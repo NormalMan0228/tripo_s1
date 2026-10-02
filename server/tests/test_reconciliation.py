@@ -18,7 +18,7 @@ def held(tmp_path):
         if req.method=='POST': raise httpx.ReadTimeout('mock uncertain submission')
         if req.url.path.endswith('/balance'): return httpx.Response(200,json={'code':0,'data':{'balance':1000}})
         return httpx.Response(200,json={'code':0,'data':{'status':'success','output':{'model_url':'https://cdn.tripo3d.ai/confirmed.glb'}}})
-    settings=Settings(data_dir=tmp_path,mode='live',registration_code='test-only-invitation-123456',tripo_key='test-placeholder',paid_enabled=True)
+    settings=Settings(data_dir=tmp_path,mode='live',registration_code='test-only-invitation-123456',tripo_key='test-placeholder',paid_enabled=True,legacy_generation_enabled=True)
     app=create_app(settings,provider=TripoProvider(settings,httpx.MockTransport(handler)),worker_enabled=False)
     with TestClient(app,base_url='https://testserver') as client:
         response=client.post('/v1/auth/register',json={'username':'operator_test','password':'testing-only-password','invitation':settings.registration_code})

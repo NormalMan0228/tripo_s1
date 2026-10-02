@@ -243,24 +243,19 @@ static func workshop(parent: Node3D) -> void:
 
 static func gate(parent: Node3D) -> void:
 	var origin := Vector3(7,0,-5.5)
-	for side in [-1.0,1.0]:
-		for i in 4:
-			var block := A.box(parent,origin+Vector3(side*1.08,0.36+i*0.65,0),Vector3(0.72,0.61,0.8),Color("7e9984").lightened(i*0.025))
-			block.rotation.y=side*0.04*(i%2)
-	for i in 7:
-		var angle := i*PI/6
-		var block := A.box(parent,origin+Vector3(cos(angle)*1.08,2.42+sin(angle)*1.08,0),Vector3(0.65,0.6,0.85),Color("94ab8f"))
-		block.rotation.z=angle-PI*0.5
-	var portal := A.box(parent,origin+Vector3(0,1.5,0.04),Vector3(1.6,2.6,0.04),Color.WHITE)
+	var arch := preload("res://assets/departure_arch.glb").instantiate() as Node3D
+	parent.add_child(arch);arch.position=origin
+	var portal := MeshInstance3D.new()
+	var plane := QuadMesh.new();plane.size=Vector2(1.94,3.26)
+	portal.mesh=plane;portal.position=origin+Vector3(0,1.63,.035)
+	portal.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(portal)
 	var mat := ShaderMaterial.new()
 	mat.shader=preload("res://shaders/portal.gdshader")
 	portal.material_override=mat
-	for i in 9:
-		var p := origin+Vector3(-1.33+sin(i*1.8)*0.2,0.3+i*0.33,-0.45)
-		A.sphere(parent,p,Vector3(0.4,0.2,0.3),Color("486b52"))
 	lantern(parent,origin+Vector3(-1.7,0,1.3),false)
 	lantern(parent,origin+Vector3(1.7,0,1.3),false)
-	A.label3d(parent,"일곱 밤의 숲",origin+Vector3(0,4.1,0),Color("def1ca"))
+	A.label3d(parent,"일곱 밤의 숲",origin+Vector3(0,4.25,0),Color("f0e4bb")).font_size=30
 	for i in 4: cylinder(parent,origin+Vector3(0,0.025,1+i*0.55),0.75,0.05,Color("aeb39a"),7).scale.z=0.38
 
 static func village(parent: Node3D, expanded := false) -> void:

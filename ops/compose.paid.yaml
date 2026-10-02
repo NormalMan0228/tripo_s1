@@ -1,0 +1,14 @@
+services:
+  api:
+    environment:
+      TRIPOTHON_STUDIO_LLM: openai
+      OPENAI_API_KEY_FILE: /run/secrets/openai_key
+      TRIPO_API_KEY_FILE: /run/secrets/tripo_key
+      TRIPO_ENABLE_PAID: "true"
+    secrets: [openai_key, tripo_key]
+
+secrets:
+  openai_key:
+    file: ./secrets/openai-key
+  tripo_key:
+    file: ./secrets/tripo-key

@@ -1,11 +1,15 @@
 extends CharacterBody3D
 
-const SPEED := 4.5
+const Profile=preload("res://scripts/controller_profile.gd")
+const SPEED := Profile.VILLAGE_WALK
 var controls_enabled := true
 var visual_only := false
 var facing := Vector3.FORWARD
 var visual: Node3D
 var external_motion := Vector2.ZERO
+var external_velocity := Vector2.ZERO
+var locomotion_velocity := Vector2.ZERO
+var locomotion_pose: SkeletonModifier3D
 var stride := 0.0
 var left_leg: Node3D
 var right_leg: Node3D
@@ -25,16 +29,19 @@ var facing_until := 0.0
 var avatar: Dictionary={}
 var action_until := 0.0
 var tool_grip := Basis.IDENTITY
+var ambient_clip := "idle"
+var greeting_until := 0.0
 const Art = preload("res://scripts/art.gd")
 
 func _ready() -> void:
+	Profile.ensure_input()
 	floor_snap_length = 0.3
 	var shape := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
-	capsule.radius = 0.32
-	capsule.height = 1.5
+	capsule.radius = Profile.BODY_RADIUS
+	capsule.height = Profile.BODY_HEIGHT
 	shape.shape = capsule
-	shape.position.y = 0.75
+	shape.position.y = Profile.BODY_HEIGHT*.5
 	add_child(shape)
 	visual = Node3D.new()
 	add_child(visual)
@@ -44,11 +51,27 @@ func _ready() -> void:
 	return
 
 func _build_explorer() -> void:
+	if avatar.get("character")=="haeru":
+		var actor := preload("res://assets/haeru_v1.glb").instantiate() as Node3D
+		visual.add_child(actor)
+		actor.scale=Vector3.ONE*Profile.CHARACTER_SCALE
+		# Developer GLB is X-forward; Player visual expects -Z-forward.
+		actor.rotation.y=PI*.5
+		animation_player=actor.find_children("*","AnimationPlayer",true,false)[0]
+		hand_skeleton=actor.find_children("*","Skeleton3D",true,false)[0]
+		hand_index=hand_skeleton.find_bone("R_Hand")
+		for clip in ["idle","walk","fishing"]:
+			animation_player.get_animation(clip).loop_mode=Animation.LOOP_LINEAR
+		animation_player.get_animation("greet").loop_mode=Animation.LOOP_NONE
+		ambient_clip="fishing"
+		animation_player.play("fishing")
+		animation_player.advance(0)
+		return
 	if avatar.get("character","explorer_b")=="explorer_b":
 		var character=preload("res://scripts/style_character.gd").new()
 		character.wardrobe=true
 		visual.add_child(character)
-		character.scale=Vector3.ONE*1.7;character.rotation.y=PI
+		character.scale=Vector3.ONE*Profile.CHARACTER_SCALE;character.rotation.y=PI
 		animation_player=character.animator;hand_skeleton=character.body_skeleton
 		hand_index=hand_skeleton.find_bone("R_Hand")
 		action_pose=preload("res://scripts/action_pose.gd").new();hand_skeleton.add_child(action_pose)
@@ -57,6 +80,9 @@ func _build_explorer() -> void:
 		var library: AnimationLibrary=animation_player.get_animation_library("")
 		for pair in [["idle","movement/B_Scout"],["walk","movement/B_TrailWalk"],["run","movement/B_Dash"]]:
 			library.add_animation(pair[0],animation_player.get_animation(pair[1]).duplicate(true))
+		locomotion_pose=preload("res://scripts/locomotion_pose.gd").new()
+		hand_skeleton.add_child(locomotion_pose)
+		locomotion_pose.configure(self)
 		return
 	# Authored fallback remains playable if the optional Scenario model is unavailable.
 	var hero_path: String="res://assets/"+str(avatar.get("character","explorer"))+".glb"
@@ -78,7 +104,7 @@ func _build_explorer() -> void:
 					var pivot := Node3D.new()
 					visual.add_child(pivot)
 					pivot.add_child(hero)
-					pivot.scale=Vector3.ONE*(1.7/bounds.size.y)
+					pivot.scale=Vector3.ONE*(Profile.CHARACTER_SCALE/bounds.size.y)
 					hero.position-=Vector3(bounds.get_center().x,bounds.position.y,bounds.get_center().z)
 					pivot.rotation.y=PI
 					var controllers := hero.find_children("*","AnimationPlayer",true,false)
@@ -143,6 +169,10 @@ func equip(item: String) -> void:
 			# Hand-local palm center and the line across the finger bases form the grip.
 			tool.position=Vector3(-.015,.095,0)
 			tool.basis=Basis(Vector3.LEFT,Vector3.FORWARD,Vector3.DOWN).scaled(Vector3.ONE/hand_transform.basis.get_scale().x)
+		elif avatar.get("character")=="haeru":
+			tool.position=Vector3(0,.045,0)
+			# Establish the grip once; the original fishing/greeting wrist animates it.
+			tool.basis=hand_transform.basis.inverse()*Basis(Vector3.UP,visual.global_rotation.y)*Basis(Vector3.RIGHT,-.35)
 		tool_grip=tool.basis
 	else:
 		equipment=Node3D.new()
@@ -151,6 +181,10 @@ func equip(item: String) -> void:
 		tool=equipment
 	tool_node=tool
 	if item=="rod":
+		if ResourceLoader.exists("res://assets/fishing_rod.glb"):
+			tool.add_child((load("res://assets/fishing_rod.glb") as PackedScene).instantiate())
+			tool.set_meta("line_tip",Vector3(0,1.63,0))
+			return
 		Art.box(tool,Vector3(0,0.85,0),Vector3(0.045,2.9,0.045),Color("ac8758"))
 		Art.sphere(tool,Vector3(0.1,0.03,0),Vector3(0.18,0.18,0.12),Color("819f9d"))
 		return
@@ -171,7 +205,7 @@ func equip(item: String) -> void:
 
 func update_tool_pose() -> void:
 	if not is_instance_valid(tool_node) or not is_instance_valid(hand_skeleton): return
-	if avatar.get("character","explorer_b")=="explorer_b":
+	if avatar.get("character","explorer_b") in ["explorer_b","haeru"]:
 		tool_node.basis=tool_grip
 		return
 	if current_clip=="slash":
@@ -189,7 +223,7 @@ func _physics_process(delta: float) -> void:
 	var movement := Vector2.ZERO
 	if controls_enabled:
 		movement = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var speed := SPEED*(1.5 if sprinting else 1.0)
+	var speed := Profile.VILLAGE_RUN if sprinting else SPEED
 	velocity.x = movement.x * speed
 	velocity.z = movement.y * speed
 	if visual_only:
@@ -198,31 +232,37 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 20.0 * delta
 	else:
 		velocity.y = 0.0
-	var look_motion := movement if controls_enabled else external_motion
+	if not visual_only:move_and_slide()
+	locomotion_velocity=Vector2(get_real_velocity().x,get_real_velocity().z) if controls_enabled and not visual_only else external_velocity
+	var look_motion := locomotion_velocity.normalized() if controls_enabled else external_motion
 	if Time.get_ticks_msec()*0.001<facing_until:
 		facing=action_facing
 	elif look_motion.length_squared() > 0.01:
 		facing = Vector3(look_motion.x, 0.0, look_motion.y)
 	if facing.length_squared()>0.01:
-		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(-facing.x, -facing.z), delta * 14.0)
+		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(-facing.x, -facing.z), Profile.damping(Profile.TURN_RESPONSE,delta))
 	if is_instance_valid(action_pose): action_pose.body_basis=visual.global_basis.orthonormalized()
-	var moving := movement.length() if controls_enabled else external_motion.length()
+	var moving := minf(1.0,locomotion_velocity.length()/SPEED)
 	stride+=delta*11*moving
 	if is_instance_valid(animation_player) and animation_player.has_animation("walk") and animation_player.has_animation("idle"):
-		var desired := ("run" if sprinting and animation_player.has_animation("run") else "walk") if moving>0.1 else "idle"
+		var desired := ("run" if (sprinting or locomotion_velocity.length()>3.4) and animation_player.has_animation("run") else "walk") if moving>0.1 else "idle"
+		if avatar.get("character")=="haeru" and moving<=.1:
+			desired="greet" if Time.get_ticks_msec()*.001<greeting_until else ambient_clip
 		if Time.get_ticks_msec()*0.001<action_until: desired="slash"
 		if current_clip!=desired:
 			current_clip=desired
 			animation_player.play(desired,0.08 if desired=="slash" else 0.18)
 			if desired=="slash": animation_player.seek(1.1,true)
-		animation_player.speed_scale=3.2 if desired=="slash" else (1.0 if desired=="run" else (1.5 if moving>0.1 else 1.0))
+		if is_instance_valid(locomotion_pose) and desired in ["walk","run"]:
+			animation_player.speed_scale=clampf(animation_player.get_animation(desired).length/locomotion_pose.cycle_seconds,.5,3.2)
+		else:
+			animation_player.speed_scale=3.2 if desired=="slash" else (1.0 if desired=="run" else (1.5 if moving>0.1 else 1.0))
 		visual.position.y=0
 	else:
 		visual.position.y=absf(sin(stride))*0.045*moving
 	if is_instance_valid(left_leg):
 		left_leg.rotation.x=sin(stride)*0.5*moving
 		right_leg.rotation.x=-sin(stride)*0.5*moving
-	if not visual_only:move_and_slide()
 	if position.y < -10.0:
 		position = Vector3(0, 0.2, 4)
 
@@ -255,6 +295,7 @@ func face_point(point: Vector3) -> void:
 	action_facing=direction.normalized()
 	facing=action_facing
 	facing_until=Time.get_ticks_msec()*0.001+0.4
+	if avatar.get("character")=="haeru":greeting_until=Time.get_ticks_msec()*.001+2.5
 
 func apply_avatar(value: Dictionary) -> void:
 	if value==avatar: return
@@ -269,6 +310,7 @@ func apply_avatar(value: Dictionary) -> void:
 	hand_skeleton=null
 	action_pose=null
 	finger_pose=null
+	locomotion_pose=null
 	equipment=null
 	tool_node=null
 	current_clip=""

@@ -1,0 +1,82 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    mem_limit: 2g
+    expose: ["8765"]
+    environment:
+      TRIPOTHON_MODE: live
+      TRIPOTHON_DATA_DIR: /data
+      TRIPOTHON_STUDIO_LLM: fixture
+      TRIPOTHON_DESIGN_FORMAT: structured
+      TRIPOTHON_REGISTRATION_CODE_FILE: /run/secrets/registration_code
+      TRIPO_ENABLE_PAID: "false"
+      TRIPO_DAILY_REQUEST_LIMIT: ${TRIPO_DAILY_REQUEST_LIMIT:-5}
+      TRIPO_USER_DAILY_REQUEST_LIMIT: ${TRIPO_USER_DAILY_REQUEST_LIMIT:-2}
+      TRIPO_RESERVE_PER_JOB: ${TRIPO_RESERVE_PER_JOB:-200}
+      TRIPOTHON_STARS_PER_CREDIT: ${TRIPOTHON_STARS_PER_CREDIT:-1}
+    secrets: [registration_code]
+    volumes:
+      - game_data:/data
+      - backups:/backups
+    networks:
+      backend:
+        ipv4_address: 172.30.72.3
+    command:
+      - python
+      - -m
+      - uvicorn
+      - server.app:create_app
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8765"
+      - --workers
+      - "1"
+      - --no-access-log
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - 172.30.72.2
+
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [api]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      TRIPOTHON_DOMAIN: ${TRIPOTHON_DOMAIN:?Set TRIPOTHON_DOMAIN in ops/production.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      backend:
+        ipv4_address: 172.30.72.2
+
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: 172.30.72.0/28
+
+volumes:
+  game_data:
+  backups:
+  caddy_data:
+  caddy_config:
+
+secrets:
+  registration_code:
+    file: ./secrets/registration-code

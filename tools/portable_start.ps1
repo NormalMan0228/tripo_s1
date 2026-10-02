@@ -1,5 +1,6 @@
 ﻿$ErrorActionPreference = 'Stop'
 $taskRoot = $PSScriptRoot
+$taskDeveloper = $args -contains '-Developer'
 $taskDataRoot = Join-Path $env:LOCALAPPDATA 'TripothonDemo'
 New-Item -ItemType Directory -Path $taskDataRoot -Force | Out-Null
 $taskServerExe = Join-Path $taskRoot 'server\TripothonDemoServer.exe'
@@ -16,4 +17,5 @@ if (-not $taskHealth) {
     }
     if (-not $taskHealth) { throw 'Demo server did not become ready.' }
 }
-Start-Process -FilePath (Join-Path $taskRoot 'Tripothon.exe') -WorkingDirectory $taskRoot -WindowStyle Normal
+$taskClientName = if ($taskDeveloper) { 'Tripothon_Developer.exe' } else { 'Tripothon.exe' }
+Start-Process -FilePath (Join-Path $taskRoot $taskClientName) -ArgumentList '--local-demo' -WorkingDirectory $taskRoot -WindowStyle Normal

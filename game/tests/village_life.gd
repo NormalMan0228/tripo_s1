@@ -96,6 +96,18 @@ func run_test() -> void:
 	expect(await walk(Vector2(27,-5)),"descend ridge")
 	expect(await walk(Vector2(27,18)),"follow east bank south")
 	expect(await walk(Vector2(26,29)),"walk onto sea fishing boardwalk")
+	var haeru: Node3D
+	for villager in app.npcs:
+		if villager.get_meta("role","")=="angler": haeru=villager
+	expect(is_instance_valid(haeru),"Haeru fisherman is present at the beach")
+	if is_instance_valid(haeru):
+		app.talk_to(haeru)
+		var portrait_found := false
+		for view in app.village_modal.find_children("*","TextureRect",true,false):
+			if view.texture is AtlasTexture: portrait_found=true
+		expect(portrait_found,"Haeru conversation shows the supplied character design")
+		await capture("haeru-dialogue")
+		app.close_village_modal()
 	app.life.open_fishing("sea")
 	await app.life.action("cast",{"spot":"sea"})
 	while app.life.now()<app.life.state.fishing.bite_at+.15: await create_timer(.05).timeout

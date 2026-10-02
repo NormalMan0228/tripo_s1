@@ -160,7 +160,9 @@ class Studio:
         def info(request:Request):
             with db.transaction() as conn:
                 user=auth(conn,request)
-                return {'llm':settings.studio_llm,'models':MODELS,'efforts':EFFORTS,
+                return {'mode':settings.mode,'llm':settings.studio_llm,
+                    'models':('gpt-6-luna',) if settings.mode=='live' else MODELS,
+                    'efforts':('high',) if settings.mode=='live' else EFFORTS,
                     'profile':profile(conn,user['id']) if profile else {},
                     'room_usage':{room:room_budget.usage(conn,assets,user['id'],room) for room in ('home','workshop','village')},
                     'geometry_enabled':bool(settings.paid_enabled and settings.tripo_key),
@@ -177,6 +179,8 @@ class Studio:
                 if body.designer=='llm' and settings.studio_llm=='fixture':fail('llm_not_configured',503)
                 if body.geometry=='tripo' and not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
                 if settings.mode=='live' and (body.designer!='llm' or body.geometry!='tripo'):fail('development_mode_forbidden',403)
+                if settings.mode=='live' and (body.model!='gpt-6-luna' or body.effort!='high'):
+                    fail('model_not_available',403)
                 if body.image and body.designer!='llm':fail('image_requires_llm')
                 if body.image_mode=='refine' and (not body.image or body.geometry!='tripo'):fail('refinement_requires_image_and_tripo')
                 if conn.execute("SELECT 1 FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled')",(user['id'],)).fetchone():fail('generation_pending')
@@ -184,6 +188,10 @@ class Studio:
                     if conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled')").fetchone() or conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone():fail('provider_busy')
                 count=conn.execute('SELECT count(*) FROM studio_jobs WHERE created>=?',(int(clock()//86400)*86400,)).fetchone()[0]
                 if count>=settings.daily_generation_limit:fail('daily_generation_limit',429)
+                if settings.mode=='live':
+                    user_count=conn.execute('SELECT count(*) FROM studio_jobs WHERE owner_id=? AND created>=?',
+                                            (user['id'],int(clock()//86400)*86400)).fetchone()[0]
+                    if user_count>=settings.user_daily_generation_limit:fail('user_daily_generation_limit',429)
                 job_id=str(uuid.uuid4());cost=price(body)
                 money(conn,user['id'],-cost,'studio_charge',job_id)
                 conn.execute('INSERT INTO studio_jobs(id,owner_id,request,state,cost,created,updated) VALUES (?,?,?,?,?,?,?)',
