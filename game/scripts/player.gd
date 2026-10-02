@@ -25,6 +25,8 @@ var facing_until := 0.0
 var avatar: Dictionary={}
 var action_until := 0.0
 var tool_grip := Basis.IDENTITY
+var ambient_clip := "idle"
+var greeting_until := 0.0
 const Art = preload("res://scripts/art.gd")
 
 func _ready() -> void:
@@ -44,6 +46,22 @@ func _ready() -> void:
 	return
 
 func _build_explorer() -> void:
+	if avatar.get("character")=="haeru":
+		var actor := preload("res://assets/haeru_v1.glb").instantiate() as Node3D
+		visual.add_child(actor)
+		actor.scale=Vector3.ONE*1.7
+		# Developer GLB is X-forward; Player visual expects -Z-forward.
+		actor.rotation.y=PI*.5
+		animation_player=actor.find_children("*","AnimationPlayer",true,false)[0]
+		hand_skeleton=actor.find_children("*","Skeleton3D",true,false)[0]
+		hand_index=hand_skeleton.find_bone("R_Hand")
+		for clip in ["idle","walk","fishing"]:
+			animation_player.get_animation(clip).loop_mode=Animation.LOOP_LINEAR
+		animation_player.get_animation("greet").loop_mode=Animation.LOOP_NONE
+		ambient_clip="fishing"
+		animation_player.play("fishing")
+		animation_player.advance(0)
+		return
 	if avatar.get("character","explorer_b")=="explorer_b":
 		var character=preload("res://scripts/style_character.gd").new()
 		character.wardrobe=true
@@ -143,6 +161,10 @@ func equip(item: String) -> void:
 			# Hand-local palm center and the line across the finger bases form the grip.
 			tool.position=Vector3(-.015,.095,0)
 			tool.basis=Basis(Vector3.LEFT,Vector3.FORWARD,Vector3.DOWN).scaled(Vector3.ONE/hand_transform.basis.get_scale().x)
+		elif avatar.get("character")=="haeru":
+			tool.position=Vector3(0,.045,0)
+			# Establish the grip once; the original fishing/greeting wrist animates it.
+			tool.basis=hand_transform.basis.inverse()*Basis(Vector3.UP,visual.global_rotation.y)*Basis(Vector3.RIGHT,-.35)
 		tool_grip=tool.basis
 	else:
 		equipment=Node3D.new()
@@ -151,6 +173,10 @@ func equip(item: String) -> void:
 		tool=equipment
 	tool_node=tool
 	if item=="rod":
+		if ResourceLoader.exists("res://assets/fishing_rod.glb"):
+			tool.add_child((load("res://assets/fishing_rod.glb") as PackedScene).instantiate())
+			tool.set_meta("line_tip",Vector3(0,1.63,0))
+			return
 		Art.box(tool,Vector3(0,0.85,0),Vector3(0.045,2.9,0.045),Color("ac8758"))
 		Art.sphere(tool,Vector3(0.1,0.03,0),Vector3(0.18,0.18,0.12),Color("819f9d"))
 		return
@@ -171,7 +197,7 @@ func equip(item: String) -> void:
 
 func update_tool_pose() -> void:
 	if not is_instance_valid(tool_node) or not is_instance_valid(hand_skeleton): return
-	if avatar.get("character","explorer_b")=="explorer_b":
+	if avatar.get("character","explorer_b") in ["explorer_b","haeru"]:
 		tool_node.basis=tool_grip
 		return
 	if current_clip=="slash":
@@ -210,6 +236,8 @@ func _physics_process(delta: float) -> void:
 	stride+=delta*11*moving
 	if is_instance_valid(animation_player) and animation_player.has_animation("walk") and animation_player.has_animation("idle"):
 		var desired := ("run" if sprinting and animation_player.has_animation("run") else "walk") if moving>0.1 else "idle"
+		if avatar.get("character")=="haeru" and moving<=.1:
+			desired="greet" if Time.get_ticks_msec()*.001<greeting_until else ambient_clip
 		if Time.get_ticks_msec()*0.001<action_until: desired="slash"
 		if current_clip!=desired:
 			current_clip=desired
@@ -255,6 +283,7 @@ func face_point(point: Vector3) -> void:
 	action_facing=direction.normalized()
 	facing=action_facing
 	facing_until=Time.get_ticks_msec()*0.001+0.4
+	if avatar.get("character")=="haeru":greeting_until=Time.get_ticks_msec()*.001+2.5
 
 func apply_avatar(value: Dictionary) -> void:
 	if value==avatar: return

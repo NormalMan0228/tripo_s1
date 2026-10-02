@@ -2,6 +2,7 @@ extends Window
 ## Local rehearsal of server-validated numeric behavior; never publishes an asset.
 const Assembly=preload("res://scripts/asset_assembly.gd")
 const Art=preload("res://scripts/art.gd")
+const BuildMode=preload("res://scripts/build_mode.gd")
 var item: Node3D
 var camera: Camera3D
 var status: Label
@@ -10,13 +11,22 @@ var world: Node3D
 
 func show_plan(value: Dictionary) -> bool:
 	payload=value
-	title="설계 동작 미리보기 · 유료 생성 전"
+	title="설계 동작 미리보기 · 유료 생성 전" if BuildMode.developer() else "만들기 전, 미리 살펴보기"
 	size=Vector2i(820,680);min_size=Vector2i(640,540)
-	var background := ColorRect.new();background.color=Color("203b36");background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(background)
+	var background := ColorRect.new();background.color=Color("f6efdd");background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(background)
 	var box := VBoxContainer.new();box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);box.offset_left=14;box.offset_right=-14;box.offset_top=14;box.offset_bottom=-14;add_child(box)
 	var font := SystemFont.new();font.font_names=PackedStringArray(["Malgun Gothic","sans-serif"]);box.add_theme_font_override("font",font)
+	var paper_theme := Theme.new();paper_theme.default_font=font;paper_theme.default_font_size=15
+	paper_theme.set_color("font_color","Label",Color("3c4736"));paper_theme.set_color("font_color","Button",Color("3c4736"))
+	for state_name in ["normal","hover","pressed","focus"]:
+		var style := StyleBoxFlat.new();style.bg_color=Color("cdddbb") if state_name!="normal" else Color("fff9ea")
+		style.set_corner_radius_all(8);style.set_border_width_all(1);style.border_color=Color("b5ac90")
+		style.content_margin_left=14;style.content_margin_right=14;style.content_margin_top=10;style.content_margin_bottom=10
+		paper_theme.set_stylebox(state_name,"Button",style)
+	box.theme=paper_theme
 	var note := Label.new();note.text="도형으로 부품과 움직임만 확인합니다. 실제 Tripo 메시의 외형과 분리는 달라질 수 있습니다.\n이 창의 조작은 저장·과금되지 않습니다. 창을 닫은 뒤 비용을 확인하고 생성하세요."
 	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;box.add_child(note)
+	if not BuildMode.developer():note.text="제작 전, 간단한 모양으로 크기와 움직임을 살펴보세요.\n완성될 가구의 모습은 달라질 수 있어요. 여기서 사용해 보는 동작은 저장되지 않아요."
 	var container := SubViewportContainer.new();container.stretch=true;container.size_flags_vertical=Control.SIZE_EXPAND_FILL;box.add_child(container)
 	var view := SubViewport.new();view.size=Vector2i(820,500);view.own_world_3d=true;view.render_target_update_mode=SubViewport.UPDATE_ALWAYS;container.add_child(view)
 	world=Node3D.new();view.add_child(world)
@@ -45,7 +55,7 @@ func rebuild() -> bool:
 	for id in payload.blobs:blobs[id]=Marshalls.base64_to_raw(payload.blobs[id])
 	if not item.build(payload,blobs):item.free();status.text="설계를 표시하지 못했습니다.";return false
 	world.add_child(item)
-	status.text="%d개 부품 · 드래그로 회전 · 휠로 확대\n%s"%[payload.plan.parts.size(),payload.plan.get("title","설계")]
+	status.text=("%d개 부품 · "%payload.plan.parts.size() if BuildMode.developer() else "")+"드래그로 회전 · 휠로 확대\n"+str(payload.plan.get("title","가구 미리보기"))
 	return true
 
 func simulate(event: String) -> void:
@@ -54,4 +64,5 @@ func simulate(event: String) -> void:
 	if event=="leave":item.nearby=false
 	var result: Dictionary=item.vm.run(event,{"dt":0,"time":item.elapsed,"near":int(item.nearby)})
 	if result.ok:item.apply_commands(result.commands)
-	status.text=("동작 확인 · "+event if result.ok else "동작 검증 실패")+"\n"+JSON.stringify(item.vm.state)
+	if BuildMode.developer():status.text=("동작 확인 · "+event if result.ok else "동작 검증 실패")+"\n"+JSON.stringify(item.vm.state)
+	else:status.text={"click":"가구를 사용해 봤어요.","near":"가까이 다가가 봤어요.","leave":"가구에서 떨어져 봤어요."}.get(event,"움직임을 살펴보세요.") if result.ok else "지금은 움직임을 확인할 수 없어요."

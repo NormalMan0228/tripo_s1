@@ -145,5 +145,6 @@ def make(kind):
     print("EXPORTED", kind)
 
 
-make("seed_shop")
-make("fishing_shack")
+if __name__ == "__main__":
+    make("seed_shop")
+    make("fishing_shack")

@@ -290,7 +290,11 @@ func error_message(code: String) -> String:
 		"session_expired":"로그인이 만료됐습니다. 다시 접속하세요.","object_not_found":"이 물건을 사용할 권한이 없습니다.",
 		"stale_object_version":"물건 상태가 바뀌었습니다. 목록을 새로고침하세요.","object_is_listed":"판매 중인 물건입니다. 판매를 취소하세요.",
 		"insufficient_provider_credit":"Tripo 크레딧이 부족합니다. 별씨는 환불됩니다."}
-	return str(messages.get(code,"요청을 완료하지 못했습니다: "+code))
+	if not preload("res://scripts/build_mode.gd").developer():
+		messages.live_generation_disabled="새 가구 제작을 준비하고 있어요. 지금은 보관함의 물건으로 꾸며 보세요."
+		messages.insufficient_provider_credit="지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요."
+		messages.server_update_required="마을을 업데이트하고 있어요. 잠시 뒤 다시 접속해 주세요."
+	return str(messages.get(code,"요청을 완료하지 못했습니다: "+code if preload("res://scripts/build_mode.gd").developer() else "지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요."))
 
 func check(result: Dictionary) -> bool:
 	if not result.ok:
@@ -326,7 +330,9 @@ func login_ui() -> void:
 	left.add_child(advanced)
 	if preload("res://scripts/build_mode.gd").developer():
 		text(advanced,"서버 주소 · 외부 서버는 HTTPS",12)
-		advanced.add_child(host)
+	# Hidden controls still need an owner so scene teardown frees their resources.
+	advanced.add_child(host)
+	host.visible=preload("res://scripts/build_mode.gd").developer()
 	advanced.add_child(invitation)
 	advanced.visible=false
 	notice = text(left,"일곱 밤을 무사히 보내고 마을을 꾸며 보세요.",13)
@@ -548,7 +554,7 @@ func enter_village() -> void:
 	prompt.max_length = 500
 	right.add_child(prompt)
 	prompt.visible=false # Retained for legacy integration/recovery, outside the player flow.
-	text(right,"공방에서 새 가구를 만들고\n색칠·부품 맞춤을 할 수 있어요.",12)
+	text(right,"공방에서 새 가구를 만들고\n좋아하는 색으로 꾸며 보세요.",12)
 	var utilities := HBoxContainer.new()
 	right.add_child(utilities)
 	button(utilities,"새로고침",refresh_inventory)
@@ -798,7 +804,7 @@ func poll_entitlements() -> void:
 func select_object(index: int) -> void:
 	if is_instance_valid(preview): cancel_preview()
 	selected = me.objects[index]
-	var state_name: String={"inventory":"보관 중","placed":"마을에 배치됨","listed":"장터에서 판매 중"}[selected.state]
+	var state_name: String={"inventory":"보관 중","placed":"배치됨 · "+{"home":"내 집","workshop":"공방","village":"마을"}.get(selected.get("room","village"),"다른 공간"),"listed":"장터에서 판매 중"}[selected.state]
 	object_info.text = "%s\n%s" % [selected.name,state_name]
 	inspect_object(selected.duplicate())
 
@@ -1386,7 +1392,9 @@ func show_results() -> void:
 	var won: bool=run.status=="won"
 	text(card,"EXPEDITION COMPLETE" if won else "UNTIL NEXT TIME",12).modulate=Color("cfbe8c")
 	text(card,"일곱 밤을 견뎌냈어요" if won else "다시 피울 작은 불씨",28)
-	text(card,"%s · %s · 보상 ×%.3f" % [region_name(run.get("map_id","forest")),difficulty_name(run.get("difficulty","standard")),run.get("reward_multiplier",1.0)],14)
+	var destination := "%s · %s" % [region_name(run.get("map_id","forest")),difficulty_name(run.get("difficulty","standard"))]
+	if preload("res://scripts/build_mode.gd").developer(): destination += " · 보상 ×%.3f" % run.get("reward_multiplier",1.0)
+	text(card,destination,14)
 	text(card,"생존  %d일     채집  %d회     처치  %d" % [run.day,run.get("harvested",0),run.get("kills",0)],16)
 	text(card,"보상  %d 별씨" % run.get("reward",0) if won else "완주 보상은 7일 생존 후 받을 수 있어요.",22 if won else 14)
 	if run.get("story") is Dictionary:
@@ -1438,8 +1446,9 @@ func follow_camera(delta: float) -> void:
 	var target := player.position+Vector3(0,1.0,-0.55)
 	if camera_focus==Vector3.ZERO or delta>=1.0: camera_focus=target
 	else: camera_focus=camera_focus.lerp(target,minf(1,delta*4.5))
-	var at := camera_focus+Vector3(0,8.8,16.5)
-	camera.position=camera.position.lerp(at,minf(1,delta*5.0))
+	# One smoothed focus and a fixed offset keep pitch constant during movement.
+	# Independently smoothing position made the view nod on starts and stops.
+	camera.position=camera_focus+Vector3(0,8.8,16.5)
 	camera.look_at(camera_focus)
 
 func _process(delta: float) -> void:
@@ -1520,6 +1529,9 @@ func _process(delta: float) -> void:
 
 func update_canopy_visibility() -> void:
 	if not is_instance_valid(player): return
+	for group in ["npc_nameplates","place_nameplates"]:
+		for label in get_tree().get_nodes_in_group(group):
+			if world.is_ancestor_of(label):label.visible=player.position.distance_to(label.global_position)<(6.0 if group=="npc_nameplates" else 9.0)
 	var hero_screen := camera.unproject_position(player.position+Vector3(0,1,0))
 	var radius := 720.0/camera.size
 	for canopy in get_tree().get_nodes_in_group("canopy"):
@@ -1657,7 +1669,8 @@ func open_expedition() -> void:
 		for difficulty in difficulties:
 			if difficulty.id==chosen_difficulty:
 				multiplier*=float(difficulty.reward_multiplier)
-				estimate.text=difficulty.description+"\n완주 성과에 따른 별씨 보상 ×%.3f · 예상 %d–%d개" % [multiplier,int(floor(35*multiplier+0.000001)),int(floor(100*multiplier+0.000001))]
+				estimate.text=difficulty.description+"\n완주하면 성과에 따라 별씨 %d–%d개를 받을 수 있어요." % [int(floor(35*multiplier+0.000001)),int(floor(100*multiplier+0.000001))]
+				if preload("res://scripts/build_mode.gd").developer():estimate.text+="  ·  보상 계수 ×%.3f"%multiplier
 		for b in region_row.get_children(): b.button_pressed=b.get_meta("id")==chosen_map
 		for b in diff_row.get_children(): b.button_pressed=b.get_meta("id")==chosen_difficulty
 	for region in maps:
@@ -1667,7 +1680,7 @@ func open_expedition() -> void:
 		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		b.custom_minimum_size.y=90
 	for difficulty in difficulties:
-		var b := button(diff_row,difficulty.name+" · ×%.1f" % difficulty.reward_multiplier,func(): chosen_difficulty=difficulty.id; refresh.call())
+		var b := button(diff_row,difficulty.name,func(): chosen_difficulty=difficulty.id; refresh.call())
 		b.set_meta("id",difficulty.id)
 		b.toggle_mode=true
 		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -1705,27 +1718,28 @@ func open_story() -> void:
 
 func spawn_villagers() -> void:
 	var entries := [
-		{"title":"나루 · 길잡이","role":"map","at":Vector3(5.1,0.1,-3.1),"character":"explorer","coat":"#70afa3"},
-		{"title":"소라 · 재단사","role":"wardrobe","at":Vector3(-3.8,0.1,2.0),"character":"ranger","coat":"#ab789f"},
-		{"title":"모루 · 야영 전문가","role":"guide","at":Vector3(6.5,0.1,5.5),"character":"tinker","coat":"#6889a1"},
-		{"title":"단비 · 씨앗지기","role":"farmer","at":Vector3(-19.3,0.65,0.9),"character":"ranger","coat":"#70afa3"},
-		{"title":"해루 · 낚시꾼","role":"angler","at":Vector3(29.6,0.1,26),"character":"explorer_b","coat":"#ad803b"}]
+		{"title":"나루 · 길잡이","role":"map","at":Vector3(5.1,0.1,-3.1),"character":"explorer_b","coat":"#70afa3"},
+		{"title":"소라 · 재단사","role":"wardrobe","at":Vector3(-3.8,0.1,2.0),"character":"explorer_b","coat":"#ab789f"},
+		{"title":"모루 · 야영 전문가","role":"guide","at":Vector3(6.5,0.1,5.5),"character":"explorer_b","coat":"#6889a1"},
+		{"title":"단비 · 씨앗지기","role":"farmer","at":Vector3(-19.3,0.65,0.9),"character":"explorer_b","coat":"#70afa3"},
+		{"title":"해루 · 낚시꾼","role":"angler","at":Vector3(29.6,0.1,26),"character":"haeru","coat":"#ad803b"}]
 	for entry in entries:
 		var npc := Player.new()
 		npc.controls_enabled=false
-		npc.avatar={"character":entry.character,"coat":entry.coat,"backpack":false,"headwear":"cap" if entry.role=="guide" else "none"}
+		npc.avatar={"character":entry.character,"coat":entry.coat,"pants":"#51574b","boots":"#826345","backpack":entry.role=="map","headwear":"cap" if entry.role=="guide" else "beret" if entry.role=="wardrobe" else "none"}
 		if entry.role=="angler":
-			npc.avatar["hair"]="#2e314a"
-			npc.avatar["coat"]="#ad803b"
-			npc.avatar["pants"]="#323a50"
-			npc.avatar["boots"]="#9c6836"
+			# Haeru has a reviewed authored palette; do not tint his facial texture.
+			npc.avatar={"character":"haeru","backpack":false,"headwear":"none"}
 		world.add_child(npc)
+		if entry.role!="angler":preload("res://scripts/villager_accessories.gd").dress(npc,entry.role)
 		if entry.role=="angler": npc.equip("rod")
 		npc.position=entry.at
 		npc.facing=Vector3(0,0,1)
 		npc.set_meta("title",entry.title)
 		npc.set_meta("role",entry.role)
-		Art.label3d(npc,entry.title,Vector3(0,2.05,0),Color("f0dfba"))
+		var nameplate := Art.label3d(npc,entry.title,Vector3(0,2.02,0),Color("f0dfba"))
+		nameplate.font_size=30;nameplate.outline_size=4;nameplate.no_depth_test=false
+		nameplate.add_to_group("npc_nameplates")
 		npcs.append(npc)
 
 func nearest_npc() -> Node3D:

@@ -76,6 +76,12 @@ var history_list: ItemList
 var history_detail: Label
 var history_selected := ""
 var live_defaults_applied := false
+var placement_tools: PanelContainer
+var placement_title: Label
+var placement_feedback: Label
+var place_button: Button
+var floor_grid: MeshInstance3D
+var grid_toggle: CheckButton
 
 func _ready() -> void:
 	api=Api.new();add_child(api)
@@ -93,7 +99,7 @@ func theme_style() -> Theme:
 	var t := Theme.new()
 	var font := SystemFont.new();font.font_names=PackedStringArray(["Malgun Gothic","sans-serif"])
 	t.default_font=font;t.default_font_size=14
-	for type in ["Label","Button","OptionButton","LineEdit","TextEdit","ItemList","CheckButton"]:
+	for type in ["Label","Button","ColorPickerButton","OptionButton","LineEdit","TextEdit","ItemList","CheckButton"]:
 		t.set_color("font_color",type,Color("3f352a"))
 		if type in ["LineEdit","TextEdit"]:t.set_color("font_placeholder_color",type,Color("8d8373"))
 		if type=="Label":continue
@@ -103,6 +109,13 @@ func theme_style() -> Theme:
 			style.set_border_width_all(1);style.border_color=Color("ada88e")
 			style.set_corner_radius_all(8);style.content_margin_left=10;style.content_margin_right=10;style.content_margin_top=8;style.content_margin_bottom=8
 			t.set_stylebox(state_name,type,style)
+	var list_panel := StyleBoxFlat.new();list_panel.bg_color=Color("faf6e9");list_panel.set_corner_radius_all(8)
+	list_panel.set_border_width_all(1);list_panel.border_color=Color("b9b39c")
+	list_panel.content_margin_left=6;list_panel.content_margin_right=6;list_panel.content_margin_top=6;list_panel.content_margin_bottom=6
+	t.set_stylebox("panel","ItemList",list_panel)
+	var chosen := StyleBoxFlat.new();chosen.bg_color=Color("cfdfbf");chosen.set_corner_radius_all(6)
+	t.set_stylebox("selected","ItemList",chosen);t.set_stylebox("selected_focus","ItemList",chosen)
+	t.set_color("font_selected_color","ItemList",Color("2c4633"))
 	return t
 
 func label(parent: Node,value: String,size_px:=14) -> Label:
@@ -135,6 +148,25 @@ func build_ui() -> void:
 	view_container=SubViewportContainer.new();view_container.stretch=true;view_container.size_flags_vertical=Control.SIZE_EXPAND_FILL;canvas.add_child(view_container)
 	viewport=SubViewport.new();viewport.size=Vector2i(880,660);viewport.own_world_3d=true;viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS;viewport.msaa_3d=Viewport.MSAA_4X;view_container.add_child(viewport)
 	view_container.gui_input.connect(view_input)
+	# In-world dressing tools remain visible next to the furniture, not in dev tabs.
+	placement_tools=PanelContainer.new();placement_tools.name="PlacementTools"
+	placement_tools.position=Vector2(24,124);placement_tools.custom_minimum_size.x=345
+	var tool_style := StyleBoxFlat.new();tool_style.bg_color=Color("fff7e8",.97);tool_style.set_corner_radius_all(12)
+	tool_style.set_border_width_all(1);tool_style.border_color=Color("b5ab8c")
+	tool_style.content_margin_left=14;tool_style.content_margin_right=14;tool_style.content_margin_top=12;tool_style.content_margin_bottom=12
+	placement_tools.add_theme_stylebox_override("panel",tool_style)
+	add_child(placement_tools);placement_tools.visible=false
+	var tools := VBoxContainer.new();tools.add_theme_constant_override("separation",8);placement_tools.add_child(tools)
+	placement_title=label(tools,"가구 놓기",18)
+	placement_title.max_lines_visible=1;placement_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+	placement_feedback=label(tools,"빈자리를 골라 주세요",13)
+	var rotate_row := row(tools)
+	button(rotate_row,"↶ 회전",func():rotate_placement(-90))
+	button(rotate_row,"회전 ↷",func():rotate_placement(90))
+	grid_toggle=CheckButton.new();grid_toggle.text="격자";grid_toggle.button_pressed=true;rotate_row.add_child(grid_toggle)
+	var confirm_row := row(tools)
+	place_button=button(confirm_row,"여기에 놓기",commit_place);place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	button(confirm_row,"취소",cancel_placement)
 	var footer := MarginContainer.new();footer.add_theme_constant_override("margin_left",20);footer.add_theme_constant_override("margin_right",20);footer.add_theme_constant_override("margin_bottom",14);canvas.add_child(footer)
 	var f := VBoxContainer.new();footer.add_child(f)
 	status_label=label(f,"서버에 연결하고 있어요",14)
@@ -204,7 +236,7 @@ func build_ui() -> void:
 	var own := VBoxContainer.new();own.name="보관함";tabs.add_child(own)
 	label(own,"내가 만든 작은 세계",19)
 	room_capacity=label(own,"배치한 가구를 확인하고 있어요",12)
-	inventory=ItemList.new();inventory.custom_minimum_size.y=135;inventory.size_flags_vertical=Control.SIZE_EXPAND_FILL;own.add_child(inventory);inventory.item_selected.connect(select_item)
+	inventory=ItemList.new();inventory.custom_minimum_size.y=135;inventory.size_flags_vertical=Control.SIZE_EXPAND_FILL;inventory.fixed_icon_size=Vector2i(26,26);own.add_child(inventory);inventory.item_selected.connect(select_item)
 	var preview_view := SubViewportContainer.new();preview_view.custom_minimum_size.y=190;preview_view.stretch=true;own.add_child(preview_view)
 	var preview_port := SubViewport.new();preview_port.size=Vector2i(330,190);preview_port.own_world_3d=true;preview_port.render_target_update_mode=SubViewport.UPDATE_ALWAYS;preview_port.msaa_3d=Viewport.MSAA_4X;preview_view.add_child(preview_port)
 	preview_stage=Node3D.new();preview_port.add_child(preview_stage)
@@ -213,7 +245,7 @@ func build_ui() -> void:
 	preview_camera=Camera3D.new();preview_camera.projection=Camera3D.PROJECTION_ORTHOGONAL;preview_camera.size=2.9;preview_camera.position=Vector3(2.7,2.2,4);preview_stage.add_child(preview_camera);preview_camera.look_at(Vector3(0,.65,0));preview_camera.current=true
 	Art.box(preview_stage,Vector3(0,-.04,0),Vector3(8,.06,8),Color("a9b7a0"))
 	preview_view.gui_input.connect(preview_input)
-	label(own,"미리보기 · 드래그 회전 / 휠 확대",11).modulate=Color("b9c8ad")
+	label(own,"미리보기 · 드래그 회전 / 휠 확대",11).modulate=Color("817960")
 	detail=label(own,"가구를 고르면 모습을 살펴볼 수 있어요",13)
 	var actions := row(own)
 	button(actions,"바닥에 배치",begin_place);button(actions,"회수",retrieve);button(actions,"사용",interact_selected)
@@ -225,7 +257,7 @@ func build_ui() -> void:
 	var custom_color := ColorPickerButton.new();custom_color.text="직접 색 고르기";custom_color.edit_alpha=false;custom_color.color=Color("dfa958");custom_color.size_flags_horizontal=Control.SIZE_EXPAND_FILL;custom_row.add_child(custom_color)
 	custom_color.popup_closed.connect(func():await paint("#"+custom_color.color.to_html(false)))
 	button(custom_row,"원래 색 복원",func():await paint("#ffffff",true))
-	button(own,"서버에서 새로고침",refresh)
+	button(own,"새로고침",refresh)
 	var source := VBoxContainer.new();source.name="동작 코드";tabs.add_child(source)
 	label(source,"생성된 조작 함수와 이벤트",18)
 	label(source,"서버가 검사한 숫자 연산·부품 제어 코드입니다. 파일이나 재화에 접근할 수 없습니다.",12)
@@ -288,7 +320,14 @@ func update_price() -> void:
 	else:provider_price.text="검증용 도형: Tripo 비용 0"
 
 func message(value: String) -> void:
-	status_label.text=value.replace("room_render_budget_exceeded","꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요.")
+	value=value.replace("room_render_budget_exceeded","꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요.")
+	if not BuildMode.developer():
+		var words := {"insufficient_shards":"별씨가 부족해요. 탐험 보상을 모아 보세요.","stale_version":"가구가 바뀌었어요. 다시 골라 주세요.","stale_runtime_version":"가구가 바뀌었어요. 다시 골라 주세요.","not_found":"물건을 찾을 수 없어요. 보관함을 새로고침해 주세요.","unauthorized":"다시 로그인해 주세요.","geometry_disabled":"지금은 새 가구 제작을 준비하고 있어요.","placement_overlap":"다른 가구와 겹쳐요.","placement_out_of_bounds":"벽과 출입문에서 떨어진 곳에 놓아 주세요.","model_download_failed":"가구를 읽지 못했어요. 잠시 뒤 다시 골라 주세요."}
+		var pattern := RegEx.new();pattern.compile("[a-z][a-z0-9]*_[a-z0-9_]+")
+		for match_value in pattern.search_all(value):
+			var code: String=match_value.get_string()
+			value=value.replace(code,words.get(code,"지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요."))
+	status_label.text=value
 
 func build_stage() -> void:
 	stage=Node3D.new();viewport.add_child(stage)
@@ -302,7 +341,19 @@ func build_stage() -> void:
 	room_root=Node3D.new();stage.add_child(room_root)
 	placement_marker=Art.box(stage,Vector3(0,0.065,0),Vector3(1.95,0.015,1.95),Color("8ccbb1"))
 	placement_marker.material_override.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+	placement_marker.material_override.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
 	placement_marker.visible=false
+	floor_grid=MeshInstance3D.new();floor_grid.name="DecoratingGrid"
+	var lines := ImmediateMesh.new();lines.surface_begin(Mesh.PRIMITIVE_LINES)
+	for cell in 21:
+		var at := -5.0+cell*.5
+		lines.surface_add_vertex(Vector3(at,.056,-5));lines.surface_add_vertex(Vector3(at,.056,5))
+		lines.surface_add_vertex(Vector3(-5,.056,at));lines.surface_add_vertex(Vector3(5,.056,at))
+	lines.surface_end();floor_grid.mesh=lines
+	var grid_material := Art.material(Color("f4ead0",.32));grid_material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+	grid_material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED;floor_grid.material_override=grid_material
+	floor_grid.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	stage.add_child(floor_grid);floor_grid.visible=false
 	build_room()
 	# Authored character is separate from all player-created furniture.
 	if ResourceLoader.exists("res://assets/explorer_b_reference.glb"):
@@ -311,6 +362,15 @@ func build_stage() -> void:
 func build_room() -> void:
 	for child in room_root.get_children():child.queue_free()
 	title_label.text="나의 작은 집" if room=="home" else "물결빛 공방"
+	var shell_path := "res://assets/cozy_home.glb" if room=="home" else "res://assets/cozy_workshop.glb"
+	if ResourceLoader.exists(shell_path):
+		var shell := (load(shell_path) as PackedScene).instantiate() as Node3D
+		shell.name="AuthoredRoomShell";room_root.add_child(shell)
+		var exit_sign := Art.label3d(room_root,"마을 →",Vector3(1.9,.45,4.85),Color("f1dfb7"));exit_sign.font_size=25
+		for x in [-1.1,1.1]:
+			var glow := OmniLight3D.new();glow.position=Vector3(x,2.6,-4.25);glow.light_color=Color("ffdba6");glow.light_energy=.18;glow.omni_range=3.0
+			room_root.add_child(glow)
+		return
 	Art.box(room_root,Vector3(0,-0.18,0),Vector3(10.4,0.35,10.4),Color("7a5940"))
 	for x in 20:
 		Art.box(room_root,Vector3(-4.75+x*0.5,-0.01,0),Vector3(0.48,0.06,10),Color("b68f62") if x%3==0 else Color("c4a477"))
@@ -368,7 +428,13 @@ func refresh() -> void:
 		if data.geometry_enabled and data.llm!="fixture":
 			designer.select(1);geometry.select(1);update_price()
 	inventory.clear()
-	for obj in data.objects:inventory.add_item(("● " if obj.state=="placed" else "○ ")+obj.name)
+	for obj in data.objects:
+		var kind := "furniture"
+		var title: String=str(obj.name).to_lower()
+		if "상자" in title or "chest" in title or "box" in title:kind="chest"
+		elif "시계" in title or "clock" in title:kind="clock"
+		elif "조명" in title or "lamp" in title:kind="lamp"
+		inventory.add_item(("● " if obj.state=="placed" else "○ ")+obj.name,load("res://assets/items/"+kind+".svg"))
 	if not selected.is_empty():
 		var exists := false
 		for obj in data.objects:
@@ -391,9 +457,10 @@ func refresh() -> void:
 			else:
 				inspected.accept_event({"state":latest.data.runtime.state,"commands":[],"version":latest.data.runtime.version})
 				inspected.paint(latest.data.runtime.colors)
-	message("서버 저장 완료 · "+("내 집" if room=="home" else "공방"))
+	if not placement_mode:message("꾸민 모습이 저장됐어요 · "+("내 집" if room=="home" else "공방"))
 
 func clear_selection() -> void:
+	cancel_placement()
 	selection_epoch+=1;placement_epoch+=1
 	binding_dirty=false
 	selected={};placement_mode=false
@@ -471,14 +538,19 @@ func select_item(index: int) -> void:
 	var preview_size: Vector3=item.get_meta("size",Vector3.ONE)
 	preview_camera.size=maxf(1.5,preview_size.y*1.5)
 	if item.get_meta("studio",false) and item.pivots.has("lid"):preview_camera.size=maxf(1.9,preview_camera.size)
-	detail.text=selected.name+"\n"+("배치됨 · "+selected.room if selected.state=="placed" else "보관 중")
+	detail.text=selected.name+"\n"+("배치됨 · "+{"home":"내 집","workshop":"공방","village":"마을"}.get(selected.room,"다른 공간") if selected.state=="placed" else "보관 중")
 	part_choice.clear();part_choice.add_item("전체 색칠")
 	if item.get_meta("studio",false):
 		generated_functions.clear()
 		binding_part.clear()
 		for fn in item.manifest.program.functions:generated_functions.add_item(fn)
 		load_function_fields(0)
-		for p in item.manifest.plan.parts:part_choice.add_item(p.id);binding_part.add_item(p.id)
+		for p in item.manifest.plan.parts:
+			var friendly: String={"body":"본체","lid":"뚜껑","base":"받침","stem":"줄기","hour_hand":"시침","minute_hand":"분침","second_hand":"초침","face":"앞면","bulb":"전구"}.get(p.id,"부분 %d"%part_choice.item_count)
+			if str(p.id).begins_with("petal_"):friendly="꽃잎 "+str(p.id).trim_prefix("petal_")
+			part_choice.add_item(str(p.id) if BuildMode.developer() else friendly)
+			part_choice.set_item_metadata(part_choice.item_count-1,p.id)
+			binding_part.add_item(p.id)
 		load_binding_fields(0)
 		code_view.text=JSON.stringify(item.manifest.program,"  ")
 		if BuildMode.developer():
@@ -630,10 +702,31 @@ func begin_place() -> void:
 	ghost=loaded
 	if ghost:
 		stage.add_child(ghost);ghost.position=Vector3(0,0.08,0);ghost.rotation_degrees.y=placement_rotation
+		# When moving furniture, hide its old instance until confirmation or cancel.
+		if placed.has(object_id):placed[object_id].visible=false
+		for mesh in ghost.find_children("*","MeshInstance3D",true,false):
+			for index in mesh.mesh.get_surface_count():
+				var source: Material=mesh.get_active_material(index)
+				if source is StandardMaterial3D:
+					var translucent: StandardMaterial3D=source.duplicate()
+					translucent.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+					translucent.albedo_color.a=.62
+					mesh.set_surface_override_material(index,translucent)
 		place_at=ghost.position
 	else:
 		placement_mode=false;message("가구를 불러오지 못했어요. 다시 선택해 주세요.");return
-	message("바닥을 가리킨 뒤 클릭해 배치하세요 · R 회전 · Esc 취소")
+	message("빈 바닥을 가리켜 보세요 · 클릭해서 놓기 · R 회전")
+
+func rotate_placement(degrees: int) -> void:
+	if not placement_mode or pending:return
+	placement_rotation=posmod(placement_rotation+degrees,360)
+	if is_instance_valid(ghost):ghost.rotation_degrees.y=placement_rotation
+
+func cancel_placement() -> void:
+	placement_mode=false;placement_epoch+=1
+	if is_instance_valid(ghost):ghost.queue_free()
+	ghost=null
+	if placed.has(selected.get("id")) and is_instance_valid(placed[selected.id]):placed[selected.id].visible=true
 
 func view_input(event: InputEvent) -> void:
 	if placement_mode and event is InputEventMouseMotion:
@@ -646,6 +739,8 @@ func view_input(event: InputEvent) -> void:
 	if placement_mode and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:await commit_place()
 
 func job_status(state: String) -> String:
+	if not BuildMode.developer():
+		return {"queued":"만들기를 기다리고 있어요","planning":"상상을 설계하고 있어요","awaiting_confirmation":"완성할 준비가 됐어요","building":"가구를 만들고 있어요","submitting":"가구를 만들고 있어요","unknown":"제작 결과를 확인하고 있어요","ready":"가구 완성!","failed":"제작을 완료하지 못했어요 · 맡긴 별씨를 돌려드렸어요","cancelled":"제작을 취소했어요"}.get(state,"제작 상황을 확인하고 있어요")
 	return {"queued":"작업 대기","planning":"설계와 동작 코드 생성","awaiting_confirmation":"견적 확인 대기","building":"메시 생성 · 검증 · 조립","submitting":"Tripo 요청 전송","unknown":"요청 결과 확인 필요 · 중복 과금 방지를 위해 정지","ready":"완성","failed":"제작 실패 · 별씨 환불","cancelled":"제작 취소"}.get(state,state)
 
 func select_history(index: int) -> void:
@@ -691,9 +786,9 @@ func commit_place() -> void:
 	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation({"version":selected.version,"room":room,"x":place_at.x,"z":place_at.z,"rotation":placement_rotation}))
 	pending=false
 	if not reply.ok:message("여기에는 놓을 수 없어요 · "+reply.error);await refresh();return
-	placement_mode=false
-	if is_instance_valid(ghost):ghost.queue_free()
+	cancel_placement()
 	await refresh()
+	message("좋아요! 가구를 놓았어요.")
 
 func retrieve() -> void:
 	if pending or selected.is_empty():return
@@ -718,7 +813,7 @@ func paint(color: String, reset := false) -> void:
 	if reset and not inspected.get_meta("studio",false):message("기본 가구는 팔레트에서 색을 골라 주세요");return
 	pending=true
 	if inspected.get_meta("studio",false):
-		var target := "all" if part_choice.selected==0 else part_choice.get_item_text(part_choice.selected)
+		var target := "all" if part_choice.selected==0 else str(part_choice.get_item_metadata(part_choice.selected))
 		var response: Dictionary=await api.post("/v1/objects/"+selected.id+"/colors",api.mutation({"version":inspected.runtime_version,"part":target,"color":color,"reset":reset}))
 		if response.ok:
 			inspected.runtime_version=response.data.version;inspected.paint(response.data.colors)
@@ -757,12 +852,9 @@ func leave() -> void:
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():return
 	if event.physical_keycode==KEY_ESCAPE:
-		placement_mode=false;placement_epoch+=1
-		if is_instance_valid(ghost):ghost.queue_free()
-		ghost=null
+		cancel_placement()
 	if event.physical_keycode==KEY_R and placement_mode:
-		placement_rotation=(placement_rotation+90)%360
-		if is_instance_valid(ghost):ghost.rotation_degrees.y=placement_rotation
+		rotate_placement(90)
 	if event.physical_keycode==KEY_E:
 		if is_instance_valid(hero) and hero.position.z>3.6 and absf(hero.position.x)<1.5:leave()
 		else:interact_nearest()
@@ -803,10 +895,19 @@ func proximity() -> void:
 	proximity_pending=false
 
 func _process(delta: float) -> void:
+	if is_instance_valid(placement_tools):
+		placement_tools.visible=placement_mode
+		if placement_mode:
+			var problem := placement_problem(place_at)
+			placement_title.text="놓을 자리 고르기 · "+str(selected.get("name","가구"))
+			placement_feedback.text="이곳에 놓을 수 있어요 · %d°"%placement_rotation if problem.is_empty() else problem
+			placement_feedback.modulate=Color("4a6d50") if problem.is_empty() else Color("a25445")
+			place_button.disabled=pending or not problem.is_empty() or not is_instance_valid(ghost)
+	if is_instance_valid(floor_grid):floor_grid.visible=placement_mode and grid_toggle.button_pressed
 	if is_instance_valid(placement_marker):
 		placement_marker.visible=placement_mode
 		placement_marker.position=Vector3(place_at.x,0.065,place_at.z)
-		placement_marker.material_override.albedo_color=Color("87c7a7") if placement_problem(place_at).is_empty() else Color("d27566")
+		placement_marker.material_override.albedo_color=Color("87c7a7",.32) if placement_problem(place_at).is_empty() else Color("d27566",.32)
 	poll_time+=delta;auth_time+=delta
 	if poll_time>2.5:poll_time=0;poll_job()
 	if auth_time>20:auth_time=0;refresh()
