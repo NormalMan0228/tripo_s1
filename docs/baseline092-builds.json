@@ -1,0 +1,11 @@
+{
+  "version": "0.9.2",
+  "server_protocol": 6,
+  "godot": "4.7.2",
+  "client_sha256": {
+    "Tripothon.exe": "a9a54f5b18494dbdade8c6c588f9716c6eddf01597e1d7672b52f8ca057cfc81",
+    "Tripothon.pck": "5122b8ba468ba28745c7cd62aa13b2999bf6b3d7331de91a21aa159e04ee129c",
+    "Tripothon_Developer.exe": "4cf6cc857e976818fde3cfce9d4386a28e2d974d4352009ecd2687919a61b4d6",
+    "Tripothon_Developer.pck": "624164ac5a4765773a42b61cde14e309e26c02cbda2aa6f14ee9bdc529c10018"
+  }
+}

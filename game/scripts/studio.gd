@@ -4,6 +4,7 @@ const Assembly=preload("res://scripts/asset_assembly.gd")
 const Loader=preload("res://scripts/model_loader.gd")
 const Art=preload("res://scripts/art.gd")
 const BuildMode=preload("res://scripts/build_mode.gd")
+const ControllerProfile=preload("res://scripts/controller_profile.gd")
 var api: Node
 var viewport: SubViewport
 var view_container: SubViewportContainer
@@ -851,6 +852,8 @@ func leave() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():return
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus is LineEdit or focus is TextEdit:return
 	if event.physical_keycode==KEY_ESCAPE:
 		cancel_placement()
 	if event.physical_keycode==KEY_R and placement_mode:
@@ -915,18 +918,22 @@ func _process(delta: float) -> void:
 	if proximity_time>0.35:proximity_time=0;proximity()
 	if not is_instance_valid(hero):return
 	hero.external_motion=Vector2.ZERO
+	hero.external_velocity=Vector2.ZERO
 	if placement_mode:return
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is TextEdit or focus is LineEdit:return
-	var direction := Vector3(float(Input.is_physical_key_pressed(KEY_D))-float(Input.is_physical_key_pressed(KEY_A)),0,float(Input.is_physical_key_pressed(KEY_S))-float(Input.is_physical_key_pressed(KEY_W)))
+	var input_direction := Input.get_vector("move_left","move_right","move_forward","move_back")
+	var direction := Vector3(input_direction.x,0,input_direction.y)
 	if direction.length()>0:
-		var step := direction.normalized()*delta*2.8
+		var before: Vector3=hero.position
+		var step := direction.normalized()*delta*ControllerProfile.ROOM_WALK
 		var candidate: Vector3=hero.position+Vector3(step.x,0,0)
 		if not movement_blocked(candidate):hero.position=candidate
 		candidate=hero.position+Vector3(0,0,step.z)
 		if not movement_blocked(candidate):hero.position=candidate
 		hero.position.x=clampf(hero.position.x,-4.5,4.5);hero.position.z=clampf(hero.position.z,-4.5,4.65)
-	hero.external_motion=Vector2(direction.x,direction.z)
+		hero.external_velocity=Vector2(hero.position.x-before.x,hero.position.z-before.z)/maxf(delta,.001)
+		hero.external_motion=hero.external_velocity.normalized()
 
 func movement_blocked(at: Vector3) -> bool:
 	if room=="workshop" and absf(at.x+3.7)<1.15 and absf(at.z+3.1)<0.75:return true
@@ -934,7 +941,7 @@ func movement_blocked(at: Vector3) -> bool:
 		var item: Node3D=placed[id]
 		var size: Vector3=item.get_meta("size",Vector3(1.6,1.6,1.6))
 		var local := (at-item.position).rotated(Vector3.UP,-item.rotation.y)
-		if absf(local.x)<size.x*0.5+0.23 and absf(local.z)<size.z*0.5+0.23:return true
+		if absf(local.x)<size.x*0.5+ControllerProfile.BODY_RADIUS and absf(local.z)<size.z*0.5+ControllerProfile.BODY_RADIUS:return true
 	return false
 
 func placement_problem(at: Vector3) -> String:

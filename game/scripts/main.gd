@@ -3,6 +3,7 @@ extends Node3D
 const Art = preload("res://scripts/art.gd")
 const Loader = preload("res://scripts/model_loader.gd")
 const Player = preload("res://scripts/player.gd")
+const ControllerProfile=preload("res://scripts/controller_profile.gd")
 const Api = preload("res://scripts/api.gd")
 const Sound = preload("res://scripts/sound.gd")
 const Landscape = preload("res://scripts/world_detail.gd")
@@ -102,6 +103,9 @@ var chosen_difficulty := "standard"
 var town: Node3D
 var life: Node
 var camera_focus := Vector3.ZERO
+var camera_focus_ready := false
+var camera_zoom_target := ControllerProfile.CAMERA_DEFAULT
+var camera_zoom_active := false
 var developer_label: Label
 var developer_panel: Control
 
@@ -113,11 +117,7 @@ func _ready() -> void:
 	life=preload("res://scripts/village_life.gd").new()
 	life.app=self
 	add_child(life)
-	for action in {"move_left":KEY_A,"move_right":KEY_D,"move_forward":KEY_W,"move_back":KEY_S}:
-		if not InputMap.has_action(action): InputMap.add_action(action)
-		var event := InputEventKey.new()
-		event.physical_keycode = {"move_left":KEY_A,"move_right":KEY_D,"move_forward":KEY_W,"move_back":KEY_S}[action]
-		InputMap.action_add_event(action,event)
+	ControllerProfile.ensure_input()
 	var e := WorldEnvironment.new()
 	environment = Environment.new()
 	environment.background_mode = Environment.BG_COLOR
@@ -136,7 +136,7 @@ func _ready() -> void:
 	add_child(sun)
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 14.5
+	camera.size = ControllerProfile.CAMERA_DEFAULT
 	camera.current = true
 	add_child(camera)
 	var layer := CanvasLayer.new()
@@ -380,6 +380,8 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 
 func build_world(survival: bool) -> void:
 	world_epoch += 1
+	camera_focus_ready=false
+	camera_zoom_active=false
 	paused=false
 	results_shown=false
 	prior_day=1
@@ -411,6 +413,7 @@ func build_world(survival: bool) -> void:
 	object_root = Node3D.new()
 	world.add_child(object_root)
 	player = Player.new()
+	player.visual_only=survival
 	world.add_child(player)
 	player.apply_avatar(me.get("profile",{}).get("avatar",{}))
 	if not survival: spawn_villagers()
@@ -495,7 +498,7 @@ func build_world(survival: bool) -> void:
 	environment.background_color = Color("88bcb9")
 	sun.light_energy = 0.25
 	sun.light_color=Color("fff5e9")
-	camera.size = 14.5
+	camera.size = ControllerProfile.CAMERA_DEFAULT
 	follow_camera(1)
 
 func enter_village() -> void:
@@ -573,6 +576,7 @@ func toggle_drawer() -> void:
 	if not is_instance_valid(right): return
 	var opening: bool=not right.get_parent().visible
 	right.get_parent().visible=opening
+	if screen=="village":player.controls_enabled=world_movement_allowed()
 	if is_instance_valid(objective): objective.get_parent().get_parent().visible=not opening
 	if is_instance_valid(inspect_panel): inspect_panel.visible=opening
 	if is_instance_valid(inspect_view): inspect_view.render_target_update_mode=SubViewport.UPDATE_ALWAYS if opening else SubViewport.UPDATE_DISABLED
@@ -1071,9 +1075,9 @@ func intent(action: String, target := "") -> void:
 func tick_run() -> void:
 	if ticking or busy or paused or run.get("status","")!="active": return
 	ticking=true
-	var movement := Input.get_vector("move_left","move_right","move_forward","move_back")
+	var movement := movement_input()
 	var ready: bool=run.get("action_cooldown",0)<=0.01 and (pending_action!="attack" or run.get("attack_cooldown",0)<=0.01)
-	var payload := {"sequence":int(run.sequence)+1,"dx":movement.x,"dz":movement.y,"sprint":Input.is_physical_key_pressed(KEY_SHIFT),"action":pending_action if ready else "","target":pending_target if ready else ""}
+	var payload := {"sequence":int(run.sequence)+1,"dx":movement.x,"dz":movement.y,"sprint":world_movement_allowed() and Input.is_physical_key_pressed(KEY_SHIFT),"action":pending_action if ready else "","target":pending_target if ready else ""}
 	if ready:
 		pending_action=""
 		pending_target=""
@@ -1443,18 +1447,38 @@ func logout() -> void:
 
 func follow_camera(delta: float) -> void:
 	if not is_instance_valid(player): return
-	var target := player.position+Vector3(0,1.0,-0.55)
-	if camera_focus==Vector3.ZERO or delta>=1.0: camera_focus=target
-	else: camera_focus=camera_focus.lerp(target,minf(1,delta*4.5))
+	var target := player.position+ControllerProfile.CAMERA_FOCUS_OFFSET
+	if not camera_focus_ready or delta>=1.0:
+		camera_focus=target;camera_focus_ready=true
+	else: camera_focus=camera_focus.lerp(target,ControllerProfile.damping(ControllerProfile.CAMERA_RESPONSE,delta))
 	# One smoothed focus and a fixed offset keep pitch constant during movement.
 	# Independently smoothing position made the view nod on starts and stops.
-	camera.position=camera_focus+Vector3(0,8.8,16.5)
+	camera.position=camera_focus+ControllerProfile.CAMERA_OFFSET
 	camera.look_at(camera_focus)
+	if camera_zoom_active:
+		camera.size=lerpf(camera.size,camera_zoom_target,ControllerProfile.damping(10.0,delta))
+		if absf(camera.size-camera_zoom_target)<.005:
+			camera.size=camera_zoom_target;camera_zoom_active=false
+
+func text_input_active() -> bool:
+	var focus := get_viewport().gui_get_focus_owner()
+	return focus is LineEdit or focus is TextEdit
+
+func world_movement_allowed() -> bool:
+	if busy or text_input_active() or is_instance_valid(village_modal) or is_instance_valid(preview):return false
+	if is_instance_valid(right) and right.get_parent().visible:return false
+	if screen=="village":return true
+	return screen=="survival" and not paused and not results_shown and network_failures==0 and run.get("status","")=="active"
+
+func movement_input() -> Vector2:
+	return Input.get_vector("move_left","move_right","move_forward","move_back") if world_movement_allowed() else Vector2.ZERO
 
 func _process(delta: float) -> void:
 	follow_camera(delta)
 	if is_instance_valid(developer_label) and is_instance_valid(developer_panel) and developer_panel.visible:
 		developer_label.text="개발 화면 · F3 닫기\nFPS %d  |  %s\n위치 %.1f, %.1f\n서버 %s\nTripo %s" % [Engine.get_frames_per_second(),screen,player.position.x,player.position.z,api.base_url,"사용 가능" if me.get("studio_tripo_enabled",false) else "비활성"]
+		developer_label.text+="\n이동 %.2f m/s · 시야 %.1f\n입력 %s" % [player.locomotion_velocity.length(),camera.size,"허용" if world_movement_allowed() else "잠금"]
+		if is_instance_valid(player.locomotion_pose):developer_label.text+="\n보행 주기 %.2f초 · 접지 오차 %.1fcm" % [player.locomotion_pose.cycle_seconds,player.locomotion_pose.contact_error*100.0]
 	canopy_elapsed+=delta
 	if canopy_elapsed>0.08:
 		canopy_elapsed=0
@@ -1467,14 +1491,17 @@ func _process(delta: float) -> void:
 	if is_instance_valid(flame) and flame.visible:
 		flame.scale=Vector3(1.0+sin(Time.get_ticks_msec()*0.011)*0.07,1.0+sin(Time.get_ticks_msec()*0.015)*0.12,1.0)
 	if screen=="survival":
-		player.external_motion=Input.get_vector("move_left","move_right","move_forward","move_back") if run.get("status","")=="active" and not paused and network_failures==0 else Vector2.ZERO
 		player.sprinting=run.get("sprinting",false)
 		repeat_action+=delta
-		if repeat_action>=0.43 and not paused:
+		if repeat_action>=0.43 and world_movement_allowed():
 			repeat_action=0
 			if Input.is_physical_key_pressed(KEY_SPACE): intent("attack")
 			elif Input.is_physical_key_pressed(KEY_E): intent("harvest")
-		player.position=player.position.lerp(Vector3(run.get("x",0),0.03,run.get("z",0)),minf(delta*18,1))
+		var previous_position: Vector3=player.position
+		player.position=player.position.lerp(Vector3(run.get("x",0),0.03,run.get("z",0)),ControllerProfile.damping(18.0,delta))
+		player.external_velocity=Vector2(player.position.x-previous_position.x,player.position.z-previous_position.z)/maxf(delta,.001)
+		player.external_motion=player.external_velocity.normalized() if world_movement_allowed() else Vector2.ZERO
+		if paused or results_shown or network_failures>0:player.external_velocity=Vector2.ZERO
 		tick_elapsed+=delta
 		if tick_elapsed>=0.1:
 			tick_elapsed=0
@@ -1487,7 +1514,7 @@ func _process(delta: float) -> void:
 		environment.background_color=environment.background_color.lerp(Color("233b50") if night else Color("88bcb9"),delta)
 		update_harvest_hint()
 	elif screen=="village":
-		player.sprinting=Input.is_physical_key_pressed(KEY_SHIFT)
+		player.sprinting=world_movement_allowed() and Input.is_physical_key_pressed(KEY_SHIFT)
 		if is_instance_valid(objective):
 			var placed := 0
 			for obj in me.get("objects",[]):
@@ -1498,7 +1525,7 @@ func _process(delta: float) -> void:
 			else: objective.text="나의 마을 · 물건 %d개 배치\n숲에서 7일을 살아남으면\n새 물건을 만들 별씨를 받아요.\n\n돌문 앞에서 E · 탐험 시작" % placed
 			if not is_instance_valid(preview) and (not life.goal.is_empty() or not me.get("active_run_summary") is Dictionary): objective.text=life.goal_text()
 		if not is_instance_valid(preview):
-			player.controls_enabled=not is_instance_valid(village_modal) and not get_viewport().gui_get_focus_owner() is LineEdit
+			player.controls_enabled=world_movement_allowed()
 			if is_instance_valid(hint):
 				var npc := nearest_npc()
 				var activity: Dictionary=life.closest()
@@ -1574,9 +1601,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_pause()
 		return
 	if paused: return
+	if text_input_active():return
 	if screen in ["village","survival"] and event is InputEventMouseButton and event.pressed:
-		if event.button_index==MOUSE_BUTTON_WHEEL_UP: camera.size=maxf(12,camera.size-1)
-		if event.button_index==MOUSE_BUTTON_WHEEL_DOWN: camera.size=minf(26,camera.size+1)
+		if event.button_index in [MOUSE_BUTTON_WHEEL_UP,MOUSE_BUTTON_WHEEL_DOWN]:
+			if not camera_zoom_active:camera_zoom_target=camera.size
+			camera_zoom_target=clampf(camera_zoom_target+(-1 if event.button_index==MOUSE_BUTTON_WHEEL_UP else 1),ControllerProfile.CAMERA_MIN,ControllerProfile.CAMERA_MAX)
+			camera_zoom_active=true
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode==KEY_F3 and is_instance_valid(developer_panel):
 			developer_panel.visible=not developer_panel.visible
@@ -1586,6 +1616,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			message("소리를 껐습니다. M으로 다시 켤 수 있습니다." if sound.muted else "소리를 켰습니다.")
 		if screen in ["village","survival"] and event.physical_keycode==KEY_I:
 			toggle_drawer()
+			return
+		if is_instance_valid(right) and right.get_parent().visible:return
 		if screen=="survival":
 			match event.physical_keycode:
 				KEY_E: intent("harvest")
@@ -1619,11 +1651,13 @@ func close_village_modal() -> void:
 		village_modal.get_parent().remove_child(village_modal)
 		village_modal.queue_free()
 	village_modal=null
+	if is_instance_valid(player) and screen=="village":player.controls_enabled=world_movement_allowed()
 
 func modal_card(title: String) -> VBoxContainer:
 	close_village_modal()
 	cancel_preview()
 	village_modal=Control.new()
+	player.controls_enabled=false
 	village_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(village_modal)
 	var shade := ColorRect.new()
