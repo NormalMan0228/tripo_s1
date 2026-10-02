@@ -1,0 +1,22 @@
+; Open this file with Godot 4.7.2 (standard edition).
+config_version=5
+
+[application]
+config/name="Tripothon — Seven Nights"
+config/icon="res://assets/starseed.svg"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=800
+window/size/min_width=960
+window/size/min_height=640
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=false
+anti_aliasing/quality/msaa_3d=2
+environment/defaults/default_clear_color=Color(0.65, 0.81, 0.87, 1)

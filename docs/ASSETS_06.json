@@ -1,0 +1,300 @@
+{
+  "query": {
+    "inferenceIds": [],
+    "assetIds": [
+      "asset_cgnnjV4rKCMhxaCR5kKsjQM3",
+      "asset_HqqCnqJ1G86hCK7i1Vbf5gRr",
+      "asset_wqZCSR1cueNgPXZosZGMoyyi",
+      "asset_mBRYDh4govArTquKv55bUDFM",
+      "asset_3BvbfNrtjpnMzJJocunstQ1t",
+      "asset_Nf5FXLjMmF2YjKgvL7cXNoeJ",
+      "asset_GY53B8Gd7xj9YaYaJ9jht8Bm",
+      "asset_XGq4KrRi7bvcVa5AezfGV2QJ",
+      "asset_2e4o2Nc3RGUL9cqVNmham8f6",
+      "asset_o4iBaR4e44GFuLY49PFZBxjj",
+      "asset_T36DTnTBo6T55MhDhTrRLJ7M",
+      "asset_YBRLXWDKX1An7m5H7X3rvVBo",
+      "asset_GMRG44rTtmNbVmSjxkWAHNwX",
+      "asset_PfBhaRajZtvk1ixfXC1HEhC8",
+      "asset_cB8cSswyi2piJAr3i4ShameE",
+      "asset_9KbzDQXFgX4udL1wXbYXkeFb",
+      "asset_4eg9uKFjkG3FCrCgAbVmiiLs",
+      "asset_4UaRThfL4jWyh6M6J5KfXMyQ",
+      "asset_fDyyKQCqNBDcJB6tngQSd27U",
+      "asset_jahwUGLY12LTpZqhcemqVhMJ",
+      "asset_2jK74GPGLGSpb9myyxXvyEUb",
+      "asset_ss853o1pgJDKHGJmoCRAUD2d",
+      "asset_R8PkbZso9fQAfAoAqY4FLwLN",
+      "asset_Wc2ewBfctaEvm4jGJE8E4nMG",
+      "asset_8xB8NQ8Jr4egQRMfTjoYvJS2"
+    ],
+    "modelIds": []
+  },
+  "options": {
+    "fileNameTemplate": "<id>",
+    "archiveName": "tripothon-expansion-06",
+    "preferOriginal": false,
+    "flat": true
+  },
+  "count": 25,
+  "assets": [
+    {
+      "id": "asset_cgnnjV4rKCMhxaCR5kKsjQM3",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_8xB8NQ8Jr4egQRMfTjoYvJS2",
+      "path": "asset_cgnnjV4rKCMhxaCR5kKsjQM3.glb",
+      "generator": {
+        "name": "Tripo Segmentation v2"
+      }
+    },
+    {
+      "id": "asset_HqqCnqJ1G86hCK7i1Vbf5gRr",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_jahwUGLY12LTpZqhcemqVhMJ",
+      "path": "asset_HqqCnqJ1G86hCK7i1Vbf5gRr.glb",
+      "generator": {
+        "name": "Tripo Segmentation v2"
+      }
+    },
+    {
+      "id": "asset_wqZCSR1cueNgPXZosZGMoyyi",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_fDyyKQCqNBDcJB6tngQSd27U",
+      "path": "asset_wqZCSR1cueNgPXZosZGMoyyi.glb",
+      "generator": {
+        "name": "Tripo Segmentation v2"
+      }
+    },
+    {
+      "id": "asset_mBRYDh4govArTquKv55bUDFM",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_fDyyKQCqNBDcJB6tngQSd27U",
+      "path": "asset_mBRYDh4govArTquKv55bUDFM.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_3BvbfNrtjpnMzJJocunstQ1t",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_fDyyKQCqNBDcJB6tngQSd27U",
+      "path": "asset_3BvbfNrtjpnMzJJocunstQ1t.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_Nf5FXLjMmF2YjKgvL7cXNoeJ",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_fDyyKQCqNBDcJB6tngQSd27U",
+      "path": "asset_Nf5FXLjMmF2YjKgvL7cXNoeJ.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_GY53B8Gd7xj9YaYaJ9jht8Bm",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_fDyyKQCqNBDcJB6tngQSd27U",
+      "path": "asset_GY53B8Gd7xj9YaYaJ9jht8Bm.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_XGq4KrRi7bvcVa5AezfGV2QJ",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_s1FsXdYe2LyJMHNQpMVTcWhJ",
+      "path": "asset_XGq4KrRi7bvcVa5AezfGV2QJ.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_2e4o2Nc3RGUL9cqVNmham8f6",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_s1FsXdYe2LyJMHNQpMVTcWhJ",
+      "path": "asset_2e4o2Nc3RGUL9cqVNmham8f6.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_o4iBaR4e44GFuLY49PFZBxjj",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_s1FsXdYe2LyJMHNQpMVTcWhJ",
+      "path": "asset_o4iBaR4e44GFuLY49PFZBxjj.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_T36DTnTBo6T55MhDhTrRLJ7M",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_2jK74GPGLGSpb9myyxXvyEUb",
+      "path": "asset_T36DTnTBo6T55MhDhTrRLJ7M.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_YBRLXWDKX1An7m5H7X3rvVBo",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_2jK74GPGLGSpb9myyxXvyEUb",
+      "path": "asset_YBRLXWDKX1An7m5H7X3rvVBo.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_GMRG44rTtmNbVmSjxkWAHNwX",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_2jK74GPGLGSpb9myyxXvyEUb",
+      "path": "asset_GMRG44rTtmNbVmSjxkWAHNwX.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_PfBhaRajZtvk1ixfXC1HEhC8",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_2jK74GPGLGSpb9myyxXvyEUb",
+      "path": "asset_PfBhaRajZtvk1ixfXC1HEhC8.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_cB8cSswyi2piJAr3i4ShameE",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_jahwUGLY12LTpZqhcemqVhMJ",
+      "path": "asset_cB8cSswyi2piJAr3i4ShameE.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_9KbzDQXFgX4udL1wXbYXkeFb",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_jahwUGLY12LTpZqhcemqVhMJ",
+      "path": "asset_9KbzDQXFgX4udL1wXbYXkeFb.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_4eg9uKFjkG3FCrCgAbVmiiLs",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_jahwUGLY12LTpZqhcemqVhMJ",
+      "path": "asset_4eg9uKFjkG3FCrCgAbVmiiLs.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_4UaRThfL4jWyh6M6J5KfXMyQ",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_jahwUGLY12LTpZqhcemqVhMJ",
+      "path": "asset_4UaRThfL4jWyh6M6J5KfXMyQ.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_fDyyKQCqNBDcJB6tngQSd27U",
+      "tags": [],
+      "type": "txt23d",
+      "parentAsset": "asset_G1pzs5eDBsJu8AEJB8E9Ua1z",
+      "path": "asset_fDyyKQCqNBDcJB6tngQSd27U.glb",
+      "generator": {
+        "name": "Tripo P2 Text to 3D"
+      },
+      "prompt": "asset_G1pzs5eDBsJu8AEJB8E9Ua1z",
+      "negativePrompt": "weapon, backpack, pedestal, ground, cape, crossed limbs, bent knees, fused fingers, text, logo, scene, multiple characters",
+      "seed": 57433649
+    },
+    {
+      "id": "asset_jahwUGLY12LTpZqhcemqVhMJ",
+      "tags": [],
+      "type": "txt23d",
+      "parentAsset": "asset_UeH91ZoM9grWNXBDCJb1Gx5e",
+      "path": "asset_jahwUGLY12LTpZqhcemqVhMJ.glb",
+      "generator": {
+        "name": "Tripo P2 Text to 3D"
+      },
+      "prompt": "asset_UeH91ZoM9grWNXBDCJb1Gx5e",
+      "negativePrompt": "weapon, backpack, pedestal, ground, cape, crossed limbs, bent knees, fused fingers, text, logo, scene, multiple characters",
+      "seed": 1834023795
+    },
+    {
+      "id": "asset_2jK74GPGLGSpb9myyxXvyEUb",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_8xB8NQ8Jr4egQRMfTjoYvJS2",
+      "path": "asset_2jK74GPGLGSpb9myyxXvyEUb.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_ss853o1pgJDKHGJmoCRAUD2d",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_8xB8NQ8Jr4egQRMfTjoYvJS2",
+      "path": "asset_ss853o1pgJDKHGJmoCRAUD2d.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_R8PkbZso9fQAfAoAqY4FLwLN",
+      "tags": [],
+      "type": "3d23d",
+      "parentAsset": "asset_8xB8NQ8Jr4egQRMfTjoYvJS2",
+      "path": "asset_R8PkbZso9fQAfAoAqY4FLwLN.glb",
+      "generator": {
+        "name": "Tripo Rigging 1.0 [Biped]"
+      }
+    },
+    {
+      "id": "asset_Wc2ewBfctaEvm4jGJE8E4nMG",
+      "tags": [],
+      "type": "txt23d",
+      "parentAsset": "asset_JV1qTGi1PQmSYBaXUjrQP35m",
+      "path": "asset_Wc2ewBfctaEvm4jGJE8E4nMG.glb",
+      "generator": {
+        "name": "Meshy 7.1 - Text-to-3D"
+      },
+      "prompt": "asset_JV1qTGi1PQmSYBaXUjrQP35m"
+    },
+    {
+      "id": "asset_8xB8NQ8Jr4egQRMfTjoYvJS2",
+      "tags": [],
+      "type": "img23d",
+      "parentAsset": "asset_GMk13nSmyBDeh968kQKrTtrk",
+      "path": "asset_8xB8NQ8Jr4egQRMfTjoYvJS2.glb",
+      "generator": {
+        "name": "Hunyuan 3D 2.1"
+      },
+      "seed": 1890725891
+    }
+  ]
+}

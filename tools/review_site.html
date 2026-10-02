@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tripothon · 제작 검토실</title>
+<style>
+:root{--bg:#142c2b;--panel:#203e3a;--ink:#f0ebdf;--muted:#c2cfc0;--gold:#e9bb68;--line:#4a6559}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 'Malgun Gothic',system-ui,sans-serif}button,input,select{font:inherit}button,a,select,input{touch-action:manipulation}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--gold);outline-offset:4px}a{color:#e9cf91}header{max-width:1280px;margin:auto;padding:36px 28px 20px}header small{letter-spacing:.16em;color:var(--gold)}h1{font-size:clamp(28px,4vw,46px);line-height:1.25;margin:12px 0}h2{font-size:24px;margin:0 0 16px}h3{font-size:18px;margin:0 0 10px}p{margin:10px 0 18px}.muted{color:var(--muted)}.shell{max-width:1280px;margin:auto;padding:0 28px 50px}nav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 26px}button{background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:11px 18px;border-radius:9px}button[aria-selected=true],button[aria-pressed=true]{background:var(--gold);color:#172b26;border-color:var(--gold)}[hidden]{display:none!important}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.card{background:var(--panel);padding:24px;border-radius:18px}.hero{display:grid;grid-template-columns:1.25fr 1fr;gap:28px;align-items:center}.hero img{width:100%;border-radius:18px}img,video{max-width:100%;display:block}figure{margin:0}figcaption{color:var(--muted);padding:10px 0;font-size:14px}.wide{width:100%;border-radius:12px}.media{display:grid;gap:30px}.metric{font-size:28px;color:var(--gold);font-variant-numeric:tabular-nums}.line{border-top:1px solid var(--line);margin:26px 0}.flow{display:flex;flex-wrap:wrap;gap:10px;margin:24px 0}.flow button{flex:1 1 140px}.stage{min-height:210px;padding:25px;background:var(--panel);border-radius:16px}.stage strong{color:var(--gold)}label{display:block;margin-bottom:14px}select,input[type=number]{display:block;width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:var(--bg)}input[type=checkbox]{width:18px;height:18px;vertical-align:middle;margin-right:10px}table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}th{color:var(--gold)}.scroll{overflow:auto}ul{padding-left:24px}li{margin:8px 0}.quote{font-size:36px;font-variant-numeric:tabular-nums;color:var(--gold)}.compact{font-size:14px}details{padding:16px 0;border-bottom:1px solid var(--line)}summary{cursor:pointer}footer{color:var(--muted);margin-top:30px;font-size:13px}.pill{display:inline-block;padding:3px 9px;background:#355449;border-radius:20px;margin:0 4px 6px 0;font-size:13px}code{background:#112521;padding:2px 5px;border-radius:4px}pre{white-space:pre-wrap;font-size:13px;max-height:300px;overflow:auto}.checks{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.checks>div{padding:16px;border-left:3px solid var(--gold)}.legend{color:var(--muted);font-size:14px}kbd{border:1px solid var(--line);border-radius:4px;padding:1px 5px;background:#233d37}@media(max-width:760px){.grid,.hero,.checks{grid-template-columns:1fr}header{padding:24px 18px 18px}.shell{padding:0 18px 30px}.card{padding:18px}nav button{flex:1 1 120px}th,td{padding:9px}.quote{font-size:30px}}
+</style>
+</head>
+<body>
+<header><small>TRIPOTHON / DEVELOPMENT REVIEW / 0.8.1</small><h1>일곱 밤을 지나,<br>나만의 물건이 있는 마을로.</h1><p class="muted">실제 실행 화면 · 생성 결과 · 비용 근거 · 아직 남은 일</p></header>
+<main class="shell">
+<nav role="tablist" aria-label="검토 내용">
+<button role="tab" id="tab-game" aria-controls="game" aria-selected="true">게임과 실행</button>
+<button role="tab" id="tab-flow" aria-controls="flow" aria-selected="false">생성 흐름</button>
+<button role="tab" id="tab-assets" aria-controls="assets" aria-selected="false">정적·동적 비교</button>
+<button role="tab" id="tab-cost" aria-controls="cost" aria-selected="false">비용 계산</button>
+<button role="tab" id="tab-models" aria-controls="models" aria-selected="false">모델 실험</button>
+</nav>
+<section id="game" role="tabpanel" aria-labelledby="tab-game">
+<div class="hero"><img src="home-exterior.png" alt="실제 Godot 마을의 새 집 외관"><div><h2>같은 캐릭터로 마을과 실내를 잇습니다.</h2><p>Explorer B의 원본 얼굴과 hand-v4를 기준으로 걷기·달리기·도구 장착을 연결했습니다. 마을의 집과 공방에 들어가 가구를 만들고, 놓고, 색칠합니다.</p><p><span class="pill">Godot 4.7.2</span><span class="pill">FastAPI</span><span class="pill">SQLite</span><span class="pill">Tripo v3</span></p><p><code>Open_Studio.cmd</code>로 실제 생성된 비교 가구를 확인하고, <code>Play.cmd</code>로 마을과 생존 게임을 실행합니다.</p></div></div>
+<div class="checks"><div><strong>7일 생존</strong><p>세 이야기 장을 각각 421초 이상 실제 플레이. 목표 달성·첫 완료 보상 78/99/124별씨·중복 수령 거부 확인.</p></div><div><strong>나의 공간</strong><p>집/공방/마을 배치, 회전, 이동, 회수, 부품 색칠과 저장 복원.</p></div><div><strong>생성된 동작</strong><p>LLM이 만든 함수와 이벤트를 서버가 검증하고, 게임의 부품에 연결.</p></div></div>
+<div class="grid"><figure><img class="wide" src="explorer-b-tool.png" alt="원본 얼굴과 손 메시를 유지한 B형 캐릭터의 도구 장착"><figcaption>개발자 제작 캐릭터. 얼굴 리깅을 새로 만들지 않았으며 손 원본 표면을 유지합니다. 전문 모션 캡처 수준으로 완성된 동작은 아닙니다.</figcaption></figure><figure><img class="wide" src="studio-binding.png" alt="부품 위치, 방향, 회전축과 크기를 수정하는 실제 공방"><figcaption>생성 결과를 다시 결제하지 않고 위치·축을 조정할 수 있습니다. 메시 자체에 붙어 나온 불필요한 부품은 이 조정만으로 지워지지 않습니다.</figcaption></figure></div>
+<figure><img src="story-journal.png" alt="실제 게임의 이야기 수첩"><figcaption>숲 → 채석장 → 서리 지역의 세 장. 서버가 생존·제작 목표와 첫 완료 보상을 검증합니다. 별도 전용 지형을 만든 장편 캠페인은 아닙니다.</figcaption></figure><details><summary>직접 확인할 순서</summary><ol><li>공방 보관함에서 정적 상자와 열리는 상자를 선택합니다.</li><li>‘사용’으로 뚜껑을 움직이고 전체 또는 부품 색상을 바꿉니다.</li><li>‘내 집’에서 바닥에 배치합니다. <kbd>R</kbd> 회전, <kbd>Esc</kbd> 취소입니다.</li><li>집을 나갔다가 다시 들어와 위치와 색이 유지되는지 확인합니다.</li><li>마을 돌문에서 생존 지역과 난이도를 선택합니다. <kbd>WASD</kbd> 이동, <kbd>E</kbd> 채집, <kbd>Q</kbd> 음식, <kbd>F</kbd> 모닥불입니다.</li></ol></details>
+<div class="grid"><figure><img src="region-quarry.png" alt="층암과 둥근 수관으로 바꾼 채석장"><figcaption>노을 채석장. 서버 장애물 위치와 반경을 유지한 개발자 제작 층암입니다.</figcaption></figure><figure><img src="region-frost.png" alt="얼음 기둥과 눈 덮인 수관이 있는 서리 분지"><figcaption>서리빛 분지. 같은 플레이 규칙에 지역별 지형 피해와 재료·보상 배율이 적용됩니다.</figcaption></figure></div><details><summary>완료되지 않은 범위</summary><p>공개 HTTPS 서비스·운영 DB 이전, 실시간 멀티플레이, 장편 스토리와 전용 지형, UV 브러시 칠하기, 임의 생물의 얼굴/관절 자동 리깅, 생성물의 완전한 의미·시각 검수는 남아 있습니다. 연속 장식 애니메이션의 시간은 클라이언트에서 진행되므로 서버가 모든 프레임을 시뮬레이션하는 구조는 아닙니다.</p></details>
+</section>
+<section id="flow" role="tabpanel" aria-labelledby="tab-flow" hidden>
+<h2>플레이어 생성에는 Blender가 들어가지 않습니다.</h2><p class="muted">각 단계를 누르면 무엇을 만들고, 누가 검사하는지 볼 수 있습니다.</p>
+<div class="flow" id="steps"></div><div class="stage" id="stage" aria-live="polite"></div>
+<div class="grid"><div class="card"><h3>동적인 부분</h3><p>LLM은 부품 이름·계층·위치·회전축과 새로운 함수 이름/인수/계산/이벤트를 만듭니다. 예를 들어 <code>set_open(x)</code>을 생성하고 뚜껑의 동작에 연결할 수 있습니다.</p></div><div class="card"><h3>미리 정한 실행 범위</h3><p>엔진의 회전·수직 이동·빛·색 제어는 고정된 안전한 연산입니다. 생성된 함수는 이 연산들을 조합합니다. 생성 코드에서 파일, 네트워크, 돈, 소유권이나 운영 DB를 조작할 수 없습니다.</p></div></div>
+<div class="line"></div><h3>개발자 에셋은 별도 경로</h3><p>컨셉 이미지 → Tripo/개발자 모델링 → Blender의 리깅·애니메이션·환경 아트 → Godot 빌드. Explorer B와 집은 이 경로의 일반 에셋이고, 플레이어 보상으로 생성한 가구는 소유권을 가진 서버 자산입니다.</p>
+<div class="grid"><figure><img src="design-preview-chest.png" alt="유료 메시 생성 전 도형으로 뚜껑 움직임을 확인하는 창"><figcaption>설계 단계에서 도형으로 미리 확인합니다. 실제 Tripo 외형을 대신하는 결과가 아닙니다.</figcaption></figure><figure><img src="generated-controls.png" alt="생성된 함수의 이름과 인수를 읽어 만든 숫자 조작 UI"><figcaption>함수 인수로 숫자 입력칸을 구성하고 서버에서 호출합니다. 계산용 함수는 반환값만 제공하며, 모든 함수가 눈에 보이는 동작을 일으키는 것은 아닙니다.</figcaption></figure></div>
+</section>
+<section id="assets" role="tabpanel" aria-labelledby="tab-assets" hidden>
+<div class="card"><h3>추가 실험: 그림을 함께 전달한 상자</h3><p>Luna high + H3, 정적/동적 실제 결과와 이전 결과를 포함한 17개 가구의 모델·effort·부품·텍스처·비용 명세입니다.</p><a href="picture-experiment/index.html">참고 그림과 생성 결과, 전체 명세 보기</a></div>
+<div class="media"><figure><video class="wide" controls preload="none" poster="h3-furniture-showcase.png" src="h3-furniture-showcase.mp4"></video><figcaption>H3: 정적 메시 10 / 텍스처 20, 두 부품 동적 메시 20 / 텍스처 40크레딧. 저렴하지만 본체에 고정 뚜껑이 함께 생성된 사례입니다.</figcaption></figure><figure><video class="wide" controls preload="none" poster="furniture-showcase.png" src="furniture-showcase.mp4"></video><figcaption>P2: 정적 메시 100 / 텍스처 110, 두 부품 동적 메시 200 / 텍스처 220크레딧. 풍차 본체에도 불필요한 날개가 생겼으므로 완벽한 부품 분리가 아닙니다.</figcaption></figure><figure><video class="wide" controls preload="none" poster="repaired-furniture-showcase.png" src="repaired-furniture-showcase.mp4"></video><figcaption>H3 본체 수정: 이미지 보정 5 + 이미지→메시 20을 추가로 사용해 고정 뚜껑을 제거했습니다. 최초 생성 20까지 합친 실험 총액은 45크레딧입니다.</figcaption></figure></div>
+</section>
+<section id="cost" role="tabpanel" aria-labelledby="tab-cost" hidden>
+<h2>제공사 크레딧과 게임 재화를 따로 계산합니다.</h2>
+<div class="grid"><form class="card" id="calculator"><label>모델<select id="model"><option value="h3">H3 · 일반 가구</option><option value="p2">P2 · 높은 생성 단가</option></select></label><label>움직임<select id="motion"><option value="static">정적 · 전체 메시 하나</option><option value="dynamic">동적 · 움직이는 부품 조립</option></select></label><label>부품 수<input id="parts" type="number" min="1" max="8" value="1" disabled></label><label><input id="texture" type="checkbox">텍스처 포함</label><label><input id="reference" type="checkbox">참고 이미지 사용</label><label><input id="refine" type="checkbox" disabled>부품별 참고 이미지를 먼저 보정</label></form><div class="card" aria-live="polite"><h3>예상 Tripo 비용</h3><div class="quote" id="quote"></div><p id="money"></p><h3>게임의 최종 견적</h3><div class="metric" id="stars"></div><p id="explain" class="muted"></p><p class="compact">텍스트 생성 비교와 H3 이미지 보정 1부품 경로는 실측했습니다. 다른 조합은 공개 요금 기반 예상입니다. 실패·재시도·LLM·호스팅 비용은 별도이며, 이는 현금 결제 내역이 아닙니다.</p></div></div>
+<p class="legend">기본 환산: 예상 Tripo 1크레딧당 1별씨, 최소 설계 예약금 20/40별씨 + 동적 10별씨. 서버 설정으로 조정할 수 있으며 최종 견적 확인 전에는 유료 생성을 시작하지 않습니다.</p>
+<div class="scroll"><table><thead><tr><th>실측 경로</th><th>Tripo 크레딧</th><th>비고</th></tr></thead><tbody><tr><td>H3 정적 메시 / 텍스처</td><td>10 / 20</td><td>텍스트 입력, 1부품</td></tr><tr><td>H3 동적 메시 / 텍스처</td><td>20 / 40</td><td>본체+뚜껑, 최초 결과</td></tr><tr><td>P2 정적 메시 / 텍스처</td><td>100 / 110</td><td>텍스트 입력, 1부품</td></tr><tr><td>P2 동적 메시 / 텍스처</td><td>200 / 220</td><td>본체+뚜껑</td></tr><tr><td>참고 이미지 보정 → H3 메시</td><td>25</td><td>이미지 5 + 3D 20</td></tr></tbody></table></div>
+<p class="muted" id="spend"></p><p><a href="https://developers.tripo3d.com/en/pricing">Tripo 공식 가격</a> · 공식 100크레딧=$1, 원화 표시는 $1=1,400원 가정이며 세금 제외.</p>
+</section>
+<section id="models" role="tabpanel" aria-labelledby="tab-models" hidden><h2>작은 가구 과제를 실제 모델로 실행했습니다.</h2><p>상자·꽃 조명·시계에 대해 문법·실행과 요청 동작을 따로 검사합니다. 높은 effort가 항상 좋은 결과를 보장하지는 않습니다. 각 설정 3과제의 소규모 비교이며 부품명 휴리스틱의 한계가 있습니다.</p><p class="muted">전부 로컬 CLI에서 실행한 Codex 구독 실험입니다. 모델 추론은 원격 서비스에서 처리되며 PC에 모델 가중치를 설치한 것은 아닙니다. API 환산액은 CLI의 맥락 토큰까지 포함한 참고치이고, 실제 GPT API 결제액은 0입니다. v1은 계약 설명에 누락이 있어 v2와 같은 조건으로 합치지 않습니다.</p><figure><video controls preload="metadata" poster="model-gallery.png" src="model-gallery.mp4"></video><figcaption>저장된 실제 출력 12개를 Godot에서 동시 실행했습니다. 각 열의 모델/effort가 다르며 도형 외형과 회전축 배치도 서로 다릅니다. 동작 검사 통과가 시각 품질을 보증하지 않는다는 점을 확인할 수 있습니다.</figcaption></figure><div class="card"><h3>같은 조건의 150회 종합 비교</h3><p>반복 실험과 실제 수행한 수정 비용을 함께 봅니다. 초기 계약이 달랐던 v1과 추가 가구 과제는 분리했습니다.</p><a href="model-comparison/index.html">실패·수정·성공당 환산 비용 비교표</a></div><div class="card"><h3>짧은 검사 이후에도 남는 오류</h3><p>60초 상태 누적과 반복 클릭, 큰 시간값을 추가 검사합니다. 기존 비교 점수는 보존하고 별도 기준으로 재검사했습니다.</p><a href="publication-gate/index.html">추가 공개 검사와 실패 원인</a></div><div class="card"><h3>조건을 골라 비교하기</h3><p>한 번에 같은 실험 조건만 표시합니다. 성공 점수와 비용을 함께 보세요.</p><div class="grid"><label>실험 조건<select id="cohort-filter"></select></label><label>모델<select id="model-filter"><option value="all">모든 모델</option></select></label><label>추론 effort<select id="effort-filter"><option value="all">모든 effort</option></select></label><label>정렬<select id="sort-filter"><option value="cost">낮은 환산 비용부터</option><option value="success">동작 충족 비율부터</option><option value="time">짧은 응답 시간부터</option></select></label></div><p id="cohort-note" class="muted" aria-live="polite"></p><div class="scroll"><table><thead><tr><th>모델</th><th>effort</th><th>실행 통과</th><th>동작 충족</th><th>평균 초</th><th>평균 환산 원</th><th>사용량 확인</th></tr></thead><tbody id="comparison-rows"></tbody></table></div><p><a id="cohort-details" href="model-benchmark-v2/index.html">해당 실험의 원본과 실패 내역</a></p></div><figure><video controls preload="none" poster="reference-model-gallery.png" src="reference-model-gallery.mp4"></video><figcaption>같은 참고 이미지를 전달한 high 설정 4모델의 실제 설계 12개. 색·부품 위치·축·비율이 다릅니다. 메시 생성 전 도형 미리보기이며 최종 Tripo 외형 재현 비교가 아닙니다.</figcaption></figure><div id="model-reports"></div></section>
+<footer id="stamp"></footer>
+</main>
+<script type="application/json" id="review-data">__REVIEW_DATA__</script>
+<script>
+const data=JSON.parse(document.getElementById('review-data').textContent);
+document.querySelectorAll('[role=tab]').forEach(button=>button.addEventListener('click',()=>{
+ document.querySelectorAll('[role=tab]').forEach(b=>b.setAttribute('aria-selected',String(b===button)));
+ document.querySelectorAll('[role=tabpanel]').forEach(p=>p.hidden=p.id!==button.getAttribute('aria-controls'));
+ document.querySelectorAll('video').forEach(v=>v.pause());
+}));
+const steps=[['1 · 요청','텍스트와 그림','플레이어가 원하는 가구, 움직임, 메시/텍스처 옵션을 보냅니다. 이미지 크기와 요청 한도는 서버가 검사합니다. API 키는 게임으로 전달하지 않습니다.'],['2 · 설계','새 부품·함수·분류','LLM이 정적 1부품 또는 최대 8부품과 숫자 함수/이벤트 코드를 만듭니다. 기존 DB 분류를 참고하고 새 분류는 완성품 등록 때 추가합니다. 잘못된 설계는 한 번만 수정 요청합니다.'],['3 · 확인','예상 비용과 실행 검사','구조·함수·자원 한도를 검사하고 부품 수와 모델별 비용을 표시합니다. 도형으로 클릭·접근·이탈 동작을 미리 볼 수 있습니다. 확인 시 별씨가 충분해야 유료 요청을 시작합니다. 취소하면 예약 별씨를 돌려줍니다.'],['4 · 생성','Tripo 부품 메시','텍스트→3D 또는 이미지→3D를 사용합니다. 이미지 보정을 선택하면 각 부품 참고 이미지를 먼저 만듭니다. 요청 결과가 불명확하면 재전송하지 않고 멈춥니다.'],['5 · 등록','검증된 파일과 내 소유물','내장 GLB·참조·수치·이미지·용량 예산을 확인하고 해시를 저장합니다. DB에 물건 소유자, 원본 설계, 생성 함수, 실제 비용을 기록합니다. 시각 품질은 별도 확인이 필요합니다.'],['6 · 플레이','불러오기·동작·꾸미기','Godot가 인증된 부품을 메모리에 불러오고 회전축에 연결합니다. 사용/색칠/배치/부품 맞춤은 서버가 소유권과 버전을 검사해 저장합니다. 이미 받은 메시의 복사 자체를 완전히 막지는 못합니다.']];
+const stepsRoot=document.getElementById('steps'), stage=document.getElementById('stage');
+steps.forEach((step,i)=>{const button=document.createElement('button');button.type='button';button.textContent=step[0];button.setAttribute('aria-pressed',String(i===0));button.addEventListener('click',()=>selectStep(i));stepsRoot.appendChild(button)});
+function selectStep(index){[...stepsRoot.children].forEach((b,i)=>b.setAttribute('aria-pressed',String(i===index)));stage.replaceChildren();const h=document.createElement('h3');h.textContent=steps[index][1];const p=document.createElement('p');p.textContent=steps[index][2];stage.append(h,p)}selectStep(0);
+const byId=id=>document.getElementById(id);
+function calculate(){const dynamic=byId('motion').value==='dynamic';byId('parts').disabled=!dynamic;if(!dynamic)byId('parts').value=1;const parts=Math.min(8,Math.max(1,Number(byId('parts').value)||1));const textured=byId('texture').checked,reference=byId('reference').checked;byId('refine').disabled=!reference;if(!reference)byId('refine').checked=false;const refine=byId('refine').checked;const image=reference&&(parts===1||refine);const h3=byId('model').value==='h3';const unit=(h3?10+(image?10:0):100)+(textured?10:0)+(refine?5:0);const total=unit*parts;const base=(textured?40:20)+(dynamic?10:0);byId('quote').textContent=total+' 크레딧';byId('money').textContent='$'+(total*.01).toFixed(2)+' 상당 · 약 '+(total*14).toLocaleString()+'원';byId('stars').textContent=Math.max(base,total)+' 별씨';byId('explain').textContent='설계 예약 '+base+' 별씨 + 확인 때 '+Math.max(0,total-base)+' 별씨. '+parts+'부품 × '+unit+'크레딧.'+(reference&&parts>1&&!refine?' 이 경우 이미지를 LLM이 해석하고 부품별 텍스트로 3D를 요청합니다.':'')}
+byId('calculator').addEventListener('input',calculate);byId('calculator').addEventListener('submit',e=>e.preventDefault());calculate();
+byId('spend').textContent='이번 연속 실험의 실제 차감 합계 '+data.tripo_measured_spend.toLocaleString()+'크레딧 · 마지막 잔액 확인 '+data.tripo_balance.toLocaleString()+'크레딧. 현재 실시간 잔액 조회 화면은 아닙니다.';
+data.cohorts.forEach(cohort=>{const div=document.createElement('div');div.className='card';div.style.marginBottom='20px';const h=document.createElement('h3');h.textContent=cohort.name+' · '+cohort.trials+'회';div.append(h);const link=document.createElement('a');link.href=cohort.name+'/index.html';link.textContent='설정별 점수·환산 비용·실패 결과 보기';div.append(link);const p=document.createElement('p');p.className='muted';p.textContent=cohort.summary.length+'개 모델/effort 조합 · 사용량이 없는 실행은 비용 미확인으로 표시';div.append(p);byId('model-reports').append(div)});
+
+const cohortNames={
+ 'model-benchmark':'초기 계약 · 78회 (다른 조건)',
+ 'model-benchmark-v2':'기본 비교 · 4모델 / 여러 effort',
+ 'model-benchmark-v2-extra':'추가 5.6 Luna / Sol 비교',
+ 'model-benchmark-v2-ultra':'높은 effort 추가 비교',
+ 'model-benchmark-repeat-1':'동일 과제 반복 1',
+ 'model-benchmark-repeat-2':'동일 과제 반복 2',
+ 'model-benchmark-variety':'추가 가구 4종 · 48회',
+ 'model-benchmark-structured-pilot':'형식 강제 · 예비 실험',
+ 'model-benchmark-structured-v3':'형식 강제 · 6모델 / 36회',
+ 'model-benchmark-publication-v2':'현재 공개 검사 + 최대 1회 수정',
+ 'model-benchmark-publication-max':'높은 effort · 강화 공개 검사',
+ 'model-benchmark-repair-feedback-v3':'오류별 수정 안내 개선 · Luna high',
+ 'model-benchmark-structured-publication':'형식 강제 + 현재 공개 검사 + 최대 1회 수정',
+ 'model-benchmark-image-reference':'참고 이미지 + 현재 공개 검사'};
+const cohortSelect=byId('cohort-filter'),modelSelect=byId('model-filter'),effortSelect=byId('effort-filter');
+const modelsSeen=new Set(),effortsSeen=new Set();
+for(const cohort of data.cohorts){const o=document.createElement('option');o.value=cohort.name;o.textContent=cohortNames[cohort.name]||cohort.name;cohortSelect.append(o);for(const row of cohort.summary){modelsSeen.add(row.model);effortsSeen.add(row.effort)}}
+for(const [select,values] of [[modelSelect,modelsSeen],[effortSelect,effortsSeen]])for(const value of values){const o=document.createElement('option');o.value=value;o.textContent=value;select.append(o)}
+if(data.cohorts.some(c=>c.name==='model-benchmark-publication-v2'))cohortSelect.value='model-benchmark-publication-v2';
+function compareModels(){
+ const cohort=data.cohorts.find(c=>c.name===cohortSelect.value);if(!cohort)return;
+ let rows=cohort.summary.filter(r=>(modelSelect.value==='all'||r.model===modelSelect.value)&&(effortSelect.value==='all'||r.effort===effortSelect.value));
+ const sort=byId('sort-filter').value;rows.sort((a,b)=>sort==='success'?b.semantic_pass/b.trials-a.semantic_pass/a.trials:sort==='time'?a.mean_seconds-b.mean_seconds:(a.mean_api_equivalent_krw??Infinity)-(b.mean_api_equivalent_krw??Infinity));
+ const body=byId('comparison-rows');body.replaceChildren();for(const row of rows){const tr=document.createElement('tr');for(const value of [row.model,row.effort,row.runtime_pass+'/'+row.trials,row.semantic_pass+'/'+row.trials,row.mean_seconds,row.mean_api_equivalent_krw??'미확인',row.usage_reported+'/'+row.trials]){const td=document.createElement('td');td.textContent=String(value);tr.append(td)}body.append(tr)}
+ if(!rows.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=7;td.textContent='이 조건으로 실행한 결과가 없습니다.';tr.append(td);body.append(tr)}
+ byId('cohort-details').href=cohort.name+'/index.html';
+ byId('cohort-note').textContent=cohort.trials+'회 저장 결과 · '+(cohort.name.includes('publication')||cohort.name.includes('image-reference')||cohort.name.includes('repair-feedback')?'강화 공개 검사와 실제 수정 호출까지 합산. ':cohort.name.includes('repairs')?'최초 실패 사례만의 회복 실험. ':'최초 출력 기준, 별도 수정 실험은 합치지 않음. ')+'평균 환산 금액은 과금 청구서가 아니며 실제 GPT API 결제는 0원입니다. 요청 동작 검사에는 시각 품질 점수가 포함되지 않습니다.';
+}
+for(const id of ['cohort-filter','model-filter','effort-filter','sort-filter'])byId(id).addEventListener('change',compareModels);compareModels();
+
+byId('stamp').textContent='검토 자료 갱신 '+data.updated+' · 로컬 개발 증거 모음. 계정·키·DB는 이 폴더에 포함하지 않습니다.';
+</script>
+</body></html>

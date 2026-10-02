@@ -1,0 +1,7 @@
+.tools
+artifacts
+server-data
+.env*
+game/.godot
+**/__pycache__
+.git
