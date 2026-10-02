@@ -67,6 +67,11 @@ if [[ ! -e ops/production.env ]]; then
         ops/production.env.example > ops/production.env
 fi
 chmod 0600 ops/production.env
+configured_domain=$(sed -n 's/^TRIPOTHON_DOMAIN=//p' ops/production.env)
+if [[ ! $configured_domain =~ ^[A-Za-z0-9.-]+$ ]]; then
+    echo 'Set one plain TRIPOTHON_DOMAIN value in ops/production.env.' >&2
+    exit 1
+fi
 
 install -m 0700 -d ops/secrets
 if [[ ! -e ops/secrets/registration-code ]]; then
@@ -80,6 +85,6 @@ compose=(docker compose --env-file ops/production.env \
 "${compose[@]}" config --quiet
 "${compose[@]}" up -d --build
 
-printf 'Demo URL: https://%s/health\n' "$domain"
+printf 'Demo URL: https://%s/health\n' "$configured_domain"
 echo 'AI payment remains disabled; no Tripo or OpenAI keys were installed.'
 echo 'The private invitation code is in ops/secrets/registration-code on this VM.'
