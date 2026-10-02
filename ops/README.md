@@ -12,6 +12,8 @@ Google Cloud 콘솔에서 2단계 인증과 무료 체험판/결제 계정을 �
 
 Debian 12 VM에서 `sudo apt-get update && sudo apt-get install -y git`으로 Git을 설치하고 저장소의 온라인 서버 브랜치를 체크아웃한 다음 `sudo bash ops/bootstrap-gcp-free.sh`를 실행한다. 스크립트는 공식 Docker 저장소에서 Engine/Compose를 설치하고, 기존 부팅 디스크에 스왑 1GB를 만들고, 공인 IP 기반 `sslip.io` 주소·비공개 초대 코드를 생성해 무료 VM용 Compose 구성을 시작한다. 기존 `ops/production.env`와 초대 코드는 덮어쓰지 않는다. 실제 접속 주소를 출력하지만 초대 코드는 출력하지 않으므로 VM에서 별도로 안전하게 확인한다. 먼저 Google Cloud 방화벽에서 80/443을 허용해야 TLS 인증서 발급이 성공한다.
 
+배포 후 VM에서 `sudo python3 ops/smoke_live.py`를 실행하면 HTTPS로 임시 계정을 만들고 API 컨테이너를 재시작한 뒤 같은 계정으로 로그인한다. 이는 SQLite 볼륨의 지속성까지 확인하며 초대 코드·비밀번호·토큰을 출력하지 않는다.
+
 서버 준비 후 아래 **최초 설치**에서 Compose 명령에 `-f ops/compose.gcp-free.yaml`을 추가한다. 유료 AI 생성은 이 소형 VM에서 검증하지 않았으므로 기본적으로 끈다. 별도 호스트 또는 더 큰 유료 VM으로 옮기기 전에는 `ops/compose.paid.yaml`을 적용하지 않는다.
 
 ## 구조
