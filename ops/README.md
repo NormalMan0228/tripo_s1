@@ -10,7 +10,7 @@ Google Cloud 콘솔에서 2단계 인증과 무료 체험판/결제 계정을 �
 
 **자동 결제 방지:** Google Cloud 결제 계정을 `Free trial account` 상태로 유지하고 `업그레이드`/`Activate`를 누르지 않는다. 무료 체험판은 카드로 자동 청구되지 않지만 크레딧 소진 또는 90일 경과 시 서버가 중지되고 나중에 데이터가 삭제될 수 있으므로 백업이 필요하다. `e2-micro`와 표준 디스크의 무료 한도와 별개로 외부 IPv4, 초과 전송량 등은 사용량이 발생할 수 있고 무료 체험 크레딧에서 차감된다. 예산 알림은 지출을 멈추는 하드캡이 아니며 청구 기록은 지연될 수 있다. 이 구성에는 Tripo/OpenAI 키를 넣지 않고 유료 생성도 켜지 않는다.
 
-Debian 12 VM에서 저장소의 온라인 서버 브랜치를 체크아웃한 다음 `sudo bash ops/bootstrap-gcp-free.sh`를 실행하면 공식 Docker 저장소에서 Engine/Compose를 설치하고, 기존 부팅 디스크에 스왑 1GB를 만들고, 공인 IP 기반 `sslip.io` 주소·비공개 초대 코드를 생성해 무료 VM용 Compose 구성을 시작한다. 스크립트는 기존 `ops/production.env`와 초대 코드를 덮어쓰지 않는다. 실제 접속 주소를 출력하지만 초대 코드는 출력하지 않으므로 VM에서 별도로 안전하게 확인한다. 먼저 Google Cloud 방화벽에서 80/443을 허용해야 TLS 인증서 발급이 성공한다.
+Debian 12 VM에서 `sudo apt-get update && sudo apt-get install -y git`으로 Git을 설치하고 저장소의 온라인 서버 브랜치를 체크아웃한 다음 `sudo bash ops/bootstrap-gcp-free.sh`를 실행한다. 스크립트는 공식 Docker 저장소에서 Engine/Compose를 설치하고, 기존 부팅 디스크에 스왑 1GB를 만들고, 공인 IP 기반 `sslip.io` 주소·비공개 초대 코드를 생성해 무료 VM용 Compose 구성을 시작한다. 기존 `ops/production.env`와 초대 코드는 덮어쓰지 않는다. 실제 접속 주소를 출력하지만 초대 코드는 출력하지 않으므로 VM에서 별도로 안전하게 확인한다. 먼저 Google Cloud 방화벽에서 80/443을 허용해야 TLS 인증서 발급이 성공한다.
 
 서버 준비 후 아래 **최초 설치**에서 Compose 명령에 `-f ops/compose.gcp-free.yaml`을 추가한다. 유료 AI 생성은 이 소형 VM에서 검증하지 않았으므로 기본적으로 끈다. 별도 호스트 또는 더 큰 유료 VM으로 옮기기 전에는 `ops/compose.paid.yaml`을 적용하지 않는다.
 
@@ -29,7 +29,7 @@ API의 8765 포트는 외부에 게시하지 않는다. Caddy IP `172.30.72.2`�
 
 1. Linux 서버에 Docker Engine/Compose를 설치하고, 도메인의 A/AAAA 레코드를 서버 IP로 연결한다. 방화벽에서는 80/TCP, 443/TCP, 필요하면 443/UDP만 공개한다. 8765는 공개하지 않는다.
 2. 저장소를 배포 서버에 체크아웃한다. `ops/production.env.example`을 `ops/production.env`로 복사해 실제 도메인을 적는다. 이 파일에는 비밀을 넣지 않는다.
-3. `ops/secrets`를 호스트에서 접근 제한된 디렉터리로 만들고 `registration-code` 파일을 만든다. 24자 이상의 무작위 ASCII 한 줄이어야 한다. 예: `python3 -c 'import secrets; print(secrets.token_urlsafe(32))' > ops/secrets/registration-code`. 디렉터리는 0700, 파일은 0600으로 제한한다. 초대 코드는 채팅, 이슈, Git, 클라이언트 빌드에 넣지 않는다.
+3. `ops/secrets`를 호스트에서 접근 제한된 디렉터리로 만들고 `registration-code` 파일을 만든다. 24자 이상의 무작위 ASCII 한 줄이어야 한다. 예: `python3 -c 'import secrets; print(secrets.token_urlsafe(32))' > ops/secrets/registration-code`. 디렉터리는 0700, 파일은 `root:10001` 소유·0640 권한으로 설정한다. Compose 파일 기반 secret이 호스트 권한 그대로 마운트되고 API 프로세스가 gid 10001로 실행되기 때문이다. 초대 코드는 채팅, 이슈, Git, 클라이언트 빌드에 넣지 않는다.
 4. 저장소 루트에서 `docker compose --env-file ops/production.env -f ops/compose.yaml config`로 구성을 확인하고 `docker compose --env-file ops/production.env -f ops/compose.yaml up -d --build`로 시작한다. `https://실제도메인/health`에서 `mode=live`, `protocol=6`, `studio_tripo_enabled=false`를 확인한다. 게임의 서버 입력란에 같은 HTTPS 주소를 넣고 새 계정을 만든다.
 
 `ops/secrets`, `ops/production.env`, `ops/backups`는 Git과 Docker 빌드 컨텍스트에서 제외된다. Docker Compose의 파일 기반 secrets는 **API 컨테이너에만** 마운트된다. 운영 호스트 관리자와 Docker 접근 권한자는 이 비밀 및 데이터에 접근할 수 있으므로 그 계정을 제한한다. 도메인 TLS 인증서와 갱신 상태는 Caddy 로그로 확인한다.

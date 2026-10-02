@@ -78,7 +78,10 @@ if [[ ! -e ops/secrets/registration-code ]]; then
     python3 -c 'import secrets; print(secrets.token_urlsafe(32))' \
         > ops/secrets/registration-code
 fi
-chmod 0600 ops/secrets/registration-code
+# Docker Compose mounts a file-backed secret with its host ownership. The API
+# runs as uid/gid 10001, so grant only that group read access.
+chown root:10001 ops/secrets/registration-code
+chmod 0640 ops/secrets/registration-code
 
 compose=(docker compose --env-file ops/production.env \
     -f ops/compose.yaml -f ops/compose.gcp-free.yaml)
