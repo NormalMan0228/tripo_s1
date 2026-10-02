@@ -21,6 +21,7 @@ jobs:
         env:
           TRIPOTHON_DOMAIN: game.example.com
         run: |
+          bash -n ops/bootstrap-gcp-free.sh
           mkdir -p ops/secrets
           printf 'ci-only-registration-code-with-sufficient-length\n' > ops/secrets/registration-code
           printf 'ci-only-openai-placeholder\n' > ops/secrets/openai-key

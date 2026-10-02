@@ -8,6 +8,10 @@ Google Cloud Always Free는 미국의 지정된 3개 리전에서 월 1대분 `e
 
 Google Cloud 콘솔에서 2단계 인증과 무료 체험판/결제 계정을 계정 소유자가 활성화한 뒤 `us-west1`, `us-central1`, `us-east1` 중 하나에 `e2-micro` Linux VM과 30GB 이내 표준 영구 디스크를 만든다. 공인 IPv4를 부여하고 SSH 관리 포트는 운영자 IP에서만 허용한다. 방화벽에 80/TCP와 443/TCP만 공개하고 API 8765는 열지 않는다. 별도 도메인이 없다면 공인 IPv4가 `123.45.67.89`일 때 `123-45-67-89.sslip.io`를 `TRIPOTHON_DOMAIN`에 넣는 무료 DNS 방식이 있다. 이는 제3자 DNS에 의존하는 데모용 주소이며 IP가 바뀌면 주소와 게임 설정도 바꿔야 한다.
 
+**자동 결제 방지:** Google Cloud 결제 계정을 `Free trial account` 상태로 유지하고 `업그레이드`/`Activate`를 누르지 않는다. 무료 체험판은 카드로 자동 청구되지 않지만 크레딧 소진 또는 90일 경과 시 서버가 중지되고 나중에 데이터가 삭제될 수 있으므로 백업이 필요하다. `e2-micro`와 표준 디스크의 무료 한도와 별개로 외부 IPv4, 초과 전송량 등은 사용량이 발생할 수 있고 무료 체험 크레딧에서 차감된다. 예산 알림은 지출을 멈추는 하드캡이 아니며 청구 기록은 지연될 수 있다. 이 구성에는 Tripo/OpenAI 키를 넣지 않고 유료 생성도 켜지 않는다.
+
+Debian 12 VM에서 저장소의 온라인 서버 브랜치를 체크아웃한 다음 `sudo bash ops/bootstrap-gcp-free.sh`를 실행하면 공식 Docker 저장소에서 Engine/Compose를 설치하고, 기존 부팅 디스크에 스왑 1GB를 만들고, 공인 IP 기반 `sslip.io` 주소·비공개 초대 코드를 생성해 무료 VM용 Compose 구성을 시작한다. 스크립트는 기존 `ops/production.env`와 초대 코드를 덮어쓰지 않는다. 실제 접속 주소를 출력하지만 초대 코드는 출력하지 않으므로 VM에서 별도로 안전하게 확인한다. 먼저 Google Cloud 방화벽에서 80/443을 허용해야 TLS 인증서 발급이 성공한다.
+
 서버 준비 후 아래 **최초 설치**에서 Compose 명령에 `-f ops/compose.gcp-free.yaml`을 추가한다. 유료 AI 생성은 이 소형 VM에서 검증하지 않았으므로 기본적으로 끈다. 별도 호스트 또는 더 큰 유료 VM으로 옮기기 전에는 `ops/compose.paid.yaml`을 적용하지 않는다.
 
 ## 구조
