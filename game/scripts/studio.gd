@@ -323,11 +323,18 @@ func refresh() -> void:
 		clear_owned()
 		return
 	data=response.data;wallet.text="별씨 %d  ·  %s"%[data.shards,"Tripo 실제 생성 가능" if data.geometry_enabled else ("개발 공방" if data.llm!="openai" else "온라인 공방")]
+	var live: bool=data.get("mode","demo")=="live"
+	for i in range(models.get_item_count()):models.set_item_disabled(i,live and i!=0)
+	for i in range(efforts.get_item_count()):efforts.set_item_disabled(i,live and i!=2)
+	if live:
+		models.select(0);efforts.select(2)
 	if is_instance_valid(hero):hero.apply_avatar(data.get("profile",{}).get("avatar",{}))
 	update_capacity()
 	history_list.clear()
 	for entry in data.jobs:history_list.add_item(job_status(entry.state)+" · %d 별씨 · %s"%[entry.cost,Time.get_datetime_string_from_unix_time(int(entry.created)).replace("T"," ")])
-	designer.set_item_disabled(1,data.llm=="fixture");geometry.set_item_disabled(1,not data.geometry_enabled)
+	designer.set_item_disabled(0,live);designer.set_item_disabled(1,data.llm=="fixture")
+	geometry.set_item_disabled(0,live);geometry.set_item_disabled(1,not data.geometry_enabled)
+	generation_button.disabled=live and not data.geometry_enabled
 	if not live_defaults_applied:
 		live_defaults_applied=true
 		if data.geometry_enabled and data.llm!="fixture":

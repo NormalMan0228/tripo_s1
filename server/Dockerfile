@@ -3,8 +3,9 @@ WORKDIR /app
 COPY server/requirements.txt /app/server/requirements.txt
 RUN pip install --no-cache-dir -r server/requirements.txt && useradd -m -u 10001 tripothon
 COPY server /app/server
+COPY tools/backup_server.py /app/tools/backup_server.py
 COPY game/assets/sample_stool.glb /app/game/assets/sample_stool.glb
-RUN mkdir -p /data && chown tripothon:tripothon /data
+RUN mkdir -p /data /backups && chown tripothon:tripothon /data /backups
 USER tripothon
 ENV TRIPOTHON_DATA_DIR=/data TRIPOTHON_MODE=live
 EXPOSE 8765

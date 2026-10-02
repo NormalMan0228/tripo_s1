@@ -176,7 +176,7 @@ def test_live_transport_pipeline_without_spending(tmp_path):
             failures['poll']=False
             raise httpx.ConnectError('mock outage')
         return httpx.Response(200,json={'code':0,'data':{'status':'success','output':{'model_url':'https://cdn.tripo3d.ai/output/model.glb'}}})
-    settings=Settings(data_dir=tmp_path,mode='live',registration_code='test-invitation-only-12345',paid_enabled=True,tripo_key='test-only-placeholder')
+    settings=Settings(data_dir=tmp_path,mode='live',registration_code='test-invitation-only-12345',paid_enabled=True,tripo_key='test-only-placeholder',legacy_generation_enabled=True)
     provider=TripoProvider(settings,httpx.MockTransport(handler))
     app=create_app(settings,provider=provider,worker_enabled=False)
     with TestClient(app,base_url='https://testserver') as c:
@@ -199,7 +199,7 @@ def test_uncertain_submit_holds_paid_lock(tmp_path):
     def handler(req):
         if req.method=='POST': raise httpx.ReadTimeout('mock timeout')
         return httpx.Response(200,json={'code':0,'data':{'balance':1000}})
-    settings=Settings(data_dir=tmp_path,mode='live',registration_code='test-invitation-only-12345',paid_enabled=True,tripo_key='fake')
+    settings=Settings(data_dir=tmp_path,mode='live',registration_code='test-invitation-only-12345',paid_enabled=True,tripo_key='fake',legacy_generation_enabled=True)
     app=create_app(settings,provider=TripoProvider(settings,httpx.MockTransport(handler)),worker_enabled=False)
     with TestClient(app,base_url='https://testserver') as c:
         r=c.post('/v1/auth/register',json={'username':'alice','password':'test-password-123','invitation':settings.registration_code})

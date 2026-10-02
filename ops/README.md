@@ -1,0 +1,45 @@
+# Tripothon 온라인 서버 파일
+
+이 구성은 **초대형 소규모 시범 서비스**를 위한 것이다. 서버를 실제로 공개하려면 별도의 Linux 호스트, 도메인, DNS 설정이 필요하다. 로컬 `demo` DB와 재화는 가져오지 않는다. `ops/compose.yaml`은 가입·게임 플레이를 켜고 AI 과금은 끈 상태로 시작한다. 유료 생성은 운영 점검 후 `ops/compose.paid.yaml`을 추가해 켠다.
+
+## 구조
+
+```text
+플레이어 Godot ── HTTPS :443 ── Caddy ── 사설 Docker 네트워크 ── FastAPI 단일 작업자
+                                                               ├─ /data: SQLite + 비공개 GLB
+                                                               ├─ /backups: 검증된 스냅샷
+                                                               └─ /run/secrets: 초대 코드·API 키
+```
+
+API의 8765 포트는 외부에 게시하지 않는다. Caddy IP `172.30.72.2`만 프록시 헤더를 신뢰한다. 이 서브넷이 호스트 네트워크와 겹치면 **Caddy의 고정 IP, API의 고정 IP, 서브넷, `--forwarded-allow-ips`를 함께** 변경한다. Docker 볼륨의 DB와 자산은 컨테이너 재빌드에도 남는다. SQLite 작업자와 과금 작업을 여러 서버로 수평 확장하는 구성은 아니다.
+
+## 최초 설치
+
+1. Linux 서버에 Docker Engine/Compose를 설치하고, 도메인의 A/AAAA 레코드를 서버 IP로 연결한다. 방화벽에서는 80/TCP, 443/TCP, 필요하면 443/UDP만 공개한다. 8765는 공개하지 않는다.
+2. 저장소를 배포 서버에 체크아웃한다. `ops/production.env.example`을 `ops/production.env`로 복사해 실제 도메인을 적는다. 이 파일에는 비밀을 넣지 않는다.
+3. `ops/secrets`를 호스트에서 접근 제한된 디렉터리로 만들고 `registration-code` 파일을 만든다. 24자 이상의 무작위 ASCII 한 줄이어야 한다. 예: `python3 -c 'import secrets; print(secrets.token_urlsafe(32))' > ops/secrets/registration-code`. 디렉터리는 0700, 파일은 0600으로 제한한다. 초대 코드는 채팅, 이슈, Git, 클라이언트 빌드에 넣지 않는다.
+4. 저장소 루트에서 `docker compose --env-file ops/production.env -f ops/compose.yaml config`로 구성을 확인하고 `docker compose --env-file ops/production.env -f ops/compose.yaml up -d --build`로 시작한다. `https://실제도메인/health`에서 `mode=live`, `protocol=6`, `studio_tripo_enabled=false`를 확인한다. 게임의 서버 입력란에 같은 HTTPS 주소를 넣고 새 계정을 만든다.
+
+`ops/secrets`, `ops/production.env`, `ops/backups`는 Git과 Docker 빌드 컨텍스트에서 제외된다. Docker Compose의 파일 기반 secrets는 **API 컨테이너에만** 마운트된다. 운영 호스트 관리자와 Docker 접근 권한자는 이 비밀 및 데이터에 접근할 수 있으므로 그 계정을 제한한다. 도메인 TLS 인증서와 갱신 상태는 Caddy 로그로 확인한다.
+
+## 유료 AI 생성 켜기
+
+1. 별도의 OpenAI API 과금 계정과 Tripo API 계정을 준비한다. 키를 서버의 `ops/secrets/openai-key`, `ops/secrets/tripo-key`에 각각 ASCII 한 줄로 저장하고 0600으로 제한한다. 값은 터미널 명령 인수, 로그, Git, 게임에 남기지 않는다. `OPENAI_API_KEY`·`TRIPO_API_KEY` 환경변수와 파일 변수를 동시에 쓰면 서버가 시작을 거부한다.
+2. 사용 가능한 OpenAI API 모델 이름과 Tripo 모델/요금을 운영 계정에서 확인한다. 현재 플레이어 공개 정책은 LLM `gpt-6-luna/high`와 제한된 Tripo 선택지에 고정되어 있다. **모델의 실제 API 사용 가능성·가격과 실제 생성은 아직 검증하지 않았다.** 필요한 경우 모델 매핑과 견적을 검증·수정한 뒤 켠다.
+3. 서버 데이터 백업을 만들고 확인한다. `docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.paid.yaml config`로 비밀 파일 경로와 외부 포트가 맞는지 살핀 뒤 같은 인자에 `up -d --build`를 실행한다. `/health`의 `studio_tripo_enabled=true`를 확인한다.
+4. 별도의 시험 계정으로 생성 요청 → 설계 및 견적 → 플레이어 확인 → Tripo 작업 → 비공개 GLB 다운로드 → 색칠·배치 → 재로그인을 끝까지 점검한다. 소액 예산으로 시작하고 공급자 콘솔에서 실제 청구액을 확인한다. 예상치가 실제 크레딧 비용을 보장하지 않는다.
+
+기본 전역 한도는 하루 5회, 계정당 2회, 동시에 유료 작업 1개다. `ops/production.env`의 한도 값은 운영 규모에 맞춰 변경할 수 있다. 유료 모드에서는 두 API 키 또는 OpenAI 설계 제공자가 없으면 시작을 거부한다. 구형 `/v1/generations`는 기본 live 서버에서 차단되어 최종 견적 확인을 건너뛸 수 없다. 동적 스크립트는 제한된 수치 AST로 검증되며 서버의 Python 코드로 실행하지 않는다.
+
+## 데이터와 사고 대응
+
+백업은 단일 DB 파일 복사가 아니라 SQLite 온라인 백업과 자산 해시 검사를 함께 수행한다. 아래 이름을 매번 새로 지정한다.
+
+```bash
+docker compose --env-file ops/production.env -f ops/compose.yaml exec api python /app/tools/backup_server.py create --data-dir /data --destination /backups/snap-YYYYMMDD-HHMM
+docker compose --env-file ops/production.env -f ops/compose.yaml exec api python /app/tools/backup_server.py verify --snapshot /backups/snap-YYYYMMDD-HHMM
+```
+
+백업 볼륨은 같은 호스트에 있으므로 암호화된 별도 저장소로 주기적으로 옮기고 복구를 연습해야 한다. 백업에는 비밀번호 해시와 사용자 자산이 포함된다. 복원 절차와 미확정 유료 작업의 수동 정합성 처리는 [`docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md)를 따른다. 과금 작업이 `unknown`이면 공급자 내역 확인 전 재제출하거나 임의 환불하지 않는다. 비밀 유출이 의심되면 공급자 키와 초대 코드를 교체하고 서버를 재시작하며, 해당 계정의 실제 사용 내역을 조사한다.
+
+운영 전에는 호스트 패치, 로그 보존/개인정보 정책, 백업 자동화, 부하 시험, 침투 시험이 남아 있다. 이 코드는 공개 대규모 서비스 보안 인증을 받은 상태가 아니다.

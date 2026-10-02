@@ -9,3 +9,6 @@ __pycache__/
 server-data/
 .pytest_cache/
 *.pyc
+ops/secrets/
+ops/production.env
+ops/backups/
