@@ -57,6 +57,8 @@ var reward_button: Button
 var hint: Label
 var hp_bar: ProgressBar
 var hunger_bar: ProgressBar
+var hp_readout: Label
+var hunger_readout: Label
 var pending_action := ""
 var pending_target := ""
 var network_failures := 0
@@ -78,6 +80,7 @@ var inspect_stage: Node3D
 var inspect_model: Node3D
 var inspect_request := 0
 var stamina_bar: ProgressBar
+var stamina_readout: Label
 var supplies: Label
 var camp_status: Label
 var field_map: Control
@@ -157,19 +160,32 @@ func make_theme() -> Theme:
 	theme.default_font = font
 	theme.default_font_size = 15
 	for type in ["Label","Button","LineEdit","ItemList","SpinBox"]:
-		theme.set_color("font_color",type,Color("ece6d6"))
+		theme.set_color("font_color",type,Color("f5f0df"))
+	theme.set_color("font_hover_color","Button",Color("fff8e6"))
+	theme.set_color("font_pressed_color","Button",Color("152b2d"))
+	theme.set_color("font_disabled_color","Button",Color("8d9c94"))
+	theme.set_color("font_selected_color","ItemList",Color("fff5d9"))
+	var selected_item := StyleBoxFlat.new()
+	selected_item.bg_color=Color("3c665e")
+	selected_item.set_corner_radius_all(7)
+	selected_item.set_border_width_all(1)
+	selected_item.border_color=Color("ddc486",0.72)
+	theme.set_stylebox("selected","ItemList",selected_item)
+	theme.set_stylebox("selected_focus","ItemList",selected_item)
 	for type in ["Button","LineEdit","ItemList"]:
-		for kind in ["normal","hover","pressed","focus"]:
+		for kind in ["normal","hover","pressed","focus","disabled"]:
 			var style := StyleBoxFlat.new()
-			style.bg_color = Color("375b59") if kind=="hover" else Color("263f42")
-			style.set_corner_radius_all(8)
-			style.content_margin_left = 10
-			style.content_margin_right = 10
-			style.content_margin_top = 8
-			style.content_margin_bottom = 8
+			style.bg_color = Color("365d58") if kind=="hover" else Color("193538") if kind=="pressed" else Color("263e40") if kind=="normal" else Color("203438")
+			style.set_corner_radius_all(10)
+			style.set_border_width_all(1)
+			style.border_color=Color("72917f",0.4)
+			style.content_margin_left = 12
+			style.content_margin_right = 12
+			style.content_margin_top = 9
+			style.content_margin_bottom = 9
 			if kind=="focus":
-				style.set_border_width_all(1)
-				style.border_color = Color("b4bb89")
+				style.set_border_width_all(2)
+				style.border_color = Color("e5c477")
 			theme.set_stylebox(kind,type,style)
 	return theme
 
@@ -184,25 +200,27 @@ func clear_ui() -> void:
 		ui.remove_child(child)
 		child.queue_free()
 
-func panel(at: Vector2, width: float) -> VBoxContainer:
+func panel(at: Vector2, width: float, variant := "default") -> VBoxContainer:
 	var p := PanelContainer.new()
 	p.position = at
 	p.custom_minimum_size.x = width
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.095,0.16,0.16,0.93)
-	style.set_corner_radius_all(13)
+	style.bg_color = Color(0.06,0.12,0.13,0.94) if variant=="hero" else Color(0.075,0.14,0.15,0.93)
+	style.set_corner_radius_all(16)
 	style.set_border_width_all(1)
-	style.border_color=Color(0.68,0.75,0.55,0.25)
-	style.shadow_color=Color(0,0,0,0.18)
-	style.shadow_size=7
-	style.content_margin_left = 18
-	style.content_margin_right = 18
-	style.content_margin_top = 16
-	style.content_margin_bottom = 16
+	style.border_width_top=2 if variant in ["hero","objective","toolbar"] else 1
+	style.border_color=Color("d8b873",0.68) if variant in ["hero","objective"] else Color("89af9a",0.48)
+	style.shadow_color=Color(0.01,0.06,0.07,0.34)
+	style.shadow_size=12
+	style.shadow_offset=Vector2(0,5)
+	style.content_margin_left = 19
+	style.content_margin_right = 19
+	style.content_margin_top = 17
+	style.content_margin_bottom = 17
 	p.add_theme_stylebox_override("panel",style)
 	ui.add_child(p)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation",9)
+	v.add_theme_constant_override("separation",8)
 	p.add_child(v)
 	return v
 
@@ -213,11 +231,36 @@ func text(parent: Node, value: String, size := 15) -> Label:
 	parent.add_child(l)
 	return l
 
-func button(parent: Node, value: String, callback: Callable) -> Button:
+func rule(parent: Node) -> void:
+	var line := ColorRect.new()
+	line.color=Color("c7ac72",0.36)
+	line.custom_minimum_size.y=1
+	line.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	parent.add_child(line)
+
+func button(parent: Node, value: String, callback: Callable, variant := "default") -> Button:
 	var b := Button.new()
 	b.text = value
-	b.custom_minimum_size.y = 37
+	b.custom_minimum_size.y = 43 if variant in ["primary","slot"] else 38
 	b.focus_mode = Control.FOCUS_NONE
+	if variant in ["primary","slot"]:
+		for kind in ["normal","hover","pressed"]:
+			var style := StyleBoxFlat.new()
+			style.set_corner_radius_all(10)
+			style.set_border_width_all(1)
+			style.content_margin_left=12
+			style.content_margin_right=12
+			style.content_margin_top=9
+			style.content_margin_bottom=9
+			if variant=="primary":
+				style.bg_color=Color("f3d992") if kind=="hover" else Color("af894c") if kind=="pressed" else Color("d3b474")
+				style.border_color=Color("f5e3ae")
+			else:
+				style.bg_color=Color("37625c") if kind=="hover" else Color("152e32") if kind=="pressed" else Color("234447")
+				style.border_color=Color("88a995",0.58)
+			b.add_theme_stylebox_override(kind,style)
+		b.add_theme_color_override("font_color",Color("23342d") if variant=="primary" else Color("f2ead7"))
+		b.add_theme_color_override("font_hover_color",Color("23342d") if variant=="primary" else Color("fff8e6"))
 	b.pressed.connect(func():
 		sound.effect("click")
 		callback.call())
@@ -255,10 +298,11 @@ func check(result: Dictionary) -> bool:
 func login_ui() -> void:
 	screen = "login"
 	clear_ui()
-	left = panel(Vector2(48,154),370)
-	text(left,"TRIPOTHON  /  SEVEN NIGHTS",12).modulate = Color("cdbd8f")
+	left = panel(Vector2(48,154),370,"hero")
+	text(left,"✦  TRIPOTHON  /  SEVEN NIGHTS",12).modulate = Color("e4c989")
 	text(left,"일곱 밤, 나의 마을",30)
 	text(left,"돌아올 마을이 있어, 숲으로 떠납니다.",14)
+	rule(left)
 	var host := LineEdit.new()
 	host.text = api.base_url
 	text(left,"탐험가 이름",13)
@@ -272,7 +316,7 @@ func login_ui() -> void:
 	var invitation := LineEdit.new()
 	invitation.placeholder_text = "초대 코드 · 로컬 샘플 서버는 불필요"
 	invitation.secret = true
-	button(left,"마을에 들어가기",func(): authenticate(false,host.text,username.text,password.text,invitation.text))
+	button(left,"마을에 들어가기  →",func(): authenticate(false,host.text,username.text,password.text,invitation.text),"primary")
 	button(left,"새 탐험가 만들기",func(): authenticate(true,host.text,username.text,password.text,invitation.text))
 	var advanced := VBoxContainer.new()
 	button(left,"연결 설정",func(): advanced.visible=not advanced.visible)
@@ -286,7 +330,7 @@ func login_ui() -> void:
 	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text(left,"숲에서 생존하고 · 별씨를 모으고\n나만의 물건으로 마을을 채워 보세요.",13)
 	player.controls_enabled = false
-	var portrait_panel := panel(Vector2(986,225),246)
+	var portrait_panel := panel(Vector2(986,225),246,"hero")
 	text(portrait_panel,"당신의 첫 번째 탐험",17)
 	var portrait := TextureRect.new()
 	portrait.texture=load("res://assets/explorer_b_portrait.png")
@@ -448,9 +492,10 @@ func enter_village() -> void:
 	screen = "loading"
 	build_world(false)
 	clear_ui()
-	left = panel(Vector2(24,24),250)
-	text(left,"STARSEED  /  HOME",11).modulate = Color("cfbe8c")
+	left = panel(Vector2(24,24),250,"hero")
+	text(left,"✦  STARSEED  /  HOME",11).modulate = Color("e4c989")
 	text(left,"물결빛 마을",24)
+	rule(left)
 	var wallet_row := HBoxContainer.new()
 	left.add_child(wallet_row)
 	var seed_icon := TextureRect.new()
@@ -462,7 +507,7 @@ func enter_village() -> void:
 	wallet = text(wallet_row,"서버 연결 중…",13)
 	reward_button=button(left,"받지 않은 생존 보상 받기",claim_pending_reward)
 	reward_button.visible=false
-	right = panel(Vector2(954,24),302)
+	right = panel(Vector2(954,24),302,"hero")
 	var drawer_title := HBoxContainer.new()
 	right.add_child(drawer_title)
 	text(drawer_title,"나의 보관함",22).size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -577,12 +622,13 @@ func inspect_object(obj: Dictionary) -> void:
 		inspect_stage.add_child(model)
 
 func build_play_hud(survival: bool) -> void:
-	var task_card := panel(Vector2(962,24),294)
-	text(task_card,"FIELD NOTES" if survival else "MY LITTLE WORLD",11).modulate=Color("cfbe8c")
+	var task_card := panel(Vector2(962,24),294,"objective")
+	text(task_card,"✦  오늘의 탐험 목표" if survival else "✦  오늘의 마을 이야기",11).modulate=Color("e4c989")
+	rule(task_card)
 	objective=text(task_card,"",14)
 	objective.custom_minimum_size.x=254
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	var toolbar := panel(Vector2(310,668 if survival else 704),660)
+	var toolbar := panel(Vector2(310,668 if survival else 704),660,"toolbar")
 	if survival:
 		var quick_row := HBoxContainer.new();quick_row.alignment=BoxContainer.ALIGNMENT_CENTER
 		quick_row.add_theme_constant_override("separation",16);toolbar.add_child(quick_row)
@@ -594,20 +640,20 @@ func build_play_hud(survival: bool) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation",8)
 	toolbar.add_child(row)
-	button(row,"I  가방 · 제작" if survival else "I  보관함 · 공방",toggle_drawer)
+	button(row,"[ I ]  가방 · 제작" if survival else "[ I ]  보관함",toggle_drawer,"slot")
 	if survival:
-		button(row,"Q  먹기",func(): intent("eat"))
-		button(row,"F  불 지키기",func(): intent("fire"))
-		button(row,"H  붕대",func(): intent("heal"))
-		button(row,"귀환",confirm_return)
+		button(row,"[ Q ]  먹기",func(): intent("eat"),"slot")
+		button(row,"[ F ]  불 지키기",func(): intent("fire"),"slot")
+		button(row,"[ H ]  붕대",func(): intent("heal"),"slot")
+		button(row,"귀환",confirm_return,"slot")
 	else:
 		if TRADING_UI_ENABLED: button(row,"별씨 장터",show_market)
-		expedition_button=button(row,"탐험 지도 →",open_expedition)
-		button(row,"옷장",open_wardrobe)
-		button(row,"Tab 지도",life.open_map)
-		button(row,"B 창고",life.open_storage)
+		expedition_button=button(row,"탐험 지도  →",open_expedition,"primary")
+		button(row,"옷장",open_wardrobe,"slot")
+		button(row,"[ Tab ]  지도",life.open_map,"slot")
+		button(row,"[ B ]  창고",life.open_storage,"slot")
 	for child in row.get_children(): child.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	var toast := panel(Vector2(365,586 if survival else 620),550)
+	var toast := panel(Vector2(365,586 if survival else 620),550,"objective")
 	toast_panel=toast.get_parent()
 	toast_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	notice=text(toast,"",14)
@@ -616,7 +662,7 @@ func build_play_hud(survival: bool) -> void:
 	toast_panel.visible=false
 	last_notice=""
 	if survival:
-		var tracker := panel(Vector2(460,24),360)
+		var tracker := panel(Vector2(460,24),360,"hero")
 		day_track=text(tracker,"",16)
 		day_track.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 
@@ -634,7 +680,7 @@ func world_hint(value: String) -> void:
 
 func meter(parent: Node, color: Color) -> ProgressBar:
 	var bar := ProgressBar.new()
-	bar.custom_minimum_size.y=10
+	bar.custom_minimum_size.y=9
 	bar.show_percentage=false
 	var fill := StyleBoxFlat.new()
 	fill.bg_color=color
@@ -646,6 +692,17 @@ func meter(parent: Node, color: Color) -> ProgressBar:
 	bar.add_theme_stylebox_override("background",bg)
 	parent.add_child(bar)
 	return bar
+
+func status_meter(parent: Node, title: String, color: Color) -> Dictionary:
+	var header := HBoxContainer.new()
+	parent.add_child(header)
+	var name_label := text(header,title,12)
+	name_label.modulate=Color("c2d3c3")
+	name_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	var value_label := text(header,"100 / 100",12)
+	value_label.modulate=Color("f7edce")
+	var bar := meter(parent,color)
+	return {"bar":bar,"readout":value_label}
 
 func refresh_inventory() -> void:
 	var requested_epoch := world_epoch
@@ -672,7 +729,6 @@ func refresh_inventory() -> void:
 	for obj in me.objects:
 		var state_name: String = {"inventory":"보관","placed":"배치","listed":"판매"}[obj.state]
 		objects_list.add_item("[%s] %s" % [state_name,obj.name])
-		objects_list.set_item_custom_fg_color(objects_list.item_count-1,Color(obj.color))
 	for node in object_root.get_children():
 		object_root.remove_child(node)
 		node.queue_free()
@@ -775,7 +831,6 @@ func paint_object(color: String) -> void:
 		for i in me.objects.size():
 			if me.objects[i].id==selected.id:
 				me.objects[i]=selected
-				objects_list.set_item_custom_fg_color(i,Color(color))
 
 func retrieve_object() -> void:
 	cancel_preview()
@@ -909,20 +964,24 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "") -
 	clear_ui()
 	screen="survival"
 	player.controls_enabled=false
-	left=panel(Vector2(24,24),250)
+	left=panel(Vector2(24,24),250,"hero")
+	text(left,"✦  SEVEN NIGHTS  /  EXPEDITION",11).modulate=Color("e4c989")
 	text(left,region_name(run.get("map_id","forest")),22)
 	text(left,"%s · 보상 ×%.3f" % [difficulty_name(run.get("difficulty","standard")),run.get("reward_multiplier",1.0)],12)
+	rule(left)
 	metrics=text(left,"",13)
-	hp_bar=meter(left,Color("d18a7c"))
-	hunger_bar=meter(left,Color("d3b877"))
-	stamina_bar=meter(left,Color("7fb9b3"))
+	var hp_meter := status_meter(left,"♥  체력",Color("d98f80"))
+	hp_bar=hp_meter.bar;hp_readout=hp_meter.readout
+	var hunger_meter := status_meter(left,"◆  포만감",Color("d9ba75"))
+	hunger_bar=hunger_meter.bar;hunger_readout=hunger_meter.readout
+	var stamina_meter := status_meter(left,"✧  기력",Color("7fc5b7"))
+	stamina_bar=stamina_meter.bar;stamina_readout=stamina_meter.readout
 	hp_bar.tooltip_text="체력";hunger_bar.tooltip_text="포만감";stamina_bar.tooltip_text="기력"
-	text(left,"Shift 달리기 · E 채집 · Space 공격",11).modulate=Color("afbda7")
-	var navigation := panel(Vector2(24,250),250)
+	var navigation := panel(Vector2(24,327),250)
 	field_map=preload("res://scripts/field_map.gd").new()
 	navigation.add_child(field_map)
 	camp_status=text(navigation,"",12)
-	right=panel(Vector2(954,24),302)
+	right=panel(Vector2(954,24),302,"hero")
 	var drawer_title := HBoxContainer.new()
 	right.add_child(drawer_title)
 	text(drawer_title,"탐험 가방",23).size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -1061,7 +1120,7 @@ func tick_run() -> void:
 
 func update_run() -> void:
 	var remaining := int(ceil(run.get("phase_remaining",0)))
-	metrics.text="%s   ·   %s %d초\n체력 %d   포만감 %d   기력 %d" % ["달이 뜬 밤" if run.night else "탐험하기 좋은 낮","아침까지" if run.night else "밤까지",remaining,run.hp,run.hunger,run.get("stamina",100)]
+	metrics.text="%s   ·   %s %d초" % ["달이 뜬 밤" if run.night else "탐험하기 좋은 낮","아침까지" if run.night else "밤까지",remaining]
 	if is_instance_valid(day_track):
 		var days := ""
 		for i in 7: days+=("● " if i<int(run.day) else "○ ")
@@ -1069,6 +1128,9 @@ func update_run() -> void:
 	hp_bar.value=run.hp
 	hunger_bar.value=run.hunger
 	stamina_bar.value=run.get("stamina",100)
+	hp_readout.text="%d / 100" % int(run.hp)
+	hunger_readout.text="%d / 100" % int(run.hunger)
+	stamina_readout.text="%d / 100" % int(run.get("stamina",100))
 	for item in quick_counts: quick_counts[item].text=str(int(run.inventory[item]))
 	var camp_distance := Vector2(run.x,run.z).length()
 	camp_status.text="야영지 %.0fm · 불 %d초\n%s" % [camp_distance,run.fire_remaining,"불빛 안 · 밤의 위협을 막아 줍니다" if run.get("warm",false) else "지도 중앙의 ▲로 돌아오세요"]
