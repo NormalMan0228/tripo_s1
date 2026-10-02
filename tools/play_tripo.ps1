@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskPython = Join-Path $taskRoot '.tools\server-venv\Scripts\python.exe'
-$taskGame = Join-Path $taskRoot 'builds\Tripothon_Demo_081\Tripothon.exe'
+$taskGame = Join-Path $taskRoot 'builds\windows\Tripothon_Developer.exe'
 $taskPortableServer = Join-Path $taskRoot 'builds\Tripothon_Demo_081\server\TripothonDemoServer.exe'
 $taskDataRoot = Join-Path $env:LOCALAPPDATA 'TripothonDemo'
 $taskData = Join-Path $taskDataRoot 'server-data'
@@ -52,7 +52,7 @@ if (-not $taskReuse -and (Test-Path -LiteralPath (Join-Path $taskData 'world.sql
 }
 
 # Restart only this packaged game's window and its verified portable server.
-Get-CimInstance Win32_Process -Filter "Name='Tripothon.exe'" |
+Get-CimInstance Win32_Process -Filter "Name='Tripothon_Developer.exe'" |
     Where-Object { $_.ExecutablePath -eq $taskGame } |
     ForEach-Object { Stop-Process -Id $_.ProcessId -ErrorAction Stop }
 if ($taskHealth -and -not $taskReuse) {

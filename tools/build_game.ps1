@@ -7,4 +7,6 @@ if (-not (Test-Path -LiteralPath $taskTemplate)) { throw 'Install the official G
 New-Item -ItemType Directory -Path builds/windows -Force | Out-Null
 & $taskGodot --headless --path game --export-release 'Windows Desktop'
 if ($LASTEXITCODE -ne 0) { throw 'Godot export failed.' }
-Write-Output 'Built builds/windows/Tripothon.exe. A separate server is required.'
+& $taskGodot --headless --path game --export-release 'Windows Developer'
+if ($LASTEXITCODE -ne 0) { throw 'Godot developer export failed.' }
+Write-Output 'Built builds/windows/Tripothon.exe and Tripothon_Developer.exe. A separate server is required.'

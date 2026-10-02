@@ -101,6 +101,9 @@ var chosen_map := "forest"
 var chosen_difficulty := "standard"
 var town: Node3D
 var life: Node
+var camera_focus := Vector3.ZERO
+var developer_label: Label
+var developer_panel: Control
 
 func _ready() -> void:
 	api = Api.new()
@@ -133,7 +136,7 @@ func _ready() -> void:
 	add_child(sun)
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
-	camera.size = 16
+	camera.size = 14.5
 	camera.current = true
 	add_child(camera)
 	var layer := CanvasLayer.new()
@@ -160,25 +163,25 @@ func make_theme() -> Theme:
 	theme.default_font = font
 	theme.default_font_size = 15
 	for type in ["Label","Button","LineEdit","ItemList","SpinBox"]:
-		theme.set_color("font_color",type,Color("f5f0df"))
-	theme.set_color("font_hover_color","Button",Color("fff8e6"))
+		theme.set_color("font_color",type,Color("3c3429"))
+	theme.set_color("font_hover_color","Button",Color("2c4437"))
 	theme.set_color("font_pressed_color","Button",Color("152b2d"))
-	theme.set_color("font_disabled_color","Button",Color("8d9c94"))
-	theme.set_color("font_selected_color","ItemList",Color("fff5d9"))
+	theme.set_color("font_disabled_color","Button",Color("968e7c"))
+	theme.set_color("font_selected_color","ItemList",Color("273a31"))
 	var selected_item := StyleBoxFlat.new()
-	selected_item.bg_color=Color("3c665e")
+	selected_item.bg_color=Color("c8dfc2")
 	selected_item.set_corner_radius_all(7)
 	selected_item.set_border_width_all(1)
-	selected_item.border_color=Color("ddc486",0.72)
+	selected_item.border_color=Color("8b9d70",0.72)
 	theme.set_stylebox("selected","ItemList",selected_item)
 	theme.set_stylebox("selected_focus","ItemList",selected_item)
 	for type in ["Button","LineEdit","ItemList"]:
 		for kind in ["normal","hover","pressed","focus","disabled"]:
 			var style := StyleBoxFlat.new()
-			style.bg_color = Color("365d58") if kind=="hover" else Color("193538") if kind=="pressed" else Color("263e40") if kind=="normal" else Color("203438")
+			style.bg_color = Color("e8dfca") if kind=="hover" else Color("c9d4bc") if kind=="pressed" else Color("fff8e9") if kind=="normal" else Color("e4decf")
 			style.set_corner_radius_all(10)
 			style.set_border_width_all(1)
-			style.border_color=Color("72917f",0.4)
+			style.border_color=Color("a99d80",0.55)
 			style.content_margin_left = 12
 			style.content_margin_right = 12
 			style.content_margin_top = 9
@@ -205,12 +208,12 @@ func panel(at: Vector2, width: float, variant := "default") -> VBoxContainer:
 	p.position = at
 	p.custom_minimum_size.x = width
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06,0.12,0.13,0.94) if variant=="hero" else Color(0.075,0.14,0.15,0.93)
+	style.bg_color = Color("fff7e7",0.96) if variant=="hero" else Color("fbf1df",0.94)
 	style.set_corner_radius_all(16)
 	style.set_border_width_all(1)
 	style.border_width_top=2 if variant in ["hero","objective","toolbar"] else 1
-	style.border_color=Color("d8b873",0.68) if variant in ["hero","objective"] else Color("89af9a",0.48)
-	style.shadow_color=Color(0.01,0.06,0.07,0.34)
+	style.border_color=Color("bbaa82",0.8) if variant in ["hero","objective"] else Color("9fac90",0.55)
+	style.shadow_color=Color(0.20,0.16,0.11,0.22)
 	style.shadow_size=12
 	style.shadow_offset=Vector2(0,5)
 	style.content_margin_left = 19
@@ -253,14 +256,14 @@ func button(parent: Node, value: String, callback: Callable, variant := "default
 			style.content_margin_top=9
 			style.content_margin_bottom=9
 			if variant=="primary":
-				style.bg_color=Color("f3d992") if kind=="hover" else Color("af894c") if kind=="pressed" else Color("d3b474")
-				style.border_color=Color("f5e3ae")
+				style.bg_color=Color("b9cf9d") if kind=="hover" else Color("829d73") if kind=="pressed" else Color("9fb889")
+				style.border_color=Color("708763")
 			else:
-				style.bg_color=Color("37625c") if kind=="hover" else Color("152e32") if kind=="pressed" else Color("234447")
-				style.border_color=Color("88a995",0.58)
+				style.bg_color=Color("e8e8d5") if kind=="hover" else Color("d5d6bd") if kind=="pressed" else Color("f4eddb")
+				style.border_color=Color("a5a486",0.62)
 			b.add_theme_stylebox_override(kind,style)
-		b.add_theme_color_override("font_color",Color("23342d") if variant=="primary" else Color("f2ead7"))
-		b.add_theme_color_override("font_hover_color",Color("23342d") if variant=="primary" else Color("fff8e6"))
+		b.add_theme_color_override("font_color",Color("273b2c"))
+		b.add_theme_color_override("font_hover_color",Color("273b2c"))
 	b.pressed.connect(func():
 		sound.effect("click")
 		callback.call())
@@ -319,13 +322,14 @@ func login_ui() -> void:
 	button(left,"마을에 들어가기  →",func(): authenticate(false,host.text,username.text,password.text,invitation.text),"primary")
 	button(left,"새 탐험가 만들기",func(): authenticate(true,host.text,username.text,password.text,invitation.text))
 	var advanced := VBoxContainer.new()
-	button(left,"연결 설정",func(): advanced.visible=not advanced.visible)
+	button(left,"연결 설정" if preload("res://scripts/build_mode.gd").developer() else "초대 코드",func(): advanced.visible=not advanced.visible)
 	left.add_child(advanced)
-	text(advanced,"서버 주소 · 외부 서버는 HTTPS",12)
-	advanced.add_child(host)
+	if preload("res://scripts/build_mode.gd").developer():
+		text(advanced,"서버 주소 · 외부 서버는 HTTPS",12)
+		advanced.add_child(host)
 	advanced.add_child(invitation)
 	advanced.visible=false
-	notice = text(left,"로컬 샘플 모드에서는 API 비용이 발생하지 않습니다.",13)
+	notice = text(left,"일곱 밤을 무사히 보내고 마을을 꾸며 보세요.",13)
 	notice.custom_minimum_size.x = 320
 	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	text(left,"숲에서 생존하고 · 별씨를 모으고\n나만의 물건으로 마을을 채워 보세요.",13)
@@ -485,7 +489,7 @@ func build_world(survival: bool) -> void:
 	environment.background_color = Color("88bcb9")
 	sun.light_energy = 0.25
 	sun.light_color=Color("fff5e9")
-	camera.size = 16
+	camera.size = 14.5
 	follow_camera(1)
 
 func enter_village() -> void:
@@ -623,12 +627,12 @@ func inspect_object(obj: Dictionary) -> void:
 
 func build_play_hud(survival: bool) -> void:
 	var task_card := panel(Vector2(962,24),294,"objective")
-	text(task_card,"✦  오늘의 탐험 목표" if survival else "✦  오늘의 마을 이야기",11).modulate=Color("e4c989")
+	text(task_card,"✦  일곱 밤의 목표" if survival else "✦  오늘의 마을 이야기",11).modulate=Color("796b4c")
 	rule(task_card)
 	objective=text(task_card,"",14)
 	objective.custom_minimum_size.x=254
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	var toolbar := panel(Vector2(310,668 if survival else 704),660,"toolbar")
+	var toolbar := panel(Vector2(310,602 if survival else 634),660,"toolbar")
 	if survival:
 		var quick_row := HBoxContainer.new();quick_row.alignment=BoxContainer.ALIGNMENT_CENTER
 		quick_row.add_theme_constant_override("separation",16);toolbar.add_child(quick_row)
@@ -640,20 +644,20 @@ func build_play_hud(survival: bool) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation",8)
 	toolbar.add_child(row)
-	button(row,"[ I ]  가방 · 제작" if survival else "[ I ]  보관함",toggle_drawer,"slot")
+	button(row,"I  가방" if survival else "I  보관함",toggle_drawer,"slot")
 	if survival:
-		button(row,"[ Q ]  먹기",func(): intent("eat"),"slot")
-		button(row,"[ F ]  불 지키기",func(): intent("fire"),"slot")
-		button(row,"[ H ]  붕대",func(): intent("heal"),"slot")
+		button(row,"Q  먹기",func(): intent("eat"),"slot")
+		button(row,"F  모닥불",func(): intent("fire"),"slot")
+		button(row,"H  붕대",func(): intent("heal"),"slot")
 		button(row,"귀환",confirm_return,"slot")
 	else:
 		if TRADING_UI_ENABLED: button(row,"별씨 장터",show_market)
-		expedition_button=button(row,"탐험 지도  →",open_expedition,"primary")
+		expedition_button=button(row,"탐험  →",open_expedition,"primary")
 		button(row,"옷장",open_wardrobe,"slot")
-		button(row,"[ Tab ]  지도",life.open_map,"slot")
-		button(row,"[ B ]  창고",life.open_storage,"slot")
+		button(row,"Tab  지도",life.open_map,"slot")
+		button(row,"B  창고",life.open_storage,"slot")
 	for child in row.get_children(): child.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	var toast := panel(Vector2(365,586 if survival else 620),550,"objective")
+	var toast := panel(Vector2(365,500 if survival else 548),550,"objective")
 	toast_panel=toast.get_parent()
 	toast_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	notice=text(toast,"",14)
@@ -665,16 +669,23 @@ func build_play_hud(survival: bool) -> void:
 		var tracker := panel(Vector2(460,24),360,"hero")
 		day_track=text(tracker,"",16)
 		day_track.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	if preload("res://scripts/build_mode.gd").developer():
+		var debug_box := panel(Vector2(24,520),248,"default")
+		developer_panel=debug_box.get_parent()
+		developer_panel.visible=false
+		developer_label=text(debug_box,"F3 · 개발 정보",12)
+		developer_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 
 func world_hint(value: String) -> void:
 	hint=Label.new()
 	hint.text=value
 	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	hint.position=Vector2(320,640 if screen=="survival" else 670)
-	hint.size=Vector2(640,35)
-	hint.add_theme_font_size_override("font_size",15)
+	hint.position=Vector2(320,564 if screen=="survival" else 605)
+	hint.size=Vector2(640,24)
+	hint.add_theme_font_size_override("font_size",13)
+	hint.add_theme_color_override("font_color",Color("fff8e8"))
 	hint.add_theme_color_override("font_outline_color",Color("17282c"))
-	hint.add_theme_constant_override("outline_size",5)
+	hint.add_theme_constant_override("outline_size",3)
 	hint.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	ui.add_child(hint)
 
@@ -723,7 +734,9 @@ func refresh_inventory() -> void:
 		var saved = me.get("active_run_summary")
 		expedition_button.text=("탐험 이어하기 · %d일" % saved.day) if saved is Dictionary else "탐험 지도 →"
 	if me.get("pending_job")!=null and job_id.is_empty(): job_id=me.pending_job
-	wallet.text = "%s  ·  별씨 %d\n%s" % [me.username,me.shards,"Tripo 연결 · 공방에서 이용" if me.get("studio_tripo_enabled",false) else ("샘플 서버 · 실제 API 비용 없음" if me.mode=="demo" else "Tripo 서버 연결")]
+	wallet.text = "%s  ·  별씨 %d" % [me.username,me.shards]
+	if preload("res://scripts/build_mode.gd").developer():
+		wallet.text += "\n"+("Tripo 연결 · 공방에서 이용" if me.get("studio_tripo_enabled",false) else ("샘플 서버 · 실제 API 비용 없음" if me.mode=="demo" else "Tripo 서버 연결"))
 	objects_list.clear()
 	selected = {}
 	for obj in me.objects:
@@ -967,7 +980,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "") -
 	left=panel(Vector2(24,24),250,"hero")
 	text(left,"✦  SEVEN NIGHTS  /  EXPEDITION",11).modulate=Color("e4c989")
 	text(left,region_name(run.get("map_id","forest")),22)
-	text(left,"%s · 보상 ×%.3f" % [difficulty_name(run.get("difficulty","standard")),run.get("reward_multiplier",1.0)],12)
+	text(left,"%s · 일곱 밤 생존" % difficulty_name(run.get("difficulty","standard")),12)
 	rule(left)
 	metrics=text(left,"",13)
 	var hp_meter := status_meter(left,"♥  체력",Color("d98f80"))
@@ -1025,7 +1038,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "") -
 	craft_buttons.soup.tooltip_text="열매보다 많은 포만감과 체력을 회복합니다. Q를 누르면 수프를 먼저 먹습니다."
 	craft_buttons.bandage.tooltip_text="H로 사용하면 체력 30을 회복합니다. 체력이 가득 차면 소모하지 않습니다."
 	text(right,"제작 전에 밤에 쓸 목재 2개를 남겨 두세요.",12).modulate=Color("e9c98b")
-	text(right,"목표: 일곱 번째 밤까지 생존\n1일 = 60초 · 총 약 7분\nE / Space를 누르고 있으면 반복 행동\n붉은 원은 적의 공격 예고입니다.\nShift로 원 밖으로 빠져나오세요.\n연결이 끊기면 진행이 멈춥니다.",12)
+	text(right,"붉은 공격 예고는 Shift로 피하세요.\n목재 두 개는 모닥불을 위해 남겨 두세요.",12)
 	right.get_parent().visible=false
 	build_play_hud(true)
 	update_run()
@@ -1422,13 +1435,17 @@ func logout() -> void:
 
 func follow_camera(delta: float) -> void:
 	if not is_instance_valid(player): return
-	var target := player.position+Vector3(0,0.6,-1)
-	var at := target+Vector3(0,14,17)
-	camera.position=camera.position.lerp(at,minf(1,delta*6))
-	camera.look_at(target)
+	var target := player.position+Vector3(0,1.0,-0.55)
+	if camera_focus==Vector3.ZERO or delta>=1.0: camera_focus=target
+	else: camera_focus=camera_focus.lerp(target,minf(1,delta*4.5))
+	var at := camera_focus+Vector3(0,8.8,16.5)
+	camera.position=camera.position.lerp(at,minf(1,delta*5.0))
+	camera.look_at(camera_focus)
 
 func _process(delta: float) -> void:
 	follow_camera(delta)
+	if is_instance_valid(developer_label) and is_instance_valid(developer_panel) and developer_panel.visible:
+		developer_label.text="개발 화면 · F3 닫기\nFPS %d  |  %s\n위치 %.1f, %.1f\n서버 %s\nTripo %s" % [Engine.get_frames_per_second(),screen,player.position.x,player.position.z,api.base_url,"사용 가능" if me.get("studio_tripo_enabled",false) else "비활성"]
 	canopy_elapsed+=delta
 	if canopy_elapsed>0.08:
 		canopy_elapsed=0
@@ -1549,6 +1566,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.button_index==MOUSE_BUTTON_WHEEL_UP: camera.size=maxf(12,camera.size-1)
 		if event.button_index==MOUSE_BUTTON_WHEEL_DOWN: camera.size=minf(26,camera.size+1)
 	if event is InputEventKey and event.pressed and not event.echo:
+		if event.physical_keycode==KEY_F3 and is_instance_valid(developer_panel):
+			developer_panel.visible=not developer_panel.visible
+			return
 		if event.physical_keycode==KEY_M:
 			sound.toggle()
 			message("소리를 껐습니다. M으로 다시 켤 수 있습니다." if sound.muted else "소리를 켰습니다.")
@@ -1689,7 +1709,7 @@ func spawn_villagers() -> void:
 		{"title":"소라 · 재단사","role":"wardrobe","at":Vector3(-3.8,0.1,2.0),"character":"ranger","coat":"#ab789f"},
 		{"title":"모루 · 야영 전문가","role":"guide","at":Vector3(6.5,0.1,5.5),"character":"tinker","coat":"#6889a1"},
 		{"title":"단비 · 씨앗지기","role":"farmer","at":Vector3(-19.3,0.65,0.9),"character":"ranger","coat":"#70afa3"},
-		{"title":"해루 · 낚시꾼","role":"angler","at":Vector3(29.6,0.1,26),"character":"tinker","coat":"#dba448"}]
+		{"title":"해루 · 낚시꾼","role":"angler","at":Vector3(29.6,0.1,26),"character":"explorer_b","coat":"#ad803b"}]
 	for entry in entries:
 		var npc := Player.new()
 		npc.controls_enabled=false
@@ -1700,6 +1720,7 @@ func spawn_villagers() -> void:
 			npc.avatar["pants"]="#323a50"
 			npc.avatar["boots"]="#9c6836"
 		world.add_child(npc)
+		if entry.role=="angler": npc.equip("rod")
 		npc.position=entry.at
 		npc.facing=Vector3(0,0,1)
 		npc.set_meta("title",entry.title)

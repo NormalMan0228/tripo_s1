@@ -3,6 +3,7 @@ const Api=preload("res://scripts/api.gd")
 const Assembly=preload("res://scripts/asset_assembly.gd")
 const Loader=preload("res://scripts/model_loader.gd")
 const Art=preload("res://scripts/art.gd")
+const BuildMode=preload("res://scripts/build_mode.gd")
 var api: Node
 var viewport: SubViewport
 var view_container: SubViewportContainer
@@ -93,11 +94,13 @@ func theme_style() -> Theme:
 	var font := SystemFont.new();font.font_names=PackedStringArray(["Malgun Gothic","sans-serif"])
 	t.default_font=font;t.default_font_size=14
 	for type in ["Label","Button","OptionButton","LineEdit","TextEdit","ItemList","CheckButton"]:
-		t.set_color("font_color",type,Color("eee8d8"))
+		t.set_color("font_color",type,Color("3f352a"))
+		if type in ["LineEdit","TextEdit"]:t.set_color("font_placeholder_color",type,Color("8d8373"))
 		if type=="Label":continue
 		for state_name in ["normal","hover","pressed","focus","selected","read_only"]:
 			var style := StyleBoxFlat.new()
-			style.bg_color=Color("476b60") if state_name in ["hover","selected"] else Color("263f3d")
+			style.bg_color=Color("cfdfbf") if state_name in ["hover","selected"] else (Color("e7e9d6") if type in ["Button","OptionButton","CheckButton"] else Color("fffdf5"))
+			style.set_border_width_all(1);style.border_color=Color("ada88e")
 			style.set_corner_radius_all(8);style.content_margin_left=10;style.content_margin_right=10;style.content_margin_top=8;style.content_margin_bottom=8
 			t.set_stylebox(state_name,type,style)
 	return t
@@ -120,21 +123,22 @@ func row(parent: Node) -> HBoxContainer:
 
 func build_ui() -> void:
 	theme=theme_style()
-	var bg := ColorRect.new();bg.color=Color("182e2e");bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(bg)
+	var bg := ColorRect.new();bg.color=Color("d6ddd0");bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(bg)
 	var layout := HBoxContainer.new();layout.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);layout.add_theme_constant_override("separation",0);add_child(layout)
 	var canvas := VBoxContainer.new();canvas.size_flags_horizontal=Control.SIZE_EXPAND_FILL;layout.add_child(canvas)
 	var header := MarginContainer.new();header.add_theme_constant_override("margin_left",24);header.add_theme_constant_override("margin_top",16);header.add_theme_constant_override("margin_bottom",10);canvas.add_child(header)
 	var head := VBoxContainer.new();header.add_child(head)
-	label(head,"TRIPOTHON  /  LITTLE THINGS, YOUR STORIES",12).modulate=Color("e5be72")
+	label(head,"TRIPOTHON  /  LITTLE THINGS, YOUR STORIES",12).modulate=Color("8b7850")
 	title_label=label(head,"물결빛 공방",26)
-	label(head,"상상하고 · 움직임을 만들고 · 나만의 공간에 놓아요",13)
+	label(head,"상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요",13)
+	if BuildMode.developer(): label(head,"개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다",11).modulate=Color("986b42")
 	view_container=SubViewportContainer.new();view_container.stretch=true;view_container.size_flags_vertical=Control.SIZE_EXPAND_FILL;canvas.add_child(view_container)
 	viewport=SubViewport.new();viewport.size=Vector2i(880,660);viewport.own_world_3d=true;viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS;viewport.msaa_3d=Viewport.MSAA_4X;view_container.add_child(viewport)
 	view_container.gui_input.connect(view_input)
 	var footer := MarginContainer.new();footer.add_theme_constant_override("margin_left",20);footer.add_theme_constant_override("margin_right",20);footer.add_theme_constant_override("margin_bottom",14);canvas.add_child(footer)
 	var f := VBoxContainer.new();footer.add_child(f)
 	status_label=label(f,"서버에 연결하고 있어요",14)
-	label(f,"WASD 산책   E 문 출입 / 가까운 가구 사용   R 배치 회전   Esc 배치 취소",12).modulate=Color("bbc7ad")
+	label(f,"WASD 이동   E 상호작용   R 회전   Esc 취소",12).modulate=Color("817960")
 	var nav := row(f)
 	button(nav,"내 집",func(): await change_room("home"))
 	button(nav,"공방",func(): await change_room("workshop"))
@@ -145,10 +149,25 @@ func build_ui() -> void:
 	quote_panel=VBoxContainer.new();box.add_child(quote_panel);quote_panel.visible=false
 	quote_label=label(quote_panel,"",14)
 	var quote_actions := row(quote_panel)
-	button(quote_actions,"도형으로 동작 미리보기",preview_design)
-	button(quote_actions,"이 설계로 생성",confirm_job)
-	button(quote_actions,"취소 · 별씨 환불",cancel_job)
+	button(quote_actions,"도형으로 동작 미리보기" if BuildMode.developer() else "모습 미리보기",preview_design)
+	button(quote_actions,"이 설계로 생성" if BuildMode.developer() else "가구 완성하기",confirm_job)
+	button(quote_actions,"취소 · 별씨 환불" if BuildMode.developer() else "취소",cancel_job)
 	var tabs := TabContainer.new();tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL;box.add_child(tabs)
+	var tab_panel := StyleBoxFlat.new();tab_panel.bg_color=Color("fff7e8");tab_panel.set_corner_radius_all(12)
+	tab_panel.content_margin_left=8;tab_panel.content_margin_right=8;tab_panel.content_margin_top=8;tab_panel.content_margin_bottom=8
+	tabs.add_theme_stylebox_override("panel",tab_panel)
+	var tab_bar := tabs.get_tab_bar()
+	for state_name in ["tab_selected","tab_unselected","tab_hovered"]:
+		var tab_style := StyleBoxFlat.new()
+		tab_style.bg_color=Color("c5d9b6") if state_name=="tab_selected" else Color("e9e4d5")
+		tab_style.set_corner_radius_all(7)
+		tab_style.content_margin_left=11;tab_style.content_margin_right=11;tab_style.content_margin_top=7;tab_style.content_margin_bottom=7
+		tab_bar.add_theme_stylebox_override(state_name,tab_style)
+		tabs.add_theme_stylebox_override(state_name,tab_style)
+	tab_bar.add_theme_color_override("font_selected_color",Color("304533"))
+	tab_bar.add_theme_color_override("font_unselected_color",Color("4e493d"))
+	tabs.add_theme_color_override("font_selected_color",Color("304533"))
+	tabs.add_theme_color_override("font_unselected_color",Color("4e493d"))
 	var create_scroll := ScrollContainer.new();create_scroll.name="만들기";tabs.add_child(create_scroll)
 	var create := VBoxContainer.new();create.size_flags_horizontal=Control.SIZE_EXPAND_FILL;create.add_theme_constant_override("separation",10);create_scroll.add_child(create)
 	label(create,"어떤 물건을 만들까요?",20)
@@ -157,22 +176,22 @@ func build_ui() -> void:
 	button(presets,"꽃 조명",func(): prompt.text="다가가면 여섯 꽃잎이 열리고 떠나면 닫히는 꽃 조명")
 	button(presets,"상자",func(): prompt.text="클릭하면 뚜껑이 부드럽게 열리고 다시 클릭하면 닫히는 나무 상자")
 	button(presets,"시계",func(): prompt.text="시침과 분침이 움직이고 클릭하면 멈추는 탁상 시계")
-	image_label=label(create,"참고 이미지 없음 · PNG/JPEG, 최대 1MB",12)
+	image_label=label(create,"참고 그림을 추가할 수 있어요",12)
 	var image_buttons := row(create)
 	button(image_buttons,"이미지 선택",func(): file_dialog.popup_centered_ratio(0.7))
 	button(image_buttons,"제거",func(): image_data="";image_label.text="참고 이미지 없음";update_price())
 	refine_reference=CheckButton.new();refine_reference.text="그림을 먼저 정리해서 만들기";refine_reference.tooltip_text="Tripo 이미지 편집: 부품당 예상 5크레딧 추가. 이후 이미지→3D 요금 적용.";create.add_child(refine_reference);refine_reference.toggled.connect(func(_value):update_price())
 	file_dialog=FileDialog.new();file_dialog.access=FileDialog.ACCESS_FILESYSTEM;file_dialog.file_mode=FileDialog.FILE_MODE_OPEN_FILE;file_dialog.filters=PackedStringArray(["*.png,*.jpg,*.jpeg ; Reference image"]);add_child(file_dialog);file_dialog.file_selected.connect(pick_image)
 	label(create,"표면과 움직임",15)
-	surface_mode=option(create,["메시 · 직접 색칠","텍스처 포함 · 색상 변경 가능"])
+	surface_mode=option(create,["내가 직접 색칠하기","완성된 질감 포함하기"])
 	motion=option(create,["움직이는 가구","정적인 가구"])
-	label(create,"디자인 / 3D 생성 방식",15)
+	var dev_title := label(create,"개발용 생성 설정",15)
 	designer=option(create,["샘플 설계 · API 비용 없음","LLM 설계 · 서버 설정 사용"])
 	geometry=option(create,["검증용 도형 · Tripo 비용 없음","Tripo 실제 생성 · 크레딧 사용"])
 	mesh_models=option(create,["H3 · 일반 가구 / 낮은 비용","P2 · 정밀 메시 / 높은 비용"])
 	mesh_models.item_selected.connect(func(_value):update_price())
 	var advanced := VBoxContainer.new()
-	button(create,"모델 비교 설정 펼치기",func(): advanced.visible=not advanced.visible)
+	var advanced_button := button(create,"모델 비교 설정 펼치기",func(): advanced.visible=not advanced.visible)
 	create.add_child(advanced);advanced.visible=false
 	models=option(advanced,["gpt-6-luna","gpt-5.6-terra","gpt-6-sol","gpt-6-astra"])
 	efforts=option(advanced,["low","medium","high","xhigh"]);efforts.select(2)
@@ -180,7 +199,8 @@ func build_ui() -> void:
 	generation_button=button(create,"만들기 · 30 별씨",generate)
 	surface_mode.item_selected.connect(func(_i): update_price());motion.item_selected.connect(func(_i): update_price())
 	geometry.item_selected.connect(func(_i): update_price())
-	label(create,"별씨는 게임 재화입니다. API 크레딧과 같은 단위가 아닙니다. 검증용 도형은 생성 메시의 완성도를 보여주지 않습니다.",12).modulate=Color("c5bc9d")
+	var dev_note := label(create,"별씨는 게임 재화입니다. API 크레딧과 같은 단위가 아닙니다. 검증용 도형은 생성 메시의 완성도를 보여주지 않습니다.",12)
+	dev_note.modulate=Color("817960")
 	var own := VBoxContainer.new();own.name="보관함";tabs.add_child(own)
 	label(own,"내가 만든 작은 세계",19)
 	room_capacity=label(own,"배치한 가구를 확인하고 있어요",12)
@@ -248,6 +268,12 @@ func build_ui() -> void:
 		var target: Control=own if index==1 else (source if index==2 else fit)
 		preview_view.reparent(target)
 		target.move_child(preview_view,1 if index==1 else 2))
+	if not BuildMode.developer():
+		for control in [dev_title,designer,geometry,mesh_models,advanced_button,advanced,provider_price,dev_note,refine_reference]: control.visible=false
+		for index in [2,3,4]: tabs.set_tab_hidden(index,true)
+		prompt.text=""
+		prompt.placeholder_text="예: 다가가면 꽃잎이 열리는 꽃 조명"
+		generation_button.text="가구 만들기"
 
 func update_price() -> void:
 	var cost := (20 if surface_mode.selected==0 else 40)+(10 if motion.selected==0 else 0)
@@ -322,7 +348,9 @@ func refresh() -> void:
 		message("서버 연결을 확인해 주세요 · "+response.error)
 		clear_owned()
 		return
-	data=response.data;wallet.text="별씨 %d  ·  %s"%[data.shards,"Tripo 실제 생성 가능" if data.geometry_enabled else ("개발 공방" if data.llm!="openai" else "온라인 공방")]
+	data=response.data
+	wallet.text="별씨 %d"%data.shards
+	if BuildMode.developer(): wallet.text+="  ·  "+("Tripo 실제 생성 가능" if data.geometry_enabled else ("개발 공방" if data.llm!="openai" else "온라인 공방"))
 	var live: bool=data.get("mode","demo")=="live"
 	for i in range(models.get_item_count()):models.set_item_disabled(i,live and i!=0)
 	for i in range(efforts.get_item_count()):efforts.set_item_disabled(i,live and i!=2)
@@ -453,8 +481,9 @@ func select_item(index: int) -> void:
 		for p in item.manifest.plan.parts:part_choice.add_item(p.id);binding_part.add_item(p.id)
 		load_binding_fields(0)
 		code_view.text=JSON.stringify(item.manifest.program,"  ")
-		detail.text+="\n설계: "+str(item.manifest.provenance.provider)+"\n메시: "+str(item.manifest.provenance.geometry)
-		if item.manifest.provenance.geometry=="tripo":detail.text+="\nTripo 실측: %s 크레딧"%str(item.manifest.provenance.get("tripo_credits_consumed","미기록"))
+		if BuildMode.developer():
+			detail.text+="\n설계: "+str(item.manifest.provenance.provider)+"\n메시: "+str(item.manifest.provenance.geometry)
+			if item.manifest.provenance.geometry=="tripo":detail.text+="\nTripo 실측: %s 크레딧"%str(item.manifest.provenance.get("tripo_credits_consumed","미기록"))
 	else:code_view.text="개발자가 제작한 일반 에셋";generated_functions.clear();load_function_fields(-1)
 	message("선택한 가구의 최신 상태를 불러왔어요.")
 
@@ -558,7 +587,10 @@ func poll_job() -> void:
 	var job: Dictionary=response.data
 	quote_panel.visible=job.state=="awaiting_confirmation"
 	if quote_panel.visible:
-		quote_label.text="설계 완료 · %d부품\n총 %d 별씨 · 이미 예약 %d 별씨\nTripo 예상 %s 크레딧\n예상 비용 확인 후에만 유료 생성을 시작합니다."%[job.parts.size(),int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost),str(job.provenance.estimated_tripo_credits)]
+		if BuildMode.developer():
+			quote_label.text="설계 완료 · %d부품\n총 %d 별씨 · 이미 예약 %d 별씨\nTripo 예상 %s 크레딧\n예상 비용 확인 후에만 유료 생성을 시작합니다."%[job.parts.size(),int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost),str(job.provenance.estimated_tripo_credits)]
+		else:
+			quote_label.text="가구를 만들 준비가 됐어요.\n필요한 별씨 %d개 · 이미 맡긴 별씨 %d개\n완성하기를 누르면 제작을 시작해요."%[int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost)]
 	var progress := ""
 	if job.state=="building":
 		var ready := 0
@@ -703,7 +735,8 @@ func pick_image(path: String) -> void:
 	if file==null or file.get_length()>1024*1024:message("이미지는 1MB 이하로 준비해 주세요");return
 	var bytes := file.get_buffer(file.get_length())
 	image_data="data:image/"+("png" if path.get_extension().to_lower()=="png" else "jpeg")+";base64,"+Marshalls.raw_to_base64(bytes)
-	image_label.text=path.get_file();designer.select(1)
+	image_label.text=path.get_file()
+	if data.get("llm","fixture")!="fixture":designer.select(1)
 	update_price()
 
 func change_room(value: String) -> void:

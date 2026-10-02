@@ -16,4 +16,4 @@ if (-not $taskHealth) {
     }
     if (-not $taskHealth) { throw 'Demo server did not become ready.' }
 }
-Start-Process -FilePath (Join-Path $taskRoot 'Tripothon.exe') -WorkingDirectory $taskRoot -WindowStyle Normal
+Start-Process -FilePath (Join-Path $taskRoot 'Tripothon.exe') -ArgumentList '--local-demo' -WorkingDirectory $taskRoot -WindowStyle Normal
