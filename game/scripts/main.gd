@@ -1694,6 +1694,11 @@ func spawn_villagers() -> void:
 		var npc := Player.new()
 		npc.controls_enabled=false
 		npc.avatar={"character":entry.character,"coat":entry.coat,"backpack":false,"headwear":"cap" if entry.role=="guide" else "none"}
+		if entry.role=="angler":
+			npc.avatar["hair"]="#2e314a"
+			npc.avatar["coat"]="#ad803b"
+			npc.avatar["pants"]="#323a50"
+			npc.avatar["boots"]="#9c6836"
 		world.add_child(npc)
 		npc.position=entry.at
 		npc.facing=Vector3(0,0,1)
@@ -1717,9 +1722,33 @@ func talk_to(npc: Node3D) -> void:
 	npc.face_point(player.position)
 	var v := modal_card(npc.get_meta("title"))
 	var role: String=npc.get_meta("role")
-	if role in ["farmer","angler"]:
-		text(v,"순무는 90초, 호박은 150초면 자라요.\n심은 뒤 물을 한 번 주고 마을을 돌아보세요.\n수확물과 물고기는 잎전으로 바꾸거나 식탁에 배달할 수 있어요." if role=="farmer" else "낚싯대와 물뿌리개는 준비되어 있어요. 미끼만 챙기세요!\n찌를 던지고 금빛 입질 신호가 오면 E로 당겨요.\n바다에는 은빛 도미가, 호수에는 강농어가 더 많아요.",17)
-		button(v,"씨앗과 미끼 가게" if role=="farmer" else "낚시 도감과 생활 창고",life.open_shop if role=="farmer" else life.open_storage)
+	if role=="angler":
+		var conversation := HBoxContainer.new()
+		conversation.add_theme_constant_override("separation",18)
+		v.add_child(conversation)
+		var portrait := TextureRect.new()
+		var crop := AtlasTexture.new()
+		crop.atlas=preload("res://assets/npc_haeru_design.png")
+		crop.region=Rect2(26,29,390,493)
+		portrait.texture=crop
+		portrait.custom_minimum_size=Vector2(205,260)
+		portrait.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+		portrait.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		conversation.add_child(portrait)
+		var speech := VBoxContainer.new()
+		speech.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		speech.add_theme_constant_override("separation",14)
+		conversation.add_child(speech)
+		text(speech,"해루  /  낚시꾼",13).modulate=Color("e4c989")
+		text(speech,"오늘 물때가 좋아요.\n낚시하러 가볼까요?",24)
+		rule(speech)
+		var advice := text(speech,"미끼를 챙겨 찌를 던져 보세요.\n금빛 입질이 오면 E로 당기면 돼요.\n바다에는 은빛 도미가 더 많아요.",15)
+		advice.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		button(v,"낚시 도감과 생활 창고",life.open_storage,"primary")
+		return
+	if role=="farmer":
+		text(v,"순무는 90초, 호박은 150초면 자라요.\n심은 뒤 물을 한 번 주고 마을을 돌아보세요.\n수확물과 물고기는 잎전으로 바꾸거나 식탁에 배달할 수 있어요.",17)
+		button(v,"씨앗과 미끼 가게",life.open_shop)
 		return
 	var words: String={"map":"숲을 지나면 뜨거운 채석장, 더 먼 곳에는 서리빛 분지가 있어요.\n처음이라면 산책 난이도로 길을 익혀 보세요.\n도전이 어려울수록 완주했을 때 받는 별씨도 늘어납니다.","wardrobe":"여행에도 나다운 옷차림이 필요하죠!\n머리와 옷, 바지, 신발 색을 따로 골라 보세요.\n외형은 생존 능력에 영향을 주지 않아요.","guide":"첫날에는 목재와 돌을 모아 도끼부터 만드세요.\n밤에는 모닥불 곁에서 몸을 녹이고, 빨간 공격 예고 밖으로 피하세요.\n이끼 수호자는 느리지만 강하고, 불씨 도깨비는 먼 곳에서도 공격해요.\n서리 지역에서는 식량과 땔감을 평소보다 넉넉히 준비하세요."}.get(role,"")
 	var label := text(v,words,17)
