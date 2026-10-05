@@ -1,0 +1,15 @@
+{
+  "id": "pants",
+  "label": "바지（주머니 포함）",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "prompt": "Use case: stylized-concept / identity-preserve.\nAsset type: simple isolated 2D component reference for the approved Tripothon B explorer, for direct human image review.\nReference image 1 is the approved character turnaround: preserve its exact proportions, costume design and soft polished stylized 3D illustration language. Do not redesign the explorer.\nOne centered component, complete silhouette, straight FRONT orthographic view, white background, broad clear margins, soft even neutral studio lighting. No scene, labels, explanatory diagram, exploded view, hardware connectors or detached fragments.\nGenerate the COMPLETE warm-grey explorer CARGO TROUSERS as ONE garment. BOTH thigh cargo pockets are already sewn to their correct outer-thigh positions on the trousers and clearly visible, with matching grey flap, volume and stitching, NOT detached pocket pieces. Include waist band, fly, regular upper slash pockets, relaxed softly tapering legs and original rolled ankle cuffs. Preserve the exact approved trouser silhouette and proportions. No belt, buckle, skin, body, shoes, mannequin or hanger. Empty trousers held naturally on an invisible mannequin, small gap between legs, balanced symmetrical frontal view. No split between waist and legs, no separate cuffs, no extra pocket diagram or exploded parts. Full trousers including both pocket flaps and cuffs fit in the image.",
+  "reference_inputs": [
+    "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+  ],
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-94a6322d-a6fa-4495-ac3e-d56994e18222.png",
+  "file": "pants-v2.png",
+  "approval": null,
+  "new_tripo_calls": 0,
+  "new_scenario_calls": 0
+}

@@ -1,0 +1,12 @@
+2026-10-04 | Built-in image_gen | Review candidate, not approved
+Source: art/references/explorer_b_modular_v1/final_images/01_head.png
+Output: 01_head_front_open_mouth.png
+Comparison plan: generate and prepare one common head mesh, then duplicate it for manual versus Faceit rigging; retain identical geometry, materials, camera, lighting and test motion targets. No 3D generation or rigging performed at this stage.
+
+Use case: identity-preserve.
+Asset type: single clean frontal head reference for image-to-3D character generation, later used as the identical input for a Faceit versus manually rigged comparison.
+Edit target: the provided approved stylized explorer character head image.
+Preserve the EXACT established character identity, head width, cranial volume, large brown eyes, dark brown eyebrows, stylized upper lashes, small rounded nose, ears, warm peach skin tone, gentle rounded cheeks and high-quality soft stylized 3D rendering. Keep the head bald as in the input and preserve the short neck. Do not masculinize, age, beautify, redesign or change eye spacing.
+Change the closed smiling mouth to a comfortably OPEN mouth suitable for facial rig preparation: relaxed jaw lowered moderately, lips gently parted into a rounded oval, neither grin nor scream, relaxed brows and cheeks. The opening must clearly reveal a plausible upper dental arch, a distinct lower dental arch, a small resting tongue behind the lower teeth, and dark oral cavity. Teeth are simplified clean stylized natural ivory teeth, not a huge solid white block, not many tiny teeth; upper and lower sets are visibly distinct and not fused to lips. Tongue stays entirely inside the mouth. Keep the character appealing and the mouth proportional; retain lip thickness, smooth mouth corners and soft chin volume. No exaggerated smile and no photoreal dental close-up.
+Composition: EXACT straight front orthographic-like view, centered bilateral symmetry, both ears visible, entire cranium and short neck visible with generous white margin, eyes look straight forward, no camera tilt. One head only. Plain white background, soft even neutral studio illumination and mild form shading suitable for reading geometry.
+No hair, clothing, jewelry, hands, diagrams, labels, grids, text, watermark, split screen, inset or multiple views. This is an individual image, NOT a character sheet. High resolution with sharp clean silhouette.

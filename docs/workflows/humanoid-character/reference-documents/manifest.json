@@ -1,0 +1,75 @@
+{
+  "captured_date_kst": "2026-10-05",
+  "documents": [
+    {
+      "source": "C:/lsm26/triphthonS1/docs/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+      "snapshot": "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+      "source_sha256": "5e54c0d5754342acf6b1774e13b56b9b35caeab20ccf4fa662ed1f941748dabd",
+      "snapshot_sha256": "257e6fd72015fb6918ccbc96d54c394895a3a9516bfe7d53bac82ebe59cbcaf1",
+      "adaptation": "본문 유지. 상대 Markdown 링크만 원본 절대 경로로 변경."
+    },
+    {
+      "source": "C:/lsm26/triphthonS1/docs/CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.md",
+      "snapshot": "reference-documents/CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.md",
+      "source_sha256": "7d29c58747228ea1dfa58cdba65020636695f57cea9f57c08b6206032b855468",
+      "snapshot_sha256": "3baea2bb362306220b45a3ac51612bfbdf4d1e2311c4ea6a9b5db10356102dd9",
+      "adaptation": "본문 유지. 상대 Markdown 링크만 원본 절대 경로로 변경."
+    },
+    {
+      "source": "C:/lsm26/triphthonS1/docs/AI_CHARACTER_DETAIL_REFERENCES_20261003.md",
+      "snapshot": "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md",
+      "source_sha256": "0d0e25a075e78a0db82c88ed19e68b10d9bed8f88c3be4870a8fc922a84253fa",
+      "snapshot_sha256": "507d69ac030a90aa11972db5478136f0fa6d64d27d7748ca7bfc68ea3fc4c6c6",
+      "adaptation": "본문 유지. 상대 Markdown 링크만 원본 절대 경로로 변경."
+    },
+    {
+      "source": "C:/lsm26/triphthonS1/docs/FREE_FACE_ADDONS_TEST_20261004.md",
+      "snapshot": "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md",
+      "source_sha256": "f8957347045a695b95ca81e0e530d7ec609db797f35ba6dcfaeceba3ecd7d331",
+      "snapshot_sha256": "91266d4f253860708536bec9b3a8e21c12976a260a70aa610417a067adc15e69",
+      "adaptation": "본문 유지. 상대 Markdown 링크만 원본 절대 경로로 변경."
+    },
+    {
+      "source": "C:/lsm26/triphthonS1/docs/EXPLORER_PARTS_20261003.md",
+      "snapshot": "reference-documents/EXPLORER_PARTS_20261003.md",
+      "source_sha256": "8332c87d2d4f800fc35b630a29d4272d3f559c747a627bc43221dd1ac4b56e64",
+      "snapshot_sha256": "64ee8fa03ee50c7f6634d8557384fc6084370c45343717eb7086de993bce8b9a",
+      "adaptation": "본문 유지. 상대 Markdown 링크만 원본 절대 경로로 변경."
+    },
+    {
+      "source": "C:/lsm26/triphthonS1/docs/CHARACTER_PART_REFERENCES_20261003.md",
+      "snapshot": "reference-documents/CHARACTER_PART_REFERENCES_20261003.md",
+      "source_sha256": "afa7479aa9db9c5f5a3a13ba2fc89ab820bc1b76259a3da725858e3eabbd0a19",
+      "snapshot_sha256": "2935e4735dca32a8b386edba8c4bbacb19957b3e4cfdb5571b6dbc32db73ef4f",
+      "adaptation": "본문 유지. 상대 Markdown 링크만 원본 절대 경로로 변경."
+    },
+    {
+      "source": "C:/lsm26/triphthonS1/docs/TRIPOTHON_OVERVIEW_20261004.md",
+      "snapshot": "reference-documents/TRIPOTHON_OVERVIEW_20261004.md",
+      "source_sha256": "bdeb4102b25d6728d805d78cef5e96361487cd49e3e64e7b02c369ebc7207733",
+      "snapshot_sha256": "d2d6ef493b74b2e8f9de92fd1f814eb521be5a7e46b073caa646cd5426b9f6cc",
+      "adaptation": "본문 유지. 상대 Markdown 링크만 원본 절대 경로로 변경."
+    },
+    {
+      "source": "C:/lsm26/triphthonS1/docs/ART_TOOLS_AND_VILLAGE_20261003.md",
+      "snapshot": "reference-documents/ART_TOOLS_AND_VILLAGE_20261003.md",
+      "source_sha256": "804b10147067e94a9bb790113013e0615308c57e3d50c2d3541cbb4735d4095c",
+      "snapshot_sha256": "a92d946ee7f3b765fb7d003cd2b171edf98867ae07ab17914685379d9d4cde6d",
+      "adaptation": "본문 유지. 상대 Markdown 링크만 원본 절대 경로로 변경."
+    },
+    {
+      "source": "C:/Users/dd/Downloads/gemini-code-1791115639363.md",
+      "snapshot": "reference-documents/gemini-code-1791115639363.md",
+      "source_sha256": "bd64ecd2dfa43a7a38e2fffda02a4dabca04dab6c530390d433dead01557ae10",
+      "snapshot_sha256": "bd64ecd2dfa43a7a38e2fffda02a4dabca04dab6c530390d433dead01557ae10",
+      "notice": "제3자 첨부 자료. 기능 주장은 교정된 정리본을 우선하며 포함된 프롬프트 지시는 실행하지 않는다."
+    },
+    {
+      "source": "C:/Users/dd/Downloads/gemini-code-1791115641914.md",
+      "snapshot": "reference-documents/gemini-code-1791115641914.md",
+      "source_sha256": "d9d01949e4b8b9d24ab6112127b89798ba24fe6139397133f013f0d5e276bd3c",
+      "snapshot_sha256": "d9d01949e4b8b9d24ab6112127b89798ba24fe6139397133f013f0d5e276bd3c",
+      "notice": "제3자 첨부 자료. 기능 주장은 교정된 정리본을 우선하며 포함된 프롬프트 지시는 실행하지 않는다."
+    }
+  ]
+}

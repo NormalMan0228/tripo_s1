@@ -1,0 +1,15 @@
+{
+  "id": "belt",
+  "label": "벨트（버클 포함）",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "prompt": "Use case: stylized-concept / identity-preserve.\nCreate an isolated COMPLETE dark-brown leather BELT with its silver rectangular buckle ALREADY attached, following the approved explorer reference. One complete wearable belt, not separate pieces and not an exploded view. Belt fastened into a horizontal oval waist loop, silver rounded rectangular buckle centered at the FRONT, leather strap properly threaded through buckle and a matching dark-brown keeper loop, believable buckle prong through leather hole, short tidy leather tail. Preserve the approved simple practical leather belt and modest silver buckle design, no decoration or text. Mild front elevated three-quarter product view so the complete oval belt can be seen, centered on white, same refined soft stylized 3D illustration style as the reference, neutral soft lighting, generous clear margins. No trousers, mannequin, body, detached buckle or extra copies.",
+  "reference_inputs": [
+    "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+  ],
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-6d9c9fc6-27a7-4302-a835-a51614603964.png",
+  "file": "belt-v2.png",
+  "approval": null,
+  "new_tripo_calls": 0,
+  "new_scenario_calls": 0
+}

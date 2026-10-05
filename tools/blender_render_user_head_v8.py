@@ -1,0 +1,3 @@
+import bpy
+from pathlib import Path
+R=Path(__file__).resolve().parents[1];A=R/'art/characters/explorer_b_user_head_v8';bpy.ops.wm.open_mainfile(filepath=str(A/'user_head_mpfb_rigify_v8.blend'));sc=bpy.context.scene;sc.render.engine='BLENDER_EEVEE_NEXT';sc.render.resolution_x=576;sc.render.resolution_y=640;sc.render.resolution_percentage=100;sc.render.image_settings.file_format='PNG';sc.render.fps=30;sc.frame_start=1;sc.frame_end=540;sc.eevee.taa_render_samples=32;sc.render.filepath=str(A/'animation_frames/frame_');(A/'animation_frames').mkdir(exist_ok=True);bpy.ops.render.render(animation=True);print('V8_ANIMATION_FRAMES_COMPLETE')

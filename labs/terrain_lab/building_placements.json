@@ -1,0 +1,1104 @@
+{
+  "version": 1,
+  "units": "metres",
+  "character_height_m": 1.7,
+  "reference": "art/maps/archipelago_terrain_v1/map_reference.png",
+  "buildings": [
+    {
+      "id": "01_cafe",
+      "name": "빨간 곡면 지붕 카페",
+      "island": "01_village_meadow",
+      "island_index": 1,
+      "model": "res://assets/buildings/cafe.glb",
+      "position": [
+        -62,
+        2.0810941644149863,
+        -38
+      ],
+      "yaw_degrees": 0,
+      "scale": 1.0,
+      "dimensions_m": [
+        10.056392669677734,
+        7.999999523162842,
+        10.831839561462402
+      ],
+      "pad_half_extents": [
+        5.148196334838867,
+        5.535919780731201
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.0193734571334803,
+        2.2713179174027927
+      ],
+      "coast_clearance_m": 9.422601524997704,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_c2073972-34c6-4a03-be6b-57464e493e47",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_c2073972-34c6-4a03-be6b-57464e493e47",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_c2073972-34c6-4a03-be6b-57464e493e47",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "02_timber_house",
+      "name": "청색 지붕 목조 주택",
+      "island": "01_village_meadow",
+      "island_index": 1,
+      "model": "res://assets/buildings/timber_house.glb",
+      "position": [
+        -42,
+        2.391449824517588,
+        -50
+      ],
+      "yaw_degrees": -20,
+      "scale": 1.0,
+      "dimensions_m": [
+        12.129064559936523,
+        8.0,
+        11.789003372192383
+      ],
+      "pad_half_extents": [
+        6.184532279968262,
+        6.0145016860961915
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.174572197932986,
+        2.5332092965224837
+      ],
+      "coast_clearance_m": 8.262629423041501,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_45d7d5bc-ca22-43f2-8df5-c00937bedd74",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_45d7d5bc-ca22-43f2-8df5-c00937bedd74",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_45d7d5bc-ca22-43f2-8df5-c00937bedd74",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "03_teal_cottage",
+      "name": "청록 지붕 크림색 주택",
+      "island": "01_village_meadow",
+      "island_index": 1,
+      "model": "res://assets/buildings/teal_cottage.glb",
+      "position": [
+        -34,
+        2.066404740923963,
+        -28
+      ],
+      "yaw_degrees": 20,
+      "scale": 1.0,
+      "dimensions_m": [
+        7.650528907775879,
+        6.200000286102295,
+        7.754189968109131
+      ],
+      "pad_half_extents": [
+        3.9452644538879396,
+        3.9970949840545655
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.036862917625422,
+        2.0840647256975267
+      ],
+      "coast_clearance_m": 6.161551269299718,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_9b09a799-5702-4121-baa0-27bdbd9e9ea8",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_9b09a799-5702-4121-baa0-27bdbd9e9ea8",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_9b09a799-5702-4121-baa0-27bdbd9e9ea8",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "04_windmill",
+      "name": "풍차",
+      "island": "01_village_meadow",
+      "island_index": 1,
+      "model": "res://assets/buildings/windmill.glb",
+      "position": [
+        -18,
+        2.09857576602528,
+        -44
+      ],
+      "yaw_degrees": 0,
+      "scale": 1.0,
+      "dimensions_m": [
+        10.187552452087402,
+        12.0,
+        6.727374076843262
+      ],
+      "pad_half_extents": [
+        5.213776226043701,
+        3.483687038421631
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.0671456976734985,
+        2.121470905339642
+      ],
+      "coast_clearance_m": 7.562656641319232,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_8866a17a-62f5-4dc9-ad3b-dcc48aa1042d",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_8866a17a-62f5-4dc9-ad3b-dcc48aa1042d",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_8866a17a-62f5-4dc9-ad3b-dcc48aa1042d",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "05_observatory",
+      "name": "망원경과 청색 돔 천문대",
+      "island": "02_garden_headland",
+      "island_index": 2,
+      "model": "res://assets/buildings/observatory.glb",
+      "position": [
+        30,
+        2.6233194653942995,
+        -48
+      ],
+      "yaw_degrees": 0,
+      "scale": 1.0,
+      "dimensions_m": [
+        10.162623405456543,
+        11.0,
+        11.299235343933105
+      ],
+      "pad_half_extents": [
+        5.201311702728272,
+        5.769617671966553
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.460911038791205,
+        2.821715731844106
+      ],
+      "coast_clearance_m": 7.510941288665318,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_fedcbf96-8921-465d-9516-5f85f459b9a2",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_fedcbf96-8921-465d-9516-5f85f459b9a2",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_fedcbf96-8921-465d-9516-5f85f459b9a2",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "06_orange_cottage",
+      "name": "주황 지붕 청록색 주택",
+      "island": "02_garden_headland",
+      "island_index": 2,
+      "model": "res://assets/buildings/orange_cottage.glb",
+      "position": [
+        24,
+        2.335878691630931,
+        -28
+      ],
+      "yaw_degrees": 40,
+      "scale": 1.0,
+      "dimensions_m": [
+        8.514631271362305,
+        6.200000286102295,
+        8.212520599365234
+      ],
+      "pad_half_extents": [
+        4.3773156356811525,
+        4.226260299682617
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.2920508806456135,
+        2.4350683535840396
+      ],
+      "coast_clearance_m": 10.002739212101506,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_888dd46a-0a44-45bb-a6c9-b1f6293feb6b",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_888dd46a-0a44-45bb-a6c9-b1f6293feb6b",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_888dd46a-0a44-45bb-a6c9-b1f6293feb6b",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "07_greenhouse",
+      "name": "유리 온실",
+      "island": "02_garden_headland",
+      "island_index": 2,
+      "model": "res://assets/buildings/greenhouse.glb",
+      "position": [
+        49,
+        2.328870862640102,
+        -20
+      ],
+      "yaw_degrees": 38,
+      "scale": 1.0,
+      "dimensions_m": [
+        11.173426628112793,
+        6.5,
+        10.468634605407715
+      ],
+      "pad_half_extents": [
+        5.706713314056397,
+        5.3543173027038575
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.292235692257118,
+        2.4063345796347333
+      ],
+      "coast_clearance_m": 11.66872431098467,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_9dcb2f56-7622-4d58-a161-fdca7c83fd52",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_9dcb2f56-7622-4d58-a161-fdca7c83fd52",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_9dcb2f56-7622-4d58-a161-fdca7c83fd52",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "08_gazebo",
+      "name": "보라색 원형 지붕 정자",
+      "island": "02_garden_headland",
+      "island_index": 2,
+      "model": "res://assets/buildings/gazebo.glb",
+      "position": [
+        71,
+        2.3234266582451824,
+        -36
+      ],
+      "yaw_degrees": 0,
+      "scale": 1.0,
+      "dimensions_m": [
+        5.985097408294678,
+        5.0,
+        6.033613204956055
+      ],
+      "pad_half_extents": [
+        3.112548704147339,
+        3.1368066024780275
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.2908981574407234,
+        2.3668172713723465
+      ],
+      "coast_clearance_m": 8.800396773996825,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_1a379a72-0d36-4601-9e31-93aea64f4a35",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_1a379a72-0d36-4601-9e31-93aea64f4a35",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_1a379a72-0d36-4601-9e31-93aea64f4a35",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "09_town_hall",
+      "name": "시계탑이 있는 마을 회관",
+      "island": "03_town_common",
+      "island_index": 3,
+      "model": "res://assets/buildings/town_hall.glb",
+      "position": [
+        -33,
+        2.830341004527904,
+        22
+      ],
+      "yaw_degrees": -19,
+      "scale": 1.0,
+      "dimensions_m": [
+        12.444253921508789,
+        10.0,
+        12.268573760986328
+      ],
+      "pad_half_extents": [
+        6.342126960754395,
+        6.254286880493164
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.7256242181878556,
+        3.0143593862439477
+      ],
+      "coast_clearance_m": 16.80888744576802,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_c3a929b7-dc12-4a14-a0ef-6c8fefba6846",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_c3a929b7-dc12-4a14-a0ef-6c8fefba6846",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_c3a929b7-dc12-4a14-a0ef-6c8fefba6846",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "10_red_house",
+      "name": "빨간 지붕 붉은 벽돌 주택",
+      "island": "03_town_common",
+      "island_index": 3,
+      "model": "res://assets/buildings/red_house.glb",
+      "position": [
+        -55,
+        2.910660016028157,
+        17
+      ],
+      "yaw_degrees": -25,
+      "scale": 1.0,
+      "dimensions_m": [
+        10.045634269714355,
+        8.0,
+        9.762731552124023
+      ],
+      "pad_half_extents": [
+        5.142817134857178,
+        5.001365776062012
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.7900578542345364,
+        3.0198518753897354
+      ],
+      "coast_clearance_m": 8.499826325057025,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_c70dfb1f-4709-4930-80d1-95488d201cca",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_c70dfb1f-4709-4930-80d1-95488d201cca",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_c70dfb1f-4709-4930-80d1-95488d201cca",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "11_purple_house",
+      "name": "보라색 지붕 주택",
+      "island": "03_town_common",
+      "island_index": 3,
+      "model": "res://assets/buildings/purple_house.glb",
+      "position": [
+        -68,
+        2.683433870262834,
+        32
+      ],
+      "yaw_degrees": 0,
+      "scale": 1.0,
+      "dimensions_m": [
+        9.81915283203125,
+        8.0,
+        9.82447338104248
+      ],
+      "pad_half_extents": [
+        5.029576416015625,
+        5.03223669052124
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.6529205823719493,
+        2.731438049959138
+      ],
+      "coast_clearance_m": 9.962398968501288,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_3028e8cd-45d9-4c6b-97ad-397edd96874a",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_3028e8cd-45d9-4c6b-97ad-397edd96874a",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_3028e8cd-45d9-4c6b-97ad-397edd96874a",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "12_blue_house",
+      "name": "노란 지붕 파란 주택",
+      "island": "03_town_common",
+      "island_index": 3,
+      "model": "res://assets/buildings/blue_house.glb",
+      "position": [
+        -67,
+        2.632751846275249,
+        46
+      ],
+      "yaw_degrees": 0,
+      "scale": 1.0,
+      "dimensions_m": [
+        8.750110626220703,
+        6.800000190734863,
+        8.796502113342285
+      ],
+      "pad_half_extents": [
+        4.495055313110352,
+        4.518251056671143
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.59203891568849,
+        2.689488784899792
+      ],
+      "coast_clearance_m": 6.4573912674308716,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_e93e6ef4-fc89-40d5-a60f-10fc42ac6509",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_e93e6ef4-fc89-40d5-a60f-10fc42ac6509",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_e93e6ef4-fc89-40d5-a60f-10fc42ac6509",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "13_shop",
+      "name": "녹백색 줄무늬 차양 상점",
+      "island": "03_town_common",
+      "island_index": 3,
+      "model": "res://assets/buildings/shop.glb",
+      "position": [
+        -17,
+        2.663272133239044,
+        28
+      ],
+      "yaw_degrees": 0,
+      "scale": 1.0,
+      "dimensions_m": [
+        6.739874839782715,
+        5.5,
+        6.207498550415039
+      ],
+      "pad_half_extents": [
+        3.4899374198913575,
+        3.2237492752075196
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.6293540600956726,
+        2.6904876635017523
+      ],
+      "coast_clearance_m": 6.716357402030008,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_e46bbe9a-e348-4d9d-88eb-c4ab6a5b8feb",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_e46bbe9a-e348-4d9d-88eb-c4ab6a5b8feb",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_e46bbe9a-e348-4d9d-88eb-c4ab6a5b8feb",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "14_stage",
+      "name": "보라색 천막 음악 무대",
+      "island": "04_camp_meadow",
+      "island_index": 4,
+      "model": "res://assets/buildings/stage.glb",
+      "position": [
+        37,
+        2.153169133004736,
+        26
+      ],
+      "yaw_degrees": 0,
+      "scale": 1.0,
+      "dimensions_m": [
+        9.444478988647461,
+        5.5,
+        9.3720703125
+      ],
+      "pad_half_extents": [
+        4.842239494323731,
+        4.80603515625
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.027662015787554,
+        2.2371100271557998
+      ],
+      "coast_clearance_m": 12.273235323451503,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_17f15b93-12cf-41fb-8a5c-5e574c81f3a9",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_17f15b93-12cf-41fb-8a5c-5e574c81f3a9",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        }
+      ]
+    },
+    {
+      "id": "15_picnic_shelter",
+      "name": "빨간 지붕 피크닉 쉼터",
+      "island": "04_camp_meadow",
+      "island_index": 4,
+      "model": "res://assets/buildings/picnic_shelter.glb",
+      "position": [
+        65,
+        1.8355057325628379,
+        29
+      ],
+      "yaw_degrees": 0,
+      "scale": 1.0,
+      "dimensions_m": [
+        8.498245239257812,
+        4.5,
+        8.679892539978027
+      ],
+      "pad_half_extents": [
+        4.369122619628906,
+        4.459946269989014
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        1.8005003482941735,
+        1.903372255232417
+      ],
+      "coast_clearance_m": 11.621237187352072,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_129f79fc-1c9f-4849-8002-911d1e548fe6",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_129f79fc-1c9f-4849-8002-911d1e548fe6",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_129f79fc-1c9f-4849-8002-911d1e548fe6",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "16_blue_cottage",
+      "name": "청색 지붕 크림색 주택",
+      "island": "04_camp_meadow",
+      "island_index": 4,
+      "model": "res://assets/buildings/blue_cottage.glb",
+      "position": [
+        70,
+        1.7777640737108467,
+        52
+      ],
+      "yaw_degrees": 45,
+      "scale": 1.0,
+      "dimensions_m": [
+        9.113780975341797,
+        6.800000190734863,
+        9.09726333618164
+      ],
+      "pad_half_extents": [
+        4.6768904876708985,
+        4.66863166809082
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        1.7506598424014166,
+        1.8154022189594397
+      ],
+      "coast_clearance_m": 7.343372909175974,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_0733e299-e486-45d7-b552-49432976e95e",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_0733e299-e486-45d7-b552-49432976e95e",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_0733e299-e486-45d7-b552-49432976e95e",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    },
+    {
+      "id": "17_lighthouse",
+      "name": "빨간 등실 등대",
+      "island": "05_lighthouse_islet",
+      "island_index": 5,
+      "model": "res://assets/buildings/lighthouse.glb",
+      "position": [
+        7,
+        1.9159346059301585,
+        78
+      ],
+      "yaw_degrees": 0,
+      "scale": 1.0,
+      "dimensions_m": [
+        4.5660176277160645,
+        9.0,
+        5.05587911605835
+      ],
+      "pad_half_extents": [
+        2.4030088138580323,
+        2.647939558029175
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        1.7944244711504134,
+        2.0152012189576216
+      ],
+      "coast_clearance_m": 5.670078359209092,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_fd1798fb-c00f-48a1-a11b-3892abf82878",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_fd1798fb-c00f-48a1-a11b-3892abf82878",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_fd1798fb-c00f-48a1-a11b-3892abf82878",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
+    }
+  ],
+  "reserved_sites": {
+    "town_green": [
+      -33,
+      2.7,
+      37
+    ],
+    "camp_tents_firepit": [
+      50,
+      1.8,
+      46
+    ]
+  },
+  "placement_authorization": "User: 이제 맵의 각 위치의 알맞는 곳에 배치해주세요",
+  "ground_preparation": "Small level pads under buildings only; original terrain and coastline retained.",
+  "source_assets_preserved": true,
+  "map_texture_max_sizes": {
+    "base_color": 4096,
+    "normal_orm": 2048
+  }
+}

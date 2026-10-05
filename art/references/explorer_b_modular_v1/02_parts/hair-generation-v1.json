@@ -1,0 +1,12 @@
+{
+  "id": "hair",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-08dfe966-90fa-4d7b-bdf3-d6b81eaa7aca.png",
+  "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONLY the same brown bob haircut as approved explorer, preserve side-swept layered fringe, rounded bob silhouette, ear-length sides, rounded back, broad sculpted hair locks rather than individual wispy strands. Render as a standalone hollow hair shell with underside open for a head to fit into. No scalp skin, skull, ears, head, face, eyes or shoulders visible inside. FRONT three-quarter orthographic view, same approved hair color and polished soft highlights, full hair shell visible.",
+  "reference_inputs": [
+    "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+    "art/references/explorer_b_v5/front.png"
+  ],
+  "approval": null
+}

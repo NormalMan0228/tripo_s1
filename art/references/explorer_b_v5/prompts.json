@@ -1,0 +1,24 @@
+{
+  "tool": "built-in image_gen.imagegen",
+  "transparent_background": false,
+  "images": [
+    {
+      "file": "front.png",
+      "reference": "game/assets/explorer_b_portrait.png",
+      "prompt": "Use case: stylized-concept. Asset type: production reference for a high quality game character 3D generation. Input image is an identity and costume reference, not the output background. Create ONE full-body straight front orthographic render of the SAME B explorer character. Preserve the warm friendly young adult face, big dark brown eyes, short side-parted dark brown bob hair, mustard ochre cropped adventure jacket with rolled cuffs, ivory undershirt, gray taupe cargo pants with side pockets, dark brown lace-up hiking boots and belt with simple silver buckle. Preserve medium stylized proportions, about 5.5 heads high, tasteful polished cozy adventure game 3D stylization, not realistic not a toddler. Improve finish with clean flowing volumes, hair clumps, tailored seams and fabric folds, crisp separate jacket/skin/pants/boot materials, smooth elegant hands with five distinctly separated relaxed fingers on each hand. Full-body neutral relaxed A-pose arms about 35 degrees away from body, feet flat parallel spaced about hip width, neutral face, symmetry. No backpack, no weapon, no accessories in hands. Camera is precisely front, level, no perspective distortion. Whole body from hair crown to soles completely visible, ample margins, plain light neutral gray background, even neutral studio lighting with only subtle floor shadow, no colored rim light, no dramatic shadow, no text, no labels, no panels, no collage, only one person. Keep the original character recognizable and costume/palette unchanged. This single character clean silhouette image will be fed to a 3D generator.",
+      "tripo_input": true
+    },
+    {
+      "file": "side.png",
+      "reference": "art/references/explorer_b_v5/front.png",
+      "prompt": "Use case: stylized-concept. Asset type: B explorer 3D character production turnaround reference. Reference image is the definitive identity/costume/proportion reference. Render ONE full-body character in strict 90-degree right side orthographic profile, facing exactly to the right. Preserve exactly the same character, anatomical proportions, mustard rolled-sleeve cropped jacket, ivory shirt, gray taupe cargo pants and brown hiking boots. Preserve same short side-parted brown bob silhouette and all existing costume details. Same relaxed A-pose with arms away from torso, flat feet, no props or backpack. Change only viewpoint. Perfect orthographic level camera, whole character visible with ample margins, plain light gray backdrop and even neutral studio lighting, no text, no labels, no collage, one character only. High quality smooth stylized 3D render matching the reference; do not redesign, don't change palette or exaggerate proportions.",
+      "tripo_input": false
+    },
+    {
+      "file": "back.png",
+      "reference": "art/references/explorer_b_v5/front.png",
+      "prompt": "Use case: stylized-concept. Asset type: B explorer 3D character production turnaround reference. Reference image is the definitive identity/costume/proportion reference. Render ONE full-body character in strict 180-degree back orthographic view facing directly away. Preserve exactly the same character, anatomical proportions, mustard rolled-sleeve cropped jacket, ivory shirt, gray taupe cargo pants and brown hiking boots. Preserve same short side-parted brown bob silhouette and all existing costume details. Same relaxed A-pose with arms away from torso, flat feet, no props or backpack. Change only viewpoint. Perfect orthographic level camera, whole character visible with ample margins, plain light gray backdrop and even neutral studio lighting, no text, no labels, no collage, one character only. High quality smooth stylized 3D render matching the reference; do not redesign, don't change palette or exaggerate proportions.",
+      "tripo_input": false
+    }
+  ]
+}

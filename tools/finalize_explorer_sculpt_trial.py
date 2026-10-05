@@ -1,0 +1,70 @@
+"""Package real Blender sculpt trial renders and exact operation evidence."""
+import hashlib, html, json, shutil, struct, zipfile
+from pathlib import Path
+ROOT=Path(__file__).resolve().parents[1]
+CHAR=ROOT/'art/characters/explorer_b_fullbody_v2'
+OUT=CHAR/'05_sculpt_trial'
+REVIEW=ROOT/'artifacts/production-lab-20261003/review/character-sculpt-trial'
+DOC=ROOT/'docs/character-sculpt-trial-20261004'
+log=json.loads((OUT/'sculpt-log.json').read_text(encoding='utf-8'))
+assert log['state']=='awaiting_user_sculpt_review' and log['native_brush_replay']
+assert log['source_hashes_unchanged'] and not log['rigged'] and log['new_api_credits']==0
+assert all(s['result']==['FINISHED'] and s['fully_masked_max_delta_m']<=1e-7 for s in log['strokes'])
+assert all(j['seam_edges_still_open']==0 for j in log['joins'])
+for source in log['source_hashes'].values():assert hashlib.sha256((ROOT/source['path']).read_bytes()).hexdigest()==source['sha256']
+REVIEW.mkdir(parents=True,exist_ok=True);DOC.mkdir(parents=True,exist_ok=True)
+views=('front','angle','side','back','face','neck','wrist','hand')
+for stage in ('before','after'):
+ for view in views:
+  file=OUT/f'{stage}-{view}.png';assert file.exists(),file
+  scene=OUT/('02_fitted_before_brush.blend' if stage=='before' else '03_sculpt_candidate.blend')
+  assert file.stat().st_mtime>=scene.stat().st_mtime,'stale render: '+file.name
+  shutil.copy2(file,REVIEW/file.name)
+for name in ('cut-mask-front.png','face-mask-face.png','wrist-mask-wrist.png'):
+ assert (OUT/name).exists();shutil.copy2(OUT/name,REVIEW/name)
+verification=json.loads((OUT/'geometry-verification.json').read_text(encoding='utf-8'))
+assert verification['state']=='passed_geometry_protection_checks_not_rig_validation'
+assert (OUT/'geometry-verification.json').stat().st_mtime>=(OUT/'03_sculpt_candidate.blend').stat().st_mtime
+for name in ('03_sculpt_candidate.blend','02_fitted_before_brush.blend','01_cut_masks.blend','mask_face.blend','mask_wrist.blend','mask_neck.blend','mask_hair.blend','sculpt-log.json','geometry-verification.json'):
+ shutil.copy2(OUT/name,REVIEW/name)
+e=html.escape
+def figure(name,label):
+ w,h=struct.unpack('>II',(REVIEW/name).read_bytes()[16:24])
+ return f'<figure><a href="{name}" target="_blank"><img src="{name}" width="{w}" height="{h}" loading="lazy" alt="{e(label)}"></a><figcaption>{e(label)}</figcaption></figure>'
+def compare(view,label):
+ return f'''<article><h3>{label}</h3><div class="comparison" style="--split:50%"><img src="before-{view}.png" width="1000" height="1000" alt="브러시 전 {label}"><img class="after" src="after-{view}.png" width="1000" height="1000" alt="브러시 후 {label}"><span class="rule"></span><span class="tag left">수정 후</span><span class="tag right">수정 전</span></div><label class="slider">비교 경계 <input aria-label="{label} 수정 전후 비교" type="range" min="0" max="100" value="50" oninput="this.closest('article').querySelector('.comparison').style.setProperty('--split',this.value+'%')"></label><p class="small"><a href="before-{view}.png" target="_blank">수정 전 원본</a> · <a href="after-{view}.png" target="_blank">수정 후 원본</a></p></article>'''
+stroke_rows=''.join(f'<tr><td>{e(s["object"])}</td><td>{e(s["brush"])}</td><td>{e(s["label"])}</td><td>{s["changed_vertices"]}</td><td>{s["max_delta_m"]*1000:.3f} mm</td><td>{s["fully_masked_max_delta_m"]*1000:.6f} mm</td></tr>' for s in log['strokes'])
+join_rows=''.join(f'<tr><td>{e(j["object"])}</td><td>{j["boundary_loop_edges"]}</td><td>{j["new_faces"]}</td><td>{j["seam_edges_still_open"]}</td></tr>' for j in log['joins'])
+page=f'''<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Explorer B · 마스킹과 스컬프팅 시험</title><style>
+*{{box-sizing:border-box}}body{{margin:0;background:#f4f5ef;color:#24322c;font:16px/1.75 'Malgun Gothic',sans-serif}}main{{max-width:1220px;margin:auto;padding:32px 24px 80px}}h1{{font-size:36px;line-height:1.3}}h2{{margin-top:48px}}a{{color:#235f4d}}nav{{display:flex;flex-wrap:wrap;gap:18px;padding:15px;background:#e3ebe4;border-radius:10px}}.notice{{background:#fff2d9;border-left:4px solid #b18128;padding:18px 22px;border-radius:8px}}.stats{{display:flex;gap:20px;flex-wrap:wrap;margin:20px 0}}.stats b{{font-size:26px;display:block}}.stats div{{background:white;padding:16px 24px;border-radius:10px}}.grid{{display:grid;grid-template-columns:1fr 1fr;gap:20px}}.four{{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}}.three{{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}}figure,article{{margin:0;background:white;border:1px solid #dce4dd;border-radius:10px;overflow:hidden}}figure img{{width:100%;height:auto;display:block}}figcaption{{padding:10px 15px}}article{{padding:16px}}.small{{font-size:13px;color:#5d6f61}}.comparison{{position:relative;overflow:hidden;aspect-ratio:1;background:#bbb}}.comparison img{{position:absolute;width:100%;height:100%;object-fit:contain}}.comparison .after{{clip-path:inset(0 calc(100% - var(--split)) 0 0)}}.rule{{position:absolute;left:var(--split);top:0;bottom:0;width:2px;background:white}}.tag{{position:absolute;top:10px;background:#183d30dc;color:white;padding:4px 10px;border-radius:4px}}.left{{left:10px}}.right{{right:10px}}.slider{{display:flex;align-items:center;gap:16px;padding-top:12px}}input{{flex:1}}table{{border-collapse:collapse;width:100%;font-size:13px;background:white}}th,td{{padding:10px;border:1px solid #d8dfd7;text-align:left}}.scroll{{overflow:auto}}details{{margin:18px 0}}section{{scroll-margin-top:18px}}.hero{{max-width:680px;margin:24px auto}}@media(max-width:750px){{.grid,.three{{grid-template-columns:1fr}}.four{{grid-template-columns:1fr 1fr}}h1{{font-size:27px}}main{{padding:20px 14px}}}}
+</style></head><body><main><p class="small">2026-10-04 · Blender 4.5.3 · Tripo P2 生成 원본 보존 · 스컬프 단계 검토</p><h1>Explorer B<br>실제 마스킹 · 브러시 수정 시험</h1>
+<p class="notice"><b>위치 조정만 한 결과가 아닙니다.</b> Blender의 실제 Mask Slice와 Sculpt 브러시를 실행했습니다. 원본 P2 FBX는 보존했고, 별도 복사본에서 작업했습니다. 아래는 실제 .blend 렌더이며 AI가 그린 완성 예상도가 아닙니다. UV·텍스처·리깅 이전의 검토 후보입니다.</p>
+<nav><a href="#result">현재 형상</a><a href="#compare">수정 전후</a><a href="#masks">실제 마스크</a><a href="#remaining">남은 문제</a><a href="#evidence">작업 기록</a><a href="03_sculpt_candidate.blend" download>Blender 후보 저장</a><a href="Sculpt_Trial_Review.zip" download>전체 검토 파일</a></nav>
+<div class="stats"><div><b>{len(log['cuts'])}회</b>실제 Mask Slice</div><div><b>{len(log['strokes'])}회</b>실제 브러시 스트로크</div><div><b>0 mm</b>완전 마스크 정점 이동</div><div><b>0크레딧</b>추가 생성 비용</div></div>
+<section id="result"><h2>현재 형상 · 독립 파츠 유지</h2><p>전신을 1.7m 기준으로 맞추고 머리·손을 교체했습니다. 눈·눈썹 등은 머리 객체 안의 별도 메시 섬으로 보존했으며 아직 개별 객체 분류 전입니다. 머리카락·의복은 별도 객체와 컬렉션으로 유지했습니다. 반대쪽 팔과 손은 Y축 Mirror로 동일하게 생성합니다. 색은 구분용 재질이며 최종 텍스처가 아닙니다.</p><div class="hero">{figure('after-angle.png','실제 조립·스컬프팅 후보 · 사선')}</div><div class="four">{''.join(figure('after-'+v+'.png',l) for v,l in [('front','정면'),('side','측면'),('back','후면'),('angle','사선')])}</div></section>
+<section id="compare"><h2>같은 카메라 · 브러시 수정 전후</h2><p>두 상태 모두 절단·접합·크기 맞춤까지 수행한 동일 후보입니다. 슬라이더는 그 뒤 실제 브러시 작업만 비교합니다. 머리카락의 상단 후면에는 두피 간섭을 줄이기 위한 Grab을 적용했습니다.</p><div class="grid">{compare('face','얼굴 · 입꼬리 국소 Smooth')}{compare('wrist','손목 · Inflate와 Smooth')}{compare('neck','목 · 보호 마스크와 Smooth')}{compare('hand','손 · 손가락 보호')}</div></section>
+<section id="masks"><h2>실제로 저장된 Sculpt 마스크</h2><p>이 렌더는 .blend에 저장된 실제 정점 마스크 속성을 색으로 표시한 진단 화면입니다. Blender UI 캡처는 아닙니다. 절단 화면의 주황색은 제거할 영역, 브러시 화면의 주황색은 보호한 영역입니다. 브러시 화면의 푸른 부분만 수정할 수 있습니다.</p><div class="three">{figure('cut-mask-front.png','절단 마스크 · 기존 머리와 한쪽 손 제거')}{figure('face-mask-face.png','얼굴 브러시 마스크 · 눈·눈썹 보호, 입꼬리만 허용')}{figure('wrist-mask-wrist.png','손목 브러시 마스크 · 손가락·손톱 보호')}</div></section>
+<section id="remaining"><h2>검토와 후속 수정이 필요한 곳</h2><ul><li>목과 손목은 실제 면으로 연결했지만, 근접 화면의 표면 굴곡과 연결 주변 토폴로지를 추가 검토해야 합니다. 닫힌 경계만으로 자연스러운 스킨 변형을 검증한 것은 아닙니다.</li><li>생성 원본의 얼굴·머리카락에는 다중 면 엣지와 열린 경계가 남아 있습니다. 안구·눈꺼풀·입 내부의 구조도 아직 리깅용으로 검증하지 않았습니다.</li><li>머리카락의 후면과 두피 간섭은 네 방향 렌더에서 확인합니다. 머리카락 전체를 머리에 리메시하지 않았습니다.</li><li>의복 아래 신체가 완전히 이어져 있다는 보장은 없습니다. 현재 전신 베이스의 피부·의복 경계 구조를 보존한 시험입니다.</li><li>다음 단계는 이 형상 검토입니다. 승인 후 국소 토폴로지 보강 → UV·텍스처 → 신체·손·얼굴 리깅 순서로 진행합니다.</li></ul></section>
+<section id="evidence"><h2>실제 작업 기록</h2><p>Mask Slice로 원본 머리·손과 교체 파츠의 접합 경계를 다듬었습니다. 경계의 타원 단면과 주변 밴드를 맞춘 뒤 쿼드/삼각형 면을 연결했습니다. 이 접합 맞춤은 Blender Python 메시 편집이며, 이후의 Smooth·Inflate/Deflate·Grab은 native Sculpt 브러시입니다. 전체 리메시는 수행하지 않았습니다.</p><div class="scroll"><table><tr><th>접합</th><th>두 경계 엣지 수</th><th>생성 면</th><th>접합에 남은 열린 엣지</th></tr>{join_rows}</table></div><details><summary>브러시 {len(log['strokes'])}회 · 수정량과 보호 검증</summary><div class="scroll"><table><tr><th>객체</th><th>브러시</th><th>수정 목적</th><th>변경 정점 수</th><th>스트로크 최대 이동</th><th>완전 보호 정점 최대 이동</th></tr>{stroke_rows}</table></div></details><p><a href="sculpt-log.json">기계 판독 작업 기록</a> · <a href="02_fitted_before_brush.blend" download>브러시 전 Blender</a> · <a href="01_cut_masks.blend" download>절단 마스크 Blender</a> · <a href="mask_face.blend" download>얼굴 마스크 Blender</a> · <a href="mask_wrist.blend" download>손목 마스크 Blender</a></p><p class="small">공식 구현 근거: <a href="https://docs.blender.org/api/4.5/bpy.ops.sculpt.html">Blender Sculpt Operators</a>. 강의 자료를 그대로 재게시하지 않고 작업 결과와 프로젝트 적용 내용을 기록했습니다.</p></section></main></body></html>'''
+page=page.replace('P2 生成 원본','P2 생성 원본')
+page=page.replace('반대쪽 팔과 손은 Y축 Mirror로 동일하게 생성합니다.', '반대쪽 팔·손과 다리는 Y축 Mirror로 동일하게 생성합니다. 머리카락의 열린 틈에는 두상의 윗부분에서 파생한 독립 두피 덮개를 추가했고, 모발 가닥과 같은 구분용 재질을 배정했습니다.')
+page=page.replace('머리카락의 후면과 두피 간섭은 네 방향 렌더에서 확인합니다.', '독립 두피 덮개가 머리카락의 틈을 가리지만, 원본 모발의 열린 경계와 다중 면 엣지를 수리한 것은 아닙니다. 모발과 덮개를 함께 검토해야 합니다.')
+page=page.replace('브러시 화면의 푸른 부분만 수정할 수 있습니다.', '브러시 화면의 푸른 부분은 선택한 스컬프 객체에서 수정을 허용한 영역입니다. 다른 독립 객체는 해당 스트로크에 포함되지 않습니다.')
+page=page.replace('<a href="sculpt-log.json">기계 판독 작업 기록</a>', '<a href="sculpt-log.json">기계 판독 작업 기록</a> · <a href="geometry-verification.json">저장 파일의 실제 정점 비교 검증</a>')
+(REVIEW/'index.html').write_text(page,encoding='utf-8')
+manifest={'state':log['state'],'date':'2026-10-04','stage':'sculpt_trial','blender':'4.5.3','api_credits':0,
+ 'source_hashes':log['source_hashes'],'native_mask_slices':len(log['cuts']),'native_brush_strokes':len(log['strokes']),
+ 'rigged':False,'uv_texture_approved':False,'user_approved':False,'url':'http://127.0.0.1:8842/character-sculpt-trial/',
+ 'candidate':(OUT/'03_sculpt_candidate.blend').relative_to(ROOT).as_posix()}
+(OUT/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding='utf-8')
+shutil.copy2(OUT/'manifest.json',REVIEW/'manifest.json')
+with zipfile.ZipFile(REVIEW/'Sculpt_Trial_Review.zip','w',zipfile.ZIP_DEFLATED) as archive:
+ for file in REVIEW.iterdir():
+  if file.is_file() and file.suffix in ('.blend','.json','.png','.html'):archive.write(file,file.name)
+for file in REVIEW.iterdir():
+ if file.is_file():shutil.copy2(file,DOC/file.name)
+plan=json.loads((CHAR/'production-plan.json').read_text(encoding='utf-8'))
+plan.update(state='sculpt_trial_awaiting_user_review',sculpt_trial=manifest,
+            next_action='User reviews actual sculpt trial before further topology, UV, texture, or rig work.')
+(CHAR/'production-plan.json').write_text(json.dumps(plan,ensure_ascii=False,indent=2),encoding='utf-8')
+print(json.dumps(manifest,ensure_ascii=False,indent=2))

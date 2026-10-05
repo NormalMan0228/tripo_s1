@@ -1,0 +1,1152 @@
+{
+  "schema_version": "1.0",
+  "workflow_id": "humanoid-character-tripo-blender",
+  "title": "인간형 캐릭터 제작 워크플로우",
+  "captured_date_kst": "2026-10-05",
+  "timezone": "Asia/Seoul",
+  "source_thread": {
+    "id": "01a0f276-190b-72b3-bbcb-8277fd264084",
+    "title": "Tripothon 게임 제작 시작",
+    "user_referred_title": "게임 제작 시작하기"
+  },
+  "evidence_policy": "현재 도구 상태는 원본 대화·로컬 기록 수집 시점의 상태다. planned는 작업 계획이며 완료를 뜻하지 않는다.",
+  "current_direction": "Tripo 원형→Blender 보정·토폴로지·재질→애드온 페이스 리깅→표정·모션→GLB Godot",
+  "current_snapshot": {
+    "main_head": "Smart Mesh P2 열린 입 생성본",
+    "hair": "이전에 다듬은 HD 헤어",
+    "default_mouth": "닫힌 입 기본값 저장 확인; 살짝 미소인 평소 모습으로 후속 보정 중",
+    "faceit_applied": false,
+    "full_face_rig_complete": false,
+    "source_thread_in_progress": true,
+    "latest_request": "속눈썹 뿌리·편안한 눈 뜨기·아랫입술에서 턱의 완만한 굴곡·약한 미소·자연스러운 눈썹"
+  },
+  "rules": [
+    "모델 원형은 얼굴까지 Tripo로 생성하고, Blender 형태·구조 보정 후 페이스 리깅에 애드온을 사용한다.",
+    "입 벌린 생성 상태에서 구강을 확보한 뒤 기본 상태는 입을 다물고 중립으로 저장한다.",
+    "머리 피부·코·뺨·턱·입술·눈꺼풀은 연결된 변형 구조로 유지한다. 눈알·치열·혀·눈썹·속눈썹·헤어는 목적에 맞게 분리한다.",
+    "대칭 부품은 한쪽 형상 검수 후 미러한다. 좌우 표정 제어는 독립적으로 설정한다. 비대칭 가르마 디자인은 보존한다.",
+    "현재 작업 좌표는 앞 +X, 위 +Z, 좌우 Y, 미러 Y=0 기록. 입력은 동일 좌표로 정리한다.",
+    "형태 승인→변형용 토폴로지→UV·베이크·텍스처→몸·손·얼굴 리깅→애니메이션→GLB·Godot 순서.",
+    "최종 Shape Key를 만들 때는 피부 정점 수·순서를 유지한다. 다른 표정을 별도 AI 생성한 메시를 바로 Shape Key로 사용하지 않는다.",
+    "눈꺼풀은 피부 구조이고 속눈썹은 부속이다. 깜빡임·시선·속눈썹 추종을 조합으로 검사한다.",
+    "개별 표정만 아니라 jawOpen과 mouthClose, 미소와 깜빡임, 시선과 눈꺼풀 등 조합을 검사한다.",
+    "원본·작업본·비교본·게임용 파생본을 구분하고 각 단계 사용자 검토를 기록한다.",
+    "수치 검사·파일 재열기·기능 시험·시각 품질·사용자 승인·게임 검증을 서로 다른 증거로 관리한다.",
+    "40메시 41본 실험, 기존 게임 71본, MPFB 930본 조작 리그는 다른 파일과 용도이다.",
+    "2026-10-05 원본 최신 요청은 닫힌 입을 유지하면서 평소 표정을 약한 미소로 보정하는 것이다. Faceit의 기술적 기준 표정은 선택한 프리셋과 별도 검수한다.",
+    "각 디테일 파츠는 독립 편집하되 주요 얼굴 피부는 연결한다. 중립 리깅 기준형과 약한 미소의 게임 평소 표정을 별도로 관리한다."
+  ],
+  "tools": [
+    {
+      "id": "tripo-p2",
+      "name": "Tripo Smart Mesh P2",
+      "cost_class": "유료 API 서비스",
+      "kind": "3D 생성",
+      "role": "입 벌린 머리·신체·의상·손의 원형 생성",
+      "observed_status": "사용 확인",
+      "observed_version": "P2-20260801",
+      "official_url": "https://developers.tripo3d.ai/en/docs/generation-image-to-model/p",
+      "constraints": "요청 쿼드 수가 변형용 얼굴 토폴로지 완성을 보장하지 않음. 최신 머리 100크레딧은 해당 설정 실측.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "tripo-hd",
+      "name": "Tripo HD H3.1",
+      "cost_class": "유료 API 서비스",
+      "kind": "3D 생성",
+      "role": "고밀도 형태 원본과 헤어 생성",
+      "observed_status": "사용 확인",
+      "observed_version": "v3.1 Ultra",
+      "official_url": "https://developers.tripo3d.ai/en/docs/generation-image-to-model/standard",
+      "constraints": "HD 원본을 보존하고 형태 승인 후 게임용 메시 제작. 이번 열린 입 HD는 구강이 얕아 P2로 교체.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "tripo-studio",
+      "name": "Tripo Studio 및 Segmentation",
+      "cost_class": "요금제와 크레딧에 따름",
+      "kind": "3D 편집 서비스",
+      "role": "부품 분할·수정·재질·리토폴로지 조사",
+      "observed_status": "API 분할 사용 확인 / Studio 기능 자료 검토",
+      "observed_version": "mesh segment v2.0-20260430",
+      "official_url": "https://www.tripo3d.ai/blog/tripo-studio-tutorial-english",
+      "constraints": "87조각을 Blender에서 40개 의미 부위로 묶음. 의상 내부와 숨은 신체 자동 복원 아님.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "tripo-rig",
+      "name": "Tripo 자동 리깅",
+      "cost_class": "유료 API 서비스",
+      "kind": "몸 리깅",
+      "role": "몸 뼈와 스킨 웨이트 생성",
+      "observed_status": "사용 확인",
+      "observed_version": "v1.0-20240301 biped spec=tripo",
+      "official_url": "https://developers.tripo3d.ai/en/docs/animations-rig",
+      "constraints": "41본 샘플은 상세 얼굴·손가락 리그 없음. mixamo 규격 선택이 얼굴 리그 추가를 의미하지 않음.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "tripo-motion",
+      "name": "Tripo 애니메이션 프리셋",
+      "cost_class": "유료 API 서비스",
+      "kind": "몸 애니메이션",
+      "role": "idle walk run 등 초기 모션 시험",
+      "observed_status": "사용 확인",
+      "observed_version": null,
+      "official_url": "https://developers.tripo3d.ai/en/pricing",
+      "constraints": "제자리 옵션에도 루트 전진이 남은 사례. 요청 성공과 클립 포함 여부 별도 확인.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "blender",
+      "name": "Blender",
+      "cost_class": "무료 오픈소스",
+      "kind": "DCC 프로그램",
+      "role": "편집·조립·Sculpt·Retopology·UV·Bake·리깅·렌더·내보내기",
+      "observed_status": "사용 확인",
+      "observed_version": "4.5.3 LTS",
+      "official_url": "https://www.blender.org/",
+      "constraints": "Mirror·UV Sphere·Shape Key·Weight Paint·Python은 기본 기능.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "rigify",
+      "name": "Rigify",
+      "cost_class": "무료 오픈소스",
+      "kind": "Blender 애드온",
+      "role": "몸·손·얼굴 메타리그와 제어 리그",
+      "observed_status": "설치 및 템플릿 시험 확인",
+      "observed_version": "0.6.10",
+      "official_url": "https://docs.blender.org/manual/en/4.5/addons/rigging/rigify/index.html",
+      "constraints": "Tripo 얼굴의 배치·바인딩·웨이트 수정은 별도. MPFB의 Shape Key와 같은 부위 이중 변형 방지.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "faceit",
+      "name": "Faceit",
+      "cost_class": "유료",
+      "kind": "Blender 애드온",
+      "role": "랜드마크 기반 얼굴 리그·표정 보정·Shape Key 베이크·컨트롤 리그",
+      "observed_status": "구매 의향 / 설치·Tripo 적용 성공 미확인",
+      "observed_version": "2.3 검토",
+      "official_url": "https://superhivemarket.com/products/faceit",
+      "constraints": "모델링·입안·토폴로지를 대신 완성하지 않음. 애드온 사용/미사용 비교는 계획.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "mpfb",
+      "name": "MPFB",
+      "cost_class": "무료 오픈소스",
+      "kind": "Blender 애드온",
+      "role": "표준 사람 메시·부품·표정 템플릿 시험",
+      "observed_status": "설치 및 기본 얼굴 시험 확인 / 주 모델 생성 경로로 미채택",
+      "observed_version": "2.0.17",
+      "official_url": "https://extensions.blender.org/add-ons/mpfb/",
+      "constraints": "사용자 최종 결정은 모델까지 Tripo로 생성. 템플릿 결과를 Tripo 얼굴의 리깅 성공으로 취급하지 않음.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "makehuman-assets",
+      "name": "MakeHuman System Assets Faceunits Visemes",
+      "cost_class": "선택한 공식 팩 무료 CC0",
+      "kind": "자산 팩",
+      "role": "눈·눈썹·속눈썹·치아·혀 및 52개 표정·발음 모양",
+      "observed_status": "설치 및 템플릿 시험 확인",
+      "observed_version": "Faceunits 01 / Visemes 01 02",
+      "official_url": "https://static.makehumancommunity.org/assets/assetpacks.html",
+      "constraints": "다른 외부 자산 팩의 라이선스까지 CC0로 일반화하지 않음.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "hair-tool",
+      "name": "Hair Tool",
+      "cost_class": "유료",
+      "kind": "Blender 애드온",
+      "role": "가이드 커브·정리된 그리드에서 모발 및 헤어 카드·UV·베이크",
+      "observed_status": "후보 / 설치·Tripo 변환 미확인",
+      "observed_version": "4.5.9는 Blender 4.5 대응 후보",
+      "official_url": "https://bartoszstyperek.gumroad.com/l/hairtool?layout=profile&recommended_by=more_like_this",
+      "constraints": "임의의 Tripo 덩어리 자동 완성 아님. 모발 방향의 쿼드와 뿌리 경계 또는 커브 준비 필요.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "hair-curves",
+      "name": "Blender Hair Curves 및 Geometry Nodes",
+      "cost_class": "Blender 기본 무료",
+      "kind": "기본 기능",
+      "role": "Interpolate·Clump·Attach·Deform Curves on Surface",
+      "observed_status": "자료 검토 / 해당 제작본 적용 미확인",
+      "observed_version": "Blender 4.5 문서",
+      "official_url": "https://docs.blender.org/manual/en/4.5/modeling/geometry_nodes/hair/generation/interpolate_hair_curves.html",
+      "constraints": "게임용 카드·메시·웨이트·표정으로 변환 검수. 현재 눈썹·속눈썹은 알파 카드 우선.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "ue-hair-cards",
+      "name": "Unreal Hair Card Generator",
+      "cost_class": "Unreal 라이선스 조건에 따름",
+      "kind": "엔진 도구",
+      "role": "Groom 모발에서 헤어 카드·텍스처",
+      "observed_status": "대안 자료 검토",
+      "observed_version": null,
+      "official_url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/hair-card-generator-for-grooms-in-unreal-engine",
+      "constraints": "Tripo 덩어리 메시가 직접 입력되는 흐름 아님. 게임 엔진 변경 결정 없음.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "houdini-hair-cards",
+      "name": "Houdini Generate Hair Cards",
+      "cost_class": "Houdini 라이선스에 따름",
+      "kind": "DCC 기능",
+      "role": "모발 커브·가이드에서 카드 생성",
+      "observed_status": "대안 자료 검토",
+      "observed_version": null,
+      "official_url": "https://www.sidefx.com/docs/houdini/shelf/groom_haircardgen.html",
+      "constraints": "별도 Houdini 환경·가이드가 필요. 상업용 라이선스와 무료 학습용 조건 구분.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "retopoflow",
+      "name": "RetopoFlow",
+      "cost_class": "유료 배포 및 공개 소스 경로 있음",
+      "kind": "Blender 애드온",
+      "role": "HD 형상 위에 눈·입·관절의 변형용 면 흐름 제작",
+      "observed_status": "강의 및 후보 / 설치 미확인",
+      "observed_version": null,
+      "official_url": "https://github.com/CGCookie/retopoflow",
+      "constraints": "공개 강의 무료와 애드온 판매는 구분. 버전 호환·지원 조건 확인 필요.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "zbrush",
+      "name": "ZBrush",
+      "cost_class": "유료",
+      "kind": "DCC 프로그램",
+      "role": "정밀 얼굴 스컬프·마스킹·비율·눈꺼풀·입술 보정",
+      "observed_status": "후보 / 설치 미확인",
+      "observed_version": null,
+      "official_url": "https://www.maxon.net/en/zbrush",
+      "constraints": "Tripo DCC Bridge 자료 검토. 기존 얼굴 인상 보존은 수동 작업 필요.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "wrap",
+      "name": "Faceform Wrap",
+      "cost_class": "유료",
+      "kind": "토폴로지 전이 프로그램",
+      "role": "기준 얼굴 메시를 여러 얼굴 형상에 맞추기",
+      "observed_status": "고급 후보 / 시험 미확인",
+      "observed_version": null,
+      "official_url": "https://docs.faceform.com/Wrap/",
+      "constraints": "기준 메시·표정 대응 자료 필요. 여러 NPC 토폴로지 일관성 후보.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "accurig",
+      "name": "AccuRIG",
+      "cost_class": "기본 무료 / CC 고급 버전 유료",
+      "kind": "몸 리깅 프로그램",
+      "role": "몸 관절·손가락·엄지·캘리브레이션",
+      "observed_status": "강의 후보 / 이번 무료 얼굴 시험에서 미설치",
+      "observed_version": null,
+      "official_url": "https://www.reallusion.com/auto-rig/accurig/default.html",
+      "constraints": "무료 AccuRIG는 얼굴 리깅 지원 안 함.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "mixamo",
+      "name": "Mixamo",
+      "cost_class": "무료 Adobe ID 필요",
+      "kind": "몸 자동 리깅·모션 서비스",
+      "role": "몸 리그 및 Rigify 얼굴 연결 자료",
+      "observed_status": "참고 자료 / 기존 전용 모션 제작에는 미사용",
+      "observed_version": null,
+      "official_url": "https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html",
+      "constraints": "이번 기록에서 상세 페이스 리깅 도구로 채택 안 함. 사용자 전용 동작은 Blender 제작.",
+      "evidence_basis": "원본 사용 맥락 / 무료 여부는 2026-10-05 Adobe FAQ 재확인"
+    },
+    {
+      "id": "krita",
+      "name": "Krita",
+      "cost_class": "무료 오픈소스",
+      "kind": "2D 페인팅 프로그램",
+      "role": "텍스처·마스킹·색 보정·편집 원본",
+      "observed_status": "설치 및 변환 시험 확인",
+      "observed_version": "5.3.4",
+      "official_url": "https://krita.org/en/download/",
+      "constraints": "ORA KRA PNG 작업 확인. 에이전트가 직접 붓질한 것으로 기록하지 않음.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "material-maker",
+      "name": "Material Maker",
+      "cost_class": "무료 오픈소스",
+      "kind": "PBR 재질 프로그램",
+      "role": "절차 재질 그래프",
+      "observed_status": "설치·실행 확인 / CLI export 미검증",
+      "observed_version": "1.7",
+      "official_url": "https://github.com/RodZill4/material-maker",
+      "constraints": "Substance Painter 전체 기능 대체로 검증되지 않음.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "substance",
+      "name": "Substance 3D Painter",
+      "cost_class": "유료",
+      "kind": "3D 페인팅 프로그램",
+      "role": "피부·헤어·복장 텍스처와 베이크",
+      "observed_status": "후보 / 라이선스 미확인·미설치",
+      "observed_version": null,
+      "official_url": "https://www.adobe.com/products/substance3d/apps/painter.html",
+      "constraints": "사용자 설치 의향과 실제 설치·라이선스 확보를 구분.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "mediapipe",
+      "name": "MediaPipe",
+      "cost_class": "무료 오픈소스 로컬 처리",
+      "kind": "추적 라이브러리",
+      "role": "영상 몸·손·얼굴 랜드마크",
+      "observed_status": "몸·손 사용 확인 / 얼굴 연결 후보",
+      "observed_version": "Pose Heavy / Hand Landmarker 21점",
+      "official_url": "https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker",
+      "constraints": "추적이 얼굴 Shape Key 또는 손 형상을 만들지 않음. 측면 단일 영상 깊이는 추정.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "blendarmocap",
+      "name": "BlendArMocap",
+      "cost_class": "무료 오픈소스",
+      "kind": "Blender 추적 애드온",
+      "role": "MediaPipe 몸·손·얼굴 데이터를 Rigify 등에 연결",
+      "observed_status": "후보 / 설치·품질 미확인",
+      "observed_version": null,
+      "official_url": "https://github.com/cgtinker/BlendArMocap",
+      "constraints": "2022년 영상 설치 방식과 현행 Tasks API 포크 구분.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "rhubarb",
+      "name": "Rhubarb Lip Sync",
+      "cost_class": "무료 오픈소스",
+      "kind": "음성 분석 프로그램",
+      "role": "음성의 입 모양 타이밍 추출",
+      "observed_status": "후보 / 미설치·한국어 시험 미확인",
+      "observed_version": null,
+      "official_url": "https://github.com/DanielSWolf/rhubarb-lip-sync",
+      "constraints": "phonetic 경로 한국어 시험 후보. 표정 자체·얼굴 모델 생성 아님.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "audio2face",
+      "name": "NVIDIA Audio2Face 3D",
+      "cost_class": "공개 코드 / 모델·실행 비용 별도",
+      "kind": "음성 얼굴 모션 SDK",
+      "role": "음성에서 얼굴 변형 가중치·립싱크 생성",
+      "observed_status": "후보 / RTX 2070 실행 미확인",
+      "observed_version": null,
+      "official_url": "https://github.com/NVIDIA/Audio2Face-3D-SDK",
+      "constraints": "CUDA TensorRT 요구·코드와 모델 조건 구분. 옛 Omniverse Launcher GUI 설치법 그대로 사용 안 함.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "cc",
+      "name": "Character Creator",
+      "cost_class": "유료",
+      "kind": "캐릭터 제작 프로그램",
+      "role": "표준 얼굴·몸 구조와 리그 생태계",
+      "observed_status": "대안 자료 검토 / 미도입",
+      "observed_version": "CC5 사례",
+      "official_url": "https://www.reallusion.com/character-creator/",
+      "constraints": "사용자 Tripo 모델링 방침의 대안 기록. 현재 주 제작 경로 아님.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "headshot",
+      "name": "Headshot",
+      "cost_class": "유료",
+      "kind": "Character Creator 플러그인",
+      "role": "이미지 또는 머리 모델을 CC 구조로 변환·보정",
+      "observed_status": "대안 자료 검토 / 미도입",
+      "observed_version": "Headshot 3 사례",
+      "official_url": "https://www.reallusion.com/character-creator/headshot/",
+      "constraints": "컨셉 비율 수동 복원과 Tripo에서 CC로 변환 품질 검수 필요.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "iclone",
+      "name": "iClone",
+      "cost_class": "유료",
+      "kind": "애니메이션 프로그램",
+      "role": "Reallusion 몸·얼굴 모션 편집",
+      "observed_status": "대안 자료 검토 / 미도입",
+      "observed_version": "iClone 8 사례",
+      "official_url": "https://www.reallusion.com/iclone/",
+      "constraints": "관련 플러그인 별도. Godot 전달 경로 미검증.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "accuface",
+      "name": "AccuFACE",
+      "cost_class": "유료",
+      "kind": "iClone 플러그인",
+      "role": "영상·카메라 얼굴 추적",
+      "observed_status": "대안 자료 검토 / 미도입",
+      "observed_version": "AccuFACE 2 사례",
+      "official_url": "https://magazine.reallusion.com/2026/07/30/accuface-2-grand-launch-professional-grade-facial-mocap-for-cc5-hd-characters/",
+      "constraints": "임의 Tripo 얼굴에 바로 적용 성공으로 기록하지 않음.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "facebuilder",
+      "name": "KeenTools FaceBuilder",
+      "cost_class": "유료 구독 / 15일 체험",
+      "kind": "Blender 애드온",
+      "role": "사진 기반 표준 두상 맞춤",
+      "observed_status": "대안 자료 검토 / 미도입",
+      "observed_version": null,
+      "official_url": "https://keentools.io/products/facebuilder-for-blender",
+      "constraints": "상시 무료 아님. Tripo 모델을 만들기로 한 현재 방침의 주 도구 아님.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "facetracker",
+      "name": "KeenTools FaceTracker",
+      "cost_class": "유료",
+      "kind": "Blender 애드온",
+      "role": "영상 얼굴 추적과 ARKit Rigify 전이",
+      "observed_status": "대안 자료 검토 / 미도입",
+      "observed_version": null,
+      "official_url": "https://keentools.io/products/facetracker-for-blender",
+      "constraints": "추적용 FaceBuilder 토폴로지 제약.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "vrm-vseeface",
+      "name": "VRM Blender Add-on 및 VSeeFace",
+      "cost_class": "무료 공개 도구 / 원본 사례",
+      "kind": "내보내기·아바타 추적",
+      "role": "Stefan의 VRM 출력·얼굴 추적 시험",
+      "observed_status": "영상 참고 / 프로젝트 적용 미확인",
+      "observed_version": null,
+      "official_url": "https://vrm-addon-for-blender.info/en/",
+      "constraints": "휴대폰 추적 앱과 장치의 비용 별도 확인. 본 게임 GLB Godot 검수의 대체 아님.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "hairstep",
+      "name": "HairStep",
+      "cost_class": "공개 연구 / 일부 비상업 조건",
+      "kind": "모발 복원 연구",
+      "role": "단일 사진의 방향·깊이에서 가닥 복원",
+      "observed_status": "연구 참고 / 미실행",
+      "observed_version": null,
+      "official_url": "https://github.com/GAP-LAB-CUHK-SZ/HairStep",
+      "constraints": "HiSa HiDa와 관련 체크포인트 비상업 연구 조건. 게임용 LOD·리그 완성 아님.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "neural-haircut",
+      "name": "Neural Haircut",
+      "cost_class": "공개 연구 / 의존 모델 조건 확인 필요",
+      "kind": "모발 복원 연구",
+      "role": "영상·다시점에서 모발 가닥 복원",
+      "observed_status": "연구 참고 / 미실행",
+      "observed_version": null,
+      "official_url": "https://samsunglabs.github.io/NeuralHaircut/",
+      "constraints": "FLAME 등 의존 데이터·모델 조건과 RTX 2070 실행 미확인.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "scenario",
+      "name": "Scenario",
+      "cost_class": "요금제·CU 과금",
+      "kind": "이미지·영상 생성 서비스",
+      "role": "헤어·손 참조와 모션 참고 영상 생성",
+      "observed_status": "사용 확인",
+      "observed_version": "GPT Image 2 / Seedance 2 Legacy / PixVerse V6 / Kling V3 Pro",
+      "official_url": "https://www.scenario.com/",
+      "constraints": "모델별 CU 실측 분리. 참고 영상 생성과 3D 애니메이션 제작은 다른 단계.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "imagegen",
+      "name": "내장 이미지 생성 도구",
+      "cost_class": "계정 사용량 조건 / 개별 단가 미확인",
+      "kind": "2D 이미지 생성",
+      "role": "동일 디자인·다면·입 벌린 머리·투명 알파 참조",
+      "observed_status": "사용 확인",
+      "observed_version": null,
+      "official_url": null,
+      "constraints": "원본 기록에서 Tripo Scenario 추가 소비 0인 이미지 작업 존재. 이미지 생성 자체의 비용이 0이라는 뜻 아님.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "godot",
+      "name": "Godot",
+      "cost_class": "무료 오픈소스",
+      "kind": "게임 엔진",
+      "role": "GLB·뼈·모프·클립 재생과 게임 플레이 검수",
+      "observed_status": "사용 확인",
+      "observed_version": "4.7.2 기록",
+      "official_url": "https://godotengine.org/",
+      "constraints": "Unity 강의의 방법을 Godot 기준으로 적용. 게임 엔진 변경 결정 없음.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "unity",
+      "name": "Unity",
+      "cost_class": "라이선스 조건에 따름",
+      "kind": "강의 예제 엔진",
+      "role": "Stefan 강의의 엔진 내보내기 참고",
+      "observed_status": "강의 참고 / 최종 게임 엔진 아님",
+      "observed_version": null,
+      "official_url": "https://unity.com/",
+      "constraints": "최종 게임 엔진 Godot와 구분.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "ml-deformer",
+      "name": "Unreal ML Deformer",
+      "cost_class": "Unreal 라이선스 조건에 따름",
+      "kind": "학습 기반 변형 도구",
+      "role": "학습 데이터의 변형 재현",
+      "observed_status": "첨부 자료 교정 / 채택 안 함",
+      "observed_version": null,
+      "official_url": "https://dev.epicgames.com/documentation/unreal-engine/ml-deformer-framework-in-unreal-engine?lang=en-US",
+      "constraints": "범용 헤어 자동 생성·충돌 해결 도구 아님.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "xatlas",
+      "name": "xatlas",
+      "cost_class": "오픈소스 / 강의에서 확인",
+      "kind": "UV 라이브러리",
+      "role": "자동 UV 관련 Tripo 심화 강의 언급",
+      "observed_status": "자료에 언급 / 로컬 설치·활용 미확인",
+      "observed_version": null,
+      "official_url": "https://github.com/jpcy/xatlas",
+      "constraints": "강의에서의 언급과 현재 제작본의 UV 적용을 구분.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "blender-automation",
+      "name": "Blender Python 및 LLM 자동화",
+      "cost_class": "Blender 무료 / LLM 계정·API 조건 별도",
+      "kind": "자동화",
+      "role": "반복 정렬·웨이트·키프레임·베이크·렌더·검사",
+      "observed_status": "Python 사용 확인 / Claude는 강의 참고",
+      "observed_version": null,
+      "official_url": null,
+      "constraints": "수치 검사와 최종 시각적 품질 승인 구분. GPT 모델 사용량과 별도 API 청구 구분.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "pinokio",
+      "name": "Pinokio",
+      "cost_class": "배포·개별 앱 조건 별도",
+      "kind": "앱 실행 관리",
+      "role": "도구 설치와 로컬 실행 후보",
+      "observed_status": "기존 제어 API 연결 실패 기록",
+      "observed_version": null,
+      "official_url": null,
+      "constraints": "기존 기록에서는 pterm localhost 연결 불가. 공식 포터블 도구로 진행.",
+      "evidence_basis": "원본 대화와 기존 캐릭터 문서; status는 수집 당시 기록"
+    },
+    {
+      "id": "cascadeur",
+      "name": "Cascadeur",
+      "cost_class": "무료 비상업·제한 출력 / 유료 Indie Pro",
+      "kind": "몸 애니메이션 프로그램",
+      "role": "물리 기반 몸 동작 보정 후보",
+      "observed_status": "후보 / 미도입",
+      "observed_version": null,
+      "official_url": "https://cascadeur.com/plans",
+      "constraints": "Free는 비상업·CASC 출력 제한. 외부 게임 전달을 위한 출력·상업 조건 확인. 범용 헤어 재구성 도구로 채택하지 않음.",
+      "evidence_basis": "기존 pipeline.json 및 첨부 자료의 대안·미채택 항목; 2026-10-05 조건 일부 재확인"
+    },
+    {
+      "id": "metahuman",
+      "name": "MetaHuman Mesh to MetaHuman DNA Groom",
+      "cost_class": "매출 100만 USD 미만 무료 조건 / 이상 Unreal 조건",
+      "kind": "표준 디지털 휴먼 생태계",
+      "role": "표준 얼굴과 리그 대안",
+      "observed_status": "첨부·파이프라인에 대안 언급 / 미도입",
+      "observed_version": null,
+      "official_url": "https://www.metahuman.com/license",
+      "constraints": "현재 Tripo 모델 생성 방침을 대체한 결정 없음. 임의 Tripo 얼굴 디자인 보존·Godot 전달은 미검증.",
+      "evidence_basis": "기존 pipeline.json 및 첨부 자료의 대안·미채택 항목; 2026-10-05 조건 일부 재확인"
+    },
+    {
+      "id": "rodin",
+      "name": "Hyper3D Rodin",
+      "cost_class": "서비스 요금제·크레딧 조건",
+      "kind": "3D 생성 서비스",
+      "role": "첨부 자료의 대안 생성기 언급",
+      "observed_status": "첨부 자료 언급 / 미채택·미사용",
+      "observed_version": null,
+      "official_url": "https://hyper3d.ai/",
+      "constraints": "Tripo 주 경로와 별도. 첨부의 헤어 자동 카드 변환 주장은 실제 입력·출력으로 검증되지 않음.",
+      "evidence_basis": "기존 pipeline.json 및 첨부 자료의 대안·미채택 항목; 2026-10-05 조건 일부 재확인"
+    },
+    {
+      "id": "live-link-face",
+      "name": "Live Link Face",
+      "cost_class": "앱 무료 / 장치·연동 환경 별도",
+      "kind": "얼굴 캡처 앱",
+      "role": "첨부 자료의 MetaHuman 얼굴 모션 입력",
+      "observed_status": "첨부 자료 언급 / 미도입",
+      "observed_version": null,
+      "official_url": "https://apps.apple.com/us/app/live-link-face/id1495370836",
+      "constraints": "iOS 앱 무료 배포 확인. 호환 장치와 추적·리타게팅 환경 필요. 임의 Tripo 리그 직접 적용 성공 기록 없음.",
+      "evidence_basis": "기존 pipeline.json 및 첨부 자료의 대안·미채택 항목; 2026-10-05 조건 일부 재확인"
+    },
+    {
+      "id": "wonder-studio",
+      "name": "Wonder Dynamics Wonder Studio 및 Flow Studio",
+      "cost_class": "무료 티어 및 유료 크레딧 플랜",
+      "kind": "영상 기반 CG 서비스",
+      "role": "첨부 자료의 영상 모캡·리타게팅 후보",
+      "observed_status": "첨부 언급 / 미채택·미사용",
+      "observed_version": null,
+      "official_url": "https://www.autodesk.com/products/flow-studio/overview",
+      "constraints": "현재 Autodesk Flow Studio 명칭 확인. 본 프로젝트 얼굴 추적·Tripo 연결 성공은 미확인.",
+      "evidence_basis": "기존 pipeline.json 및 첨부 자료의 대안·미채택 항목; 2026-10-05 조건 일부 재확인"
+    }
+  ],
+  "stages": [
+    {
+      "id": "design",
+      "name": "디자인과 전신 기준",
+      "recorded_status": "approved_reference",
+      "depends_on": [],
+      "tool_ids": [
+        "imagegen",
+        "scenario"
+      ],
+      "input": "정면·측면·후면, 같은 얼굴·체형·복장",
+      "output": "승인된 전신 이미지·프롬프트",
+      "completion_criteria": "얼굴 인상과 비율 일치, 중립 포즈, 사용자 검토",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "part-refs",
+      "name": "파트별 이미지와 규격",
+      "recorded_status": "reference_history",
+      "depends_on": [
+        "design"
+      ],
+      "tool_ids": [
+        "imagegen",
+        "scenario"
+      ],
+      "input": "7개 제작 그룹 및 머리·손 확대",
+      "output": "부품 이미지·좌표·접합 규격",
+      "completion_criteria": "정면·좌·후·우 일관성, 한쪽 대칭 부품 생성",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "head-source",
+      "name": "입 벌린 머리 생성",
+      "recorded_status": "geometry_review",
+      "depends_on": [
+        "part-refs"
+      ],
+      "tool_ids": [
+        "tripo-p2"
+      ],
+      "input": "머리·목·쇄골 이미지; 헤어·장식 제외",
+      "output": "원본 FBX·작업용 blend·검사 기록",
+      "completion_criteria": "구강 깊이와 치아·혀 확인, 실제 경계·분리 구조 검사",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "hair-source",
+      "name": "HD 헤어 생성과 맞춤",
+      "recorded_status": "trial",
+      "depends_on": [
+        "part-refs"
+      ],
+      "tool_ids": [
+        "tripo-hd",
+        "blender"
+      ],
+      "input": "정면·좌·후·우 헤어 이미지",
+      "output": "HD 원본·맞춤 작업본",
+      "completion_criteria": "두피 공간·뒷머리·앞머리 실루엣·관통 검사",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "body-parts",
+      "name": "신체와 복장 원형 생성",
+      "recorded_status": "historical_trials",
+      "depends_on": [
+        "part-refs"
+      ],
+      "tool_ids": [
+        "tripo-p2",
+        "tripo-hd"
+      ],
+      "input": "전체 신체·손·상의·하의·신발",
+      "output": "독립 원본 파츠",
+      "completion_criteria": "숨은 신체와 의상 안쪽 확보, 사용자 단계 검토",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "form",
+      "name": "조립과 기본 얼굴 형태",
+      "recorded_status": "in_progress_snapshot",
+      "depends_on": [
+        "head-source",
+        "hair-source",
+        "body-parts"
+      ],
+      "tool_ids": [
+        "blender",
+        "zbrush"
+      ],
+      "input": "원본 복사본·눈알·입안 부품",
+      "output": "닫힌 입 중립 얼굴·비율·접합 작업본",
+      "completion_criteria": "정면·사선·측면 인상, 눈꺼풀·입술·턱 형상, 피부 연결",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "brow-lash",
+      "name": "눈썹과 속눈썹 제작",
+      "recorded_status": "static_fitting_trial",
+      "depends_on": [
+        "form"
+      ],
+      "tool_ids": [
+        "blender",
+        "krita"
+      ],
+      "input": "한쪽 눈썹·윗속눈썹·아랫속눈썹 RGBA 참조",
+      "output": "UV 알파 카드·미러 파츠",
+      "completion_criteria": "뿌리 밀착·UV 클리핑·양면·투명도·자연스러운 방향",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "retopo",
+      "name": "변형용 리토폴로지",
+      "recorded_status": "planned",
+      "depends_on": [
+        "form"
+      ],
+      "tool_ids": [
+        "blender",
+        "retopoflow",
+        "wrap"
+      ],
+      "input": "승인된 형태와 HD/P2 원본",
+      "output": "게임용 피부·헤어·관절 메시",
+      "completion_criteria": "눈·입 루프, 안쪽 두께, 접합·노멀·잔여 조각 검사",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "surface",
+      "name": "UV와 베이크 및 텍스처",
+      "recorded_status": "planned",
+      "depends_on": [
+        "retopo",
+        "brow-lash"
+      ],
+      "tool_ids": [
+        "blender",
+        "krita",
+        "substance",
+        "material-maker"
+      ],
+      "input": "게임용 메시와 고밀도 원본",
+      "output": "UV·PBR·베이크·편집 파일",
+      "completion_criteria": "얼굴 인상·재질·경계·베이크 오류, 사선·조명 검사",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "body-rig",
+      "name": "몸과 손 리깅",
+      "recorded_status": "planned_for_current_model",
+      "depends_on": [
+        "retopo",
+        "surface"
+      ],
+      "tool_ids": [
+        "rigify",
+        "tripo-rig",
+        "accurig"
+      ],
+      "input": "공통 rest pose·접합·손가락 메시",
+      "output": "몸 리그·손가락·의상 웨이트",
+      "completion_criteria": "관절·엄지 대립·쥐기·도구·좌우 변형",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "face-rig",
+      "name": "페이스 리깅과표정",
+      "recorded_status": "planned",
+      "depends_on": [
+        "retopo",
+        "surface",
+        "brow-lash"
+      ],
+      "tool_ids": [
+        "faceit",
+        "rigify"
+      ],
+      "input": "닫힌 입 기준 피부·좌우 눈·치아·혀·눈썹·속눈썹",
+      "output": "랜드마크·리그·표정 작업본",
+      "completion_criteria": "정면·측면 배치, 역할 그룹·피부·파츠 웨이트 검수",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "face-bake",
+      "name": "표정 보정과 Shape Key 베이크",
+      "recorded_status": "planned",
+      "depends_on": [
+        "face-rig"
+      ],
+      "tool_ids": [
+        "faceit",
+        "blender"
+      ],
+      "input": "깜빡임·시선·턱·입술·미소·눈썹",
+      "output": "Shape Key·컨트롤 리그·표정 프리셋",
+      "completion_criteria": "0·25·50·75·100%·좌우·조합·추종·토폴로지 유지",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "motion",
+      "name": "몸·얼굴 동작과 립싱크",
+      "recorded_status": "planned_for_current_model",
+      "depends_on": [
+        "body-rig",
+        "face-bake"
+      ],
+      "tool_ids": [
+        "blender",
+        "mediapipe",
+        "tripo-motion",
+        "rhubarb",
+        "audio2face",
+        "blendarmocap"
+      ],
+      "input": "직접 동작·영상 추적·음성 타이밍",
+      "output": "클립·블렌드·립싱크·전환",
+      "completion_criteria": "루프·속도·접지·깜빡임·시선·얼굴 몸 동시 재생",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    },
+    {
+      "id": "engine",
+      "name": "GLB와 게임 검수",
+      "recorded_status": "planned_for_current_model",
+      "depends_on": [
+        "motion"
+      ],
+      "tool_ids": [
+        "blender",
+        "godot"
+      ],
+      "input": "본·모프·재질·텍스처·애니메이션",
+      "output": "GLB·재임포트·플레이 결과",
+      "completion_criteria": "모프 및 파츠 유지, 투명도·머리 회전·복장 교체·성능 검수",
+      "requires_user_review": true,
+      "status_scope": "최신 제작본; 기존 다른 캐릭터의 성공과 구분"
+    }
+  ],
+  "workflow_variants": [
+    {
+      "id": "A",
+      "name": "전신 통째 생성과 초기 몸 리그",
+      "status": "historical",
+      "flow": "Scenario/Tripo 전신→Tripo 41본→Blender 전용 모션→Godot",
+      "findings": "빠른 몸 동작 시제품; 상세 얼굴 별도"
+    },
+    {
+      "id": "B",
+      "name": "표면 40부위 분리",
+      "status": "historical",
+      "flow": "Tripo segmentation 87조각→Blender 40메시→41본·6동작 보존",
+      "findings": "숨은 몸체·의상 안쪽·교체 구조 미완료"
+    },
+    {
+      "id": "C",
+      "name": "P2 9개 부품 별도 생성",
+      "status": "failed_assembly_trial",
+      "flow": "머리·몸·손·헤어·재킷·셔츠·바지·부츠·벨트→Blender 조립",
+      "findings": "목·손목·의상 겹침·피부색 불량. 리깅 전 형상 검수 필요"
+    },
+    {
+      "id": "D",
+      "name": "P2 전체 신체와 부품 교체",
+      "status": "historical",
+      "flow": "전신 기반→머리·손 보강→스컬프·재질",
+      "findings": "전체 비율 기준; 연결부 검수 필요"
+    },
+    {
+      "id": "E",
+      "name": "HD 7개 제작 그룹",
+      "status": "source_trial",
+      "flow": "속옷 포함 신체·머리·헤어·손·상의·하의·신발→HD→조립→리토폴로지",
+      "findings": "7파츠 280크레딧; 고밀도는 표정용 구조 완성 아님"
+    },
+    {
+      "id": "F",
+      "name": "수작업 얼굴과 반복 보정",
+      "status": "stopped_primary_route",
+      "flow": "HD/P2 머리→Blender 눈·입·턱·Shape Key 반복 조정",
+      "findings": "주름·눈 깊이·속눈썹·입술 U형·턱·모션 손실 반복"
+    },
+    {
+      "id": "G",
+      "name": "MPFB 기본 얼굴 템플릿",
+      "status": "separate_test",
+      "flow": "MPFB·CC0 부품·Faceunits·Visemes→Rigify→표정 시험",
+      "findings": "설치·표정 시험 성공; 모델도 Tripo로 만든다는 사용자 방침으로 미채택"
+    },
+    {
+      "id": "H",
+      "name": "Tripo 모델과 애드온 페이스 리깅",
+      "status": "current_direction",
+      "flow": "Tripo→Blender 형태·토폴로지→Faceit/Rigify→표정·베이크→Godot",
+      "findings": "모델 원형은 Tripo; 애드온으로 리깅. 실제 Faceit 적용 성공 미확인"
+    },
+    {
+      "id": "I",
+      "name": "P2 머리와 HD 헤어 및 알파 카드",
+      "status": "current_tool_split",
+      "flow": "P2 얼굴·목·쇄골 + 4방향 HD 헤어 + 눈썹·속눈썹 UV 알파 카드",
+      "findings": "머리카락 HD, 얼굴과 다른 생성 파츠 P2; 원본 보존·형상 검토"
+    },
+    {
+      "id": "J",
+      "name": "열린 입 HD와 P2 비교",
+      "status": "current_head_choice",
+      "flow": "같은 입 벌린 이미지→HD 40크레딧→P2 100크레딧",
+      "findings": "HD 구강 얕음; P2 구강 깊이·독립 치아·혀 연결 성분 확인"
+    },
+    {
+      "id": "K",
+      "name": "새 P2 머리의 닫힌 입 기본 조립",
+      "status": "assembly_saved_refinement_in_progress",
+      "flow": "새 P2 머리 + 다듬은 HD 헤어 + 새 눈·눈썹·속눈썹; 입안 보존",
+      "findings": "닫힌 입 기본 조립과 FACE_CONTROLS mouth_open 저장 완료 보고. 후속 사용자 형태 보정 요청 작업 중. 전체 얼굴 리그 없음."
+    }
+  ],
+  "cost_records": [
+    {
+      "id": "initial-b",
+      "label": "초기 B 모델과 리그",
+      "unit": "Tripo credits",
+      "observed_amount": 135,
+      "breakdown": "P2 메시·재질 110 + 몸 리깅 25",
+      "source": "원본 2026-10-01 기록",
+      "current_web_check": false,
+      "note": "과거 실제 소비. 서로 중첩되는 묶음이 있으므로 전체 합계로 재합산하지 않음."
+    },
+    {
+      "id": "walk",
+      "label": "걷기 프리셋 1개",
+      "unit": "Tripo credits",
+      "observed_amount": 10,
+      "breakdown": "기존 리그 재사용",
+      "source": "원본 2026-10-01 기록",
+      "current_web_check": false,
+      "note": "과거 실제 소비. 서로 중첩되는 묶음이 있으므로 전체 합계로 재합산하지 않음."
+    },
+    {
+      "id": "oct3",
+      "label": "10월 3일 생산·영상·세부 실험",
+      "unit": "Tripo credits",
+      "observed_amount": 595,
+      "breakdown": "전신120·리그25·동작50·분할40·헤어120·불량손120·이미지손120",
+      "source": "docs/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+      "current_web_check": false,
+      "note": "과거 실제 소비. 서로 중첩되는 묶음이 있으므로 전체 합계로 재합산하지 않음."
+    },
+    {
+      "id": "oct3-scenario",
+      "label": "동일 범위 이미지와 영상",
+      "unit": "Scenario CU",
+      "observed_amount": 308,
+      "breakdown": "Seedance182·PixVerse50·Kling53·이미지12+11",
+      "source": "docs/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+      "current_web_check": false,
+      "note": "과거 실제 소비. 서로 중첩되는 묶음이 있으므로 전체 합계로 재합산하지 않음."
+    },
+    {
+      "id": "nine-parts",
+      "label": "P2 9개 부품",
+      "unit": "Tripo credits",
+      "observed_amount": 1080,
+      "breakdown": "120×9",
+      "source": "원본 모듈 부품 생성 결과",
+      "current_web_check": false,
+      "note": "과거 실제 소비. 서로 중첩되는 묶음이 있으므로 전체 합계로 재합산하지 않음."
+    },
+    {
+      "id": "seven-hd",
+      "label": "HD 7개 파츠",
+      "unit": "Tripo credits",
+      "observed_amount": 280,
+      "breakdown": "40×7; 텍스처 없음",
+      "source": "원본 HD 재시작 결과",
+      "current_web_check": false,
+      "note": "과거 실제 소비. 서로 중첩되는 묶음이 있으므로 전체 합계로 재합산하지 않음."
+    },
+    {
+      "id": "hybrid",
+      "label": "P2 머리와 HD 헤어 조립 원본",
+      "unit": "Tripo credits",
+      "observed_amount": 140,
+      "breakdown": "P2 머리100 + HD 헤어40",
+      "source": "explorer_b_hybrid_bust_v1",
+      "current_web_check": false,
+      "note": "과거 실제 소비. 서로 중첩되는 묶음이 있으므로 전체 합계로 재합산하지 않음."
+    },
+    {
+      "id": "open-hd",
+      "label": "새 입 벌린 HD 머리",
+      "unit": "Tripo credits",
+      "observed_amount": 40,
+      "breakdown": "471138 삼각형",
+      "source": "explorer_b_open_mouth_hd_v1",
+      "current_web_check": false,
+      "note": "과거 실제 소비. 서로 중첩되는 묶음이 있으므로 전체 합계로 재합산하지 않음."
+    },
+    {
+      "id": "open-p2",
+      "label": "같은 참조의 새 P2 머리",
+      "unit": "Tripo credits",
+      "observed_amount": 100,
+      "breakdown": "15748 정점 16784면 14514쿼드",
+      "source": "explorer_b_open_mouth_p2_v1",
+      "current_web_check": false,
+      "note": "과거 실제 소비. 서로 중첩되는 묶음이 있으므로 전체 합계로 재합산하지 않음."
+    },
+    {
+      "id": "local-refine",
+      "label": "로컬 조립 및 보정",
+      "unit": "additional generation API",
+      "observed_amount": 0,
+      "breakdown": "Blender·MediaPipe 추가 생성 호출 0 기록",
+      "source": "각 제작 보고서",
+      "current_web_check": false,
+      "note": "과거 실제 소비. 서로 중첩되는 묶음이 있으므로 전체 합계로 재합산하지 않음."
+    },
+    {
+      "id": "faceit-price",
+      "label": "Faceit 판매 가격",
+      "unit": "USD",
+      "observed_amount": null,
+      "breakdown": "1.8 $78 / 2.3 $99 / Studio $289",
+      "source": "https://superhivemarket.com/products/faceit",
+      "current_web_check": true,
+      "note": "2026-10-05 확인. 결제액과 부가세·환율·할인 별도."
+    },
+    {
+      "id": "hair-price",
+      "label": "Hair Tool 판매 가격",
+      "unit": "USD",
+      "observed_amount": null,
+      "breakdown": "Standard $52+ / Studio 2–6 $202+ / 7–15 $352+는 원본 대화 기록; 이번에는 $52+ 확인",
+      "source": "https://bartoszstyperek.gumroad.com/l/hairtool?layout=profile&recommended_by=more_like_this",
+      "current_web_check": true,
+      "note": "2026-10-05 확인. 결제액과 부가세·환율·할인 별도."
+    }
+  ],
+  "source_archive": "source-archive.json",
+  "reference_archive": "reference-documents",
+  "manager_design": {
+    "note": "향후 관리 프로그램 설계를 위한 제안이며 앱 구현은 이번 작업 범위가 아님.",
+    "entities": [
+      "Workflow",
+      "WorkflowVersion",
+      "Stage",
+      "Tool",
+      "ToolVersion",
+      "Artifact",
+      "Review",
+      "Issue",
+      "CostEntry",
+      "Reference",
+      "SourceMessage"
+    ],
+    "stage_statuses": [
+      "planned",
+      "ready",
+      "in_progress",
+      "awaiting_review",
+      "needs_changes",
+      "approved",
+      "completed",
+      "blocked",
+      "archived"
+    ],
+    "status_rule": "원본 단계 승인·실행 결과·검증 결과를 저장하고 별도 검토가 필요한 단계를 자동 완료하지 않는다.",
+    "import_rule": "원본 source thread turn id와 relative artifact path를 보존. 비용 unit와 cost group을 분리하고 중첩 aggregate를 합산하지 않음."
+  },
+  "source_documents_manifest": "reference-documents/manifest.json",
+  "artifact_index": "artifact-index.json",
+  "references_index": "references.json",
+  "rig_ready_mesh_spec": {
+    "date_kst": "2026-10-05",
+    "source": "현재 채팅의 사용자 요구사항",
+    "document": "RIG_READY_MESH.md",
+    "goal": "디테일 부위 개별 편집과 연결된 얼굴 피부 변형을 함께 확보한 페이스 리깅 시작용 메시",
+    "connected_skin_regions": [
+      "nose",
+      "cheeks",
+      "chin",
+      "upper_lip",
+      "lower_lip",
+      "upper_eyelids",
+      "lower_eyelids",
+      "ears"
+    ],
+    "separate_roles": [
+      "eye_L",
+      "eye_R",
+      "brow_L",
+      "brow_R",
+      "upper_lash_L",
+      "upper_lash_R",
+      "lower_lash_L",
+      "lower_lash_R",
+      "upper_teeth_gums",
+      "lower_teeth_gums",
+      "tongue",
+      "hair"
+    ],
+    "skin_detail_editing": "버텍스 그룹·선택 영역으로 세부 피부 부위를 관리",
+    "technical_basis": "편안하게 뜬 눈과 다문 입의 중립 기준형",
+    "runtime_rest_expression": "약한 미소는 별도 평소 표정 프리셋",
+    "lash_representation": "알파 카드 또는 가닥 메시; 해당 버전의 실제 방식 기록",
+    "faceit_adapter": "원본 +X 전방 규격 보존. 바인딩용 복사본은 Faceit의 -Y 전방 규격에 맞추고 변환 기록",
+    "geometry_gate": [
+      "connected_face_skin",
+      "eyelid_lip_edge_flow",
+      "oral_depth_and_thickness",
+      "clean_geometry",
+      "independent_part_roles",
+      "reviewed_neutral_shape",
+      "stable_vertex_topology",
+      "modifier_and_rest_pose_preparation"
+    ],
+    "latest_geometry_reference": "art/characters/explorer_b_p2_rest_refined_v3/explorer_b_P2_rest_refined_v3.blend",
+    "latest_reference_rig_ready": null,
+    "assessment": "기존 상태 보고서 확인만 수행. 토폴로지 검수 및 사용자 승인으로 리깅 준비 완료를 판정한 것은 아님"
+  }
+}

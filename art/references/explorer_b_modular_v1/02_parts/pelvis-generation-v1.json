@@ -1,0 +1,12 @@
+{
+  "id": "pelvis",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-8f9c6a1d-ced0-4745-8f8f-f4ea2a5a91fd.png",
+  "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nFor this concealed body component use a uniform matte pale warm-beige CLAY ENGINEERING MANNEQUIN material. Smooth gender-neutral toy-like base form matching the approved character's proportions, without sexual/anatomical surface details, clothing, muscles drawn on the surface, gore, exposed tissue, textures or mechanical ball joints. Ends are clean manufactured modeling boundaries, not wounds. Isolate PELVIS/HIP modeling component only, waist down to the two short upper-thigh connector bases. Modest slim hip width from approved explorer, smooth featureless mannequin form, clean manufactured connection boundaries. No genital/anatomical detail, no underwear or clothes, no torso, no full legs. FRONT view, symmetric hips.",
+  "reference_inputs": [
+    "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+    "art/references/explorer_b_v5/front.png"
+  ],
+  "approval": null
+}

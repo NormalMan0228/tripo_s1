@@ -2,6 +2,7 @@
 game/.godot/
 builds/
 artifacts/
+output/pdf/
 .env
 .env.*
 !.env.example
@@ -12,3 +13,22 @@ server-data/
 ops/secrets/
 ops/production.env
 ops/backups/
+
+labs/character_lab/.godot/
+labs/production_lab/.godot/
+labs/video_motion_lab/.godot/
+*.blend1
+labs/village_art_lab/.godot/
+labs/detail_parts_lab/.godot/
+labs/terrain_lab/.godot/
+labs/archipelago_object_lab/.godot/
+
+# Large generated art kept locally only (not pushed to GitHub)
+output/
+art/maps/
+art/characters/npc_cast_*/
+art/characters/explorer_b_modular_v1/
+labs/terrain_lab/assets/
+labs/archipelago_object_lab/assets/
+labs/archipelago_object_lab/reviews/
+*.zip

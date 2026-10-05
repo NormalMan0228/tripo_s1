@@ -1,0 +1,29 @@
+{
+  "stage": "design_2d",
+  "revision": "v1",
+  "status": "approved",
+  "approval": {
+    "source": "human user message",
+    "text": "다음 단계로",
+    "date": "2026-10-03"
+  },
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "image": "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+  "inputs": [
+    "art/references/explorer_b_v5/front.png",
+    "art/references/explorer_b_v5/side.png",
+    "art/references/explorer_b_v5/back.png"
+  ],
+  "prompt": "Use case: stylized-concept / identity-preserve.\nAsset type: first-stage character design turnaround for human review BEFORE any part images or 3D generation.\nInput images are design references of the SAME existing Tripothon B-type explorer: image 1 front, image 2 right profile, image 3 back. Preserve this exact character identity, face, head shape, warm light skin, brown eyes, brown bob hair, medium stylized body proportions, mustard-yellow open cropped work jacket with rolled cuffs, ivory undershirt, warm-grey cargo trousers, dark-brown belt with simple silver buckle, and brown hiking boots. Do not redesign her into a different character or more realistic proportions.\nCreate ONE polished high-resolution landscape character turnaround sheet, three evenly separated full-body views: strict FRONT, strict RIGHT PROFILE, strict BACK, all the SAME character, same size, hair height and boot soles aligned on one baseline. Front and back use a symmetrical neutral A-pose with arms away from body around 25 degrees; hands relaxed open, thumb and four fingers anatomically plausible. Right profile is the matching neutral pose seen from exactly 90 degrees. Face neutral-friendly closed mouth, gaze straight ahead. No expression variants.\nStyle: refined soft stylized 3D character illustration consistent with references; smooth sculpted forms, carefully defined seams and cloth folds, subtle high quality fabric/skin/boot rendering. Clean orthographic design-sheet presentation, no wide-angle perspective, no tilt, minimal shadows, flat pale ivory background. Large character silhouettes occupying most of the page with useful white margins, no cropped limbs or hair.\nOptional small unobtrusive labels FRONT / RIGHT / BACK beneath figures, no other text, no title, no measurement guesses, no added accessories, no props, no weapons, no extra outfits, no environment. This is a whole-character 2D approval image, NOT an exploded parts sheet. Preserve the reference clothing design exactly. Keep the same body proportions across all three views.",
+  "new_tripo_calls": 0,
+  "new_scenario_calls": 0,
+  "review_focus": [
+    "얼굴 인상·헤어",
+    "머리 대비 몸 비율",
+    "팔·다리·손·발 크기",
+    "재킷·셔츠·바지·부츠 실루엣",
+    "정면·측면·후면의 일관성"
+  ],
+  "limitation": "Concept approval sheet only; not approved part references, geometry, UV, rigging or animation"
+}

@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-04",
+  "character": "Explorer B",
+  "revision": "fullbody_v2",
+  "state": "approved_for_3d_generation",
+  "tool": "built-in image_gen.imagegen",
+  "generation_calls": 2,
+  "tripo_calls": 0,
+  "scenario_calls": 0,
+  "references": [
+    "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+    "art/references/explorer_b_modular_v1/final_images/02_body.png",
+    "art/references/explorer_b_modular_v1/final_images/01_head.png"
+  ],
+  "images": [
+    {
+      "view": "front",
+      "file": "front.png",
+      "source": "C:/Users/dd/.codex/generated_images/01a0f276-190b-72b3-bbcb-8277fd264084/exec-d2b1b496-ad11-4601-b22f-7cf1516ab7ec.png",
+      "prompt": "Use case: stylized-concept. Asset type: developer character whole-body reference for image-to-3D and subsequent replacement of head/hands.\nInput images: Image 1 is the approved Explorer B character turnaround and is the PRIMARY identity, style and body-proportion reference. Image 2 is the existing body reference for opaque white training underclothes only; do NOT copy its missing head or hands or its comparatively long anatomy. Image 3 is the approved isolated face reference.\nCreate exactly ONE clean full-body FRONT VIEW, no contact sheet, no additional views, no labels. The same stylized feminine Explorer B from image 1, with the same large round brown eyes, soft cheeks, face, warm peach skin uniformly across all body parts, slim softly stylized proportions. Maintain the approved character's head/body ratio of about 4.5 to 5 heads tall, relatively short legs compared with image 2, gentle rounded shoulders, no muscular male anatomy, no realistic adult fashion-model proportions.\nComplete continuous body from top of head to feet, INCLUDING head, ears, both arms, both hands, all fingers, both legs and bare feet. Bald head for a separately replaceable hair asset; preserve eyebrows and eyelashes. This is a neutral technical character reference, nonsexual. Wear an opaque plain white modest fitted sleeveless underlayer top and opaque white fitted mid-thigh shorts; no transparency, no anatomical detail through fabric. No jacket, trousers, belt, boots, accessories or jewelry.\nSymmetrical neutral A pose, arms angled about 30 degrees down from horizontal, elbows nearly straight, both hands relaxed straight open and facing mostly forward, FIVE cleanly separated readable fingers per hand including thumb, no fists, feet parallel shoulder-width, all skin the same tone, relaxed neutral slight friendly expression. Orthographic front camera at torso center, no perspective foreshortening, no body twist. Entire subject within frame with margin above head and below feet; character fills most of a portrait canvas. Plain warm off-white seamless background, diffuse even studio illumination with minimal soft grounding shadow, high-quality cohesive stylized 3D sculpt-render aesthetic matching image 1. No text, no seam marks, no detached parts, no skeleton, no cut wrists or neck, no props.",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "8ded4ca45f9b10d232bea520133d8ce9a303bc570ff35dbfcb24622869d431e8"
+    },
+    {
+      "view": "back",
+      "file": "back.png",
+      "source": "C:/Users/dd/.codex/generated_images/01a0f276-190b-72b3-bbcb-8277fd264084/exec-dafc4dc3-d988-423b-8d56-db64ffb5076c.png",
+      "prompt": "Use case: identity-preserve. Asset type: matching BACK reference for the same whole-body character image-to-3D base.\nEdit target / sole input image: the newly generated FRONT reference.\nProduce exactly ONE full-body BACK VIEW of precisely this same bald stylized feminine Explorer B character, same head size, same torso/leg proportions, same body height, same warm peach skin, same opaque white fitted modest sleeveless training underlayer top and white mid-thigh shorts. Show the entire back of the bald head, ears, neck, both arms, hands, all legs and bare feet. Keep exactly the same symmetrical neutral A-pose, shoulder/hip widths and hand orientation; turn only the viewpoint 180 degrees. Bare feet seen from the back, palms toward the front of the character, backs of hands visible to this camera. Five anatomical fingers on each hand, no fused fingers. No face visible from this view, no new garment decoration, no hair or accessories.\nMaintain the same orthographic framing, ground plane, portrait canvas, character top/bottom margins, off-white plain studio background and diffuse even neutral light. A single complete uncut continuous body. Do not redesign, no contact sheet, no other views, no text, no skeleton, no cropped head or hands or feet. This is a neutral nonsexual technical 3D-character production reference.",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "68209a6cb3e18fcf5d7431c60310756bbb1d6361caf7f31776e23236db0e15eb"
+    }
+  ],
+  "visual_review": {
+    "complete_whole_body_reference": true,
+    "hair_is_intentionally_separate": true,
+    "protective_underclothes_included": true,
+    "skin_hidden_under_underclothes_not_proven": true,
+    "front_finger_separation_not_fully_visible": true,
+    "front_back_pixel_exact_symmetry_not_proven": true,
+    "user_approved": true,
+    "approval_evidence": "2026-10-04 user: 다음 단계로"
+  }
+}

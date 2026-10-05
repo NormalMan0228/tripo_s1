@@ -1,0 +1,186 @@
+{
+  "title": "AI 캐릭터 세부 제작 자료집",
+  "date": "2026-10-03",
+  "resources": [
+    {
+      "id": "stefan-p2", "topic": "parts", "priority": "먼저 보기", "channel": "Stefan 3D AI", "title": "Tripo Smart Mesh P2 강의",
+      "url": "https://www.learn3d.ai/", "kind": "AI 메시 생성", "access": "보유한 유료 강의 자료",
+      "range": "03:15–05:01 · 파츠별 생성과 머리카락 실험",
+      "learn": "파츠를 따로 생성하는 접근과 P2 머리카락 테스트. 같은 예제에서 1,500 quad보다 3,000 quad 결과가 나았지만, 이것을 모든 헤어의 공통 기준으로 삼을 수는 없습니다.",
+      "output": "부품별 메시. 헤어 카드나 리그의 완성을 보장하는 결과는 아닙니다.",
+      "fit": "B형 탐험가의 머리카락·재킷·부츠를 별도 생성하고 실루엣을 먼저 비교하는 데 가장 직접적입니다.",
+      "limit": "강사도 머리카락 생성의 어려움과 후속 수정을 설명합니다. 목·손목·옷 경계의 연결은 별도로 검수해야 합니다.",
+      "verified": "사용자가 제공한 강의 자막의 해당 구간 확인", "local": "artifacts/stefan-study/character__b3_tripo_smart_mesh_p2.txt"
+    },
+    {
+      "id": "tripo-parts", "topic": "parts", "priority": "먼저 보기", "channel": "Tripo 공식", "title": "Tripo Studio Tutorial과 Segmentation",
+      "url": "https://www.tripo3d.ai/blog/tripo-studio-tutorial-english", "kind": "AI 파츠 분리와 보완", "access": "공개 가이드 · 생성 서비스 이용료 별도",
+      "range": "Segmentation · Brush · Add Part · Merge · Part Completion",
+      "learn": "생성한 모델에서 부품을 분리하고 브러시로 영역을 수정하며, 누락된 부품 형상을 보완하는 흐름입니다.",
+      "output": "편집 가능한 파츠 메시. 표정용 토폴로지나 손가락 관절을 자동으로 확보하는 기능과는 구분해야 합니다.",
+      "fit": "처음부터 개별 생성한 부품과, 통합 모델을 분리한 부품을 비교할 기준으로 씁니다.",
+      "limit": "Studio 기능·요금과 API 지원 범위를 동일하게 가정하지 않습니다. 분리만으로 관절 주변의 변형 품질이 좋아지지는 않습니다.",
+      "verified": "공식 가이드와 API 기능 문서 확인", "extra": [{"label":"Mesh Segment API","url":"https://developers.tripo3d.ai/en/docs/mesh-segment"},{"label":"Mesh Complete API","url":"https://developers.tripo3d.ai/en/docs/mesh-complete"}]
+    },
+    {
+      "id": "stefan-hands", "topic": "hands", "priority": "먼저 보기", "channel": "Stefan 3D AI", "title": "Rigging and Weight 강의",
+      "url": "https://www.learn3d.ai/", "kind": "자동 리깅과 수동 보정", "access": "보유한 유료 강의 · AccuRIG 기본 도구 무료",
+      "range": "12:15–15:17 · 특히 14:05–14:33 손 리깅",
+      "learn": "AccuRIG에서 관절 위치를 정면과 깊이 방향으로 확인하고, 손가락 수·마디 위치를 맞춘 뒤 캘리브레이션하는 과정입니다.",
+      "output": "몸과 손가락의 뼈·스킨 웨이트. 전용 손 동작이나 얼굴 리그까지 만들어 주는 수업은 아닙니다.",
+      "fit": "손가락이 붙어 있거나 손만 각지는 문제를 메시 단계부터 확인하고, 마디 위치를 검수하는 기준으로 씁니다.",
+      "limit": "관절 생성과 모션 생성은 별도 작업입니다. 손가락 형상과 웨이트를 고친 뒤 쥐기·펴기·엄지 맞닿기를 시험해야 합니다.",
+      "verified": "사용자 강의 자막과 공식 손 리깅 매뉴얼 확인", "local": "artifacts/stefan-study/character__8_rigging_and_weight.txt",
+      "extra": [{"label":"AccuRIG 손가락 관절과 엄지 방향","url":"https://manual.reallusion.com/actorcore-accurig-1/content/enu/1.1/07-Hand-Rig/Setting-and-Mirroring-Joints.htm"},{"label":"AccuRIG 2 공식 매뉴얼","url":"https://manual.reallusion.com/AccuRig-2/2.0/01-welcome/welcome.htm"}]
+    },
+    {
+      "id": "faceit-1", "topic": "face-rig", "priority": "먼저 보기", "channel": "CGDive", "title": "This addon automates Facial Animation FACEIT Tut 1",
+      "url": "https://www.youtube.com/watch?v=KQ32KRYq6RA", "kind": "얼굴 리깅 자동화", "access": "영상 무료 · Faceit 애드온 유료",
+      "range": "영상 전체 · 랜드마크와 표정용 변형 준비",
+      "learn": "Faceit으로 얼굴의 기준점을 맞추고 표정용 shape key와 컨트롤 리그를 준비하는 접근입니다. Faceit 자체를 생성형 AI라고 분류하지 않습니다.",
+      "output": "표정용 변형과 얼굴 제어 구조. 여기에 다른 AI가 추출한 표정 수치를 연결할 수 있습니다.",
+      "fit": "Tripo로 만든 얼굴을 움직이게 만들 때 필요한 구조를 이해하는 첫 자료입니다.",
+      "limit": "모든 얼굴에서 자동 결과가 자연스럽다는 보장은 없습니다. 입·눈꺼풀·턱의 메시와 생성된 표정을 확인해야 합니다.",
+      "verified": "제작자 자료 페이지·YouTube 제목과 채널·Faceit 공식 문서 확인",
+      "extra": [{"label":"CGDive의 Faceit 자료 모음","url":"https://addons.cgdive.com/tools/faceit"},{"label":"Faceit 공식 문서","url":"https://faceit-doc.readthedocs.io/en/latest/"}]
+    },
+    {
+      "id": "faceit-2", "topic": "face-rig", "priority": "다음 보기", "channel": "CGDive", "title": "FaceIt Tutorial 2 Body rigs and FaceIt mocap Blender",
+      "url": "https://www.youtube.com/watch?v=MnZzj8OUH_0", "kind": "몸과 얼굴 리그 통합", "access": "영상 무료 · Faceit 애드온 유료",
+      "range": "영상 전체 · 몸 리그와 얼굴 모션의 결합",
+      "learn": "이미 준비된 몸 리그에 얼굴 모션을 결합하는 작업을 다룹니다.",
+      "output": "몸·머리·얼굴의 제어 관계를 정리한 캐릭터 리그.",
+      "fit": "우리 영상 기반 몸 애니메이션에 얼굴 움직임을 추가할 때 머리 회전이 두 번 적용되지 않도록 설계하는 참고입니다.",
+      "limit": "영상 속 리그와 우리 리그의 뼈 이름·기준 자세가 다를 수 있습니다. 적용 완료 사례로 제시하는 것은 아닙니다.",
+      "verified": "CGDive 공식 자료 페이지와 YouTube 제목·채널 확인"
+    },
+    {
+      "id": "faceit-fix", "topic": "face-rig", "priority": "먼저 보기", "channel": "Csaba Kiss", "title": "Blender Facial Animation Faceit",
+      "url": "https://www.youtube.com/watch?v=_g277CtsnJk", "kind": "얼굴 리깅과 오류 수정", "access": "영상 무료 · Faceit 애드온 유료",
+      "range": "07:15–09:16 바인딩 오류 · 11:37–13:07 표정 수정 · 13:08–14:55 게임용 베이크",
+      "learn": "자동 바인딩이 실패하거나 표정이 깨질 때 수정하고, 게임에 전달할 shape key를 베이크하는 과정을 챕터로 나눠 보여줍니다.",
+      "output": "수정한 표정용 shape key와 베이크 결과.",
+      "fit": "우리 얼굴이 과하게 일그러지거나 눈·입이 어색해지는 문제를 해결하는 데 우선순위가 높습니다.",
+      "limit": "자동 리깅의 한계를 확인하는 자료입니다. 영상의 Game Ready Bake 이후에도 Godot GLB 검증은 별도로 필요합니다.",
+      "verified": "2024-12-26 공개 영상의 제작자 설명과 챕터 확인"
+    },
+    {
+      "id": "a2f-shapes", "topic": "face-rig", "priority": "원리 참고", "channel": "NVIDIA Omniverse", "title": "Audio2Face and Blender Part 1 Generating Facial Shape Keys",
+      "url": "https://www.youtube.com/watch?v=Etztivmjny4", "kind": "AI 얼굴 변형 전이", "access": "영상 무료 · 과거 Omniverse 앱 워크플로우",
+      "range": "Part 1 · 사용자 캐릭터의 얼굴 변형 준비",
+      "learn": "AI 얼굴 움직임을 사용자 캐릭터에 적용하기 위한 shape key 생성·전이 흐름입니다.",
+      "output": "Blender에서 사용할 얼굴 shape key.",
+      "fit": "얼굴 구조를 준비하는 단계와 음성에서 모션을 만드는 단계가 어떻게 이어지는지 이해하는 자료입니다.",
+      "limit": "예전 설치법은 그대로 따라 하지 않습니다. Omniverse Launcher의 설치 파일 배포와 Exchange 설치 경로는 종료됐습니다. 기존 설치의 실행과 새 SDK 도입은 구분해야 합니다.",
+      "verified": "공식 채널 제목·공식 포럼의 연결 링크·현행 NVIDIA 안내 확인",
+      "extra": [{"label":"현재 Audio2Face 3D 저장소","url":"https://github.com/NVIDIA/Audio2Face-3D"},{"label":"Launcher 변경 안내","url":"https://developer.nvidia.com/omniverse/legacy-tools"}]
+    },
+    {
+      "id": "a2f-motion", "topic": "face-motion", "priority": "다음 보기", "channel": "NVIDIA Omniverse", "title": "Audio2Face and Blender Part 2 Loading AI Generated Lip Sync Clips",
+      "url": "https://www.youtube.com/watch?v=TIkpVjKEkvY", "kind": "음성에서 얼굴 모션 생성", "access": "영상 무료 · 현행 실행 환경 구축 별도",
+      "range": "Part 2 · AI 립싱크 모션을 Blender로 전달",
+      "learn": "음성에서 얻은 얼굴 애니메이션을 준비된 캐릭터에 전달하는 과정입니다.",
+      "output": "얼굴 변형의 시간별 가중치와 립싱크 클립.",
+      "fit": "NPC 대사를 음성 기반 얼굴 애니메이션으로 만드는 후보입니다. 모델링 문제를 대신 해결하는 도구로 쓰지는 않습니다.",
+      "limit": "현행 SDK는 CUDA·TensorRT 환경이 필요합니다. SDK 코드의 MIT 라이선스와 모델의 이용 조건은 별개이며, 우리 PC에서 실행 검증한 상태가 아닙니다.",
+      "verified": "공식 채널 제목·공식 연결 링크·Audio2Face 3D SDK README 확인",
+      "extra": [{"label":"Audio2Face 3D SDK","url":"https://github.com/NVIDIA/Audio2Face-3D-SDK"}]
+    },
+    {
+      "id": "accuface", "topic": "face-motion", "priority": "유료 후보", "channel": "Reallusion 공식", "title": "Getting Started with AccuFACE 2 iClone 8 Tutorial",
+      "url": "https://www.youtube.com/watch?v=fiiuYBCZF20", "kind": "AI 영상 얼굴 추적", "access": "영상 무료 · iClone와 관련 플러그인 유료",
+      "range": "현행 AccuFACE 2 입문 · 아래 이전 영상은 설정별 챕터 제공",
+      "learn": "영상·카메라에서 얼굴 연기를 추적하는 방식입니다. AccuFACE 2는 CC5 HD 캐릭터에 맞춘 AI 추적을 강조합니다.",
+      "output": "편집 가능한 얼굴 연기 데이터.",
+      "fit": "얼굴 클로즈업 영상에서 표정을 얻는 대안입니다. Reallusion 제작 도구를 도입할 경우 비교합니다.",
+      "limit": "임의의 Tripo 메시가 바로 얼굴 추적 대상이 된다고 가정하지 않습니다. CC 얼굴 구조로의 변환과 Godot 전달 경로를 시험해야 합니다.",
+      "verified": "공식 영상 설명과 2026-07-30 제품 발표 확인",
+      "extra": [{"label":"이전 입문 영상 · 03:44 영상 입력 · 07:44 스무딩 · 08:13 노이즈 제거","url":"https://www.youtube.com/watch?v=dFdzR48MkXU"},{"label":"AccuFACE 2 공식 발표","url":"https://magazine.reallusion.com/2026/07/30/accuface-2-grand-launch-professional-grade-facial-mocap-for-cc5-hd-characters/"}]
+    },
+    {
+      "id": "cgtinker", "topic": "hands", "priority": "무료 후보", "channel": "cg tinker", "title": "BlendArMocap AR Pose Hand Face Detection in Blender Beta Release",
+      "url": "https://www.youtube.com/watch?v=pji6IHNCnAk", "kind": "ML 얼굴과 손 동작 추적", "access": "영상과 오픈소스 도구 무료",
+      "range": "02:53 손·얼굴·몸 감지 · 04:17 Rigify · 05:05 동작 전이 · 05:50 결과 정리",
+      "learn": "Google MediaPipe로 얼굴과 손을 추적하고 리그에 전달합니다. 뒤의 릴리스 영상도 함께 보면 좋습니다.",
+      "output": "랜드마크와 리그 구동 데이터. 손 모델이나 얼굴 shape key를 생성하는 기능은 아닙니다.",
+      "fit": "이미 사용 중인 영상 기반 MediaPipe 몸 애니메이션을 얼굴·손 클로즈업으로 확장하는 데 가장 가까운 무료 참고입니다.",
+      "limit": "2022년 영상의 설치 방식은 오래됐습니다. 현행 Tasks API 포크는 Blender 4.5 LTS 테스트를 주장하지만 여기서는 설치·품질을 검증하지 않았습니다. 가려진 손가락도 자동으로 정확해지지는 않습니다.",
+      "verified": "제작자 영상 챕터·공식 사이트·포크 README·Google 문서 확인",
+      "extra": [{"label":"개선 릴리스 영상","url":"https://www.youtube.com/watch?v=U9G2VlG9HbA"},{"label":"원 제작자 코드","url":"https://github.com/cgtinker/BlendArMocap"},{"label":"현행 API 포크 · 미검증 후보","url":"https://github.com/Ivangeraldo/BlendArMocap-UpdatedAPIPort-2026"},{"label":"MediaPipe 얼굴 추적 공식 가이드","url":"https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker"}]
+    },
+    {
+      "id": "phibix", "topic": "surface", "priority": "세부 품질 참고", "channel": "PhiBix", "title": "Building a Realistic 3D Digital Clone",
+      "url": "https://www.youtube.com/watch?v=OSZuiGmc-ig", "kind": "AI 참조 이미지와 표면 보완", "access": "영상 무료 · CC5와 Headshot 등 유료 도구",
+      "range": "공식 사례의 Steps 7–11 · 텍스처 누락과 눈·피부·복장 검수",
+      "learn": "다각도 얼굴 자료를 맞추고, 턱 아래의 누락된 참조를 AI로 보완한 뒤 투영·수정하는 사례입니다.",
+      "output": "보완한 얼굴 텍스처와 디테일을 갖춘 캐릭터.",
+      "fit": "귀 뒤·턱 아래·두피처럼 생성 결과가 약한 부분을 찾아 국소적으로 고치는 방법을 참고합니다.",
+      "limit": "실사 디지털 더블 사례입니다. 우리 탐험가의 그림체를 실사화하는 기준으로 쓰지 않습니다. 머리카락도 통째로 AI가 완성하는 시연으로 보지 않습니다.",
+      "verified": "제작자 채널·영상 제목과 2026-08-11 공식 사례 본문 확인",
+      "extra": [{"label":"AI 보완 단계가 정리된 공식 사례","url":"https://magazine.reallusion.com/2026/08/11/digital-double-from-photos-phibixs-photorealistic-workflow-with-cc5-and-headshot-3-1/"}]
+    },
+    {
+      "id": "mythcons", "topic": "surface", "priority": "유료 후보", "channel": "Reallusion 공식 · Mythcons 사례", "title": "Headshot 3 Stylized Image to 3D CC5 and Blender",
+      "url": "https://www.youtube.com/watch?v=uK08MPGbKaQ", "kind": "AI 참조와 표준 얼굴 메시 변형", "access": "영상 무료 · CC5와 Headshot 등 유료 도구",
+      "range": "AI 측면 생성 → 가이드 곡선 수정 → Blender morph → Krita 텍스처 정렬",
+      "learn": "과장된 캐릭터도 자동 평균 얼굴에 맞추지 않고, 컨셉 실루엣을 수동으로 되살리는 접근입니다.",
+      "output": "기존 리그를 유지하며 수정한 스타일 캐릭터.",
+      "fit": "B형 탐험가의 얼굴 비율을 유지하면서 표준 얼굴 구조를 활용할 수 있는지 비교할 자료입니다.",
+      "limit": "근육질 캐리커처가 예제입니다. AI가 머리카락까지 새로 생성한 사례가 아니며, 우리 캐릭터에서 변형이 자연스러운지는 별도 확인해야 합니다.",
+      "verified": "공식 채널·영상 제목과 2026-06-26 공식 사례 본문 확인",
+      "extra": [{"label":"제작 과정과 수동 보정 설명","url":"https://magazine.reallusion.com/2026/06/26/headshot-3-stylized-image-to-3d-building-a-bodybuilder-caricature-in-cc5-and-blender/"}]
+    },
+    {
+      "id": "keentools", "topic": "face-motion", "priority": "대안 비교", "channel": "KeenTools 공식", "title": "Facial Mocap and 3D Facial Animation in One FaceTracker for Blender Tutorial",
+      "url": "https://www.youtube.com/watch?v=Lc8w2aZ5Mwk", "kind": "영상 얼굴 추적과 리타게팅", "access": "영상 무료 · FaceTracker와 FaceBuilder 유료",
+      "range": "얼굴 모션을 ARKit blendshape 또는 Rigify로 전달하는 흐름",
+      "learn": "사진으로 만든 얼굴의 영상 추적과 다른 캐릭터로의 표정 전이를 Blender 안에서 다루는 후보입니다.",
+      "output": "얼굴 추적과 전이한 표정 애니메이션.",
+      "fit": "얼굴 영상 기반 파이프라인을 비교할 때 사용합니다.",
+      "limit": "추적에 사용하는 얼굴은 FaceBuilder 토폴로지가 필요합니다. 임의의 Tripo 얼굴을 곧바로 추적할 수 있다고 보면 안 됩니다.",
+      "verified": "현재 공식 제품 페이지의 영상 링크·요구 조건과 YouTube 채널 확인",
+      "extra": [{"label":"기초 영상 · 02:09 얼굴 메시 · 07:20 추적 개선 · 09:52 내보내기","url":"https://www.youtube.com/watch?v=uEWQl8xw1ZA"},{"label":"FaceTracker 현재 제품 안내","url":"https://keentools.io/products/facetracker-for-blender"}]
+    },
+    {
+      "id": "stefan-llm", "topic": "surface", "priority": "자동화 참고", "channel": "Stefan 3D AI", "title": "Claude in Blender 강의",
+      "url": "https://www.learn3d.ai/", "kind": "LLM Blender 작업 자동화", "access": "보유한 유료 강의 자료",
+      "range": "03:03–04:49 · 베이크 실패와 설정 수정",
+      "learn": "Claude가 Blender 베이크를 자동화하다 설정 오류로 실패한 뒤, 사람이 작업 조건을 명확히 지정하는 사례입니다.",
+      "output": "작업 스크립트와 베이크한 텍스처. 얼굴 리그 생성 시연은 아닙니다.",
+      "fit": "파츠 정렬·이름 규칙·텍스처 베이크·내보내기 검사를 자동화하는 방식을 참고합니다.",
+      "limit": "강의의 ray distance 같은 수치를 우리 모델에 그대로 복사하지 않습니다. 메시 크기와 주변 부품에 맞춘 설정이 필요합니다.",
+      "verified": "사용자 강의 자막의 해당 구간 확인", "local": "artifacts/stefan-study/character__b1_claude_in_blender.txt"
+    },
+    {
+      "id": "stefan-public", "topic": "parts", "priority": "전체 흐름 참고", "channel": "Stefan 3D AI", "title": "Building My Dream Game With AI Characters and Animations",
+      "url": "https://www.youtube.com/watch?v=UBjgJM6D18A", "kind": "AI 캐릭터 제작과 게임 통합", "access": "공개 영상 무료",
+      "range": "04:30–22:10 캐릭터 예제 · 29:50 플레이 테스트",
+      "learn": "P2 캐릭터 생성에서 애니메이션과 게임 테스트까지 이어지는 전체 흐름입니다.",
+      "output": "게임에 통합하는 캐릭터와 동작 사례.",
+      "fit": "파츠·얼굴·손의 개별 작업을 전체 제작 순서 안에 놓는 참고 자료입니다.",
+      "limit": "얼굴 shape key와 손가락의 상세 제작 강의로 보지는 않습니다. Unity 예제의 엔진 통합 부분은 Godot 방식으로 바꿔야 합니다.",
+      "verified": "공개 영상 설명·챕터와 로컬 자막 확인", "local": "artifacts/stefan-study/youtube/UBjgJM6D18A-transcript.txt"
+    },
+    {
+      "id": "hairstep", "topic": "research", "priority": "연구 참고", "channel": "GAP LAB 연구팀", "title": "HairStep CVPR 2023",
+      "url": "https://github.com/GAP-LAB-CUHK-SZ/HairStep", "kind": "AI 모발 가닥 복원", "access": "공개 연구 코드 · 데이터와 체크포인트 비상업 연구용",
+      "range": "프로젝트 데모와 README의 Single view 3D Hair Reconstruction",
+      "learn": "한 장의 사진에서 모발 방향·깊이를 추정하여 3D 가닥을 복원하는 연구입니다.",
+      "output": "가닥 기반 모발 복원. 게임용 헤어 메시·LOD·리그까지 완성하는 결과는 아닙니다.",
+      "fit": "AI가 머리카락을 어디까지 복원할 수 있는지 이해하는 참고로만 둡니다.",
+      "limit": "HiSa·HiDa 데이터와 관련 체크포인트는 비상업 연구용입니다. 상용 게임에 도입할 후보로 추천하지 않습니다.",
+      "verified": "공식 저장소의 연구 설명·환경·이용 제한 확인"
+    },
+    {
+      "id": "neuralhaircut", "topic": "research", "priority": "연구 참고", "channel": "Neural Haircut 연구팀", "title": "Neural Haircut ICCV 2023",
+      "url": "https://samsunglabs.github.io/NeuralHaircut/", "kind": "AI 영상 모발 가닥 복원", "access": "공개 연구 · 의존 데이터와 모델 조건 별도 확인",
+      "range": "프로젝트 데모와 공식 추론 코드",
+      "learn": "단안 영상이나 여러 시점의 이미지에서 가닥 단위 모발을 복원하는 연구입니다.",
+      "output": "가닥 기반 헤어 형상.",
+      "fit": "여러 각도의 참조가 헤어 형상에 어떤 정보를 더 주는지 비교할 참고입니다.",
+      "limit": "우리 RTX 2070 환경에서 실행하거나 게임용 변환을 검증하지 않았습니다. FLAME 등 의존 모델까지 상업 이용 가능하다고 판정하지 않습니다.",
+      "verified": "연구 논문과 공식 추론 코드의 입력·출력 설명 확인",
+      "extra": [{"label":"공식 추론 코드","url":"https://github.com/Vanessik/NeuralHaircut"}]
+    }
+  ]
+}

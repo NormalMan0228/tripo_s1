@@ -1,0 +1,12 @@
+{
+  "id": "hair-back",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-22f8b48f-b8a4-4231-84e3-f71dd938a68c.png",
+  "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME isolated brown bob HAIR SHELL in strict BACK view. Preserve haircut length, rounded silhouette and layered broad sculpted locks. No scalp skin, head, ears, face or body anywhere inside; hollow standalone hair piece.",
+  "reference_inputs": [
+    "art/references/explorer_b_modular_v1/02_parts/hair-v1.png",
+    "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+  ],
+  "approval": null
+}

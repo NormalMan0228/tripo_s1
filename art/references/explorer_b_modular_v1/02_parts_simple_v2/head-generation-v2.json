@@ -1,0 +1,16 @@
+{
+  "id": "head",
+  "label": "머리",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "prompt": "Use case: precise-object-edit / identity-preserve.\nImage 1 is the exact head to retain. Image 2 is a uniform warm peach mannequin body used ONLY for matching the shared skin base color and rendering material.\nKeep the same face, large brown eyes, eyebrows, ears, jaw, neutral friendly closed smile, bald head and short neck join of image 1 unchanged. Change ONLY the overall skin material/color to match the warm peach skin-color surface of image 2. Both should share the same warm peach base color, not mismatched lighter/darker material; preserve normal light/shadow and very subtle natural cheek blush, no skin recoloring patches. Same front orthographic view, white background, neutral soft studio light, whole head centered with margin. No hair, no shoulders, no outfit, no extra heads, labels or anatomy diagram. Polished soft stylized 3D reference illustration. Preserve the head identity exactly.",
+  "reference_inputs": [
+    "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/head-front-v1.png",
+    "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts_simple_v2/body-v2.png"
+  ],
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-3fa0afd0-c4ba-4888-9a1a-77534c674542.png",
+  "file": "head-v2.png",
+  "approval": null,
+  "new_tripo_calls": 0,
+  "new_scenario_calls": 0
+}

@@ -1,0 +1,42 @@
+{
+  "geometry_vertices_stable": true,
+  "all_coordinates_finite": true,
+  "per_object": {
+    "Leg_PosY": {
+      "changed_vertices": 0,
+      "max_delta_m": 0.0
+    },
+    "Arm_Hand_PosY_P2": {
+      "changed_vertices": 400,
+      "max_delta_m": 0.0014011245375401297
+    },
+    "Head_and_Neck_P2": {
+      "changed_vertices": 611,
+      "max_delta_m": 0.015350795409070334
+    },
+    "Hair_P2_Independent": {
+      "changed_vertices": 409,
+      "max_delta_m": 0.056962561721676234
+    },
+    "Hair_Scalp_Base_Blender": {
+      "changed_vertices": 0,
+      "max_delta_m": 0.0
+    },
+    "Underlayer_Top": {
+      "changed_vertices": 0,
+      "max_delta_m": 0.0
+    },
+    "Underlayer_Shorts": {
+      "changed_vertices": 0,
+      "max_delta_m": 0.0
+    }
+  },
+  "head_small_islands_max_delta_m": 0.0,
+  "protected_hand_vertices": 3782,
+  "hand_beyond_wrist_band_max_delta_m": 0.0,
+  "exact_y_mirror_parts": [
+    "Leg_PosY",
+    "Arm_Hand_PosY_P2"
+  ],
+  "state": "passed_geometry_protection_checks_not_rig_validation"
+}

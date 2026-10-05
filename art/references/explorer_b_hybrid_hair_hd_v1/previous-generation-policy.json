@@ -1,0 +1,105 @@
+{
+  "date": "2026-10-04",
+  "scope": "developer_character_generation",
+  "user_decision": "캐릭터만 처음으로 돌아갑니다. 이번에는 hd로 만들겁니다. 캐릭터 디자인은 이전과 동일합니다",
+  "generation_mode": "HD",
+  "part_plan": {
+    "user_decision": "전체 신체부위(속옷 포함), 머리, 머리카락, 손, 상의, 하의, 신발",
+    "generation_groups": [
+      {
+        "id": "fullbody",
+        "label": "전체 신체부위(속옷 포함)",
+        "role": "continuous_fullbody_base_with_opaque_underwear",
+        "reference_keys": [
+          "fullbody_front",
+          "fullbody_back"
+        ]
+      },
+      {
+        "id": "head",
+        "label": "머리",
+        "role": "separate_replacement_head_for_reviewed_fullbody_base",
+        "reference_file": "art/references/explorer_b_modular_v1/final_images/01_head.png"
+      },
+      {
+        "id": "hair",
+        "label": "머리카락",
+        "role": "independent_hair_part",
+        "reference_file": "art/references/explorer_b_modular_v1/final_images/04_hair.png"
+      },
+      {
+        "id": "hand",
+        "label": "손",
+        "role": "separate_replacement_hand_pair_with_consistent_skin_tone",
+        "reference_file": "art/references/explorer_b_modular_v1/final_images/03_hand.png"
+      },
+      {
+        "id": "upper_clothing",
+        "label": "상의",
+        "role": "upper_clothing_group_preserving_existing_design",
+        "existing_design_references": [
+          "art/references/explorer_b_modular_v1/final_images/05_jacket.png",
+          "art/references/explorer_b_modular_v1/final_images/06_shirt.png"
+        ]
+      },
+      {
+        "id": "lower_clothing",
+        "label": "하의",
+        "role": "lower_clothing_group_with_attached_pockets_and_existing_belt_design",
+        "existing_design_references": [
+          "art/references/explorer_b_modular_v1/final_images/07_pants.png",
+          "art/references/explorer_b_modular_v1/final_images/09_belt.png"
+        ]
+      },
+      {
+        "id": "footwear",
+        "label": "신발",
+        "role": "footwear_pair_with_reviewed_left_right_symmetry",
+        "reference_file": "art/references/explorer_b_modular_v1/final_images/08_boots.png"
+      }
+    ],
+    "group_count": 7,
+    "all_groups_use_HD_geometry": true,
+    "whole_body_before_replacing_head_and_hands": true,
+    "skin_tone_consistent_across_body_head_hands": true,
+    "left_right_symmetry_review_required": true,
+    "fitting_and_join_work_after_geometry_review": true,
+    "upper_and_lower_group_reference_preparation_pending": false,
+    "old_nine_part_generation_plan_superseded": true
+  },
+  "default_geometry_model": "v3.1-20260211",
+  "api_model_version_status": "verified_HD_H3_1",
+  "topology_preference": "high_resolution_source_then_reviewed_game_retopology",
+  "restart_scope": "character_mesh_creation_only_keep_existing_approved_design",
+  "approved_reference_reuse": {
+    "fullbody_front": "art/references/explorer_b_fullbody_v2/front.png",
+    "fullbody_back": "art/references/explorer_b_fullbody_v2/back.png",
+    "individual_parts": "art/references/explorer_b_modular_v1/final_images",
+    "selection_record": "art/references/explorer_b_modular_v1/final_images_selection.json",
+    "design_and_reference_regeneration_required": false
+  },
+  "input_preference": "user_approved_character_or_individual_part_images",
+  "stage_gates": [
+    "reference_image_review",
+    "generated_geometry_review",
+    "Blender_fit_and_topology_review",
+    "final_uv_and_texture_review",
+    "body_hand_face_rig_review",
+    "animation_and_Godot_movement_review"
+  ],
+  "current_geometry_outputs": "art\\characters\\explorer_b_hd_restart_v1\\generation-manifest.json",
+  "current_stage": "seven_HD_sources_awaiting_user_geometry_review",
+  "new_HD_generation_submitted": true,
+  "prior_outputs_retained_as_reference": {
+    "P2_parts": "art/characters/explorer_b_fullbody_v2/04_replacement_parts_p2/manifest.json",
+    "textured_parts": "art/characters/explorer_b_fullbody_v2/06_textured_parts/preparation-report.json"
+  },
+  "previous_default_geometry_model": "P2-20260801",
+  "preserve_native_source": true,
+  "review_each_stage_before_advancing": true,
+  "API_credit_authorization_unchanged_by_this_design_decision": true,
+  "hand_counterpart_method": "mirror_one_validated_hand_in_Blender_after_geometry_review",
+  "source_parts_are_not_yet_fitted_or_rigged": true,
+  "current_batch_credit_cap": 1000,
+  "current_batch_actual_credits": 280.0
+}

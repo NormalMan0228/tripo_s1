@@ -1,0 +1,25 @@
+{
+  "status": "new_compact_mesh_bob_local_face_cleanup_closed_smile",
+  "identity_reference": "art/references/explorer_b_integrated_face_haircards_v1/00_user_identity_reference.png",
+  "image_tool": "builtin image_gen",
+  "prompts": "promptset.json",
+  "views": {
+    "front": "01_hair_front.png",
+    "left": "02_hair_left.png",
+    "back": "03_hair_back.png",
+    "right": "04_hair_right.png"
+  },
+  "reference_approved": true,
+  "approval": "이 4방향 헤어로 생성",
+  "reference_sha256_by_view": {
+    "front": "549de8738b463abf8210c101413f641f3d732a05ace50413be8559a8eb7243cb",
+    "right": "57da4a3df38cdc773c921e753d6b8e99277219fd5803198542e71585b9b33589",
+    "back": "6b94d1893bbe3d9d8263091530a64874d79a4ec529c41d6179abe1a7379c4b0a",
+    "left": "7f66b9ac9fbe024b65b368ecc7019b0a3911d45b20fec23f087327b95c698c64"
+  },
+  "hair_task_id": "bec78fb4-f468-4e12-be63-d5fa27d1f09c",
+  "face_regenerated": false,
+  "hair_cards": false,
+  "actual_credits": 40,
+  "assembly": "art/characters/explorer_b_young_bob_face_cleanup_v3/assembly/explorer_b_young_bob_closed_smile_v3.blend"
+}

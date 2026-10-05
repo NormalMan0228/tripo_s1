@@ -1,0 +1,12 @@
+{
+  "id": "hand-r-profile",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-30b561d0-9954-41d8-bb0e-14847599eaae.png",
+  "prompt": "Use case: precise-object-edit / identity-preserve. Image 1 is the SAME generated right hand, image 2 its palm reference. Generate a NEW orthographic RADIAL SIDE PROFILE of exactly this hand. Camera turns fully 90 degrees around the upright hand to look from thumb side across the palm thickness. Fingers point vertically UP, wrist DOWN, same open neutral pose, same lengths and proportions. Palm is a NARROW EDGE silhouette, not a wide palm or back surface; no three-quarter front/back view. The four long fingers are aligned in depth with silhouettes partially overlapping in true side view, thumb projects naturally in front of this layered stack. Emphasize actual palm thickness and thumb-root/thenar depth. All five fingers anatomically present; never duplicate fingers or force a fan to show all five. SAME soft stylized light skin material, no sleeve, arm, props, jewelry, labels or environment. One isolated component, solid white background, entire hand in frame. Do not show the full character or a second view.",
+  "reference_inputs": [
+    "art/references/explorer_b_modular_v1/02_parts/hand-r-dorsal-v1.png",
+    "art/references/explorer_b_modular_v1/02_parts/hand-r-palm-v1.png"
+  ],
+  "approval": null
+}

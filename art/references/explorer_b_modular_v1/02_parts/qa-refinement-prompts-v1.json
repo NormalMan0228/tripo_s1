@@ -1,0 +1,45 @@
+{
+  "assets": [
+    {
+      "id": "hand-r-profile",
+      "variant_of": "hand-r-dorsal",
+      "category": "body",
+      "label": "오른손",
+      "view": "정확한 엄지 측면",
+      "parts": [
+        "palm_R",
+        "thumb_R",
+        "index_R",
+        "middle_R",
+        "ring_R",
+        "little_R"
+      ],
+      "state": "pending",
+      "file": "hand-r-profile-v1.png",
+      "prompt": "Use case: precise-object-edit / identity-preserve. Image 1 is the SAME generated right hand, image 2 its palm reference. Generate a NEW orthographic RADIAL SIDE PROFILE of exactly this hand. Camera turns fully 90 degrees around the upright hand to look from thumb side across the palm thickness. Fingers point vertically UP, wrist DOWN, same open neutral pose, same lengths and proportions. Palm is a NARROW EDGE silhouette, not a wide palm or back surface; no three-quarter front/back view. The four long fingers are aligned in depth with silhouettes partially overlapping in true side view, thumb projects naturally in front of this layered stack. Emphasize actual palm thickness and thumb-root/thenar depth. All five fingers anatomically present; never duplicate fingers or force a fan to show all five. SAME soft stylized light skin material, no sleeve, arm, props, jewelry, labels or environment. One isolated component, solid white background, entire hand in frame. Do not show the full character or a second view.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/hand-r-dorsal-v1.png",
+        "art/references/explorer_b_modular_v1/02_parts/hand-r-palm-v1.png"
+      ],
+      "review_status": "awaiting_user_review"
+    },
+    {
+      "id": "torso-clean-boundaries",
+      "variant_of": "torso",
+      "category": "body",
+      "label": "몸통",
+      "view": "연결 경계 수정안 v2",
+      "parts": [
+        "torso"
+      ],
+      "state": "pending",
+      "file": "torso-v2.png",
+      "prompt": "Use case: precise-object-edit / identity-preserve. Edit the isolated mannequin torso from image 1, which is a standalone engineering modeling part of the approved explorer in image 2. Preserve its shoulder width, body shape, torso length, warm matte clay material and frontal neutral view. Make ONLY these boundary corrections: REMOVE the tall cylindrical neck entirely down to the shoulder/clavicle junction; leave a shallow clean neck-attachment opening level with the upper shoulder line, so the separate neck component can be fitted later. Remove the hard raised disc/cylinder rims at the two arm boundaries and at the bottom waist; these ends should be simple smooth cut surfaces/attachment openings, not mechanical toy connector fittings. Keep the gently rounded shoulders and soft natural torso silhouette. No face, head, neck above the collarbone junction, arms, pelvis, clothing or detailed anatomy. Featureless nonsexual smooth mannequin surface, not a human injury. One complete component centered on white background, straight FRONT orthographic view, high quality refined smooth 3D illustration, no labels or extra copies.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/torso-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review"
+    }
+  ]
+}

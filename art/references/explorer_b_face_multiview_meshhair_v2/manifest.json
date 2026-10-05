@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-05",
+  "status": "Tripo_front_left_right_face_and_solid_mesh_hair_geometry_review",
+  "user_direction": "Mesh hair matching the original reference, no hair cards. Give Tripo side views to improve the lower face.",
+  "face_views": {
+    "front": "01_head_front.png",
+    "left": "02_head_left.png",
+    "right": "03_head_right.png"
+  },
+  "front_previously_approved": true,
+  "new_profiles_approved": true,
+  "tripo_submitted": true,
+  "generation_pose": "Relaxed moderately open mouth with visible teeth, tongue and cavity; continuous lids and rooted lashes",
+  "lower_face_targets": [
+    "Compact rounded jaw",
+    "Restrained lip/chin projection",
+    "Smooth lower-lip-to-chin curve"
+  ],
+  "hair_method": "Separate solid mesh hairstyle with grouped locks; existing approved four-view HD source preserved; no cards",
+  "image_tool": "built-in image_gen",
+  "prompt_file": "prompts.json",
+  "generation_budget_remaining_before_new_task": 875,
+  "task_id": "b3750b15-9b51-4c5b-bfca-879ee9847d8b",
+  "hair_cards": false,
+  "face_generation_credits": 120,
+  "texture_conversion_credits": 5,
+  "new_hair_credits": 0,
+  "remaining_credits": 750.0,
+  "assembly": "art/characters/explorer_b_face_multiview_meshhair_v2/assembly/explorer_b_multiview_mesh_hair_v2.blend"
+}
