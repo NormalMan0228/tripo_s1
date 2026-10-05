@@ -93,12 +93,12 @@ func interact() -> void:
 		"bell":
 			app.sound.effect("reward")
 			app.floating_feedback("종소리가 마을에 퍼집니다",app.player.position,Color("f4d58e"))
-			app.message("별바람 언덕에서 잠시 쉬어 가세요. Tab으로 다음 목적지를 고를 수 있어요.")
+			app.message("등대 종소리를 들으며 잠시 쉬어 가세요. Tab으로 다음 목적지를 고를 수 있어요.")
 		"view":
-			var v: VBoxContainer=app.modal_card("소나무 전망대")
+			var v: VBoxContainer=app.modal_card("별빛 천문대 전망")
 			mode="view"
-			app.camera.size=25
-			app.text(v,"강 건너 텃밭과 남쪽 바다가 한눈에 보여요.\nEsc를 누르면 산책으로 돌아갑니다.",16)
+			app.camera.size=34
+			app.text(v,"다섯 섬과 다리가 한눈에 보여요.\nEsc를 누르면 산책으로 돌아갑니다.",16)
 
 func open_plot(index: int) -> void:
 	if state.is_empty(): return
@@ -233,7 +233,7 @@ func reel() -> void:
 func open_map() -> void:
 	var v: VBoxContainer=app.modal_card("물결빛 마을 산책 지도")
 	mode="map"
-	app.text(v,"목적지를 고르면 길잡이 표식이 생겨요. 강은 두 다리로 건너세요.",14)
+	app.text(v,"목적지를 고르면 길잡이 표식이 생겨요. 섬과 섬은 다리로 이어져 있어요.",14)
 	var row := HBoxContainer.new()
 	v.add_child(row)
 	map_view=Map.new()
@@ -250,7 +250,7 @@ func open_map() -> void:
 	app.button(v,"B · 생활 창고 열기",open_storage)
 
 func closed() -> void:
-	if mode=="view" and is_instance_valid(app.camera): app.camera.size=16
+	if mode=="view" and is_instance_valid(app.camera): app.camera.size=preload("res://scripts/controller_profile.gd").VILLAGE_CAMERA_DEFAULT
 	mode=""
 	if is_instance_valid(app.player) and app.screen!="survival" and app.player.equipped in ["rod","watering_can"]: app.player.equip("")
 
@@ -283,7 +283,7 @@ func _process(delta: float) -> void:
 		if bite and not bite_announced:
 			bite_announced=true
 			app.sound.effect("click")
-	var cast_at := Vector3(-7,-0.4,18.3) if current_spot=="pond" else Vector3(26,-1.7,36)
+	var cast_at: Vector3=Town.CAST_POINTS.get(current_spot,Town.CAST_POINTS.pond)
 	var hand: Vector3=app.player.position+Vector3(0.35,2.2,0.7)
 	if is_instance_valid(app.player.tool_node): hand=app.player.tool_node.to_global(app.player.tool_node.get_meta("line_tip",Vector3(0,2.3,0)))
 	app.town.update_fishing(active,cast_at,bite,hand)
@@ -299,7 +299,6 @@ func _process(delta: float) -> void:
 			var arrow=preload("res://scripts/art.gd").cone(marker,Vector3(0,3.8,0),0.32,0.65,Color("f6d17d"))
 			arrow.rotation.z=PI
 		marker.position=Town.point(goal.at)
-		if goal.id=="pond": marker.position.y=0
 		if Vector2(app.player.position.x,app.player.position.z).distance_to(goal.at)<2:
 			goal={}
 			marker.queue_free()

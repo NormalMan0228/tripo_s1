@@ -17,6 +17,7 @@ from pydantic import Field, field_validator
 from fastapi import Request, HTTPException
 from fastapi.responses import Response
 from .models import Mutation
+from .homestead import village_reserved, village_inside
 from .asset_assembly import demo_design, fixture_glb, validate_plan, static_plan
 from .asset_vm import AssetVM, ProgramError, exercise_extended as exercise
 from .design_provider import DesignProvider, DesignFailure, MODELS, EFFORTS
@@ -106,8 +107,8 @@ class Placement(Mutation):
     version: int=Field(ge=1)
     action: Literal['place','retrieve']='place'
     room: Literal['village','home','workshop']='home'
-    x: float=Field(default=0,ge=-11,le=11)
-    z: float=Field(default=0,ge=-11,le=11)
+    x: float=Field(default=0,ge=-130,le=130)
+    z: float=Field(default=0,ge=-130,le=130)
     rotation: Literal[0,90,180,270]=0
 
 def price(body):
@@ -352,12 +353,12 @@ class Studio:
                 if body.action=='retrieve':
                     conn.execute("UPDATE objects SET state='inventory',x=NULL,z=NULL,version=version+1 WHERE id=?",(object_id,))
                 else:
-                    bound=11 if body.room=='village' else 4
-                    if abs(body.x)>bound or abs(body.z)>bound:fail('outside_room')
+                    if body.room=='village':
+                        if not village_inside(body.x,body.z):fail('outside_room')
+                    elif abs(body.x)>4 or abs(body.z)>4:fail('outside_room')
                     if body.room!='village' and abs(body.x)<1.5 and body.z>2.5:fail('door_area_reserved')
                     if body.room=='workshop' and body.x < -1.8 and body.z < -1.5:fail('workbench_area_reserved')
-                    if body.room=='village' and -14<body.x<-7.8 and -10<body.z<-3:fail('home_area_reserved')
-                    if body.room=='village' and ((abs(body.x)<2 and abs(body.z)<2) or (-8<body.x<-2 and -8<body.z<-2) or (5<body.x<10 and -8<body.z<-3)):fail('reserved_area')
+                    if body.room=='village' and village_reserved(body.x,body.z):fail('reserved_area')
                     others=conn.execute("SELECT x,z FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? AND objects.id!=? AND state='placed' AND COALESCE(room,'village')=?",(user['id'],object_id,body.room)).fetchall()
                     if len(others)>=30:fail('room_full')
                     if any(abs(o['x']-body.x)<2 and abs(o['z']-body.z)<2 for o in others):fail('placement_overlap')

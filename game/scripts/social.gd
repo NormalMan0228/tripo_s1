@@ -176,7 +176,7 @@ func refresh_guest_objects() -> void:
 			return
 		if model:
 			app.object_root.add_child(model)
-			model.position = Vector3(obj.x, 0, obj.z)
+			model.position = preload("res://scripts/town.gd").furniture_point(obj.x, obj.z)
 			model.rotation_degrees.y = obj.rotation
 			Loader.add_collision(model)
 			app.loaded[obj.id] = model

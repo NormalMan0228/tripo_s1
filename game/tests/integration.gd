@@ -45,7 +45,7 @@ func run_test() -> void:
 	await app.begin_place()
 	expect(is_instance_valid(app.preview),"authenticated GLB loaded from bytes")
 	if is_instance_valid(app.preview):
-		app.preview.position=Vector3(4,0,4)
+		app.preview.position=preload("res://scripts/town.gd").furniture_point(4,4)
 		await app.place_preview()
 	expect(app.me.objects[0].state=="placed","server-authorized placement")
 	await capture("village-online")

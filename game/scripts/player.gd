@@ -32,11 +32,21 @@ var action_until := 0.0
 var tool_grip := Basis.IDENTITY
 var ambient_clip := "idle"
 var greeting_until := 0.0
+## The island village keeps walkers out of the sea: below this height the body
+## returns to its last grounded spot. Rooms and survival leave it unset.
+var min_ground_y := -INF
+var safe_position := Vector3.ZERO
+var has_safe_position := false
 const Art = preload("res://scripts/art.gd")
 
 func _ready() -> void:
 	Profile.ensure_input()
 	floor_snap_length = 0.3
+	# Characters stand on layer 4 so ground probes (layers 1, 2 and 8) never hit them.
+	# Island buildings, bridges and piers use layer 2, props and trees layer 8 and
+	# placed furniture layer 16.
+	collision_layer = 4
+	collision_mask = 1|2|4|8|16
 	var shape := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
 	capsule.radius = Profile.BODY_RADIUS
@@ -238,7 +248,14 @@ func _physics_process(delta: float) -> void:
 		velocity.y -= 20.0 * delta
 	else:
 		velocity.y = 0.0
-	if not visual_only:move_and_slide()
+	if not visual_only:
+		move_and_slide()
+		if position.y < min_ground_y and has_safe_position:
+			position = safe_position
+			velocity = Vector3.ZERO
+		elif is_on_floor() and position.y >= min_ground_y:
+			safe_position = position
+			has_safe_position = true
 	locomotion_velocity=Vector2(get_real_velocity().x,get_real_velocity().z) if controls_enabled and not visual_only else external_velocity
 	var look_motion := locomotion_velocity.normalized() if controls_enabled else external_motion
 	if Time.get_ticks_msec()*0.001<facing_until:
@@ -278,7 +295,7 @@ func _physics_process(delta: float) -> void:
 		left_leg.rotation.x=sin(stride)*0.5*moving
 		right_leg.rotation.x=-sin(stride)*0.5*moving
 	if position.y < -10.0:
-		position = Vector3(0, 0.2, 4)
+		position = safe_position if has_safe_position else Vector3(0, 0.2, 4)
 
 func react(kind: String) -> void:
 	# Visual response only. The collision body and server position never change.

@@ -74,6 +74,7 @@ var toast_panel: PanelContainer
 var toast_time := 0.0
 var last_notice := ""
 var ambience: CPUParticles3D
+var sun_defaults: Dictionary
 var results_shown := false
 var prior_day := 1
 var prior_night := false
@@ -139,6 +140,7 @@ func _ready() -> void:
 	sun.light_energy = 0.25
 	sun.shadow_enabled = true
 	add_child(sun)
+	sun_defaults={"rotation":sun.rotation_degrees,"bias":sun.shadow_bias,"normal_bias":sun.shadow_normal_bias,"distance":sun.directional_shadow_max_distance}
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.size = ControllerProfile.CAMERA_DEFAULT
@@ -159,7 +161,7 @@ func _ready() -> void:
 		var server_status: Dictionary = await api.request("/health")
 		social.enabled = social.feature_enabled() and server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
 		await enter_village()
-		player.position=TownLayout.HOME_RETURN if session.get("room")=="home" else Vector3(-5,0.1,-2.6)
+		player.position=TownLayout.point(TownLayout.HOME_RETURN_AT if session.get("room")=="home" else TownLayout.WORKSHOP_RETURN_AT,.3)
 		follow_camera(1)
 	else: login_ui()
 
@@ -291,7 +293,7 @@ func error_message(code: String) -> String:
 		"invalid_request":"입력 형식을 확인하세요. 이름 3~24자, 비밀번호 10자 이상입니다.",
 		"insufficient_shards":"별씨가 부족합니다. 생존 도전을 완료해 보세요.","placement_overlap":"다른 물건과 겹칩니다.",
 		"room_render_budget_exceeded":"꾸미기 용량이 꽉 찼습니다. 가구 일부를 회수한 뒤 배치해 주세요.",
-		"spawn_area_reserved":"중앙 광장에는 놓을 수 없습니다.","house_area_reserved":"집 주변의 공간을 비워 주세요.",
+		"spawn_area_reserved":"중앙 광장에는 놓을 수 없습니다.","workshop_area_reserved":"공방 입구 앞은 비워 주세요.","reserved_area":"길과 입구 앞은 비워 주세요.",
 		"gate_area_reserved":"숲 입구에는 놓을 수 없습니다.","daily_generation_limit":"오늘 생성 한도에 도달했습니다.",
 		"live_generation_disabled":"Tripo 실생성이 아직 설정되지 않았습니다.","generation_pending":"진행 중인 생성이 있습니다.",
 		"session_expired":"로그인이 만료됐습니다. 다시 접속하세요.","object_not_found":"이 물건을 사용할 권한이 없습니다.",
@@ -397,6 +399,7 @@ func build_world(survival: bool) -> void:
 	prior_day=1
 	prior_night=false
 	sound.play_music("forest" if survival else "village")
+	if is_instance_valid(town): town.release_map()
 	if is_instance_valid(world):
 		remove_child(world)
 		world.queue_free()
@@ -417,6 +420,7 @@ func build_world(survival: bool) -> void:
 	if survival: preload("res://scripts/biomes.gd").build(world,run)
 	else:
 		town=preload("res://scripts/town.gd").new()
+		town.camera=camera
 		for chapter in me.get("campaign",[]):
 			if chapter.completed:town.story_progress+=1
 		world.add_child(town)
@@ -427,7 +431,8 @@ func build_world(survival: bool) -> void:
 	world.add_child(player)
 	player.apply_avatar(me.get("profile",{}).get("avatar",{}))
 	if not survival: spawn_villagers()
-	player.position = Vector3(0,0.1,3) if not survival else Vector3(run.get("x",0),0.1,run.get("z",1.4))
+	player.position = TownLayout.point(TownLayout.SPAWN,.3) if not survival else Vector3(run.get("x",0),0.1,run.get("z",1.4))
+	player.min_ground_y = TownLayout.SHORE_MIN_Y if not survival else -INF
 	flame = Node3D.new()
 	world.add_child(flame)
 	for index in 3:
@@ -508,7 +513,18 @@ func build_world(survival: bool) -> void:
 	environment.background_color = Color("88bcb9")
 	sun.light_energy = 0.25
 	sun.light_color=Color("fff5e9")
+	environment.tonemap_mode=Environment.TONE_MAPPER_LINEAR
+	environment.tonemap_exposure=1.0
+	environment.fog_enabled=false
+	sun.rotation_degrees=sun_defaults.rotation
+	sun.shadow_bias=sun_defaults.bias
+	sun.shadow_normal_bias=sun_defaults.normal_bias
+	sun.directional_shadow_max_distance=sun_defaults.distance
 	camera.size = ControllerProfile.CAMERA_DEFAULT
+	if not survival:
+		TownLayout.Archipelago.apply_lighting(environment,sun)
+		camera.size = ControllerProfile.VILLAGE_CAMERA_DEFAULT
+	camera_zoom_active=false
 	follow_camera(1)
 
 func enter_village() -> void:
@@ -786,7 +802,7 @@ func refresh_inventory() -> void:
 				return
 			if asset:
 				object_root.add_child(asset)
-				asset.position = Vector3(obj.x,0,obj.z)
+				asset.position = TownLayout.furniture_point(obj.x,obj.z)
 				asset.rotation_degrees.y = obj.rotation
 				Loader.add_collision(asset)
 				loaded[obj.id] = asset
@@ -895,6 +911,16 @@ func begin_place() -> void:
 	if preview:
 		world.add_child(preview)
 		preview_rotation=0
+		# A ground disc shows whether the spot is free: green to place, red when blocked.
+		var disc := MeshInstance3D.new()
+		var plate := CylinderMesh.new()
+		var span: Vector3=preview.get_meta("size",Vector3.ONE)
+		plate.top_radius=maxf(span.x,span.z)*.62;plate.bottom_radius=plate.top_radius;plate.height=.04
+		disc.mesh=plate;disc.position.y=.03;disc.name="PlacementDisc"
+		var tint := StandardMaterial3D.new();tint.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+		tint.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA;tint.albedo_color=Color(.4,.9,.5,.45)
+		disc.material_override=tint;disc.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		preview.add_child(disc)
 		player.controls_enabled=false
 		if right.get_parent().visible: toggle_drawer()
 		message("마음에 드는 바닥을 클릭하세요. R로 돌리고 Esc로 취소할 수 있어요.")
@@ -904,14 +930,32 @@ func cancel_preview() -> void:
 	preview=null
 	if is_instance_valid(player): player.controls_enabled=screen=="village"
 
+## Why the preview spot cannot take the furniture, or "" when it is free.
+## Mirrors homestead.village_inside/village_reserved and adds the map's own geometry.
+func placement_problem() -> String:
+	var p := TownLayout.furniture_local(preview.position)
+	if p.x< -60 or p.x>130 or p.y< -115 or p.y>60: return "섬 안쪽에 놓아 주세요."
+	if preview.position.y<TownLayout.SHORE_MIN_Y+.5: return "물 위에는 놓을 수 없어요."
+	if absf(p.x)<2 and absf(p.y)<2: return "광장 한가운데는 비워 주세요."
+	if absf(p.x)<3.5 and p.y> -12 and p.y< -6: return "공방 입구 앞은 비워 주세요."
+	if Vector2(player.position.x-preview.position.x,player.position.z-preview.position.z).length()<1.3:
+		return "캐릭터와 겹치지 않는 곳에 놓으세요."
+	var span: Vector3=preview.get_meta("size",Vector3.ONE)
+	var box := BoxShape3D.new();box.size=Vector3(maxf(span.x,.4),maxf(span.y-.1,.2),maxf(span.z,.4))
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape=box;query.collision_mask=2|8|16
+	query.transform=Transform3D(Basis(Vector3.UP,deg_to_rad(preview_rotation)),preview.position+Vector3(0,box.size.y*.5+.08,0))
+	if not get_world_3d().direct_space_state.intersect_shape(query,1).is_empty(): return "건물이나 다른 물건과 겹쳐요."
+	return ""
+
 func place_preview() -> void:
 	if not is_instance_valid(preview): return
-	var p := preview.position
-	if absf(p.x)>11 or absf(p.z)>11: return
-	if Vector2(player.position.x-p.x,player.position.z-p.z).length()<1.3:
-		message("캐릭터와 겹치지 않는 곳에 놓으세요.")
+	var p := TownLayout.furniture_local(preview.position)
+	var problem := placement_problem()
+	if not problem.is_empty():
+		message(problem)
 		return
-	if await edit_object({"action":"place","x":p.x,"z":p.z,"rotation":preview_rotation}):
+	if await edit_object({"action":"place","x":p.x,"z":p.y,"rotation":preview_rotation}):
 		cancel_preview()
 		await refresh_inventory()
 		message("마을에 놓았습니다. 다시 접속해도 유지됩니다.")
@@ -1482,8 +1526,17 @@ func logout() -> void:
 	login_ui()
 	busy=false
 
+func _exit_tree() -> void:
+	# A pending studio session means the map is only travelling to a room and back.
+	if not Engine.has_meta("studio_session"): TownLayout.discard_kept()
+
+## Village distance on the ground plane; island terrain heights vary by metres.
+func near(at: Vector2, radius: float) -> bool:
+	return is_instance_valid(player) and Vector2(player.position.x,player.position.z).distance_to(at)<radius
+
 func follow_camera(delta: float) -> void:
 	if not is_instance_valid(player): return
+	if is_instance_valid(ambience) and screen=="village": ambience.position=player.position+Vector3(0,1.6,0)
 	var target := player.position+ControllerProfile.CAMERA_FOCUS_OFFSET
 	if not camera_focus_ready or delta>=1.0:
 		camera_focus=target;camera_focus_ready=true
@@ -1568,9 +1621,9 @@ func _process(delta: float) -> void:
 				var activity: Dictionary=life.closest()
 				if not activity.is_empty(): hint.text="E · "+activity.title+"   |   B · 생활 창고"
 				elif npc: hint.text="E · %s와 이야기하기" % npc.get_meta("title")
-				elif player.position.distance_to(Vector3(7,0,-5.5))<3: hint.text="E · 탐험 지역과 난이도 고르기"
-				elif player.position.distance_to(TownLayout.HOME_DOOR)<2: hint.text="E · 나의 집으로 들어가기"
-				elif player.position.distance_to(Vector3(-5,0,-2.6))<2.5: hint.text="E · 별씨 공방에서 물건 꾸미기"
+				elif near(TownLayout.GATE,3): hint.text="E · 탐험 지역과 난이도 고르기"
+				elif near(TownLayout.HOME_DOOR,2): hint.text="E · 나의 집으로 들어가기"
+				elif near(TownLayout.WORKSHOP_DOOR,2.5): hint.text="E · 별씨 공방에서 물건 꾸미기"
 				elif not nearest_furniture().is_empty():hint.text="E · 가까운 가구 사용"
 				else: hint.text="WASD · 산책하기    휠 · 가까이 보기    I · 나의 물건"
 		entitlement_elapsed+=delta
@@ -1586,10 +1639,15 @@ func _process(delta: float) -> void:
 				poll_job()
 		if is_instance_valid(preview):
 			var mouse := get_viewport().get_mouse_position()
-			var point = Plane(Vector3.UP,0).intersects_ray(camera.project_ray_origin(mouse),camera.project_ray_normal(mouse))
-			if point!=null:
-				preview.position=Vector3(snappedf(point.x,0.5),0,snappedf(point.z,0.5))
+			var origin := camera.project_ray_origin(mouse)
+			var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+camera.project_ray_normal(mouse)*400,1|2|8))
+			# Only open ground takes furniture; buildings, bridges and props keep the last spot.
+			if not hit.is_empty() and hit.collider is CollisionObject3D and hit.collider.collision_layer&1:
+				var local := TownLayout.furniture_local(hit.position).snapped(Vector2(0.5,0.5))
+				preview.position=TownLayout.furniture_point(local.x,local.y)
 				preview.rotation_degrees.y=preview_rotation
+			var disc := preview.get_node_or_null("PlacementDisc") as MeshInstance3D
+			if disc: disc.material_override.albedo_color=Color(.4,.9,.5,.45) if placement_problem().is_empty() else Color(.95,.35,.3,.5)
 
 func update_canopy_visibility() -> void:
 	if not is_instance_valid(player): return
@@ -1642,7 +1700,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if screen in ["village","survival"] and event is InputEventMouseButton and event.pressed:
 		if event.button_index in [MOUSE_BUTTON_WHEEL_UP,MOUSE_BUTTON_WHEEL_DOWN]:
 			if not camera_zoom_active:camera_zoom_target=camera.size
-			camera_zoom_target=clampf(camera_zoom_target+(-1 if event.button_index==MOUSE_BUTTON_WHEEL_UP else 1),ControllerProfile.CAMERA_MIN,ControllerProfile.CAMERA_MAX)
+			var village := screen=="village"
+			camera_zoom_target=clampf(camera_zoom_target+(-1 if event.button_index==MOUSE_BUTTON_WHEEL_UP else 1),ControllerProfile.VILLAGE_CAMERA_MIN if village else ControllerProfile.CAMERA_MIN,ControllerProfile.VILLAGE_CAMERA_MAX if village else ControllerProfile.CAMERA_MAX)
 			camera_zoom_active=true
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode==KEY_F3 and is_instance_valid(developer_panel):
@@ -1669,9 +1728,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.physical_keycode==KEY_R: preview_rotation=(preview_rotation+90)%360
 			if event.physical_keycode==KEY_E and not life.closest().is_empty(): life.interact()
 			elif event.physical_keycode==KEY_E and nearest_npc(): talk_to(nearest_npc())
-			elif event.physical_keycode==KEY_E and player.position.distance_to(Vector3(7,0,-5.5))<3: open_expedition()
-			elif event.physical_keycode==KEY_E and player.position.distance_to(TownLayout.HOME_DOOR)<2: open_studio("home")
-			elif event.physical_keycode==KEY_E and player.position.distance_to(Vector3(-5,0,-2.6))<2.5: open_studio()
+			elif event.physical_keycode==KEY_E and near(TownLayout.GATE,3): open_expedition()
+			elif event.physical_keycode==KEY_E and near(TownLayout.HOME_DOOR,2): open_studio("home")
+			elif event.physical_keycode==KEY_E and near(TownLayout.WORKSHOP_DOOR,2.5): open_studio()
 			elif event.physical_keycode==KEY_E: village_furniture_event(nearest_furniture(),"click")
 	if screen=="village" and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 		place_preview()
@@ -1789,11 +1848,11 @@ func open_story() -> void:
 
 func spawn_villagers() -> void:
 	var entries := [
-		{"title":"나루 · 길잡이","role":"map","at":Vector3(5.1,0.1,-3.1),"character":"explorer_b","coat":"#70afa3"},
-		{"title":"소라 · 재단사","role":"wardrobe","at":Vector3(-3.8,0.1,2.0),"character":"explorer_b","coat":"#ab789f"},
-		{"title":"모루 · 야영 전문가","role":"guide","at":Vector3(6.5,0.1,5.5),"character":"explorer_b","coat":"#6889a1"},
-		{"title":"단비 · 씨앗지기","role":"farmer","at":Vector3(-19.3,0.65,0.9),"character":"explorer_b","coat":"#70afa3"},
-		{"title":"해루 · 낚시꾼","role":"angler","at":Vector3(29.6,0.1,26),"character":"haeru","coat":"#ad803b"}]
+		{"title":"나루 · 길잡이","role":"map","character":"explorer_b","coat":"#70afa3"},
+		{"title":"소라 · 재단사","role":"wardrobe","character":"explorer_b","coat":"#ab789f"},
+		{"title":"모루 · 야영 전문가","role":"guide","character":"explorer_b","coat":"#6889a1"},
+		{"title":"단비 · 씨앗지기","role":"farmer","character":"explorer_b","coat":"#70afa3"},
+		{"title":"해루 · 낚시꾼","role":"angler","character":"haeru","coat":"#ad803b"}]
 	for entry in entries:
 		var npc := Player.new()
 		npc.controls_enabled=false
@@ -1804,7 +1863,7 @@ func spawn_villagers() -> void:
 		world.add_child(npc)
 		if entry.role!="angler":preload("res://scripts/villager_accessories.gd").dress(npc,entry.role)
 		if entry.role=="angler": npc.equip("rod")
-		npc.position=entry.at
+		npc.position=TownLayout.point(TownLayout.VILLAGERS[entry.role],.1)
 		npc.facing=Vector3(0,0,1)
 		npc.set_meta("title",entry.title)
 		npc.set_meta("role",entry.role)
@@ -1891,6 +1950,7 @@ func open_studio(destination: String="workshop") -> void:
 		return
 	if busy or api.token.is_empty(): return
 	Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":destination})
+	if is_instance_valid(town): town.release_map()
 	get_tree().change_scene_to_file("res://scenes/studio.tscn")
 
 func nearest_furniture() -> String:

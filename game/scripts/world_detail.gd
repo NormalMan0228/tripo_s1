@@ -241,8 +241,7 @@ static func workshop(parent: Node3D) -> void:
 	for i in 3: cylinder(parent,Vector3(-3.45+i*0.4,0.98,-6.9),0.12,0.25,[Color("d38367"),Color("dda94b"),Color("649f98")][i],10)
 	A.label3d(parent,"별씨 공방",Vector3(-5,3.95,-5),Color("fff1c8"))
 
-static func gate(parent: Node3D) -> void:
-	var origin := Vector3(7,0,-5.5)
+static func gate(parent: Node3D, origin := Vector3(7,0,-5.5)) -> void:
 	var arch := preload("res://assets/departure_arch.glb").instantiate() as Node3D
 	parent.add_child(arch);arch.position=origin
 	var portal := MeshInstance3D.new()

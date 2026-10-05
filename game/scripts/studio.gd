@@ -90,6 +90,7 @@ func _ready() -> void:
 		var session: Dictionary=Engine.get_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
 		room=session.get("room","workshop")
+		Engine.remove_meta("studio_session")
 	build_ui()
 	build_stage()
 	if api.token.is_empty():
@@ -845,6 +846,9 @@ func update_capacity() -> void:
 	var capacity: Dictionary=data.get("room_usage",{}).get(room,{})
 	room_capacity.text="배치 %d / 30 · 꾸미기 용량 %.0f%%"%[capacity.get("count",0),capacity.get("percent",0)]
 	room_capacity.tooltip_text="가구의 복잡도와 이미지 크기에 따라 용량이 달라져요. 꽉 차면 일부 가구를 회수하거나 다른 방으로 옮겨 주세요."
+
+func _exit_tree() -> void:
+	if not Engine.has_meta("studio_session"): preload("res://scripts/town.gd").discard_kept()
 
 func leave() -> void:
 	Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":room})

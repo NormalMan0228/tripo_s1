@@ -32,3 +32,6 @@ labs/terrain_lab/assets/
 labs/archipelago_object_lab/assets/
 labs/archipelago_object_lab/reviews/
 *.zip
+
+# The archipelago map binaries are copied from labs/terrain_lab by tools/port_archipelago_map.py.
+game/maps/archipelago/assets/

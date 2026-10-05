@@ -363,8 +363,18 @@ def test_resumed_failure_refunds_only_the_outstanding_charge(world):
 def test_reserved_house_and_workbench_cannot_be_bypassed(world):
     app,c=world;a=account(c,'alice');oid=build(app,c,a,'chest',motion='static');route='/v1/objects/'+oid
     assert c.post(route+'/placement',headers=a,json=mutation(version=1,room='workshop',x=-3,z=-3)).status_code==409
-    assert c.post(route+'/placement',headers=a,json=mutation(version=1,room='village',x=-10.8,z=-7)).status_code==409
-    assert c.post(route,headers=a,json=mutation(version=1,action='place',x=-10.8,z=-7)).status_code==409
+    assert c.post(route+'/placement',headers=a,json=mutation(version=1,room='village',x=-2,z=-8)).status_code==409
+    assert c.post(route,headers=a,json=mutation(version=1,action='place',x=-2,z=-8)).status_code==409
+
+def test_village_furniture_reaches_every_island_but_not_open_sea(world):
+    app,c=world;a=account(c,'alice');oid=build(app,c,a,'chest',motion='static');route='/v1/objects/'+oid
+    assert c.post(route+'/placement',headers=a,json=mutation(version=1,room='village',x=-75,z=0)).status_code==409
+    assert c.post(route+'/placement',headers=a,json=mutation(version=1,room='home',x=20,z=0)).status_code==409
+    # The lighthouse islet is about 40 m south-east of the town green.
+    placed=c.post(route+'/placement',headers=a,json=mutation(version=1,room='village',x=40,z=41))
+    assert placed.status_code==200
+    assert c.post(route,headers=a,json=mutation(version=2,action='retrieve')).status_code==200
+    assert c.post(route,headers=a,json=mutation(version=3,action='place',x=85,z=-75)).status_code==200
 
 def test_generated_api_is_owned_versioned_idempotent_and_registered(world):
     app,c=world;a=account(c,'alice');b=account(c,'bob');oid=build(app,c,a,'chest');route='/v1/objects/'+oid+'/invoke'

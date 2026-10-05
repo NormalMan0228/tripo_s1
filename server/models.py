@@ -44,8 +44,8 @@ class ObjectEdit(Mutation):
     version: int = Field(ge=1)
     action: Literal['paint','place','retrieve']
     color: str = Field(default='#f6eee0',pattern=r'^#[0-9a-fA-F]{6}$')
-    x: float = Field(default=0,ge=-11,le=11)
-    z: float = Field(default=0,ge=-11,le=11)
+    x: float = Field(default=0,ge=-130,le=130)
+    z: float = Field(default=0,ge=-130,le=130)
     rotation: Literal[0,90,180,270] = 0
 
 class Input(Strict):

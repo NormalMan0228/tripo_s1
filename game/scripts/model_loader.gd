@@ -73,6 +73,8 @@ static func paint(root: Node3D, color: Color) -> void:
 static func add_collision(root: Node3D) -> void:
 	var size: Vector3 = root.get_meta("size")
 	var body := StaticBody3D.new()
+	# Furniture blocks walkers but is not ground for height probes or placement.
+	body.collision_layer = 16
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = size

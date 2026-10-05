@@ -9,7 +9,8 @@ func capture(path: String) -> void:
 	root.get_texture().get_image().save_png("res://../artifacts/"+path)
 func run() -> void:
 	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url="http://127.0.0.1:8766"
-	var login: Dictionary=await api.post("/v1/auth/login",{"username":"workshop","password":"tripothon-local-demo"})
+	# A fresh account keeps the test independent of any seeded demo database.
+	var login: Dictionary=await api.post("/v1/auth/register",{"username":"home_"+str(Time.get_ticks_usec()),"password":"local-home-qa-password"})
 	check(login.ok,"login")
 	if not login.ok:quit(1);return
 	Engine.set_meta("studio_session",{"token":login.data.token,"url":api.base_url,"room":"home"})
@@ -17,7 +18,7 @@ func run() -> void:
 	await create_timer(4).timeout
 	var village=current_scene
 	check(village.screen=="village","village loaded")
-	check(village.player.position.distance_to(load("res://scripts/town.gd").HOME_RETURN)<0.5,"home doorstep return position")
+	check(village.player.position.distance_to(load("res://scripts/town.gd").point(load("res://scripts/town.gd").HOME_RETURN_AT,.3))<0.5,"home doorstep return position")
 	await capture("home-exterior.png")
 	village.open_studio("home")
 	await create_timer(3).timeout
@@ -29,6 +30,6 @@ func run() -> void:
 	home.leave()
 	await create_timer(4).timeout
 	check(current_scene.screen=="village","returned village")
-	check(current_scene.player.position.distance_to(load("res://scripts/town.gd").HOME_RETURN)<0.5,"return to same door")
+	check(current_scene.player.position.distance_to(load("res://scripts/town.gd").point(load("res://scripts/town.gd").HOME_RETURN_AT,.3))<0.5,"return to same door")
 	print("HOME_ROUNDTRIP ",JSON.stringify({"ok":failures.is_empty(),"failures":failures}))
 	quit(0 if failures.is_empty() else 1)

@@ -331,10 +331,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             else:
                 # Uniform 2x2 parcel; matches normalized 1.6m props on the client.
                 if row['state']!='inventory': fail('retrieve_before_moving')
-                if abs(body.x)<2 and abs(body.z)<2: fail('spawn_area_reserved')
-                if -8 < body.x < -2 and -8 < body.z < -2: fail('house_area_reserved')
-                if 5 < body.x < 10 and -8 < body.z < -3: fail('gate_area_reserved')
-                if -14 < body.x < -7.8 and -10 < body.z < -3: fail('home_area_reserved')
+                if not homestead.village_inside(body.x, body.z): fail('outside_room')
+                reserved = homestead.village_reserved(body.x, body.z)
+                if reserved: fail(reserved)
                 other = conn.execute("SELECT x,z FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? AND state='placed' AND COALESCE(room,'village')='village'",(user['id'],)).fetchall()
                 if len(other)>=30: fail('village_full')
                 if any(abs(r['x']-body.x)<2 and abs(r['z']-body.z)<2 for r in other): fail('placement_overlap')

@@ -13,6 +13,10 @@ const CAMERA_FOCUS_OFFSET := Vector3(0,1.0,-.55)
 const CAMERA_DEFAULT := 14.5
 const CAMERA_MIN := 12.0
 const CAMERA_MAX := 26.0
+# The island village is larger and taller, so its view starts closer to the walker.
+const VILLAGE_CAMERA_DEFAULT := 10.0
+const VILLAGE_CAMERA_MIN := 6.5
+const VILLAGE_CAMERA_MAX := 22.0
 
 static func damping(response: float,delta: float) -> float:
 	return 1.0-exp(-response*maxf(delta,0.0))
