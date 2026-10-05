@@ -8,7 +8,7 @@ func check(ok: bool,text: String) -> void:
 func _initialize() -> void:call_deferred("run")
 func run() -> void:
 	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url="http://127.0.0.1:8766"
-	var credentials := {"username":"studioqa_"+str(Time.get_ticks_usec()),"password":"local-studio-qa-password"}
+	var credentials := {"username":"studioqa_"+str(Time.get_ticks_usec()),"password":"Local-studio-qa-password"}
 	var login: Dictionary=await api.post("/v1/auth/register",credentials)
 	check(login.ok,"new independent account")
 	if not login.ok:quit(1);return
@@ -60,7 +60,7 @@ func run() -> void:
 	await app.retrieve()
 	check(not app.placed.has(id) and app.selected.state=="inventory","retrieve preserves inventory")
 	var other=load("res://scripts/api.gd").new();root.add_child(other);other.base_url=api.base_url
-	var stranger: Dictionary=await other.post("/v1/auth/register",{"username":"stranger_"+str(Time.get_ticks_usec()),"password":"local-stranger-password"})
+	var stranger: Dictionary=await other.post("/v1/auth/register",{"username":"stranger_"+str(Time.get_ticks_usec()),"password":"Local-stranger-password"})
 	other.token=stranger.data.token
 	var denied: Dictionary=await other.request("/v1/objects/"+id+"/assembly")
 	check(not denied.ok,"other account cannot load assembly")

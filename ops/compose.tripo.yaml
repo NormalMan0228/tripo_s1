@@ -1,0 +1,13 @@
+# Paid crafting with only a Tripo key: players get the simple one-mesh craft
+# (their words go straight to Tripo). Use instead of compose.paid.yaml when the
+# server has no OpenAI key. Limits come from ops/production.env.
+services:
+  api:
+    environment:
+      TRIPO_API_KEY_FILE: /run/secrets/tripo_key
+      TRIPO_ENABLE_PAID: "true"
+    secrets: [tripo_key]
+
+secrets:
+  tripo_key:
+    file: ./secrets/tripo-key

@@ -19,7 +19,7 @@ func run_test() -> void:
 	root.add_child(app)
 	await process_frame
 	var username := "expand_"+str(Time.get_unix_time_from_system()).replace(".","_")
-	await app.authenticate(true,"http://127.0.0.1:8766",username,"qa-expansion-123","")
+	await app.authenticate(true,"http://127.0.0.1:8766",username,"Qa-expansion-123","")
 	expect(app.screen=="village","village loads on protocol 6")
 	if app.screen!="village": quit(1); return
 	expect(app.npcs.size()==5,"five villagers spawned including farmer and angler")
@@ -58,7 +58,7 @@ func run_test() -> void:
 		if region!="forest": expect(app.run.hazards.size()==2 and app.run.obstacles.size()==3,"region hazards and obstacles received")
 		await app.leave_run()
 	await app.logout()
-	await app.authenticate(false,"http://127.0.0.1:8766",username,"qa-expansion-123","")
+	await app.authenticate(false,"http://127.0.0.1:8766",username,"Qa-expansion-123","")
 	expect(app.player.avatar.character=="ranger" and app.me.profile.version==1,"avatar persists across session replacement")
 	app.queue_free()
 	await process_frame

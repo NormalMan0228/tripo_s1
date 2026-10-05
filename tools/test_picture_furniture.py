@@ -32,7 +32,7 @@ async def main():
     with TestClient(app) as client:
         for kind,prompt in CASES.items():
             folder=OUT/kind;folder.mkdir(exist_ok=True);record=folder/'result.json'
-            credentials={'username':'picture_'+kind,'password':'local-picture-experiment-only'}
+            credentials={'username':'picture_'+kind,'password':'Local-picture-experiment-only'}
             login=client.post('/v1/auth/register',json=credentials)
             if login.status_code!=200:login=client.post('/v1/auth/login',json=credentials)
             if login.status_code!=200:raise RuntimeError('experiment_login_failed')

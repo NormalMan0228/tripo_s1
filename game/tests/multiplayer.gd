@@ -36,7 +36,7 @@ func add_client(index: int, register: bool) -> Node3D:
 	var app := Main.new()
 	root.add_child(app)
 	await process_frame
-	await app.authenticate(register, url, names[index], "multiplayer-test-password", "")
+	await app.authenticate(register, url, names[index], "Multiplayer-test-password", "")
 	expect(app.screen == "village", "client %d authenticated" % index)
 	return app
 
@@ -54,6 +54,8 @@ func invitation(sender: int, recipient: int, kind: String) -> void:
 	expect(found, kind+" invitation accepted by intended player")
 
 func run_test() -> void:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--server="): url = arg.trim_prefix("--server=")
 	var suffix := str(Time.get_unix_time_from_system()).replace(".", "").right(10)
 	for index in 3:
 		names.append("multi_"+suffix+"_"+str(index))

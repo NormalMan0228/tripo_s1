@@ -85,7 +85,12 @@ try {
         if ((Get-Content artifacts\integration-headless-error.log -Raw) -match '(?m)^\s*(SCRIPT ERROR|ERROR):') { throw 'Godot reported runtime errors during headless integration.' }
     }
 } finally {
-    if ($taskServer -and -not $taskServer.HasExited) { Stop-Process -Id $taskServer.Id }
+    if ($taskServer -and -not $taskServer.HasExited) { Stop-Process -Id $taskServer.Id; $taskServer.WaitForExit(5000) | Out-Null }
+    # Each run uses a throwaway database; remove it so test accounts do not pile up.
+    $taskQaData = $env:TRIPOTHON_DATA_DIR
+    if ($taskQaData -and (Split-Path -Leaf $taskQaData) -like 'qa-*' -and (Test-Path -LiteralPath $taskQaData)) {
+        Remove-Item -LiteralPath $taskQaData -Recurse -Force -ErrorAction SilentlyContinue
+    }
     $env:TRIPOTHON_DATA_DIR = $taskOldData
     $env:TRIPOTHON_MODE = $taskOldMode
     $env:TRIPO_DAILY_REQUEST_LIMIT = $taskOldLimit

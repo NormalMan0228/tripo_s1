@@ -70,6 +70,15 @@ def validate_plan(data):
     return plan
 
 
+def simple_plan(request):
+    """The cheapest craft: the player's words go straight to Tripo as one static
+    mesh. No LLM design step, no moving parts."""
+    words=' '.join(request.split())[:300]
+    return validate_plan({'title':words[:60] or 'object','category':'decoration','parts':[{
+        'id':'whole','parent':'','prompt':('A single simple stylized game prop, clean silhouette, no base plate: '+words)[:800],
+        'shape':'box','size':[1.2,1.2,1.2],'position':[0,.6,0],'color':'#c9a46e'}]})
+
+
 def static_plan(plan,request):
     """Static furniture is one complete mesh, never separately billed hidden parts."""
     if len(plan['parts'])==1:return plan

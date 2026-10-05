@@ -6,7 +6,7 @@ if (-not (Test-Path -LiteralPath $taskPidFile)) { Write-Output 'No Tripo game se
 $taskId = [int](Get-Content -LiteralPath $taskPidFile)
 $taskParent = Get-CimInstance Win32_Process -Filter "ProcessId=$taskId" -ErrorAction SilentlyContinue
 if (-not $taskParent) { Write-Output 'Tripo game server is already stopped.'; exit }
-if ($taskParent.ExecutablePath -ne $taskPython -or $taskParent.CommandLine -notlike '*uvicorn*server.app:create_app*8765*') {
+if ($taskParent.ExecutablePath -ne $taskPython -or ($taskParent.CommandLine -notlike '*uvicorn*server.app:create_app*8765*' -and $taskParent.CommandLine -notlike '*serve_multi.py*8765*')) {
     throw 'Saved PID belongs to another process.'
 }
 $taskChildren = Get-CimInstance Win32_Process -Filter "ParentProcessId=$taskId" -ErrorAction SilentlyContinue

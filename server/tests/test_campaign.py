@@ -7,7 +7,7 @@ from server import campaign,simulation
 
 def mutation(**kw):return {'request_id':str(uuid.uuid4()),**kw}
 def account(c,name):
-    token=c.post('/v1/auth/register',json={'username':name,'password':'local-campaign-test'}).json()['token']
+    token=c.post('/v1/auth/register',json={'username':name,'password':'Local-campaign-test'}).json()['token']
     return {'Authorization':'Bearer '+token}
 def finish_fixture(app,run_id,complete=True):
     # Unit-test state fixture, separate from the real-time Godot playthrough.

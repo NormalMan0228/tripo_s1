@@ -5,6 +5,8 @@ const Loader=preload("res://scripts/model_loader.gd")
 const Art=preload("res://scripts/art.gd")
 const BuildMode=preload("res://scripts/build_mode.gd")
 const ControllerProfile=preload("res://scripts/controller_profile.gd")
+const Transition=preload("res://scripts/transition.gd")
+const I18n=preload("res://scripts/i18n.gd")
 var api: Node
 var viewport: SubViewport
 var view_container: SubViewportContainer
@@ -37,6 +39,16 @@ var placed: Dictionary={}
 var inspected: Node3D
 var ghost: Node3D
 var room := "workshop"
+## Home visits: a friend's home opens read-only; everyone inside the same home
+## shares presence so visitors and the host see each other.
+var visit_host := ""
+var visit_name := ""
+var dock_panel: Control
+var room_buttons: Array[Button] = []
+var peers: Dictionary = {}
+var presence_time := 0.0
+var presence_pending := false
+var shared_presence := false
 var placement_mode := false
 var placement_rotation := 0
 var place_at := Vector3.ZERO
@@ -85,15 +97,29 @@ var floor_grid: MeshInstance3D
 var grid_toggle: CheckButton
 
 func _ready() -> void:
+	I18n.setup()
+	var veil := Transition.of(get_tree())
+	veil.cover()
+	veil.play_door("close")
+	veil.fade_in(0.55)
 	api=Api.new();add_child(api)
 	if Engine.has_meta("studio_session"):
 		var session: Dictionary=Engine.get_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
 		room=session.get("room","workshop")
+		visit_host=str(session.get("visit_host",""))
+		visit_name=str(session.get("visit_name",""))
+		shared_presence=bool(session.get("multiplayer",false)) and room=="home"
+		Engine.remove_meta("studio_session")
 	build_ui()
 	build_stage()
+	if not visit_host.is_empty():
+		# Visitors only look around: no inventory, crafting, room switching or editing.
+		dock_panel.visible=false
+		for b in room_buttons: b.visible=false
+		message(tr("%s님의 집에 놀러 왔어요. 가구는 구경만 할 수 있어요.") % visit_name)
 	if api.token.is_empty():
-		message("마을에서 로그인한 뒤 공방으로 들어오세요.")
+		message(tr("마을에서 로그인한 뒤 공방으로 들어오세요."))
 	else: await refresh()
 
 func theme_style() -> Theme:
@@ -143,9 +169,9 @@ func build_ui() -> void:
 	var header := MarginContainer.new();header.add_theme_constant_override("margin_left",24);header.add_theme_constant_override("margin_top",16);header.add_theme_constant_override("margin_bottom",10);canvas.add_child(header)
 	var head := VBoxContainer.new();header.add_child(head)
 	label(head,"TRIPOTHON  /  LITTLE THINGS, YOUR STORIES",12).modulate=Color("8b7850")
-	title_label=label(head,"물결빛 공방",26)
-	label(head,"상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요",13)
-	if BuildMode.developer(): label(head,"개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다",11).modulate=Color("986b42")
+	title_label=label(head,tr("물결빛 공방"),26)
+	label(head,tr("상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요"),13)
+	if BuildMode.developer(): label(head,tr("개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다"),11).modulate=Color("986b42")
 	view_container=SubViewportContainer.new();view_container.stretch=true;view_container.size_flags_vertical=Control.SIZE_EXPAND_FILL;canvas.add_child(view_container)
 	viewport=SubViewport.new();viewport.size=Vector2i(880,660);viewport.own_world_3d=true;viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS;viewport.msaa_3d=Viewport.MSAA_4X;view_container.add_child(viewport)
 	view_container.gui_input.connect(view_input)
@@ -158,33 +184,33 @@ func build_ui() -> void:
 	placement_tools.add_theme_stylebox_override("panel",tool_style)
 	add_child(placement_tools);placement_tools.visible=false
 	var tools := VBoxContainer.new();tools.add_theme_constant_override("separation",8);placement_tools.add_child(tools)
-	placement_title=label(tools,"가구 놓기",18)
+	placement_title=label(tools,tr("가구 놓기"),18)
 	placement_title.max_lines_visible=1;placement_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
-	placement_feedback=label(tools,"빈자리를 골라 주세요",13)
+	placement_feedback=label(tools,tr("빈자리를 골라 주세요"),13)
 	var rotate_row := row(tools)
-	button(rotate_row,"↶ 회전",func():rotate_placement(-90))
-	button(rotate_row,"회전 ↷",func():rotate_placement(90))
-	grid_toggle=CheckButton.new();grid_toggle.text="격자";grid_toggle.button_pressed=true;rotate_row.add_child(grid_toggle)
+	button(rotate_row,tr("↶ 회전"),func():rotate_placement(-90))
+	button(rotate_row,tr("회전 ↷"),func():rotate_placement(90))
+	grid_toggle=CheckButton.new();grid_toggle.text=tr("격자");grid_toggle.button_pressed=true;rotate_row.add_child(grid_toggle)
 	var confirm_row := row(tools)
-	place_button=button(confirm_row,"여기에 놓기",commit_place);place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	button(confirm_row,"취소",cancel_placement)
+	place_button=button(confirm_row,tr("여기에 놓기"),commit_place);place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	button(confirm_row,tr("취소"),cancel_placement)
 	var footer := MarginContainer.new();footer.add_theme_constant_override("margin_left",20);footer.add_theme_constant_override("margin_right",20);footer.add_theme_constant_override("margin_bottom",14);canvas.add_child(footer)
 	var f := VBoxContainer.new();footer.add_child(f)
-	status_label=label(f,"서버에 연결하고 있어요",14)
-	label(f,"WASD 이동   E 상호작용   R 회전   Esc 취소",12).modulate=Color("817960")
+	status_label=label(f,tr("서버에 연결하고 있어요"),14)
+	label(f,tr("WASD 이동   E 상호작용   R 회전   Esc 취소"),12).modulate=Color("817960")
 	var nav := row(f)
-	button(nav,"내 집",func(): await change_room("home"))
-	button(nav,"공방",func(): await change_room("workshop"))
-	button(nav,"마을로 나가기",leave)
-	var dock := MarginContainer.new();dock.custom_minimum_size.x=380;dock.add_theme_constant_override("margin_left",16);dock.add_theme_constant_override("margin_right",16);dock.add_theme_constant_override("margin_top",14);layout.add_child(dock)
+	room_buttons.append(button(nav,tr("내 집"),func(): await change_room("home")))
+	room_buttons.append(button(nav,tr("공방"),func(): await change_room("workshop")))
+	button(nav,tr("마을로 나가기"),leave)
+	var dock := MarginContainer.new();dock_panel=dock;dock.custom_minimum_size.x=380;dock.add_theme_constant_override("margin_left",16);dock.add_theme_constant_override("margin_right",16);dock.add_theme_constant_override("margin_top",14);layout.add_child(dock)
 	var box := VBoxContainer.new();dock.add_child(box)
-	wallet=label(box,"나의 공방",18)
+	wallet=label(box,tr("나의 공방"),18)
 	quote_panel=VBoxContainer.new();box.add_child(quote_panel);quote_panel.visible=false
 	quote_label=label(quote_panel,"",14)
 	var quote_actions := row(quote_panel)
-	button(quote_actions,"도형으로 동작 미리보기" if BuildMode.developer() else "모습 미리보기",preview_design)
-	button(quote_actions,"이 설계로 생성" if BuildMode.developer() else "가구 완성하기",confirm_job)
-	button(quote_actions,"취소 · 별씨 환불" if BuildMode.developer() else "취소",cancel_job)
+	button(quote_actions,tr("도형으로 동작 미리보기") if BuildMode.developer() else tr("모습 미리보기"),preview_design)
+	button(quote_actions,tr("이 설계로 생성") if BuildMode.developer() else tr("가구 완성하기"),confirm_job)
+	button(quote_actions,tr("취소 · 별씨 환불") if BuildMode.developer() else tr("취소"),cancel_job)
 	var tabs := TabContainer.new();tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL;box.add_child(tabs)
 	var tab_panel := StyleBoxFlat.new();tab_panel.bg_color=Color("fff7e8");tab_panel.set_corner_radius_all(12)
 	tab_panel.content_margin_left=8;tab_panel.content_margin_right=8;tab_panel.content_margin_top=8;tab_panel.content_margin_bottom=8
@@ -201,42 +227,42 @@ func build_ui() -> void:
 	tab_bar.add_theme_color_override("font_unselected_color",Color("4e493d"))
 	tabs.add_theme_color_override("font_selected_color",Color("304533"))
 	tabs.add_theme_color_override("font_unselected_color",Color("4e493d"))
-	var create_scroll := ScrollContainer.new();create_scroll.name="만들기";tabs.add_child(create_scroll)
+	var create_scroll := ScrollContainer.new();create_scroll.name=tr("만들기");tabs.add_child(create_scroll)
 	var create := VBoxContainer.new();create.size_flags_horizontal=Control.SIZE_EXPAND_FILL;create.add_theme_constant_override("separation",10);create_scroll.add_child(create)
-	label(create,"어떤 물건을 만들까요?",20)
-	prompt=TextEdit.new();prompt.custom_minimum_size.y=112;prompt.wrap_mode=TextEdit.LINE_WRAPPING_BOUNDARY;prompt.text="다가가면 꽃잎이 열리는 꽃 조명";create.add_child(prompt)
+	label(create,tr("어떤 물건을 만들까요?"),20)
+	prompt=TextEdit.new();prompt.custom_minimum_size.y=112;prompt.wrap_mode=TextEdit.LINE_WRAPPING_BOUNDARY;prompt.text=tr("다가가면 꽃잎이 열리는 꽃 조명");create.add_child(prompt)
 	var presets := row(create)
-	button(presets,"꽃 조명",func(): prompt.text="다가가면 여섯 꽃잎이 열리고 떠나면 닫히는 꽃 조명")
-	button(presets,"상자",func(): prompt.text="클릭하면 뚜껑이 부드럽게 열리고 다시 클릭하면 닫히는 나무 상자")
-	button(presets,"시계",func(): prompt.text="시침과 분침이 움직이고 클릭하면 멈추는 탁상 시계")
-	image_label=label(create,"참고 그림을 추가할 수 있어요",12)
+	button(presets,tr("꽃 조명"),func(): prompt.text=tr("다가가면 여섯 꽃잎이 열리고 떠나면 닫히는 꽃 조명"))
+	button(presets,tr("상자"),func(): prompt.text=tr("클릭하면 뚜껑이 부드럽게 열리고 다시 클릭하면 닫히는 나무 상자"))
+	button(presets,tr("시계"),func(): prompt.text=tr("시침과 분침이 움직이고 클릭하면 멈추는 탁상 시계"))
+	image_label=label(create,tr("참고 그림을 추가할 수 있어요"),12)
 	var image_buttons := row(create)
-	button(image_buttons,"이미지 선택",func(): file_dialog.popup_centered_ratio(0.7))
-	button(image_buttons,"제거",func(): image_data="";image_label.text="참고 이미지 없음";update_price())
-	refine_reference=CheckButton.new();refine_reference.text="그림을 먼저 정리해서 만들기";refine_reference.tooltip_text="Tripo 이미지 편집: 부품당 예상 5크레딧 추가. 이후 이미지→3D 요금 적용.";create.add_child(refine_reference);refine_reference.toggled.connect(func(_value):update_price())
+	button(image_buttons,tr("이미지 선택"),func(): file_dialog.popup_centered_ratio(0.7))
+	button(image_buttons,tr("제거"),func(): image_data="";image_label.text=tr("참고 이미지 없음");update_price())
+	refine_reference=CheckButton.new();refine_reference.text=tr("그림을 먼저 정리해서 만들기");refine_reference.tooltip_text=tr("Tripo 이미지 편집: 부품당 예상 5크레딧 추가. 이후 이미지→3D 요금 적용.");create.add_child(refine_reference);refine_reference.toggled.connect(func(_value):update_price())
 	file_dialog=FileDialog.new();file_dialog.access=FileDialog.ACCESS_FILESYSTEM;file_dialog.file_mode=FileDialog.FILE_MODE_OPEN_FILE;file_dialog.filters=PackedStringArray(["*.png,*.jpg,*.jpeg ; Reference image"]);add_child(file_dialog);file_dialog.file_selected.connect(pick_image)
-	label(create,"표면과 움직임",15)
-	surface_mode=option(create,["내가 직접 색칠하기","완성된 질감 포함하기"])
-	motion=option(create,["움직이는 가구","정적인 가구"])
-	var dev_title := label(create,"개발용 생성 설정",15)
-	designer=option(create,["샘플 설계 · API 비용 없음","LLM 설계 · 서버 설정 사용"])
-	geometry=option(create,["검증용 도형 · Tripo 비용 없음","Tripo 실제 생성 · 크레딧 사용"])
-	mesh_models=option(create,["H3 · 일반 가구 / 낮은 비용","P2 · 정밀 메시 / 높은 비용"])
+	label(create,tr("표면과 움직임"),15)
+	surface_mode=option(create,[tr("내가 직접 색칠하기"),tr("완성된 질감 포함하기")])
+	motion=option(create,[tr("움직이는 가구"),tr("정적인 가구")])
+	var dev_title := label(create,tr("개발용 생성 설정"),15)
+	designer=option(create,[tr("샘플 설계 · API 비용 없음"),tr("LLM 설계 · 서버 설정 사용")])
+	geometry=option(create,[tr("검증용 도형 · Tripo 비용 없음"),tr("Tripo 실제 생성 · 크레딧 사용")])
+	mesh_models=option(create,[tr("H3 · 일반 가구 / 낮은 비용"),tr("P2 · 정밀 메시 / 높은 비용")])
 	mesh_models.item_selected.connect(func(_value):update_price())
 	var advanced := VBoxContainer.new()
-	var advanced_button := button(create,"모델 비교 설정 펼치기",func(): advanced.visible=not advanced.visible)
+	var advanced_button := button(create,tr("모델 비교 설정 펼치기"),func(): advanced.visible=not advanced.visible)
 	create.add_child(advanced);advanced.visible=false
 	models=option(advanced,["gpt-6-luna","gpt-5.6-terra","gpt-6-sol","gpt-6-astra"])
 	efforts=option(advanced,["low","medium","high","xhigh"]);efforts.select(2)
-	provider_price=label(create,"검증용 도형: Tripo 비용 0",12)
-	generation_button=button(create,"만들기 · 30 별씨",generate)
+	provider_price=label(create,tr("검증용 도형: Tripo 비용 0"),12)
+	generation_button=button(create,tr("만들기 · 30 별씨"),generate)
 	surface_mode.item_selected.connect(func(_i): update_price());motion.item_selected.connect(func(_i): update_price())
 	geometry.item_selected.connect(func(_i): update_price())
-	var dev_note := label(create,"별씨는 게임 재화입니다. API 크레딧과 같은 단위가 아닙니다. 검증용 도형은 생성 메시의 완성도를 보여주지 않습니다.",12)
+	var dev_note := label(create,tr("별씨는 게임 재화입니다. API 크레딧과 같은 단위가 아닙니다. 검증용 도형은 생성 메시의 완성도를 보여주지 않습니다."),12)
 	dev_note.modulate=Color("817960")
-	var own := VBoxContainer.new();own.name="보관함";tabs.add_child(own)
-	label(own,"내가 만든 작은 세계",19)
-	room_capacity=label(own,"배치한 가구를 확인하고 있어요",12)
+	var own := VBoxContainer.new();own.name=tr("보관함");tabs.add_child(own)
+	label(own,tr("내가 만든 작은 세계"),19)
+	room_capacity=label(own,tr("배치한 가구를 확인하고 있어요"),12)
 	inventory=ItemList.new();inventory.custom_minimum_size.y=135;inventory.size_flags_vertical=Control.SIZE_EXPAND_FILL;inventory.fixed_icon_size=Vector2i(26,26);own.add_child(inventory);inventory.item_selected.connect(select_item)
 	var preview_view := SubViewportContainer.new();preview_view.custom_minimum_size.y=190;preview_view.stretch=true;own.add_child(preview_view)
 	var preview_port := SubViewport.new();preview_port.size=Vector2i(330,190);preview_port.own_world_3d=true;preview_port.render_target_update_mode=SubViewport.UPDATE_ALWAYS;preview_port.msaa_3d=Viewport.MSAA_4X;preview_view.add_child(preview_port)
@@ -246,39 +272,39 @@ func build_ui() -> void:
 	preview_camera=Camera3D.new();preview_camera.projection=Camera3D.PROJECTION_ORTHOGONAL;preview_camera.size=2.9;preview_camera.position=Vector3(2.7,2.2,4);preview_stage.add_child(preview_camera);preview_camera.look_at(Vector3(0,.65,0));preview_camera.current=true
 	Art.box(preview_stage,Vector3(0,-.04,0),Vector3(8,.06,8),Color("a9b7a0"))
 	preview_view.gui_input.connect(preview_input)
-	label(own,"미리보기 · 드래그 회전 / 휠 확대",11).modulate=Color("817960")
-	detail=label(own,"가구를 고르면 모습을 살펴볼 수 있어요",13)
+	label(own,tr("미리보기 · 드래그 회전 / 휠 확대"),11).modulate=Color("817960")
+	detail=label(own,tr("가구를 고르면 모습을 살펴볼 수 있어요"),13)
 	var actions := row(own)
-	button(actions,"바닥에 배치",begin_place);button(actions,"회수",retrieve);button(actions,"사용",interact_selected)
-	part_choice=option(own,["전체 색칠"])
+	button(actions,tr("바닥에 배치"),begin_place);button(actions,tr("회수"),retrieve);button(actions,tr("사용"),interact_selected)
+	part_choice=option(own,[tr("전체 색칠")])
 	var palette := row(own)
 	for color in ["#f1dfb8","#dfa958","#789887","#bd7f75","#7d9ca3"]:
 		var b := button(palette,"●",func(): await paint(color));b.modulate=Color(color);b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	var custom_row := row(own)
-	var custom_color := ColorPickerButton.new();custom_color.text="직접 색 고르기";custom_color.edit_alpha=false;custom_color.color=Color("dfa958");custom_color.size_flags_horizontal=Control.SIZE_EXPAND_FILL;custom_row.add_child(custom_color)
+	var custom_color := ColorPickerButton.new();custom_color.text=tr("직접 색 고르기");custom_color.edit_alpha=false;custom_color.color=Color("dfa958");custom_color.size_flags_horizontal=Control.SIZE_EXPAND_FILL;custom_row.add_child(custom_color)
 	custom_color.popup_closed.connect(func():await paint("#"+custom_color.color.to_html(false)))
-	button(custom_row,"원래 색 복원",func():await paint("#ffffff",true))
-	button(own,"새로고침",refresh)
-	var source := VBoxContainer.new();source.name="동작 코드";tabs.add_child(source)
-	label(source,"생성된 조작 함수와 이벤트",18)
-	label(source,"서버가 검사한 숫자 연산·부품 제어 코드입니다. 파일이나 재화에 접근할 수 없습니다.",12)
+	button(custom_row,tr("원래 색 복원"),func():await paint("#ffffff",true))
+	button(own,tr("새로고침"),refresh)
+	var source := VBoxContainer.new();source.name=tr("동작 코드");tabs.add_child(source)
+	label(source,tr("생성된 조작 함수와 이벤트"),18)
+	label(source,tr("서버가 검사한 숫자 연산·부품 제어 코드입니다. 파일이나 재화에 접근할 수 없습니다."),12)
 	generated_functions=option(source,[])
 	generated_functions.item_selected.connect(load_function_fields)
 	function_signature=label(source,"",12)
 	function_fields_scroll=ScrollContainer.new();function_fields_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;source.add_child(function_fields_scroll)
 	function_fields_box=VBoxContainer.new();function_fields_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL;function_fields_scroll.add_child(function_fields_box)
-	raw_args_toggle=CheckButton.new();raw_args_toggle.text="개발자용 JSON 입력";source.add_child(raw_args_toggle)
-	function_args=LineEdit.new();function_args.text="[]";function_args.placeholder_text="숫자 인수 예: [0.5]";source.add_child(function_args);function_args.visible=false
+	raw_args_toggle=CheckButton.new();raw_args_toggle.text=tr("개발자용 JSON 입력");source.add_child(raw_args_toggle)
+	function_args=LineEdit.new();function_args.text="[]";function_args.placeholder_text=tr("숫자 인수 예: [0.5]");source.add_child(function_args);function_args.visible=false
 	raw_args_toggle.toggled.connect(func(enabled):function_args.visible=enabled;function_fields_scroll.visible=not enabled)
-	button(source,"선택한 생성 함수 호출",invoke_generated)
-	function_result=label(source,"가구를 선택하면 생성된 함수를 검사할 수 있어요.",12)
+	button(source,tr("선택한 생성 함수 호출"),invoke_generated)
+	function_result=label(source,tr("가구를 선택하면 생성된 함수를 검사할 수 있어요."),12)
 	code_view=CodeEdit.new();code_view.editable=false;code_view.size_flags_vertical=Control.SIZE_EXPAND_FILL;source.add_child(code_view)
-	var fit_scroll := ScrollContainer.new();fit_scroll.name="부품 맞춤";tabs.add_child(fit_scroll)
+	var fit_scroll := ScrollContainer.new();fit_scroll.name=tr("부품 맞춤");tabs.add_child(fit_scroll)
 	var fit := VBoxContainer.new();fit.size_flags_horizontal=Control.SIZE_EXPAND_FILL;fit_scroll.add_child(fit)
-	label(fit,"움직이는 부품 맞추기",18)
-	label(fit,"뚜껑·바늘의 위치와 회전축을 조정합니다. 저장하면 내 가구에만 적용되며 원래 설계로 되돌릴 수 있어요.",12)
+	label(fit,tr("움직이는 부품 맞추기"),18)
+	label(fit,tr("뚜껑·바늘의 위치와 회전축을 조정합니다. 저장하면 내 가구에만 적용되며 원래 설계로 되돌릴 수 있어요."),12)
 	binding_part=option(fit,[]);binding_part.item_selected.connect(load_binding_fields)
-	for spec in [["position","위치 · m",-3.0,3.0,.01],["rotation","방향 · 도",-360.0,360.0,1.0],["pivot","회전축 · 중심 기준",-.5,.5,.01],["size","크기 · m",.02,3.0,.01]]:
+	for spec in [["position",tr("위치 · m"),-3.0,3.0,.01],["rotation",tr("방향 · 도"),-360.0,360.0,1.0],["pivot",tr("회전축 · 중심 기준"),-.5,.5,.01],["size",tr("크기 · m"),.02,3.0,.01]]:
 		label(fit,spec[1],13)
 		var axes := row(fit);var fields: Array[SpinBox]=[]
 		for axis in ["X","Y","Z"]:
@@ -286,16 +312,16 @@ func build_ui() -> void:
 			field.value_changed.connect(func(_value):preview_binding_fields())
 		binding_fields[spec[0]]=fields
 	var fitting_actions := row(fit)
-	button(fitting_actions,"맞춤 저장",func():await save_binding(false))
-	button(fitting_actions,"원래 설계로",func():await save_binding(true))
-	button(fit,"열기·닫기 등 동작 시험",interact_selected)
-	binding_hint=label(fit,"가구를 고르면 부품 목록이 표시됩니다. 전체 크기는 배치 구역에 맞게 자동 조절됩니다.",12)
-	var history := VBoxContainer.new();history.name="제작 기록";tabs.add_child(history)
-	label(history,"최근 제작 30건 · 시간 UTC",18)
+	button(fitting_actions,tr("맞춤 저장"),func():await save_binding(false))
+	button(fitting_actions,tr("원래 설계로"),func():await save_binding(true))
+	button(fit,tr("열기·닫기 등 동작 시험"),interact_selected)
+	binding_hint=label(fit,tr("가구를 고르면 부품 목록이 표시됩니다. 전체 크기는 배치 구역에 맞게 자동 조절됩니다."),12)
+	var history := VBoxContainer.new();history.name=tr("제작 기록");tabs.add_child(history)
+	label(history,tr("최근 제작 30건 · 시간 UTC"),18)
 	history_list=ItemList.new();history_list.custom_minimum_size.y=180;history_list.item_selected.connect(select_history);history.add_child(history_list)
-	history_detail=label(history,"기록을 선택하면 예약·확정 별씨와 확인된 Tripo 비용을 볼 수 있어요.",13)
-	button(history,"이 설계의 도형 미리보기",func():await show_design(history_selected))
-	button(history,"기록 새로고침",refresh)
+	history_detail=label(history,tr("기록을 선택하면 예약·확정 별씨와 확인된 Tripo 비용을 볼 수 있어요."),13)
+	button(history,tr("이 설계의 도형 미리보기"),func():await show_design(history_selected))
+	button(history,tr("기록 새로고침"),refresh)
 	tabs.tab_changed.connect(func(index: int):
 		if index==0 or index==4:return
 		var target: Control=own if index==1 else (source if index==2 else fit)
@@ -305,29 +331,33 @@ func build_ui() -> void:
 		for control in [dev_title,designer,geometry,mesh_models,advanced_button,advanced,provider_price,dev_note,refine_reference]: control.visible=false
 		for index in [2,3,4]: tabs.set_tab_hidden(index,true)
 		prompt.text=""
-		prompt.placeholder_text="예: 다가가면 꽃잎이 열리는 꽃 조명"
-		generation_button.text="가구 만들기"
+		prompt.placeholder_text=tr("예: 다가가면 꽃잎이 열리는 꽃 조명")
+		generation_button.text=tr("가구 만들기")
 
 func update_price() -> void:
 	var cost := (20 if surface_mode.selected==0 else 40)+(10 if motion.selected==0 else 0)
-	generation_button.text="만들기 · %d 별씨"%cost
+	generation_button.text=tr("만들기 · %d 별씨")%cost
 	if geometry.selected==1:
 		var use_image := not image_data.is_empty() and (motion.selected==1 or refine_reference.button_pressed)
 		var unit := (10+(10 if use_image else 0)) if mesh_models.selected==0 else 100
 		if surface_mode.selected==1:unit+=10
 		if not image_data.is_empty() and refine_reference.button_pressed:unit+=5
-		provider_price.text="공식 요금·실측 기반 예상: "+("정적 1부품 · %d 크레딧"%unit if motion.selected==1 else "부품당 %d 크레딧 · 최대 8부품"%unit)+"\n설계 후 부품 수와 예상 비용을 확인합니다."
-		generation_button.text="설계 먼저 · %d 별씨 예약"%cost
-	else:provider_price.text="검증용 도형: Tripo 비용 0"
+		provider_price.text=tr("공식 요금·실측 기반 예상: ")+(tr("정적 1부품 · %d 크레딧")%unit if motion.selected==1 else tr("부품당 %d 크레딧 · 최대 8부품")%unit)+tr("\n설계 후 부품 수와 예상 비용을 확인합니다.")
+		generation_button.text=tr("설계 먼저 · %d 별씨 예약")%cost
+	else:provider_price.text=tr("검증용 도형: Tripo 비용 0")
 
 func message(value: String) -> void:
-	value=value.replace("room_render_budget_exceeded","꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요.")
+	value=value.replace("room_render_budget_exceeded",tr("꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요."))
 	if not BuildMode.developer():
-		var words := {"insufficient_shards":"별씨가 부족해요. 탐험 보상을 모아 보세요.","stale_version":"가구가 바뀌었어요. 다시 골라 주세요.","stale_runtime_version":"가구가 바뀌었어요. 다시 골라 주세요.","not_found":"물건을 찾을 수 없어요. 보관함을 새로고침해 주세요.","unauthorized":"다시 로그인해 주세요.","geometry_disabled":"지금은 새 가구 제작을 준비하고 있어요.","placement_overlap":"다른 가구와 겹쳐요.","placement_out_of_bounds":"벽과 출입문에서 떨어진 곳에 놓아 주세요.","model_download_failed":"가구를 읽지 못했어요. 잠시 뒤 다시 골라 주세요."}
+		var words := {"insufficient_shards":tr("별씨가 부족해요. 탐험 보상을 모아 보세요."),"stale_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"stale_runtime_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"not_found":tr("물건을 찾을 수 없어요. 보관함을 새로고침해 주세요."),"unauthorized":tr("다시 로그인해 주세요."),"geometry_disabled":tr("지금은 새 가구 제작을 준비하고 있어요."),"placement_overlap":tr("다른 가구와 겹쳐요."),"placement_out_of_bounds":tr("벽과 출입문에서 떨어진 곳에 놓아 주세요."),"model_download_failed":tr("가구를 읽지 못했어요. 잠시 뒤 다시 골라 주세요.")}
 		var pattern := RegEx.new();pattern.compile("[a-z][a-z0-9]*_[a-z0-9_]+")
+		# Only known codes, or a reply that is nothing but a code, are rewritten;
+		# player names such as host_841 stay as they are.
+		if pattern.search(value) and pattern.search(value).get_string()==value.strip_edges() and not words.has(value.strip_edges()):
+			value=tr("지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.")
 		for match_value in pattern.search_all(value):
 			var code: String=match_value.get_string()
-			value=value.replace(code,words.get(code,"지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요."))
+			if words.has(code): value=value.replace(code,words[code])
 	status_label.text=value
 
 func build_stage() -> void:
@@ -362,12 +392,13 @@ func build_stage() -> void:
 
 func build_room() -> void:
 	for child in room_root.get_children():child.queue_free()
-	title_label.text="나의 작은 집" if room=="home" else "물결빛 공방"
+	title_label.text=tr("나의 작은 집") if room=="home" else tr("물결빛 공방")
+	if not visit_host.is_empty(): title_label.text=tr("%s님의 집") % visit_name
 	var shell_path := "res://assets/cozy_home.glb" if room=="home" else "res://assets/cozy_workshop.glb"
 	if ResourceLoader.exists(shell_path):
 		var shell := (load(shell_path) as PackedScene).instantiate() as Node3D
 		shell.name="AuthoredRoomShell";room_root.add_child(shell)
-		var exit_sign := Art.label3d(room_root,"마을 →",Vector3(1.9,.45,4.85),Color("f1dfb7"));exit_sign.font_size=25
+		var exit_sign := Art.label3d(room_root,tr("마을 →"),Vector3(1.9,.45,4.85),Color("f1dfb7"));exit_sign.font_size=25
 		for x in [-1.1,1.1]:
 			var glow := OmniLight3D.new();glow.position=Vector3(x,2.6,-4.25);glow.light_color=Color("ffdba6");glow.light_energy=.18;glow.omni_range=3.0
 			room_root.add_child(glow)
@@ -391,7 +422,7 @@ func build_room() -> void:
 	Art.box(room_root,Vector3(0,0.06,4.8),Vector3(2.6,0.12,0.5),Color("e0ca91"))
 	# Cutaway front wall: a tall lintel hides the player at the entrance.
 	for x in [-1.25,1.25]:Art.box(room_root,Vector3(x,.35,5),Vector3(0.18,.7,0.22),Color("7b6248"))
-	var sign := Label3D.new();sign.text="마을  →";sign.position=Vector3(1.9,.85,4.85);sign.font_size=32;sign.pixel_size=0.006;room_root.add_child(sign)
+	var sign := Label3D.new();sign.text=tr("마을  →");sign.position=Vector3(1.9,.85,4.85);sign.font_size=32;sign.pixel_size=0.006;room_root.add_child(sign)
 	var rug := Art.box(room_root,Vector3(0,0.035,0),Vector3(3.8,0.02,3.2),Color("718d7c"))
 	rug.name="WovenRug"
 	for x in [-1.7,1.7]:Art.box(room_root,Vector3(x,0.049,0),Vector3(0.08,0.015,3),Color("d9c690"))
@@ -401,17 +432,20 @@ func build_room() -> void:
 			for z in [-3.5,-2.7]:Art.box(room_root,Vector3(x,0.4,z),Vector3(0.1,0.8,0.1),Color("785d43"))
 
 func refresh() -> void:
+	if not visit_host.is_empty():
+		await share_presence()
+		return
 	if refreshing:return
 	refreshing=true
 	var response: Dictionary=await api.request("/v1/studio")
 	refreshing=false
 	if not response.ok:
-		message("서버 연결을 확인해 주세요 · "+response.error)
+		message(tr("서버 연결을 확인해 주세요 · ")+response.error)
 		clear_owned()
 		return
 	data=response.data
-	wallet.text="별씨 %d"%data.shards
-	if BuildMode.developer(): wallet.text+="  ·  "+("Tripo 실제 생성 가능" if data.geometry_enabled else ("개발 공방" if data.llm!="openai" else "온라인 공방"))
+	wallet.text=tr("별씨 %d")%data.shards
+	if BuildMode.developer(): wallet.text+="  ·  "+(tr("Tripo 실제 생성 가능") if data.geometry_enabled else (tr("개발 공방") if data.llm!="openai" else tr("온라인 공방")))
 	var live: bool=data.get("mode","demo")=="live"
 	for i in range(models.get_item_count()):models.set_item_disabled(i,live and i!=0)
 	for i in range(efforts.get_item_count()):efforts.set_item_disabled(i,live and i!=2)
@@ -420,7 +454,7 @@ func refresh() -> void:
 	if is_instance_valid(hero):hero.apply_avatar(data.get("profile",{}).get("avatar",{}))
 	update_capacity()
 	history_list.clear()
-	for entry in data.jobs:history_list.add_item(job_status(entry.state)+" · %d 별씨 · %s"%[entry.cost,Time.get_datetime_string_from_unix_time(int(entry.created)).replace("T"," ")])
+	for entry in data.jobs:history_list.add_item(job_status(entry.state)+tr(" · %d 별씨 · %s")%[entry.cost,Time.get_datetime_string_from_unix_time(int(entry.created)).replace("T"," ")])
 	designer.set_item_disabled(0,live);designer.set_item_disabled(1,data.llm=="fixture")
 	geometry.set_item_disabled(0,live);geometry.set_item_disabled(1,not data.geometry_enabled)
 	generation_button.disabled=live and not data.geometry_enabled
@@ -449,16 +483,16 @@ func refresh() -> void:
 			var selected_id: String=selected.id;var refresh_selection := selection_epoch
 			var latest: Dictionary=await api.request("/v1/objects/"+selected_id+"/assembly")
 			if refresh_selection!=selection_epoch:return
-			if not latest.ok:clear_selection();message("선택한 가구를 다시 불러올 수 없어요.");return
+			if not latest.ok:clear_selection();message(tr("선택한 가구를 다시 불러올 수 없어요."));return
 			if latest.data.plan!=inspected.manifest.plan:
 				if binding_dirty:
-					message("다른 곳에서 부품 맞춤이 바뀌었어요. 편집값은 보존했습니다. 가구를 다시 선택하면 최신 설계를 불러옵니다.");return
+					message(tr("다른 곳에서 부품 맞춤이 바뀌었어요. 편집값은 보존했습니다. 가구를 다시 선택하면 최신 설계를 불러옵니다."));return
 				for index in data.objects.size():
 					if data.objects[index].id==selected_id:await select_item(index);break
 			else:
 				inspected.accept_event({"state":latest.data.runtime.state,"commands":[],"version":latest.data.runtime.version})
 				inspected.paint(latest.data.runtime.colors)
-	if not placement_mode:message("꾸민 모습이 저장됐어요 · "+("내 집" if room=="home" else "공방"))
+	if not placement_mode:message(tr("꾸민 모습이 저장됐어요 · ")+(tr("내 집") if room=="home" else tr("공방")))
 
 func clear_selection() -> void:
 	cancel_placement()
@@ -472,7 +506,7 @@ func clear_selection() -> void:
 	if is_instance_valid(generated_functions):generated_functions.clear()
 	if is_instance_valid(function_fields_box):load_function_fields(-1)
 	if is_instance_valid(binding_part):binding_part.clear()
-	if is_instance_valid(detail):detail.text="가구를 고르면 모습을 살펴볼 수 있어요"
+	if is_instance_valid(detail):detail.text=tr("가구를 고르면 모습을 살펴볼 수 있어요")
 
 func clear_owned() -> void:
 	epoch+=1
@@ -481,10 +515,12 @@ func clear_owned() -> void:
 	placed.clear()
 
 func load_item(obj: Dictionary) -> Node3D:
-	var value: Node3D=await Assembly.fetch(api,obj.id)
+	# A visitor reads the host's furniture through the read-only guest routes.
+	var prefix := "/v1/objects/" if visit_host.is_empty() else "/v1/social/village/objects/"
+	var value: Node3D=await Assembly.fetch(api,obj.id,prefix)
 	if value:return value
 	if obj.get("studio",false):return null
-	var response: Dictionary=await api.request("/v1/objects/"+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
+	var response: Dictionary=await api.request(prefix+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
 	if not response.ok:return null
 	value=Loader.load_bytes(response.bytes)
 	if value:Loader.paint(value,Color(obj.color))
@@ -534,37 +570,37 @@ func select_item(index: int) -> void:
 	if selected.get("id")!=id or selection_request!=selection_epoch:
 		if item:item.queue_free()
 		return
-	if not item:message("에셋을 읽을 수 없습니다");return
+	if not item:message(tr("에셋을 읽을 수 없습니다"));return
 	inspected=item;preview_stage.add_child(item);item.position=Vector3.ZERO
 	var preview_size: Vector3=item.get_meta("size",Vector3.ONE)
 	preview_camera.size=maxf(1.5,preview_size.y*1.5)
 	if item.get_meta("studio",false) and item.pivots.has("lid"):preview_camera.size=maxf(1.9,preview_camera.size)
-	detail.text=selected.name+"\n"+("배치됨 · "+{"home":"내 집","workshop":"공방","village":"마을"}.get(selected.room,"다른 공간") if selected.state=="placed" else "보관 중")
-	part_choice.clear();part_choice.add_item("전체 색칠")
+	detail.text=selected.name+"\n"+(tr("배치됨 · ")+{"home":tr("내 집"),"workshop":tr("공방"),"village":tr("마을")}.get(selected.room,tr("다른 공간")) if selected.state=="placed" else tr("보관 중"))
+	part_choice.clear();part_choice.add_item(tr("전체 색칠"))
 	if item.get_meta("studio",false):
 		generated_functions.clear()
 		binding_part.clear()
 		for fn in item.manifest.program.functions:generated_functions.add_item(fn)
 		load_function_fields(0)
 		for p in item.manifest.plan.parts:
-			var friendly: String={"body":"본체","lid":"뚜껑","base":"받침","stem":"줄기","hour_hand":"시침","minute_hand":"분침","second_hand":"초침","face":"앞면","bulb":"전구"}.get(p.id,"부분 %d"%part_choice.item_count)
-			if str(p.id).begins_with("petal_"):friendly="꽃잎 "+str(p.id).trim_prefix("petal_")
+			var friendly: String={"body":tr("본체"),"lid":tr("뚜껑"),"base":tr("받침"),"stem":tr("줄기"),"hour_hand":tr("시침"),"minute_hand":tr("분침"),"second_hand":tr("초침"),"face":tr("앞면"),"bulb":tr("전구")}.get(p.id,tr("부분 %d")%part_choice.item_count)
+			if str(p.id).begins_with("petal_"):friendly=tr("꽃잎 ")+str(p.id).trim_prefix("petal_")
 			part_choice.add_item(str(p.id) if BuildMode.developer() else friendly)
 			part_choice.set_item_metadata(part_choice.item_count-1,p.id)
 			binding_part.add_item(p.id)
 		load_binding_fields(0)
 		code_view.text=JSON.stringify(item.manifest.program,"  ")
 		if BuildMode.developer():
-			detail.text+="\n설계: "+str(item.manifest.provenance.provider)+"\n메시: "+str(item.manifest.provenance.geometry)
-			if item.manifest.provenance.geometry=="tripo":detail.text+="\nTripo 실측: %s 크레딧"%str(item.manifest.provenance.get("tripo_credits_consumed","미기록"))
-	else:code_view.text="개발자가 제작한 일반 에셋";generated_functions.clear();load_function_fields(-1)
-	message("선택한 가구의 최신 상태를 불러왔어요.")
+			detail.text+=tr("\n설계: ")+str(item.manifest.provenance.provider)+tr("\n메시: ")+str(item.manifest.provenance.geometry)
+			if item.manifest.provenance.geometry=="tripo":detail.text+=tr("\nTripo 실측: %s 크레딧")%str(item.manifest.provenance.get("tripo_credits_consumed",tr("미기록")))
+	else:code_view.text=tr("개발자가 제작한 일반 에셋");generated_functions.clear();load_function_fields(-1)
+	message(tr("선택한 가구의 최신 상태를 불러왔어요."))
 
 func load_function_fields(index: int) -> void:
 	function_fields.clear()
 	function_fields_scroll.custom_minimum_size.y=0
 	for child in function_fields_box.get_children():function_fields_box.remove_child(child);child.queue_free()
-	function_args.text="[]";function_signature.text="이 물건에는 생성된 조작 함수가 없어요."
+	function_args.text="[]";function_signature.text=tr("이 물건에는 생성된 조작 함수가 없어요.")
 	if not is_instance_valid(inspected) or not inspected.get_meta("studio",false) or index<0 or index>=generated_functions.item_count:return
 	var function_name := generated_functions.get_item_text(index)
 	var definition: Dictionary=inspected.manifest.program.functions[function_name]
@@ -577,7 +613,7 @@ func load_function_fields(index: int) -> void:
 		var field := SpinBox.new();field.min_value=-1000000;field.max_value=1000000;field.step=.01;field.custom_minimum_size.x=150
 		line.add_child(field);function_fields.append(field)
 		field.value_changed.connect(func(_v):sync_function_args())
-	function_signature.text=function_name+"("+", ".join(names)+")"+(" · 입력값 없이 실행" if names.is_empty() else " · 숫자를 입력하고 실행하세요")
+	function_signature.text=function_name+"("+", ".join(names)+")"+(tr(" · 입력값 없이 실행") if names.is_empty() else tr(" · 숫자를 입력하고 실행하세요"))
 	sync_function_args()
 
 func sync_function_args() -> void:
@@ -594,7 +630,7 @@ func load_binding_fields(index: int) -> void:
 		if p.id!=id:continue
 		for key in binding_fields:
 			for axis in 3:binding_fields[key][axis].set_value_no_signal(p[key][axis])
-		binding_hint.text="%s · X 좌우 / Y 높이 / Z 앞뒤\n회전축 -0.5는 부품의 뒤·아래·왼쪽 끝, 0.5는 반대쪽 끝입니다."%id
+		binding_hint.text=tr("%s · X 좌우 / Y 높이 / Z 앞뒤\n회전축 -0.5는 부품의 뒤·아래·왼쪽 끝, 0.5는 반대쪽 끝입니다.")%id
 
 func preview_binding_fields() -> void:
 	if binding_part.item_count==0 or not is_instance_valid(inspected):return
@@ -605,7 +641,7 @@ func preview_binding_fields() -> void:
 	if edits.size()!=4:return
 	inspected.preview_binding(binding_part.get_item_text(binding_part.selected),edits)
 	binding_dirty=true
-	binding_hint.text="미리보기만 변경됨 · ‘맞춤 저장’을 누르면 서버에 저장합니다."
+	binding_hint.text=tr("미리보기만 변경됨 · ‘맞춤 저장’을 누르면 서버에 저장합니다.")
 
 func save_binding(reset: bool) -> void:
 	if pending or selected.is_empty() or binding_part.item_count==0 or not is_instance_valid(inspected):return
@@ -619,7 +655,7 @@ func save_binding(reset: bool) -> void:
 	pending=true
 	var reply: Dictionary=await api.post("/v1/objects/"+id+"/bindings",api.mutation(body))
 	pending=false
-	if not reply.ok:message("맞춤을 저장하지 못했어요 · "+reply.error);return
+	if not reply.ok:message(tr("맞춤을 저장하지 못했어요 · ")+reply.error);return
 	binding_dirty=false
 	if placed.has(id):placed[id].queue_free();placed.erase(id)
 	await refresh()
@@ -627,19 +663,19 @@ func save_binding(reset: bool) -> void:
 		if data.objects[i].id==id:await select_item(i);break
 	for i in binding_part.item_count:
 		if binding_part.get_item_text(i)==chosen:binding_part.select(i);load_binding_fields(i);break
-	message("원래 부품 설계로 돌아왔어요" if reset else "부품 맞춤을 저장했어요")
+	message(tr("원래 부품 설계로 돌아왔어요") if reset else tr("부품 맞춤을 저장했어요"))
 
 func invoke_generated() -> void:
 	if pending or selected.is_empty() or generated_functions.item_count==0 or not is_instance_valid(inspected):return
 	var args=JSON.parse_string(function_args.text)
-	if not args is Array:function_result.text="숫자 배열로 입력해 주세요. 예: [0.5]";return
+	if not args is Array:function_result.text=tr("숫자 배열로 입력해 주세요. 예: [0.5]");return
 	pending=true
 	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/invoke",api.mutation({"version":inspected.runtime_version,"function":generated_functions.get_item_text(generated_functions.selected),"args":args}))
 	pending=false
 	if reply.ok:
 		inspected.accept_event(reply.data)
 		if placed.has(selected.id):placed[selected.id].accept_event(reply.data)
-		function_result.text="반환값: "+str(reply.data.result)+" · 명령 %d개"%reply.data.commands.size()
+		function_result.text=tr("반환값: ")+str(reply.data.result)+tr(" · 명령 %d개")%reply.data.commands.size()
 	else:function_result.text=reply.error
 
 func generate() -> void:
@@ -648,8 +684,8 @@ func generate() -> void:
 	var body := {"prompt":prompt.text.strip_edges(),"material":"mesh" if surface_mode.selected==0 else "textured","motion":"dynamic" if motion.selected==0 else "static","designer":"fixture" if designer.selected==0 else "llm","geometry":"proxy" if geometry.selected==0 else "tripo","model":models.get_item_text(models.selected),"effort":efforts.get_item_text(efforts.selected),"image":image_data,"mesh_model":"v3.1-20260211" if mesh_models.selected==0 else "P2-20260801","image_mode":"refine" if geometry.selected==1 and not image_data.is_empty() and refine_reference.button_pressed else "original"}
 	var response: Dictionary=await api.post("/v1/studio/jobs",api.mutation(body))
 	pending=false;generation_button.disabled=false
-	if not response.ok:message("생성을 시작하지 못했어요 · "+response.error);return
-	job_id=response.data.id;message("설계를 준비하고 있어요. 다른 가구를 꾸미며 기다릴 수 있어요.");await refresh()
+	if not response.ok:message(tr("생성을 시작하지 못했어요 · ")+response.error);return
+	job_id=response.data.id;message(tr("설계를 준비하고 있어요. 다른 가구를 꾸미며 기다릴 수 있어요."));await refresh()
 
 func poll_job() -> void:
 	if polling or job_id.is_empty():return
@@ -661,15 +697,15 @@ func poll_job() -> void:
 	quote_panel.visible=job.state=="awaiting_confirmation"
 	if quote_panel.visible:
 		if BuildMode.developer():
-			quote_label.text="설계 완료 · %d부품\n총 %d 별씨 · 이미 예약 %d 별씨\nTripo 예상 %s 크레딧\n예상 비용 확인 후에만 유료 생성을 시작합니다."%[job.parts.size(),int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost),str(job.provenance.estimated_tripo_credits)]
+			quote_label.text=tr("설계 완료 · %d부품\n총 %d 별씨 · 이미 예약 %d 별씨\nTripo 예상 %s 크레딧\n예상 비용 확인 후에만 유료 생성을 시작합니다.")%[job.parts.size(),int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost),str(job.provenance.estimated_tripo_credits)]
 		else:
-			quote_label.text="가구를 만들 준비가 됐어요.\n필요한 별씨 %d개 · 이미 맡긴 별씨 %d개\n완성하기를 누르면 제작을 시작해요."%[int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost)]
+			quote_label.text=tr("가구를 만들 준비가 됐어요.\n필요한 별씨 %d개 · 이미 맡긴 별씨 %d개\n완성하기를 누르면 제작을 시작해요.")%[int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost)]
 	var progress := ""
 	if job.state=="building":
 		var ready := 0
 		for state in job.parts.values():
 			if state=="ready":ready+=1
-		progress=" · %d / %d부품 완료"%[ready,job.parts.size()]
+		progress=tr(" · %d / %d부품 완료")%[ready,job.parts.size()]
 	message(job_status(job.state)+progress)
 	if job.state in ["ready","failed","cancelled"]:
 		job_id="";await refresh()
@@ -679,7 +715,7 @@ func confirm_job() -> void:
 	pending=true
 	var response: Dictionary=await api.post("/v1/studio/jobs/"+job_id+"/confirm",api.mutation())
 	pending=false
-	if response.ok:quote_panel.visible=false;message("확인한 설계로 3D 메시를 만들고 있어요")
+	if response.ok:quote_panel.visible=false;message(tr("확인한 설계로 3D 메시를 만들고 있어요"))
 	else:message(response.error)
 
 func cancel_job() -> void:
@@ -715,8 +751,8 @@ func begin_place() -> void:
 					mesh.set_surface_override_material(index,translucent)
 		place_at=ghost.position
 	else:
-		placement_mode=false;message("가구를 불러오지 못했어요. 다시 선택해 주세요.");return
-	message("빈 바닥을 가리켜 보세요 · 클릭해서 놓기 · R 회전")
+		placement_mode=false;message(tr("가구를 불러오지 못했어요. 다시 선택해 주세요."));return
+	message(tr("빈 바닥을 가리켜 보세요 · 클릭해서 놓기 · R 회전"))
 
 func rotate_placement(degrees: int) -> void:
 	if not placement_mode or pending:return
@@ -741,8 +777,8 @@ func view_input(event: InputEvent) -> void:
 
 func job_status(state: String) -> String:
 	if not BuildMode.developer():
-		return {"queued":"만들기를 기다리고 있어요","planning":"상상을 설계하고 있어요","awaiting_confirmation":"완성할 준비가 됐어요","building":"가구를 만들고 있어요","submitting":"가구를 만들고 있어요","unknown":"제작 결과를 확인하고 있어요","ready":"가구 완성!","failed":"제작을 완료하지 못했어요 · 맡긴 별씨를 돌려드렸어요","cancelled":"제작을 취소했어요"}.get(state,"제작 상황을 확인하고 있어요")
-	return {"queued":"작업 대기","planning":"설계와 동작 코드 생성","awaiting_confirmation":"견적 확인 대기","building":"메시 생성 · 검증 · 조립","submitting":"Tripo 요청 전송","unknown":"요청 결과 확인 필요 · 중복 과금 방지를 위해 정지","ready":"완성","failed":"제작 실패 · 별씨 환불","cancelled":"제작 취소"}.get(state,state)
+		return {"queued":tr("만들기를 기다리고 있어요"),"planning":tr("상상을 설계하고 있어요"),"awaiting_confirmation":tr("완성할 준비가 됐어요"),"building":tr("가구를 만들고 있어요"),"submitting":tr("가구를 만들고 있어요"),"unknown":tr("제작 결과를 확인하고 있어요"),"ready":tr("가구 완성!"),"failed":tr("제작을 완료하지 못했어요 · 맡긴 별씨를 돌려드렸어요"),"cancelled":tr("제작을 취소했어요")}.get(state,tr("제작 상황을 확인하고 있어요"))
+	return {"queued":tr("작업 대기"),"planning":tr("설계와 동작 코드 생성"),"awaiting_confirmation":tr("견적 확인 대기"),"building":tr("메시 생성 · 검증 · 조립"),"submitting":tr("Tripo 요청 전송"),"unknown":tr("요청 결과 확인 필요 · 중복 과금 방지를 위해 정지"),"ready":tr("완성"),"failed":tr("제작 실패 · 별씨 환불"),"cancelled":tr("제작 취소")}.get(state,state)
 
 func select_history(index: int) -> void:
 	if index<0 or index>=data.jobs.size():return
@@ -751,14 +787,14 @@ func select_history(index: int) -> void:
 	if history_selected!=id:return
 	if not response.ok:history_detail.text=response.error;return
 	var job: Dictionary=response.data;var proof: Dictionary=job.provenance
-	history_detail.text=job_status(job.state)+"\n별씨 예약/확정: %d\n"%job.cost
-	if proof.has("quoted_game_cost"):history_detail.text+="설계 후 최종 견적: %d 별씨\n"%int(proof.quoted_game_cost)
+	history_detail.text=job_status(job.state)+tr("\n별씨 예약/확정: %d\n")%job.cost
+	if proof.has("quoted_game_cost"):history_detail.text+=tr("설계 후 최종 견적: %d 별씨\n")%int(proof.quoted_game_cost)
 	if proof.get("geometry")=="tripo":
-		history_detail.text+="Tripo 예상: %s 크레딧\n확인된 사용: %s 크레딧\n"%[str(proof.get("estimated_tripo_credits","미기록")),str(proof.get("known_tripo_credits",0))]
-		if not proof.get("billing_complete",false):history_detail.text+="일부 작업 비용은 아직 미확인입니다. 0원 확정이 아닙니다.\n"
-	else:history_detail.text+="도형 메시 · Tripo 호출 없음\n"
-	if job.state=="failed":history_detail.text+="게임 별씨는 환불했지만 이미 실행된 제공사 비용은 남을 수 있습니다.\n"
-	if job.get("error"):history_detail.text+="상태 코드: "+str(job.error)
+		history_detail.text+=tr("Tripo 예상: %s 크레딧\n확인된 사용: %s 크레딧\n")%[str(proof.get("estimated_tripo_credits",tr("미기록"))),str(proof.get("known_tripo_credits",0))]
+		if not proof.get("billing_complete",false):history_detail.text+=tr("일부 작업 비용은 아직 미확인입니다. 0원 확정이 아닙니다.\n")
+	else:history_detail.text+=tr("도형 메시 · Tripo 호출 없음\n")
+	if job.state=="failed":history_detail.text+=tr("게임 별씨는 환불했지만 이미 실행된 제공사 비용은 남을 수 있습니다.\n")
+	if job.get("error"):history_detail.text+=tr("상태 코드: ")+str(job.error)
 
 func preview_design() -> void:
 	await show_design(job_id)
@@ -766,11 +802,11 @@ func preview_design() -> void:
 func show_design(id: String) -> void:
 	if id.is_empty():return
 	var response: Dictionary=await api.request("/v1/studio/jobs/"+id+"/preview")
-	if not response.ok:message("설계 미리보기 실패 · "+response.error);return
+	if not response.ok:message(tr("설계 미리보기 실패 · ")+response.error);return
 	var window=load("res://scripts/design_preview.gd").new()
 	add_child(window)
 	if window.show_plan(response.data):window.popup_centered()
-	else:window.queue_free();message("설계를 표시하지 못했습니다")
+	else:window.queue_free();message(tr("설계를 표시하지 못했습니다"))
 
 func preview_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and event.button_mask&MOUSE_BUTTON_MASK_LEFT and is_instance_valid(inspected):
@@ -786,10 +822,10 @@ func commit_place() -> void:
 	pending=true
 	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation({"version":selected.version,"room":room,"x":place_at.x,"z":place_at.z,"rotation":placement_rotation}))
 	pending=false
-	if not reply.ok:message("여기에는 놓을 수 없어요 · "+reply.error);await refresh();return
+	if not reply.ok:message(tr("여기에는 놓을 수 없어요 · ")+reply.error);await refresh();return
 	cancel_placement()
 	await refresh()
-	message("좋아요! 가구를 놓았어요.")
+	message(tr("좋아요! 가구를 놓았어요."))
 
 func retrieve() -> void:
 	if pending or selected.is_empty():return
@@ -811,7 +847,7 @@ func interact_selected() -> void:
 
 func paint(color: String, reset := false) -> void:
 	if pending or selected.is_empty() or not is_instance_valid(inspected):return
-	if reset and not inspected.get_meta("studio",false):message("기본 가구는 팔레트에서 색을 골라 주세요");return
+	if reset and not inspected.get_meta("studio",false):message(tr("기본 가구는 팔레트에서 색을 골라 주세요"));return
 	pending=true
 	if inspected.get_meta("studio",false):
 		var target := "all" if part_choice.selected==0 else str(part_choice.get_item_metadata(part_choice.selected))
@@ -828,7 +864,7 @@ func paint(color: String, reset := false) -> void:
 
 func pick_image(path: String) -> void:
 	var file := FileAccess.open(path,FileAccess.READ)
-	if file==null or file.get_length()>1024*1024:message("이미지는 1MB 이하로 준비해 주세요");return
+	if file==null or file.get_length()>1024*1024:message(tr("이미지는 1MB 이하로 준비해 주세요"));return
 	var bytes := file.get_buffer(file.get_length())
 	image_data="data:image/"+("png" if path.get_extension().to_lower()=="png" else "jpeg")+";base64,"+Marshalls.raw_to_base64(bytes)
 	image_label.text=path.get_file()
@@ -843,10 +879,70 @@ func change_room(value: String) -> void:
 
 func update_capacity() -> void:
 	var capacity: Dictionary=data.get("room_usage",{}).get(room,{})
-	room_capacity.text="배치 %d / 30 · 꾸미기 용량 %.0f%%"%[capacity.get("count",0),capacity.get("percent",0)]
-	room_capacity.tooltip_text="가구의 복잡도와 이미지 크기에 따라 용량이 달라져요. 꽉 차면 일부 가구를 회수하거나 다른 방으로 옮겨 주세요."
+	room_capacity.text=tr("배치 %d / 30 · 꾸미기 용량 %.0f%%")%[capacity.get("count",0),capacity.get("percent",0)]
+	room_capacity.tooltip_text=tr("가구의 복잡도와 이미지 크기에 따라 용량이 달라져요. 꽉 차면 일부 가구를 회수하거나 다른 방으로 옮겨 주세요.")
+
+func _exit_tree() -> void:
+	if not Engine.has_meta("studio_session"): preload("res://scripts/town.gd").discard_kept()
+
+## Shares this walker's spot inside the home and, for visitors, loads the host's
+## furniture. Everyone in the same home sees the others (server: mp_presence).
+func share_presence() -> void:
+	if presence_pending or not is_instance_valid(hero) or api.token.is_empty(): return
+	presence_pending=true
+	var heading: float=hero.visual.rotation.y if is_instance_valid(hero.visual) else 0.0
+	var response: Dictionary=await api.post("/v1/social/presence",{"scene":"home","x":hero.position.x,"z":hero.position.z,"y":0.0,"yaw":wrapf(heading,-PI,PI)})
+	presence_pending=false
+	if not response.ok or not is_inside_tree(): return
+	var space = response.data.get("space")
+	if not space is Dictionary: return
+	if not visit_host.is_empty():
+		if str(space.host_id)!=visit_host:
+			message(tr("방문이 끝나 마을로 돌아갑니다."))
+			visit_host=""
+			leave()
+			return
+		var objects: Array=space.objects
+		for obj in objects: obj.room="home"
+		var signature := JSON.stringify(objects)
+		if signature!=str(data.get("signature","")):
+			data={"objects":objects,"signature":signature}
+			await reload_placed()
+	var self_id := str(response.data.get("self_id",""))
+	var present := {}
+	for record in space.players:
+		if str(record.id)==self_id: continue
+		present[record.id]=true
+		if not peers.has(record.id):
+			var body: Node3D=preload("res://scripts/player.gd").new()
+			body.controls_enabled=false;body.visual_only=true
+			stage.add_child(body)
+			body.apply_avatar(record.get("avatar",{}))
+			body.position=Vector3(record.x,0,record.z)
+			var plate := Art.label3d(body,str(record.username),Vector3(0,2.05,0),Color("f0dfba"))
+			plate.font_size=30;plate.outline_size=4
+			peers[record.id]={"node":body,"target":Vector3(record.x,0,record.z)}
+		peers[record.id].target=Vector3(record.x,0,record.z)
+	for id in peers.keys():
+		if not present.has(id):
+			if is_instance_valid(peers[id].node): peers[id].node.queue_free()
+			peers.erase(id)
+
+func update_peers(delta: float) -> void:
+	for entry in peers.values():
+		var body: Node3D=entry.node
+		if not is_instance_valid(body): continue
+		var before: Vector3=body.position
+		body.position=body.position.lerp(entry.target,ControllerProfile.damping(8.0,delta))
+		var moved := Vector2(body.position.x-before.x,body.position.z-before.z)/maxf(delta,.001)
+		body.external_velocity=moved if moved.length()>.05 else Vector2.ZERO
+		body.external_motion=body.external_velocity.normalized()
 
 func leave() -> void:
+	var veil := Transition.of(get_tree())
+	if veil.veil.modulate.a > 0.5: return
+	veil.play_door("open")
+	await veil.fade_out(0.45)
 	Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":room})
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
@@ -863,7 +959,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		else:interact_nearest()
 
 func interact_nearest() -> void:
-	if not is_instance_valid(hero) or pending:return
+	if not is_instance_valid(hero) or pending or not visit_host.is_empty():return
 	var nearest := "";var distance := 2.3
 	for id in placed:
 		var d: float=hero.position.distance_to(placed[id].position)
@@ -873,7 +969,7 @@ func interact_nearest() -> void:
 		if data.objects[i].id==nearest:await select_item(i);await interact_selected();return
 
 func proximity() -> void:
-	if proximity_pending or pending or not is_instance_valid(hero):return
+	if proximity_pending or pending or not is_instance_valid(hero) or not visit_host.is_empty():return
 	proximity_pending=true
 	var snapshot := placed.keys()
 	for id in snapshot:
@@ -902,8 +998,8 @@ func _process(delta: float) -> void:
 		placement_tools.visible=placement_mode
 		if placement_mode:
 			var problem := placement_problem(place_at)
-			placement_title.text="놓을 자리 고르기 · "+str(selected.get("name","가구"))
-			placement_feedback.text="이곳에 놓을 수 있어요 · %d°"%placement_rotation if problem.is_empty() else problem
+			placement_title.text=tr("놓을 자리 고르기 · ")+str(selected.get("name",tr("가구")))
+			placement_feedback.text=tr("이곳에 놓을 수 있어요 · %d°")%placement_rotation if problem.is_empty() else problem
 			placement_feedback.modulate=Color("4a6d50") if problem.is_empty() else Color("a25445")
 			place_button.disabled=pending or not problem.is_empty() or not is_instance_valid(ghost)
 	if is_instance_valid(floor_grid):floor_grid.visible=placement_mode and grid_toggle.button_pressed
@@ -912,8 +1008,14 @@ func _process(delta: float) -> void:
 		placement_marker.position=Vector3(place_at.x,0.065,place_at.z)
 		placement_marker.material_override.albedo_color=Color("87c7a7",.32) if placement_problem(place_at).is_empty() else Color("d27566",.32)
 	poll_time+=delta;auth_time+=delta
-	if poll_time>2.5:poll_time=0;poll_job()
-	if auth_time>20:auth_time=0;refresh()
+	if visit_host.is_empty():
+		if poll_time>2.5:poll_time=0;poll_job()
+		if auth_time>20:auth_time=0;refresh()
+	presence_time+=delta
+	if (shared_presence or not visit_host.is_empty()) and presence_time>0.35:
+		presence_time=0
+		share_presence()
+	update_peers(delta)
 	proximity_time+=delta
 	if proximity_time>0.35:proximity_time=0;proximity()
 	if not is_instance_valid(hero):return
@@ -945,11 +1047,11 @@ func movement_blocked(at: Vector3) -> bool:
 	return false
 
 func placement_problem(at: Vector3) -> String:
-	if absf(at.x)>4 or absf(at.z)>4:return "벽에서 한 칸 안쪽에 놓아 주세요."
-	if absf(at.x)<1.5 and at.z>2.5:return "출입문 앞은 비워 주세요."
-	if room=="workshop" and at.x < -1.8 and at.z < -1.5:return "고정 작업대와 겹쳐요."
-	if is_instance_valid(hero) and absf(hero.position.x-at.x)<1.15 and absf(hero.position.z-at.z)<1.15:return "캐릭터가 서 있는 곳은 비워 주세요."
+	if absf(at.x)>4 or absf(at.z)>4:return tr("벽에서 한 칸 안쪽에 놓아 주세요.")
+	if absf(at.x)<1.5 and at.z>2.5:return tr("출입문 앞은 비워 주세요.")
+	if room=="workshop" and at.x < -1.8 and at.z < -1.5:return tr("고정 작업대와 겹쳐요.")
+	if is_instance_valid(hero) and absf(hero.position.x-at.x)<1.15 and absf(hero.position.z-at.z)<1.15:return tr("캐릭터가 서 있는 곳은 비워 주세요.")
 	for obj in data.get("objects",[]):
 		if obj.id==selected.get("id") or obj.state!="placed" or obj.room!=room:continue
-		if absf(obj.x-at.x)<2 and absf(obj.z-at.z)<2:return "다른 가구에서 두 칸 이상 떨어뜨려 주세요."
+		if absf(obj.x-at.x)<2 and absf(obj.z-at.z)<2:return tr("다른 가구에서 두 칸 이상 떨어뜨려 주세요.")
 	return ""

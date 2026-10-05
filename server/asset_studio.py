@@ -17,7 +17,8 @@ from pydantic import Field, field_validator
 from fastapi import Request, HTTPException
 from fastapi.responses import Response
 from .models import Mutation
-from .asset_assembly import demo_design, fixture_glb, validate_plan, static_plan
+from .homestead import village_reserved, village_inside
+from .asset_assembly import demo_design, fixture_glb, validate_plan, static_plan, simple_plan
 from .asset_vm import AssetVM, ProgramError, exercise_extended as exercise
 from .design_provider import DesignProvider, DesignFailure, MODELS, EFFORTS
 from .provider import ProviderError, validate_glb
@@ -50,7 +51,7 @@ class StudioRequest(Mutation):
     prompt: str=Field(min_length=3,max_length=1500)
     material: Literal['mesh','textured']='mesh'
     motion: Literal['static','dynamic']='dynamic'
-    designer: Literal['fixture','llm']='fixture'
+    designer: Literal['fixture','llm','simple']='fixture'
     geometry: Literal['proxy','tripo']='proxy'
     mesh_model: Literal['configured','v3.1-20260211','P2-20260801']='configured'
     image_mode: Literal['original','refine']='original'
@@ -106,8 +107,8 @@ class Placement(Mutation):
     version: int=Field(ge=1)
     action: Literal['place','retrieve']='place'
     room: Literal['village','home','workshop']='home'
-    x: float=Field(default=0,ge=-11,le=11)
-    z: float=Field(default=0,ge=-11,le=11)
+    x: float=Field(default=0,ge=-130,le=130)
+    z: float=Field(default=0,ge=-130,le=130)
     rotation: Literal[0,90,180,270]=0
 
 def price(body):
@@ -125,6 +126,11 @@ def billing(parts):
             if type(value) in (int,float) and math.isfinite(value) and 0<=value<=1000000:reported.append(value)
             else:missing=True
     return {'known_tripo_credits':sum(reported),'tripo_credits_consumed':None if missing else sum(reported),'billing_complete':not missing}
+
+# A quote awaiting the owner's confirmation has not reached Tripo, so it must
+# not block other players. The single-provider limit is enforced again at confirm.
+def provider_busy(conn,exclude=''):
+    return conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled','awaiting_confirmation') AND id!=?",(exclude,)).fetchone() or         conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone()
 
 class Studio:
     def __init__(self,app,db,settings,clock,provider,auth,mutate,money,own,new_object,assets,designer=None,profile=None):
@@ -178,14 +184,15 @@ class Studio:
             def create(conn,user):
                 if body.designer=='llm' and settings.studio_llm=='fixture':fail('llm_not_configured',503)
                 if body.geometry=='tripo' and not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
-                if settings.mode=='live' and (body.designer!='llm' or body.geometry!='tripo'):fail('development_mode_forbidden',403)
-                if settings.mode=='live' and (body.model!='gpt-6-luna' or body.effort!='high'):
+                if body.designer=='simple' and (body.motion!='static' or body.image):fail('simple_requires_static_text')
+                if settings.mode=='live' and (body.designer not in ('llm','simple') or body.geometry!='tripo'):fail('development_mode_forbidden',403)
+                if settings.mode=='live' and body.designer=='llm' and (body.model!='gpt-6-luna' or body.effort!='high'):
                     fail('model_not_available',403)
                 if body.image and body.designer!='llm':fail('image_requires_llm')
                 if body.image_mode=='refine' and (not body.image or body.geometry!='tripo'):fail('refinement_requires_image_and_tripo')
                 if conn.execute("SELECT 1 FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled')",(user['id'],)).fetchone():fail('generation_pending')
                 if body.geometry=='tripo':
-                    if conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled')").fetchone() or conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone():fail('provider_busy')
+                    if provider_busy(conn):fail('provider_busy')
                 count=conn.execute('SELECT count(*) FROM studio_jobs WHERE created>=?',(int(clock()//86400)*86400,)).fetchone()[0]
                 if count>=settings.daily_generation_limit:fail('daily_generation_limit',429)
                 if settings.mode=='live':
@@ -247,6 +254,7 @@ class Studio:
                 if not row:fail('job_not_found',404)
                 if row['state']!='awaiting_confirmation':fail('not_awaiting_confirmation')
                 if not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
+                if provider_busy(conn,job_id):fail('provider_busy')
                 quote=json.loads(row['provenance'])
                 total=max(row['cost'],int(quote.get('quoted_game_cost',row['cost'])))
                 if total>row['cost']:money(conn,user['id'],row['cost']-total,'studio_quote_charge',job_id)
@@ -346,12 +354,12 @@ class Studio:
                 if body.action=='retrieve':
                     conn.execute("UPDATE objects SET state='inventory',x=NULL,z=NULL,version=version+1 WHERE id=?",(object_id,))
                 else:
-                    bound=11 if body.room=='village' else 4
-                    if abs(body.x)>bound or abs(body.z)>bound:fail('outside_room')
+                    if body.room=='village':
+                        if not village_inside(body.x,body.z):fail('outside_room')
+                    elif abs(body.x)>4 or abs(body.z)>4:fail('outside_room')
                     if body.room!='village' and abs(body.x)<1.5 and body.z>2.5:fail('door_area_reserved')
                     if body.room=='workshop' and body.x < -1.8 and body.z < -1.5:fail('workbench_area_reserved')
-                    if body.room=='village' and -14<body.x<-7.8 and -10<body.z<-3:fail('home_area_reserved')
-                    if body.room=='village' and ((abs(body.x)<2 and abs(body.z)<2) or (-8<body.x<-2 and -8<body.z<-2) or (5<body.x<10 and -8<body.z<-3)):fail('reserved_area')
+                    if body.room=='village' and village_reserved(body.x,body.z):fail('reserved_area')
                     others=conn.execute("SELECT x,z FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? AND objects.id!=? AND state='placed' AND COALESCE(room,'village')=?",(user['id'],object_id,body.room)).fetchall()
                     if len(others)>=30:fail('room_full')
                     if any(abs(o['x']-body.x)<2 and abs(o['z']-body.z)<2 for o in others):fail('placement_overlap')
@@ -432,6 +440,9 @@ class Studio:
             if job['state']=='queued':
                 if body.designer=='fixture':
                     plan,program=demo_design(body.prompt);provenance={'provider':'authored_fixture','validation':exercise(program,[p['id'] for p in plan['parts']])}
+                elif body.designer=='simple':
+                    plan=simple_plan(body.prompt);program={'version':1,'state':{},'functions':{},'events':{}}
+                    provenance={'provider':'direct_prompt','validation':exercise(program,['whole'])}
                 else:
                     request_prompt=body.prompt+('\nOutput ONE complete static part and an empty program.' if body.motion=='static' else '')
                     with self.db.transaction() as conn:categories=[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')]

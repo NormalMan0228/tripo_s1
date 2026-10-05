@@ -20,7 +20,7 @@ def world(tmp_path):
     with TestClient(app) as client:
         headers = []
         for name in ('alice', 'bravo', 'charlie', 'delta'):
-            response = client.post('/v1/auth/register', json={'username': name, 'password': 'test-password-123'})
+            response = client.post('/v1/auth/register', json={'username': name, 'password': 'Test-password-123'})
             headers.append({'Authorization': 'Bearer '+response.json()['token']})
         yield app, client, now, headers, settings
 
@@ -75,6 +75,29 @@ def test_village_invitation_privacy_revocation_and_capacity(world):
     post(c, hs[0], '/v1/social/eject', user_id=visitor_id)
     assert c.get(route, headers=hs[1]).status_code == 404
     assert not c.get('/v1/social', headers=hs[1]).json()['visiting']
+
+
+def test_visitors_enter_the_host_home_but_not_the_workshop(world):
+    app, c, now, hs, _ = world
+    own = c.get('/v1/me', headers=hs[0]).json()['objects'][0]
+    post(c, hs[0], '/v1/objects/'+own['id']+'/placement', version=1, room='home', x=2, z=-2)
+    route = '/v1/social/village/objects/'+own['id']+'/model'
+    assert c.get(route, headers=hs[1]).status_code == 404
+    invite(c, hs[0], hs[1], 'bravo', 'village')
+    assert c.get(route, headers=hs[1]).content[:4] == b'glTF'
+    host = c.post('/v1/social/presence', headers=hs[0], json={'scene': 'home', 'x': 0, 'z': 3}).json()
+    guest = c.post('/v1/social/presence', headers=hs[1], json={'scene': 'home', 'x': 1, 'z': 2}).json()
+    assert guest['village'] is None and guest['space']['scene'] == 'home'
+    assert [o['id'] for o in guest['space']['objects']] == [own['id']]
+    assert {p['username'] for p in guest['space']['players']} == {'alice', 'bravo'}
+    assert guest['space']['crops'] is None
+    # Someone outdoors in the village does not appear inside the home.
+    outdoors = c.post('/v1/social/presence', headers=hs[1], json={'scene': 'village', 'x': 1, 'z': 2}).json()
+    assert own['id'] not in str(outdoors['village']['objects'])
+    host = c.post('/v1/social/presence', headers=hs[0], json={'scene': 'home', 'x': 0, 'z': 3}).json()
+    assert {p['username'] for p in host['space']['players']} == {'alice'}
+    post(c, hs[0], '/v1/objects/'+own['id']+'/placement', version=2, room='workshop', x=2, z=2)
+    assert c.get(route, headers=hs[1]).status_code == 404
 
 
 def test_visitor_assembly_render_data_and_revoked_part_access(world):

@@ -5,7 +5,7 @@ func check(value: bool,message: String) -> void:
 func _initialize() -> void:call_deferred("run")
 func run() -> void:
 	var app=load("res://scripts/main.gd").new();root.add_child(app);await process_frame
-	await app.authenticate(true,"http://127.0.0.1:8766","journal"+str(Time.get_ticks_usec()),"local-journal-test","")
+	await app.authenticate(true,"http://127.0.0.1:8766","journal"+str(Time.get_ticks_usec()),"Local-journal-test","")
 	check(app.screen=="village","journal account loaded")
 	app.open_story();await process_frame
 	for button in app.village_modal.find_children("*","Button",true,false):

@@ -19,7 +19,7 @@ def world(tmp_path):
         yield app,client,now
 
 def account(client,name):
-    r=client.post('/v1/auth/register',json={'username':name,'password':'testing-only-12345'})
+    r=client.post('/v1/auth/register',json={'username':name,'password':'Testing-only-12345'})
     assert r.status_code==200,r.text
     return {'Authorization':'Bearer '+r.json()['token']}
 
@@ -180,7 +180,7 @@ def test_live_transport_pipeline_without_spending(tmp_path):
     provider=TripoProvider(settings,httpx.MockTransport(handler))
     app=create_app(settings,provider=provider,worker_enabled=False)
     with TestClient(app,base_url='https://testserver') as c:
-        body={'username':'alice','password':'test-password-123','invitation':settings.registration_code}
+        body={'username':'alice','password':'Test-password-123','invitation':settings.registration_code}
         token=c.post('/v1/auth/register',json=body).json()['token']; h={'Authorization':'Bearer '+token}
         assert c.get('/v1/me',headers=h).json()['shards']==0
         # Server-side test grant, deliberately not exposed as an endpoint.
@@ -202,7 +202,7 @@ def test_uncertain_submit_holds_paid_lock(tmp_path):
     settings=Settings(data_dir=tmp_path,mode='live',registration_code='test-invitation-only-12345',paid_enabled=True,tripo_key='fake',legacy_generation_enabled=True)
     app=create_app(settings,provider=TripoProvider(settings,httpx.MockTransport(handler)),worker_enabled=False)
     with TestClient(app,base_url='https://testserver') as c:
-        r=c.post('/v1/auth/register',json={'username':'alice','password':'test-password-123','invitation':settings.registration_code})
+        r=c.post('/v1/auth/register',json={'username':'alice','password':'Test-password-123','invitation':settings.registration_code})
         h={'Authorization':'Bearer '+r.json()['token']}
         with app.state.db.transaction() as conn: conn.execute('UPDATE users SET shards=100')
         job=c.post('/v1/generations',headers=h,json=mutation(prompt='wooden stool')).json()
@@ -210,3 +210,29 @@ def test_uncertain_submit_holds_paid_lock(tmp_path):
         assert c.get('/v1/generations/'+job['id'],headers=h).json()['state']=='unknown'
         assert c.post('/v1/generations',headers=h,json=mutation(prompt='another stool')).status_code==409
         assert c.get('/v1/me',headers=h).json()['shards']==75
+
+
+def test_new_passwords_need_uppercase_and_special_character(world):
+    app,c,now=world
+    for weak in ('lowercase-only-12','NoSpecialChar123'):
+        response=c.post('/v1/auth/register',json={'username':'weakling','password':weak})
+        assert response.status_code==422 and response.json()['detail']=='weak_password'
+    ok=c.post('/v1/auth/register',json={'username':'strongone','password':'Strong-pass-1'})
+    assert ok.status_code==200
+    me=c.get('/v1/me',headers={'Authorization':'Bearer '+ok.json()['token']}).json()
+    assert me['role']=='player'
+
+
+def test_admin_grants_are_operator_only_and_ledgered(world):
+    app,c,now=world
+    token=c.post('/v1/auth/register',json={'username':'plainuser','password':'Plain-user-12'}).json()['token']
+    headers={'Authorization':'Bearer '+token}
+    grant=lambda: c.post('/v1/admin/grant',headers=headers,json={'request_id':str(uuid.uuid4()),'shards':500,'coins':40})
+    assert grant().status_code==403
+    with app.state.db.transaction() as db:
+        db.execute("UPDATE users SET role='admin' WHERE username='plainuser'")
+    result=grant()
+    assert result.status_code==200 and result.json()['shards']==580 and result.json()['coins']>=40
+    assert c.get('/v1/me',headers=headers).json()['role']=='admin'
+    with app.state.db.read() as db:
+        assert db.execute("SELECT COUNT(*) FROM ledger WHERE reason='admin_grant'").fetchone()[0]==1

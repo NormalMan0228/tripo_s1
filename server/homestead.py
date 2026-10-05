@@ -7,6 +7,29 @@ are authoritative, but these endpoints do not claim to attest client proximity.
 import copy
 import secrets
 
+
+# Village furniture coordinates are metres from the town green; this box covers all
+# five islands (the client also refuses water, buildings and props).
+VILLAGE_X = (-60.0, 130.0)
+VILLAGE_Z = (-115.0, 60.0)
+
+
+def village_inside(x, z):
+    return VILLAGE_X[0] <= x <= VILLAGE_X[1] and VILLAGE_Z[0] <= z <= VILLAGE_Z[1]
+
+
+def village_reserved(x, z):
+    """Outdoor furniture coordinates are relative to the island town green.
+
+    The arrival spot and the walk up to the workshop (town hall) door stay clear.
+    Returns an error code, or None when the parcel may be used.
+    """
+    if abs(x) < 2 and abs(z) < 2:
+        return 'spawn_area_reserved'
+    if -3.5 < x < 3.5 and -12 < z < -6:
+        return 'workshop_area_reserved'
+    return None
+
 CROPS = {
     'turnip': {'name':'순무','seconds':90,'yield':2,'seed_cost':2,'price':3},
     'pumpkin': {'name':'호박','seconds':150,'yield':2,'seed_cost':4,'price':6},

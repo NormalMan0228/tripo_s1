@@ -31,7 +31,7 @@ async def exercise(url, duration):
             return response.json()
         for index in range(3):
             name = f'load_{index}_{secrets.token_hex(3)}'
-            response = await client.post('/v1/auth/register', json={'username':name, 'password':secrets.token_urlsafe(20)})
+            response = await client.post('/v1/auth/register', json={'username':name, 'password':secrets.token_urlsafe(20)+'Aa!'})
             response.raise_for_status()
             users.append((name, {'Authorization':'Bearer '+response.json()['token']}))
         await post('/v1/party', users[0][1])

@@ -4,10 +4,7 @@ var base_url := "http://127.0.0.1:8765"
 var token := ""
 var mode := "demo"
 
-func _ready() -> void:
-	# Release players use the online demo; editor and developer builds use local testing.
-	if OS.has_feature("tripothon_player") and not OS.get_cmdline_user_args().has("--local-demo"):
-		base_url = "https://34-28-65-113.sslip.io"
+## The login screen chooses the server; there is no offline or bundled sample play.
 
 func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD_GET, binary := false) -> Dictionary:
 	var http := HTTPRequest.new()

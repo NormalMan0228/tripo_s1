@@ -36,7 +36,7 @@ func run_test() -> void:
 	root.add_child(app)
 	await process_frame
 	var username := "village_"+str(Time.get_unix_time_from_system()).replace(".","_")
-	await app.authenticate(true,"http://127.0.0.1:8766",username,"qa-village-123","")
+	await app.authenticate(true,"http://127.0.0.1:8766",username,"Qa-village-123","")
 	expect(app.screen=="village" and not app.life.state.is_empty(),"new village and authenticated life state load")
 	if app.screen!="village": quit(1); return
 	app.life.open_map()
@@ -138,7 +138,7 @@ func run_test() -> void:
 	expect(app.life.state.bag.get("apple",0)==2,"orchard yields apples")
 	await capture("orchard-07")
 	await app.logout()
-	await app.authenticate(false,"http://127.0.0.1:8766",username,"qa-village-123","")
+	await app.authenticate(false,"http://127.0.0.1:8766",username,"Qa-village-123","")
 	expect(app.life.state.caught==2 and app.life.state.coins==18 and app.life.state.plots[4].is_empty(),"fish crop and wallet survive relogin")
 	app.life.open_storage()
 	await capture("village-storage-07")

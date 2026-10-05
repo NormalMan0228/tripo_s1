@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from .config import Settings, ROOT
 from .database import Database
-from .models import Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction
+from .models import strong_password, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction
 from .provider import TripoProvider, ProviderError, validate_glb
 from . import simulation, catalog, homestead, campaign
 from .security import BodyLimitMiddleware
@@ -63,7 +63,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         token = secrets.token_urlsafe(32)
         conn.execute('DELETE FROM sessions WHERE expires<?',(clock(),))
         conn.execute('INSERT INTO sessions VALUES (?,?,?)',(digest(token),user_id,clock()+settings.session_seconds))
-        return {'token':token,'mode':settings.mode}
+        role = conn.execute('SELECT role FROM users WHERE id=?',(user_id,)).fetchone()[0]
+        return {'token':token,'mode':settings.mode,'role':role}
 
     def money(conn,user_id,amount,reason,reference):
         conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',(uid(),user_id,amount,reason,reference,clock()))
@@ -239,6 +240,22 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             user=auth(conn,request)
             return homestead.public(life_state(conn,user['id']),clock())
 
+    @app.post('/v1/admin/grant')
+    def admin_grant(body:AdminGrant,request:Request):
+        # Debug top-ups for operator accounts only; every grant is in the ledger.
+        def grant(conn,user):
+            if user['role']!='admin': fail('admin_only',403)
+            if body.shards: money(conn,user['id'],body.shards,'admin_grant',str(body.request_id))
+            if body.coins:
+                state=life_state(conn,user['id'])
+                state['coins']=state.get('coins',0)+body.coins
+                state['version']=state.get('version',0)+1
+                conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
+                             (user['id'],json.dumps(state)))
+            return {'shards':conn.execute('SELECT shards FROM users WHERE id=?',(user['id'],)).fetchone()[0],
+                    'coins':life_state(conn,user['id']).get('coins',0)}
+        return mutate(request,body,'admin_grant',grant)
+
     @app.post('/v1/homestead')
     def edit_life(body:LifeAction,request:Request):
         def edit(conn,user):
@@ -270,11 +287,12 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def register(body:Credentials):
         if settings.mode=='live' and not secrets.compare_digest(body.invitation.encode(),settings.registration_code.encode()):
             fail('invalid_invitation',403)
+        if not strong_password(body.password): fail('weak_password',422)
         password_hash = hasher.hash(body.password)
         with db.transaction() as conn:
             user_id = uid()
             try:
-                conn.execute('INSERT INTO users VALUES (?,?,?,?,?)',(user_id,body.username.lower(),password_hash,0,clock()))
+                conn.execute('INSERT INTO users(id,username,password_hash,shards,created) VALUES (?,?,?,?,?)',(user_id,body.username.lower(),password_hash,0,clock()))
             except sqlite3.IntegrityError: fail('username_unavailable')
             new_object(conn,user_id,'starter','환영의 나무 의자')
             if settings.mode=='demo': money(conn,user_id,80,'demo_welcome',user_id)
@@ -309,7 +327,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 active_summary={k:snapshot[k] for k in ('day','elapsed','hp','hunger','map_id','difficulty')}
             pending_reward = conn.execute("SELECT id,reward,state FROM runs WHERE owner_id=? AND status='won' AND claimed=0 ORDER BY created LIMIT 1",(user['id'],)).fetchone()
             pending_job = conn.execute("SELECT id FROM jobs WHERE owner_id=? AND state IN ('queued','submitting','generating','unknown') ORDER BY created LIMIT 1",(user['id'],)).fetchone()
-            return {'username':user['username'],'shards':user['shards'],'mode':settings.mode,
+            return {'username':user['username'],'shards':user['shards'],'mode':settings.mode,'role':user['role'],
                 'generation_enabled': settings.mode=='demo' or bool(settings.legacy_generation_enabled and settings.tripo_key and settings.paid_enabled),
                 'studio_tripo_enabled': bool(settings.tripo_key and settings.paid_enabled),
                 'generation_cost':25,'profile':profile(conn,user['id']),'catalog':catalog.public_catalog(),'campaign':campaign.public(conn,user['id']),
@@ -331,10 +349,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             else:
                 # Uniform 2x2 parcel; matches normalized 1.6m props on the client.
                 if row['state']!='inventory': fail('retrieve_before_moving')
-                if abs(body.x)<2 and abs(body.z)<2: fail('spawn_area_reserved')
-                if -8 < body.x < -2 and -8 < body.z < -2: fail('house_area_reserved')
-                if 5 < body.x < 10 and -8 < body.z < -3: fail('gate_area_reserved')
-                if -14 < body.x < -7.8 and -10 < body.z < -3: fail('home_area_reserved')
+                if not homestead.village_inside(body.x, body.z): fail('outside_room')
+                reserved = homestead.village_reserved(body.x, body.z)
+                if reserved: fail(reserved)
                 other = conn.execute("SELECT x,z FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? AND state='placed' AND COALESCE(room,'village')='village'",(user['id'],)).fetchall()
                 if len(other)>=30: fail('village_full')
                 if any(abs(r['x']-body.x)<2 and abs(r['z']-body.z)<2 for r in other): fail('placement_overlap')

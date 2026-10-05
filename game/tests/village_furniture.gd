@@ -6,7 +6,7 @@ func check(value: bool,message: String) -> void:
 func _initialize() -> void:call_deferred("run")
 func run() -> void:
 	var app=load("res://scripts/main.gd").new();root.add_child(app);await process_frame
-	await app.authenticate(true,"http://127.0.0.1:8766","villageprop_"+str(Time.get_ticks_usec()),"local-furniture-qa-password","")
+	await app.authenticate(true,"http://127.0.0.1:8766","villageprop_"+str(Time.get_ticks_usec()),"Local-furniture-qa-password","")
 	if app.screen!="village":quit(1);return
 	var queued: Dictionary=await app.api.post("/v1/studio/jobs",app.api.mutation({"prompt":"flower lamp","geometry":"proxy","designer":"fixture"}))
 	if not queued.ok:quit(1);return
@@ -23,14 +23,14 @@ func run() -> void:
 	await create_timer(1).timeout
 	await app.paint_object("#a8bcad")
 	check(app.inspect_model.colors.size()==8,"village paint covers all eight parts")
-	await app.begin_place();app.preview.position=Vector3(4,0,3);await app.place_preview()
+	await app.begin_place();app.preview.position=preload("res://scripts/town.gd").furniture_point(4,3);await app.place_preview()
 	check(app.loaded.has(id) and app.loaded[id].pivots.size()==8,"full assembly placed in village")
-	app.player.position=Vector3(4,0,4.6);await app.village_furniture_proximity();await create_timer(1).timeout
+	app.player.position=preload("res://scripts/town.gd").furniture_point(4,4.6);await app.village_furniture_proximity();await create_timer(1).timeout
 	check(app.loaded[id].nearby,"village proximity event authorized")
 	var before: Dictionary=app.loaded[id].vm.state.duplicate()
 	await app.village_furniture_event(id,"click")
 	check(app.loaded[id].vm.state!=before,"village click changes generated state")
-	app.player.position=Vector3(8,0,4);await app.village_furniture_proximity()
+	app.player.position=preload("res://scripts/town.gd").furniture_point(8,4);await app.village_furniture_proximity()
 	check(not app.loaded[id].nearby,"village leave event authorized")
 	await app.refresh_inventory();await create_timer(.5).timeout
 	check(app.loaded[id].colors.size()==8 and app.loaded[id].colors.values()[0]=="#a8bcad","part paint survives village reload")

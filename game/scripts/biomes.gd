@@ -35,7 +35,7 @@ static func build(parent: Node3D, state: Dictionary) -> void:
 			var crack := A.box(parent,at+Vector3(sin(i*2.4)*hazard.radius*0.5,0.026,cos(i*2.4)*hazard.radius*0.5),Vector3(0.045,0.015,hazard.radius*0.7),Color("e9ffff") if snow else Color("ff9954"))
 			crack.rotation.y=i*2.4
 			crack.material_override.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
-		A.label3d(parent,"얼음 · 이동 둔화" if snow else "열기 · 접근 주의",at+Vector3(0,0.45,0),Color("e5f6f4") if snow else Color("ffcb92"))
+		A.label3d(parent,TranslationServer.translate("얼음 · 이동 둔화") if snow else TranslationServer.translate("열기 · 접근 주의"),at+Vector3(0,0.45,0),Color("e5f6f4") if snow else Color("ffcb92"))
 	if snow:
 		var flakes := CPUParticles3D.new()
 		flakes.amount=160

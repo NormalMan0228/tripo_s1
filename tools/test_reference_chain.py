@@ -28,7 +28,7 @@ async def main():
     settings=Settings(data_dir=OUT/'server-data',studio_llm='codex',paid_enabled=True,tripo_key=read_tripo_key(Path.home()/'Desktop/tripo_key.txt'))
     app=create_app(settings,designer=SinglePartDesigner(settings),worker_enabled=False)
     with TestClient(app) as client:
-        credentials={'username':'reference_qa','password':'local-reference-qa-password'}
+        credentials={'username':'reference_qa','password':'Local-reference-qa-password'}
         reply=client.post('/v1/auth/register',json=credentials)
         if reply.status_code!=200:reply=client.post('/v1/auth/login',json=credentials)
         if reply.status_code!=200:raise RuntimeError('experiment_login_failed')

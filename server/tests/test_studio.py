@@ -13,7 +13,7 @@ from server.provider import validate_glb,ProviderError
 
 def mutation(**kw):return {'request_id':str(uuid.uuid4()),**kw}
 def account(c,name):
-    r=c.post('/v1/auth/register',json={'username':name,'password':'studio-test-password'})
+    r=c.post('/v1/auth/register',json={'username':name,'password':'Studio-test-password'})
     assert r.status_code==200
     return {'Authorization':'Bearer '+r.json()['token']}
 @pytest.fixture
@@ -244,6 +244,24 @@ def test_preflight_preview_is_private_readonly_and_never_calls_provider(tmp_path
         assert c.get('/v1/me',headers=a).json()==before
         assert c.get('/v1/studio/jobs/'+job,headers=a).json()['state']=='awaiting_confirmation'
 
+def test_unconfirmed_quote_does_not_block_other_players_but_confirm_stays_single(tmp_path):
+    provider=FurnitureProvider();app,client=paid_world(tmp_path,provider)
+    with client as c:
+        a=account(c,'alice');b=account(c,'bob')
+        stale=c.post('/v1/studio/jobs',headers=a,json=mutation(prompt='wooden chest',geometry='tripo',motion='static')).json()['id']
+        asyncio.run(app.state.studio.process(stale))
+        assert c.get('/v1/studio/jobs/'+stale,headers=a).json()['state']=='awaiting_confirmation'
+        # The owner still has one pending job; other players may request a quote.
+        assert c.post('/v1/studio/jobs',headers=a,json=mutation(prompt='stool',geometry='tripo',motion='static')).json()['detail']=='generation_pending'
+        fresh=c.post('/v1/studio/jobs',headers=b,json=mutation(prompt='stool',geometry='tripo',motion='static'))
+        assert fresh.status_code==200;fresh=fresh.json()['id']
+        asyncio.run(app.state.studio.process(fresh))
+        assert c.post('/v1/studio/jobs/'+fresh+'/confirm',headers=b,json=mutation()).status_code==200
+        # Only one confirmed job may use the provider at a time.
+        assert c.post('/v1/studio/jobs/'+stale+'/confirm',headers=a,json=mutation()).json()['detail']=='provider_busy'
+        assert c.get('/v1/studio/jobs/'+stale,headers=a).json()['state']=='awaiting_confirmation'
+        assert not provider.calls
+
 def test_paid_design_quote_precedes_generation_and_confirm_is_idempotent(tmp_path):
     provider=FurnitureProvider();app,client=paid_world(tmp_path,provider)
     with client as c:
@@ -345,8 +363,18 @@ def test_resumed_failure_refunds_only_the_outstanding_charge(world):
 def test_reserved_house_and_workbench_cannot_be_bypassed(world):
     app,c=world;a=account(c,'alice');oid=build(app,c,a,'chest',motion='static');route='/v1/objects/'+oid
     assert c.post(route+'/placement',headers=a,json=mutation(version=1,room='workshop',x=-3,z=-3)).status_code==409
-    assert c.post(route+'/placement',headers=a,json=mutation(version=1,room='village',x=-10.8,z=-7)).status_code==409
-    assert c.post(route,headers=a,json=mutation(version=1,action='place',x=-10.8,z=-7)).status_code==409
+    assert c.post(route+'/placement',headers=a,json=mutation(version=1,room='village',x=-2,z=-8)).status_code==409
+    assert c.post(route,headers=a,json=mutation(version=1,action='place',x=-2,z=-8)).status_code==409
+
+def test_village_furniture_reaches_every_island_but_not_open_sea(world):
+    app,c=world;a=account(c,'alice');oid=build(app,c,a,'chest',motion='static');route='/v1/objects/'+oid
+    assert c.post(route+'/placement',headers=a,json=mutation(version=1,room='village',x=-75,z=0)).status_code==409
+    assert c.post(route+'/placement',headers=a,json=mutation(version=1,room='home',x=20,z=0)).status_code==409
+    # The lighthouse islet is about 40 m south-east of the town green.
+    placed=c.post(route+'/placement',headers=a,json=mutation(version=1,room='village',x=40,z=41))
+    assert placed.status_code==200
+    assert c.post(route,headers=a,json=mutation(version=2,action='retrieve')).status_code==200
+    assert c.post(route,headers=a,json=mutation(version=3,action='place',x=85,z=-75)).status_code==200
 
 def test_generated_api_is_owned_versioned_idempotent_and_registered(world):
     app,c=world;a=account(c,'alice');b=account(c,'bob');oid=build(app,c,a,'chest');route='/v1/objects/'+oid+'/invoke'

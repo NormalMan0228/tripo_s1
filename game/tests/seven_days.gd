@@ -80,7 +80,7 @@ func play() -> void:
 	var register := true
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--account="):user=argument.trim_prefix("--account=");register=false
-	await app.authenticate(register,"http://127.0.0.1:8766",user,"local-survival-test-123","")
+	await app.authenticate(register,"http://127.0.0.1:8766",user,"Local-survival-test-123","")
 	expect(app.screen=="village","full-run account created through game")
 	if app.screen!="village": quit(1); return
 	var wallet_before: int=app.me.shards
