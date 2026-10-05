@@ -15,14 +15,14 @@ var pose_nodes: Dictionary={}
 var normalizers: Dictionary={}
 var mesh_bounds: Dictionary={}
 
-static func fetch(api: Node, object_id: String) -> Node3D:
-	var reply: Dictionary=await api.request("/v1/objects/"+object_id+"/assembly")
+static func fetch(api: Node, object_id: String, prefix: String="/v1/objects/") -> Node3D:
+	var reply: Dictionary=await api.request(prefix+object_id+"/assembly")
 	if not reply.ok: return null
 	var value: Dictionary=reply.data
 	var blobs := {}
 	var total_bytes := 0
 	for p in value.plan.parts:
-		var response: Dictionary=await api.request("/v1/objects/"+object_id+"/parts/"+p.id,{},HTTPClient.METHOD_GET,true)
+		var response: Dictionary=await api.request(prefix+object_id+"/parts/"+p.id,{},HTTPClient.METHOD_GET,true)
 		if not response.ok: return null
 		total_bytes+=response.bytes.size()
 		if total_bytes>48*1024*1024:return null

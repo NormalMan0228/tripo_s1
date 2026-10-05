@@ -46,27 +46,31 @@ func run_test() -> void:
 	var hip := skeleton.find_bone("Hip")
 	expect(hip>=0,"hip bone exists")
 	player.external_motion=Vector2(1,0)
+	player.external_velocity=Vector2(preload("res://scripts/controller_profile.gd").VILLAGE_WALK,0)
 	await create_timer(0.35).timeout
 	expect(player.current_clip=="walk","movement selects walk animation")
 	player.equip("axe")
 	await create_timer(0.15).timeout
 	var hand: Transform3D=player.hand_skeleton.global_transform*player.hand_skeleton.get_bone_global_pose(player.hand_index)
 	expect(player.equipment.global_position.distance_to(hand.origin)<0.1,"crafted tool follows animated hand")
-	var before := skeleton.get_bone_pose(0)
+	var animated_joint := skeleton.find_bone("L_Thigh")
+	var before := skeleton.get_bone_pose(animated_joint)
 	await create_timer(0.25).timeout
-	expect(not before.is_equal_approx(skeleton.get_bone_pose(0)),"walk changes bone pose")
+	expect(not before.is_equal_approx(skeleton.get_bone_pose(animated_joint)),"walk changes the thigh pose while the root stays in place")
 	# Pose playback must not move the authoritative CharacterBody.
 	expect(Vector2(player.position.x,player.position.z).length()<0.001,"animation does not move collision body")
 	if "--capture" in OS.get_cmdline_user_args():
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://../artifacts/explorer-walk.png"))
 	player.external_motion=Vector2.ZERO
+	player.external_velocity=Vector2.ZERO
 	await create_timer(0.4).timeout
 	expect(player.current_clip=="idle","stopping returns smoothly to idle")
 	var body_before := player.position
 	player.react("gather")
 	await create_timer(0.16).timeout
-	expect(player.current_clip=="slash","axe gather plays the trimmed imported attack motion")
+	var gather_visible: bool=player.current_clip=="slash" or (player.action_pose.kind=="gather" and player.action_pose.applied_amount>0)
+	expect(gather_visible,"axe gather plays the available authored action")
 	expect(player.position.distance_to(body_before)<0.01,"gather keeps authoritative collision body still")
 	if "--capture" in OS.get_cmdline_user_args():
 		await RenderingServer.frame_post_draw

@@ -38,6 +38,9 @@ func enter() -> void:
 	goal={}
 	await refresh()
 func refresh() -> void:
+	if app.social.visiting():
+		app.social.accept_crops()
+		return
 	if reading or app.api.token.is_empty(): return
 	reading=true
 	var epoch: int=app.world_epoch
@@ -47,6 +50,9 @@ func refresh() -> void:
 	if response.ok: accept(response.data)
 	elif app.screen=="village": app.message("마을 생활 정보를 읽지 못했어요. 다시 접속해 주세요.")
 func action(kind: String, extra: Dictionary={}) -> bool:
+	if app.social.visiting():
+		app.message("방문한 마을의 텃밭과 물건은 주인만 수정할 수 있습니다.")
+		return false
 	if pending or state.is_empty() or app.screen!="village": return false
 	pending=true
 	var epoch: int=app.world_epoch
@@ -72,6 +78,9 @@ func closest() -> Dictionary:
 		if p.distance_to(place.at)<2.3: return place
 	return {}
 func interact() -> void:
+	if app.social.visiting():
+		app.social.open_menu()
+		return
 	var place := closest()
 	if place.is_empty(): return
 	match place.kind:
@@ -296,6 +305,7 @@ func _process(delta: float) -> void:
 			marker.queue_free()
 
 func goal_text() -> String:
+	if app.social.visiting(): return str(app.social.data.get("host_name", "친구"))+"님의 마을 방문 중\n함께 산책하고 함께하기에서 대화해 보세요."
 	if goal.is_empty():
 		var note := "Tab · 마을 지도  /  B · 생활 창고\n서쪽 텃밭에서 첫 씨앗을 심어 보세요."
 		if not state.is_empty(): note+="\n\n잎전 %d  ·  미끼 %d개"%[state.coins,state.bag.get("bait",0)]

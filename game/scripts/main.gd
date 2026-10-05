@@ -14,6 +14,8 @@ const ITEM_NAMES := {"wood":"목재","stone":"돌","berry":"열매","fiber":"섬
 const COLORS := ["#f6eee0","#edbc63","#d98477","#70afa3","#7c9ec6"]
 const RECIPES := {"axe":{"wood":3,"stone":2},"spear":{"wood":4,"stone":2},"soup":{"berry":3,"wood":1},"bandage":{"fiber":3}}
 var api: Node
+var social: Node
+var coop_run := false
 var furniture_proximity_time := 0.0
 var furniture_event_pending := false
 var sound: Node
@@ -112,6 +114,9 @@ var developer_panel: Control
 func _ready() -> void:
 	api = Api.new()
 	add_child(api)
+	social = preload("res://scripts/social.gd").new()
+	social.app = self
+	add_child(social)
 	sound = Sound.new()
 	add_child(sound)
 	life=preload("res://scripts/village_life.gd").new()
@@ -151,6 +156,8 @@ func _ready() -> void:
 		var session: Dictionary=Engine.get_meta("studio_session")
 		Engine.remove_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
+		var server_status: Dictionary = await api.request("/health")
+		social.enabled = server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
 		await enter_village()
 		player.position=TownLayout.HOME_RETURN if session.get("room")=="home" else Vector3(-5,0.1,-2.6)
 		follow_camera(1)
@@ -374,11 +381,14 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	var result: Dictionary = await api.post("/v1/auth/"+("register" if register else "login"),{"username":username,"password":password,"invitation":invitation})
 	busy = false
 	if not check(result): return
+	social.reset_session()
+	social.enabled = int(health.data.get("multiplayer_protocol", 0)) == 1
 	api.token = result.data.token
 	api.mode = result.data.mode
 	await enter_village()
 
 func build_world(survival: bool) -> void:
+	social.reset_world()
 	world_epoch += 1
 	camera_focus_ready=false
 	camera_zoom_active=false
@@ -502,6 +512,7 @@ func build_world(survival: bool) -> void:
 	follow_camera(1)
 
 func enter_village() -> void:
+	coop_run = false
 	screen = "loading"
 	build_world(false)
 	clear_ui()
@@ -567,12 +578,16 @@ func enter_village() -> void:
 	build_inspector()
 	await refresh_inventory()
 	screen = "village"
-	await life.enter()
+	if social.visiting(): social.accept_crops()
+	else: await life.enter()
 	player.controls_enabled = true
 	world_hint("Tab · 마을 지도   B · 생활 창고   E · 가까운 곳과 상호작용")
 	message("넓어진 물결빛 마을에 오신 것을 환영해요. Tab으로 텃밭과 낚시터를 찾아보세요.")
 
 func toggle_drawer() -> void:
+	if screen == "village" and social.visiting():
+		message("방문 중에는 함께하기 메뉴에서 대화하거나 내 마을로 돌아갈 수 있습니다.")
+		return
 	if not is_instance_valid(right): return
 	var opening: bool=not right.get_parent().visible
 	right.get_parent().visible=opening
@@ -636,6 +651,7 @@ func inspect_object(obj: Dictionary) -> void:
 		inspect_stage.add_child(model)
 
 func build_play_hud(survival: bool) -> void:
+	social.install_hud(survival)
 	var task_card := panel(Vector2(962,24),294,"objective")
 	text(task_card,"✦  일곱 밤의 목표" if survival else "✦  오늘의 마을 이야기",11).modulate=Color("796b4c")
 	rule(task_card)
@@ -726,6 +742,11 @@ func status_meter(parent: Node, title: String, color: Color) -> Dictionary:
 	return {"bar":bar,"readout":value_label}
 
 func refresh_inventory() -> void:
+	if social.visiting():
+		if is_instance_valid(wallet): wallet.text = str(social.data.get("host_name", "친구"))+"님의 마을 방문 중"
+		if is_instance_valid(reward_button): reward_button.visible = false
+		await social.refresh_guest_objects()
+		return
 	var requested_epoch := world_epoch
 	while refreshing:
 		await get_tree().process_frame
@@ -787,6 +808,7 @@ func claim_pending_reward() -> void:
 		message("생존 보상 %d 별씨를 받았습니다." % result.data.reward)
 
 func poll_entitlements() -> void:
+	if social.visiting(): return
 	if polling_entitlements or busy or refreshing: return
 	polling_entitlements=true
 	var epoch := world_epoch
@@ -812,11 +834,11 @@ func select_object(index: int) -> void:
 	object_info.text = "%s\n%s" % [selected.name,state_name]
 	inspect_object(selected.duplicate())
 
-func load_object(obj: Dictionary) -> Node3D:
-	var assembly: Node3D=await preload("res://scripts/asset_assembly.gd").fetch(api,obj.id)
+func load_object(obj: Dictionary, prefix: String="/v1/objects/") -> Node3D:
+	var assembly: Node3D=await preload("res://scripts/asset_assembly.gd").fetch(api,obj.id,prefix)
 	if assembly: return assembly
 	if obj.get("studio",false):message("가구의 모든 부품을 불러오지 못했습니다.");return null
-	var response: Dictionary = await api.request("/v1/objects/"+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
+	var response: Dictionary = await api.request(prefix+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
 	if not check(response): return null
 	var model := Loader.load_bytes(response.bytes)
 	if model: Loader.paint(model,Color(obj.color))
@@ -968,17 +990,21 @@ func show_market() -> void:
 				message("장터 거래가 완료됐습니다."))
 	popup.popup_centered()
 
-func start_run(map_id := "forest", difficulty := "standard", chapter_id := "") -> void:
+func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", party_run_id := "") -> void:
 	if busy: return
+	if screen == "survival" and coop_run and party_run_id == run_id:
+		close_village_modal()
+		return
 	close_village_modal()
 	cancel_preview()
 	busy=true
-	var result: Dictionary = await api.post("/v1/runs",api.mutation({"map_id":map_id,"difficulty":difficulty,"chapter_id":chapter_id}))
+	coop_run = not party_run_id.is_empty()
+	var result: Dictionary = {"ok":true,"data":{"id":party_run_id}} if coop_run else await api.post("/v1/runs",api.mutation({"map_id":map_id,"difficulty":difficulty,"chapter_id":chapter_id}))
 	if not check(result):
 		busy=false
 		return
 	run_id=result.data.id
-	var snapshot: Dictionary = await api.request("/v1/runs/"+run_id)
+	var snapshot: Dictionary = await api.request(run_route())
 	if not check(snapshot):
 		busy=false
 		return
@@ -1072,8 +1098,11 @@ func intent(action: String, target := "") -> void:
 	pending_action=action
 	pending_target=target
 
+func run_route() -> String:
+	return ("/v1/coop/runs/" if coop_run else "/v1/runs/")+run_id
+
 func tick_run() -> void:
-	if ticking or busy or paused or run.get("status","")!="active": return
+	if ticking or busy or (paused and not coop_run) or run.get("status","")!="active": return
 	ticking=true
 	var movement := movement_input()
 	var ready: bool=run.get("action_cooldown",0)<=0.01 and (pending_action!="attack" or run.get("attack_cooldown",0)<=0.01)
@@ -1082,7 +1111,7 @@ func tick_run() -> void:
 		pending_action=""
 		pending_target=""
 	var epoch := world_epoch
-	var result: Dictionary = await api.post("/v1/runs/"+run_id+"/input",payload)
+	var result: Dictionary = await api.post(run_route()+"/input",payload)
 	if epoch!=world_epoch:
 		ticking=false
 		return
@@ -1090,7 +1119,7 @@ func tick_run() -> void:
 		network_failures+=1
 		message("서버 응답을 기다리고 있습니다. 연결을 복구하면 이어집니다.")
 		# An uncertain response may have committed. Resync sequence before sending again.
-		var snapshot: Dictionary = await api.request("/v1/runs/"+run_id)
+		var snapshot: Dictionary = await api.request(run_route())
 		if epoch!=world_epoch:
 			ticking=false
 			return
@@ -1142,6 +1171,9 @@ func tick_run() -> void:
 	update_run()
 
 func update_run() -> void:
+	if coop_run:
+		social.sync_peers(run.get("players", []))
+		social.update_status()
 	var remaining := int(ceil(run.get("phase_remaining",0)))
 	metrics.text="%s   ·   %s %d초" % ["달이 뜬 밤" if run.night else "탐험하기 좋은 낮","아침까지" if run.night else "밤까지",remaining]
 	if is_instance_valid(day_track):
@@ -1295,7 +1327,7 @@ func confirm_return() -> void:
 	if is_instance_valid(return_dialog): return
 	return_dialog=ConfirmationDialog.new()
 	return_dialog.title="탐험을 마칠까요?"
-	return_dialog.dialog_text="지금 돌아가면 이번 도전이 끝나고 완주 보상을 받을 수 없습니다.\n"+("현재 탐험은 일시 정지되어 있습니다." if paused else "이 창을 보는 동안에도 생존 시간은 흐릅니다.")
+	return_dialog.dialog_text="지금 돌아가면 이번 도전이 끝나고 완주 보상을 받을 수 없습니다.\n"+("동료의 탐험은 계속되며, 나의 완주 보상은 포기합니다." if coop_run else ("현재 탐험은 일시 정지되어 있습니다." if paused else "이 창을 보는 동안에도 생존 시간은 흐릅니다."))
 	return_dialog.ok_button_text="탐험을 마치고 귀환"
 	return_dialog.cancel_button_text="계속 생존하기"
 	return_dialog.confirmed.connect(func():
@@ -1324,10 +1356,10 @@ func toggle_pause() -> void:
 	ui.remove_child(container)
 	pause_shade.add_child(container)
 	text(card,"잠깐 숨 고르기",27)
-	text(card,"현재 도전은 1인 생존 모드입니다.\n일시 정지 중에는 생존 시간과 허기가 멈춥니다.",14)
+	text(card,"협동 생존은 메뉴를 열어도 계속됩니다.\n연결이 끊겨도 동료가 남아 있으면 위험에 노출됩니다." if coop_run else "현재 도전은 1인 생존 모드입니다.\n일시 정지 중에는 생존 시간과 허기가 멈춥니다.",14)
 	text(card,"WASD 이동 · Shift 달리기\nE 채집 · Space 공격 (길게 누르면 반복)\nQ 먹기 · F 모닥불 · H 붕대\nI 가방/제작 · 휠 확대/축소 · M 소리",14)
 	button(card,"Esc · 계속 생존하기",toggle_pause)
-	button(card,"진행을 저장하고 마을로",suspend_run)
+	if not coop_run: button(card,"진행을 저장하고 마을로",suspend_run)
 	button(card,"소리 켜기 / 끄기",sound.toggle)
 	button(card,"탐험을 마치고 귀환",confirm_return)
 
@@ -1338,6 +1370,7 @@ func retry_run() -> void:
 	if screen=="village": await start_run(region,difficulty)
 
 func suspend_run() -> void:
+	if coop_run: return
 	if busy or screen!="survival" or run.get("status","")!="active": return
 	busy=true
 	paused=true
@@ -1413,19 +1446,22 @@ func show_results() -> void:
 		advice.custom_minimum_size.x=420
 		advice.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	button(card,"보상 받고 마을로" if won else "마을로 돌아가기",leave_run)
-	if not won: button(card,"새 탐험으로 다시 도전",retry_run)
+	if not won and not coop_run: button(card,"새 탐험으로 다시 도전",retry_run)
 
 func leave_run() -> void:
 	if busy: return
 	busy=true
 	while ticking: await get_tree().process_frame
 	if run.status=="won" and not run.claimed:
-		var result: Dictionary = await api.post("/v1/runs/"+run_id+"/claim",api.mutation())
+		var result: Dictionary = await api.post(run_route()+"/claim",api.mutation())
+		if not result.ok and coop_run:
+			var current: Dictionary = await api.request(run_route())
+			if current.ok and current.data.get("claimed", false): result = {"ok":true}
 		if not check(result):
 			busy=false
 			return
 	elif run.status=="active":
-		var result: Dictionary = await api.post("/v1/runs/"+run_id+"/abandon",api.mutation())
+		var result: Dictionary = await api.post(run_route()+"/abandon",api.mutation())
 		if not check(result):
 			busy=false
 			return
@@ -1440,6 +1476,7 @@ func logout() -> void:
 	world_epoch+=1
 	await api.post("/v1/auth/logout",{})
 	api.token=""
+	social.reset_session()
 	job_id=""
 	build_world(false)
 	login_ui()
@@ -1468,7 +1505,7 @@ func world_movement_allowed() -> bool:
 	if busy or text_input_active() or is_instance_valid(village_modal) or is_instance_valid(preview):return false
 	if is_instance_valid(right) and right.get_parent().visible:return false
 	if screen=="village":return true
-	return screen=="survival" and not paused and not results_shown and network_failures==0 and run.get("status","")=="active"
+	return screen=="survival" and not paused and not results_shown and network_failures==0 and run.get("status","")=="active" and run.get("hp", 0)>0
 
 func movement_input() -> Vector2:
 	return Input.get_vector("move_left","move_right","move_forward","move_back") if world_movement_allowed() else Vector2.ZERO
@@ -1503,7 +1540,7 @@ func _process(delta: float) -> void:
 		player.external_motion=player.external_velocity.normalized() if world_movement_allowed() else Vector2.ZERO
 		if paused or results_shown or network_failures>0:player.external_velocity=Vector2.ZERO
 		tick_elapsed+=delta
-		if tick_elapsed>=0.1:
+		if tick_elapsed>=(0.2 if coop_run else 0.1):
 			tick_elapsed=0
 			tick_run()
 		var night: bool=run.get("night",false)
@@ -1849,6 +1886,9 @@ func open_wardrobe() -> void:
 
 
 func open_studio(destination: String="workshop") -> void:
+	if social.visiting():
+		message("방문 중에는 마을 바깥에서 함께 산책할 수 있습니다. 실내 편집은 내 마을에서 해 주세요.")
+		return
 	if busy or api.token.is_empty(): return
 	Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":destination})
 	get_tree().change_scene_to_file("res://scenes/studio.tscn")
@@ -1856,6 +1896,7 @@ func open_studio(destination: String="workshop") -> void:
 func nearest_furniture() -> String:
 	var result := "";var distance := 2.3
 	for id in loaded:
+		if not is_instance_valid(loaded[id]): continue
 		var item: Node3D=loaded[id]
 		if not is_instance_valid(item) or not item.get_meta("studio",false):continue
 		var d: float=player.position.distance_to(item.position)
@@ -1863,6 +1904,7 @@ func nearest_furniture() -> String:
 	return result
 
 func village_furniture_event(id: String,event: String) -> void:
+	if social.visiting(): return
 	if id.is_empty() or busy or refreshing or furniture_event_pending:return
 	var item: Node3D=loaded.get(id)
 	if not is_instance_valid(item) and selected.get("id")==id:item=inspect_model
@@ -1884,9 +1926,10 @@ func village_furniture_event(id: String,event: String) -> void:
 		if obj.id==id:obj.runtime_version=reply.data.version
 
 func village_furniture_proximity() -> void:
+	if social.visiting(): return
 	if furniture_event_pending or busy or refreshing or not is_instance_valid(player):return
 	for id in loaded.keys():
-		if not loaded.has(id):continue
+		if not loaded.has(id) or not is_instance_valid(loaded[id]):continue
 		var item: Node3D=loaded[id]
 		if not is_instance_valid(item) or not item.get_meta("studio",false):continue
 		var near_now: bool=player.position.distance_to(item.position)<(2.5 if item.nearby else 1.8)

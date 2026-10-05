@@ -8,6 +8,31 @@ var cycle_seconds := .65
 var speed := 0.0
 var running := false
 var contact_error := 0.0
+var contact_vertical_error := 0.0
+var previous_solved: Dictionary={}
+
+func smooth_solved_pose(skeleton: Skeleton3D,delta: float,legs_only: bool) -> void:
+	# Contact releases and clip transitions share a finite angular velocity.
+	# Body 20 rad/s; legs 24 rad/s preserve reach without a one-frame pose swap.
+	# Normal source poses pass through; only a discontinuous target is limited.
+	for index in skeleton.get_bone_count():
+		var is_leg := false
+		for leg in legs:
+			if index in [leg.hip,leg.knee,leg.foot]:is_leg=true
+		if is_leg!=legs_only:continue
+		var name := skeleton.get_bone_name(index)
+		if name.begins_with("Face_"):continue
+		var finger := false
+		for digit in ["Thumb_","Index_","Middle_","Ring_","Little_"]:
+			if digit in name:finger=true
+		if finger:continue
+		var target := skeleton.get_bone_pose_rotation(index)
+		if previous_solved.has(index):
+			var old: Quaternion=previous_solved[index]
+			var angle := old.angle_to(target)
+			var weight := minf(1.0,(24.0 if legs_only else 20.0)*delta/maxf(.00001,angle))
+			target=old.slerp(target,weight)
+		skeleton.set_bone_pose_rotation(index,target);previous_solved[index]=target
 
 func configure(player: Node3D) -> void:
 	actor=player
@@ -58,21 +83,31 @@ func solve(skeleton: Skeleton3D,leg: Dictionary,target_world: Vector3,weight: fl
 		var result: Vector3=skeleton.global_transform*skeleton.get_bone_global_pose(leg.foot).origin
 		contact_error=maxf(contact_error,Vector2(result.x-target_world.x,result.z-target_world.z).length())
 
+func cycle_for_speed(actual_speed: float) -> float:
+	if legs.is_empty():return .65
+	var fast := actual_speed>3.4
+	var stance := .38 if fast else .50
+	var stride_length := float(legs[0].reach)*(.90 if fast else .72)
+	return clampf(stride_length/maxf(.1,actual_speed*stance),.42,1.25)
+
 func _process_modification_with_delta(delta: float) -> void:
 	if not is_instance_valid(actor) or legs.size()!=2:return
 	var skeleton := get_skeleton()
+	# Solve contacts against the filtered pelvis before applying leg corrections.
+	smooth_solved_pose(skeleton,delta,false)
 	speed=actor.locomotion_velocity.length()
 	running=speed>3.4
 	var active: bool=speed>.12 and actor.current_clip in ["walk","run"]
 	blend=lerpf(blend,1.0 if active else 0.0,1.0-exp(-16.0*delta))
 	if not active:
 		contact_error=0
+		contact_vertical_error=0
 		for leg in legs:leg.contact=false
+		smooth_solved_pose(skeleton,delta,true)
 		return
 	var stance := .38 if running else .50
-	var stride_length := float(legs[0].reach)*(.90 if running else .72)
-	cycle_seconds=clampf(stride_length/maxf(.1,speed*stance),.42,1.25)
-	phase=fposmod(phase+delta/cycle_seconds,1.0)
+	cycle_seconds=cycle_for_speed(speed)
+	phase=actor.gait_phase
 	var forward: Vector3=-actor.visual.global_basis.z.normalized()
 	var footprint := speed*cycle_seconds*stance
 	contact_error=0
@@ -96,3 +131,13 @@ func _process_modification_with_delta(delta: float) -> void:
 			leg.target=leg.start.lerp(landing,smoothstep(0.0,1.0,u))+Vector3.UP*sin(u*PI)*(.15 if running else .085)
 		solve(skeleton,leg,leg.target,blend)
 		leg.last_phase=p
+	smooth_solved_pose(skeleton,delta,true)
+	# Report the final pose, including transition filtering.
+	contact_error=0
+	contact_vertical_error=0
+	for leg in legs:
+		var final_foot: Vector3=skeleton.global_transform*skeleton.get_bone_global_pose(leg.foot).origin
+		if leg.contact and blend>.99:
+			var foot: Vector3=final_foot
+			contact_error=maxf(contact_error,Vector2(foot.x-leg.target.x,foot.z-leg.target.z).length())
+			contact_vertical_error=maxf(contact_vertical_error,absf(foot.y-leg.target.y))

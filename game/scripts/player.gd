@@ -10,6 +10,7 @@ var external_motion := Vector2.ZERO
 var external_velocity := Vector2.ZERO
 var locomotion_velocity := Vector2.ZERO
 var locomotion_pose: SkeletonModifier3D
+var gait_phase := 0.0
 var stride := 0.0
 var left_leg: Node3D
 var right_leg: Node3D
@@ -73,6 +74,9 @@ func _build_explorer() -> void:
 		visual.add_child(character)
 		character.scale=Vector3.ONE*Profile.CHARACTER_SCALE;character.rotation.y=PI
 		animation_player=character.animator;hand_skeleton=character.body_skeleton
+		hand_skeleton.modifier_callback_mode_process=Skeleton3D.MODIFIER_CALLBACK_MODE_PROCESS_PHYSICS
+		# Advance once in the motor tick, then let contact IK read the same phase.
+		animation_player.callback_mode_process=AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 		hand_index=hand_skeleton.find_bone("R_Hand")
 		action_pose=preload("res://scripts/action_pose.gd").new();hand_skeleton.add_child(action_pose)
 		action_pose.modification_processed.connect(update_tool_pose)
@@ -83,6 +87,8 @@ func _build_explorer() -> void:
 		locomotion_pose=preload("res://scripts/locomotion_pose.gd").new()
 		hand_skeleton.add_child(locomotion_pose)
 		locomotion_pose.configure(self)
+		action_pose.modification_processed.disconnect(update_tool_pose)
+		locomotion_pose.modification_processed.connect(update_tool_pose)
 		return
 	# Authored fallback remains playable if the optional Scenario model is unavailable.
 	var hero_path: String="res://assets/"+str(avatar.get("character","explorer"))+".glb"
@@ -250,13 +256,21 @@ func _physics_process(delta: float) -> void:
 			desired="greet" if Time.get_ticks_msec()*.001<greeting_until else ambient_clip
 		if Time.get_ticks_msec()*0.001<action_until: desired="slash"
 		if current_clip!=desired:
+			var preserve_gait: bool=desired in ["walk","run"] and is_instance_valid(locomotion_pose)
 			current_clip=desired
 			animation_player.play(desired,0.08 if desired=="slash" else 0.18)
+			if preserve_gait:
+				animation_player.seek(gait_phase*animation_player.get_animation(desired).length,false)
 			if desired=="slash": animation_player.seek(1.1,true)
 		if is_instance_valid(locomotion_pose) and desired in ["walk","run"]:
-			animation_player.speed_scale=clampf(animation_player.get_animation(desired).length/locomotion_pose.cycle_seconds,.5,3.2)
+			var seconds: float=locomotion_pose.cycle_for_speed(locomotion_velocity.length())
+			animation_player.speed_scale=animation_player.get_animation(desired).length/seconds
 		else:
 			animation_player.speed_scale=3.2 if desired=="slash" else (1.0 if desired=="run" else (1.5 if moving>0.1 else 1.0))
+		if animation_player.callback_mode_process==AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL:
+			animation_player.advance(delta)
+			if desired in ["walk","run"]:
+				gait_phase=fposmod(animation_player.current_animation_position/animation_player.get_animation(desired).length,1.0)
 		visual.position.y=0
 	else:
 		visual.position.y=absf(sin(stride))*0.045*moving

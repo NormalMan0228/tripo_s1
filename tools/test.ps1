@@ -1,4 +1,4 @@
-param([switch]$Capture, [switch]$Night, [switch]$Packaged, [switch]$Developer, [switch]$PortableServer, [switch]$EngineDiagnostics, [switch]$FullRun, [switch]$Combat, [switch]$Loss, [switch]$Expansion, [switch]$Village, [switch]$SkipServerTests, [string]$Region = 'forest', [string]$Difficulty = 'standard', [string]$Chapter = '', [string]$ClientScript = '')
+param([switch]$Capture, [switch]$Night, [switch]$Packaged, [switch]$Developer, [switch]$PortableServer, [switch]$EngineDiagnostics, [switch]$FullRun, [switch]$Combat, [switch]$Loss, [switch]$Expansion, [switch]$Village, [switch]$SkipServerTests, [string]$Region = 'forest', [string]$Difficulty = 'standard', [string]$Chapter = '', [string]$ClientScript = '', [string]$ClientPack = '')
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $taskRoot
@@ -26,6 +26,13 @@ if ($ClientScript) {
     if ($Packaged) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Tripothon.pck'),'--script',$taskScript) }
 }
 if ($EngineDiagnostics) { $taskGameArguments = @('--verbose') + $taskGameArguments }
+if ($ClientPack) {
+    if (-not $Packaged) { throw 'ClientPack requires Packaged.' }
+    $taskSelectedPack = (Resolve-Path -LiteralPath $ClientPack).Path
+    $taskGameArguments = @($taskGameArguments | ForEach-Object {
+        if ($_ -eq (Join-Path $taskRoot 'builds\windows\Tripothon.pck')) { $taskSelectedPack } else { $_ }
+    })
+}
 if ($Packaged -and $Developer) {
     $taskGameArguments = @($taskGameArguments | ForEach-Object {
         if ($_ -eq (Join-Path $taskRoot 'builds\windows\Tripothon.pck')) { Join-Path $taskRoot 'builds\windows\Tripothon_Developer.pck' } else { $_ }

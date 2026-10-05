@@ -192,6 +192,12 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         now = clock()
         identity = request.client.host if request.client else 'unknown'
         is_auth = request.url.path.startswith('/v1/auth/')
+        if not is_auth and request.headers.get('authorization', '').startswith('Bearer '):
+            try:
+                with db.read() as conn:
+                    identity = 'user:' + auth(conn, request)['id']
+            except HTTPException:
+                pass
         key = (identity,'auth' if is_auth else 'general')
         if now-last_rate_cleanup >= 60:
             for old_key, old_queue in list(rates.items()):
@@ -221,7 +227,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     @app.get('/health')
     def health(): return {'ok':True,'service':'tripothon','mode':settings.mode,'version':'0.8.1','protocol':6,
                           'studio_tripo_enabled':bool(settings.tripo_key and settings.paid_enabled),
-                          'studio_llm':settings.studio_llm}
+                          'studio_llm':settings.studio_llm, 'multiplayer_protocol':1, 'max_party_members':3}
 
     def life_state(conn,user_id):
         row=conn.execute('SELECT state FROM homesteads WHERE user_id=?',(user_id,)).fetchone()
@@ -229,7 +235,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
 
     @app.get('/v1/homestead')
     def get_life(request:Request):
-        with db.transaction() as conn:
+        with db.read() as conn:
             user=auth(conn,request)
             return homestead.public(life_state(conn,user['id']),clock())
 
@@ -276,23 +282,25 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
 
     @app.post('/v1/auth/login')
     def login(body:Credentials):
-        with db.transaction() as conn:
+        with db.read() as conn:
             user = conn.execute('SELECT * FROM users WHERE username=?',(body.username.lower(),)).fetchone()
-            try: hasher.verify(user['password_hash'] if user else dummy,body.password)
-            except VerificationError: fail('invalid_credentials',401)
-            if not user: fail('invalid_credentials',401)
+        try: hasher.verify(user['password_hash'] if user else dummy,body.password)
+        except VerificationError: fail('invalid_credentials',401)
+        if not user: fail('invalid_credentials',401)
+        with db.transaction() as conn:
             return session(conn,user['id'])
 
     @app.post('/v1/auth/logout')
     def logout(request:Request):
         with db.transaction() as conn:
-            auth(conn,request)
+            user=auth(conn,request)
+            conn.execute('DELETE FROM mp_presence WHERE user_id=?',(user['id'],))
             conn.execute('DELETE FROM sessions WHERE token_hash=?',(digest(request.headers['authorization'][7:]),))
         return {'ok':True}
 
     @app.get('/v1/me')
     def me(request:Request):
-        with db.transaction() as conn:
+        with db.read() as conn:
             user = auth(conn,request)
             active = conn.execute("SELECT id,state FROM runs WHERE owner_id=? AND status='active'",(user['id'],)).fetchone()
             active_summary = None
@@ -352,6 +360,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     @app.post('/v1/runs')
     def start(body:RunStart,request:Request):
         def create(conn,user):
+            if multiplayer.active_coop(conn,user['id']): fail('party_expedition_active')
             existing = conn.execute("SELECT id FROM runs WHERE owner_id=? AND status='active'",(user['id'],)).fetchone()
             if existing: return {'id':existing['id']}
             region=body.map_id
@@ -379,7 +388,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
 
     @app.get('/v1/runs/{run_id}')
     def get_run(run_id:str,request:Request):
-        with db.transaction() as conn:
+        with db.read() as conn:
             user=auth(conn,request); row=own_run(conn,user['id'],run_id)
             return run_reply(conn,user['id'],row,json.loads(row['state']))
 
@@ -490,5 +499,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     from .asset_studio import Studio
     studio=Studio(app,db,settings,clock,provider,auth,mutate,money,own,new_object,assets,designer,profile)
     app.state.studio=studio
+    from .multiplayer import Multiplayer
+    multiplayer=Multiplayer(app,db,settings,clock,auth,mutate,money,profile,assets)
+    app.state.multiplayer=multiplayer
     app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':1500000})
     return app
