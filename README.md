@@ -23,7 +23,7 @@
 - **언어**: 한국어·English·中文. 번역표는 `game/i18n/strings.json`(795개)과 서버 메시지 템플릿 `game/i18n/templates.json`입니다. 새 한국어 문구를 추가한 뒤 `python tools/i18n_catalog.py extract`로 빠진 번역을 확인합니다.
 - **멀티플레이**: 다시 켰습니다. 혼자 하려면 `--no-multiplayer`를 씁니다.
 - **서로의 집 방문**: 같은 서버에 로그인한 사람끼리 `함께하기`에서 마을 초대를 보내고 받습니다. 방문 중에 친구의 빨간 집 문 앞에서 `E`를 누르면 친구 집 안에 들어갑니다. 가구는 구경만 할 수 있고, 같은 집 안에 있는 사람끼리 서로 보입니다. 친구의 공방은 들어갈 수 없습니다.
-- **이 PC를 서버로 쓰기**: [Host_Friends.cmd](Host_Friends.cmd)를 실행하면 Tripo 서버를 같은 공유기의 다른 PC에도 열고 게임을 켭니다. 처음에는 Windows 방화벽이 Python 허용을 물어봅니다. 친구는 로그인 화면의 `직접 입력`에 이 PC 주소(`http://192.168.x.x:8765`)를 넣습니다. 같은 공유기 밖(PC방 등)에서는 HTTPS 주소가 필요해 이 방식으로는 접속할 수 없습니다.
+- **이 PC를 서버로 쓰기**: [Host_Friends.cmd](Host_Friends.cmd)를 실행하면 Tripo 서버를 같은 공유기 안의 다른 PC에도 열고 게임을 켭니다. 친구는 로그인 화면의 `직접 입력`에 출력된 주소(`http://192.168.x.x:8765`)를 넣습니다. 처음에는 Windows 방화벽이 Python 허용을 물어봅니다. 공유기 없이 공인 IP로 인터넷에 바로 연결된 PC에서는 서버가 누구에게나 열리게 되므로 실행을 거부합니다. 공유기 밖(PC방 등)의 친구는 HTTPS 주소가 필요해 이 방식으로는 접속할 수 없습니다.
 
 Tripo 생성은 이 PC에서 [Play_Tripo.cmd](Play_Tripo.cmd)로 서버와 게임을 함께 켭니다. 서버만 켜려면 `tools/play_tripo.ps1 -ServerOnly`를 씁니다. 서버가 데스크톱의 `tripo_key.txt`를 서버 쪽에서만 읽습니다.
 

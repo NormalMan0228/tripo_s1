@@ -23,8 +23,21 @@ if ($LASTEXITCODE -ne 0) { throw 'Tripo account check failed.' }
 $taskCheck = $taskCheckOutput | ConvertFrom-Json
 if ($taskCheck.status -ne 'ok') { throw ('Tripo account check: ' + $taskCheck.status) }
 
+# -Lan opens the server to other PCs behind the same router. A PC that holds a
+# public internet address would publish the server to everyone, so -Lan refuses.
+$taskBind = '127.0.0.1'
+$taskLanAddress = ''
+if ($Lan) {
+    $taskAddresses = @(Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | ForEach-Object { $_.IPAddress })
+    $taskPublic = $taskAddresses | Where-Object { $_ -notmatch '^(127\.|169\.254\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)' }
+    if ($taskPublic) { throw ('This PC is connected straight to the internet (' + ($taskPublic -join ', ') + '). -Lan would publish the server publicly, so it is refused.') }
+    $taskLanAddress = $taskAddresses | Where-Object { $_ -match '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)' } | Select-Object -First 1
+    if (-not $taskLanAddress) { throw 'No home network address was found for -Lan.' }
+    $taskBind = '0.0.0.0'
+}
+$taskUrl = 'http://127.0.0.1:8765'
 $taskHealth = $null
-try { $taskHealth = Invoke-RestMethod 'http://127.0.0.1:8765/health' -TimeoutSec 2 } catch {}
+try { $taskHealth = Invoke-RestMethod ($taskUrl + '/health') -TimeoutSec 2 } catch {}
 $taskManaged = $null
 if (Test-Path -LiteralPath $taskPidFile) {
     $taskId = [int](Get-Content -LiteralPath $taskPidFile)
@@ -35,10 +48,10 @@ if (Test-Path -LiteralPath $taskPidFile) {
 }
 $taskReuse = $taskHealth -and $taskHealth.service -eq 'tripothon' -and $taskHealth.protocol -eq 6 -and $taskManaged
 # A running server bound to the wrong interface is restarted with the requested one.
-if ($taskReuse -and ($taskManaged.CommandLine -like '*0.0.0.0*') -ne [bool]$Lan) {
+if ($taskReuse -and ($taskManaged.CommandLine -notlike ('*--host ' + $taskBind + '*'))) {
     Stop-Process -Id $taskManaged.ProcessId -ErrorAction Stop
     for ($taskAttempt=0; $taskAttempt -lt 30; $taskAttempt++) {
-        try { Invoke-RestMethod 'http://127.0.0.1:8765/health' -TimeoutSec 1 | Out-Null; Start-Sleep -Milliseconds 100 } catch { break }
+        try { Invoke-RestMethod ($taskUrl + '/health') -TimeoutSec 1 | Out-Null; Start-Sleep -Milliseconds 100 } catch { break }
     }
     $taskHealth = $null
     $taskReuse = $false
@@ -76,7 +89,7 @@ if (-not $ServerOnly) {
 if ($taskHealth -and -not $taskReuse) {
     Stop-Process -Id $taskPortableId -ErrorAction Stop
     for ($taskAttempt=0; $taskAttempt -lt 30; $taskAttempt++) {
-        try { Invoke-RestMethod 'http://127.0.0.1:8765/health' -TimeoutSec 1 | Out-Null; Start-Sleep -Milliseconds 100 } catch { break }
+        try { Invoke-RestMethod ($taskUrl + '/health') -TimeoutSec 1 | Out-Null; Start-Sleep -Milliseconds 100 } catch { break }
     }
 }
 
@@ -92,13 +105,13 @@ if (-not $taskReuse) {
     $env:TRIPO_MODEL = 'v3.1-20260211'
     $env:TRIPO_DAILY_REQUEST_LIMIT = '5'
     $env:TRIPO_RESERVE_PER_JOB = '200'
-    $taskServer = Start-Process -FilePath $taskPython -ArgumentList @('-m','uvicorn','server.app:create_app','--factory','--host',$(if ($Lan) { '0.0.0.0' } else { '127.0.0.1' }),'--port','8765','--workers','1','--no-access-log','--no-proxy-headers') -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $taskRoot 'artifacts\tripo-game-server.log') -RedirectStandardError (Join-Path $taskRoot 'artifacts\tripo-game-server-error.log')
+    $taskServer = Start-Process -FilePath $taskPython -ArgumentList @('-m','uvicorn','server.app:create_app','--factory','--host',$taskBind,'--port','8765','--workers','1','--no-access-log','--no-proxy-headers') -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $taskRoot 'artifacts\tripo-game-server.log') -RedirectStandardError (Join-Path $taskRoot 'artifacts\tripo-game-server-error.log')
     $taskServer.Id | Set-Content -LiteralPath $taskPidFile
     $taskHealth = $null
     for ($taskAttempt=0; $taskAttempt -lt 40; $taskAttempt++) {
         Start-Sleep -Milliseconds 250
         if ($taskServer.HasExited) { throw 'Tripo-enabled game server exited during startup.' }
-        try { $taskHealth = Invoke-RestMethod 'http://127.0.0.1:8765/health' -TimeoutSec 1; break } catch {}
+        try { $taskHealth = Invoke-RestMethod ($taskUrl + '/health') -TimeoutSec 1; break } catch {}
     }
 }
 if (-not $taskHealth -or $taskHealth.service -ne 'tripothon' -or $taskHealth.protocol -ne 6) {
@@ -108,12 +121,7 @@ if (-not $taskHealth -or $taskHealth.service -ne 'tripothon' -or $taskHealth.pro
 # The game process never needs the API key or its file path.
 Remove-Item Env:TRIPO_API_KEY_FILE -ErrorAction SilentlyContinue
 Remove-Item Env:TRIPO_API_KEY -ErrorAction SilentlyContinue
-if ($Lan) {
-    $taskAddresses = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-        Where-Object { $_.IPAddress -match '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)' } |
-        ForEach-Object { 'http://' + $_.IPAddress + ':8765' }
-    Write-Output ('Friends on the same router can log in at: ' + ($taskAddresses -join ', '))
-}
+if ($Lan) { Write-Output ('Friends on the same router can log in at: http://' + $taskLanAddress + ':8765') }
 if ($ServerOnly) {
     Write-Output ('Tripo-enabled server is ready at http://127.0.0.1:8765. Available provider credits: ' + $taskCheck.available_credits)
     exit 0
