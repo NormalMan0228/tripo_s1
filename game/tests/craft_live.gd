@@ -37,7 +37,7 @@ func run() -> void:
 	app = Main.new()
 	root.add_child(app)
 	await create_timer(1.5).timeout
-	await app.authenticate(true,server,"crafter_"+str(Time.get_unix_time_from_system()).replace(".","_"),"craft-live-password-1","")
+	await app.authenticate(true,server,"crafter_"+str(Time.get_unix_time_from_system()).replace(".","_"),"Craft-live-password-1","")
 	await create_timer(1.0).timeout
 	expect(app.screen=="village","logged in to the village")
 	expect(app.me.get("studio_tripo_enabled",false),"server offers Tripo crafting")

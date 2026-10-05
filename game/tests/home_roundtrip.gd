@@ -10,7 +10,7 @@ func capture(path: String) -> void:
 func run() -> void:
 	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url="http://127.0.0.1:8766"
 	# A fresh account keeps the test independent of any seeded demo database.
-	var login: Dictionary=await api.post("/v1/auth/register",{"username":"home_"+str(Time.get_ticks_usec()),"password":"local-home-qa-password"})
+	var login: Dictionary=await api.post("/v1/auth/register",{"username":"home_"+str(Time.get_ticks_usec()),"password":"Local-home-qa-password"})
 	check(login.ok,"login")
 	if not login.ok:quit(1);return
 	Engine.set_meta("studio_session",{"token":login.data.token,"url":api.base_url,"room":"home"})

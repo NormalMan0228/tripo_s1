@@ -256,6 +256,10 @@
    "en": "F3 · Dev Info",
    "zh": "F3 · 开发信息"
   },
+  "F3 개발 정보 켜기/끄기": {
+   "en": "Toggle F3 developer info",
+   "zh": "开关 F3 开发信息"
+  },
   "H  붕대": {
    "en": "H  Bandage",
    "zh": "H  绷带"
@@ -615,6 +619,18 @@
   "공식 요금·실측 기반 예상: ": {
    "en": "Estimate from official rates and measurements: ",
    "zh": "基于官方价格与实测的预估："
+  },
+  "관리": {
+   "en": "Admin",
+   "zh": "管理"
+  },
+  "관리자 계정 전용입니다. 지급 내역은 서버 원장에 남아요.": {
+   "en": "Admin accounts only. Every grant is recorded in the server ledger.",
+   "zh": "仅限管理员账号。每次发放都会记录在服务器账本中。"
+  },
+  "관리자 도구": {
+   "en": "Admin Tools",
+   "zh": "管理员工具"
   },
   "광장 한가운데는 비워 주세요.": {
    "en": "Please keep the middle of the square clear.",
@@ -1496,6 +1512,14 @@
    "en": "Starseeds %d",
    "zh": "星种 %d"
   },
+  "별씨 +1000": {
+   "en": "Starseeds +1000",
+   "zh": "星种 +1000"
+  },
+  "별씨 +10000": {
+   "en": "Starseeds +10000",
+   "zh": "星种 +10000"
+  },
   "별씨 공방": {
    "en": "Starseed Workshop",
    "zh": "星种工坊"
@@ -1627,6 +1651,14 @@
   "비밀번호 · 10자 이상": {
    "en": "Password · 10+ characters",
    "zh": "密码 · 10个字符以上"
+  },
+  "비밀번호 · 10자 이상, 대문자와 특수문자 포함": {
+   "en": "Password · 10+ characters with an uppercase letter and a symbol",
+   "zh": "密码 · 至少10位，含大写字母和特殊字符"
+  },
+  "비밀번호에는 대문자와 특수문자가 하나 이상 들어가야 해요. (10자 이상)": {
+   "en": "Your password needs at least one uppercase letter and one symbol (10+ characters).",
+   "zh": "密码至少需要一个大写字母和一个特殊字符（至少10位）。"
   },
   "비어 있는 마을 바닥을 선택해 주세요.": {
    "en": "Please pick an empty spot on the village ground.",
@@ -1951,6 +1983,10 @@
   "수확할 준비가 되었어요!": {
    "en": "Ready to harvest!",
    "zh": "可以收获了！"
+  },
+  "순간 이동": {
+   "en": "Teleport",
+   "zh": "瞬间移动"
   },
   "순무": {
    "en": "Turnip",
@@ -2464,6 +2500,10 @@
    "en": "Leaf coins %d  ·  Harvested %d  ·  Fish caught %d",
    "zh": "叶币 %d  ·  收获 %d 个  ·  钓到的鱼 %d 条"
   },
+  "잎전 +500": {
+   "en": "Leaf coins +500",
+   "zh": "叶币 +500"
+  },
   "잎전으로 씨앗과 미끼를 사고, 직접 얻은 수확물을 팔아요.": {
    "en": "Buy seeds and Bait with Leaf coins, and sell what you've harvested.",
    "zh": "用叶币买种子和鱼饵，出售亲手收获的作物。"
@@ -2707,6 +2747,10 @@
   "지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요.": {
    "en": "Crafting can't be finished right now. Your Starseeds have been returned.",
    "zh": "现在无法完成制作。委托的星种已退还给你。"
+  },
+  "지급했어요 · 별씨 %d · 잎전 %d": {
+   "en": "Granted · Starseeds %d · Leaf coins %d",
+   "zh": "已发放 · 星种 %d · 叶币 %d"
   },
   "지도": {
    "en": "Map",
@@ -2959,6 +3003,10 @@
   "탐험 지도 펼치기": {
    "en": "Open Expedition Map",
    "zh": "打开探险地图"
+  },
+  "탐험 출발지": {
+   "en": "Expedition Gate",
+   "zh": "探险出发点"
   },
   "탐험에서 귀환한 뒤 파티를 나갈 수 있습니다.": {
    "en": "You can leave the party after returning from the expedition.",

@@ -61,6 +61,9 @@ class Database:
         with closing(self.connect()) as db:
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript(SCHEMA)
+            # Accounts are players unless an operator promotes them (tools/admin_accounts.py).
+            if 'role' not in [r[1] for r in db.execute('PRAGMA table_info(users)')]:
+                db.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'player'")
             db.execute("INSERT OR IGNORE INTO metadata VALUES ('mode',?)", (mode,))
             if db.execute("SELECT value FROM metadata WHERE key='mode'").fetchone()[0] != mode:
                 raise ValueError('Demo and live must use different database directories')

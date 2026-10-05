@@ -20,7 +20,7 @@ def test_crops_require_seed_water_and_server_growth_then_persist(world):
     assert do(c,a,'harvest',plot=0).json()['bag']['turnip']==2
     assert do(c,a,'harvest',plot=0).status_code==409
     assert c.post('/v1/auth/logout',headers=a).status_code==200
-    login=c.post('/v1/auth/login',json={'username':'farmer','password':'testing-only-12345'}).json()
+    login=c.post('/v1/auth/login',json={'username':'farmer','password':'Testing-only-12345'}).json()
     a={'Authorization':'Bearer '+login['token']}
     assert get(c,a)['bag']['turnip']==2
 
@@ -99,7 +99,7 @@ def test_daily_order_is_atomic_even_when_partial_ingredients_exist(world,monkeyp
     assert do(c,a,'order').json()['coins']==coins+20
     assert do(c,a,'order').status_code==409
     t[0]+=86400
-    login=c.post('/v1/auth/login',json={'username':'orders','password':'testing-only-12345'}).json()
+    login=c.post('/v1/auth/login',json={'username':'orders','password':'Testing-only-12345'}).json()
     a={'Authorization':'Bearer '+login['token']}
     assert get(c,a)['order_available']
 
@@ -124,7 +124,7 @@ def test_village_state_survives_backup_restore_and_old_db_upgrade(world,tmp_path
     recovered=create_app(Settings(data_dir=restored),clock=lambda:t[0]+151,worker_enabled=False)
     with TestClient(recovered) as client:
         assert client.get('/v1/homestead',headers=a).status_code==401
-        login=client.post('/v1/auth/login',json={'username':'backup_farmer','password':'testing-only-12345'}).json()
+        login=client.post('/v1/auth/login',json={'username':'backup_farmer','password':'Testing-only-12345'}).json()
         auth={'Authorization':'Bearer '+login['token']}
         assert get(client,auth)['coins']==before['coins']
         assert get(client,auth)['plots'][0]['ready']

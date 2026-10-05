@@ -16,7 +16,7 @@ def main():
     app=create_app(Settings(data_dir=folder,studio_llm='codex',daily_generation_limit=100),worker_enabled=False)
     # Explicitly disposable localhost demo identity, never a production credential.
     with TestClient(app) as c:
-        credentials={'username':'workshop','password':'tripothon-local-demo'}
+        credentials={'username':'workshop','password':'Tripothon-local-demo'}
         reply=c.post('/v1/auth/register',json=credentials)
         if reply.status_code!=200:reply=c.post('/v1/auth/login',json=credentials)
         if reply.status_code!=200:raise RuntimeError('review_login_failed')

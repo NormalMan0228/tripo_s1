@@ -20,7 +20,7 @@ def world(tmp_path):
     with TestClient(app) as client:
         headers = []
         for name in ('alice', 'bravo', 'charlie', 'delta'):
-            response = client.post('/v1/auth/register', json={'username': name, 'password': 'test-password-123'})
+            response = client.post('/v1/auth/register', json={'username': name, 'password': 'Test-password-123'})
             headers.append({'Authorization': 'Bearer '+response.json()['token']})
         yield app, client, now, headers, settings
 

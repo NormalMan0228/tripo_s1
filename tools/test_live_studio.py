@@ -22,7 +22,7 @@ async def main():
     settings=Settings(data_dir=ROOT/'artifacts/studio-review-data',studio_llm='codex',tripo_key=read_tripo_key(Path.home()/'Desktop/tripo_key.txt'),paid_enabled=True,daily_generation_limit=100)
     app=create_app(settings,designer=BudgetedDesigner(settings),worker_enabled=False)
     with TestClient(app) as c:
-        login=c.post('/v1/auth/login',json={'username':'workshop','password':'tripothon-local-demo'})
+        login=c.post('/v1/auth/login',json={'username':'workshop','password':'Tripothon-local-demo'})
         if login.status_code!=200:raise RuntimeError('login_failed')
         headers={'Authorization':'Bearer '+login.json()['token']}
         cases=[('static','A cozy sage ceramic vase with a rounded belly and short neck. Exactly ONE static part, no moving features.'),

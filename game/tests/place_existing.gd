@@ -10,7 +10,7 @@ func run() -> void:
 	var app = Main.new()
 	root.add_child(app)
 	await create_timer(1.5).timeout
-	await app.authenticate(false,"http://127.0.0.1:8765",user,"craft-live-password-1","")
+	await app.authenticate(false,"http://127.0.0.1:8765",user,"Craft-live-password-1","")
 	await create_timer(2).timeout
 	var target := ""
 	for obj in app.me.objects:

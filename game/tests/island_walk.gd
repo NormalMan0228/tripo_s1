@@ -71,7 +71,7 @@ func run_test() -> void:
 	root.add_child(app)
 	await process_frame
 	var started := Time.get_ticks_msec()
-	await app.authenticate(true,test_url,"walk_"+str(Time.get_unix_time_from_system()).replace(".","_"),"qa-local-password-123","")
+	await app.authenticate(true,test_url,"walk_"+str(Time.get_unix_time_from_system()).replace(".","_"),"Qa-local-password-123","")
 	expect(app.screen=="village","island village opened")
 	print("VILLAGE_READY_MS ",Time.get_ticks_msec()-started)
 	if app.screen!="village":

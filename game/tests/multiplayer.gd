@@ -36,7 +36,7 @@ func add_client(index: int, register: bool) -> Node3D:
 	var app := Main.new()
 	root.add_child(app)
 	await process_frame
-	await app.authenticate(register, url, names[index], "multiplayer-test-password", "")
+	await app.authenticate(register, url, names[index], "Multiplayer-test-password", "")
 	expect(app.screen == "village", "client %d authenticated" % index)
 	return app
 

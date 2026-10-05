@@ -32,7 +32,7 @@ def test_online_backup_restore_and_held_paid_jobs(tmp_path):
     data=tmp_path/'source'; snapshot=tmp_path/'snapshot'; restored=tmp_path/'restored'
     app=create_app(Settings(data_dir=data),worker_enabled=False)
     with TestClient(app) as client:
-        credentials={'username':'backup_user','password':'test-password-12345'}
+        credentials={'username':'backup_user','password':'Test-password-12345'}
         response=client.post('/v1/auth/register',json=credentials)
         auth={'Authorization':'Bearer '+response.json()['token']}
         job=client.post('/v1/generations',headers=auth,json={'request_id':str(uuid.uuid4()),'prompt':'wooden chair'}).json()
@@ -81,7 +81,7 @@ def test_completed_job_is_never_delivered_twice(tmp_path):
     import asyncio
     app=create_app(Settings(data_dir=tmp_path),worker_enabled=False)
     with TestClient(app) as client:
-        credentials={'username':'repeat_user','password':'test-password-12345'}
+        credentials={'username':'repeat_user','password':'Test-password-12345'}
         token=client.post('/v1/auth/register',json=credentials).json()['token']
         auth={'Authorization':'Bearer '+token}
         job=client.post('/v1/generations',headers=auth,json={'request_id':str(uuid.uuid4()),'prompt':'stool'}).json()
@@ -111,7 +111,7 @@ def test_backup_restores_all_assembly_parts_edits_and_private_access(tmp_path):
         other=create_app(Settings(data_dir=restored),worker_enabled=False)
         with TestClient(other) as recovered:
             def login(name):
-                response=recovered.post('/v1/auth/login',json={'username':name,'password':'studio-test-password'})
+                response=recovered.post('/v1/auth/login',json={'username':name,'password':'Studio-test-password'})
                 return {'Authorization':'Bearer '+response.json()['token']}
             new_owner=login('owner'); new_stranger=login('stranger')
             assert recovered.get(route+'/assembly',headers=owner).status_code==401

@@ -6,7 +6,7 @@ func _initialize() -> void:call_deferred("run")
 func run() -> void:
 	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url="http://127.0.0.1:8766"
 	var account := "preview"+str(Time.get_ticks_msec())
-	var login: Dictionary=await api.post("/v1/auth/register",{"username":account,"password":"private-local-test"})
+	var login: Dictionary=await api.post("/v1/auth/register",{"username":account,"password":"Private-local-test"})
 	if not login.ok:quit(1);return
 	api.token=login.data.token
 	for prompt in ["wooden chest","flower"]:

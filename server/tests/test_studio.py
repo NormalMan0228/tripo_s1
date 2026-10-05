@@ -13,7 +13,7 @@ from server.provider import validate_glb,ProviderError
 
 def mutation(**kw):return {'request_id':str(uuid.uuid4()),**kw}
 def account(c,name):
-    r=c.post('/v1/auth/register',json={'username':name,'password':'studio-test-password'})
+    r=c.post('/v1/auth/register',json={'username':name,'password':'Studio-test-password'})
     assert r.status_code==200
     return {'Authorization':'Bearer '+r.json()['token']}
 @pytest.fixture

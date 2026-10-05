@@ -70,7 +70,7 @@ func run_test() -> void:
 	report={"walking_speed":walking_speed,"diagonal_run_speed":run_speed,"max_foot_contact_error_m":contact_error,"run_contact_error_m":run_contact_error,"contact_samples":contacts,"bones":bone_count}
 	stage.queue_free();await process_frame
 	var app := Main.new();root.add_child(app);await process_frame
-	await app.authenticate(true,"http://127.0.0.1:8766","control_"+str(Time.get_ticks_usec()),"controller-test-password","")
+	await app.authenticate(true,"http://127.0.0.1:8766","control_"+str(Time.get_ticks_usec()),"Controller-test-password","")
 	expect(app.screen=="village","controller test reaches authenticated village")
 	if app.screen!="village":quit(1);return
 	if preload("res://scripts/build_mode.gd").developer():

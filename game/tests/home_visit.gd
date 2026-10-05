@@ -15,7 +15,7 @@ func expect(value: bool, description: String) -> void:
 	if not value: failed = true
 
 func account(api: Node, name: String) -> String:
-	var login: Dictionary = await api.post("/v1/auth/register",{"username":name,"password":"home-visit-password-1"})
+	var login: Dictionary = await api.post("/v1/auth/register",{"username":name,"password":"Home-visit-password-1"})
 	return login.data.token if login.ok else ""
 
 func open_room(token: String, extra: Dictionary) -> Control:

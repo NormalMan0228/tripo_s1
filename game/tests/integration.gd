@@ -31,7 +31,7 @@ func run_test() -> void:
 	await create_timer(0.4).timeout
 	await capture("login")
 	var name := "qa_"+str(Time.get_unix_time_from_system()).replace(".","_")
-	await app.authenticate(true,test_url,name,"qa-local-password-123","")
+	await app.authenticate(true,test_url,name,"Qa-local-password-123","")
 	expect(app.screen=="village","Godot registration and village bootstrap")
 	if app.screen!="village":
 		print(app.notice.text)
@@ -105,7 +105,7 @@ func run_test() -> void:
 	expect(app.screen=="village" and app.me.active_run==saved_id,"suspend preserves active expedition in village")
 	await capture("village-resume")
 	await app.logout()
-	await app.authenticate(false,test_url,name,"qa-local-password-123","")
+	await app.authenticate(false,test_url,name,"Qa-local-password-123","")
 	expect(app.me.active_run==saved_id and app.me.active_run_summary.day>=1,"saved expedition survives session replacement")
 	await app.start_run()
 	expect(app.run_id==saved_id and absf(app.run.elapsed-saved_elapsed)<0.5 and app.run.inventory.wood==saved_wood,"resume restores the same day, inventory and run")
@@ -138,7 +138,7 @@ func run_test() -> void:
 	await app.logout()
 	await process_frame
 	expect(not is_instance_valid(app.inspect_model),"logout frees protected inventory preview")
-	await app.authenticate(false,test_url,name,"qa-local-password-123","")
+	await app.authenticate(false,test_url,name,"Qa-local-password-123","")
 	expect(app.me.objects.size()==2 and app.me.objects[0].state=="placed","objects persist after relogin")
 	expect(app.me.shards==55,"generation billed exactly once")
 	await app.logout()

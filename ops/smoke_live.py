@@ -23,7 +23,7 @@ domain = next(
 base = f"https://{domain}"
 invitation = (ROOT / "ops/secrets/registration-code").read_text().strip()
 username = "probe_" + secrets.token_hex(4)
-password = secrets.token_urlsafe(24)
+password = secrets.token_urlsafe(24) + 'Aa!'
 
 
 def request(method, path, payload=None, token=None):

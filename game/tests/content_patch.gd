@@ -16,7 +16,7 @@ func capture(name: String) -> void:
 	expect(root.get_texture().get_image().save_png(folder.path_join(name+".png"))==OK,"capture "+name)
 func run() -> void:
 	app=Main.new();root.add_child(app);await process_frame
-	await app.authenticate(true,"http://127.0.0.1:8766","content_"+str(Time.get_ticks_usec()),"content-patch-test-password","")
+	await app.authenticate(true,"http://127.0.0.1:8766","content_"+str(Time.get_ticks_usec()),"Content-patch-test-password","")
 	expect(app.screen=="village","authenticated village opens")
 	if app.screen!="village":quit(1);return
 	expect(app.npcs.size()==5,"five village NPCs are available")

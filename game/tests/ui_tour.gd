@@ -18,8 +18,9 @@ func expect(value: bool, description: String) -> void:
 
 func capture(name: String) -> void:
 	for i in 8: await process_frame
-	await RenderingServer.frame_post_draw
+	# Headless runs never draw, so only wait for a frame when capturing.
 	if "--capture" in OS.get_cmdline_user_args():
+		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://../artifacts/ui-"+name+".png"))
 
 func find_text(node: Node, needle: String) -> bool:
@@ -48,7 +49,7 @@ func run() -> void:
 		await capture(code+"-login")
 		if code=="en": expect(find_text(app.ui,"Log In"),"English login button")
 		if code=="zh": expect(find_text(app.ui,"登录"),"Chinese login button")
-		await app.authenticate(true,"http://127.0.0.1:8766","ui_"+code+"_"+str(Time.get_ticks_msec()),"ui-tour-password-123","")
+		await app.authenticate(true,"http://127.0.0.1:8766","ui_"+code+"_"+str(Time.get_ticks_msec()),"Ui-tour-password-123","")
 		await create_timer(1.2).timeout
 		expect(app.screen=="village","village after login in "+code)
 		await capture(code+"-village")

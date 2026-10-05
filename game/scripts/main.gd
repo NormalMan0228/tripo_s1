@@ -313,6 +313,7 @@ func error_message(code: String) -> String:
 		"invalid_request":tr("입력 형식을 확인하세요. 이름 3~24자, 비밀번호 10자 이상입니다."),
 		"insufficient_shards":tr("별씨가 부족합니다. 생존 도전을 완료해 보세요."),"placement_overlap":tr("다른 물건과 겹칩니다."),
 		"room_render_budget_exceeded":tr("꾸미기 용량이 꽉 찼습니다. 가구 일부를 회수한 뒤 배치해 주세요."),
+		"weak_password":tr("비밀번호에는 대문자와 특수문자가 하나 이상 들어가야 해요. (10자 이상)"),
 		"invalid_invitation":tr("이 서버는 초대 코드가 있어야 가입할 수 있어요. 초대 코드를 넣거나 '이 PC 서버'를 고르세요."),
 		"spawn_area_reserved":tr("중앙 광장에는 놓을 수 없습니다."),"workshop_area_reserved":tr("공방 입구 앞은 비워 주세요."),"reserved_area":tr("길과 입구 앞은 비워 주세요."),
 		"gate_area_reserved":tr("숲 입구에는 놓을 수 없습니다."),"daily_generation_limit":tr("오늘 생성 한도에 도달했습니다."),
@@ -403,7 +404,7 @@ func login_ui(page := "menu") -> void:
 			RpgUi.label(column,tr("모험가 로그인"),20,RpgUi.GOLD)
 			var username := RpgUi.field(column,tr("아이디 · 영문·숫자·밑줄 3~24자"))
 			username.text = str(I18n.setting("username",""))
-			var password := RpgUi.field(column,tr("비밀번호 · 10자 이상"),true)
+			var password := RpgUi.field(column,tr("비밀번호 · 10자 이상, 대문자와 특수문자 포함"),true)
 			var invitation := RpgUi.field(column,tr("초대 코드 · 서버가 요구할 때만"),true)
 			RpgUi.label(column,tr("서버"),14,RpgUi.GOLD)
 			var servers := OptionButton.new()
@@ -471,6 +472,7 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	social.enabled = social.feature_enabled() and int(health.data.get("multiplayer_protocol", 0)) == 1
 	api.token = result.data.token
 	api.mode = result.data.mode
+	preload("res://scripts/build_mode.gd").admin = str(result.data.get("role","player"))=="admin"
 	# Only the real game remembers the login; test harnesses add Main to the root directly.
 	if get_tree().current_scene==self:
 		I18n.remember("server",host)
@@ -765,14 +767,15 @@ func build_village_hud() -> void:
 	objective.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var slots := []
 	for spec in [["bag.svg","I",tr("가방"),toggle_drawer],["craft.svg","C",tr("제작"),open_craft],["map.svg","Tab",tr("지도"),life.open_map],
-			["chest.svg","B",tr("창고"),life.open_storage],["wardrobe.svg","O",tr("옷장"),open_wardrobe],["expedition.svg","",tr("탐험"),open_expedition]]:
+			["chest.svg","B",tr("창고"),life.open_storage],["wardrobe.svg","O",tr("옷장"),open_wardrobe],["expedition.svg","",tr("탐험"),open_expedition]]+(
+			[["craft.svg","F9",tr("관리"),open_admin]] if preload("res://scripts/build_mode.gd").admin else []):
 		var action: Callable = spec[3]
-		slots.append({"icon":"res://assets/ui/"+spec[0],"key":spec[1],"label":tr(spec[2]),"primary":spec[2]=="탐험",
+		slots.append({"icon":"res://assets/ui/"+spec[0],"key":spec[1],"label":tr(spec[2]),"primary":spec[0]=="expedition.svg",
 			"call":func():
 				sound.effect("click")
 				action.call()})
 	var bar := RpgUi.hotbar(ui,slots,700)
-	expedition_button = bar.get_child(bar.get_child_count()-1)
+	expedition_button = bar.get_child(5)
 	toast_panel = PanelContainer.new()
 	toast_panel.add_theme_stylebox_override("panel",RpgUi.style(Color(0.1,0.12,0.13,.9),12))
 	toast_panel.position = Vector2(390,92)
@@ -1322,15 +1325,15 @@ func tick_run() -> void:
 					resource_response(n)
 			player.react("gather")
 			floating_feedback(feedback,player.position,Color("ece1b4"))
-		elif feedback.contains(tr("제작 완료")):
+		elif feedback.contains("제작 완료"):
 			sound.effect("craft")
 			player.react("craft")
 			floating_feedback(feedback,player.position,Color("b8dfb1"))
-		elif feedback.contains(tr("먹었습니다")) or feedback.contains(tr("회복했습니다")):
+		elif feedback.contains("먹었습니다") or feedback.contains("회복했습니다"):
 			sound.effect("eat")
 			player.react("eat")
-		elif feedback.contains(tr("피웠습니다")): sound.effect("fire")
-		elif feedback.contains(tr("공격!")) or feedback=="가까운 적이 없습니다.":
+		elif feedback.contains("피웠습니다"): sound.effect("fire")
+		elif feedback.contains("공격!") or feedback=="가까운 적이 없습니다.":
 			sound.effect("hit")
 			player.equip("spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else "")
 			for enemy in run.enemies:
@@ -1560,7 +1563,7 @@ func suspend_run() -> void:
 
 func floating_feedback(value: String, at: Vector3, color: Color) -> void:
 	var label := Label3D.new()
-	label.text=value
+	label.text=I18n.server(value)
 	label.font_size=32
 	label.pixel_size=0.007
 	label.position=at+Vector3(0,2.1,0)
@@ -1647,6 +1650,7 @@ func leave_run() -> void:
 
 func logout() -> void:
 	if busy: return
+	preload("res://scripts/build_mode.gd").admin = false
 	busy=true
 	screen="logging_out"
 	world_epoch+=1
@@ -1865,6 +1869,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.physical_keycode==KEY_TAB: life.open_map()
 			if event.physical_keycode==KEY_B: life.open_storage()
 			if event.physical_keycode==KEY_C and not is_instance_valid(village_modal): open_craft()
+			if event.physical_keycode==KEY_F9 and preload("res://scripts/build_mode.gd").admin: open_admin()
 			if event.physical_keycode==KEY_O and not is_instance_valid(village_modal): open_wardrobe()
 			if event.physical_keycode==KEY_ESCAPE: cancel_preview()
 			if event.physical_keycode==KEY_R: preview_rotation=(preview_rotation+90)%360
@@ -2238,6 +2243,40 @@ func place_crafted(object_id: String) -> void:
 			select_object(i)
 			await begin_place()
 			return
+
+## Operator tools (F9, admin accounts only): top up currencies through the
+## server's ledgered admin route and jump to any village site.
+func open_admin() -> void:
+	if screen!="village": return
+	var v := modal_card(tr("관리자 도구"))
+	text(v,tr("관리자 계정 전용입니다. 지급 내역은 서버 원장에 남아요."),14)
+	var grants := HBoxContainer.new()
+	grants.add_theme_constant_override("separation",8)
+	v.add_child(grants)
+	for spec in [[tr("별씨 +1000"),{"shards":1000}],[tr("별씨 +10000"),{"shards":10000}],[tr("잎전 +500"),{"coins":500}]]:
+		var amount: Dictionary = spec[1]
+		button(grants,spec[0],func():
+			var reply: Dictionary = await api.post("/v1/admin/grant",api.mutation(amount))
+			if check(reply):
+				message(tr("지급했어요 · 별씨 %d · 잎전 %d") % [int(reply.data.shards),int(reply.data.coins)])
+				await refresh_inventory()
+				await life.refresh())
+	text(v,tr("순간 이동"),16)
+	var places := GridContainer.new()
+	places.columns = 3
+	v.add_child(places)
+	var sites := [[tr("물결빛 광장"),TownLayout.SPAWN],[tr("탐험 출발지"),TownLayout.GATE]]
+	for place in TownLayout.PLACES: sites.append([tr(place.title),place.at])
+	for site in sites:
+		var at: Vector2 = site[1]
+		button(places,site[0],func():
+			close_village_modal()
+			player.position = TownLayout.point(at+Vector2(0,1.2),.3)
+			camera_focus_ready = false)
+	var dev := HBoxContainer.new()
+	v.add_child(dev)
+	button(dev,tr("F3 개발 정보 켜기/끄기"),func():
+		if is_instance_valid(developer_panel): developer_panel.visible = not developer_panel.visible)
 
 func nearest_furniture() -> String:
 	var result := "";var distance := 2.3

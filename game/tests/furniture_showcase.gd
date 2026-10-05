@@ -10,7 +10,7 @@ func run() -> void:
 	h3="--h3" in OS.get_cmdline_user_args()
 	repair="--repair" in OS.get_cmdline_user_args()
 	api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url="http://127.0.0.1:8766"
-	var login: Dictionary=await api.post("/v1/auth/login",{"username":"workshop","password":"tripothon-local-demo"})
+	var login: Dictionary=await api.post("/v1/auth/login",{"username":"workshop","password":"Tripothon-local-demo"})
 	if not login.ok:quit(1);return
 	api.token=login.data.token
 	var listing: Dictionary=await api.request("/v1/studio")

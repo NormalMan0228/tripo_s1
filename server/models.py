@@ -13,6 +13,17 @@ class Credentials(Strict):
 class Mutation(Strict):
     request_id: UUID
 
+
+def strong_password(value: str) -> bool:
+    """New passwords need an uppercase letter and a special character (length is
+    checked by Credentials)."""
+    return any(c.isupper() for c in value) and any(not c.isalnum() for c in value)
+
+
+class AdminGrant(Mutation):
+    shards: int = Field(default=0, ge=0, le=100000)
+    coins: int = Field(default=0, ge=0, le=100000)
+
 class RunStart(Mutation):
     map_id: Literal['forest','quarry','frost'] = 'forest'
     difficulty: Literal['relaxed','standard','veteran'] = 'standard'

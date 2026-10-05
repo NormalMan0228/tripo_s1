@@ -31,7 +31,7 @@ def test_live_starts_without_paid_keys_and_blocks_legacy_generation(tmp_path):
         assert client.get('/health').json()['detail'] == 'https_required'
     with TestClient(app, base_url='https://testserver') as client:
         token = client.post('/v1/auth/register', json={
-            'username': 'live_user', 'password': 'test-password-123',
+            'username': 'live_user', 'password': 'Test-password-123',
             'invitation': settings.registration_code}).json()['token']
         headers = {'Authorization': 'Bearer ' + token}
         assert client.get('/v1/me', headers=headers).json()['generation_enabled'] is False
@@ -57,7 +57,7 @@ def test_paid_live_with_only_tripo_offers_the_simple_craft(tmp_path):
     app = create_app(settings, worker_enabled=False)
     with TestClient(app, base_url='https://testserver') as client:
         token = client.post('/v1/auth/register', json={
-            'username': 'simple_user', 'password': 'test-password-123',
+            'username': 'simple_user', 'password': 'Test-password-123',
             'invitation': settings.registration_code}).json()['token']
         headers = {'Authorization': 'Bearer ' + token}
         # Live accounts start without Starseeds; survival rewards pay for crafts.
@@ -89,7 +89,7 @@ def test_paid_live_limits_user_and_model_before_any_provider_call(tmp_path):
     app = create_app(settings, worker_enabled=False)
     with TestClient(app, base_url='https://testserver') as client:
         token = client.post('/v1/auth/register', json={
-            'username': 'paid_user', 'password': 'test-password-123',
+            'username': 'paid_user', 'password': 'Test-password-123',
             'invitation': settings.registration_code}).json()['token']
         headers = {'Authorization': 'Bearer ' + token}
         with app.state.db.transaction() as db:
