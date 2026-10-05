@@ -84,8 +84,8 @@ func run() -> void:
 	for offset in [Vector2(3,2),Vector2(-3,3),Vector2(4,-2),Vector2(0,4),Vector2(-4,-1),Vector2(5,5)]:
 		if not is_instance_valid(app.preview): break
 		var spot: Vector2 = Town.furniture_local(app.player.position)+offset
+		# The preview follows the mouse every frame, so check and place in the same frame.
 		app.preview.position = Town.furniture_point(spot.x,spot.y)
-		await physics_frame
 		if not app.placement_problem().is_empty(): continue
 		await app.place_preview()
 		placed = app.me.objects.any(func(o): return o.id==object_id and o.state=="placed")
