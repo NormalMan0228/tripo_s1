@@ -443,7 +443,9 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	if busy: return
 	host = host.strip_edges().trim_suffix("/")
 	var local_pattern := RegEx.new()
-	local_pattern.compile("^http://(127\\.0\\.0\\.1|localhost):[0-9]{1,5}$")
+	# Plain HTTP only for this PC or a private home network (a friend's PC hosting
+	# the server on the same router); anything on the internet needs HTTPS.
+	local_pattern.compile("^http://(127\\.0\\.0\\.1|localhost|10(\\.[0-9]{1,3}){3}|192\\.168(\\.[0-9]{1,3}){2}|172\\.(1[6-9]|2[0-9]|3[01])(\\.[0-9]{1,3}){2}):[0-9]{1,5}$")
 	if not (host.begins_with("https://") or local_pattern.search(host)!=null):
 		message(tr("원격 서버는 HTTPS 주소를 사용하세요."))
 		return
@@ -1753,7 +1755,8 @@ func _process(delta: float) -> void:
 				var npc := nearest_npc()
 				var activity: Dictionary=life.closest()
 				var prompt_text := ""
-				if not activity.is_empty(): prompt_text="E  "+tr(activity.title)
+				if not activity.is_empty() and social.visiting() and activity.get("id","")=="home": prompt_text="E  "+tr("%s님의 집 들어가기") % str(social.data.get("host_name",tr("친구")))
+				elif not activity.is_empty(): prompt_text="E  "+tr(activity.title)
 				elif npc: prompt_text="E  "+tr("%s와 대화") % tr(npc.get_meta("title"))
 				elif near(TownLayout.GATE,3): prompt_text="E  "+tr("탐험 떠나기")
 				elif near(TownLayout.HOME_DOOR,2): prompt_text="E  "+tr("나의 집 들어가기")
@@ -2084,11 +2087,16 @@ func open_wardrobe() -> void:
 
 
 func open_studio(destination: String="workshop") -> void:
+	var session := {"token":api.token,"url":api.base_url,"room":destination,"multiplayer":social.enabled}
 	if social.visiting():
-		message(tr("방문 중에는 마을 바깥에서 함께 산책할 수 있습니다. 실내 편집은 내 마을에서 해 주세요."))
-		return
+		# Friends may step into the host's home to look around; the workshop stays private.
+		if destination!="home":
+			message(tr("친구의 공방은 들어갈 수 없어요. 친구 집에는 놀러 갈 수 있어요."))
+			return
+		session.visit_host=str(social.data.get("host_id",""))
+		session.visit_name=str(social.data.get("host_name",tr("친구")))
 	if busy or api.token.is_empty(): return
-	Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":destination})
+	Engine.set_meta("studio_session",session)
 	var veil := Transition.of(get_tree())
 	veil.play_door("open")
 	player.controls_enabled=false

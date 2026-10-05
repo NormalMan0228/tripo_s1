@@ -53,6 +53,8 @@ func _fade(alpha: float, seconds: float) -> void:
 
 ## "open" is a wooden latch and creak; "close" a soft thud.
 func play_door(kind: String) -> void:
+	# The node joins the root one idle step after a scene first asks for it.
+	if not door.is_inside_tree(): await ready
 	door.stream = door_sound(kind)
 	door.play()
 

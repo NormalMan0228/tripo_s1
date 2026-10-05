@@ -79,7 +79,8 @@ func closest() -> Dictionary:
 	return {}
 func interact() -> void:
 	if app.social.visiting():
-		app.social.open_menu()
+		if closest().get("id","")=="home": app.open_studio("home")
+		else: app.social.open_menu()
 		return
 	var place := closest()
 	if place.is_empty(): return

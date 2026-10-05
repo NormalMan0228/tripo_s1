@@ -1,6 +1,7 @@
-# -ServerOnly starts or reuses the Tripo-enabled server without opening a client,
-# for hosting other players' logins or running client tests.
-param([switch]$ServerOnly)
+# -ServerOnly starts or reuses the Tripo-enabled server without opening a client.
+# -Lan also accepts logins from other PCs on the same router (http://<this PC's
+# LAN address>:8765). Windows may ask once to allow Python through the firewall.
+param([switch]$ServerOnly, [switch]$Lan)
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskPython = Join-Path $taskRoot '.tools\server-venv\Scripts\python.exe'
@@ -33,6 +34,15 @@ if (Test-Path -LiteralPath $taskPidFile) {
     }
 }
 $taskReuse = $taskHealth -and $taskHealth.service -eq 'tripothon' -and $taskHealth.protocol -eq 6 -and $taskManaged
+# A running server bound to the wrong interface is restarted with the requested one.
+if ($taskReuse -and ($taskManaged.CommandLine -like '*0.0.0.0*') -ne [bool]$Lan) {
+    Stop-Process -Id $taskManaged.ProcessId -ErrorAction Stop
+    for ($taskAttempt=0; $taskAttempt -lt 30; $taskAttempt++) {
+        try { Invoke-RestMethod 'http://127.0.0.1:8765/health' -TimeoutSec 1 | Out-Null; Start-Sleep -Milliseconds 100 } catch { break }
+    }
+    $taskHealth = $null
+    $taskReuse = $false
+}
 if ($taskHealth -and -not $taskReuse) {
     if ($taskHealth.service -ne 'tripothon' -or $taskHealth.protocol -ne 6 -or $taskHealth.mode -ne 'demo') {
         throw 'Port 8765 is occupied by another or incompatible server.'
@@ -82,7 +92,7 @@ if (-not $taskReuse) {
     $env:TRIPO_MODEL = 'v3.1-20260211'
     $env:TRIPO_DAILY_REQUEST_LIMIT = '5'
     $env:TRIPO_RESERVE_PER_JOB = '200'
-    $taskServer = Start-Process -FilePath $taskPython -ArgumentList @('-m','uvicorn','server.app:create_app','--factory','--host','127.0.0.1','--port','8765','--workers','1','--no-access-log','--no-proxy-headers') -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $taskRoot 'artifacts\tripo-game-server.log') -RedirectStandardError (Join-Path $taskRoot 'artifacts\tripo-game-server-error.log')
+    $taskServer = Start-Process -FilePath $taskPython -ArgumentList @('-m','uvicorn','server.app:create_app','--factory','--host',$(if ($Lan) { '0.0.0.0' } else { '127.0.0.1' }),'--port','8765','--workers','1','--no-access-log','--no-proxy-headers') -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $taskRoot 'artifacts\tripo-game-server.log') -RedirectStandardError (Join-Path $taskRoot 'artifacts\tripo-game-server-error.log')
     $taskServer.Id | Set-Content -LiteralPath $taskPidFile
     $taskHealth = $null
     for ($taskAttempt=0; $taskAttempt -lt 40; $taskAttempt++) {
@@ -98,6 +108,12 @@ if (-not $taskHealth -or $taskHealth.service -ne 'tripothon' -or $taskHealth.pro
 # The game process never needs the API key or its file path.
 Remove-Item Env:TRIPO_API_KEY_FILE -ErrorAction SilentlyContinue
 Remove-Item Env:TRIPO_API_KEY -ErrorAction SilentlyContinue
+if ($Lan) {
+    $taskAddresses = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+        Where-Object { $_.IPAddress -match '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.)' } |
+        ForEach-Object { 'http://' + $_.IPAddress + ':8765' }
+    Write-Output ('Friends on the same router can log in at: ' + ($taskAddresses -join ', '))
+}
 if ($ServerOnly) {
     Write-Output ('Tripo-enabled server is ready at http://127.0.0.1:8765. Available provider credits: ' + $taskCheck.available_credits)
     exit 0

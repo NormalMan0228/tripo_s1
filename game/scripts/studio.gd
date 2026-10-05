@@ -39,6 +39,16 @@ var placed: Dictionary={}
 var inspected: Node3D
 var ghost: Node3D
 var room := "workshop"
+## Home visits: a friend's home opens read-only; everyone inside the same home
+## shares presence so visitors and the host see each other.
+var visit_host := ""
+var visit_name := ""
+var dock_panel: Control
+var room_buttons: Array[Button] = []
+var peers: Dictionary = {}
+var presence_time := 0.0
+var presence_pending := false
+var shared_presence := false
 var placement_mode := false
 var placement_rotation := 0
 var place_at := Vector3.ZERO
@@ -97,9 +107,17 @@ func _ready() -> void:
 		var session: Dictionary=Engine.get_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
 		room=session.get("room","workshop")
+		visit_host=str(session.get("visit_host",""))
+		visit_name=str(session.get("visit_name",""))
+		shared_presence=bool(session.get("multiplayer",false)) and room=="home"
 		Engine.remove_meta("studio_session")
 	build_ui()
 	build_stage()
+	if not visit_host.is_empty():
+		# Visitors only look around: no inventory, crafting, room switching or editing.
+		dock_panel.visible=false
+		for b in room_buttons: b.visible=false
+		message(tr("%s님의 집에 놀러 왔어요. 가구는 구경만 할 수 있어요.") % visit_name)
 	if api.token.is_empty():
 		message(tr("마을에서 로그인한 뒤 공방으로 들어오세요."))
 	else: await refresh()
@@ -181,10 +199,10 @@ func build_ui() -> void:
 	status_label=label(f,tr("서버에 연결하고 있어요"),14)
 	label(f,tr("WASD 이동   E 상호작용   R 회전   Esc 취소"),12).modulate=Color("817960")
 	var nav := row(f)
-	button(nav,tr("내 집"),func(): await change_room("home"))
-	button(nav,tr("공방"),func(): await change_room("workshop"))
+	room_buttons.append(button(nav,tr("내 집"),func(): await change_room("home")))
+	room_buttons.append(button(nav,tr("공방"),func(): await change_room("workshop")))
 	button(nav,tr("마을로 나가기"),leave)
-	var dock := MarginContainer.new();dock.custom_minimum_size.x=380;dock.add_theme_constant_override("margin_left",16);dock.add_theme_constant_override("margin_right",16);dock.add_theme_constant_override("margin_top",14);layout.add_child(dock)
+	var dock := MarginContainer.new();dock_panel=dock;dock.custom_minimum_size.x=380;dock.add_theme_constant_override("margin_left",16);dock.add_theme_constant_override("margin_right",16);dock.add_theme_constant_override("margin_top",14);layout.add_child(dock)
 	var box := VBoxContainer.new();dock.add_child(box)
 	wallet=label(box,tr("나의 공방"),18)
 	quote_panel=VBoxContainer.new();box.add_child(quote_panel);quote_panel.visible=false
@@ -333,9 +351,13 @@ func message(value: String) -> void:
 	if not BuildMode.developer():
 		var words := {"insufficient_shards":tr("별씨가 부족해요. 탐험 보상을 모아 보세요."),"stale_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"stale_runtime_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"not_found":tr("물건을 찾을 수 없어요. 보관함을 새로고침해 주세요."),"unauthorized":tr("다시 로그인해 주세요."),"geometry_disabled":tr("지금은 새 가구 제작을 준비하고 있어요."),"placement_overlap":tr("다른 가구와 겹쳐요."),"placement_out_of_bounds":tr("벽과 출입문에서 떨어진 곳에 놓아 주세요."),"model_download_failed":tr("가구를 읽지 못했어요. 잠시 뒤 다시 골라 주세요.")}
 		var pattern := RegEx.new();pattern.compile("[a-z][a-z0-9]*_[a-z0-9_]+")
+		# Only known codes, or a reply that is nothing but a code, are rewritten;
+		# player names such as host_841 stay as they are.
+		if pattern.search(value) and pattern.search(value).get_string()==value.strip_edges() and not words.has(value.strip_edges()):
+			value=tr("지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.")
 		for match_value in pattern.search_all(value):
 			var code: String=match_value.get_string()
-			value=value.replace(code,words.get(code,tr("지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.")))
+			if words.has(code): value=value.replace(code,words[code])
 	status_label.text=value
 
 func build_stage() -> void:
@@ -371,6 +393,7 @@ func build_stage() -> void:
 func build_room() -> void:
 	for child in room_root.get_children():child.queue_free()
 	title_label.text=tr("나의 작은 집") if room=="home" else tr("물결빛 공방")
+	if not visit_host.is_empty(): title_label.text=tr("%s님의 집") % visit_name
 	var shell_path := "res://assets/cozy_home.glb" if room=="home" else "res://assets/cozy_workshop.glb"
 	if ResourceLoader.exists(shell_path):
 		var shell := (load(shell_path) as PackedScene).instantiate() as Node3D
@@ -409,6 +432,9 @@ func build_room() -> void:
 			for z in [-3.5,-2.7]:Art.box(room_root,Vector3(x,0.4,z),Vector3(0.1,0.8,0.1),Color("785d43"))
 
 func refresh() -> void:
+	if not visit_host.is_empty():
+		await share_presence()
+		return
 	if refreshing:return
 	refreshing=true
 	var response: Dictionary=await api.request("/v1/studio")
@@ -489,10 +515,12 @@ func clear_owned() -> void:
 	placed.clear()
 
 func load_item(obj: Dictionary) -> Node3D:
-	var value: Node3D=await Assembly.fetch(api,obj.id)
+	# A visitor reads the host's furniture through the read-only guest routes.
+	var prefix := "/v1/objects/" if visit_host.is_empty() else "/v1/social/village/objects/"
+	var value: Node3D=await Assembly.fetch(api,obj.id,prefix)
 	if value:return value
 	if obj.get("studio",false):return null
-	var response: Dictionary=await api.request("/v1/objects/"+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
+	var response: Dictionary=await api.request(prefix+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
 	if not response.ok:return null
 	value=Loader.load_bytes(response.bytes)
 	if value:Loader.paint(value,Color(obj.color))
@@ -857,6 +885,59 @@ func update_capacity() -> void:
 func _exit_tree() -> void:
 	if not Engine.has_meta("studio_session"): preload("res://scripts/town.gd").discard_kept()
 
+## Shares this walker's spot inside the home and, for visitors, loads the host's
+## furniture. Everyone in the same home sees the others (server: mp_presence).
+func share_presence() -> void:
+	if presence_pending or not is_instance_valid(hero) or api.token.is_empty(): return
+	presence_pending=true
+	var heading: float=hero.visual.rotation.y if is_instance_valid(hero.visual) else 0.0
+	var response: Dictionary=await api.post("/v1/social/presence",{"scene":"home","x":hero.position.x,"z":hero.position.z,"y":0.0,"yaw":wrapf(heading,-PI,PI)})
+	presence_pending=false
+	if not response.ok or not is_inside_tree(): return
+	var space = response.data.get("space")
+	if not space is Dictionary: return
+	if not visit_host.is_empty():
+		if str(space.host_id)!=visit_host:
+			message(tr("방문이 끝나 마을로 돌아갑니다."))
+			visit_host=""
+			leave()
+			return
+		var objects: Array=space.objects
+		for obj in objects: obj.room="home"
+		var signature := JSON.stringify(objects)
+		if signature!=str(data.get("signature","")):
+			data={"objects":objects,"signature":signature}
+			await reload_placed()
+	var self_id := str(response.data.get("self_id",""))
+	var present := {}
+	for record in space.players:
+		if str(record.id)==self_id: continue
+		present[record.id]=true
+		if not peers.has(record.id):
+			var body: Node3D=preload("res://scripts/player.gd").new()
+			body.controls_enabled=false;body.visual_only=true
+			stage.add_child(body)
+			body.apply_avatar(record.get("avatar",{}))
+			body.position=Vector3(record.x,0,record.z)
+			var plate := Art.label3d(body,str(record.username),Vector3(0,2.05,0),Color("f0dfba"))
+			plate.font_size=30;plate.outline_size=4
+			peers[record.id]={"node":body,"target":Vector3(record.x,0,record.z)}
+		peers[record.id].target=Vector3(record.x,0,record.z)
+	for id in peers.keys():
+		if not present.has(id):
+			if is_instance_valid(peers[id].node): peers[id].node.queue_free()
+			peers.erase(id)
+
+func update_peers(delta: float) -> void:
+	for entry in peers.values():
+		var body: Node3D=entry.node
+		if not is_instance_valid(body): continue
+		var before: Vector3=body.position
+		body.position=body.position.lerp(entry.target,ControllerProfile.damping(8.0,delta))
+		var moved := Vector2(body.position.x-before.x,body.position.z-before.z)/maxf(delta,.001)
+		body.external_velocity=moved if moved.length()>.05 else Vector2.ZERO
+		body.external_motion=body.external_velocity.normalized()
+
 func leave() -> void:
 	var veil := Transition.of(get_tree())
 	if veil.veil.modulate.a > 0.5: return
@@ -878,7 +959,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		else:interact_nearest()
 
 func interact_nearest() -> void:
-	if not is_instance_valid(hero) or pending:return
+	if not is_instance_valid(hero) or pending or not visit_host.is_empty():return
 	var nearest := "";var distance := 2.3
 	for id in placed:
 		var d: float=hero.position.distance_to(placed[id].position)
@@ -888,7 +969,7 @@ func interact_nearest() -> void:
 		if data.objects[i].id==nearest:await select_item(i);await interact_selected();return
 
 func proximity() -> void:
-	if proximity_pending or pending or not is_instance_valid(hero):return
+	if proximity_pending or pending or not is_instance_valid(hero) or not visit_host.is_empty():return
 	proximity_pending=true
 	var snapshot := placed.keys()
 	for id in snapshot:
@@ -927,8 +1008,14 @@ func _process(delta: float) -> void:
 		placement_marker.position=Vector3(place_at.x,0.065,place_at.z)
 		placement_marker.material_override.albedo_color=Color("87c7a7",.32) if placement_problem(place_at).is_empty() else Color("d27566",.32)
 	poll_time+=delta;auth_time+=delta
-	if poll_time>2.5:poll_time=0;poll_job()
-	if auth_time>20:auth_time=0;refresh()
+	if visit_host.is_empty():
+		if poll_time>2.5:poll_time=0;poll_job()
+		if auth_time>20:auth_time=0;refresh()
+	presence_time+=delta
+	if (shared_presence or not visit_host.is_empty()) and presence_time>0.35:
+		presence_time=0
+		share_presence()
+	update_peers(delta)
 	proximity_time+=delta
 	if proximity_time>0.35:proximity_time=0;proximity()
 	if not is_instance_valid(hero):return

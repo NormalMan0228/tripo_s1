@@ -176,6 +176,18 @@
    "en": "Visiting %s's village",
    "zh": "正在拜访%s的村庄"
   },
+  "%s님의 집": {
+   "en": "%s's Home",
+   "zh": "%s的家"
+  },
+  "%s님의 집 들어가기": {
+   "en": "Enter %s's home",
+   "zh": "进入%s的家"
+  },
+  "%s님의 집에 놀러 왔어요. 가구는 구경만 할 수 있어요.": {
+   "en": "You're visiting %s's home. You can look at the furniture but not change it.",
+   "zh": "你正在%s家做客。家具只能观赏，不能更改。"
+  },
   "%s와 대화": {
    "en": "Talk to %s",
    "zh": "与%s交谈"
@@ -1419,6 +1431,10 @@
   "방문 중에는 함께하기 메뉴에서 대화하거나 내 마을로 돌아갈 수 있습니다.": {
    "en": "While visiting, you can chat or return to your village from the Play Together menu.",
    "zh": "拜访期间，可在一起玩菜单中聊天或返回自己的村庄。"
+  },
+  "방문이 끝나 마을로 돌아갑니다.": {
+   "en": "The visit has ended. Heading back to the village.",
+   "zh": "拜访已结束，正在返回村庄。"
   },
   "방문한 마을의 텃밭과 물건은 주인만 수정할 수 있습니다.": {
    "en": "Only the owner can change Garden plots and items in a visited village.",
@@ -2867,6 +2883,10 @@
   "친구": {
    "en": "Friends",
    "zh": "好友"
+  },
+  "친구의 공방은 들어갈 수 없어요. 친구 집에는 놀러 갈 수 있어요.": {
+   "en": "You can't enter a friend's workshop, but you can visit their home.",
+   "zh": "不能进入朋友的工坊，但可以去朋友家做客。"
   },
   "캐릭터가 서 있는 곳은 비워 주세요.": {
    "en": "Keep the spot where your character stands clear.",

@@ -43,8 +43,12 @@ class Invite(Mutation):
     kind: Literal['village', 'party']
 
 
+# Visitors may walk the host's village and the host's home interior.
+VISIBLE_SCENES = ('village', 'home')
+
+
 class Presence(Strict):
-    scene: Literal['village', 'away'] = 'village'
+    scene: Literal['village', 'home', 'away'] = 'village'
     x: float = Field(default=0, ge=-100, le=100)
     z: float = Field(default=3, ge=-100, le=100)
     y: float = Field(default=0, ge=-20, le=40)
@@ -109,17 +113,17 @@ class Multiplayer:
             return dict(self_id=user['id'], host_id=host, host_name=host_name, visiting=host != user['id'],
                         party=party_public(conn, user['id']), invites=invites, pending_rewards=pending, messages=messages)
 
-        def village(conn, user):
+        def village(conn, user, scene='village'):
             host = host_for(conn, user['id'])
-            objects = [dict(r) for r in conn.execute("SELECT o.id,o.name,o.color,o.version,o.state,o.x,o.z,o.rotation,COALESCE(l.room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE asset_id=o.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=o.id) AS runtime_version FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village')='village' ORDER BY o.id", (host,))]
+            objects = [dict(r) for r in conn.execute("SELECT o.id,o.name,o.color,o.version,o.state,o.x,o.z,o.rotation,COALESCE(l.room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE asset_id=o.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=o.id) AS runtime_version FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village')=? ORDER BY o.id", (host, scene))]
             players = []
-            for row in conn.execute("SELECT p.*,u.username FROM mp_presence p JOIN users u ON u.id=p.user_id WHERE p.host_id=? AND p.scene='village' AND p.seen>? AND (p.user_id=? OR EXISTS(SELECT 1 FROM mp_visits v WHERE v.user_id=p.user_id AND v.host_id=? AND v.expires>?))", (host, clock()-coop.PRESENCE_SECONDS, host, host, clock())):
+            for row in conn.execute("SELECT p.*,u.username FROM mp_presence p JOIN users u ON u.id=p.user_id WHERE p.host_id=? AND p.scene=? AND p.seen>? AND (p.user_id=? OR EXISTS(SELECT 1 FROM mp_visits v WHERE v.user_id=p.user_id AND v.host_id=? AND v.expires>?))", (host, scene, clock()-coop.PRESENCE_SECONDS, host, host, clock())):
                 players.append(dict(id=row['user_id'], username=row['username'], x=row['x'], z=row['z'], y=row['y'], yaw=row['yaw'], avatar=profile(conn, row['user_id'])['avatar']))
             row = conn.execute('SELECT state FROM homesteads WHERE user_id=?', (host,)).fetchone()
             life = homestead.public(json.loads(row[0]) if row else homestead.initial(), clock())
             # Visitors can see crops, not the host's private inventory or fishing outcome.
             crops = {'version': life['version'], 'plots': life['plots'], 'server_time': clock()}
-            return dict(host_id=host, objects=objects, players=players, crops=crops)
+            return dict(host_id=host, scene=scene, objects=objects, players=players, crops=crops if scene == 'village' else None)
 
         @app.get('/v1/social')
         def social(request: Request):
@@ -132,7 +136,8 @@ class Multiplayer:
                 user = auth(conn, request)
                 host = host_for(conn, user['id'])
                 conn.execute('INSERT INTO mp_presence(user_id,host_id,scene,x,z,y,yaw,seen) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,scene=excluded.scene,x=excluded.x,z=excluded.z,y=excluded.y,yaw=excluded.yaw,seen=excluded.seen', (user['id'], host, body.scene, body.x, body.z, body.y, body.yaw, clock()))
-                return {**overview(conn, user), 'village': village(conn, user) if body.scene == 'village' else None}
+                space = village(conn, user, body.scene) if body.scene in VISIBLE_SCENES else None
+                return {**overview(conn, user), 'village': space if body.scene == 'village' else None, 'space': space}
 
         @app.post('/v1/social/invites')
         def invite(body: Invite, request: Request):
@@ -339,7 +344,7 @@ class Multiplayer:
             return mutate(request, body, 'coop_claim:'+run_id, apply)
 
         def visible_object(conn, user_id, object_id):
-            row = conn.execute("SELECT o.* FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.id=? AND o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village')='village'", (object_id, host_for(conn, user_id))).fetchone()
+            row = conn.execute("SELECT o.* FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.id=? AND o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village') IN ('village','home')", (object_id, host_for(conn, user_id))).fetchone()
             if not row:
                 fail('object_not_found', 404)
             return row
