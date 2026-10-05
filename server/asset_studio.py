@@ -126,6 +126,11 @@ def billing(parts):
             else:missing=True
     return {'known_tripo_credits':sum(reported),'tripo_credits_consumed':None if missing else sum(reported),'billing_complete':not missing}
 
+# A quote awaiting the owner's confirmation has not reached Tripo, so it must
+# not block other players. The single-provider limit is enforced again at confirm.
+def provider_busy(conn,exclude=''):
+    return conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled','awaiting_confirmation') AND id!=?",(exclude,)).fetchone() or         conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone()
+
 class Studio:
     def __init__(self,app,db,settings,clock,provider,auth,mutate,money,own,new_object,assets,designer=None,profile=None):
         self.db,self.settings,self.clock,self.provider=db,settings,clock,provider
@@ -185,7 +190,7 @@ class Studio:
                 if body.image_mode=='refine' and (not body.image or body.geometry!='tripo'):fail('refinement_requires_image_and_tripo')
                 if conn.execute("SELECT 1 FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled')",(user['id'],)).fetchone():fail('generation_pending')
                 if body.geometry=='tripo':
-                    if conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled')").fetchone() or conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone():fail('provider_busy')
+                    if provider_busy(conn):fail('provider_busy')
                 count=conn.execute('SELECT count(*) FROM studio_jobs WHERE created>=?',(int(clock()//86400)*86400,)).fetchone()[0]
                 if count>=settings.daily_generation_limit:fail('daily_generation_limit',429)
                 if settings.mode=='live':
@@ -247,6 +252,7 @@ class Studio:
                 if not row:fail('job_not_found',404)
                 if row['state']!='awaiting_confirmation':fail('not_awaiting_confirmation')
                 if not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
+                if provider_busy(conn,job_id):fail('provider_busy')
                 quote=json.loads(row['provenance'])
                 total=max(row['cost'],int(quote.get('quoted_game_cost',row['cost'])))
                 if total>row['cost']:money(conn,user['id'],row['cost']-total,'studio_quote_charge',job_id)

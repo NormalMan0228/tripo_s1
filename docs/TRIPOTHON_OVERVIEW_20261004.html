@@ -104,8 +104,8 @@ main{margin:0 0 0 270px;padding:48px 4vw 80px;max-width:1510px}article{backgroun
 </tr>
 <tr>
 <td>멀티플레이</td>
-<td><strong>최대 3인 마을 방문 / 2–3인 협동 생존을 로컬 검증</strong></td>
-<td>최신 서버 배포, 서로 다른 집·네트워크에서 검증</td>
+<td><strong>최대 3인 마을 방문 / 2–3인 협동 생존을 로컬 검증.</strong> 10/5 온라인 서버 반영 확인</td>
+<td>2인 PC방 → 3인 서로 다른 집·네트워크 온라인 검증</td>
 </tr>
 <tr>
 <td>거래</td>
@@ -124,7 +124,7 @@ main{margin:0 0 0 270px;padding:48px 4vw 80px;max-width:1510px}article{backgroun
 </tr>
 </tbody>
 </table></div>
-<p><strong>온라인과 로컬은 같은 상태가 아닙니다.</strong> 이번에 확인한 원격 <code>/health</code>는 <code>mode=live</code>, <code>protocol=6</code>, <code>studio_tripo_enabled=false</code>를 반환했습니다. 멀티플레이 버전 필드는 응답에 표시되지 않았습니다. 따라서 온라인 데모에서 최신 협동 기능이나 유료 Tripo 생성을 바로 쓸 수 있다고 안내하면 안 됩니다.</p>
+<p><strong>온라인과 로컬은 같은 상태가 아닙니다.</strong> 10/4 작성 당시 원격 <code>/health</code>에는 멀티플레이 필드가 없었습니다. <strong>2026-10-05 재확인 결과</strong> <code>mode=live</code>, <code>protocol=6</code>, <code>studio_tripo_enabled=false</code>와 함께 <code>multiplayer_protocol: 1</code>, <code>max_party_members: 3</code>을 반환하므로 협동 서버 코드는 온라인에 반영되어 있습니다. 다만 온라인에서 실제 여러 PC로 플레이한 검증 기록은 아직 없습니다. 배포 시각·백업·기존 데이터 보존도 기록되지 않았습니다(<a href="MULTIPLAYER_20261004.md#온라인-반영-기록">반영 기록</a>). 유료 Tripo 생성은 온라인에서 계속 꺼져 있습니다.</p>
 <p>기존 상세 문서의 “멀티플레이 미구현”과 오래된 캐릭터 우선순위는 작성 당시의 기록입니다. 최신 멀티플레이 상태는 <a href="MULTIPLAYER_20261004.md">멀티플레이 개발 기록</a>, 캐릭터 방향은 <a href="../art/characters/explorer_b_pipeline_v3/pipeline.json">새 제작 파이프라인 명세</a>를 우선합니다.</p>
 <h2 id="3">3. 전체 개발 계획: 큰 방향과 실제 단계</h2>
 <h3 id="_2">큰 방향은 다섯 가지입니다</h3>
@@ -613,7 +613,7 @@ studio_jobs (생성 요청과 진행)
 <tr>
 <td><strong>최신 멀티플레이 테스트본</strong></td>
 <td>3인 방문·협동 검증</td>
-<td><code>builds/Tripothon_Multiplayer_Test</code>. 같은 폴더의 EXE와 PCK를 함께 사용. 맞는 최신 서버 필요</td>
+<td><code>builds/Tripothon_Multiplayer_Test</code>. 같은 폴더의 EXE와 PCK를 함께 사용. 기본 온라인 서버(10/5 반영 확인)에 연결</td>
 </tr>
 <tr>
 <td><strong>플레이어용 / 개발자용 빌드</strong></td>
@@ -695,8 +695,8 @@ studio_jobs (생성 요청과 진행)
 </tr>
 <tr>
 <td><strong>병행 A</strong></td>
-<td>최신 멀티플레이 서버 배포 준비 및 외부 테스트</td>
-<td>서로 다른 네트워크의 3인 방문·협동·재접속·보상 검증 기록</td>
+<td>멀티플레이 온라인 검증 (서버 반영은 10/5 확인). 2인 PC방 검증 → 3인 외부 테스트</td>
+<td>2인 PC방 체크리스트 결과 기록, 이어서 서로 다른 네트워크의 3인 방문·협동·재접속·보상 검증 기록</td>
 </tr>
 <tr>
 <td><strong>병행 B</strong></td>

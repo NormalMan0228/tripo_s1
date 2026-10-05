@@ -16,10 +16,16 @@ var status_label: Label
 var menu_messages: Label
 var last_failure := 0.0
 
+## Multiplayer is parked until online verification. Tests opt in with the
+## "multiplayer_feature" engine meta; --multiplayer opts in a client by hand.
+static func feature_enabled() -> bool:
+	return Engine.has_meta("multiplayer_feature") or OS.get_cmdline_user_args().has("--multiplayer")
+
 func visiting() -> bool:
 	return enabled and bool(data.get("visiting", false))
 
 func install_hud(survival: bool) -> void:
+	if not feature_enabled(): return
 	var box: VBoxContainer = app.panel(Vector2(350, 88 if survival else 24), 560, "hero")
 	var row := HBoxContainer.new()
 	box.add_child(row)

@@ -4,6 +4,12 @@
 
 [제작 현황·자료·실행 계획 통합 문서](docs/TRIPOTHON_MASTER_HANDOFF_20261003.md)에서 상단 요약, 현재 완료 상태, 기존 8단계 계획, 추천 처리 순서, 영상·강의·공식 문서, 모델·비용과 실행 방법을 확인할 수 있습니다. [목차가 있는 HTML 뷰어](http://127.0.0.1:8842/master-handoff/index.html)는 로컬 보고서 서버에서 열립니다. 문서의 오프라인 묶음에는 선별 참고 문서·사진·검토 영상이 포함됩니다.
 
+## 멀티플레이 보류 · 2026-10-05
+
+멀티플레이(마을 방문·협동 생존)는 온라인 검증을 나중에 하기로 하고 게임 화면에서 뺐습니다. 클라이언트에 `함께하기` 메뉴가 나오지 않습니다. 서버의 멀티플레이 API·DB 테이블·검사는 그대로 남아 있으며, 클라이언트를 `--multiplayer` 사용자 인자로 실행하거나 `game/tests/multiplayer.gd` 검사를 돌릴 때만 다시 켜집니다. 상세 상태와 검증 계획은 [멀티플레이 기록](docs/MULTIPLAYER_20261004.md)에 있습니다.
+
+서버와 DB는 계속 필요합니다. 게임 중 Tripo 생성은 이 PC에서 [Play_Tripo.cmd](Play_Tripo.cmd)로 사용합니다. 로컬 FastAPI 서버가 데스크톱의 `tripo_key.txt`를 서버에서만 읽고, 개발용 클라이언트가 그 서버에 연결합니다. 확정하지 않은 견적 하나가 남아 있으면 이후 모든 생성이 `provider_busy`로 거부되던 문제를 고쳤습니다. 이제 Tripo 동시 1건 제한은 확정 시점에 검사합니다. `play_tripo.ps1`은 이 프로젝트 `builds` 폴더의 어떤 무과금 샘플 서버가 떠 있어도 백업한 뒤 교체합니다.
+
 ## 0.9.2 조작·카메라·공간 크기 기준 · 2026-10-03
 
 2026-10-05 용량 정리로 구버전 데모 클라이언트와 일부 이전 배포 ZIP을 제거했습니다. 현재 실행은 `builds/Tripothon_Baseline_092`, 개발 실행은 `builds/windows`를 사용합니다. 아래 구버전 실행 경로는 당시 기록입니다. 검토 페이지의 중복 파일은 원본을 참조하며, 강의 실습자료 재추출 방법은 `artifacts/stefan-course-audit-20261004/RESTORE_ASSIGNMENTS.txt`에 있습니다. 같은 날 실패·대체된 주인공 시도(`art/characters/explorer_b_*` v1~v12·v14, `face_rig_manual_*`, HD 재시작, P2 흉상 등과 그 검토 사본, `labs/face_rig_v10~v12`, `artifacts/characters`의 v1·body-v3·detailed-v2·tripo-walk·v5)를 영구 삭제했습니다. 문서에 남은 해당 경로는 기록용이며, 현재 작업본은 `art/characters/explorer_b_mesh_reset_v13`(사용자 원본 머리 포함), 게임 주인공은 `explorer-b-hand-v4`입니다. 지도·실험실 대용량 에셋, NPC 캐릭터, `output/`은 로컬에만 두고 GitHub에는 올리지 않습니다.

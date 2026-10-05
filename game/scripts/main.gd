@@ -157,7 +157,7 @@ func _ready() -> void:
 		Engine.remove_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
 		var server_status: Dictionary = await api.request("/health")
-		social.enabled = server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
+		social.enabled = social.feature_enabled() and server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
 		await enter_village()
 		player.position=TownLayout.HOME_RETURN if session.get("room")=="home" else Vector3(-5,0.1,-2.6)
 		follow_camera(1)
@@ -382,7 +382,7 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	busy = false
 	if not check(result): return
 	social.reset_session()
-	social.enabled = int(health.data.get("multiplayer_protocol", 0)) == 1
+	social.enabled = social.feature_enabled() and int(health.data.get("multiplayer_protocol", 0)) == 1
 	api.token = result.data.token
 	api.mode = result.data.mode
 	await enter_village()

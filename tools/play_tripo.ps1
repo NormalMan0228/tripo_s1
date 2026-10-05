@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskPython = Join-Path $taskRoot '.tools\server-venv\Scripts\python.exe'
 $taskGame = Join-Path $taskRoot 'builds\windows\Tripothon_Developer.exe'
-$taskPortableServer = Join-Path $taskRoot 'builds\Tripothon_Demo_081\server\TripothonDemoServer.exe'
+$taskBuilds = Join-Path $taskRoot 'builds'
 $taskDataRoot = Join-Path $env:LOCALAPPDATA 'TripothonDemo'
 $taskData = Join-Path $taskDataRoot 'server-data'
 $taskKeyFile = Join-Path $env:USERPROFILE 'Desktop\tripo_key.txt'
@@ -38,7 +38,10 @@ if ($taskHealth -and -not $taskReuse) {
     if (-not (Test-Path -LiteralPath $taskPortablePidFile)) { throw 'The running demo server is not managed by this project.' }
     $taskPortableId = [int](Get-Content -LiteralPath $taskPortablePidFile)
     $taskPortableProcess = Get-CimInstance Win32_Process -Filter "ProcessId=$taskPortableId" -ErrorAction SilentlyContinue
-    if (-not $taskPortableProcess -or $taskPortableProcess.ExecutablePath -ne $taskPortableServer) {
+    # Any packaged sample server from this project's builds folder shares the same data directory.
+    $taskPortablePath = if ($taskPortableProcess) { [string]$taskPortableProcess.ExecutablePath } else { '' }
+    if (-not $taskPortableProcess -or -not $taskPortablePath.StartsWith($taskBuilds + '\',[StringComparison]::OrdinalIgnoreCase) -or
+        (Split-Path -Leaf $taskPortablePath) -ne 'TripothonDemoServer.exe') {
         throw 'The running demo server does not match the saved project process.'
     }
 }

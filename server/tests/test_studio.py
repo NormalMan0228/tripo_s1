@@ -244,6 +244,24 @@ def test_preflight_preview_is_private_readonly_and_never_calls_provider(tmp_path
         assert c.get('/v1/me',headers=a).json()==before
         assert c.get('/v1/studio/jobs/'+job,headers=a).json()['state']=='awaiting_confirmation'
 
+def test_unconfirmed_quote_does_not_block_other_players_but_confirm_stays_single(tmp_path):
+    provider=FurnitureProvider();app,client=paid_world(tmp_path,provider)
+    with client as c:
+        a=account(c,'alice');b=account(c,'bob')
+        stale=c.post('/v1/studio/jobs',headers=a,json=mutation(prompt='wooden chest',geometry='tripo',motion='static')).json()['id']
+        asyncio.run(app.state.studio.process(stale))
+        assert c.get('/v1/studio/jobs/'+stale,headers=a).json()['state']=='awaiting_confirmation'
+        # The owner still has one pending job; other players may request a quote.
+        assert c.post('/v1/studio/jobs',headers=a,json=mutation(prompt='stool',geometry='tripo',motion='static')).json()['detail']=='generation_pending'
+        fresh=c.post('/v1/studio/jobs',headers=b,json=mutation(prompt='stool',geometry='tripo',motion='static'))
+        assert fresh.status_code==200;fresh=fresh.json()['id']
+        asyncio.run(app.state.studio.process(fresh))
+        assert c.post('/v1/studio/jobs/'+fresh+'/confirm',headers=b,json=mutation()).status_code==200
+        # Only one confirmed job may use the provider at a time.
+        assert c.post('/v1/studio/jobs/'+stale+'/confirm',headers=a,json=mutation()).json()['detail']=='provider_busy'
+        assert c.get('/v1/studio/jobs/'+stale,headers=a).json()['state']=='awaiting_confirmation'
+        assert not provider.calls
+
 def test_paid_design_quote_precedes_generation_and_confirm_is_idempotent(tmp_path):
     provider=FurnitureProvider();app,client=paid_world(tmp_path,provider)
     with client as c:
