@@ -2099,7 +2099,7 @@ func open_studio(destination: String="workshop") -> void:
 ## Simple craft request: the cheapest real generation the server offers (one static
 ## untextured mesh). The player writes an idea, sees the starseed price, confirms,
 ## and the finished object arrives in the bag ready to place anywhere free.
-const CRAFT_REQUEST := {"material":"mesh","motion":"static","designer":"llm","geometry":"tripo",
+const CRAFT_REQUEST := {"material":"mesh","motion":"static","designer":"simple","geometry":"tripo",
 	"mesh_model":"v3.1-20260211","model":"gpt-6-luna","effort":"high"}
 var craft_box: VBoxContainer
 var craft_polling := false

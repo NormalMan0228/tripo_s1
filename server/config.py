@@ -83,8 +83,10 @@ class Settings:
             raise ValueError('Generation budget must be positive')
         if self.mode == 'live' and self.paid_enabled and not self.tripo_key:
             raise ValueError('Paid live mode requires a Tripo server secret')
-        if self.mode == 'live' and self.paid_enabled and not self.legacy_generation_enabled and (self.studio_llm != 'openai' or not self.llm_key):
-            raise ValueError('Paid live mode requires Tripo and OpenAI server secrets')
+        # Without an OpenAI design provider, live crafting offers only the simple
+        # one-mesh designer (the player's prompt goes straight to Tripo).
+        if self.mode == 'live' and self.paid_enabled and self.studio_llm == 'openai' and not self.llm_key:
+            raise ValueError('Paid live mode with OpenAI design requires an OpenAI server secret')
         if not math.isfinite(self.studio_credit_rate) or not .1<=self.studio_credit_rate<=100:
             raise ValueError('Invalid reward currency conversion')
         self.data_dir.mkdir(parents=True, exist_ok=True)

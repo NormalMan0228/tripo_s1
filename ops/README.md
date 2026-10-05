@@ -16,6 +16,17 @@ Debian 12 VM에서 `sudo apt-get update && sudo apt-get install -y git`으로 Gi
 
 서버 준비 후 아래 **최초 설치**에서 Compose 명령에 `-f ops/compose.gcp-free.yaml`을 추가한다. 유료 AI 생성은 이 소형 VM에서 검증하지 않았으므로 기본적으로 끈다. 별도 호스트 또는 더 큰 유료 VM으로 옮기기 전에는 `ops/compose.paid.yaml`을 적용하지 않는다.
 
+## 온라인 서버 업데이트와 제작 켜기 (2026-10-05)
+
+게임의 로그인 화면에서 `온라인 서버`를 고르면 이 VM에 접속한다. 최신 클라이언트(섬 마을·멀티플레이·간단 제작)와 맞추려면 VM의 서버 코드도 갱신해야 한다. VM에 SSH로 접속한 뒤 저장소 체크아웃에서 실행한다.
+
+1. **(선택) 제작 켜기:** Tripo 키를 `ops/secrets/tripo-key`에 한 줄로 저장한다. 업데이트 스크립트가 소유자를 `root:10001`, 권한을 0640으로 맞춘다. 키 파일이 있으면 `ops/compose.tripo.yaml`이 붙어 **간단 제작**(플레이어가 쓴 문장을 바로 Tripo 정적 메시 1개로 만드는 방식)이 켜진다. 이 방식은 OpenAI 키가 필요 없다. 기본 한도는 하루 전체 5회·계정당 2회·동시 1건이다(`ops/production.env`).
+2. **업데이트:** `sudo bash ops/update_online_server.sh main`. 스크립트는 DB·자산을 백업·검증하고, 브랜치를 받아 API 컨테이너만 다시 빌드한 뒤 `/health`를 출력한다. 비밀 파일·`production.env`·Docker 볼륨은 건드리지 않는다.
+3. **확인:** `/health`에 `multiplayer_protocol: 1`이 보이고, 제작을 켰다면 `studio_tripo_enabled: true`가 보여야 한다.
+4. **가입 초대 코드:** 온라인 서버는 초대 코드가 있어야 가입할 수 있다. VM에서 `sudo cat ops/secrets/registration-code`로 확인해 함께할 사람에게만 따로 전달한다.
+
+온라인 서버의 새 계정은 별씨 0개로 시작한다. 제작비(별씨 20)는 일곱 밤 생존 보상으로 모은다. Tripo 크레딧은 키 주인의 계정에서 빠지므로 처음에는 한도를 낮게 두고 공급자 콘솔에서 실제 사용량을 확인한다.
+
 ## 구조
 
 ```text

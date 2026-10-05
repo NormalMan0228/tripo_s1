@@ -18,7 +18,7 @@ from fastapi import Request, HTTPException
 from fastapi.responses import Response
 from .models import Mutation
 from .homestead import village_reserved, village_inside
-from .asset_assembly import demo_design, fixture_glb, validate_plan, static_plan
+from .asset_assembly import demo_design, fixture_glb, validate_plan, static_plan, simple_plan
 from .asset_vm import AssetVM, ProgramError, exercise_extended as exercise
 from .design_provider import DesignProvider, DesignFailure, MODELS, EFFORTS
 from .provider import ProviderError, validate_glb
@@ -51,7 +51,7 @@ class StudioRequest(Mutation):
     prompt: str=Field(min_length=3,max_length=1500)
     material: Literal['mesh','textured']='mesh'
     motion: Literal['static','dynamic']='dynamic'
-    designer: Literal['fixture','llm']='fixture'
+    designer: Literal['fixture','llm','simple']='fixture'
     geometry: Literal['proxy','tripo']='proxy'
     mesh_model: Literal['configured','v3.1-20260211','P2-20260801']='configured'
     image_mode: Literal['original','refine']='original'
@@ -184,8 +184,9 @@ class Studio:
             def create(conn,user):
                 if body.designer=='llm' and settings.studio_llm=='fixture':fail('llm_not_configured',503)
                 if body.geometry=='tripo' and not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
-                if settings.mode=='live' and (body.designer!='llm' or body.geometry!='tripo'):fail('development_mode_forbidden',403)
-                if settings.mode=='live' and (body.model!='gpt-6-luna' or body.effort!='high'):
+                if body.designer=='simple' and (body.motion!='static' or body.image):fail('simple_requires_static_text')
+                if settings.mode=='live' and (body.designer not in ('llm','simple') or body.geometry!='tripo'):fail('development_mode_forbidden',403)
+                if settings.mode=='live' and body.designer=='llm' and (body.model!='gpt-6-luna' or body.effort!='high'):
                     fail('model_not_available',403)
                 if body.image and body.designer!='llm':fail('image_requires_llm')
                 if body.image_mode=='refine' and (not body.image or body.geometry!='tripo'):fail('refinement_requires_image_and_tripo')
@@ -439,6 +440,9 @@ class Studio:
             if job['state']=='queued':
                 if body.designer=='fixture':
                     plan,program=demo_design(body.prompt);provenance={'provider':'authored_fixture','validation':exercise(program,[p['id'] for p in plan['parts']])}
+                elif body.designer=='simple':
+                    plan=simple_plan(body.prompt);program={'version':1,'state':{},'functions':{},'events':{}}
+                    provenance={'provider':'direct_prompt','validation':exercise(program,['whole'])}
                 else:
                     request_prompt=body.prompt+('\nOutput ONE complete static part and an empty program.' if body.motion=='static' else '')
                     with self.db.transaction() as conn:categories=[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')]
