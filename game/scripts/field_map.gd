@@ -33,7 +33,7 @@ func _draw() -> void:
 	draw_circle(p,4,Color("354d4e"))
 	draw_line(p,p+facing.normalized()*9,Color("354d4e"),2,true)
 	draw_string(get_theme_default_font(),Vector2(102,12),"N",HORIZONTAL_ALIGNMENT_LEFT,-1,12,INK)
-	draw_string(get_theme_default_font(),Vector2(8,170),"▲ 야영지    ● 나    ● 적",HORIZONTAL_ALIGNMENT_LEFT,-1,11,INK)
+	draw_string(get_theme_default_font(),Vector2(8,170),tr("▲ 야영지    ● 나    ● 적"),HORIZONTAL_ALIGNMENT_LEFT,-1,11,INK)
 
 func update_state(state: Dictionary,direction: Vector2) -> void:
 	snapshot=state

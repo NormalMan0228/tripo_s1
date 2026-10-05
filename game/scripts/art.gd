@@ -103,7 +103,7 @@ static func pine_crown(parent: Node3D, seed_value: int) -> void:
 
 static func label3d(parent: Node3D, text: String, at: Vector3, color := Color("f5eed9")) -> Label3D:
 	var l := Label3D.new()
-	l.text = text
+	l.text = TranslationServer.translate(text)
 	l.position = at
 	l.pixel_size = 0.006
 	l.font_size = 44
@@ -166,8 +166,8 @@ static func village(parent: Node3D) -> void:
 	var gate := box(parent,Vector3(7,1.6,-5.5),Vector3(1.4,2.8,0.08),Color("82c1b4"))
 	gate.material_override.emission_enabled = true
 	gate.material_override.emission = Color("32776c")
-	label3d(parent,"일곱 밤의 숲",Vector3(7,4.3,-5.5))
-	label3d(parent,"별씨 공방",Vector3(-5,4.5,-5.5))
+	label3d(parent,TranslationServer.translate("일곱 밤의 숲"),Vector3(7,4.3,-5.5))
+	label3d(parent,TranslationServer.translate("별씨 공방"),Vector3(-5,4.5,-5.5))
 	for i in 28:
 		var p := Vector3(sin(i*2.34)*10,0.06,cos(i*1.77)*10)
 		if absf(p.x)<2 or (p.x< -2 and p.z< -2) or (p.x>5 and p.z< -3): continue
@@ -186,4 +186,4 @@ static func forest(parent: Node3D) -> void:
 		sphere(parent,Vector3(cos(a)*0.75,0.15,sin(a)*0.75),Vector3(0.4,0.3,0.4),Color("8d9789"))
 	box(parent,Vector3(0,0.15,0),Vector3(1.1,0.18,0.22),Color("7b5842"))
 	box(parent,Vector3(0,0.22,0),Vector3(0.22,0.18,1.1),Color("7b5842"))
-	label3d(parent,"야영지 · F 모닥불",Vector3(0,2,0))
+	label3d(parent,TranslationServer.translate("야영지 · F 모닥불"),Vector3(0,2,0))

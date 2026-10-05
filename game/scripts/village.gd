@@ -140,21 +140,21 @@ func _build_ui() -> void:
 	rows.add_theme_constant_override("separation", 12)
 	panel.add_child(rows)
 	var title := Label.new()
-	title.text = "나의 작은 마을"
+	title.text = tr("나의 작은 마을")
 	title.add_theme_font_size_override("font_size", 25)
 	rows.add_child(title)
 	var subtitle := Label.new()
-	subtitle.text = "첫 제작 테스트 · 샘플 모드\nWASD / 방향키로 걷기"
+	subtitle.text = tr("첫 제작 테스트 · 샘플 모드\nWASD / 방향키로 걷기")
 	rows.add_child(subtitle)
 	var create := Button.new()
-	create.text = "샘플 의자 불러오기"
+	create.text = tr("샘플 의자 불러오기")
 	create.custom_minimum_size.y = 42
 	create.focus_mode = Control.FOCUS_NONE
 	create.pressed.connect(begin_sample)
 	rows.add_child(create)
 	var palette := HBoxContainer.new()
 	rows.add_child(palette)
-	var names := ["크림", "노랑", "분홍", "초록", "파랑"]
+	var names := [tr("크림"), tr("노랑"), tr("분홍"), tr("초록"), tr("파랑")]
 	for i in COLORS.size():
 		var color: Color = COLORS[i]
 		var button := Button.new()
@@ -166,16 +166,16 @@ func _build_ui() -> void:
 	status = Label.new()
 	status.custom_minimum_size.x = 260
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	status.text = "의자를 불러와 색을 고르고, 마을 바닥을 클릭해 놓아 보세요."
+	status.text = tr("의자를 불러와 색을 고르고, 마을 바닥을 클릭해 놓아 보세요.")
 	rows.add_child(status)
 	var hint := Label.new()
-	hint.text = "마우스: 놓을 위치 선택\nR: 회전 · Esc: 배치 취소\nBackspace: 마지막 배치 회수"
+	hint.text = tr("마우스: 놓을 위치 선택\nR: 회전 · Esc: 배치 취소\nBackspace: 마지막 배치 회수")
 	rows.add_child(hint)
 	count_label = Label.new()
-	count_label.text = "놓은 물건 0 / 30"
+	count_label.text = tr("놓은 물건 0 / 30")
 	rows.add_child(count_label)
 	var footer := Label.new()
-	footer.text = "API 사용·비용 없음\n지금 놓은 물건은 종료하면 초기화됩니다.\n생존 도전·생성·거래는 다음 제작 단계입니다."
+	footer.text = tr("API 사용·비용 없음\n지금 놓은 물건은 종료하면 초기화됩니다.\n생존 도전·생성·거래는 다음 제작 단계입니다.")
 	footer.add_theme_font_size_override("font_size", 12)
 	rows.add_child(footer)
 
@@ -195,16 +195,16 @@ func _process(_delta: float) -> void:
 		var point: Vector3 = hit
 		preview.position = Vector3(snappedf(point.x, 0.5), 0.02, snappedf(point.z, 0.5))
 		cursor_valid = can_place(preview)
-	status.text = "클릭하면 배치합니다. R로 회전할 수 있어요." if cursor_valid else "비어 있는 마을 바닥을 선택해 주세요."
+	status.text = tr("클릭하면 배치합니다. R로 회전할 수 있어요.") if cursor_valid else tr("비어 있는 마을 바닥을 선택해 주세요.")
 
 func begin_sample() -> void:
 	if placed.size() >= 30:
-		status.text = "이번 테스트에서는 30개까지 놓을 수 있어요."
+		status.text = tr("이번 테스트에서는 30개까지 놓을 수 있어요.")
 		return
 	cancel_preview()
 	preview = ModelLoader.load_sample(SAMPLE)
 	if preview == null:
-		status.text = "샘플 GLB를 읽지 못했습니다. 파일을 확인해 주세요."
+		status.text = tr("샘플 GLB를 읽지 못했습니다. 파일을 확인해 주세요.")
 		return
 	add_child(preview)
 	ModelLoader.paint(preview, selected_color)
@@ -241,8 +241,8 @@ func place_preview() -> bool:
 	placed.append(preview)
 	preview = null
 	player.controls_enabled = true
-	count_label.text = "놓은 물건 %d / 30" % placed.size()
-	status.text = "배치 완료! 걸어가서 확인해 보세요. 다음 의자는 다른 색으로 놓을 수 있어요."
+	count_label.text = tr("놓은 물건 %d / 30") % placed.size()
+	status.text = tr("배치 완료! 걸어가서 확인해 보세요. 다음 의자는 다른 색으로 놓을 수 있어요.")
 	return true
 
 func cancel_preview() -> void:
@@ -256,7 +256,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		match event.physical_keycode:
 			KEY_ESCAPE:
 				cancel_preview()
-				status.text = "배치를 취소했습니다. 마을을 걸어 다닐 수 있어요."
+				status.text = tr("배치를 취소했습니다. 마을을 걸어 다닐 수 있어요.")
 			KEY_R:
 				if preview != null:
 					preview.rotate_y(PI / 2)
@@ -264,7 +264,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				if not placed.is_empty():
 					var last: Node3D = placed.pop_back()
 					last.queue_free()
-					count_label.text = "놓은 물건 %d / 30" % placed.size()
+					count_label.text = tr("놓은 물건 %d / 30") % placed.size()
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		if preview != null and cursor_valid:
 			place_preview()

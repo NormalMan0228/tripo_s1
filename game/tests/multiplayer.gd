@@ -6,7 +6,6 @@ var failed := false
 var url := "http://127.0.0.1:8766"
 
 func _initialize() -> void:
-	Engine.set_meta("multiplayer_feature", true)
 	call_deferred("run_test")
 	create_timer(150).timeout.connect(func():
 		push_error("Multiplayer integration exceeded 150 seconds")
@@ -55,6 +54,8 @@ func invitation(sender: int, recipient: int, kind: String) -> void:
 	expect(found, kind+" invitation accepted by intended player")
 
 func run_test() -> void:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--server="): url = arg.trim_prefix("--server=")
 	var suffix := str(Time.get_unix_time_from_system()).replace(".", "").right(10)
 	for index in 3:
 		names.append("multi_"+suffix+"_"+str(index))

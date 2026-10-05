@@ -86,8 +86,8 @@ func _ready() -> void:
 		A.box(self,Vector3(0,1.3,20),Vector3(200,2,200),Color("8fb86a"),true)
 	space=get_world_3d().direct_space_state
 	var home := point(HOME_DOOR)
-	A.label3d(self,"나의 집 · E 들어가기",home+Vector3(0,3.4,0),Color("f5e5b7"))
-	A.label3d(self,"별씨 공방 · E 들어가기",point(WORKSHOP_DOOR)+Vector3(0,3.6,0),Color("fff1c8"))
+	A.label3d(self,tr("나의 집 · E 들어가기"),home+Vector3(0,3.4,0),Color("f5e5b7"))
+	A.label3d(self,tr("별씨 공방 · E 들어가기"),point(WORKSHOP_DOOR)+Vector3(0,3.6,0),Color("fff1c8"))
 	for i in mini(3,story_progress):
 		var at := point(HOME_DOOR+Vector2(-2.2+i*1.6,1.6),.25)
 		A.box(self,at,Vector3(.2,.5,.2),Color("846344"))
@@ -119,7 +119,7 @@ func build_farm() -> void:
 		A.box(root,Vector3(0,0.01,0),Vector3(2.2,0.09,2.0),Color("76563e"))
 		for z in [-0.7,-0.25,0.2,0.65]: A.box(root,Vector3(0,0.08,z),Vector3(2,0.08,0.16),Color("916548"))
 		for x in [-1.15,1.15]: A.box(root,Vector3(x,0.1,0),Vector3(0.1,0.2,2.2),Color("bd9b6e"))
-		labels.append(A.label3d(root,"%d · 빈 밭" % (i+1),Vector3(0,0.65,0),Color("f3e1af")))
+		labels.append(A.label3d(root,tr("%d · 빈 밭") % (i+1),Vector3(0,0.65,0),Color("f3e1af")))
 		var crop := Node3D.new()
 		root.add_child(crop)
 		crops.append(crop)
@@ -129,7 +129,7 @@ func build_farm() -> void:
 	A.sphere(self,scare+Vector3(0,1.95,0),Vector3(0.5,0.5,0.5),Color("ddb77d"))
 	L.cylinder(self,scare+Vector3(0,2.15,0),0.43,0.13,Color("b8864e"))
 	A.box(self,scare+Vector3(0,1.5,0),Vector3(0.55,0.6,0.3),Color("6f94a0"))
-	A.label3d(self,"햇살 텃밭 · 씨앗을 심고 물을 주세요",point(Vector2(-16,-33.5),3),Color("f2dfaa"))
+	A.label3d(self,tr("햇살 텃밭 · 씨앗을 심고 물을 주세요"),point(Vector2(-16,-33.5),3),Color("f2dfaa"))
 
 func build_orchard() -> void:
 	# Apples hang in a small crate beside the meadow trees; the herb bed sits by the greenhouse.
@@ -147,10 +147,10 @@ func update_plots(state: Dictionary, now: float) -> void:
 	for i in plots.size():
 		var plot: Dictionary=state.get("plots",[{},{},{},{},{},{}])[i]
 		var ready: bool=not plot.is_empty() and plot.get("watered",false) and now>=float(plot.get("ready_at",0))
-		if plot.is_empty(): labels[i].text="%d · E 심기" % (i+1)
-		elif not plot.get("watered",false): labels[i].text="E · 물주기"
-		elif ready: labels[i].text="E · 수확!"
-		else: labels[i].text="성장 중 · %d초" % maxi(0,int(ceil(float(plot.ready_at)-now)))
+		if plot.is_empty(): labels[i].text=tr("%d · E 심기") % (i+1)
+		elif not plot.get("watered",false): labels[i].text=tr("E · 물주기")
+		elif ready: labels[i].text=tr("E · 수확!")
+		else: labels[i].text=tr("성장 중 · %d초") % maxi(0,int(ceil(float(plot.ready_at)-now)))
 		if signature!=last_plot_signature or crops[i].get_meta("ripe",false)!=ready:
 			for child in crops[i].get_children():
 				crops[i].remove_child(child)

@@ -28,11 +28,11 @@ func _draw() -> void:
 		draw_string(get_theme_default_font(),at+Vector2(-4 if i<9 else -7,4),str(i+1),HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("f3e7bd"))
 	var gate := p(Town.GATE)
 	draw_circle(gate,8,Color("7b5a8f"))
-	draw_string(get_theme_default_font(),gate+Vector2(-5,4),"숲",HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("f3e7bd"))
+	draw_string(get_theme_default_font(),gate+Vector2(-5,4),tr("숲"),HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("f3e7bd"))
 	if has_destination:
 		draw_line(p(player_at),p(destination),Color("f0d67f"),1.5,true)
 		draw_arc(p(destination),12,0,TAU,32,Color("ffe393"),2)
 	draw_circle(p(player_at),7,Color("405653"))
 	draw_circle(p(player_at),4.5,Color("fff6d8"))
 	draw_rect(Rect2(32,22,146,23),Color("eee0c5"))
-	draw_string(get_theme_default_font(),Vector2(37,38),"N ↑     ● 현재 위치",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("405653"))
+	draw_string(get_theme_default_font(),Vector2(37,38),tr("N ↑     ● 현재 위치"),HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("405653"))

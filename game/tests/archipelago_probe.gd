@@ -50,7 +50,41 @@ func run() -> void:
 			await game_view(arg.trim_prefix("--view=").split(","))
 		if arg.begins_with("--top="):
 			await top_view(arg.trim_prefix("--top=").split(","))
+		if arg.begins_with("--shot="):
+			await shot(arg.trim_prefix("--shot=").split(","))
 	quit()
+
+## Perspective still for menus: --shot=px,py,pz,tx,ty,tz,fov,name (1920 x 1080).
+func shot(v: PackedStringArray) -> void:
+	var frame := SubViewport.new()
+	frame.size = Vector2i(1920, 1080)
+	frame.msaa_3d = Viewport.MSAA_4X
+	frame.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	root.add_child(frame)
+	var view := Camera3D.new()
+	view.fov = float(v[6])
+	view.far = 3000
+	frame.add_child(view)
+	view.position = Vector3(float(v[0]), float(v[1]), float(v[2]))
+	view.look_at(Vector3(float(v[3]), float(v[4]), float(v[5])))
+	view.current = true
+	var e := WorldEnvironment.new()
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	e.environment = env
+	frame.add_child(e)
+	var sun := DirectionalLight3D.new()
+	sun.shadow_enabled = true
+	frame.add_child(sun)
+	Map.apply_lighting(env, sun)
+	sun.directional_shadow_max_distance = 260
+	map.camera = view
+	for i in 40: await process_frame
+	await RenderingServer.frame_post_draw
+	var path := ProjectSettings.globalize_path("res://../artifacts/island-shot-"+v[7]+".png")
+	print("SHOT ", frame.get_texture().get_image().save_png(path), " ", path)
+	frame.queue_free()
 
 ## Straight-down square image for measuring: --top=x,z,size,name (800 px = size m).
 func top_view(v: PackedStringArray) -> void:

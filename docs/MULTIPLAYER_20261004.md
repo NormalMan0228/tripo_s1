@@ -1,6 +1,6 @@
 # 3인 멀티플레이 테스트 — 2026-10-04
 
-> **2026-10-05 보류:** 온라인 검증을 나중에 하기로 하고 게임 화면에서 멀티플레이를 뺐다. 클라이언트는 `함께하기` 메뉴를 표시하지 않으며 서버가 `multiplayer_protocol: 1`을 알려도 켜지지 않는다. `--multiplayer` 사용자 인자로 실행하거나 `game/tests/multiplayer.gd`(엔진 메타 `multiplayer_feature`)에서만 켜진다. 서버 API·DB·검사는 유지한다. 아래 PC방 계획과 10/4 테스트 빌드(`builds/Tripothon_Multiplayer_Test`, 기능이 켜진 빌드)는 재개할 때 사용한다.
+> **2026-10-05 저녁 갱신:** 잠시 보류했던 멀티플레이를 다시 켰다. 서버가 `multiplayer_protocol: 1`을 알리면 마을 HUD 왼쪽(캐릭터 프레임 아래)에 `함께하기`·`인사` 버튼이 나온다. 혼자 하려면 `--no-multiplayer` 인자로 끈다. 메인 마을이 다섯 섬 지도로 바뀐 뒤의 검증 결과는 아래 "섬 마을 재검증" 절에 있다.
 
 ## 상태
 
@@ -73,6 +73,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\test.ps1 -SkipServer
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\test.ps1 -SkipServerTests -ClientScript multiplayer -Packaged -ClientPack builds/Tripothon_Multiplayer_Test/Tripothon.pck
 .\.tools\server-venv\Scripts\python.exe tools/test_multiplayer_load.py --seconds 65
 ```
+
+## 섬 마을 재검증 (2026-10-05 저녁)
+
+메인 마을을 다섯 섬 지도로 바꾸고 로그인 화면·RPG 화면·3개 언어를 넣은 뒤 다시 검증했다. 모두 이 PC 안에서 돌린 검증이다. 서로 다른 집이나 네트워크에서의 온라인 검증은 아직 하지 않았다.
+
+| 검사 | 서버 | 결과 |
+|---|---|---|
+| 3인 클라이언트 통합(`game/tests/multiplayer.gd --server=http://127.0.0.1:8765 --capture`) | 이 PC의 Tripo 서버(8765) | 41개 통과. 섬 마을 방문·대화·파티·협동 생존·재접속·보상 포함 |
+| 같은 검사, 격리 테스트 서버(`tools/test.ps1 -ClientScript multiplayer`) | 테스트용 8766 | 38개 통과 |
+| 부하(`tools/test_multiplayer_load.py --seconds 65`) | 격리 서버 | 3인 65초 생존 입력 978회, 실패 0, 평균 50.2ms, p95 77.1ms, 최대 147ms |
+
+캡처는 `artifacts/multiplayer-village.png`(섬 광장의 세 사람), `multiplayer-coop.png`(3인 협동 생존)이다. 마을 방문 화면의 가구는 방문 대상 마을의 광장 기준 좌표로 표시된다.
 
 ## 2인 PC방 검증 — 계획 (2026-10-05)
 

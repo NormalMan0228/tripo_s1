@@ -48,7 +48,7 @@ func _ready() -> void:
 	controls.add_child(row)
 	for id in ["explorer_b","explorer","ranger","tinker"]:
 		var b := Button.new()
-		b.text={"explorer_b":"여행자","explorer":"루","ranger":"미라","tinker":"테오"}[id]
+		b.text={"explorer_b":tr("여행자"),"explorer":tr("루"),"ranger":tr("미라"),"tinker":tr("테오")}[id]
 		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		b.set_meta("character",id)
 		b.toggle_mode=true
@@ -63,7 +63,7 @@ func _ready() -> void:
 		var colors := ["#30595b","#774f3d","#d5a250","#c47b50","#ab789f","#e6dfce","#526552","#6889a1"]
 		if key=="skin": colors=["#e4b587","#f0cdb1","#bc865c","#895b43","#604431"]
 		var label := Label.new()
-		label.text={"hair":"머리","coat":"상의","pants":"하의","boots":"신발","skin":"피부"}[key]
+		label.text={"hair":tr("머리"),"coat":tr("상의"),"pants":tr("하의"),"boots":tr("신발"),"skin":tr("피부")}[key]
 		controls.add_child(label)
 		var palette := HBoxContainer.new()
 		controls.add_child(palette)
@@ -79,19 +79,19 @@ func _ready() -> void:
 			swatch.pressed.connect(func(): avatar[key]=color; refresh())
 			palette.add_child(swatch)
 	var hat := OptionButton.new()
-	for title in ["모자 없음","여행 모자","베레모"]: hat.add_item(title)
+	for title in [tr("모자 없음"),tr("여행 모자"),tr("베레모")]: hat.add_item(title)
 	hat.select(["none","cap","beret"].find(avatar.headwear))
 	hat.item_selected.connect(func(index): avatar.headwear=["none","cap","beret"][index]; refresh())
 	controls.add_child(hat)
 	var pack := CheckButton.new()
-	pack.text="여행 배낭"
+	pack.text=tr("여행 배낭")
 	pack.button_pressed=avatar.backpack
 	pack.toggled.connect(func(value): avatar.backpack=value; refresh())
 	controls.add_child(pack)
 	var turn := HSlider.new()
 	turn.min_value=-180
 	turn.max_value=180
-	turn.tooltip_text="미리보기 회전"
+	turn.tooltip_text=tr("미리보기 회전")
 	turn.value_changed.connect(func(value): actor.visual.rotation.y=PI+deg_to_rad(value))
 	controls.add_child(turn)
 	refresh()
@@ -103,5 +103,5 @@ func refresh() -> void:
 		if b.has_meta("part"):
 			b.text="◆" if avatar[b.get_meta("part")]==b.get_meta("color") else "●"
 			b.disabled=avatar.character=="explorer_b" and b.get_meta("part") in ["hair","skin"]
-			if b.disabled:b.tooltip_text="이 여행자의 머리와 피부는 고유한 모습으로 유지돼요. 옷과 소품을 바꿔 보세요."
+			if b.disabled:b.tooltip_text=tr("이 여행자의 머리와 피부는 고유한 모습으로 유지돼요. 옷과 소품을 바꿔 보세요.")
 	if actor.animation_player and actor.animation_player.has_animation("idle"): actor.animation_player.play("idle",0.18)

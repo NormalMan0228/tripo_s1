@@ -111,7 +111,7 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 	if Vector2(direction.x,direction.z).length()>0.001: target_angle=atan2(direction.x,direction.z)
 	if state.hp<last_hp: flash=0.16
 	last_hp=state.hp
-	health.text=("내려찍기!" if kind=="brute" else "불꽃!" if kind=="wisp" else "!") if phase=="windup" else "%d / %d" % [state.hp,state.get("max_hp",45)]
+	health.text=(tr("내려찍기!") if kind=="brute" else tr("불꽃!") if kind=="wisp" else "!") if phase=="windup" else "%d / %d" % [state.hp,state.get("max_hp",45)]
 	health.modulate=Color("f08d72") if phase=="windup" else Color("d4dcca")
 
 func _process(delta: float) -> void:

@@ -1,0 +1,3193 @@
+{
+ "strings": {
+  "\nTripo 실측: %s 크레딧": {
+   "en": "\nTripo actual: %s credits",
+   "zh": "\nTripo 实测：%s 积分"
+  },
+  "\n뜨거운 균열! 빨리 벗어나세요": {
+   "en": "\nScorching crack! Get out fast",
+   "zh": "\n炽热裂缝！快离开"
+  },
+  "\n메시: ": {
+   "en": "\nMesh: ",
+   "zh": "\n网格："
+  },
+  "\n별씨 예약/확정: %d\n": {
+   "en": "\nStarseeds reserved/confirmed: %d\n",
+   "zh": "\n星种预留/确认：%d\n"
+  },
+  "\n보행 주기 %.2f초 · 접지 오차 %.1fcm": {
+   "en": "\nStep cycle %.2fs · Ground offset %.1fcm",
+   "zh": "\n步行周期 %.2f秒 · 着地误差 %.1fcm"
+  },
+  "\n설계 후 부품 수와 예상 비용을 확인합니다.": {
+   "en": "\nPart count and estimated cost are shown after the design step.",
+   "zh": "\n设计完成后确认部件数和预计费用。"
+  },
+  "\n설계: ": {
+   "en": "\nDesign: ",
+   "zh": "\n设计："
+  },
+  "\n얼음 위 · 이동 둔화 / 허기 증가": {
+   "en": "\nOn ice · Slower movement / Faster hunger",
+   "zh": "\n冰面上 · 移动减速 / 饥饿加快"
+  },
+  "\n완주하면 성과에 따라 별씨 %d–%d개를 받을 수 있어요.": {
+   "en": "\nFinish to earn %d–%d Starseeds based on how you do.",
+   "zh": "\n通关后可根据表现获得 %d–%d 个星种。"
+  },
+  "\n이동 %.2f m/s · 시야 %.1f\n입력 %s": {
+   "en": "\nMove %.2f m/s · View %.1f\nInput %s",
+   "zh": "\n移动 %.2f m/s · 视野 %.1f\n输入 %s"
+  },
+  "\n첫 완료 보너스 %d 별씨": {
+   "en": "\nFirst-clear bonus %d Starseeds",
+   "zh": "\n首次通关奖励 %d 星种"
+  },
+  "  ·  보상 계수 ×%.3f": {
+   "en": "  ·  Reward multiplier ×%.3f",
+   "zh": "  ·  奖励系数 ×%.3f"
+  },
+  " 2개를 모았어요.": {
+   "en": " ×2 gathered.",
+   "zh": " ×2 已收获。"
+  },
+  " · %d / %d부품 완료": {
+   "en": " · %d / %d parts done",
+   "zh": " · 已完成 %d / %d 部件"
+  },
+  " · %d 별씨 · %s": {
+   "en": " · %d Starseeds · %s",
+   "zh": " · %d 星种 · %s"
+  },
+  " · 관전": {
+   "en": " · Spectating",
+   "zh": " · 观战"
+  },
+  " · 명령 %d개": {
+   "en": " · %d commands",
+   "zh": " · 命令 %d 条"
+  },
+  " · 보상 ×%.3f": {
+   "en": " · Reward ×%.3f",
+   "zh": " · 奖励 ×%.3f"
+  },
+  " · 숫자를 입력하고 실행하세요": {
+   "en": " · Enter numbers and run",
+   "zh": " · 请输入数字后运行"
+  },
+  " · 연결 끊김": {
+   "en": " · Disconnected",
+   "zh": " · 已断开"
+  },
+  " · 연결 대기": {
+   "en": " · Waiting to connect",
+   "zh": " · 等待连接"
+  },
+  " · 입력값 없이 실행": {
+   "en": " · Runs without input",
+   "zh": " · 无需输入，直接运行"
+  },
+  " · 접속 중": {
+   "en": " · Online",
+   "zh": " · 在线"
+  },
+  " · 초대 %d개": {
+   "en": " · %d invites",
+   "zh": " · 邀请 %d 个"
+  },
+  " · 클릭해서 먹기": {
+   "en": " · Click to eat",
+   "zh": " · 点击食用"
+  },
+  " · 클릭해서 치료": {
+   "en": " · Click to heal",
+   "zh": " · 点击治疗"
+  },
+  " · 파티 %d/3명": {
+   "en": " · Party %d/3",
+   "zh": " · 队伍 %d/3人"
+  },
+  " · 파티장": {
+   "en": " · Leader",
+   "zh": " · 队长"
+  },
+  " 방문 종료": {
+   "en": " — End Visit",
+   "zh": " 结束拜访"
+  },
+  " 씨앗을 심었어요. 물을 주세요.": {
+   "en": " seeds planted. Give them some water.",
+   "zh": "种子已种下。请浇水。"
+  },
+  " 한 마리를 낚았어요!": {
+   "en": " caught!",
+   "zh": "上钩啦！钓到一条。"
+  },
+  "%d · E 심기": {
+   "en": "%d · E Plant",
+   "zh": "%d · E 播种"
+  },
+  "%d · 빈 밭": {
+   "en": "%d · Empty plot",
+   "zh": "%d · 空田"
+  },
+  "%d개 부품 · ": {
+   "en": "%d parts · ",
+   "zh": "%d个部件 · "
+  },
+  "%d번 텃밭": {
+   "en": "Garden plot %d",
+   "zh": "%d号菜园"
+  },
+  "%d일째 아침이에요. 숲을 둘러보고 다음 밤을 준비하세요.": {
+   "en": "Morning of Day %d. Explore the forest and prepare for the next night.",
+   "zh": "第%d天早上了。在森林里逛逛，为下一个夜晚做准备吧。"
+  },
+  "%s   ·   %s %d초": {
+   "en": "%s   ·   %s %ds",
+   "zh": "%s   ·   %s %d秒"
+  },
+  "%s %d개 · +%d잎전": {
+   "en": "%s ×%d · +%d Leaf coins",
+   "zh": "%s %d个 · +%d叶币"
+  },
+  "%s +1 · %d잎전": {
+   "en": "%s +1 · %d Leaf coins",
+   "zh": "%s +1 · %d叶币"
+  },
+  "%s · %d 별씨 · %s": {
+   "en": "%s · %d Starseeds · %s",
+   "zh": "%s · %d 星种 · %s"
+  },
+  "%s · X 좌우 / Y 높이 / Z 앞뒤\n회전축 -0.5는 부품의 뒤·아래·왼쪽 끝, 0.5는 반대쪽 끝입니다.": {
+   "en": "%s · X left-right / Y height / Z front-back\nPivot -0.5 is the part's back/bottom/left end; 0.5 is the opposite end.",
+   "zh": "%s · X 左右 / Y 高度 / Z 前后\n旋转轴 -0.5 为部件的后·下·左端，0.5 为另一端。"
+  },
+  "%s · 일곱 밤 생존": {
+   "en": "%s · Survive Seven Nights",
+   "zh": "%s · 七夜生存"
+  },
+  "%s 심기 · 씨앗 %d개\n성장 %d초 / 수확 2개": {
+   "en": "Plant %s · %d seeds\nGrows in %ds / Yields 2",
+   "zh": "种植%s · 种子 %d 个\n生长 %d秒 / 收获 2 个"
+  },
+  "%s님의 마을 방문 중": {
+   "en": "Visiting %s's village",
+   "zh": "正在拜访%s的村庄"
+  },
+  "%s와 대화": {
+   "en": "Talk to %s",
+   "zh": "与%s交谈"
+  },
+  "1장 · 첫 번째 불씨": {
+   "en": "Chapter 1 · The First Ember",
+   "zh": "第1章 · 第一簇火种"
+  },
+  "2장 · 멈춘 돌바퀴": {
+   "en": "Chapter 2 · The Stopped Stone Wheel",
+   "zh": "第2章 · 停转的石轮"
+  },
+  "3장 · 돌아오는 빛": {
+   "en": "Chapter 3 · The Returning Light",
+   "zh": "第3章 · 归来的光"
+  },
+  "API 사용·비용 없음\n지금 놓은 물건은 종료하면 초기화됩니다.\n생존 도전·생성·거래는 다음 제작 단계입니다.": {
+   "en": "No API use or cost\nItems placed now reset when you quit.\nSurvival, generation, and trading come in the next build.",
+   "zh": "不使用 API·无费用\n现在放置的物品在退出后会重置。\n生存挑战·生成·交易将在下一制作阶段推出。"
+  },
+  "B  창고": {
+   "en": "B  Storage",
+   "zh": "B  仓库"
+  },
+  "B · 생활 창고 열기": {
+   "en": "B · Open Life Storage",
+   "zh": "B · 打开生活仓库"
+  },
+  "B · 여행자": {
+   "en": "B · Traveler",
+   "zh": "B · 旅行者"
+  },
+  "C · 새 물건 제작 의뢰": {
+   "en": "C · Commission a New Item",
+   "zh": "C · 委托制作新物品"
+  },
+  "E · %s 채집 (남은 자원 %d)  |  I · 가방  |  M · 소리": {
+   "en": "E · Gather %s (%d left)  |  I · Bag  |  M · Sound",
+   "zh": "E · 采集%s (剩余资源 %d)  |  I · 背包  |  M · 声音"
+  },
+  "E · 동쪽 숲": {
+   "en": "E · East Woods",
+   "zh": "E · 东边森林"
+  },
+  "E · 물주기": {
+   "en": "E · Water",
+   "zh": "E · 浇水"
+  },
+  "E · 수확!": {
+   "en": "E · Harvest!",
+   "zh": "E · 收获！"
+  },
+  "E · 챔질": {
+   "en": "E · Hook",
+   "zh": "E · 提竿"
+  },
+  "Esc · 계속 생존하기": {
+   "en": "Esc · Keep Surviving",
+   "zh": "Esc · 继续生存"
+  },
+  "F  모닥불": {
+   "en": "F  Campfire",
+   "zh": "F  篝火"
+  },
+  "F3 · 개발 정보": {
+   "en": "F3 · Dev Info",
+   "zh": "F3 · 开发信息"
+  },
+  "H  붕대": {
+   "en": "H  Bandage",
+   "zh": "H  绷带"
+  },
+  "H3 · 일반 가구 / 낮은 비용": {
+   "en": "H3 · Regular furniture / Lower cost",
+   "zh": "H3 · 普通家具 / 低费用"
+  },
+  "H로 사용하면 체력 30을 회복합니다. 체력이 가득 차면 소모하지 않습니다.": {
+   "en": "Press H to restore 30 Health. Not used when Health is full.",
+   "zh": "按 H 使用可恢复30点生命。生命已满时不会消耗。"
+  },
+  "I  가방": {
+   "en": "I  Bag",
+   "zh": "I  背包"
+  },
+  "I  보관함": {
+   "en": "I  Bag",
+   "zh": "I  背包"
+  },
+  "I 제작 · F 모닥불 · Q 식사": {
+   "en": "I Craft · F Campfire · Q Eat",
+   "zh": "I 制作 · F 篝火 · Q 进食"
+  },
+  "LLM 설계 · 서버 설정 사용": {
+   "en": "LLM design · Uses server settings",
+   "zh": "LLM 设计 · 使用服务器设置"
+  },
+  "N · 바위 능선": {
+   "en": "N · Rocky Ridge",
+   "zh": "N · 岩石山脊"
+  },
+  "N ↑     ● 현재 위치": {
+   "en": "N ↑     ● You are here",
+   "zh": "N ↑     ● 当前位置"
+  },
+  "P2 · 정밀 메시 / 높은 비용": {
+   "en": "P2 · Detailed mesh / Higher cost",
+   "zh": "P2 · 精细网格 / 高费用"
+  },
+  "Q  먹기": {
+   "en": "Q  Eat",
+   "zh": "Q  进食"
+  },
+  "Q · 먼저 음식을 드세요": {
+   "en": "Q · Eat something first",
+   "zh": "Q · 先吃点东西吧"
+  },
+  "S · 물가": {
+   "en": "S · Waterside",
+   "zh": "S · 水边"
+  },
+  "Tab  지도": {
+   "en": "Tab  Map",
+   "zh": "Tab  地图"
+  },
+  "Tripo 실생성이 아직 설정되지 않았습니다.": {
+   "en": "Tripo generation isn't set up yet.",
+   "zh": "尚未配置 Tripo 实际生成。"
+  },
+  "Tripo 실제 생성 · 크레딧 사용": {
+   "en": "Real Tripo generation · Uses credits",
+   "zh": "Tripo 实际生成 · 消耗积分"
+  },
+  "Tripo 실제 생성 가능": {
+   "en": "Real Tripo generation available",
+   "zh": "可进行 Tripo 实际生成"
+  },
+  "Tripo 예상: %s 크레딧\n확인된 사용: %s 크레딧\n": {
+   "en": "Tripo estimate: %s credits\nConfirmed usage: %s credits\n",
+   "zh": "Tripo 预计：%s 积分\n已确认使用：%s 积分\n"
+  },
+  "Tripo 요청 전송": {
+   "en": "Sending Tripo request",
+   "zh": "发送 Tripo 请求"
+  },
+  "Tripo 이미지 편집: 부품당 예상 5크레딧 추가. 이후 이미지→3D 요금 적용.": {
+   "en": "Tripo image edit: about 5 extra credits per part, then image-to-3D rates apply.",
+   "zh": "Tripo 图片编辑：每个部件预计额外 5 积分，之后按图片→3D 计费。"
+  },
+  "Tripo 크레딧이 부족합니다. 별씨는 환불됩니다.": {
+   "en": "Not enough Tripo credits. Your Starseeds will be refunded.",
+   "zh": "Tripo 额度不足。星种将退还。"
+  },
+  "W · 서쪽 숲": {
+   "en": "W · West Woods",
+   "zh": "W · 西边森林"
+  },
+  "WASD 이동   E 상호작용   R 회전   Esc 취소": {
+   "en": "WASD Move   E Interact   R Rotate   Esc Cancel",
+   "zh": "WASD 移动   E 互动   R 旋转   Esc 取消"
+  },
+  "WASD 이동 · Shift 달리기\nE 채집 · Space 공격 (길게 누르면 반복)\nQ 먹기 · F 모닥불 · H 붕대\nI 가방/제작 · 휠 확대/축소 · M 소리": {
+   "en": "WASD Move · Shift Run\nE Gather · Space Attack (hold to repeat)\nQ Eat · F Campfire · H Bandage\nI Bag/Craft · Wheel Zoom · M Sound",
+   "zh": "WASD 移动 · Shift 奔跑\nE 采集 · Space 攻击（长按连续）\nQ 进食 · F 篝火 · H 绷带\nI 背包/制作 · 滚轮 缩放 · M 声音"
+  },
+  "{0} {1}개를 수확했어요!": {
+   "en": "Harvested {1} {0}!",
+   "zh": "收获了{1}个{0}！"
+  },
+  "↶ 회전": {
+   "en": "↶ Rotate",
+   "zh": "↶ 旋转"
+  },
+  "▲ 야영지    ● 나    ● 적": {
+   "en": "▲ Camp    ● You    ● Enemy",
+   "zh": "▲ 营地    ● 我    ● 敌人"
+  },
+  "◆  포만감": {
+   "en": "◆  Fullness",
+   "zh": "◆  饱腹度"
+  },
+  "♥  체력": {
+   "en": "♥  Health",
+   "zh": "♥  生命"
+  },
+  "✦  오늘의 마을 이야기": {
+   "en": "✦  Today in the Village",
+   "zh": "✦  今日村庄故事"
+  },
+  "✦  일곱 밤의 목표": {
+   "en": "✦  Seven Nights Goals",
+   "zh": "✦  七夜的目标"
+  },
+  "✧  기력": {
+   "en": "✧  Stamina",
+   "zh": "✧  精力"
+  },
+  "가구": {
+   "en": "Furniture",
+   "zh": "家具"
+  },
+  "가구 놓기": {
+   "en": "Place Furniture",
+   "zh": "摆放家具"
+  },
+  "가구 만들기": {
+   "en": "Make Furniture",
+   "zh": "制作家具"
+  },
+  "가구 미리보기": {
+   "en": "Furniture Preview",
+   "zh": "家具预览"
+  },
+  "가구 사용하기": {
+   "en": "Use Furniture",
+   "zh": "使用家具"
+  },
+  "가구 완성!": {
+   "en": "Furniture complete!",
+   "zh": "家具完成！"
+  },
+  "가구 완성하기": {
+   "en": "Finish Furniture",
+   "zh": "完成家具"
+  },
+  "가구가 바뀌었어요. 다시 골라 주세요.": {
+   "en": "The furniture changed. Please pick again.",
+   "zh": "家具已变更，请重新选择。"
+  },
+  "가구를 고르면 모습을 살펴볼 수 있어요": {
+   "en": "Pick a piece of furniture to take a look",
+   "zh": "选择家具即可查看外观"
+  },
+  "가구를 고르면 부품 목록이 표시됩니다. 전체 크기는 배치 구역에 맞게 자동 조절됩니다.": {
+   "en": "Pick furniture to see its parts. Overall size adjusts automatically to fit the placement area.",
+   "zh": "选择家具后会显示部件列表。整体尺寸会自动适配摆放区域。"
+  },
+  "가구를 만들 준비가 됐어요.\n필요한 별씨 %d개 · 이미 맡긴 별씨 %d개\n완성하기를 누르면 제작을 시작해요.": {
+   "en": "Your furniture is ready to make.\nStarseeds needed: %d · Already held: %d\nPress Finish to start crafting.",
+   "zh": "家具已准备好制作。\n需要星种 %d 个 · 已托付星种 %d 个\n点击“完成”即开始制作。"
+  },
+  "가구를 만들고 있어요": {
+   "en": "Making your furniture",
+   "zh": "正在制作家具"
+  },
+  "가구를 불러오지 못했어요. 다시 선택해 주세요.": {
+   "en": "Couldn't load the furniture. Please select it again.",
+   "zh": "无法加载家具，请重新选择。"
+  },
+  "가구를 사용해 봤어요.": {
+   "en": "You tried using the furniture.",
+   "zh": "试用了家具。"
+  },
+  "가구를 선택하면 생성된 함수를 검사할 수 있어요.": {
+   "en": "Select furniture to inspect its generated functions.",
+   "zh": "选择家具即可检查生成的函数。"
+  },
+  "가구를 읽지 못했어요. 잠시 뒤 다시 골라 주세요.": {
+   "en": "Couldn't load the furniture. Try picking it again in a moment.",
+   "zh": "无法读取家具，请稍后重新选择。"
+  },
+  "가구에서 떨어져 봤어요.": {
+   "en": "You stepped away from the furniture.",
+   "zh": "试着离开了家具。"
+  },
+  "가구의 모든 부품 색상을 저장했어요.": {
+   "en": "Saved the colors of every furniture part.",
+   "zh": "已保存家具所有部件的颜色。"
+  },
+  "가구의 모든 부품을 불러오지 못했습니다.": {
+   "en": "Couldn't load all the furniture parts.",
+   "zh": "无法加载家具的全部部件。"
+  },
+  "가구의 복잡도와 이미지 크기에 따라 용량이 달라져요. 꽉 차면 일부 가구를 회수하거나 다른 방으로 옮겨 주세요.": {
+   "en": "Capacity depends on furniture complexity and image size. When it's full, pick up some furniture or move it to another room.",
+   "zh": "容量取决于家具复杂度和图片大小。满了的话，请收回部分家具或移到其他房间。"
+  },
+  "가까운 적이 없습니다.": {
+   "en": "No enemies nearby.",
+   "zh": "附近没有敌人。"
+  },
+  "가까이 가기": {
+   "en": "Walk Up",
+   "zh": "靠近"
+  },
+  "가까이 다가가 봤어요.": {
+   "en": "You walked up to it.",
+   "zh": "试着靠近了。"
+  },
+  "가방": {
+   "en": "Bag",
+   "zh": "背包"
+  },
+  "가방에 들어왔어요. 마을이든 집이든 비어 있는 곳에 놓을 수 있어요.": {
+   "en": "It's in your Bag. Place it in any open spot, in the village or at home.",
+   "zh": "已放入背包。可以摆放在村庄或家里的任何空位。"
+  },
+  "가입한 사용자 이름을 확인해 주세요.": {
+   "en": "Check the player's username.",
+   "zh": "请确认已注册的用户名。"
+  },
+  "강농어": {
+   "en": "River Perch",
+   "zh": "河鲈"
+  },
+  "개발 공방": {
+   "en": "Dev Workshop",
+   "zh": "开发工坊"
+  },
+  "개발 화면 · F3 닫기\nFPS %d  |  %s\n위치 %.1f, %.1f\n서버 %s\nTripo %s": {
+   "en": "Dev View · F3 to close\nFPS %d  |  %s\nPosition %.1f, %.1f\nServer %s\nTripo %s",
+   "zh": "开发画面 · F3 关闭\nFPS %d  |  %s\n位置 %.1f, %.1f\n服务器 %s\nTripo %s"
+  },
+  "개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다": {
+   "en": "Dev view · Check generation modes, models, code, and history",
+   "zh": "开发界面 · 可检验生成方式、模型、代码与记录"
+  },
+  "개발용 생성 설정": {
+   "en": "Dev Generation Settings",
+   "zh": "开发用生成设置"
+  },
+  "개발자가 제작한 일반 에셋": {
+   "en": "Standard asset made by the developers",
+   "zh": "开发者制作的通用资源"
+  },
+  "개발자용 JSON 입력": {
+   "en": "Developer JSON Input",
+   "zh": "开发者 JSON 输入"
+  },
+  "개인 생존 탐험을 마친 뒤 파티로 출발해 주세요.": {
+   "en": "Finish your solo Survival expedition before setting out with a party.",
+   "zh": "请先结束个人生存探险，再与队伍出发。"
+  },
+  "개척": {
+   "en": "Pioneer",
+   "zh": "开拓"
+  },
+  "개척 · 더 강한 적": {
+   "en": "Pioneer · Tougher enemies",
+   "zh": "开拓 · 更强的敌人"
+  },
+  "거두기": {
+   "en": "Reel In",
+   "zh": "收竿"
+  },
+  "거절": {
+   "en": "Decline",
+   "zh": "拒绝"
+  },
+  "건물이나 다른 물건과 겹쳐요.": {
+   "en": "It overlaps a building or another item.",
+   "zh": "与建筑或其他物品重叠了。"
+  },
+  "검증용 도형 · Tripo 비용 없음": {
+   "en": "Test shapes · No Tripo cost",
+   "zh": "验证用几何体 · 无 Tripo 费用"
+  },
+  "검증용 도형: Tripo 비용 0": {
+   "en": "Test shapes: Tripo cost 0",
+   "zh": "验证用几何体：Tripo 费用 0"
+  },
+  "게임 별씨는 환불했지만 이미 실행된 제공사 비용은 남을 수 있습니다.\n": {
+   "en": "In-game Starseeds were refunded, but provider costs already incurred may remain.\n",
+   "zh": "游戏星种已退还，但已产生的服务商费用可能仍会计入。\n"
+  },
+  "게임 시작": {
+   "en": "Start Game",
+   "zh": "开始游戏"
+  },
+  "게임 종료": {
+   "en": "Quit Game",
+   "zh": "退出游戏"
+  },
+  "격자": {
+   "en": "Grid",
+   "zh": "网格"
+  },
+  "견적 확인 대기": {
+   "en": "Waiting for estimate confirmation",
+   "zh": "等待确认报价"
+  },
+  "계속 생존하기": {
+   "en": "Keep Surviving",
+   "zh": "继续生存"
+  },
+  "계정 만들기": {
+   "en": "Create Account",
+   "zh": "创建账号"
+  },
+  "고정 작업대와 겹쳐요.": {
+   "en": "It overlaps the fixed workbench.",
+   "zh": "与固定工作台重叠了。"
+  },
+  "공격 피해 10 → 25. 적의 준비 동작을 공격으로 끊을 수 있습니다.": {
+   "en": "Attack damage 10 → 25. Your attacks can interrupt an enemy's wind-up.",
+   "zh": "攻击伤害 10 → 25。可以用攻击打断敌人的蓄力动作。"
+  },
+  "공격!": {
+   "en": "Attack!",
+   "zh": "攻击！"
+  },
+  "공방": {
+   "en": "Workshop",
+   "zh": "工坊"
+  },
+  "공방 입구 앞은 비워 주세요.": {
+   "en": "Please keep the Workshop entrance clear.",
+   "zh": "请让工坊入口前保持空旷。"
+  },
+  "공방 제작 의뢰": {
+   "en": "Workshop Commission",
+   "zh": "工坊制作委托"
+  },
+  "공방에서 만들고 있습니다…": {
+   "en": "The Workshop is crafting…",
+   "zh": "工坊正在制作中…"
+  },
+  "공방에서 만들고 있어요…": {
+   "en": "Crafting in the Workshop…",
+   "zh": "工坊正在制作…"
+  },
+  "공방에서 물건을 만들고 있습니다…": {
+   "en": "The Workshop is crafting your item…",
+   "zh": "工坊正在制作物品…"
+  },
+  "공식 요금·실측 기반 예상: ": {
+   "en": "Estimate from official rates and measurements: ",
+   "zh": "基于官方价格与实测的预估："
+  },
+  "광장 한가운데는 비워 주세요.": {
+   "en": "Please keep the middle of the square clear.",
+   "zh": "请让广场正中央保持空旷。"
+  },
+  "구매": {
+   "en": "Buy",
+   "zh": "购买"
+  },
+  "귀환": {
+   "en": "Return",
+   "zh": "返程"
+  },
+  "그림을 먼저 정리해서 만들기": {
+   "en": "Clean up the picture before creating",
+   "zh": "先整理图片再制作"
+  },
+  "그림자 짐승": {
+   "en": "Shadow Beast",
+   "zh": "暗影兽"
+  },
+  "금빛 입질 신호에 E로 챔질하세요.\n사용 가능한 미끼 %d개": {
+   "en": "Press E to hook when the golden bite signal appears.\nBait available: %d",
+   "zh": "看到金色咬钩信号时按 E 提竿。\n可用鱼饵 %d 个"
+  },
+  "금빛 표식까지 %.0fm": {
+   "en": "%.0fm to the golden marker",
+   "zh": "距金色标记 %.0fm"
+  },
+  "기력": {
+   "en": "Stamina",
+   "zh": "精力"
+  },
+  "기록 새로고침": {
+   "en": "Refresh History",
+   "zh": "刷新记录"
+  },
+  "기록을 선택하면 예약·확정 별씨와 확인된 Tripo 비용을 볼 수 있어요.": {
+   "en": "Select an entry to see reserved/confirmed Starseeds and confirmed Tripo costs.",
+   "zh": "选择记录可查看预留/确认的星种与已确认的 Tripo 费用。"
+  },
+  "기본 가구는 팔레트에서 색을 골라 주세요": {
+   "en": "For basic furniture, pick a color from the palette",
+   "zh": "基础家具请从调色板选择颜色"
+  },
+  "기본 생존 규칙. 준비와 전투를 균형 있게.": {
+   "en": "Standard Survival rules. Balance preparation and combat.",
+   "zh": "基础生存规则。兼顾准备与战斗。"
+  },
+  "길과 입구 앞은 비워 주세요.": {
+   "en": "Please keep paths and entrances clear.",
+   "zh": "请让道路和入口前保持空旷。"
+  },
+  "꽃 조명": {
+   "en": "Flower Lamp",
+   "zh": "花灯"
+  },
+  "꽃잎 ": {
+   "en": "Petal ",
+   "zh": "花瓣 "
+  },
+  "꾸미기 용량이 꽉 찼습니다. 가구 일부를 회수한 뒤 배치해 주세요.": {
+   "en": "Decoration capacity is full. Pick up some furniture before placing more.",
+   "zh": "装饰容量已满。请先收回部分家具再摆放。"
+  },
+  "꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요.": {
+   "en": "Decor capacity is full. Pick up some furniture or place it in another room.",
+   "zh": "装饰容量已满。请收回部分家具，或放到其他房间。"
+  },
+  "꾸민 모습이 저장됐어요 · ": {
+   "en": "Your decorated look was saved · ",
+   "zh": "装饰已保存 · "
+  },
+  "나": {
+   "en": "Me",
+   "zh": "我"
+  },
+  "나루": {
+   "en": "Naru",
+   "zh": "娜露"
+  },
+  "나루 · 길잡이": {
+   "en": "Naru · Guide",
+   "zh": "娜露 · 向导"
+  },
+  "나만의 자리 찾기\n바닥을 클릭하면 배치돼요.\nR · 회전    Esc · 취소": {
+   "en": "Find the Perfect Spot\nClick the ground to place it.\nR · Rotate    Esc · Cancel",
+   "zh": "寻找专属位置\n点击地面即可摆放。\nR · 旋转    Esc · 取消"
+  },
+  "나무": {
+   "en": "Tree",
+   "zh": "树木"
+  },
+  "나무·열매·돌·풀에 가까이 가서 E로 채집하세요.": {
+   "en": "Get close to trees, berries, stones, or grass and press E to gather.",
+   "zh": "靠近树木·浆果·石头·草，按 E 采集。"
+  },
+  "나무에서 목재를 한 번에 2개 채집합니다. 밤의 모닥불용 목재 2개를 남겨 두세요.": {
+   "en": "Gathers 2 wood from trees at once. Save 2 wood for the night's Campfire.",
+   "zh": "从树上一次采集2个木材。记得留下2个木材给夜晚的篝火。"
+  },
+  "나의 공방": {
+   "en": "My Workshop",
+   "zh": "我的工坊"
+  },
+  "나의 마을 · 물건 %d개 배치\n숲에서 7일을 살아남으면\n새 물건을 만들 별씨를 받아요.\n\n돌문 앞에서 E · 탐험 시작": {
+   "en": "My Village · %d items placed\nSurvive 7 days in the forest\nto earn Starseeds for new items.\n\nE at the stone gate · Start Expedition",
+   "zh": "我的村庄 · 已摆放 %d 件物品\n在森林中生存7天，\n就能获得制作新物品的星种。\n\n在石门前按 E · 开始探险"
+  },
+  "나의 보관함": {
+   "en": "My Bag",
+   "zh": "我的背包"
+  },
+  "나의 여행자": {
+   "en": "My Traveler",
+   "zh": "我的旅行者"
+  },
+  "나의 작은 마을": {
+   "en": "My Little Village",
+   "zh": "我的小村庄"
+  },
+  "나의 작은 집": {
+   "en": "My Little Home",
+   "zh": "我的小屋"
+  },
+  "나의 집": {
+   "en": "My Home",
+   "zh": "我的家"
+  },
+  "나의 집 · E 들어가기": {
+   "en": "My Home · E Enter",
+   "zh": "我的家 · E 进入"
+  },
+  "나의 집 들어가기": {
+   "en": "Enter My Home",
+   "zh": "进入我的家"
+  },
+  "낚시 도감: 강농어 %d마리 / 은빛 도미 %d마리\n호수에는 강농어, 바다에는 은빛 도미가 더 자주 찾아와요.": {
+   "en": "Fishing log: River Perch %d / Silver Bream %d\nRiver Perch show up more in the lake, Silver Bream in the sea.",
+   "zh": "钓鱼图鉴：河鲈 %d 条 / 银鲷 %d 条\n湖里常见河鲈，海里常见银鲷。"
+  },
+  "낚시 도감과 생활 창고": {
+   "en": "Fishing Log & Pantry Storage",
+   "zh": "钓鱼图鉴与生活仓库"
+  },
+  "낚싯대를 거두었어요. 사용한 미끼는 돌아오지 않습니다.": {
+   "en": "You reeled in your line. Used Bait doesn't come back.",
+   "zh": "收起了鱼竿。用掉的鱼饵不会返还。"
+  },
+  "낮에는 채집하고 밤에는 모닥불 곁을 지키세요.": {
+   "en": "Gather by day and stay by the Campfire at night.",
+   "zh": "白天采集，夜晚守在篝火旁。"
+  },
+  "내 마을로 돌아가기": {
+   "en": "Return to My Village",
+   "zh": "返回我的村庄"
+  },
+  "내 마을로 초대": {
+   "en": "Invite to My Village",
+   "zh": "邀请到我的村庄"
+  },
+  "내 이름: ": {
+   "en": "My name: ",
+   "zh": "我的名字："
+  },
+  "내 집": {
+   "en": "My Home",
+   "zh": "我的家"
+  },
+  "내가 만든 작은 세계": {
+   "en": "My Little World",
+   "zh": "我创造的小世界"
+  },
+  "내가 직접 색칠하기": {
+   "en": "Paint it myself",
+   "zh": "自己涂色"
+  },
+  "내려찍기!": {
+   "en": "Slam!",
+   "zh": "下砸！"
+  },
+  "너무 빨리 당겼어요. 다음 입질을 기다려 보세요.": {
+   "en": "Too early! Wait for the next bite.",
+   "zh": "拉得太早了。等下一次咬钩吧。"
+  },
+  "넉넉한 나무와 열매. 첫 탐험에 어울리는 숲.": {
+   "en": "Plenty of wood and berries. A forest made for your first Expedition.",
+   "zh": "树木和果实充足。适合第一次探险的森林。"
+  },
+  "노란 우비를 입은 섬의 첫 탐험가.": {
+   "en": "The island's first explorer, in a yellow raincoat.",
+   "zh": "身穿黄色雨衣的岛上第一位探险家。"
+  },
+  "노랑": {
+   "en": "Yellow",
+   "zh": "黄色"
+  },
+  "노을 채석장": {
+   "en": "Sunset Quarry",
+   "zh": "晚霞采石场"
+  },
+  "놓은 물건 %d / 30": {
+   "en": "Items placed %d / 30",
+   "zh": "已放置 %d / 30"
+  },
+  "놓은 물건 0 / 30": {
+   "en": "Items placed 0 / 30",
+   "zh": "已放置 0 / 30"
+  },
+  "놓을 자리 고르기 · ": {
+   "en": "Choose a spot · ",
+   "zh": "选择摆放位置 · "
+  },
+  "느린 허기, 약한 적. 지형과 생존을 익히세요.": {
+   "en": "Slow hunger, weak enemies. Learn the terrain and the basics of Survival.",
+   "zh": "饥饿缓慢，敌人较弱。熟悉地形与生存。"
+  },
+  "님의 마을": {
+   "en": "'s Village",
+   "zh": "的村庄"
+  },
+  "다 자란 작물 수확하기": {
+   "en": "Harvest Ripe Crop",
+   "zh": "收获成熟的作物"
+  },
+  "다가가면 꽃잎이 열리는 꽃 조명": {
+   "en": "A flower lamp that opens its petals as you approach",
+   "zh": "靠近时花瓣会绽放的花灯"
+  },
+  "다가가면 여섯 꽃잎이 열리고 떠나면 닫히는 꽃 조명": {
+   "en": "A flower lamp whose six petals open as you approach and close when you leave",
+   "zh": "靠近时六片花瓣绽放、离开时合拢的花灯"
+  },
+  "다른 가구에서 두 칸 이상 떨어뜨려 주세요.": {
+   "en": "Keep it at least two tiles from other furniture.",
+   "zh": "请与其他家具保持两格以上距离。"
+  },
+  "다른 가구와 겹쳐요.": {
+   "en": "It overlaps other furniture.",
+   "zh": "与其他家具重叠了。"
+  },
+  "다른 곳에서 부품 맞춤이 바뀌었어요. 편집값은 보존했습니다. 가구를 다시 선택하면 최신 설계를 불러옵니다.": {
+   "en": "Part fitting was changed elsewhere. Your edits are kept. Select the furniture again to load the latest design.",
+   "zh": "部件调整已在其他地方更改。你的编辑已保留，重新选择家具即可加载最新设计。"
+  },
+  "다른 공간": {
+   "en": "Elsewhere",
+   "zh": "其他地方"
+  },
+  "다른 물건과 겹칩니다.": {
+   "en": "It overlaps another item.",
+   "zh": "与其他物品重叠。"
+  },
+  "다른 요청으로 바뀐 상태를 새로 읽었어요. 다시 선택하세요.": {
+   "en": "Things changed from another request and were reloaded. Please choose again.",
+   "zh": "状态已因其他请求更新，请重新选择。"
+  },
+  "다섯 섬 마을": {
+   "en": "Five-Island Village",
+   "zh": "五岛村庄"
+  },
+  "다섯 섬과 다리가 한눈에 보여요.\nEsc를 누르면 산책으로 돌아갑니다.": {
+   "en": "You can see all five islands and bridges at a glance.\nPress Esc to go back to your stroll.",
+   "zh": "五座岛和桥梁尽收眼底。\n按 Esc 返回漫步。"
+  },
+  "다시 로그인해 주세요.": {
+   "en": "Please log in again.",
+   "zh": "请重新登录。"
+  },
+  "다시 자라는 중이에요. 잠시 뒤에 찾아오세요.": {
+   "en": "Still regrowing. Come back in a bit.",
+   "zh": "正在重新生长，过一会儿再来吧。"
+  },
+  "다시 피울 작은 불씨": {
+   "en": "A Small Ember to Rekindle",
+   "zh": "可再次点燃的小火种"
+  },
+  "다음 공격을 준비 중입니다.": {
+   "en": "Getting ready for the next attack.",
+   "zh": "正在准备下一次攻击。"
+  },
+  "다음 밤을 준비하세요\n열매와 목재를 비축하고,\n창으로 그림자 짐승에 맞서세요.": {
+   "en": "Prepare for the next night\nStock up on berries and wood,\nand face the shadow beasts with a spear.",
+   "zh": "为下一个夜晚做准备\n储备浆果和木材，\n用长矛对抗暗影兽。"
+  },
+  "단비 · 씨앗지기": {
+   "en": "Danbi · Seed Keeper",
+   "zh": "丹比 · 种子守护人"
+  },
+  "닫기": {
+   "en": "Close",
+   "zh": "关闭"
+  },
+  "닫기 · Esc": {
+   "en": "Close · Esc",
+   "zh": "关闭 · Esc"
+  },
+  "달이 뜬 밤": {
+   "en": "Moonlit Night",
+   "zh": "月夜"
+  },
+  "더 빠르고 강한 적, 빠른 허기. 보상 1.6배.": {
+   "en": "Faster, stronger enemies and quicker hunger. Rewards ×1.6.",
+   "zh": "敌人更快更强，饥饿更快。奖励 1.6 倍。"
+  },
+  "도끼": {
+   "en": "Axe",
+   "zh": "斧头"
+  },
+  "도끼 제작": {
+   "en": "Craft an Axe",
+   "zh": "制作斧头"
+  },
+  "도끼를 만들면 채집이 빨라져요\n목재 3 + 돌 2를 모으세요.\nI · 가방에서 도구 만들기": {
+   "en": "An axe makes gathering faster\nCollect Wood 3 + Stone 2.\nI · Craft tools from your Bag",
+   "zh": "做把斧头采集会更快\n收集木材 3 + 石头 2。\nI · 在背包中制作工具"
+  },
+  "도전 가능": {
+   "en": "Available",
+   "zh": "可挑战"
+  },
+  "도형 메시 · Tripo 호출 없음\n": {
+   "en": "Shape mesh · No Tripo call\n",
+   "zh": "几何体网格 · 未调用 Tripo\n"
+  },
+  "도형으로 동작 미리보기": {
+   "en": "Preview Motion with Shapes",
+   "zh": "用几何体预览动作"
+  },
+  "도형으로 부품과 움직임만 확인합니다. 실제 Tripo 메시의 외형과 분리는 달라질 수 있습니다.\n이 창의 조작은 저장·과금되지 않습니다. 창을 닫은 뒤 비용을 확인하고 생성하세요.": {
+   "en": "Shapes show only the parts and motion. The final Tripo mesh may look and split differently.\nNothing you do here is saved or charged. Close this window, check the cost, then generate.",
+   "zh": "仅用几何体确认部件与动作。实际 Tripo 网格的外观与拆分可能不同。\n此窗口中的操作不会保存或扣费。关闭窗口后请确认费用再生成。"
+  },
+  "돌": {
+   "en": "Stone",
+   "zh": "石头"
+  },
+  "돌도끼": {
+   "en": "Stone Axe",
+   "zh": "石斧"
+  },
+  "돌도끼 · 목재 3 + 돌 2": {
+   "en": "Stone Axe · Wood 3 + Stone 2",
+   "zh": "石斧 · 木材 3 + 石头 2"
+  },
+  "돌아갈 탐험이 있어요\n%d일째 · 체력 %d\n하단의 이어하기 또는 돌문 앞 E\n\n마을에서는 생존 시간이 멈춥니다.": {
+   "en": "An expedition awaits\nDay %d · Health %d\nUse Continue below or press E at the stone gate\n\nSurvival time is paused in the village.",
+   "zh": "还有可以返回的探险\n第%d天 · 生命 %d\n点击下方的继续探险，或在石门前按 E\n\n在村庄里生存时间会暂停。"
+  },
+  "돌아올 마을이 있어, 숲으로 떠납니다.": {
+   "en": "With a village to come home to, I head into the forest.",
+   "zh": "有可以回去的村庄，才敢前往森林。"
+  },
+  "동료를 초대해 2명 이상 모여 주세요.": {
+   "en": "Invite friends so at least 2 players are together.",
+   "zh": "请邀请同伴，凑齐2人以上。"
+  },
+  "동료의 탐험은 계속되며, 나의 완주 보상은 포기합니다.": {
+   "en": "Your teammates' expedition continues, but you'll give up your completion reward.",
+   "zh": "同伴的探险会继续，你将放弃自己的通关奖励。"
+  },
+  "동작 검증 실패": {
+   "en": "Motion check failed",
+   "zh": "动作验证失败"
+  },
+  "동작 코드": {
+   "en": "Motion Code",
+   "zh": "动作代码"
+  },
+  "동작 확인 · ": {
+   "en": "Motion check · ",
+   "zh": "动作确认 · "
+  },
+  "뒤로": {
+   "en": "Back",
+   "zh": "返回"
+  },
+  "드래그로 회전 · 휠로 확대\n": {
+   "en": "Drag to rotate · Scroll to zoom\n",
+   "zh": "拖动旋转 · 滚轮缩放\n"
+  },
+  "등대 부두 낚시터": {
+   "en": "Lighthouse Pier Fishing Spot",
+   "zh": "灯塔码头钓场"
+  },
+  "등대 종소리를 들으며 잠시 쉬어 가세요. Tab으로 다음 목적지를 고를 수 있어요.": {
+   "en": "Rest a while to the lighthouse bell. Press Tab to choose your next destination.",
+   "zh": "听着灯塔钟声歇一会儿吧。按 Tab 可选择下一个目的地。"
+  },
+  "등대섬": {
+   "en": "Lighthouse Isle",
+   "zh": "灯塔岛"
+  },
+  "떠나기": {
+   "en": "Walk Away",
+   "zh": "离开"
+  },
+  "뚜껑": {
+   "en": "Lid",
+   "zh": "盖子"
+  },
+  "뚜껑·바늘의 위치와 회전축을 조정합니다. 저장하면 내 가구에만 적용되며 원래 설계로 되돌릴 수 있어요.": {
+   "en": "Adjust the position and pivot of lids and hands. Saving applies only to your furniture, and you can revert to the original design.",
+   "zh": "调整盖子、指针的位置与旋转轴。保存后仅对你的家具生效，并可恢复原设计。"
+  },
+  "로그아웃": {
+   "en": "Log Out",
+   "zh": "退出登录"
+  },
+  "로그인": {
+   "en": "Log In",
+   "zh": "登录"
+  },
+  "로그인이 만료됐습니다. 다시 접속하세요.": {
+   "en": "Your login has expired. Please reconnect.",
+   "zh": "登录已过期。请重新连接。"
+  },
+  "루": {
+   "en": "Ru",
+   "zh": "露"
+  },
+  "루 · 탐험가": {
+   "en": "Ru · Explorer",
+   "zh": "露 · 探险家"
+  },
+  "마우스: 놓을 위치 선택\nR: 회전 · Esc: 배치 취소\nBackspace: 마지막 배치 회수": {
+   "en": "Mouse: Choose spot\nR: Rotate · Esc: Cancel placing\nBackspace: Pick up last placed",
+   "zh": "鼠标：选择放置位置\nR：旋转 · Esc：取消放置\nBackspace：收回最后放置的物品"
+  },
+  "마을": {
+   "en": "Village",
+   "zh": "村庄"
+  },
+  "마을  →": {
+   "en": "Village  →",
+   "zh": "村庄  →"
+  },
+  "마을 →": {
+   "en": "Village →",
+   "zh": "村庄 →"
+  },
+  "마을 대화": {
+   "en": "Village Chat",
+   "zh": "村庄聊天"
+  },
+  "마을 방문": {
+   "en": "Village Visit",
+   "zh": "拜访村庄"
+  },
+  "마을 생활 정보를 읽지 못했어요. 다시 접속해 주세요.": {
+   "en": "Couldn't load village life info. Please reconnect.",
+   "zh": "无法读取村庄生活信息，请重新连接。"
+  },
+  "마을 생활 창고": {
+   "en": "Village Life Storage",
+   "zh": "村庄生活仓库"
+  },
+  "마을 식탁 배달 완료! 잎전 20개를 받았어요.": {
+   "en": "Village table delivery done! You received 20 Leaf coins.",
+   "zh": "村庄餐桌配送完成！获得了 20 叶币。"
+  },
+  "마을 연못 낚시터": {
+   "en": "Village Pond Fishing Spot",
+   "zh": "村庄池塘钓场"
+  },
+  "마을 초대를 보냈습니다.": {
+   "en": "Village invite sent.",
+   "zh": "已发送村庄邀请。"
+  },
+  "마을로 나가기": {
+   "en": "Back to Village",
+   "zh": "前往村庄"
+  },
+  "마을로 돌아가기": {
+   "en": "Return to Village",
+   "zh": "返回村庄"
+  },
+  "마을에 놓았습니다. 다시 접속해도 유지됩니다.": {
+   "en": "Placed in the village. It'll stay even after you reconnect.",
+   "zh": "已摆放在村庄中。重新连接后也会保留。"
+  },
+  "마을에서 로그인한 뒤 공방으로 들어오세요.": {
+   "en": "Log in from the village, then come into the Workshop.",
+   "zh": "请先在村庄登录，再进入工坊。"
+  },
+  "마을은 주인을 포함해 최대 3명입니다.": {
+   "en": "Villages hold up to 3 players, including the owner.",
+   "zh": "村庄包括主人在内最多3人。"
+  },
+  "마을을 업데이트하고 있어요. 잠시 뒤 다시 접속해 주세요.": {
+   "en": "The village is being updated. Please reconnect in a moment.",
+   "zh": "村庄正在更新中。请稍后再连接。"
+  },
+  "마음에 드는 바닥을 클릭하세요. R로 돌리고 Esc로 취소할 수 있어요.": {
+   "en": "Click a spot you like. Press R to rotate, Esc to cancel.",
+   "zh": "点击喜欢的地面。按 R 旋转，按 Esc 取消。"
+  },
+  "만들 물건을 두 글자 이상 적어 주세요.": {
+   "en": "Describe the item in at least two characters.",
+   "zh": "请写下要制作的物品（至少两个字）。"
+  },
+  "만들고 싶은 물건을 세 글자 이상 적어 주세요.": {
+   "en": "Describe the item you want in at least three characters.",
+   "zh": "请写下想制作的物品（至少三个字）。"
+  },
+  "만들고 싶은 물건을 짧게 적어 주세요. 가장 간단한 한 덩어리 모양으로 만들어 드려요.": {
+   "en": "Briefly describe the item you want. We'll make it as one simple solid shape.",
+   "zh": "请简短写下想制作的物品。我们会做成最简单的一体造型。"
+  },
+  "만들기": {
+   "en": "Create",
+   "zh": "制作"
+  },
+  "만들기 · %d 별씨": {
+   "en": "Create · %d Starseeds",
+   "zh": "制作 · %d 星种"
+  },
+  "만들기 · 30 별씨": {
+   "en": "Create · 30 Starseeds",
+   "zh": "制作 · 30 星种"
+  },
+  "만들기 전, 미리 살펴보기": {
+   "en": "Take a Look Before Crafting",
+   "zh": "制作前，先看一看"
+  },
+  "만들기를 기다리고 있어요": {
+   "en": "Waiting to create",
+   "zh": "等待制作中"
+  },
+  "만료되었거나 이미 처리된 초대입니다.": {
+   "en": "This invite has expired or was already handled.",
+   "zh": "邀请已过期或已处理。"
+  },
+  "맞춤 저장": {
+   "en": "Save Fit",
+   "zh": "保存调整"
+  },
+  "맞춤을 저장하지 못했어요 · ": {
+   "en": "Couldn't save the fit · ",
+   "zh": "无法保存调整 · "
+  },
+  "맨손 공격!": {
+   "en": "Bare-handed attack!",
+   "zh": "徒手攻击！"
+  },
+  "머리": {
+   "en": "Hair",
+   "zh": "发型"
+  },
+  "먹었습니다": {
+   "en": "Ate",
+   "zh": "吃掉了"
+  },
+  "먹을 것이 없습니다. 열매를 채집하세요.": {
+   "en": "Nothing to eat. Gather some berries.",
+   "zh": "没有吃的。去采集果实吧。"
+  },
+  "먹을 수 없는 물건입니다.": {
+   "en": "You can't eat that.",
+   "zh": "这个不能吃。"
+  },
+  "먼저 미끼를 달고 찌를 던져 주세요.": {
+   "en": "Put on Bait and cast your bobber first.",
+   "zh": "请先挂上鱼饵再抛竿。"
+  },
+  "먼저 배를 채우세요\nQ로 열매나 수프를 먹으세요.": {
+   "en": "Eat something first\nPress Q to eat berries or soup.",
+   "zh": "先填饱肚子吧\n按 Q 吃浆果或喝汤。"
+  },
+  "먼저 씨앗을 심어 주세요.": {
+   "en": "Plant some seeds first.",
+   "zh": "请先播种。"
+  },
+  "메시 생성 · 검증 · 조립": {
+   "en": "Mesh generation · Checks · Assembly",
+   "zh": "生成网格 · 验证 · 组装"
+  },
+  "메시지는 1초 간격으로 보낼 수 있습니다.": {
+   "en": "You can send a message once per second.",
+   "zh": "每隔1秒才能发送一条消息。"
+  },
+  "메시지를 입력하고 Enter": {
+   "en": "Type a message and press Enter",
+   "zh": "输入消息后按 Enter"
+  },
+  "모닥불 피우기": {
+   "en": "Light a Campfire",
+   "zh": "点燃篝火"
+  },
+  "모닥불을 피웠습니다. 주변에서는 밤의 위협을 피할 수 있어요.": {
+   "en": "Campfire lit. Stay near it to avoid the night's dangers.",
+   "zh": "篝火点燃了。在附近可以躲避夜晚的威胁。"
+  },
+  "모닥불의 금색 원 안으로 돌아오거나, 붉은 공격 예고를 피하세요.": {
+   "en": "Get back inside the Campfire's golden circle, or dodge the red attack warnings.",
+   "zh": "回到篝火的金色圆圈内，或躲开红色攻击预警。"
+  },
+  "모닥불이 곧 꺼져요. 야영지에서 F로 목재를 보태세요.": {
+   "en": "The Campfire is dying. Press F at camp to add wood.",
+   "zh": "篝火快熄灭了。在营地按 F 添加木材吧。"
+  },
+  "모델 비교 설정 펼치기": {
+   "en": "Show Model Comparison Settings",
+   "zh": "展开模型对比设置"
+  },
+  "모델을 읽을 수 없습니다.": {
+   "en": "Couldn't read the model.",
+   "zh": "无法读取模型。"
+  },
+  "모두 마을에 있을 때 함께 출발합니다. 체력·가방은 개인, 자원·적·모닥불은 공유합니다.": {
+   "en": "Set out together when everyone is in the village. Health and Bags are personal; resources, enemies, and Campfires are shared.",
+   "zh": "所有人都在村庄时一起出发。生命·背包为个人所有，资源·敌人·篝火共享。"
+  },
+  "모두 마을에 접속한 뒤 출발해 주세요.": {
+   "en": "Set out once everyone is in the village.",
+   "zh": "请等所有人都进入村庄后再出发。"
+  },
+  "모루": {
+   "en": "Moru",
+   "zh": "莫鲁"
+  },
+  "모루 · 야영 전문가": {
+   "en": "Moru · Camping Expert",
+   "zh": "莫鲁 · 露营专家"
+  },
+  "모습 미리보기": {
+   "en": "Preview Look",
+   "zh": "预览外观"
+  },
+  "모아 온 기록으로 테오가 종탑의 돌바퀴를 고쳤습니다. 서리빛 분지로 향하는 길이 드러났습니다.": {
+   "en": "With the records you gathered, Teo fixed the bell tower's stone wheel. The path to Frostlight Basin is revealed.",
+   "zh": "特奥用带回的记录修好了钟楼的石轮。通往霜光盆地的路显现了。"
+  },
+  "모자 없음": {
+   "en": "No Hat",
+   "zh": "无帽子"
+  },
+  "모험가 로그인": {
+   "en": "Adventurer Login",
+   "zh": "冒险者登录"
+  },
+  "목재": {
+   "en": "Wood",
+   "zh": "木材"
+  },
+  "목재 두 개가 필요합니다.": {
+   "en": "You need two pieces of wood.",
+   "zh": "需要两块木材。"
+  },
+  "목적지를 고르면 길잡이 표식이 생겨요. 섬과 섬은 다리로 이어져 있어요.": {
+   "en": "Choose a destination to place a guide marker. The islands are linked by bridges.",
+   "zh": "选择目的地后会出现指引标记。岛与岛之间有桥相连。"
+  },
+  "목표": {
+   "en": "Goals",
+   "zh": "目标"
+  },
+  "목표가 남아 있어 이야기는 다음 도전에서 이어집니다.": {
+   "en": "Some goals remain, so the story continues in your next challenge.",
+   "zh": "还有未完成的目标，故事将在下次挑战中继续。"
+  },
+  "물 위에는 놓을 수 없어요.": {
+   "en": "You can't place items on the water.",
+   "zh": "不能放在水面上。"
+  },
+  "물건 미리 보기": {
+   "en": "Item Preview",
+   "zh": "物品预览"
+  },
+  "물건 상태가 바뀌었습니다. 목록을 새로고침하세요.": {
+   "en": "This item has changed. Please refresh the list.",
+   "zh": "物品状态已变化。请刷新列表。"
+  },
+  "물건과 별씨는 서버에서 동시에 이전됩니다.": {
+   "en": "Items and Starseeds are exchanged on the server at the same time.",
+   "zh": "物品与星种将在服务器上同时转移。"
+  },
+  "물건을 선택하세요.": {
+   "en": "Select an item.",
+   "zh": "请选择物品。"
+  },
+  "물건을 찾을 수 없어요. 보관함을 새로고침해 주세요.": {
+   "en": "Item not found. Please refresh your Bag.",
+   "zh": "找不到物品，请刷新背包。"
+  },
+  "물결빛 공방": {
+   "en": "Ripplelight Workshop",
+   "zh": "波光工坊"
+  },
+  "물결빛 광장": {
+   "en": "Ripplelight Square",
+   "zh": "波光广场"
+  },
+  "물결빛 마을 산책 지도": {
+   "en": "Ripplelight Village Stroll Map",
+   "zh": "波光村漫步地图"
+  },
+  "물결빛 마을에 오신 것을 환영해요! 다리를 건너 다섯 섬을 둘러보세요.": {
+   "en": "Welcome to Ripplelight Village! Cross the bridges and explore the five islands.",
+   "zh": "欢迎来到波光村！过桥去逛逛五座岛吧。"
+  },
+  "물고기가 달아났어요. 다시 던져 보세요.": {
+   "en": "The fish got away. Cast again.",
+   "zh": "鱼跑掉了，再抛一次吧。"
+  },
+  "물고기가 달아났어요. 다시 도전해 보세요.": {
+   "en": "The fish got away. Try again.",
+   "zh": "鱼跑掉了，再试一次吧。"
+  },
+  "물뿌리개로 물주기": {
+   "en": "Water with Watering Can",
+   "zh": "用水壶浇水"
+  },
+  "물을 주었어요. 마을을 떠나도 계속 자랍니다.": {
+   "en": "Watered! It keeps growing even after you leave the village.",
+   "zh": "浇好水了。离开村庄后也会继续生长。"
+  },
+  "물을 준 뒤 작물이 자랄 때까지 기다려 주세요.": {
+   "en": "After watering, wait for the crop to grow.",
+   "zh": "浇水后请等待作物长大。"
+  },
+  "미기록": {
+   "en": "Not recorded",
+   "zh": "未记录"
+  },
+  "미끼": {
+   "en": "Bait",
+   "zh": "鱼饵"
+  },
+  "미끼 %d개": {
+   "en": "Bait %d",
+   "zh": "鱼饵 %d 个"
+  },
+  "미끼를 챙겨 찌를 던져 보세요.\n금빛 입질이 오면 E로 당기면 돼요.\n바다에는 은빛 도미가 더 많아요.": {
+   "en": "Grab some Bait and cast your line.\nWhen you get a golden bite, press E to reel in.\nThere are more silver sea bream out at sea.",
+   "zh": "带上鱼饵，把浮漂抛出去吧。\n出现金色咬钩时按 E 拉竿。\n海里的银鲷更多哦。"
+  },
+  "미라": {
+   "en": "Mira",
+   "zh": "米拉"
+  },
+  "미라 · 숲지기": {
+   "en": "Mira · Forest Keeper",
+   "zh": "米拉 · 森林守护人"
+  },
+  "미리보기 · 드래그 회전 / 휠 확대": {
+   "en": "Preview · Drag to rotate / Wheel to zoom",
+   "zh": "预览 · 拖动旋转 / 滚轮缩放"
+  },
+  "미리보기 회전": {
+   "en": "Rotate Preview",
+   "zh": "旋转预览"
+  },
+  "미리보기만 변경됨 · ‘맞춤 저장’을 누르면 서버에 저장합니다.": {
+   "en": "Preview only · Press 'Save Fit' to save to the server.",
+   "zh": "仅预览已更改 · 点击“保存调整”即可保存到服务器。"
+  },
+  "바닥에 배치": {
+   "en": "Place on Floor",
+   "zh": "放到地面"
+  },
+  "바람 선착장": {
+   "en": "Windy Dock",
+   "zh": "风之码头"
+  },
+  "바람 호수 낚시": {
+   "en": "Breeze Lake Fishing",
+   "zh": "风之湖钓鱼"
+  },
+  "바위 사이를 돌아 탐험하세요. 뜨거운 균열을 조심하세요.": {
+   "en": "Explore among the rocks. Watch out for hot cracks.",
+   "zh": "在岩石间迂回探险。小心炽热的裂缝。"
+  },
+  "반환값: ": {
+   "en": "Returned: ",
+   "zh": "返回值："
+  },
+  "받지 않은 생존 보상 받기": {
+   "en": "Claim Unclaimed Survival Rewards",
+   "zh": "领取未领的生存奖励"
+  },
+  "받침": {
+   "en": "Base",
+   "zh": "底座"
+  },
+  "밤까지": {
+   "en": "Night in",
+   "zh": "距入夜"
+  },
+  "밤까지 %d초! 야영지로 돌아갈 준비를 하세요.": {
+   "en": "%ds until night! Get ready to head back to camp.",
+   "zh": "距入夜还有%d秒！准备回营地吧。"
+  },
+  "밤에는 목재 2개를 남기고 야영지의 불을 지키세요.": {
+   "en": "At night, save 2 wood and keep the camp fire burning.",
+   "zh": "夜里留下2个木材，守护营地的篝火。"
+  },
+  "밤을 버틴 불씨가 공방의 등을 밝혔습니다. 나루가 노을 채석장의 지도를 건넵니다.": {
+   "en": "The ember that lasted the night lit the Workshop's lamp. Naru hands you a map of Sunset Quarry.",
+   "zh": "熬过黑夜的火种点亮了工坊的灯。娜露递来了晚霞采石场的地图。"
+  },
+  "방문 중에는 내 마을에서만 제작을 맡길 수 있어요.": {
+   "en": "While visiting, you can only commission crafts in your own village.",
+   "zh": "拜访期间只能在自己的村庄委托制作。"
+  },
+  "방문 중에는 마을 바깥에서 함께 산책할 수 있습니다. 실내 편집은 내 마을에서 해 주세요.": {
+   "en": "While visiting, you can stroll outside together. Edit interiors in your own village.",
+   "zh": "拜访期间可以在村庄户外一起散步。室内编辑请在自己的村庄进行。"
+  },
+  "방문 중에는 산책과 대화를 할 수 있습니다. 가구·텃밭 편집은 마을 주인만 할 수 있습니다.": {
+   "en": "While visiting, you can stroll and chat. Only the village owner can edit furniture and Garden plots.",
+   "zh": "拜访期间可以散步和聊天。只有村庄主人可以编辑家具和菜园。"
+  },
+  "방문 중에는 함께하기 메뉴에서 대화하거나 내 마을로 돌아갈 수 있습니다.": {
+   "en": "While visiting, you can chat or return to your village from the Play Together menu.",
+   "zh": "拜访期间，可在一起玩菜单中聊天或返回自己的村庄。"
+  },
+  "방문한 마을의 텃밭과 물건은 주인만 수정할 수 있습니다.": {
+   "en": "Only the owner can change Garden plots and items in a visited village.",
+   "zh": "拜访的村庄中，菜园和物品只有主人能修改。"
+  },
+  "방향 · 도": {
+   "en": "Rotation · °",
+   "zh": "方向 · 度"
+  },
+  "배치": {
+   "en": "Place",
+   "zh": "摆放"
+  },
+  "배치 %d / 30 · 꾸미기 용량 %.0f%%": {
+   "en": "Placed %d / 30 · Decor capacity %.0f%%",
+   "zh": "摆放 %d / 30 · 装饰容量 %.0f%%"
+  },
+  "배치 완료! 걸어가서 확인해 보세요. 다음 의자는 다른 색으로 놓을 수 있어요.": {
+   "en": "Placed! Walk over and take a look. You can place the next chair in a different color.",
+   "zh": "放置完成！走过去看看吧。下一把椅子可以换个颜色。"
+  },
+  "배치됨 · ": {
+   "en": "Placed · ",
+   "zh": "已摆放 · "
+  },
+  "배치를 취소했습니다. 마을을 걸어 다닐 수 있어요.": {
+   "en": "Placing canceled. You can walk around the village.",
+   "zh": "已取消放置，可以在村庄里自由走动了。"
+  },
+  "배치한 가구를 확인하고 있어요": {
+   "en": "Checking your placed furniture",
+   "zh": "正在确认已摆放的家具"
+  },
+  "베레모": {
+   "en": "Beret",
+   "zh": "贝雷帽"
+  },
+  "벽과 출입문에서 떨어진 곳에 놓아 주세요.": {
+   "en": "Place it away from walls and doorways.",
+   "zh": "请放在远离墙壁和门口的地方。"
+  },
+  "벽에서 한 칸 안쪽에 놓아 주세요.": {
+   "en": "Place it one tile in from the wall.",
+   "zh": "请离墙至少留出一格。"
+  },
+  "별바람 등대": {
+   "en": "Starwind Lighthouse",
+   "zh": "星风灯塔"
+  },
+  "별빛 천문대 전망": {
+   "en": "Starlight Observatory Lookout",
+   "zh": "星光天文台观景点"
+  },
+  "별씨": {
+   "en": "Starseeds",
+   "zh": "星种"
+  },
+  "별씨 %d": {
+   "en": "Starseeds %d",
+   "zh": "星种 %d"
+  },
+  "별씨 공방": {
+   "en": "Starseed Workshop",
+   "zh": "星种工坊"
+  },
+  "별씨 공방 · E 들어가기": {
+   "en": "Starseed Workshop · E Enter",
+   "zh": "星种工坊 · E 进入"
+  },
+  "별씨 공방 들어가기": {
+   "en": "Enter Starseed Workshop",
+   "zh": "进入星种工坊"
+  },
+  "별씨 장터": {
+   "en": "Starseed Market",
+   "zh": "星种市集"
+  },
+  "별씨가 부족합니다. 생존 도전을 완료해 보세요.": {
+   "en": "Not enough Starseeds. Try completing a Survival challenge.",
+   "zh": "星种不足。试着完成生存挑战吧。"
+  },
+  "별씨가 부족해요. 탐험 보상을 모아 보세요.": {
+   "en": "Not enough Starseeds. Earn more from Expedition rewards.",
+   "zh": "星种不足。去探险收集奖励吧。"
+  },
+  "별씨는 게임 재화입니다. API 크레딧과 같은 단위가 아닙니다. 검증용 도형은 생성 메시의 완성도를 보여주지 않습니다.": {
+   "en": "Starseeds are an in-game currency, not the same as API credits. Test shapes don't show the quality of a generated mesh.",
+   "zh": "星种是游戏货币，与 API 积分不是同一单位。验证用几何体无法体现生成网格的完成度。"
+  },
+  "별씨로 판매": {
+   "en": "Sell for Starseeds",
+   "zh": "以星种出售"
+  },
+  "보관": {
+   "en": "Stored",
+   "zh": "收纳"
+  },
+  "보관 중": {
+   "en": "Stored",
+   "zh": "收纳中"
+  },
+  "보관 중인 물건을 선택하세요.": {
+   "en": "Select a stored item.",
+   "zh": "请选择收纳中的物品。"
+  },
+  "보관함": {
+   "en": "Bag",
+   "zh": "背包"
+  },
+  "보관함으로 회수했습니다.": {
+   "en": "Returned to your Bag.",
+   "zh": "已收回到背包。"
+  },
+  "보상  %d 별씨": {
+   "en": "Reward  %d Starseeds",
+   "zh": "奖励  %d 星种"
+  },
+  "보상 받고 마을로": {
+   "en": "Claim Reward and Return",
+   "zh": "领取奖励并回村"
+  },
+  "본체": {
+   "en": "Body",
+   "zh": "主体"
+  },
+  "부분 %d": {
+   "en": "Part %d",
+   "zh": "部件 %d"
+  },
+  "부품 맞춤": {
+   "en": "Part Fitting",
+   "zh": "部件调整"
+  },
+  "부품 맞춤을 저장했어요": {
+   "en": "Part fit saved",
+   "zh": "已保存部件调整"
+  },
+  "부품당 %d 크레딧 · 최대 8부품": {
+   "en": "%d credits per part · Up to 8 parts",
+   "zh": "每部件 %d 积分 · 最多 8 部件"
+  },
+  "북쪽에서는 추위가 가장 큰 적이에요. 수프와 모닥불을 준비하고 일곱 밤을 건너세요. 돌아오면 그동안 모은 별씨로 집에 놓을 첫 작품을 만들어 봅시다.": {
+   "en": "In the north, the cold is your greatest enemy. Prepare soup and a Campfire, and make it through Seven Nights. When you return, let's use your Starseeds to make the first piece for your home.",
+   "zh": "在北方，寒冷才是最大的敌人。准备好汤和篝火，度过七夜吧。回来后，就用攒下的星种做第一件摆进家里的作品吧。"
+  },
+  "분침": {
+   "en": "Minute Hand",
+   "zh": "分针"
+  },
+  "분홍": {
+   "en": "Pink",
+   "zh": "粉色"
+  },
+  "불꽃!": {
+   "en": "Flame!",
+   "zh": "火焰！"
+  },
+  "불빛 안 · 밤의 위협을 막아 줍니다": {
+   "en": "In the firelight · Safe from night's dangers",
+   "zh": "火光范围内 · 可抵挡夜晚的威胁"
+  },
+  "불빛 안에서 밤을 버티세요\nF · 목재 2개로 불 30초 연장\n\n붉은 원 = 적의 공격 예고\nShift로 피하거나 Space로 공격": {
+   "en": "Hold out the night in the firelight\nF · 2 wood adds 30s of fire\n\nRed circle = enemy attack warning\nShift to dodge or Space to attack",
+   "zh": "在火光中撑过夜晚\nF · 用2个木材让火延长30秒\n\n红圈 = 敌人攻击预警\n按 Shift 闪避或按 Space 攻击"
+  },
+  "불씨 도깨비": {
+   "en": "Ember Goblin",
+   "zh": "火种小鬼"
+  },
+  "불이 충분히 타고 있습니다. 목재를 아껴 두세요.": {
+   "en": "The fire is burning well. Save your wood.",
+   "zh": "火烧得正旺，留着木材吧。"
+  },
+  "붉은 공격 예고는 Shift로 피하세요.\n목재 두 개는 모닥불을 위해 남겨 두세요.": {
+   "en": "Dodge red attack warnings with Shift.\nSave two wood for the Campfire.",
+   "zh": "红色攻击预警请用 Shift 闪避。\n留两个木材给篝火。"
+  },
+  "붕대": {
+   "en": "Bandage",
+   "zh": "绷带"
+  },
+  "붕대 · 섬유 3": {
+   "en": "Bandage · Fiber 3",
+   "zh": "绷带 · 纤维 3"
+  },
+  "붕대로 체력을 회복했습니다.": {
+   "en": "Bandage applied. Health restored.",
+   "zh": "用绷带恢复了体力。"
+  },
+  "비밀번호 · 10자 이상": {
+   "en": "Password · 10+ characters",
+   "zh": "密码 · 10个字符以上"
+  },
+  "비어 있는 마을 바닥을 선택해 주세요.": {
+   "en": "Please pick an empty spot on the village ground.",
+   "zh": "请选择空着的村庄地面。"
+  },
+  "비활성": {
+   "en": "Disabled",
+   "zh": "未启用"
+  },
+  "빈 바닥을 가리켜 보세요 · 클릭해서 놓기 · R 회전": {
+   "en": "Point at an empty floor · Click to place · R Rotate",
+   "zh": "指向空地面 · 点击放置 · R 旋转"
+  },
+  "빈 밭이에요. 어떤 작물을 심을까요?": {
+   "en": "An empty plot. What would you like to plant?",
+   "zh": "这是块空田。要种什么作物呢？"
+  },
+  "빈자리를 골라 주세요": {
+   "en": "Pick an empty spot",
+   "zh": "请选择一个空位"
+  },
+  "사과": {
+   "en": "Apple",
+   "zh": "苹果"
+  },
+  "사과 과수원": {
+   "en": "Apple Orchard",
+   "zh": "苹果果园"
+  },
+  "사용": {
+   "en": "Use",
+   "zh": "使用"
+  },
+  "사용 / 클릭": {
+   "en": "Use / Click",
+   "zh": "使用 / 点击"
+  },
+  "사용 가능": {
+   "en": "Available",
+   "zh": "可用"
+  },
+  "산책": {
+   "en": "Stroll",
+   "zh": "漫步"
+  },
+  "산책 · 천천히 이야기 즐기기": {
+   "en": "Stroll · Enjoy the story at your pace",
+   "zh": "漫步 · 慢慢享受故事"
+  },
+  "상상을 설계하고 있어요": {
+   "en": "Designing your idea",
+   "zh": "正在设计你的想象"
+  },
+  "상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요": {
+   "en": "Make the furniture you imagine, paint it, and place it in your space",
+   "zh": "构想家具，涂上颜色，摆进自己的空间"
+  },
+  "상의": {
+   "en": "Top",
+   "zh": "上衣"
+  },
+  "상자": {
+   "en": "Chest",
+   "zh": "箱子"
+  },
+  "상태 코드: ": {
+   "en": "Status code: ",
+   "zh": "状态码："
+  },
+  "새 가구 제작을 준비하고 있어요. 지금은 보관함의 물건으로 꾸며 보세요.": {
+   "en": "New furniture crafting is getting ready. For now, decorate with items from your Bag.",
+   "zh": "新家具制作正在准备中。现在先用背包里的物品来装饰吧。"
+  },
+  "새 물건이 보관함에 도착했습니다!": {
+   "en": "A new item has arrived in your Bag!",
+   "zh": "新物品已送达背包！"
+  },
+  "새 물건이 완성됐어요! C를 눌러 확인해 보세요.": {
+   "en": "Your new item is ready! Press C to check it out.",
+   "zh": "新物品完成了！按 C 查看吧。"
+  },
+  "새 탐험으로 다시 도전": {
+   "en": "Try Again on a New Expedition",
+   "zh": "开始新的探险，再次挑战"
+  },
+  "새로고침": {
+   "en": "Refresh",
+   "zh": "刷新"
+  },
+  "새로운 여행자 모습이 저장되었습니다.": {
+   "en": "Your new traveler look has been saved.",
+   "zh": "新的旅行者造型已保存。"
+  },
+  "색상이 서버에 저장됐습니다.": {
+   "en": "Colors saved to the server.",
+   "zh": "颜色已保存到服务器。"
+  },
+  "샘플 GLB를 읽지 못했습니다. 파일을 확인해 주세요.": {
+   "en": "Couldn't load the sample GLB. Please check the file.",
+   "zh": "无法读取示例 GLB，请检查文件。"
+  },
+  "샘플 · ": {
+   "en": "Sample · ",
+   "zh": "示例 · "
+  },
+  "샘플 설계 · API 비용 없음": {
+   "en": "Sample design · No API cost",
+   "zh": "示例设计 · 无 API 费用"
+  },
+  "샘플 의자 불러오기": {
+   "en": "Load Sample Chair",
+   "zh": "加载示例椅子"
+  },
+  "생성 상태: ": {
+   "en": "Craft status: ",
+   "zh": "生成状态："
+  },
+  "생성된 조작 함수와 이벤트": {
+   "en": "Generated control functions and events",
+   "zh": "生成的操作函数与事件"
+  },
+  "생성을 시작하지 못했어요 · ": {
+   "en": "Couldn't start generating · ",
+   "zh": "无法开始生成 · "
+  },
+  "생존  %d일     채집  %d회     처치  %d": {
+   "en": "Survived  %d days     Gathered  %d times     Defeated  %d",
+   "zh": "生存  %d天     采集  %d次     击败  %d"
+  },
+  "생존 보상 %d 별씨를 받았습니다.": {
+   "en": "Received %d Starseeds as a Survival reward.",
+   "zh": "已领取生存奖励 %d 星种。"
+  },
+  "생존 성공! 마을로 돌아가 %d 별씨를 받으세요.": {
+   "en": "You survived! Return to the village to claim %d Starseeds.",
+   "zh": "生存成功！回到村庄领取 %d 星种吧。"
+  },
+  "서리빛 분지": {
+   "en": "Frostlight Basin",
+   "zh": "霜光盆地"
+  },
+  "서버": {
+   "en": "Server",
+   "zh": "服务器"
+  },
+  "서버 연결을 확인해 주세요 · ": {
+   "en": "Please check your server connection · ",
+   "zh": "请检查服务器连接 · "
+  },
+  "서버 연결이 끊겼습니다. 서버를 실행한 뒤 다시 접속하세요.": {
+   "en": "Lost connection to the server. Start the server and reconnect.",
+   "zh": "与服务器的连接已断开。请启动服务器后重新连接。"
+  },
+  "서버 응답을 기다리고 있습니다. 연결을 복구하면 이어집니다.": {
+   "en": "Waiting for the server. You'll continue once the connection is back.",
+   "zh": "正在等待服务器响应。连接恢复后将继续。"
+  },
+  "서버 주소 직접 입력 (https://...)": {
+   "en": "Enter server address (https://...)",
+   "zh": "直接输入服务器地址 (https://...)"
+  },
+  "서버가 검사한 숫자 연산·부품 제어 코드입니다. 파일이나 재화에 접근할 수 없습니다.": {
+   "en": "Server-checked code for number math and part control only. It can't access files or currency.",
+   "zh": "经服务器检查的数值运算与部件控制代码，无法访问文件或货币。"
+  },
+  "서버를 업데이트한 뒤 다시 접속해 주세요": {
+   "en": "Please reconnect after updating the server",
+   "zh": "请更新服务器后重新连接"
+  },
+  "서버에 연결하고 있어요": {
+   "en": "Connecting to the server",
+   "zh": "正在连接服务器"
+  },
+  "서버에 접속 중…": {
+   "en": "Connecting to server…",
+   "zh": "正在连接服务器…"
+  },
+  "선택한 가구 사용": {
+   "en": "Use Selected Furniture",
+   "zh": "使用所选家具"
+  },
+  "선택한 가구를 다시 불러올 수 없어요.": {
+   "en": "Couldn't reload the selected furniture.",
+   "zh": "无法重新加载所选家具。"
+  },
+  "선택한 가구의 최신 상태를 불러왔어요.": {
+   "en": "Loaded the latest state of the selected furniture.",
+   "zh": "已加载所选家具的最新状态。"
+  },
+  "선택한 물건 놓기": {
+   "en": "Place Selected Item",
+   "zh": "摆放所选物品"
+  },
+  "선택한 물건 회수": {
+   "en": "Pick Up Selected Item",
+   "zh": "收回所选物品"
+  },
+  "선택한 생성 함수 호출": {
+   "en": "Call Selected Function",
+   "zh": "调用所选生成函数"
+  },
+  "설계 동작 미리보기 · 유료 생성 전": {
+   "en": "Design Motion Preview · Before paid generation",
+   "zh": "设计动作预览 · 付费生成前"
+  },
+  "설계 먼저 · %d 별씨 예약": {
+   "en": "Design First · Reserve %d Starseeds",
+   "zh": "先设计 · 预留 %d 星种"
+  },
+  "설계 미리보기 실패 · ": {
+   "en": "Design preview failed · ",
+   "zh": "设计预览失败 · "
+  },
+  "설계 완료 · %d부품\n총 %d 별씨 · 이미 예약 %d 별씨\nTripo 예상 %s 크레딧\n예상 비용 확인 후에만 유료 생성을 시작합니다.": {
+   "en": "Design complete · %d parts\nTotal %d Starseeds · %d already reserved\nTripo estimate %s credits\nPaid generation starts only after you confirm the estimate.",
+   "zh": "设计完成 · %d 个部件\n共 %d 星种 · 已预留 %d 星种\nTripo 预计 %s 积分\n确认预计费用后才会开始付费生成。"
+  },
+  "설계 후 최종 견적: %d 별씨\n": {
+   "en": "Final estimate after design: %d Starseeds\n",
+   "zh": "设计后最终报价：%d 星种\n"
+  },
+  "설계가 끝났어요!": {
+   "en": "The design is done!",
+   "zh": "设计完成了！"
+  },
+  "설계를 준비하고 있어요. 다른 가구를 꾸미며 기다릴 수 있어요.": {
+   "en": "Preparing the design. You can decorate other furniture while you wait.",
+   "zh": "正在准备设计。等待时可以去装饰其他家具。"
+  },
+  "설계를 표시하지 못했습니다": {
+   "en": "Couldn't display the design",
+   "zh": "无法显示设计"
+  },
+  "설계를 표시하지 못했습니다.": {
+   "en": "Couldn't show the design.",
+   "zh": "无法显示设计。"
+  },
+  "설계와 동작 코드 생성": {
+   "en": "Generating design and motion code",
+   "zh": "生成设计与动作代码"
+  },
+  "설정": {
+   "en": "Settings",
+   "zh": "设置"
+  },
+  "섬 안쪽에 놓아 주세요.": {
+   "en": "Place it on the island.",
+   "zh": "请放在岛屿内侧。"
+  },
+  "섬유": {
+   "en": "Fiber",
+   "zh": "纤维"
+  },
+  "섬유 세 개로 붕대를 만들어 보세요.": {
+   "en": "Try making a bandage from three fibers.",
+   "zh": "用三根纤维做绷带吧。"
+  },
+  "성장 중 · %d초": {
+   "en": "Growing · %ds",
+   "zh": "生长中 · %d秒"
+  },
+  "세션이 만료되었습니다. 다시 로그인해 주세요.": {
+   "en": "Your session has expired. Please log in again.",
+   "zh": "登录已过期，请重新登录。"
+  },
+  "소라 · 재단사": {
+   "en": "Sora · Tailor",
+   "zh": "索拉 · 裁缝"
+  },
+  "소리": {
+   "en": "Sound",
+   "zh": "声音"
+  },
+  "소리 끄기": {
+   "en": "Sound Off",
+   "zh": "关闭声音"
+  },
+  "소리 켜기": {
+   "en": "Sound On",
+   "zh": "开启声音"
+  },
+  "소리 켜기 / 끄기": {
+   "en": "Sound On / Off",
+   "zh": "开启 / 关闭声音"
+  },
+  "소리를 껐습니다. M으로 다시 켤 수 있습니다.": {
+   "en": "Sound off. Press M to turn it back on.",
+   "zh": "已关闭声音。按 M 可重新开启。"
+  },
+  "소리를 켰습니다.": {
+   "en": "Sound on.",
+   "zh": "已开启声音。"
+  },
+  "솔바람 숲": {
+   "en": "Pinebreeze Forest",
+   "zh": "松风森林"
+  },
+  "수락": {
+   "en": "Accept",
+   "zh": "接受"
+  },
+  "수프": {
+   "en": "Soup",
+   "zh": "汤"
+  },
+  "수프 · 열매 3 + 목재 1": {
+   "en": "Soup · Berries 3 + Wood 1",
+   "zh": "汤 · 浆果 3 + 木材 1"
+  },
+  "수프 제작": {
+   "en": "Cook Soup",
+   "zh": "制作汤"
+  },
+  "수확물 판매 · 한 개씩": {
+   "en": "Sell Harvest · One at a Time",
+   "zh": "出售收获物 · 每次一个"
+  },
+  "수확할 준비가 되었어요!": {
+   "en": "Ready to harvest!",
+   "zh": "可以收获了！"
+  },
+  "순무": {
+   "en": "Turnip",
+   "zh": "芜菁"
+  },
+  "순무 씨앗": {
+   "en": "Turnip Seeds",
+   "zh": "芜菁种子"
+  },
+  "순무는 90초, 호박은 150초면 자라요.\n심은 뒤 물을 한 번 주고 마을을 돌아보세요.\n수확물과 물고기는 잎전으로 바꾸거나 식탁에 배달할 수 있어요.": {
+   "en": "Turnips grow in 90 seconds, pumpkins in 150.\nWater them once after planting, then stroll around the village.\nTrade crops and fish for Leaf coins, or deliver them to the dinner table.",
+   "zh": "芜菁90秒、南瓜150秒就能长成。\n种下后浇一次水，再去村里逛逛吧。\n收获物和鱼可以换成叶币，或送到餐桌上。"
+  },
+  "숫자 배열로 입력해 주세요. 예: [0.5]": {
+   "en": "Please enter a number array, e.g. [0.5]",
+   "zh": "请输入数字数组。例：[0.5]"
+  },
+  "숫자 인수 예: [0.5]": {
+   "en": "Number arguments, e.g. [0.5]",
+   "zh": "数值参数示例：[0.5]"
+  },
+  "숲": {
+   "en": "Forest",
+   "zh": "森林"
+  },
+  "숲 입구에는 놓을 수 없습니다.": {
+   "en": "You can't place items at the forest entrance.",
+   "zh": "森林入口不能摆放。"
+  },
+  "숲길을 좋아하는 구리빛 머리의 숲지기.": {
+   "en": "A copper-haired forest keeper who loves woodland trails.",
+   "zh": "喜爱林间小路的铜发森林守护人。"
+  },
+  "숲을 지나면 뜨거운 채석장, 더 먼 곳에는 서리빛 분지가 있어요.\n처음이라면 산책 난이도로 길을 익혀 보세요.\n도전이 어려울수록 완주했을 때 받는 별씨도 늘어납니다.": {
+   "en": "Past the forest is the scorching quarry, and farther still, Frostlight Basin.\nIf it's your first time, learn the way on Stroll difficulty.\nThe harder the challenge, the more Starseeds you earn for finishing.",
+   "zh": "穿过森林是炎热的采石场，更远处还有霜光盆地。\n第一次的话，用漫步难度熟悉一下路线吧。\n挑战越难，通关时获得的星种也越多。"
+  },
+  "시계": {
+   "en": "Clock",
+   "zh": "时钟"
+  },
+  "시침": {
+   "en": "Hour Hand",
+   "zh": "时针"
+  },
+  "시침과 분침이 움직이고 클릭하면 멈추는 탁상 시계": {
+   "en": "A desk clock with moving hour and minute hands that stops when clicked",
+   "zh": "时针分针转动、点击即停的台钟"
+  },
+  "식탁에 배달하기": {
+   "en": "Deliver to the Table",
+   "zh": "配送到餐桌"
+  },
+  "신발": {
+   "en": "Shoes",
+   "zh": "鞋子"
+  },
+  "쓰러졌습니다. 동료가 생존하는 동안 관전합니다.": {
+   "en": "You're down. Spectating while your teammates survive.",
+   "zh": "你倒下了。队友存活期间可以观战。"
+  },
+  "씨앗 가게 · 배달 게시판": {
+   "en": "Seed Shop · Delivery Board",
+   "zh": "种子店 · 配送公告板"
+  },
+  "씨앗 가게 · 잎전 %d": {
+   "en": "Seed Shop · Leaf coins %d",
+   "zh": "种子店 · 叶币 %d"
+  },
+  "씨앗 가게에서 씨앗을 사고 수확물을 잎전으로 바꿀 수 있어요.": {
+   "en": "Buy seeds and trade your harvest for Leaf coins at the Seed Shop.",
+   "zh": "可以在种子店买种子，把收获物换成叶币。"
+  },
+  "씨앗 심기 → 한 번 물주기 → 성장 → 수확\n마을을 떠나거나 게임을 꺼도 작물은 계속 자라요.": {
+   "en": "Plant seeds → Water once → Grow → Harvest\nCrops keep growing even after you leave or quit the game.",
+   "zh": "播种 → 浇一次水 → 生长 → 收获\n即使离开村庄或关闭游戏，作物也会继续生长。"
+  },
+  "씨앗과 미끼 가게": {
+   "en": "Seed & Bait Shop",
+   "zh": "种子与鱼饵商店"
+  },
+  "아이디 · 영문·숫자·밑줄 3~24자": {
+   "en": "Username · 3–24 letters, numbers, or _",
+   "zh": "账号 · 英文、数字、下划线3~24个字符"
+  },
+  "아이디 또는 비밀번호를 확인하세요.": {
+   "en": "Check your username or password.",
+   "zh": "请检查账号或密码。"
+  },
+  "아이디와 비밀번호를 입력하세요.": {
+   "en": "Enter your username and password.",
+   "zh": "请输入账号和密码。"
+  },
+  "아직 대화가 없습니다.": {
+   "en": "No messages yet.",
+   "zh": "还没有聊天记录。"
+  },
+  "아직 등록된 물건이 없습니다.": {
+   "en": "No items listed yet.",
+   "zh": "还没有上架的物品。"
+  },
+  "아침까지": {
+   "en": "Morning in",
+   "zh": "距天亮"
+  },
+  "안녕하세요! 👋": {
+   "en": "Hello! 👋",
+   "zh": "你好！👋"
+  },
+  "알 수 없는 제작법입니다.": {
+   "en": "Unknown recipe.",
+   "zh": "未知的制作配方。"
+  },
+  "앞면": {
+   "en": "Front",
+   "zh": "正面"
+  },
+  "야영지": {
+   "en": "Campsite",
+   "zh": "营地"
+  },
+  "야영지 %.0fm · 불 %d초\n%s": {
+   "en": "Camp %.0fm · Fire %ds\n%s",
+   "zh": "营地 %.0fm · 火 %d秒\n%s"
+  },
+  "야영지 · F 모닥불": {
+   "en": "Camp · F Campfire",
+   "zh": "营地 · F 篝火"
+  },
+  "어느 곳에서 일곱 밤을 보낼까요?": {
+   "en": "Where will you spend Seven Nights?",
+   "zh": "要在哪里度过七夜呢？"
+  },
+  "어떤 물건을 만들까요?": {
+   "en": "What would you like to make?",
+   "zh": "想做什么物品？"
+  },
+  "언어": {
+   "en": "Language",
+   "zh": "语言"
+  },
+  "얼음 · 이동 둔화": {
+   "en": "Ice · Slows movement",
+   "zh": "冰面 · 移动减速"
+  },
+  "에 길잡이를 표시했어요.": {
+   "en": " · waypoint marked.",
+   "zh": "已设为指引目的地。"
+  },
+  "에셋을 읽을 수 없습니다": {
+   "en": "Can't read the asset",
+   "zh": "无法读取资源"
+  },
+  "여기에 놓기": {
+   "en": "Place Here",
+   "zh": "放在这里"
+  },
+  "여기에는 놓을 수 없어요 · ": {
+   "en": "Can't place it here · ",
+   "zh": "这里无法放置 · "
+  },
+  "여행 모자": {
+   "en": "Travel Hat",
+   "zh": "旅行帽"
+  },
+  "여행 배낭": {
+   "en": "Travel Backpack",
+   "zh": "旅行背包"
+  },
+  "여행에도 나다운 옷차림이 필요하죠!\n머리와 옷, 바지, 신발 색을 따로 골라 보세요.\n외형은 생존 능력에 영향을 주지 않아요.": {
+   "en": "Every trip needs an outfit that feels like you!\nPick colors for your hair, top, pants, and shoes separately.\nYour look doesn't affect survival abilities.",
+   "zh": "旅行也需要有自己风格的穿搭！\n头发、上衣、裤子、鞋子的颜色可以分别挑选。\n外观不会影响生存能力。"
+  },
+  "여행자": {
+   "en": "Traveler",
+   "zh": "旅行者"
+  },
+  "연결 상태 확인 중…": {
+   "en": "Checking connection…",
+   "zh": "正在检查连接状态…"
+  },
+  "열기 · 접근 주의": {
+   "en": "Heat · Watch your step",
+   "zh": "高温 · 小心靠近"
+  },
+  "열기·닫기 등 동작 시험": {
+   "en": "Test Open/Close and Other Motions",
+   "zh": "测试开合等动作"
+  },
+  "열매": {
+   "en": "Berries",
+   "zh": "浆果"
+  },
+  "열매 수프": {
+   "en": "Berry Soup",
+   "zh": "浆果汤"
+  },
+  "열매보다 많은 포만감과 체력을 회복합니다. Q를 누르면 수프를 먼저 먹습니다.": {
+   "en": "Restores more Fullness and Health than berries. Q eats soup first.",
+   "zh": "比浆果恢复更多饱腹度和生命。按 Q 会优先喝汤。"
+  },
+  "열매와 수프를 비축하고, 포만감이 떨어지면 Q로 먹으세요.": {
+   "en": "Stock up on berries and soup, and press Q to eat when Fullness drops.",
+   "zh": "储备浆果和汤，饱腹度下降时按 Q 进食。"
+  },
+  "예: 다가가면 꽃잎이 열리는 꽃 조명": {
+   "en": "e.g. A flower lamp that opens its petals as you approach",
+   "zh": "例：靠近时花瓣会绽放的花灯"
+  },
+  "예: 작은 버섯 모양 의자": {
+   "en": "e.g. A small mushroom-shaped chair",
+   "zh": "例：小蘑菇形状的椅子"
+  },
+  "오늘 물때가 좋아요.\n낚시하러 가볼까요?": {
+   "en": "The tide's great today.\nShall we go fishing?",
+   "zh": "今天潮水正好。\n一起去钓鱼吧？"
+  },
+  "오늘 배달 완료": {
+   "en": "Today's Delivery Done",
+   "zh": "今日配送已完成"
+  },
+  "오늘 생성 한도에 도달했습니다.": {
+   "en": "You've reached today's crafting limit.",
+   "zh": "已达到今日生成上限。"
+  },
+  "오늘의 마을 식탁: 순무 2개 + 강농어 1마리 → 20잎전\n매일 오전 9시(한국 시간)에 새 배달이 열려요.": {
+   "en": "Today's village table: 2 Turnips + 1 River Perch → 20 Leaf coins\nA new delivery opens every day at 9 AM (Korea time).",
+   "zh": "今日村庄餐桌：芜菁 2 个 + 河鲈 1 条 → 20叶币\n每天上午 9 点（韩国时间）开放新的配送。"
+  },
+  "오늘의 배달을 이미 마쳤어요.": {
+   "en": "You've already finished today's delivery.",
+   "zh": "今天的配送已完成。"
+  },
+  "온라인 공방": {
+   "en": "Online Workshop",
+   "zh": "在线工坊"
+  },
+  "온라인 서버": {
+   "en": "Online Server",
+   "zh": "在线服务器"
+  },
+  "옷장": {
+   "en": "Wardrobe",
+   "zh": "衣橱"
+  },
+  "옷장 열기": {
+   "en": "Open Wardrobe",
+   "zh": "打开衣橱"
+  },
+  "완료한 협동 탐험 보상 받기": {
+   "en": "Claim Completed Co-op Expedition Rewards",
+   "zh": "领取已完成的合作探险奖励"
+  },
+  "완성": {
+   "en": "Complete",
+   "zh": "完成"
+  },
+  "완성된 질감 포함하기": {
+   "en": "Include finished textures",
+   "zh": "包含成品材质"
+  },
+  "완성할 준비가 됐어요": {
+   "en": "Ready to finish",
+   "zh": "准备完成"
+  },
+  "완성했어요!": {
+   "en": "All done!",
+   "zh": "完成了！"
+  },
+  "완주 보상은 7일 생존 후 받을 수 있어요.": {
+   "en": "The completion reward is earned after surviving 7 days.",
+   "zh": "生存7天后可领取通关奖励。"
+  },
+  "외형은 모든 지역에서 같게 유지됩니다. 능력치는 바뀌지 않습니다.": {
+   "en": "Your look stays the same in every region. Stats don't change.",
+   "zh": "外观在所有区域都保持一致。能力值不会改变。"
+  },
+  "요청 결과 확인 필요 · 중복 과금 방지를 위해 정지": {
+   "en": "Request result needs checking · Paused to avoid double charges",
+   "zh": "需确认请求结果 · 为防止重复扣费已暂停"
+  },
+  "요청을 완료하지 못했습니다: ": {
+   "en": "Couldn't complete the request: ",
+   "zh": "请求未能完成："
+  },
+  "움직이는 가구": {
+   "en": "Moving furniture",
+   "zh": "会动的家具"
+  },
+  "움직이는 부품 맞추기": {
+   "en": "Fit Moving Parts",
+   "zh": "调整会动的部件"
+  },
+  "움직임을 살펴보세요.": {
+   "en": "Take a look at how it moves.",
+   "zh": "看看动作吧。"
+  },
+  "원격 서버는 HTTPS 주소를 사용하세요.": {
+   "en": "Use an HTTPS address for remote servers.",
+   "zh": "远程服务器请使用 HTTPS 地址。"
+  },
+  "원래 부품 설계로 돌아왔어요": {
+   "en": "Back to the original part design",
+   "zh": "已恢复原部件设计"
+  },
+  "원래 색 복원": {
+   "en": "Restore Original Colors",
+   "zh": "恢复原色"
+  },
+  "원래 설계로": {
+   "en": "Revert to Original",
+   "zh": "恢复原设计"
+  },
+  "원래 얼굴과 손을 보존한 노란 재킷 여행자.": {
+   "en": "A yellow-jacketed traveler with their original face and hands preserved.",
+   "zh": "保留原本面容和双手的黄夹克旅行者。"
+  },
+  "위치 · m": {
+   "en": "Position · m",
+   "zh": "位置 · m"
+  },
+  "은빛 도미": {
+   "en": "Silver Bream",
+   "zh": "银鲷"
+  },
+  "의 부탁\n\n": {
+   "en": "'s Request\n\n",
+   "zh": "的委托\n\n"
+  },
+  "의뢰하기": {
+   "en": "Commission",
+   "zh": "委托"
+  },
+  "의자를 불러와 색을 고르고, 마을 바닥을 클릭해 놓아 보세요.": {
+   "en": "Load the chair, pick a color, then click the village ground to place it.",
+   "zh": "加载椅子并选择颜色，点击村庄地面放置吧。"
+  },
+  "이 PC 서버": {
+   "en": "This PC's Server",
+   "zh": "本机服务器"
+  },
+  "이 모습으로 저장": {
+   "en": "Save This Look",
+   "zh": "保存这个造型"
+  },
+  "이 물건에는 생성된 조작 함수가 없어요.": {
+   "en": "This item has no generated control functions.",
+   "zh": "此物品没有生成的操作函数。"
+  },
+  "이 물건을 사용할 권한이 없습니다.": {
+   "en": "You don't have permission to use this item.",
+   "zh": "你没有使用此物品的权限。"
+  },
+  "이 서버는 함께하기 업데이트가 필요합니다.": {
+   "en": "This server needs the Play Together update.",
+   "zh": "此服务器需要更新一起玩功能。"
+  },
+  "이 서버에서는 지금 새 물건을 만들 수 없어요.": {
+   "en": "New items can't be crafted on this server right now.",
+   "zh": "此服务器目前无法制作新物品。"
+  },
+  "이 설계로 생성": {
+   "en": "Generate This Design",
+   "zh": "按此设计生成"
+  },
+  "이 설계의 도형 미리보기": {
+   "en": "Shape Preview of This Design",
+   "zh": "此设计的几何体预览"
+  },
+  "이 섬의 밤은 길어요. 숲에서 도끼를 만들고, 작은 불을 지켜 주세요. 일곱 번의 아침을 맞으면 오래된 채석장의 길을 알려 드릴게요.": {
+   "en": "Nights on this island are long. Make an axe in the forest and keep a small fire going. Greet seven mornings, and I'll show you the way to the old quarry.",
+   "zh": "这座岛的夜晚很漫长。在森林里做把斧头，守住小小的火光吧。迎来七个清晨后，我会告诉你通往古老采石场的路。"
+  },
+  "이 여행자의 머리와 피부는 고유한 모습으로 유지돼요. 옷과 소품을 바꿔 보세요.": {
+   "en": "This traveler's hair and skin stay true to their look. Try changing clothes and accessories.",
+   "zh": "这位旅行者的发型和肤色保持独有样貌。试试更换服装和配饰吧。"
+  },
+  "이 창을 보는 동안에도 생존 시간은 흐릅니다.": {
+   "en": "Survival time keeps running while this window is open.",
+   "zh": "查看此窗口时，生存时间仍在流逝。"
+  },
+  "이곳에 놓을 수 있어요 · %d°": {
+   "en": "You can place it here · %d°",
+   "zh": "可以放在这里 · %d°"
+  },
+  "이끼 수호자": {
+   "en": "Moss Guardian",
+   "zh": "苔藓守护者"
+  },
+  "이미 던진 찌가 있어요.": {
+   "en": "Your bobber is already out.",
+   "zh": "鱼漂已经抛出了。"
+  },
+  "이미 물을 주었어요.": {
+   "en": "Already watered.",
+   "zh": "已经浇过水了。"
+  },
+  "이미 배가 부르고 건강합니다.": {
+   "en": "You're already full and healthy.",
+   "zh": "已经吃饱了，身体也很健康。"
+  },
+  "이미 사용 중인 이름입니다.": {
+   "en": "That name is already taken.",
+   "zh": "该名称已被使用。"
+  },
+  "이미 심어 둔 작물이 있어요.": {
+   "en": "Something is already planted here.",
+   "zh": "这里已经种了作物。"
+  },
+  "이미 이 도구를 갖고 있습니다.": {
+   "en": "You already have this tool.",
+   "zh": "已经拥有这件工具了。"
+  },
+  "이미 파티에 참여 중입니다.": {
+   "en": "You're already in a party.",
+   "zh": "你已经在队伍中了。"
+  },
+  "이미지 선택": {
+   "en": "Choose Image",
+   "zh": "选择图片"
+  },
+  "이미지는 1MB 이하로 준비해 주세요": {
+   "en": "Please use an image of 1MB or less",
+   "zh": "请准备 1MB 以下的图片"
+  },
+  "이번 탐험은 여기까지예요.\n귀환 후 다시 도전할 수 있어요.": {
+   "en": "This expedition ends here.\nReturn and try again anytime.",
+   "zh": "这次探险就到这里了。\n返回后可以再次挑战。"
+  },
+  "이번 탐험의 목표\n": {
+   "en": "Goals for This Expedition\n",
+   "zh": "本次探险目标\n"
+  },
+  "이번 테스트에서는 30개까지 놓을 수 있어요.": {
+   "en": "You can place up to 30 items in this test.",
+   "zh": "本次测试最多可放置 30 个。"
+  },
+  "이야기 수첩 · 돌아오는 빛": {
+   "en": "Story Journal · The Returning Light",
+   "zh": "故事手册 · 归来之光"
+  },
+  "이야기 수첩 · 섬의 세 가지 기록": {
+   "en": "Story Journal · Three Island Tales",
+   "zh": "故事手册 · 岛屿的三段记录"
+  },
+  "이야기 시작": {
+   "en": "Start Story",
+   "zh": "开始故事"
+  },
+  "이전 서버가 실행 중입니다. 서버를 종료한 뒤 새 실행본으로 다시 시작하세요.": {
+   "en": "An older server is still running. Shut it down and restart with the new build.",
+   "zh": "旧版服务器正在运行。请关闭服务器后用新版本重新启动。"
+  },
+  "이전 장을 먼저 완료하세요": {
+   "en": "Complete the previous chapter first",
+   "zh": "请先完成上一章"
+  },
+  "인사": {
+   "en": "Wave",
+   "zh": "打招呼"
+  },
+  "인사 보내기": {
+   "en": "Send Greeting",
+   "zh": "打招呼"
+  },
+  "일곱 밤 생존": {
+   "en": "Survive Seven Nights",
+   "zh": "生存七夜"
+  },
+  "일곱 밤, 나의 마을": {
+   "en": "Seven Nights, My Village",
+   "zh": "七夜，我的村庄"
+  },
+  "일곱 밤을 견뎌냈어요": {
+   "en": "You Survived Seven Nights",
+   "zh": "撑过了七夜"
+  },
+  "일곱 밤을 견뎌냈어요!\n귀환하여 %d 별씨를 받으세요.": {
+   "en": "You survived Seven Nights!\nReturn to claim %d Starseeds.",
+   "zh": "撑过了七夜！\n返回后领取 %d 星种吧。"
+  },
+  "일곱 밤의 숲": {
+   "en": "Forest of Seven Nights",
+   "zh": "七夜森林"
+  },
+  "일곱 번의 밤을 버텼습니다! 별씨를 받고 마을로 돌아가세요.": {
+   "en": "You survived seven nights! Collect your Starseeds and head back to the village.",
+   "zh": "撑过了七个夜晚！领取星种，返回村庄吧。"
+  },
+  "일곱 번째 아침, 서리 너머에서 마을의 종소리가 들립니다. 이제 당신의 이야기를 담을 물건을 만들 차례입니다.": {
+   "en": "On the seventh morning, the village bell rings from beyond the frost. Now it's time to make something that holds your story.",
+   "zh": "第七个清晨，霜雪那头传来了村庄的钟声。现在轮到你制作承载自己故事的物品了。"
+  },
+  "일부 작업 비용은 아직 미확인입니다. 0원 확정이 아닙니다.\n": {
+   "en": "Some task costs aren't confirmed yet. This doesn't mean they're zero.\n",
+   "zh": "部分任务费用尚未确认，并非确定为 0。\n"
+  },
+  "입력 형식을 확인하세요. 이름 3~24자, 비밀번호 10자 이상입니다.": {
+   "en": "Check your input. Name: 3–24 characters, password: 10+ characters.",
+   "zh": "请检查输入格式。名称3~24个字符，密码10个字符以上。"
+  },
+  "입질! 지금 챔질하세요!": {
+   "en": "A bite! Hook it now!",
+   "zh": "咬钩了！快提竿！"
+  },
+  "잎전 %d  ·  수확 %d개  ·  낚은 물고기 %d마리": {
+   "en": "Leaf coins %d  ·  Harvested %d  ·  Fish caught %d",
+   "zh": "叶币 %d  ·  收获 %d 个  ·  钓到的鱼 %d 条"
+  },
+  "잎전으로 씨앗과 미끼를 사고, 직접 얻은 수확물을 팔아요.": {
+   "en": "Buy seeds and Bait with Leaf coins, and sell what you've harvested.",
+   "zh": "用叶币买种子和鱼饵，出售亲手收获的作物。"
+  },
+  "잎전은 씨앗과 미끼를 사는 마을 전용 돈이에요. 별씨와는 별개입니다.": {
+   "en": "Leaf coins are village money for buying seeds and Bait. They're separate from Starseeds.",
+   "zh": "叶币是用来买种子和鱼饵的村庄专用货币，与星种不同。"
+  },
+  "잎전이 부족해요. 수확물이나 물고기를 팔아 보세요.": {
+   "en": "Not enough Leaf coins. Try selling crops or fish.",
+   "zh": "叶币不足。试着卖掉收获物或鱼吧。"
+  },
+  "자라는 중 · %d초 남음": {
+   "en": "Growing · %ds left",
+   "zh": "生长中 · 还剩 %d秒"
+  },
+  "자원 가까이 이동하세요  |  I · 가방  |  휠 · 확대/축소  |  M · 소리": {
+   "en": "Move closer to resources  |  I · Bag  |  Wheel · Zoom  |  M · Sound",
+   "zh": "靠近资源吧  |  I · 背包  |  滚轮 · 缩放  |  M · 声音"
+  },
+  "자원 채집": {
+   "en": "Gather Resources",
+   "zh": "采集资源"
+  },
+  "작업 대기": {
+   "en": "Queued",
+   "zh": "等待任务"
+  },
+  "작은 물건을 고치는 붉은 재킷의 정비사.": {
+   "en": "A red-jacketed mechanic who fixes little things.",
+   "zh": "修理小物件的红夹克修理师。"
+  },
+  "잠금": {
+   "en": "Locked",
+   "zh": "锁定"
+  },
+  "잠깐 숨 고르기": {
+   "en": "Take a Breather",
+   "zh": "歇口气"
+  },
+  "잠시 후 다시 시도해 주세요.": {
+   "en": "Please try again in a moment.",
+   "zh": "请稍后再试。"
+  },
+  "장인이 설계도를 그리고 있어요…": {
+   "en": "The artisan is drawing up the design…",
+   "zh": "工匠正在绘制设计图…"
+  },
+  "장터 거래가 완료됐습니다.": {
+   "en": "Market trade complete.",
+   "zh": "市集交易已完成。"
+  },
+  "장터에 등록했습니다. 판매 중에는 배치와 색칠이 잠깁니다.": {
+   "en": "Listed at the Market. While for sale, placing and coloring are locked.",
+   "zh": "已上架市集。出售期间无法摆放和上色。"
+  },
+  "장터에서 판매 중": {
+   "en": "For sale at the Market",
+   "zh": "正在市集出售"
+  },
+  "재료가 부족해요. 창고와 씨앗 가게를 확인하세요.": {
+   "en": "Not enough materials. Check Storage and the Seed Shop.",
+   "zh": "材料不足。请查看仓库和种子店。"
+  },
+  "저장하지 못했습니다. 옷장을 닫고 새로고침한 뒤 다시 시도하세요.": {
+   "en": "Couldn't save. Close the Wardrobe, refresh, and try again.",
+   "zh": "保存失败。请关闭衣橱并刷新后再试。"
+  },
+  "전구": {
+   "en": "Bulb",
+   "zh": "灯泡"
+  },
+  "전체 색칠": {
+   "en": "Paint All",
+   "zh": "整体上色"
+  },
+  "정원 언덕": {
+   "en": "Garden Hill",
+   "zh": "花园山丘"
+  },
+  "정원 향초밭": {
+   "en": "Garden Herb Patch",
+   "zh": "花园香草田"
+  },
+  "정적 1부품 · %d 크레딧": {
+   "en": "Static, 1 part · %d credits",
+   "zh": "静态 1 部件 · %d 积分"
+  },
+  "정적인 가구": {
+   "en": "Static furniture",
+   "zh": "静态家具"
+  },
+  "제거": {
+   "en": "Remove",
+   "zh": "移除"
+  },
+  "제작": {
+   "en": "Craft",
+   "zh": "制作"
+  },
+  "제작 결과를 확인하고 있어요": {
+   "en": "Checking the result",
+   "zh": "正在确认制作结果"
+  },
+  "제작 결과를 확인하고 있어요…": {
+   "en": "Checking the result…",
+   "zh": "正在确认制作结果…"
+  },
+  "제작 기록": {
+   "en": "Crafting History",
+   "zh": "制作记录"
+  },
+  "제작 상황을 확인하고 있어요": {
+   "en": "Checking crafting progress",
+   "zh": "正在确认制作进度"
+  },
+  "제작 실패 · 별씨 환불": {
+   "en": "Crafting failed · Starseeds refunded",
+   "zh": "制作失败 · 退还星种"
+  },
+  "제작 완료": {
+   "en": "Crafted",
+   "zh": "制作完成"
+  },
+  "제작 재료가 부족합니다.": {
+   "en": "Not enough crafting materials.",
+   "zh": "制作材料不足。"
+  },
+  "제작 전, 간단한 모양으로 크기와 움직임을 살펴보세요.\n완성될 가구의 모습은 달라질 수 있어요. 여기서 사용해 보는 동작은 저장되지 않아요.": {
+   "en": "Before crafting, check the size and motion with simple shapes.\nThe finished furniture may look different. Actions you try here aren't saved.",
+   "zh": "制作前，用简单的形状看看大小和动作吧。\n完成后的家具外观可能有所不同。在这里试用的动作不会被保存。"
+  },
+  "제작 전에 밤에 쓸 목재 2개를 남겨 두세요.": {
+   "en": "Save 2 wood for the night before crafting.",
+   "zh": "制作前请留下2个夜晚要用的木材。"
+  },
+  "제작 중이에요…": {
+   "en": "Crafting…",
+   "zh": "制作中…"
+  },
+  "제작 취소": {
+   "en": "Crafting canceled",
+   "zh": "制作取消"
+  },
+  "제작 확정": {
+   "en": "Confirm Craft",
+   "zh": "确认制作"
+  },
+  "제작대": {
+   "en": "Crafting Bench",
+   "zh": "工作台"
+  },
+  "제작비 별씨 20 · 완성까지 1~3분 정도 걸려요.": {
+   "en": "Cost: 20 Starseeds · Takes about 1–3 minutes.",
+   "zh": "制作费 星种 20 · 完成大约需要1~3分钟。"
+  },
+  "제작에 실패했어요. 맡긴 별씨는 돌려드렸어요.": {
+   "en": "Crafting failed. Your Starseeds have been returned.",
+   "zh": "制作失败了。委托的星种已退还给你。"
+  },
+  "제작을 맡겨 마을 꾸미기": {
+   "en": "Commission crafts to decorate the village",
+   "zh": "委托制作，装饰村庄"
+  },
+  "제작을 완료하지 못했어요 · 맡긴 별씨를 돌려드렸어요": {
+   "en": "Couldn't finish crafting · Your Starseeds were returned",
+   "zh": "制作未能完成 · 已退还托付的星种"
+  },
+  "제작을 취소했어요": {
+   "en": "Crafting canceled",
+   "zh": "已取消制作"
+  },
+  "조개빛 해변 낚시": {
+   "en": "Shellglow Beach Fishing",
+   "zh": "贝光海滩钓鱼"
+  },
+  "조금 더 가까이 다가가세요.": {
+   "en": "Get a little closer.",
+   "zh": "再靠近一点。"
+  },
+  "조명": {
+   "en": "Lamp",
+   "zh": "灯具"
+  },
+  "조용히 입질을 기다려요…": {
+   "en": "Quietly waiting for a bite…",
+   "zh": "静静等待鱼儿咬钩…"
+  },
+  "종소리가 마을에 퍼집니다": {
+   "en": "The bell rings across the village",
+   "zh": "钟声回荡在村庄上空"
+  },
+  "좋아요! 가구를 놓았어요.": {
+   "en": "Nice! Furniture placed.",
+   "zh": "好！家具放好了。"
+  },
+  "주문을 접수했어요": {
+   "en": "Order received",
+   "zh": "订单已接收"
+  },
+  "준비 완료 · 일곱 밤 시작": {
+   "en": "Ready · Begin Seven Nights",
+   "zh": "准备完毕 · 七夜开始"
+  },
+  "준비하러 가기": {
+   "en": "Go Get Ready",
+   "zh": "去做准备"
+  },
+  "줄기": {
+   "en": "Stem",
+   "zh": "茎秆"
+  },
+  "중앙 광장에는 놓을 수 없습니다.": {
+   "en": "You can't place items in the central square.",
+   "zh": "中央广场不能摆放。"
+  },
+  "중앙 야영지로 돌아가세요.": {
+   "en": "Head back to the central campsite.",
+   "zh": "请回到中央营地。"
+  },
+  "지금 돌아가면 이번 도전이 끝나고 완주 보상을 받을 수 없습니다.\n": {
+   "en": "If you return now, this challenge ends and you won't get the completion reward.\n",
+   "zh": "现在返回的话，本次挑战将结束，无法获得通关奖励。\n"
+  },
+  "지금 마을에 놓기": {
+   "en": "Place in Village Now",
+   "zh": "现在摆放到村庄"
+  },
+  "지금은 새 가구 제작을 준비하고 있어요.": {
+   "en": "New furniture crafting is getting ready.",
+   "zh": "新家具制作正在准备中。"
+  },
+  "지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.": {
+   "en": "Couldn't finish that right now. Please try again in a moment.",
+   "zh": "现在无法完成。请稍后再试。"
+  },
+  "지금은 움직임을 확인할 수 없어요.": {
+   "en": "Can't check the motion right now.",
+   "zh": "现在无法确认动作。"
+  },
+  "지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요.": {
+   "en": "Crafting can't be finished right now. Your Starseeds have been returned.",
+   "zh": "现在无法完成制作。委托的星种已退还给你。"
+  },
+  "지도": {
+   "en": "Map",
+   "zh": "地图"
+  },
+  "지도 중앙의 ▲로 돌아오세요": {
+   "en": "Head back to the ▲ in the middle of the map",
+   "zh": "回到地图中央的 ▲"
+  },
+  "지도에서 텃밭과 낚시터 찾기": {
+   "en": "Find Garden Plots and Fishing Spots on the Map",
+   "zh": "在地图上查找菜园和钓场"
+  },
+  "지역과 난이도는 탐험을 시작하면 고정됩니다.": {
+   "en": "Region and difficulty are locked once the expedition starts.",
+   "zh": "开始探险后，区域和难度将固定。"
+  },
+  "직접 색 고르기": {
+   "en": "Pick a Color",
+   "zh": "自选颜色"
+  },
+  "직접 입력": {
+   "en": "Custom",
+   "zh": "直接输入"
+  },
+  "진행 중인 생성이 있습니다.": {
+   "en": "A craft is already in progress.",
+   "zh": "已有正在进行的生成。"
+  },
+  "진행 중인 협동 탐험으로 돌아가 주세요.": {
+   "en": "Please return to your ongoing co-op expedition.",
+   "zh": "请返回正在进行的合作探险。"
+  },
+  "진행을 저장하고 마을로": {
+   "en": "Save and Return to Village",
+   "zh": "保存进度并回村"
+  },
+  "찌 던지기 · 미끼 1": {
+   "en": "Cast Bobber · 1 Bait",
+   "zh": "抛竿 · 鱼饵 1"
+  },
+  "찌를 던져 보세요.": {
+   "en": "Try casting your bobber.",
+   "zh": "试着抛竿吧。"
+  },
+  "찌를 던졌어요. 입질이 오면 E 또는 챔질 버튼을 누르세요.": {
+   "en": "Bobber cast. When you get a bite, press E or the Hook button.",
+   "zh": "抛出鱼漂了。咬钩时请按 E 或提竿按钮。"
+  },
+  "찬 바람과 얼음 웅덩이. 모닥불과 식량을 먼저 준비하세요.": {
+   "en": "Cold winds and icy pools. Prepare a Campfire and food first.",
+   "zh": "寒风和冰洼。请先准备好篝火和食物。"
+  },
+  "참고 그림을 추가할 수 있어요": {
+   "en": "You can add a reference picture",
+   "zh": "可以添加参考图片"
+  },
+  "참고 이미지 없음": {
+   "en": "No reference image",
+   "zh": "没有参考图片"
+  },
+  "창": {
+   "en": "Spear",
+   "zh": "长矛"
+  },
+  "창 · 목재 4 + 돌 2": {
+   "en": "Spear · Wood 4 + Stone 2",
+   "zh": "长矛 · 木材 4 + 石头 2"
+  },
+  "창 공격!": {
+   "en": "Spear attack!",
+   "zh": "长矛攻击！"
+  },
+  "창 제작": {
+   "en": "Craft a Spear",
+   "zh": "制作长矛"
+  },
+  "창고": {
+   "en": "Storage",
+   "zh": "仓库"
+  },
+  "창을 닫아도 계속 만들어져요. 완성되면 알려 드릴게요.": {
+   "en": "Crafting continues even if you close this window. We'll let you know when it's done.",
+   "zh": "关闭窗口也会继续制作。完成后会通知你。"
+  },
+  "채석장의 돌바퀴가 멈춘 뒤로 섬의 종이 울리지 않아요. 위험한 틈을 돌아 재료를 모으고 창을 준비해 주세요. 일곱 밤의 기록이 있으면 북쪽 길을 찾을 수 있어요.": {
+   "en": "Since the quarry's stone wheel stopped, the island bell has gone silent. Gather materials around the dangerous cracks and prepare a spear. With a record of Seven Nights, you'll find the northern path.",
+   "zh": "采石场的石轮停转后，岛上的钟就再也没响过。绕开危险的裂缝收集材料，准备好长矛吧。有了七夜的记录，就能找到通往北方的路。"
+  },
+  "채집할 나무·바위·풀·열매 가까이 가세요.": {
+   "en": "Get close to a tree, rock, grass, or berries to gather.",
+   "zh": "请靠近可采集的树木·岩石·草·浆果。"
+  },
+  "채집할 자원이 없습니다.": {
+   "en": "Nothing to gather here.",
+   "zh": "没有可采集的资源。"
+  },
+  "처음 상태": {
+   "en": "Reset",
+   "zh": "初始状态"
+  },
+  "첫 번째 마을 꾸미기\nI로 보관함을 열어 색을 고르고,\n환영의 의자를 놓아 보세요.": {
+   "en": "Decorate Your Village\nPress I to open your Bag, pick colors,\nand place the Welcome Chair.",
+   "zh": "第一次装饰村庄\n按 I 打开背包挑选颜色，\n试着摆放欢迎椅吧。"
+  },
+  "첫 완료 보상 +%d 별씨 · %s": {
+   "en": "First-clear reward +%d Starseeds · %s",
+   "zh": "首次通关奖励 +%d 星种 · %s"
+  },
+  "첫 완료 보상 수령 완료 · 다시 도전할 수 있어요": {
+   "en": "First-clear reward claimed · You can play again",
+   "zh": "已领取首次通关奖励 · 可以再次挑战"
+  },
+  "첫 완료 시 별씨와 집 앞 기념등이 추가됩니다. 자유 탐험은 지역 제한 없이 계속할 수 있어요.": {
+   "en": "Your first clear adds Starseeds and a memorial lantern outside your home. Free expeditions can continue in any region.",
+   "zh": "首次通关将获得星种和家门前的纪念灯。自由探险不受区域限制，可以一直进行。"
+  },
+  "첫 제작 테스트 · 샘플 모드\nWASD / 방향키로 걷기": {
+   "en": "First crafting test · Sample mode\nWASD / Arrow keys to walk",
+   "zh": "首次制作测试 · 示例模式\nWASD / 方向键行走"
+  },
+  "첫 준비 · 목재 모으기\n나무 옆에서 E로 채집하세요.\n밤에 쓸 목재를 남겨 두세요.": {
+   "en": "Getting Started · Gather Wood\nPress E next to a tree to gather.\nSave some wood for the night.",
+   "zh": "第一步准备 · 收集木材\n在树旁按 E 采集。\n留些木材夜里用。"
+  },
+  "첫날에는 목재와 돌을 모아 도끼부터 만드세요.\n밤에는 모닥불 곁에서 몸을 녹이고, 빨간 공격 예고 밖으로 피하세요.\n이끼 수호자는 느리지만 강하고, 불씨 도깨비는 먼 곳에서도 공격해요.\n서리 지역에서는 식량과 땔감을 평소보다 넉넉히 준비하세요.": {
+   "en": "On day one, gather wood and stone and make an axe first.\nAt night, warm up by the Campfire and step outside red attack warnings.\nMoss Guardians are slow but strong, and Ember Goblins attack from afar.\nIn frosty areas, bring more food and firewood than usual.",
+   "zh": "第一天先收集木材和石头，做把斧头。\n夜里在篝火旁取暖，躲到红色攻击预警外面。\n苔藓守护者虽慢但强，火星鬼怪在远处也能攻击。\n在霜冻区域，要比平时多准备些食物和柴火。"
+  },
+  "체력": {
+   "en": "Health",
+   "zh": "生命"
+  },
+  "체력이 충분합니다. 붕대를 아껴 두세요.": {
+   "en": "Your health is fine. Save your bandages.",
+   "zh": "体力充足，留着绷带吧。"
+  },
+  "초대 / 상태 새로고침": {
+   "en": "Refresh Invites / Status",
+   "zh": "邀请 / 刷新状态"
+  },
+  "초대 코드 · 서버가 요구할 때만": {
+   "en": "Invite code · only if the server asks",
+   "zh": "邀请码 · 仅在服务器要求时填写"
+  },
+  "초대할 사용자 이름": {
+   "en": "Username to invite",
+   "zh": "要邀请的用户名"
+  },
+  "초록": {
+   "en": "Green",
+   "zh": "绿色"
+  },
+  "초침": {
+   "en": "Second Hand",
+   "zh": "秒针"
+  },
+  "최근 제작 30건 · 시간 UTC": {
+   "en": "Last 30 crafts · Times in UTC",
+   "zh": "最近 30 次制作 · 时间 UTC"
+  },
+  "출입문 앞은 비워 주세요.": {
+   "en": "Keep the doorway clear.",
+   "zh": "门口前请保持空出。"
+  },
+  "취소": {
+   "en": "Cancel",
+   "zh": "取消"
+  },
+  "취소 · 별씨 환불": {
+   "en": "Cancel · Refund Starseeds",
+   "zh": "取消 · 退还星种"
+  },
+  "취소하고 별씨 돌려받기": {
+   "en": "Cancel and Refund Starseeds",
+   "zh": "取消并退还星种"
+  },
+  "친구": {
+   "en": "Friends",
+   "zh": "好友"
+  },
+  "캐릭터가 서 있는 곳은 비워 주세요.": {
+   "en": "Keep the spot where your character stands clear.",
+   "zh": "请空出角色站立的位置。"
+  },
+  "캐릭터와 겹치지 않는 곳에 놓으세요.": {
+   "en": "Place it where it won't overlap a character.",
+   "zh": "请放在不与角色重叠的地方。"
+  },
+  "캠프 초원": {
+   "en": "Camp Meadow",
+   "zh": "营地草原"
+  },
+  "캠프 초원에서 탐험 떠나기": {
+   "en": "Set out on an Expedition from Camp Meadow",
+   "zh": "从营地草原出发探险"
+  },
+  "크기 · m": {
+   "en": "Size · m",
+   "zh": "尺寸 · m"
+  },
+  "크림": {
+   "en": "Cream",
+   "zh": "奶油"
+  },
+  "클릭하면 뚜껑이 부드럽게 열리고 다시 클릭하면 닫히는 나무 상자": {
+   "en": "A wooden chest whose lid opens gently on click and closes on a second click",
+   "zh": "点击后盖子缓缓打开、再次点击即合上的木箱"
+  },
+  "클릭하면 배치합니다. R로 회전할 수 있어요.": {
+   "en": "Click to place. Press R to rotate.",
+   "zh": "点击即可放置，按 R 旋转。"
+  },
+  "탐험": {
+   "en": "Expedition",
+   "zh": "探险"
+  },
+  "탐험  →": {
+   "en": "Expedition  →",
+   "zh": "探险  →"
+  },
+  "탐험 · 기본 생존": {
+   "en": "Explorer · Standard Survival",
+   "zh": "探险 · 基础生存"
+  },
+  "탐험 가방": {
+   "en": "Expedition Bag",
+   "zh": "探险背包"
+  },
+  "탐험 가방이 가득 찼습니다.": {
+   "en": "Your Expedition Bag is full.",
+   "zh": "探险背包已满。"
+  },
+  "탐험 떠나기": {
+   "en": "Set Out on Expedition",
+   "zh": "出发探险"
+  },
+  "탐험 소지품  %d / 80": {
+   "en": "Expedition Items  %d / 80",
+   "zh": "探险物品  %d / 80"
+  },
+  "탐험 이어하기 · %d일": {
+   "en": "Continue Expedition · Day %d",
+   "zh": "继续探险 · 第%d天"
+  },
+  "탐험 지도 펼치기": {
+   "en": "Open Expedition Map",
+   "zh": "打开探险地图"
+  },
+  "탐험에서 귀환한 뒤 파티를 나갈 수 있습니다.": {
+   "en": "You can leave the party after returning from the expedition.",
+   "zh": "从探险返回后才能离开队伍。"
+  },
+  "탐험을 마치고 귀환": {
+   "en": "End Expedition and Return",
+   "zh": "结束探险并返回"
+  },
+  "탐험을 마칠까요?": {
+   "en": "End the expedition?",
+   "zh": "要结束探险吗？"
+  },
+  "탐험을 저장했습니다. 하단의 이어하기로 같은 날부터 돌아갈 수 있어요.": {
+   "en": "Expedition saved. Use Continue below to pick up from the same day.",
+   "zh": "已保存探险。可通过下方的继续探险从同一天返回。"
+  },
+  "탐험이 끝났습니다. 마을로 돌아가 결과를 확인하세요.": {
+   "en": "The expedition is over. Return to the village to see your results.",
+   "zh": "探险已结束。回到村庄查看结果吧。"
+  },
+  "탐험이 끝났습니다. 마을에서 다시 준비해 보세요.": {
+   "en": "The Expedition is over. Get ready again in the village.",
+   "zh": "探险结束了。回村庄重新做好准备吧。"
+  },
+  "탐험이 이미 종료되었습니다.": {
+   "en": "The Expedition has already ended.",
+   "zh": "探险已经结束了。"
+  },
+  "탐험하기 좋은 낮": {
+   "en": "A Fine Day to Explore",
+   "zh": "适合探险的白天"
+  },
+  "텃밭 작물 돌보기": {
+   "en": "Tend your Garden crops",
+   "zh": "照料菜园作物"
+  },
+  "테오": {
+   "en": "Teo",
+   "zh": "特奥"
+  },
+  "테오 · 정비사": {
+   "en": "Teo · Mechanic",
+   "zh": "特奥 · 修理师"
+  },
+  "파랑": {
+   "en": "Blue",
+   "zh": "蓝色"
+  },
+  "파티": {
+   "en": "Party",
+   "zh": "队伍"
+  },
+  "파티 나가기": {
+   "en": "Leave Party",
+   "zh": "离开队伍"
+  },
+  "파티 대화": {
+   "en": "Party Chat",
+   "zh": "队伍聊天"
+  },
+  "파티 만들기": {
+   "en": "Create Party",
+   "zh": "创建队伍"
+  },
+  "파티 초대를 보냈습니다.": {
+   "en": "Party invite sent.",
+   "zh": "已发送队伍邀请。"
+  },
+  "파티 함께 출발": {
+   "en": "Set Out as Party",
+   "zh": "队伍一起出发"
+  },
+  "파티는 최대 3명입니다.": {
+   "en": "Parties can have up to 3 players.",
+   "zh": "队伍最多3人。"
+  },
+  "파티로 초대": {
+   "en": "Invite to Party",
+   "zh": "邀请加入队伍"
+  },
+  "파티장만 할 수 있습니다.": {
+   "en": "Only the party leader can do that.",
+   "zh": "只有队长可以操作。"
+  },
+  "판매": {
+   "en": "Sell",
+   "zh": "出售"
+  },
+  "판매 중인 물건입니다. 판매를 취소하세요.": {
+   "en": "This item is for sale. Cancel the listing first.",
+   "zh": "该物品正在出售中。请先取消出售。"
+  },
+  "판매 취소": {
+   "en": "Cancel Listing",
+   "zh": "取消出售"
+  },
+  "팔레트로 전체 색을 바꿔 보세요.\nR · 배치 방향 회전": {
+   "en": "Use the palette to change all the colors.\nR · Rotate placement",
+   "zh": "用调色板改变整体颜色吧。\nR · 旋转摆放方向"
+  },
+  "포만감": {
+   "en": "Fullness",
+   "zh": "饱腹度"
+  },
+  "표면과 움직임": {
+   "en": "Surface & Motion",
+   "zh": "表面与动作"
+  },
+  "풀": {
+   "en": "Grass",
+   "zh": "草"
+  },
+  "풍차 들판": {
+   "en": "Windmill Meadow",
+   "zh": "风车原野"
+  },
+  "풍차 들판 텃밭에 씨앗 심기": {
+   "en": "Plant seeds in the Windmill Meadow Garden plot",
+   "zh": "在风车原野菜园播种"
+  },
+  "피부": {
+   "en": "Skin",
+   "zh": "肤色"
+  },
+  "피웠습니다": {
+   "en": "Lit",
+   "zh": "点燃了"
+  },
+  "하의": {
+   "en": "Bottoms",
+   "zh": "下装"
+  },
+  "한국어": {
+   "en": "English",
+   "zh": "한국어"
+  },
+  "함께하기": {
+   "en": "Play Together",
+   "zh": "一起玩"
+  },
+  "함께하기 · 초대 / 파티": {
+   "en": "Play Together · Invite / Party",
+   "zh": "一起玩 · 邀请 / 队伍"
+  },
+  "함께하기 · 최대 3명": {
+   "en": "Play Together · Up to 3 Players",
+   "zh": "一起玩 · 最多3人"
+  },
+  "함께하기 연결을 확인 중입니다. 잠시 후 다시 시도합니다.": {
+   "en": "Checking Play Together connection. Retrying shortly.",
+   "zh": "正在检查一起玩的连接。稍后将重试。"
+  },
+  "함께하기는 서버 업데이트 후 사용할 수 있습니다.": {
+   "en": "Play Together will be available after a server update.",
+   "zh": "服务器更新后即可使用一起玩功能。"
+  },
+  "해가 졌어요. 야영지로 돌아가 불을 지키세요.": {
+   "en": "The sun has set. Return to camp and keep the fire going.",
+   "zh": "太阳下山了。回到营地守护篝火吧。"
+  },
+  "해루  /  낚시꾼": {
+   "en": "Haeru  /  Angler",
+   "zh": "海璐  /  渔夫"
+  },
+  "해루 · 낚시꾼": {
+   "en": "Haeru · Angler",
+   "zh": "海璐 · 渔夫"
+  },
+  "햇살 텃밭": {
+   "en": "Sunny Garden",
+   "zh": "阳光菜园"
+  },
+  "햇살 텃밭 · %d번 밭": {
+   "en": "Sunny Garden · Plot %d",
+   "zh": "阳光菜园 · %d号田"
+  },
+  "햇살 텃밭 · 씨앗을 심고 물을 주세요": {
+   "en": "Sunny Garden · Plant seeds and water them",
+   "zh": "阳光菜园 · 播种后记得浇水"
+  },
+  "향초": {
+   "en": "Herbs",
+   "zh": "香草"
+  },
+  "허용": {
+   "en": "Allowed",
+   "zh": "允许"
+  },
+  "허용되지 않은 행동입니다.": {
+   "en": "That action isn't allowed.",
+   "zh": "不允许的操作。"
+  },
+  "현재 도전은 1인 생존 모드입니다.\n일시 정지 중에는 생존 시간과 허기가 멈춥니다.": {
+   "en": "This is a solo Survival challenge.\nWhile paused, survival time and hunger stop.",
+   "zh": "当前挑战为单人生存模式。\n暂停期间生存时间和饥饿都会停止。"
+  },
+  "현재 탐험은 일시 정지되어 있습니다.": {
+   "en": "The current expedition is paused.",
+   "zh": "当前探险已暂停。"
+  },
+  "협동 생존 · ": {
+   "en": "Co-op Survival · ",
+   "zh": "合作生存 · "
+  },
+  "협동 생존은 메뉴를 열어도 계속됩니다.\n연결이 끊겨도 동료가 남아 있으면 위험에 노출됩니다.": {
+   "en": "Co-op Survival keeps running while the menu is open.\nIf you disconnect while teammates remain, you'll still be in danger.",
+   "zh": "合作生存在打开菜单时也会继续。\n即使断开连接，只要同伴还在，你仍会面临危险。"
+  },
+  "협동 탐험 보상을 받았습니다.": {
+   "en": "Co-op expedition rewards claimed.",
+   "zh": "已领取合作探险奖励。"
+  },
+  "협동 탐험으로 돌아가기": {
+   "en": "Return to Co-op Expedition",
+   "zh": "返回合作探险"
+  },
+  "호박": {
+   "en": "Pumpkin",
+   "zh": "南瓜"
+  },
+  "호박 씨앗": {
+   "en": "Pumpkin Seeds",
+   "zh": "南瓜种子"
+  },
+  "확인한 설계로 3D 메시를 만들고 있어요": {
+   "en": "Building the 3D mesh from the confirmed design",
+   "zh": "正在按确认的设计生成 3D 网格"
+  },
+  "확정하면 바로 만들기 시작해요. 제작비 별씨 %d": {
+   "en": "Confirm to start crafting right away. Cost: %d Starseeds",
+   "zh": "确认后立即开始制作。制作费 星种 %d"
+  },
+  "환영의 나무 의자": {
+   "en": "Welcome Wooden Chair",
+   "zh": "迎宾木椅"
+  },
+  "회복했습니다": {
+   "en": "Healed",
+   "zh": "恢复了"
+  },
+  "회수": {
+   "en": "Pick Up",
+   "zh": "收回"
+  },
+  "회전 ↷": {
+   "en": "Rotate ↷",
+   "zh": "旋转 ↷"
+  },
+  "회전축 · 중심 기준": {
+   "en": "Pivot · from center",
+   "zh": "旋转轴 · 以中心为准"
+  },
+  "흙이 말라 있어요. 물을 주세요.": {
+   "en": "The soil is dry. Give it some water.",
+   "zh": "土壤干了，请浇水。"
+  }
+ },
+ "templates": []
+}

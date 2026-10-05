@@ -239,7 +239,7 @@ static func workshop(parent: Node3D) -> void:
 	A.box(parent,Vector3(-3,0.8,-6.9),Vector3(1.45,0.12,0.62),Color("b58b58"))
 	for x in [-3.6,-2.4]: A.box(parent,Vector3(x,0.4,-6.9),Vector3(0.1,0.8,0.4),Color("826449"))
 	for i in 3: cylinder(parent,Vector3(-3.45+i*0.4,0.98,-6.9),0.12,0.25,[Color("d38367"),Color("dda94b"),Color("649f98")][i],10)
-	A.label3d(parent,"별씨 공방",Vector3(-5,3.95,-5),Color("fff1c8"))
+	A.label3d(parent,TranslationServer.translate("별씨 공방"),Vector3(-5,3.95,-5),Color("fff1c8"))
 
 static func gate(parent: Node3D, origin := Vector3(7,0,-5.5)) -> void:
 	var arch := preload("res://assets/departure_arch.glb").instantiate() as Node3D
@@ -254,7 +254,7 @@ static func gate(parent: Node3D, origin := Vector3(7,0,-5.5)) -> void:
 	portal.material_override=mat
 	lantern(parent,origin+Vector3(-1.7,0,1.3),false)
 	lantern(parent,origin+Vector3(1.7,0,1.3),false)
-	A.label3d(parent,"일곱 밤의 숲",origin+Vector3(0,4.25,0),Color("f0e4bb")).font_size=30
+	A.label3d(parent,TranslationServer.translate("일곱 밤의 숲"),origin+Vector3(0,4.25,0),Color("f0e4bb")).font_size=30
 	for i in 4: cylinder(parent,origin+Vector3(0,0.025,1+i*0.55),0.75,0.05,Color("aeb39a"),7).scale.z=0.38
 
 static func village(parent: Node3D, expanded := false) -> void:
@@ -303,7 +303,7 @@ static func village(parent: Node3D, expanded := false) -> void:
 		for z in [12.2,14,15.7]: cylinder(parent,Vector3(x,-0.5,z),0.12,2.1,Color("735d43"),8)
 	bench(parent,Vector3(-9.3,0,10.6),PI)
 	if not expanded: path_strip(parent,Vector2(-7,9.4),Vector2(-7,12),1.6)
-	if not expanded: A.label3d(parent,"바람 선착장",Vector3(-7,2.2,15.5),Color("ead9b2"))
+	if not expanded: A.label3d(parent,TranslationServer.translate("바람 선착장"),Vector3(-7,2.2,15.5),Color("ead9b2"))
 	scatter(parent,false)
 
 static func forest(parent: Node3D) -> void:
@@ -317,8 +317,8 @@ static func forest(parent: Node3D) -> void:
 	var hearth=(load("res://assets/storybook_camp_v1.glb") as PackedScene).instantiate()
 	parent.add_child(hearth)
 	lantern(parent,Vector3(-1.45,0,-0.6),false)
-	A.label3d(parent,"야영지",Vector3(0,1.5,-0.8),Color("eedb9c"))
-	for marker in [[Vector3(0,0,-18),"N · 바위 능선"],[Vector3(-18,0,0),"W · 서쪽 숲"],[Vector3(18,0,0),"E · 동쪽 숲"],[Vector3(0,0,18),"S · 물가"]]:
+	A.label3d(parent,TranslationServer.translate("야영지"),Vector3(0,1.5,-0.8),Color("eedb9c"))
+	for marker in [[Vector3(0,0,-18),TranslationServer.translate("N · 바위 능선")],[Vector3(-18,0,0),TranslationServer.translate("W · 서쪽 숲")],[Vector3(18,0,0),TranslationServer.translate("E · 동쪽 숲")],[Vector3(0,0,18),TranslationServer.translate("S · 물가")]]:
 		var at: Vector3=marker[0]
 		cylinder(parent,at+Vector3(0,0.65,0),0.07,1.3,Color("a38a62"),7)
 		A.box(parent,at+Vector3(0,1.1,0),Vector3(1.2,0.36,0.09),Color("806e51"))

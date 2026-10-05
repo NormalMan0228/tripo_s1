@@ -1,3 +1,6 @@
+# -ServerOnly starts or reuses the Tripo-enabled server without opening a client,
+# for hosting other players' logins or running client tests.
+param([switch]$ServerOnly)
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskPython = Join-Path $taskRoot '.tools\server-venv\Scripts\python.exe'
@@ -10,7 +13,7 @@ $taskPidFile = Join-Path $taskRoot 'artifacts\tripo-game-server.pid'
 Set-Location -LiteralPath $taskRoot
 
 if (-not (Test-Path -LiteralPath $taskPython -PathType Leaf)) { throw 'Python server runtime is missing.' }
-if (-not (Test-Path -LiteralPath $taskGame -PathType Leaf)) { throw 'Godot game build is missing.' }
+if (-not $ServerOnly -and -not (Test-Path -LiteralPath $taskGame -PathType Leaf)) { throw 'Godot game build is missing.' }
 if (-not (Test-Path -LiteralPath $taskKeyFile -PathType Leaf)) { throw 'Server-side Tripo key file is missing.' }
 
 # This read-only account request confirms the secret works without echoing it.
@@ -55,9 +58,11 @@ if (-not $taskReuse -and (Test-Path -LiteralPath (Join-Path $taskData 'world.sql
 }
 
 # Restart only this packaged game's window and its verified portable server.
-Get-CimInstance Win32_Process -Filter "Name='Tripothon_Developer.exe'" |
-    Where-Object { $_.ExecutablePath -eq $taskGame } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -ErrorAction Stop }
+if (-not $ServerOnly) {
+    Get-CimInstance Win32_Process -Filter "Name='Tripothon_Developer.exe'" |
+        Where-Object { $_.ExecutablePath -eq $taskGame } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -ErrorAction Stop }
+}
 if ($taskHealth -and -not $taskReuse) {
     Stop-Process -Id $taskPortableId -ErrorAction Stop
     for ($taskAttempt=0; $taskAttempt -lt 30; $taskAttempt++) {
@@ -93,5 +98,9 @@ if (-not $taskHealth -or $taskHealth.service -ne 'tripothon' -or $taskHealth.pro
 # The game process never needs the API key or its file path.
 Remove-Item Env:TRIPO_API_KEY_FILE -ErrorAction SilentlyContinue
 Remove-Item Env:TRIPO_API_KEY -ErrorAction SilentlyContinue
+if ($ServerOnly) {
+    Write-Output ('Tripo-enabled server is ready at http://127.0.0.1:8765. Available provider credits: ' + $taskCheck.available_credits)
+    exit 0
+}
 Start-Process -FilePath $taskGame -WorkingDirectory (Split-Path -Parent $taskGame) -WindowStyle Normal
 Write-Output ('Tripothon is running with server-side Tripo access. Available provider credits: ' + $taskCheck.available_credits)

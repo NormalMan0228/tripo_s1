@@ -35,3 +35,5 @@ labs/archipelago_object_lab/reviews/
 
 # The archipelago map binaries are copied from labs/terrain_lab by tools/port_archipelago_map.py.
 game/maps/archipelago/assets/
+# Working list written by tools/i18n_catalog.py extract.
+game/i18n/source.json
