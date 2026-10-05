@@ -410,7 +410,7 @@ func login_ui(page := "menu") -> void:
 			servers.custom_minimum_size = Vector2(320,40)
 			servers.focus_mode = Control.FOCUS_NONE
 			column.add_child(servers)
-			var custom := RpgUi.field(column,tr("서버 주소 직접 입력 (https://...)"))
+			var custom := RpgUi.field(column,tr("서버 주소 · 예: http://100.101.1.2:8765 (Tailscale)"))
 			var saved := str(I18n.setting("server",SERVERS[0][1]))
 			var chosen := SERVERS.size()
 			for i in SERVERS.size():
@@ -443,9 +443,9 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	if busy: return
 	host = host.strip_edges().trim_suffix("/")
 	var local_pattern := RegEx.new()
-	# Plain HTTP only for this PC or a private home network (a friend's PC hosting
-	# the server on the same router); anything on the internet needs HTTPS.
-	local_pattern.compile("^http://(127\\.0\\.0\\.1|localhost|10(\\.[0-9]{1,3}){3}|192\\.168(\\.[0-9]{1,3}){2}|172\\.(1[6-9]|2[0-9]|3[01])(\\.[0-9]{1,3}){2}):[0-9]{1,5}$")
+	# Plain HTTP only for this PC, a home network or a Tailscale network (100.64/10,
+	# *.ts.net; Tailscale encrypts the link). Anything else on the internet needs HTTPS.
+	local_pattern.compile("^http://(127\\.0\\.0\\.1|localhost|10(\\.[0-9]{1,3}){3}|192\\.168(\\.[0-9]{1,3}){2}|172\\.(1[6-9]|2[0-9]|3[01])(\\.[0-9]{1,3}){2}|100\\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])(\\.[0-9]{1,3}){2}|[a-z0-9-]+(\\.[a-z0-9-]+)*\\.ts\\.net):[0-9]{1,5}$")
 	if not (host.begins_with("https://") or local_pattern.search(host)!=null):
 		message(tr("원격 서버는 HTTPS 주소를 사용하세요."))
 		return

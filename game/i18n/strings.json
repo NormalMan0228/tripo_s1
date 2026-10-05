@@ -1784,6 +1784,10 @@
    "en": "Waiting for the server. You'll continue once the connection is back.",
    "zh": "正在等待服务器响应。连接恢复后将继续。"
   },
+  "서버 주소 · 예: http://100.101.1.2:8765 (Tailscale)": {
+   "en": "Server address · e.g. http://100.101.1.2:8765 (Tailscale)",
+   "zh": "服务器地址 · 例如 http://100.101.1.2:8765（Tailscale）"
+  },
   "서버 주소 직접 입력 (https://...)": {
    "en": "Enter server address (https://...)",
    "zh": "直接输入服务器地址 (https://...)"
