@@ -1,0 +1,12 @@
+{
+  "asset": "20_pier",
+  "name": "기둥이 있는 목조 부두",
+  "stem": "pier",
+  "height_m": 1.65,
+  "width_m": 3.0,
+  "depth_m": 5.989999771118164,
+  "category": "prop",
+  "initial_azimuth": -0.12,
+  "model": "res://assets/pier.glb",
+  "out": "res://../../art/maps/archipelago_objects_v1/20_pier/"
+}

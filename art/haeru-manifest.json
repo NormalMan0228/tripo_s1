@@ -1,0 +1,38 @@
+{
+  "geometry_source": "Tripo P2-20260801",
+  "rig_source": "Tripo v1.0-20240301",
+  "credits_generation": 120,
+  "credits_rig": 25,
+  "face": "Original geometry, UV, skin weights and texture; no added face mesh or morphs",
+  "bones": 41,
+  "semantic_faces": {
+    "hair": 3796,
+    "coat": 1996,
+    "pants": 930,
+    "boots": 2367,
+    "skin": 3275,
+    "detail": 213
+  },
+  "clips": {
+    "idle": {
+      "duration": 6.0,
+      "loop": true,
+      "authored_in_blender": true
+    },
+    "walk": {
+      "duration": 1.25,
+      "loop": true,
+      "authored_in_blender": true
+    },
+    "fishing": {
+      "duration": 4.0,
+      "loop": true,
+      "authored_in_blender": true
+    },
+    "greet": {
+      "duration": 2.5,
+      "loop": false,
+      "authored_in_blender": true
+    }
+  }
+}

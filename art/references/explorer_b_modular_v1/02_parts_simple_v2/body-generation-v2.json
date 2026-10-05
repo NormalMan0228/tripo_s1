@@ -1,0 +1,16 @@
+{
+  "id": "body",
+  "label": "몸（목·몸통·팔·다리·발 일체）",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "prompt": "Use case: stylized-concept.\nAsset type: non-anatomical technical clothing-fit mannequin reference.\nReference image 1 supplies only the approved explorer's shoulder width, limb lengths and A-pose. Reference image 2 supplies only the warm peach color.\nMake a single headless, handless adult UNISEX clothing-fit mannequin, as one solid smooth model from neck to feet, with the neck, shoulders, torso, hips, both arms to wrists and both legs and feet all continuously connected. This is an opaque artificial 3D dress form covered throughout by a smooth solid warm-peach foundation surface. The torso and pelvis are entirely featureless, like a simple shop display mannequin wearing a seamless opaque full-body unitard; do not depict human intimate anatomy or suggest contours beneath the opaque surface. Broad clear front view, symmetrical neutral A-pose, arms 25 degrees out, feet slightly apart. Match the reference explorer's medium stylized body proportions, gentle rounded joints and natural limb taper. No head, no hands, no detached limbs, no mechanical joint discs/rings, no grey clay, no outfit or accessories. Match the warm peach midtone of the head reference uniformly from neck to wrists and feet; no different colored body regions. Soft polished stylized render on solid white background, neutral even studio light, no labels, no text, no environment, full model inside frame.",
+  "reference_inputs": [
+    "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+    "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/head-front-v1.png"
+  ],
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-43e71675-34fe-464a-93e7-6d687b15467b.png",
+  "file": "body-v2.png",
+  "approval": null,
+  "new_tripo_calls": 0,
+  "new_scenario_calls": 0
+}

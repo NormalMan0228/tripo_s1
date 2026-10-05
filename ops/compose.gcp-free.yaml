@@ -1,0 +1,6 @@
+services:
+  api:
+    mem_limit: 640m
+    pids_limit: 128
+  proxy:
+    mem_limit: 96m

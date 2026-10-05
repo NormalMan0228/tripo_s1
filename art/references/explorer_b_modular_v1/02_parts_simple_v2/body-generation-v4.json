@@ -1,0 +1,28 @@
+{
+  "id": "body",
+  "revision": "v4",
+  "date": "2026-10-04",
+  "file": "body-v4.png",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "prompt": "Use case: stylized-concept / precise-object-edit.\nAsset type: ONE standalone technical character modeling reference, clearly clothed in plain base underwear.\nImage 1 is the current headless, handless artificial mannequin body and supplies the continuous-body layout and warm peach skin color. Improve its modeling quality and proportions substantially.\nCreate a nonsexual, adult unisex stylized game-character base body wearing a SIMPLE OPAQUE WHITE SLEEVELESS UNDERSHIRT and SIMPLE OPAQUE WHITE HIGH-WAISTED BOXER-BRIEF UNDERSHORTS extending to MID-THIGH. Both garments are modest, plain practical underlayers, completely covering the chest, torso and pelvis. The undershirt overlaps the waistband so no midriff is exposed. Normal comfortable fit without intimate anatomical contours, no sheer fabric, lace, lingerie styling, logos or decorative details. This is a neutral technical fit/reference figure, not an intimate portrait.\nThe neck, exposed shoulders, arms, lower thighs, knees, calves, ankles and feet share ONE uniform warm peach skin base color. Head and hands are absent: one clean top-of-neck boundary and clean boundaries at wrists. The torso, arms, pelvis, legs and feet remain one continuously connected figure, not detached parts.\nAim for the approved B explorer's refined soft stylized game art: slender balanced medium body proportions, natural relaxed shoulder width rather than broad muscular shoulders, soft ribcage and waist taper under the undershirt, balanced hips, slim upper legs. High-quality deliberate sculptural form instead of an inflated rubber mannequin.\nPrecisely model the exposed areas: smooth neck/shoulder transition, subtle collarbone at the top opening, natural shoulder-to-upper-arm blend, believable elbows with gentle landmarks, distinct forearm taper and wrists, carefully placed kneecaps, softly defined calf/ankle transitions. No exaggerated musculature or glossy wax.\nBare feet must be properly modeled with a heel, instep, arch, forefoot and FIVE clearly distinct rounded toes on EACH foot, anatomically plausible big toes and smaller outer toes. Do not make block feet, sock-shaped feet, webbed toes or extra toes.\nSymmetrical neutral A-pose, arms 25 degrees from torso, knees straight but relaxed, feet slightly apart, soles level. Correct corresponding lengths and joint heights left/right. Both limbs naturally connected, no mechanical sockets, rigid toy discs or circular joint caps.\nOne centered FRONT orthographic body from neck to toe tips, crisp clean silhouette, entire model fits with generous white margin. Soft neutral studio key/fill light, controlled gentle shadows, subtle refined skin surface detail, polished production-quality stylized 3D illustration. Pure white background, no labels, no grids, no sheet, no collage, no secondary views, no head, no hands, no props.",
+  "reference_inputs": [
+    "art/references/explorer_b_modular_v1/02_parts_simple_v2/body-v2.png"
+  ],
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-d8d0e183-7406-40e7-bef0-121e0c33c568.png",
+  "approval": null,
+  "review_status": "awaiting_user_review",
+  "decision_source": "User requested opaque underwear for the body reference",
+  "clothing": "white opaque sleeveless undershirt and mid-thigh boxer briefs",
+  "presentation": "individual_images_only",
+  "accounting": {
+    "image_generation_attempts": 1,
+    "successful_images": 1,
+    "new_tripo_calls": 0,
+    "new_scenario_calls": 0
+  },
+  "limitations": [
+    "2D image only; garment-covered skin and 3D topology are not yet verified.",
+    "No 3D generation, rigging or animation was performed."
+  ]
+}

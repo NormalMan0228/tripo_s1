@@ -1,0 +1,25 @@
+{
+  "date": "2026-10-04",
+  "status": "P2_generation_complete",
+  "image": "art/references/explorer_b_open_mouth_v1/01_head_open_mouth_front.png",
+  "prompt_file": "art/references/explorer_b_open_mouth_v1/prompts.json",
+  "identity_source": "art/references/explorer_b_hybrid_hair_hd_v1/01_head_neck_clavicle_smartmesh.png",
+  "request": "Generate an open-mouth head in Tripo from the source image, instead of opening the closed-mouth generated head afterward.",
+  "inspection": "Front view; mouth visibly open; upper/lower lips separated; oral cavity, upper/lower tooth edges and tongue visible; bald head, no brows/lashes; neck ends at clavicles.",
+  "next_model": "Tripo Smart Mesh P2",
+  "existing_hair_and_brow_lash_assets": "retain for refitting after head geometry review",
+  "review_gate_source": "User instruction: review newly generated images before Tripo submission.",
+  "tripo_submitted": true,
+  "tripo_credits_spent": 100.0,
+  "generation_checks": [
+    "Oral opening must be real geometry, not a painted patch",
+    "Inspect cavity depth, lip boundary and any teeth/skin fusion",
+    "Inspect topology before facial rigging"
+  ],
+  "approval": "2026-10-04: 머리만 다시 3d 생성해봅시다. 대신 이번엔 hd로 만든 다음 모양을 만들고 리토폴로지 하는 방식으로 갑시다",
+  "task_id": "70d955f8-a808-4bbe-95b0-30c0d34441fe",
+  "HD_generation_preserved": {
+    "task_id": "d985f629-8747-4938-9580-4cecf82f7ad1",
+    "output": "art/characters/explorer_b_open_mouth_hd_v1"
+  }
+}

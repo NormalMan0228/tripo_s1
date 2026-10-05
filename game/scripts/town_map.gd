@@ -8,7 +8,11 @@ func _ready() -> void:
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
 func p(v: Vector2) -> Vector2: return Vector2(182,171)+v*4.5
 func _draw() -> void:
-	draw_rect(Rect2(0,0,365,345),Color("426f72"))
+	var frame := StyleBoxFlat.new()
+	frame.bg_color=Color("eee0c5")
+	frame.set_corner_radius_all(12)
+	draw_style_box(frame,Rect2(0,0,365,345))
+	draw_rect(Rect2(15,18,335,309),Color("87aaa1"))
 	draw_rect(Rect2(p(Vector2(-36,-34)),Vector2(72,68)*4.5),Color("81975e"))
 	draw_rect(Rect2(p(Vector2(-36,-34)),Vector2(72,16)*4.5),Color("a2af91"))
 	draw_rect(Rect2(p(Vector2(-36,24)),Vector2(72,10)*4.5),Color("d0bb89"))
@@ -26,5 +30,7 @@ func _draw() -> void:
 	if has_destination:
 		draw_line(p(player_at),p(destination),Color("f0d67f"),1.5,true)
 		draw_arc(p(destination),13,0,TAU,32,Color("ffe393"),2)
-	draw_circle(p(player_at),5,Color("fff6d8"))
-	draw_string(get_theme_default_font(),Vector2(12,18),"N ↑     ● 현재 위치",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("f3ead1"))
+	draw_circle(p(player_at),7,Color("405653"))
+	draw_circle(p(player_at),4.5,Color("fff6d8"))
+	draw_rect(Rect2(20,23,146,23),Color("eee0c5"))
+	draw_string(get_theme_default_font(),Vector2(25,39),"N ↑     ● 현재 위치",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("405653"))

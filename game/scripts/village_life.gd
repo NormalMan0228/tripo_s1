@@ -38,6 +38,9 @@ func enter() -> void:
 	goal={}
 	await refresh()
 func refresh() -> void:
+	if app.social.visiting():
+		app.social.accept_crops()
+		return
 	if reading or app.api.token.is_empty(): return
 	reading=true
 	var epoch: int=app.world_epoch
@@ -47,6 +50,9 @@ func refresh() -> void:
 	if response.ok: accept(response.data)
 	elif app.screen=="village": app.message("마을 생활 정보를 읽지 못했어요. 다시 접속해 주세요.")
 func action(kind: String, extra: Dictionary={}) -> bool:
+	if app.social.visiting():
+		app.message("방문한 마을의 텃밭과 물건은 주인만 수정할 수 있습니다.")
+		return false
 	if pending or state.is_empty() or app.screen!="village": return false
 	pending=true
 	var epoch: int=app.world_epoch
@@ -72,6 +78,9 @@ func closest() -> Dictionary:
 		if p.distance_to(place.at)<2.3: return place
 	return {}
 func interact() -> void:
+	if app.social.visiting():
+		app.social.open_menu()
+		return
 	var place := closest()
 	if place.is_empty(): return
 	match place.kind:
@@ -97,7 +106,7 @@ func open_plot(index: int) -> void:
 	var v: VBoxContainer=app.modal_card("햇살 텃밭 · %d번 밭"%(index+1))
 	mode="plot"
 	var plot: Dictionary=state.plots[index]
-	app.text(v,"씨앗 심기 → 한 번 물주기 → 성장 → 수확\n마을을 떠나거나 게임을 꺼도 서버 시간으로 자라요.",15)
+	app.text(v,"씨앗 심기 → 한 번 물주기 → 성장 → 수확\n마을을 떠나거나 게임을 꺼도 작물은 계속 자라요.",15)
 	status_label=app.text(v,"",20)
 	var row := HBoxContainer.new()
 	v.add_child(row)
@@ -118,7 +127,7 @@ func open_plot(index: int) -> void:
 		reel_button=app.button(row,"다 자란 작물 수확하기",func():
 			await action("harvest",{"plot":index})
 			if mode=="plot" and is_instance_valid(app.village_modal): open_plot(index))
-	app.text(v,"남쪽 천막 가게에서 씨앗을 사고 수확물을 잎전으로 바꿀 수 있어요.",14)
+	app.text(v,"씨앗 가게에서 씨앗을 사고 수확물을 잎전으로 바꿀 수 있어요.",14)
 
 func open_storage() -> void:
 	if state.is_empty(): return
@@ -130,10 +139,28 @@ func open_storage() -> void:
 	grid.columns=3
 	v.add_child(grid)
 	for item in state.catalog.names:
-		var card: Label=app.text(grid,"%s  × %d"%[state.catalog.names[item],state.bag.get(item,0)],17)
-		card.custom_minimum_size=Vector2(220,42)
+		var card := PanelContainer.new()
+		var paper := StyleBoxFlat.new()
+		paper.bg_color=Color("f2e6cf")
+		paper.set_corner_radius_all(9)
+		paper.set_content_margin_all(10)
+		card.add_theme_stylebox_override("panel",paper)
+		card.custom_minimum_size=Vector2(220,64)
+		grid.add_child(card)
+		var row := HBoxContainer.new();row.add_theme_constant_override("separation",10);card.add_child(row)
+		var icon := TextureRect.new();icon.texture=load("res://assets/items/"+life_icon(item)+".svg")
+		icon.custom_minimum_size=Vector2(38,38);icon.expand_mode=TextureRect.EXPAND_IGNORE_SIZE;icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		row.add_child(icon)
+		app.text(row,"%s  × %d"%[state.catalog.names[item],state.bag.get(item,0)],16)
 	app.text(v,"낚시 도감: 강농어 %d마리 / 은빛 도미 %d마리\n호수에는 강농어, 바다에는 은빛 도미가 더 자주 찾아와요."%[state.collection.get("perch",0),state.collection.get("silverfish",0)],15)
 	app.button(v,"지도에서 텃밭과 낚시터 찾기",open_map)
+
+func life_icon(item: String) -> String:
+	if item in ["perch","silverfish"]:return "fish"
+	if item.ends_with("_seed") or item=="bait":return "seed"
+	if item=="herb":return "fiber"
+	if item in ["turnip","pumpkin"]:return "harvest"
+	return "berry"
 
 func open_shop() -> void:
 	if state.is_empty(): return
@@ -157,7 +184,7 @@ func open_shop() -> void:
 			await action("sell",{"item":item})
 			if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
 		b.disabled=state.bag.get(item,0)<1
-	app.text(v,"오늘의 마을 식탁: 순무 2개 + 강농어 1마리 → 20잎전\n하루 한 번, 서버 날짜(UTC 자정)에 새 배달을 받을 수 있어요.",15)
+	app.text(v,"오늘의 마을 식탁: 순무 2개 + 강농어 1마리 → 20잎전\n매일 오전 9시(한국 시간)에 새 배달이 열려요.",15)
 	var order: Button=app.button(v,"식탁에 배달하기" if state.order_available else "오늘 배달 완료",func():
 		await action("order")
 		if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
@@ -258,7 +285,7 @@ func _process(delta: float) -> void:
 			app.sound.effect("click")
 	var cast_at := Vector3(-7,-0.4,18.3) if current_spot=="pond" else Vector3(26,-1.7,36)
 	var hand: Vector3=app.player.position+Vector3(0.35,2.2,0.7)
-	if is_instance_valid(app.player.tool_node): hand=app.player.tool_node.to_global(Vector3(0,2.3,0))
+	if is_instance_valid(app.player.tool_node): hand=app.player.tool_node.to_global(app.player.tool_node.get_meta("line_tip",Vector3(0,2.3,0)))
 	app.town.update_fishing(active,cast_at,bite,hand)
 	if mode=="map" and is_instance_valid(map_view):
 		map_view.player_at=Vector2(app.player.position.x,app.player.position.z)
@@ -278,6 +305,7 @@ func _process(delta: float) -> void:
 			marker.queue_free()
 
 func goal_text() -> String:
+	if app.social.visiting(): return str(app.social.data.get("host_name", "친구"))+"님의 마을 방문 중\n함께 산책하고 함께하기에서 대화해 보세요."
 	if goal.is_empty():
 		var note := "Tab · 마을 지도  /  B · 생활 창고\n서쪽 텃밭에서 첫 씨앗을 심어 보세요."
 		if not state.is_empty(): note+="\n\n잎전 %d  ·  미끼 %d개"%[state.coins,state.bag.get("bait",0)]

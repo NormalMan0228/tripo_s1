@@ -1,0 +1,12 @@
+{
+  "id": "hand-r-side",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-14da6dfd-1ae5-4551-82f1-6c98fb5c3bff.png",
+  "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME right hand from a near SIDE profile on thumb side with mild three-quarter angle, fingers upward, wrist bottom. Preserve exact anatomy, lengths and relaxed-open pose. The projection should expose palm thickness, thumb root and wrist taper; all five fingers still anatomically present even if some overlap in this viewpoint. No arm, sleeve or jewelry.",
+  "reference_inputs": [
+    "art/references/explorer_b_modular_v1/02_parts/hand-r-dorsal-v1.png",
+    "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+  ],
+  "approval": null
+}

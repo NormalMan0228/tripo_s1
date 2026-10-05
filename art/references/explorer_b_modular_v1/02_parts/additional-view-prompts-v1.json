@@ -1,0 +1,125 @@
+{
+  "assets": [
+    {
+      "id": "head-side",
+      "variant_of": "head-front",
+      "category": "body",
+      "label": "머리 피부",
+      "view": "우측면",
+      "parts": [
+        "head_skin"
+      ],
+      "state": "pending",
+      "file": "head-side-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME bald explorer head with ears, brows and the short neck connector in a strict RIGHT PROFILE facing image-right, 90 degrees, no three-quarter view. Preserve face profile and expression; no scalp hair, shoulders or clothing.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/head-front-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review"
+    },
+    {
+      "id": "head-back",
+      "variant_of": "head-front",
+      "category": "body",
+      "label": "머리 피부",
+      "view": "후면",
+      "parts": [
+        "head_skin"
+      ],
+      "state": "pending",
+      "file": "head-back-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME bald explorer head in strict BACK view, exactly 180 degrees, no three-quarter angle. Smooth rounded skull, both ears visible symmetrically, short neck connector unchanged, no scalp hair, shoulders or clothing, no face features painted on back.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/head-front-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review"
+    },
+    {
+      "id": "hair-back",
+      "variant_of": "hair",
+      "category": "hair",
+      "label": "기본 헤어",
+      "view": "후면",
+      "parts": [
+        "hair_base",
+        "hair_fringe",
+        "hair_sidelock_R",
+        "hair_sidelock_L"
+      ],
+      "state": "pending",
+      "file": "hair-back-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME isolated brown bob HAIR SHELL in strict BACK view. Preserve haircut length, rounded silhouette and layered broad sculpted locks. No scalp skin, head, ears, face or body anywhere inside; hollow standalone hair piece.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/hair-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review"
+    },
+    {
+      "id": "hand-r-palm",
+      "variant_of": "hand-r-dorsal",
+      "category": "body",
+      "label": "오른손",
+      "view": "손바닥",
+      "parts": [
+        "palm_R",
+        "thumb_R",
+        "index_R",
+        "middle_R",
+        "ring_R",
+        "little_R"
+      ],
+      "state": "pending",
+      "file": "hand-r-palm-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME RIGHT HAND from PALM side, fingers upward, wrist at bottom, thumb on viewer's RIGHT. Exactly the same five fingers, length ratios, spacing, wrist, skin and relaxed extended neutral pose as image 1, with softly stylized palm creases and thenar volume. Anatomically correct thumb opposability; no nails visible on the long fingers' palms. No arm, sleeve or jewelry.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/hand-r-dorsal-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review"
+    },
+    {
+      "id": "hand-r-side",
+      "variant_of": "hand-r-dorsal",
+      "category": "body",
+      "label": "오른손",
+      "view": "엄지 측면",
+      "parts": [
+        "palm_R",
+        "thumb_R",
+        "index_R",
+        "middle_R",
+        "ring_R",
+        "little_R"
+      ],
+      "state": "pending",
+      "file": "hand-r-side-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME right hand from a near SIDE profile on thumb side with mild three-quarter angle, fingers upward, wrist bottom. Preserve exact anatomy, lengths and relaxed-open pose. The projection should expose palm thickness, thumb root and wrist taper; all five fingers still anatomically present even if some overlap in this viewpoint. No arm, sleeve or jewelry.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/hand-r-dorsal-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review"
+    },
+    {
+      "id": "jacket-body-back",
+      "variant_of": "jacket-body",
+      "category": "clothing",
+      "label": "재킷 몸판",
+      "view": "후면",
+      "parts": [
+        "jacket_torso"
+      ],
+      "state": "pending",
+      "file": "jacket-body-back-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME isolated empty mustard work-jacket BODY without sleeves in strict BACK view. Preserve collar, armhole edges, waist hem and fabric. Reconstruct original approved jacket's plain rear yoke and seams, no embroidery, logo, pockets on back, body or inner shirt.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/jacket-body-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review"
+    }
+  ]
+}

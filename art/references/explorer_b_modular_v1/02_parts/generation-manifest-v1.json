@@ -1,0 +1,721 @@
+{
+  "stage": "references",
+  "status": "awaiting_user_review",
+  "approval": null,
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "source": "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+  "no_image_to_3d_calls": true,
+  "assets": [
+    {
+      "id": "head-front",
+      "category": "body",
+      "label": "머리 피부",
+      "view": "정면",
+      "parts": [
+        "head_skin"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nSame exact friendly neutral face and facial proportions as approved explorer, brown eyes and brows, subtle closed-mouth smile. Isolate the head only, including both ears, remove ALL scalp hair completely to reveal smooth bald head silhouette. Do not change eye size, nose, jaw, cheeks, skin tone or expression. A small clean neck connector opening under jaw, no long neck, no shoulders, no clothing. Strict straight FRONT view, symmetrical head position. Skin softly rendered, eyebrows and eyes intact. This isolated bald head is a detachable modeling part, not an injury.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "head-front-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1312,
+        1199
+      ],
+      "sha256": "fea1d8323a85d9cde7abfc2b6de36f302419bf87f231741c1bd01c6049343983",
+      "generation_record": "head-front-generation-v1.json"
+    },
+    {
+      "id": "neck",
+      "category": "body",
+      "label": "목",
+      "view": "정면",
+      "parts": [
+        "neck"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nFor this concealed body component use a uniform matte pale warm-beige CLAY ENGINEERING MANNEQUIN material. Smooth gender-neutral toy-like base form matching the approved character's proportions, without sexual/anatomical surface details, clothing, muscles drawn on the surface, gore, exposed tissue, textures or mechanical ball joints. Ends are clean manufactured modeling boundaries, not wounds. Isolate ONLY the neck connector component, from below jaw to the flared shoulder/collarbone junction. Gentle anatomically plausible stylized neck column, lower trapezius flare, clear smooth upper and lower attachment boundaries. No head, no torso, no clothing. FRONT view, upright and centered.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "neck-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1448,
+        1086
+      ],
+      "sha256": "db88a10b3fa91a610471a2148bbce60c60b2d8b13d703a856f513985dd804819",
+      "generation_record": "neck-generation-v1.json"
+    },
+    {
+      "id": "torso",
+      "category": "body",
+      "label": "몸통",
+      "view": "정면",
+      "parts": [
+        "torso"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nFor this concealed body component use a uniform matte pale warm-beige CLAY ENGINEERING MANNEQUIN material. Smooth gender-neutral toy-like base form matching the approved character's proportions, without sexual/anatomical surface details, clothing, muscles drawn on the surface, gore, exposed tissue, textures or mechanical ball joints. Ends are clean manufactured modeling boundaries, not wounds. Isolate the TORSO ONLY from base of neck to natural waist. Preserve explorer's chest width, narrow relaxed waist, rounded shoulders and soft slim medium body proportions. Closed featureless mannequin front without breast or nipple detail. Upper shoulder arm-attachment contours with very short clean stumps, open neck connector, clean waist connection. No head, no extended neck, no arms or hands, no pelvis, no clothing. Strict FRONT view.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "torso-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1145,
+        1374
+      ],
+      "sha256": "2de9f1ccbaea04d3c291d82295c06ab8a65be37e9647a8508a3bf180b0687455",
+      "generation_record": "torso-generation-v1.json"
+    },
+    {
+      "id": "pelvis",
+      "category": "body",
+      "label": "골반",
+      "view": "정면",
+      "parts": [
+        "pelvis"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nFor this concealed body component use a uniform matte pale warm-beige CLAY ENGINEERING MANNEQUIN material. Smooth gender-neutral toy-like base form matching the approved character's proportions, without sexual/anatomical surface details, clothing, muscles drawn on the surface, gore, exposed tissue, textures or mechanical ball joints. Ends are clean manufactured modeling boundaries, not wounds. Isolate PELVIS/HIP modeling component only, waist down to the two short upper-thigh connector bases. Modest slim hip width from approved explorer, smooth featureless mannequin form, clean manufactured connection boundaries. No genital/anatomical detail, no underwear or clothes, no torso, no full legs. FRONT view, symmetric hips.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "pelvis-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1312,
+        1199
+      ],
+      "sha256": "c15cc1659f086f61ec39787f2042f9049a2bd8e998dc2e0613d278fba4035163",
+      "generation_record": "pelvis-generation-v1.json"
+    },
+    {
+      "id": "upper-arm-r",
+      "category": "body",
+      "label": "오른쪽 위팔",
+      "view": "정면",
+      "parts": [
+        "upper_arm_R",
+        "upper_arm_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nFor this concealed body component use a uniform matte pale warm-beige CLAY ENGINEERING MANNEQUIN material. Smooth gender-neutral toy-like base form matching the approved character's proportions, without sexual/anatomical surface details, clothing, muscles drawn on the surface, gore, exposed tissue, textures or mechanical ball joints. Ends are clean manufactured modeling boundaries, not wounds. Isolate ONE RIGHT UPPER ARM from shoulder cap to elbow, unbent upright with elbow downward, smooth modest taper and softly defined elbow connector. No forearm, no hand, no sleeve. Proportions of the approved explorer, neither muscular nor ultra-thin. FRONT view with whole part visible.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "upper-arm-r-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "840243279ee52cfde4f0c6adc56e504e184df6d18cda977a2ac11c0335bd1160",
+      "generation_record": "upper-arm-r-generation-v1.json"
+    },
+    {
+      "id": "forearm-r",
+      "category": "body",
+      "label": "오른쪽 아래팔",
+      "view": "정면",
+      "parts": [
+        "forearm_R",
+        "forearm_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nFor this concealed body component use a uniform matte pale warm-beige CLAY ENGINEERING MANNEQUIN material. Smooth gender-neutral toy-like base form matching the approved character's proportions, without sexual/anatomical surface details, clothing, muscles drawn on the surface, gore, exposed tissue, textures or mechanical ball joints. Ends are clean manufactured modeling boundaries, not wounds. Isolate ONE RIGHT FOREARM from elbow to wrist only, straight upright wrist downward. Gentle forearm fullness narrowing into wrist, enough material at both connector ends. No upper arm, hand, clothes, sleeve or jewelry. FRONT view, full separate component.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "forearm-r-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "920f9e0d3ff4f0fe0021620d5ca94fa13c4dfe4aadd5371002bf2e353a24bf7b",
+      "generation_record": "forearm-r-generation-v1.json"
+    },
+    {
+      "id": "hand-r-dorsal",
+      "category": "body",
+      "label": "오른손",
+      "view": "손등",
+      "parts": [
+        "palm_R",
+        "thumb_R",
+        "index_R",
+        "middle_R",
+        "ring_R",
+        "little_R",
+        "palm_L",
+        "thumb_L",
+        "index_L",
+        "middle_L",
+        "ring_L",
+        "little_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONE RIGHT HAND of approved explorer, rendered in the same softly stylized warm light skin. DORSAL/back-of-hand view, fingers pointing upward, wrist stump at bottom, thumb on viewer's LEFT. Exactly five fingers total: thumb plus index/middle/ring/little, correct differing lengths, three softly articulated phalanges per long finger, realistic but stylized palm proportions, smooth natural knuckles and nails, gentle small gaps between all fingers, no fused fingers. Open relaxed neutral hand, not spread excessively, no clenched fist. No arm, sleeve, rings or gloves. High-quality hand surface, not low-poly. Orthographic view centered, only one hand.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "hand-r-dorsal-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "adab7944da047ec27b3a0dea2de254951280e25af4673bd6cd7b8eef1d57ec97",
+      "generation_record": "hand-r-dorsal-generation-v1.json"
+    },
+    {
+      "id": "thigh-r",
+      "category": "body",
+      "label": "오른쪽 허벅지",
+      "view": "정면",
+      "parts": [
+        "thigh_R",
+        "thigh_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nFor this concealed body component use a uniform matte pale warm-beige CLAY ENGINEERING MANNEQUIN material. Smooth gender-neutral toy-like base form matching the approved character's proportions, without sexual/anatomical surface details, clothing, muscles drawn on the surface, gore, exposed tissue, textures or mechanical ball joints. Ends are clean manufactured modeling boundaries, not wounds. Isolate ONE RIGHT THIGH, clean hip attachment to above knee, soft slim medium explorer proportions, gentle round volume and taper. Upright with knee connector at bottom. No pelvis, lower leg, shorts or pants. FRONT view.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "thigh-r-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "eec33960c371d0e45750bfb5060c35368e4929e5c46788f8591364ddb0cc79e2",
+      "generation_record": "thigh-r-generation-v1.json"
+    },
+    {
+      "id": "calf-r",
+      "category": "body",
+      "label": "오른쪽 종아리",
+      "view": "정면",
+      "parts": [
+        "calf_R",
+        "calf_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nFor this concealed body component use a uniform matte pale warm-beige CLAY ENGINEERING MANNEQUIN material. Smooth gender-neutral toy-like base form matching the approved character's proportions, without sexual/anatomical surface details, clothing, muscles drawn on the surface, gore, exposed tissue, textures or mechanical ball joints. Ends are clean manufactured modeling boundaries, not wounds. Isolate ONE RIGHT LOWER LEG from below knee to ankle only, smooth softly full calf narrowing into ankle, a subtly defined knee connector. Upright ankle down, no thigh, foot or clothing. FRONT view, whole component.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "calf-r-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "e829b624b70bc0f49f4d4fba7d41feea70a3a23ce15227ae24b81789fad7d18e",
+      "generation_record": "calf-r-generation-v1.json"
+    },
+    {
+      "id": "foot-r",
+      "category": "body",
+      "label": "오른발",
+      "view": "앞·안쪽 3/4",
+      "parts": [
+        "foot_R",
+        "foot_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nFor this concealed body component use a uniform matte pale warm-beige CLAY ENGINEERING MANNEQUIN material. Smooth gender-neutral toy-like base form matching the approved character's proportions, without sexual/anatomical surface details, clothing, muscles drawn on the surface, gore, exposed tissue, textures or mechanical ball joints. Ends are clean manufactured modeling boundaries, not wounds. Isolate ONE RIGHT BARE MANNEQUIN FOOT with short ankle connector. Medium stylized foot proportions sized for explorer's boots, heel and arch volume, exactly five naturally ordered toes including big toe on the medial side. Front-inner three-quarter orthographic view reveals all toe tips and ankle. No shoe, sock, leg or anatomical skin detailing. Full clean form on white background.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "foot-r-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1225,
+        1284
+      ],
+      "sha256": "cb346784b49bdde660c5914d3d457a4654e07c3d957cfbdc64e9555adde53484",
+      "generation_record": "foot-r-generation-v1.json"
+    },
+    {
+      "id": "hair",
+      "category": "hair",
+      "label": "기본 헤어",
+      "view": "앞쪽（정면에 가까운 시점）",
+      "parts": [
+        "hair_base",
+        "hair_fringe",
+        "hair_sidelock_R",
+        "hair_sidelock_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONLY the same brown bob haircut as approved explorer, preserve side-swept layered fringe, rounded bob silhouette, ear-length sides, rounded back, broad sculpted hair locks rather than individual wispy strands. Render as a standalone hollow hair shell with underside open for a head to fit into. No scalp skin, skull, ears, head, face, eyes or shoulders visible inside. FRONT three-quarter orthographic view, same approved hair color and polished soft highlights, full hair shell visible.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "hair-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1374,
+        1145
+      ],
+      "sha256": "6632d2bb6b6f6c141ac0dfb698d6bf2de1ca595cf888639250dd5d1813918747",
+      "generation_record": "hair-generation-v1.json",
+      "requested_view": "정면 3/4"
+    },
+    {
+      "id": "jacket-body",
+      "category": "clothing",
+      "label": "재킷 몸판",
+      "view": "정면",
+      "parts": [
+        "jacket_torso"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONLY mustard-yellow jacket TORSO/BODY from approved explorer. Collar, open zipper front, neat hem and same small front pockets, fabric seams and soft folds, inside visible through open front. REMOVE BOTH SLEEVES completely leaving clean armholes for separate sleeves. Not a different vest design: retain exact original jacket body silhouette and collar. Empty garment, no mannequin/body/arms/head/undershirt/belt. FRONT view upright, realistic cloth thickness at armholes, hem and collar.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "jacket-body-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1312,
+        1199
+      ],
+      "sha256": "54c2c7b3cbafab35cc83ab9df88c5578922ea83361221527057c726c93420260",
+      "generation_record": "jacket-body-generation-v1.json"
+    },
+    {
+      "id": "jacket-sleeve-r",
+      "category": "clothing",
+      "label": "오른쪽 재킷 소매·소매단",
+      "view": "정면 3/4",
+      "parts": [
+        "jacket_sleeve_R",
+        "jacket_cuff_R",
+        "jacket_sleeve_L",
+        "jacket_cuff_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONLY ONE RIGHT SLEEVE from approved mustard work jacket, shoulder sleeve-cap at top, elbow length and thick neatly rolled cuff at bottom. Retain mustard fabric, seams, rounded sleeve volume and original rolled cuff shape. Hollow separate sleeve with a visible inner cuff opening, no skin or arm inside. No jacket torso, hand, head or other garment. Upright front three-quarter orthographic view shows cap, full sleeve and cuff.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "jacket-sleeve-r-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "b2f340997ef7630601946a42b940a006697078d187183fc32b632f6db5e8d9e0",
+      "generation_record": "jacket-sleeve-r-generation-v1.json"
+    },
+    {
+      "id": "shirt",
+      "category": "clothing",
+      "label": "안쪽 셔츠",
+      "view": "정면",
+      "parts": [
+        "shirt"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONLY the ivory/off-white simple crew-neck undershirt from approved explorer. Create a complete independent soft cotton shirt torso with close-fitting slim medium proportions, subtle cloth folds, a plain rounded neckline, shoulder coverage and neat waist hem. Sleeveless underlayer with ordinary broad shoulder straps, matching what is visible under jacket; do not invent logos or decorations. Empty hollow garment, no skin, mannequin, jacket, belt or trousers. FRONT view; clear finished neckline and armhole edges.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "shirt-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1199,
+        1312
+      ],
+      "sha256": "efbb5d0145a9964d19416c73b33cf561da8ff7dd2133f0e90e81e78ba76e7801",
+      "generation_record": "shirt-generation-v1.json"
+    },
+    {
+      "id": "pants",
+      "category": "clothing",
+      "label": "바지 기본형",
+      "view": "정면",
+      "parts": [
+        "pants_waist",
+        "pants_leg_R",
+        "pants_leg_L",
+        "pants_cuff_R",
+        "pants_cuff_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONLY the approved warm-grey trousers, waistband and BOTH trouser legs at equal height, straight relaxed pose, softly baggy silhouette, central fly and seams, rolled ankle cuffs. REMOVE belt, boots, all external cargo pockets and back pockets (these will be independent parts). Keep base trouser fabric shape and color exactly. Empty garment with no body or skin, upper opening and hem thickness plausible. FRONT orthographic view, symmetrical neutral leg spacing, no jacket or accessories.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "pants-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "fa89fcccfb5a45a3df33eeb0afba7082e742be62fd9c4d29450cc3101f49f10a",
+      "generation_record": "pants-generation-v1.json"
+    },
+    {
+      "id": "boot-r",
+      "category": "clothing",
+      "label": "오른쪽 부츠",
+      "view": "앞·바깥 3/4",
+      "parts": [
+        "boot_upper_R",
+        "boot_sole_R",
+        "boot_upper_L",
+        "boot_sole_L",
+        "boot_lace_R",
+        "boot_lace_L",
+        "boot_hardware_R",
+        "boot_hardware_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONE RIGHT dark-brown hiking boot from approved explorer, retain rounded toe, ankle height, padded collar, leather panels, brown laces, metal eyelets and thick rugged tread sole. Same cozy medium stylized proportion and leather texture. Empty boot, no foot, sock, trouser cuff or ground plane. FRONT-OUTER three-quarter orthographic view exposing toe, side panels and ankle opening. Not a pair, no extra shoe.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "boot-r-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1226,
+        1283
+      ],
+      "sha256": "d59758e8b6d4dec26591b9668ffe08762e054cd73d12dc5cb89e88e232a0348f",
+      "generation_record": "boot-r-generation-v1.json"
+    },
+    {
+      "id": "belt",
+      "category": "accessory",
+      "label": "벨트 가죽 띠",
+      "view": "정면 3/4",
+      "parts": [
+        "belt"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONLY the dark-brown LEATHER BELT STRAP from approved explorer, without any metal buckle. Belt arranged as a simple horizontal oval loop fitting the explorer's waist, a small front gap with two clean strap ends, one end with neat punched holes. Smooth worn brown leather with subtle stitched edges, sensible consistent width and thickness. No trousers, body, belt buckle, jewelry or props. Three-quarter orthographic view reveals loop and thickness.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "belt-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "68d630f949679f01e405ae018a634251ba864c6aa677f4e54185429415a05219",
+      "generation_record": "belt-generation-v1.json"
+    },
+    {
+      "id": "buckle",
+      "category": "accessory",
+      "label": "벨트 버클",
+      "view": "정면 3/4",
+      "parts": [
+        "belt_buckle"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONLY the simple brushed-silver rectangular belt buckle from approved explorer. Rounded corners, outer frame, one central bar and a correctly connected movable single prong, moderate thickness and soft metal highlights. No leather strap, clothing, body or other hardware. Large front three-quarter product-style orthographic view, all parts of this single buckle connected and visible.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "buckle-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1312,
+        1199
+      ],
+      "sha256": "290b2dd95ce97936bbef75c7d97a59dc534c1e03ccc9b2a1a2dcf1cfe0f6c5b3",
+      "generation_record": "buckle-generation-v1.json"
+    },
+    {
+      "id": "cargo-pocket",
+      "category": "accessory",
+      "label": "카고 주머니",
+      "view": "정면 3/4",
+      "parts": [
+        "pants_pocket_R",
+        "pants_pocket_L"
+      ],
+      "state": "saved",
+      "prompt": "Use case: stylized-concept / precise-object-edit. Generate a NEW, isolated high-quality 2D modeling reference of ONE detachable character component. Image 1 is the APPROVED Tripothon B explorer turnaround; image 2 supplements fine details from the old front reference. The approved identity, medium stylized proportions and costume design must be kept. Recreate the requested component independently; do not merely crop the old image, do not show the complete character. Single object, single specified view, centered and large with generous clear margin, orthographic or very mild orthographic three-quarter view as specified, soft neutral studio lighting, solid white background, negligible contact shadow. Polished smooth stylized 3D illustration, clean silhouette and coherent volume. No environment, props, captions, labels, borders, extra copies, scale rulers or invented ornaments. Full component must fit in frame. This is a modeling REFERENCE, not a posed final character or rigged mesh.\nIsolate ONLY ONE warm-grey rectangular fabric cargo pocket with flap from approved explorer's thigh. Same cloth color, rounded lower corners, stitched border and neat flap, a subtly expanded gusset adds real volume and a flat attachment back. No trouser leg, skin, buttons invented, belt or second pocket. FRONT three-quarter orthographic view exposing front flap and shallow side gusset. Full independent attachable garment component.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+        "art/references/explorer_b_v5/front.png"
+      ],
+      "file": "cargo-pocket-v1.png",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1145,
+        1374
+      ],
+      "sha256": "5f9e93aa8ff387596f9d94c3ee1d2acd79c73f2bf6792f307ca8feed3fcb86bb",
+      "generation_record": "cargo-pocket-generation-v1.json"
+    },
+    {
+      "id": "head-side",
+      "variant_of": "head-front",
+      "category": "body",
+      "label": "머리 피부",
+      "view": "우측면",
+      "parts": [
+        "head_skin"
+      ],
+      "state": "saved",
+      "file": "head-side-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME bald explorer head with ears, brows and the short neck connector in a strict RIGHT PROFILE facing image-right, 90 degrees, no three-quarter view. Preserve face profile and expression; no scalp hair, shoulders or clothing.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/head-front-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1312,
+        1199
+      ],
+      "sha256": "e2c9e51c9ea95439af73efc012609178026e76d6cc61fa1419df86113fad01dd",
+      "generation_record": "head-side-generation-v1.json"
+    },
+    {
+      "id": "head-back",
+      "variant_of": "head-front",
+      "category": "body",
+      "label": "머리 피부",
+      "view": "후면",
+      "parts": [
+        "head_skin"
+      ],
+      "state": "saved",
+      "file": "head-back-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME bald explorer head in strict BACK view, exactly 180 degrees, no three-quarter angle. Smooth rounded skull, both ears visible symmetrically, short neck connector unchanged, no scalp hair, shoulders or clothing, no face features painted on back.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/head-front-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1312,
+        1199
+      ],
+      "sha256": "29eb9e03dedb5ed2635cbef1ad551f44cde9f4bcf886334eeeaf98af30dd52d1",
+      "generation_record": "head-back-generation-v1.json"
+    },
+    {
+      "id": "hair-back",
+      "variant_of": "hair",
+      "category": "hair",
+      "label": "기본 헤어",
+      "view": "후면",
+      "parts": [
+        "hair_base",
+        "hair_fringe",
+        "hair_sidelock_R",
+        "hair_sidelock_L"
+      ],
+      "state": "saved",
+      "file": "hair-back-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME isolated brown bob HAIR SHELL in strict BACK view. Preserve haircut length, rounded silhouette and layered broad sculpted locks. No scalp skin, head, ears, face or body anywhere inside; hollow standalone hair piece.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/hair-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1374,
+        1145
+      ],
+      "sha256": "7b19070359367ba996903d17b0f233b48500a3460311e7a8a745069b02dd8bc5",
+      "generation_record": "hair-back-generation-v1.json"
+    },
+    {
+      "id": "hand-r-palm",
+      "variant_of": "hand-r-dorsal",
+      "category": "body",
+      "label": "오른손",
+      "view": "손바닥",
+      "parts": [
+        "palm_R",
+        "thumb_R",
+        "index_R",
+        "middle_R",
+        "ring_R",
+        "little_R"
+      ],
+      "state": "saved",
+      "file": "hand-r-palm-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME RIGHT HAND from PALM side, fingers upward, wrist at bottom, thumb on viewer's RIGHT. Exactly the same five fingers, length ratios, spacing, wrist, skin and relaxed extended neutral pose as image 1, with softly stylized palm creases and thenar volume. Anatomically correct thumb opposability; no nails visible on the long fingers' palms. No arm, sleeve or jewelry.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/hand-r-dorsal-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "49721c0b639dd8118c881c0120bafcccbaacce3235cf9baee2e0514e85b94f8b",
+      "generation_record": "hand-r-palm-generation-v1.json"
+    },
+    {
+      "id": "hand-r-side",
+      "variant_of": "hand-r-dorsal",
+      "category": "body",
+      "label": "오른손",
+      "view": "3/4 시점（초기 측면 요청）",
+      "parts": [
+        "palm_R",
+        "thumb_R",
+        "index_R",
+        "middle_R",
+        "ring_R",
+        "little_R"
+      ],
+      "state": "saved",
+      "file": "hand-r-side-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME right hand from a near SIDE profile on thumb side with mild three-quarter angle, fingers upward, wrist bottom. Preserve exact anatomy, lengths and relaxed-open pose. The projection should expose palm thickness, thumb root and wrist taper; all five fingers still anatomically present even if some overlap in this viewpoint. No arm, sleeve or jewelry.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/hand-r-dorsal-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "65a9919573e23dc7a9fbdc4a9835fff67d86c87265165350d715cd5e4095a25c",
+      "generation_record": "hand-r-side-generation-v1.json",
+      "requested_view": "엄지 측면"
+    },
+    {
+      "id": "jacket-body-back",
+      "variant_of": "jacket-body",
+      "category": "clothing",
+      "label": "재킷 몸판",
+      "view": "후면",
+      "parts": [
+        "jacket_torso"
+      ],
+      "state": "saved",
+      "file": "jacket-body-back-v1.png",
+      "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME isolated empty mustard work-jacket BODY without sleeves in strict BACK view. Preserve collar, armhole edges, waist hem and fabric. Reconstruct original approved jacket's plain rear yoke and seams, no embroidery, logo, pockets on back, body or inner shirt.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/jacket-body-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1312,
+        1199
+      ],
+      "sha256": "04d3d2fa62bc9e81a9aa9ef5e55c39cacbc0df446dd78991dd867789adb4f5ce",
+      "generation_record": "jacket-body-back-generation-v1.json"
+    },
+    {
+      "id": "hand-r-profile",
+      "variant_of": "hand-r-dorsal",
+      "category": "body",
+      "label": "오른손",
+      "view": "정확한 엄지 측면",
+      "parts": [
+        "palm_R",
+        "thumb_R",
+        "index_R",
+        "middle_R",
+        "ring_R",
+        "little_R"
+      ],
+      "state": "saved",
+      "file": "hand-r-profile-v1.png",
+      "prompt": "Use case: precise-object-edit / identity-preserve. Image 1 is the SAME generated right hand, image 2 its palm reference. Generate a NEW orthographic RADIAL SIDE PROFILE of exactly this hand. Camera turns fully 90 degrees around the upright hand to look from thumb side across the palm thickness. Fingers point vertically UP, wrist DOWN, same open neutral pose, same lengths and proportions. Palm is a NARROW EDGE silhouette, not a wide palm or back surface; no three-quarter front/back view. The four long fingers are aligned in depth with silhouettes partially overlapping in true side view, thumb projects naturally in front of this layered stack. Emphasize actual palm thickness and thumb-root/thenar depth. All five fingers anatomically present; never duplicate fingers or force a fan to show all five. SAME soft stylized light skin material, no sleeve, arm, props, jewelry, labels or environment. One isolated component, solid white background, entire hand in frame. Do not show the full character or a second view.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/hand-r-dorsal-v1.png",
+        "art/references/explorer_b_modular_v1/02_parts/hand-r-palm-v1.png"
+      ],
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "6a26d6b90654b0525d2a44f3d52db2724100ba52bf0ac941b072f2eb17a25ebc",
+      "generation_record": "hand-r-profile-generation-v1.json"
+    },
+    {
+      "id": "torso-clean-boundaries",
+      "variant_of": "torso",
+      "category": "body",
+      "label": "몸통",
+      "view": "연결 경계 수정안 v2",
+      "parts": [
+        "torso"
+      ],
+      "state": "saved",
+      "file": "torso-v2.png",
+      "prompt": "Use case: precise-object-edit / identity-preserve. Edit the isolated mannequin torso from image 1, which is a standalone engineering modeling part of the approved explorer in image 2. Preserve its shoulder width, body shape, torso length, warm matte clay material and frontal neutral view. Make ONLY these boundary corrections: REMOVE the tall cylindrical neck entirely down to the shoulder/clavicle junction; leave a shallow clean neck-attachment opening level with the upper shoulder line, so the separate neck component can be fitted later. Remove the hard raised disc/cylinder rims at the two arm boundaries and at the bottom waist; these ends should be simple smooth cut surfaces/attachment openings, not mechanical toy connector fittings. Keep the gently rounded shoulders and soft natural torso silhouette. No face, head, neck above the collarbone junction, arms, pelvis, clothing or detailed anatomy. Featureless nonsexual smooth mannequin surface, not a human injury. One complete component centered on white background, straight FRONT orthographic view, high quality refined smooth 3D illustration, no labels or extra copies.",
+      "reference_inputs": [
+        "art/references/explorer_b_modular_v1/02_parts/torso-v1.png",
+        "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+      ],
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1145,
+        1374
+      ],
+      "sha256": "a826cce0a7f670abb252b135580e601fcfbaf66fab153cf2c5ccdbaab32c6073",
+      "generation_record": "torso-clean-boundaries-generation-v1.json"
+    }
+  ],
+  "notes": [
+    "Body references are featureless clay mannequins; final skin textures have not been made.",
+    "Left/right anatomical chirality and measured socket sizes require 3D inspection.",
+    "A reference image can cover several editing slots, such as fingers in one complete hand.",
+    "Jacket sleeves and cargo pockets have independent images; body, clothes and accessories are not fused.",
+    "No 3D, UV, rig or motion was generated in this stage."
+  ],
+  "preferred_variants": {
+    "torso": "torso-clean-boundaries"
+  },
+  "qa_notes": {
+    "neck": "목과 쇄골이 연결된 형태. 몸통과의 중복 영역 및 목 길이는 조립 때 결정해야 함.",
+    "pelvis": "허벅지 연결용 영역이 비교적 길게 생성됨. 최종 분할 경계 검토 필요.",
+    "hand-r-side": "엄지 방향 3/4 시점으로 생성됨. 엄밀한 90도 측면이 아니므로 추가 측면을 생성함.",
+    "shirt": "재킷 아래 가려진 소매 구조는 확정 전. 현재는 민소매 안쪽 셔츠 후보.",
+    "boot-r": "끈·금속 장식은 함께 보이는 기준 이미지. 부품별 3D 분리 규격을 완성한 것은 아님."
+  },
+  "primary_component_groups": 19,
+  "image_count": 27,
+  "accounting": {
+    "image_gen_calls": 27,
+    "new_tripo_calls": 0,
+    "new_tripo_credits": 0,
+    "new_scenario_calls": 0,
+    "new_scenario_credits": 0,
+    "image_generation_price": "not_exposed_by_tool"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "id": "torso-clean-boundaries",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-65b981f8-d0ab-43ff-ac71-715eb1d8a22f.png",
+  "prompt": "Use case: precise-object-edit / identity-preserve. Edit the isolated mannequin torso from image 1, which is a standalone engineering modeling part of the approved explorer in image 2. Preserve its shoulder width, body shape, torso length, warm matte clay material and frontal neutral view. Make ONLY these boundary corrections: REMOVE the tall cylindrical neck entirely down to the shoulder/clavicle junction; leave a shallow clean neck-attachment opening level with the upper shoulder line, so the separate neck component can be fitted later. Remove the hard raised disc/cylinder rims at the two arm boundaries and at the bottom waist; these ends should be simple smooth cut surfaces/attachment openings, not mechanical toy connector fittings. Keep the gently rounded shoulders and soft natural torso silhouette. No face, head, neck above the collarbone junction, arms, pelvis, clothing or detailed anatomy. Featureless nonsexual smooth mannequin surface, not a human injury. One complete component centered on white background, straight FRONT orthographic view, high quality refined smooth 3D illustration, no labels or extra copies.",
+  "reference_inputs": [
+    "art/references/explorer_b_modular_v1/02_parts/torso-v1.png",
+    "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+  ],
+  "approval": null
+}

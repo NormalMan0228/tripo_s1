@@ -1,0 +1,1129 @@
+{
+  "state": "awaiting_user_sculpt_review",
+  "source_hashes": {
+    "body": {
+      "path": "art/characters/explorer_b_fullbody_v2/03_generated_p2/model.fbx",
+      "sha256": "803ece7fad0d8d77e536599e7ebc04344d4dd30e1031bde30b592fd80e10fb23"
+    },
+    "head": {
+      "path": "art/characters/explorer_b_fullbody_v2/04_replacement_parts_p2/head/model.fbx",
+      "sha256": "3367e5b65938f84c1be8933f8d7ab515c154f9bfd651e8c80f940d4a76bdcb5e"
+    },
+    "hand": {
+      "path": "art/characters/explorer_b_fullbody_v2/04_replacement_parts_p2/hand/model.fbx",
+      "sha256": "7b4314c8cc965f9e6f871e1f343feec8110f6f9d337d131abdb274885a77e1a1"
+    },
+    "hair": {
+      "path": "art/characters/explorer_b_fullbody_v2/04_replacement_parts_p2/hair/model.fbx",
+      "sha256": "b1c4371d4914ca2d117a53ec251fc9b2d3571e739cd31a660e38eef4a6682e4b"
+    }
+  },
+  "cuts": [
+    {
+      "object": "Neck_From_Base",
+      "method": "bpy.ops.sculpt.paint_mask_slice",
+      "label": "original head removal, lower neck retained",
+      "fill_holes": false,
+      "result": [
+        "FINISHED"
+      ],
+      "before": {
+        "vertices": 9801,
+        "polygons": 10121,
+        "polygon_sides": {
+          "3": 906,
+          "4": 9215
+        },
+        "boundary_edges": 413,
+        "nonmanifold_multiface_edges": 52
+      },
+      "after": {
+        "vertices": 298,
+        "polygons": 263,
+        "polygon_sides": {
+          "3": 33,
+          "4": 230
+        },
+        "boundary_edges": 103,
+        "nonmanifold_multiface_edges": 0
+      }
+    },
+    {
+      "object": "Arm_PosY",
+      "method": "bpy.ops.sculpt.paint_mask_slice",
+      "label": "original hand removal, forearm retained",
+      "fill_holes": false,
+      "result": [
+        "FINISHED"
+      ],
+      "before": {
+        "vertices": 2525,
+        "polygons": 2600,
+        "polygon_sides": {
+          "3": 181,
+          "4": 2419
+        },
+        "boundary_edges": 31,
+        "nonmanifold_multiface_edges": 0
+      },
+      "after": {
+        "vertices": 695,
+        "polygons": 678,
+        "polygon_sides": {
+          "3": 37,
+          "4": 641
+        },
+        "boundary_edges": 73,
+        "nonmanifold_multiface_edges": 0
+      }
+    },
+    {
+      "object": "Head_P2_Replacement",
+      "method": "bpy.ops.sculpt.paint_mask_slice",
+      "label": "replacement head lower neck trim",
+      "fill_holes": false,
+      "result": [
+        "FINISHED"
+      ],
+      "before": {
+        "vertices": 6205,
+        "polygons": 6358,
+        "polygon_sides": {
+          "3": 614,
+          "4": 5744
+        },
+        "boundary_edges": 320,
+        "nonmanifold_multiface_edges": 16
+      },
+      "after": {
+        "vertices": 6145,
+        "polygons": 6298,
+        "polygon_sides": {
+          "3": 614,
+          "4": 5684
+        },
+        "boundary_edges": 320,
+        "nonmanifold_multiface_edges": 16
+      }
+    },
+    {
+      "object": "Hand_P2_Replacement_PosY",
+      "method": "bpy.ops.sculpt.paint_mask_slice",
+      "label": "replacement hand wrist trim",
+      "fill_holes": false,
+      "result": [
+        "FINISHED"
+      ],
+      "before": {
+        "vertices": 4209,
+        "polygons": 4378,
+        "polygon_sides": {
+          "3": 386,
+          "4": 3992
+        },
+        "boundary_edges": 50,
+        "nonmanifold_multiface_edges": 0
+      },
+      "after": {
+        "vertices": 4179,
+        "polygons": 4346,
+        "polygon_sides": {
+          "3": 384,
+          "4": 3962
+        },
+        "boundary_edges": 52,
+        "nonmanifold_multiface_edges": 0
+      }
+    }
+  ],
+  "strokes": [
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "neck seam local smooth",
+      "radius_m": 0.035,
+      "strength": 0.2,
+      "path": [
+        [
+          0.02008012682199478,
+          2.976522637254675e-06,
+          1.337249994277954
+        ],
+        [
+          0.02008012682199478,
+          2.976522637254675e-06,
+          1.340250015258789
+        ],
+        [
+          0.02008012682199478,
+          2.976522637254675e-06,
+          1.3342499732971191
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 105,
+      "max_delta_m": 0.003027741152687821,
+      "fully_masked_vertices": 6003,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "neck seam local smooth",
+      "radius_m": 0.035,
+      "strength": 0.2,
+      "path": [
+        [
+          -0.0898657813668251,
+          2.976522637254675e-06,
+          1.337249994277954
+        ],
+        [
+          -0.0898657813668251,
+          2.976522637254675e-06,
+          1.340250015258789
+        ],
+        [
+          -0.0898657813668251,
+          2.976522637254675e-06,
+          1.3342499732971191
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 25,
+      "max_delta_m": 0.0026677202593195955,
+      "fully_masked_vertices": 6003,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "neck seam local smooth",
+      "radius_m": 0.035,
+      "strength": 0.2,
+      "path": [
+        [
+          -0.011237218044698238,
+          0.042023926973342896,
+          1.3251042366027832
+        ],
+        [
+          -0.011237218044698238,
+          0.042023926973342896,
+          1.3281042575836182
+        ],
+        [
+          -0.011237218044698238,
+          0.042023926973342896,
+          1.3221042156219482
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 61,
+      "max_delta_m": 0.005495231514820826,
+      "fully_masked_vertices": 6003,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "neck seam local smooth",
+      "radius_m": 0.035,
+      "strength": 0.2,
+      "path": [
+        [
+          -0.012006787583231926,
+          -0.04201853275299072,
+          1.3251042366027832
+        ],
+        [
+          -0.012006787583231926,
+          -0.04201853275299072,
+          1.3281042575836182
+        ],
+        [
+          -0.012006787583231926,
+          -0.04201853275299072,
+          1.3221042156219482
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 60,
+      "max_delta_m": 0.0054531326219246145,
+      "fully_masked_vertices": 6003,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          0.018694467842578888,
+          0.0016844123601913452,
+          1.334928274154663
+        ],
+        [
+          0.018694467842578888,
+          0.0016844123601913452,
+          1.337928295135498
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 176,
+      "max_delta_m": 0.004606941581522082,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          0.00853388849645853,
+          0.038593392819166183,
+          1.3344849348068237
+        ],
+        [
+          0.00853388849645853,
+          0.038593392819166183,
+          1.3374849557876587
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 146,
+      "max_delta_m": 0.005968643920540399,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          -0.019699832424521446,
+          0.0547519326210022,
+          1.3276106119155884
+        ],
+        [
+          -0.019699832424521446,
+          0.0547519326210022,
+          1.3306106328964233
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 102,
+      "max_delta_m": 0.006057780095114092,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          -0.06241599842905998,
+          0.056142691522836685,
+          1.3338937759399414
+        ],
+        [
+          -0.06241599842905998,
+          0.056142691522836685,
+          1.3368937969207764
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 66,
+      "max_delta_m": 0.004965415572555658,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          -0.08937922865152359,
+          -0.002350832335650921,
+          1.3349074125289917
+        ],
+        [
+          -0.08937922865152359,
+          -0.002350832335650921,
+          1.3379074335098267
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 47,
+      "max_delta_m": 0.0039102854317487985,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          -0.06237930431962013,
+          -0.056191373616456985,
+          1.3337500095367432
+        ],
+        [
+          -0.06237930431962013,
+          -0.056191373616456985,
+          1.3367500305175781
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 67,
+      "max_delta_m": 0.005418814999202997,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          -0.019104573875665665,
+          -0.05401342734694481,
+          1.3271269798278809
+        ],
+        [
+          -0.019104573875665665,
+          -0.05401342734694481,
+          1.3301270008087158
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 102,
+      "max_delta_m": 0.005971153669060053,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          0.009207814931869507,
+          -0.03670314699411392,
+          1.334856629371643
+        ],
+        [
+          0.009207814931869507,
+          -0.03670314699411392,
+          1.337856650352478
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 150,
+      "max_delta_m": 0.004806684158727879,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          0.01574481651186943,
+          0.0036006958689540625,
+          1.3361893892288208
+        ],
+        [
+          0.01574481651186943,
+          0.0036006958689540625,
+          1.3391894102096558
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 176,
+      "max_delta_m": 0.002159597818938128,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          0.007313915062695742,
+          0.036718957126140594,
+          1.335674524307251
+        ],
+        [
+          0.007313915062695742,
+          0.036718957126140594,
+          1.338674545288086
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 148,
+      "max_delta_m": 0.0022045502320217967,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          -0.012302739545702934,
+          0.05361633375287056,
+          1.3348264694213867
+        ],
+        [
+          -0.012302739545702934,
+          0.05361633375287056,
+          1.3378264904022217
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 112,
+      "max_delta_m": 0.001953519113412578,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          -0.06282944977283478,
+          0.05545784533023834,
+          1.3360732793807983
+        ],
+        [
+          -0.06282944977283478,
+          0.05545784533023834,
+          1.3390733003616333
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 66,
+      "max_delta_m": 0.0022946174211837607,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          -0.08878623694181442,
+          -0.004939771257340908,
+          1.3358083963394165
+        ],
+        [
+          -0.08878623694181442,
+          -0.004939771257340908,
+          1.3388084173202515
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 49,
+      "max_delta_m": 0.0022243958667790917,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          -0.06901269406080246,
+          -0.04981311783194542,
+          1.3358131647109985
+        ],
+        [
+          -0.06901269406080246,
+          -0.04981311783194542,
+          1.3388131856918335
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 67,
+      "max_delta_m": 0.0035649439320142966,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          -0.013626300729811192,
+          -0.05480141565203667,
+          1.335044264793396
+        ],
+        [
+          -0.013626300729811192,
+          -0.05480141565203667,
+          1.338044285774231
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 107,
+      "max_delta_m": 0.00272280100906471,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "circumferential neck transition smooth",
+      "radius_m": 0.05,
+      "strength": 0.32,
+      "path": [
+        [
+          0.0076340544037520885,
+          -0.03530736267566681,
+          1.3354195356369019
+        ],
+        [
+          0.0076340544037520885,
+          -0.03530736267566681,
+          1.3384195566177368
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 152,
+      "max_delta_m": 0.00232399192091417,
+      "fully_masked_vertices": 5910,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "mouth corner pinching cleanup",
+      "radius_m": 0.022,
+      "strength": 0.23,
+      "path": [
+        [
+          0.08692783117294312,
+          -0.05302124470472336,
+          1.4099328517913818
+        ],
+        [
+          0.08692783117294312,
+          -0.05102124437689781,
+          1.4099328517913818
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 98,
+      "max_delta_m": 0.0004168786182896412,
+      "fully_masked_vertices": 6247,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "mouth corner pinching cleanup",
+      "radius_m": 0.022,
+      "strength": 0.23,
+      "path": [
+        [
+          0.08692783117294312,
+          -0.05302124470472336,
+          1.4099328517913818
+        ],
+        [
+          0.08692783117294312,
+          -0.05102124437689781,
+          1.4099328517913818
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 98,
+      "max_delta_m": 0.000337225721340795,
+      "fully_masked_vertices": 6247,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "mouth corner pinching cleanup",
+      "radius_m": 0.022,
+      "strength": 0.23,
+      "path": [
+        [
+          0.08692783117294312,
+          0.05302123352885246,
+          1.4099328517913818
+        ],
+        [
+          0.08692783117294312,
+          0.05502123385667801,
+          1.4099328517913818
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 98,
+      "max_delta_m": 0.00038899374867682563,
+      "fully_masked_vertices": 6247,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "mouth corner pinching cleanup",
+      "radius_m": 0.022,
+      "strength": 0.23,
+      "path": [
+        [
+          0.08692783117294312,
+          0.05302123352885246,
+          1.4099328517913818
+        ],
+        [
+          0.08692783117294312,
+          0.05502123385667801,
+          1.4099328517913818
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 98,
+      "max_delta_m": 0.0003199873092598518,
+      "fully_masked_vertices": 6247,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Arm_Hand_PosY_P2",
+      "brush": "Inflate/Deflate",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "wrist transition subtle volume",
+      "radius_m": 0.025,
+      "strength": 0.075,
+      "path": [
+        [
+          0.004228692501783371,
+          0.3828999996185303,
+          0.8568000197410583
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 103,
+      "max_delta_m": 3.515582804366629e-05,
+      "fully_masked_vertices": 4413,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Arm_Hand_PosY_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "wrist bridge local smooth",
+      "radius_m": 0.034,
+      "strength": 0.16,
+      "path": [
+        [
+          0.004228692501783371,
+          0.3828999996185303,
+          0.8568000197410583
+        ],
+        [
+          0.004228692501783371,
+          0.38530001044273376,
+          0.853600025177002
+        ],
+        [
+          0.004228692501783371,
+          0.3804999887943268,
+          0.8600000143051147
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 337,
+      "max_delta_m": 0.0009905311888383005,
+      "fully_masked_vertices": 4413,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Arm_Hand_PosY_P2",
+      "brush": "Inflate/Deflate",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "wrist transition subtle volume",
+      "radius_m": 0.025,
+      "strength": 0.075,
+      "path": [
+        [
+          0.03176845982670784,
+          0.3829214572906494,
+          0.8567708730697632
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 128,
+      "max_delta_m": 3.515626226675712e-05,
+      "fully_masked_vertices": 4413,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Arm_Hand_PosY_P2",
+      "brush": "Smooth",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "wrist bridge local smooth",
+      "radius_m": 0.034,
+      "strength": 0.16,
+      "path": [
+        [
+          0.03176845982670784,
+          0.3829214572906494,
+          0.8567708730697632
+        ],
+        [
+          0.03176845982670784,
+          0.3853214681148529,
+          0.8535708785057068
+        ],
+        [
+          0.03176845982670784,
+          0.3805214464664459,
+          0.8599708676338196
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 343,
+      "max_delta_m": 0.0012275749116712287,
+      "fully_masked_vertices": 4413,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Head_and_Neck_P2",
+      "brush": "Grab",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "lower neck silhouette 1.5mm grab",
+      "radius_m": 0.025,
+      "strength": 0.24,
+      "path": [
+        [
+          -0.009649082086980343,
+          0.049521151930093765,
+          1.3438920974731445
+        ],
+        [
+          -0.009649082086980343,
+          0.05102115124464035,
+          1.3438920974731445
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 29,
+      "max_delta_m": 0.00035998225088732975,
+      "fully_masked_vertices": 6088,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Hair_P2_Independent",
+      "brush": "Grab",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "upper rear hair cap fit to scalp",
+      "radius_m": 0.15,
+      "strength": 0.85,
+      "path": [
+        [
+          -0.11362392455339432,
+          -0.0367126427590847,
+          1.6587109565734863
+        ],
+        [
+          -0.15362392365932465,
+          -0.0367126427590847,
+          1.6707109212875366
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 337,
+      "max_delta_m": 0.03549704992617407,
+      "fully_masked_vertices": 3881,
+      "fully_masked_max_delta_m": 0.0
+    },
+    {
+      "object": "Hair_P2_Independent",
+      "brush": "Grab",
+      "method": "bpy.ops.sculpt.brush_stroke",
+      "label": "upper rear hair cap fit to scalp",
+      "radius_m": 0.15,
+      "strength": 0.85,
+      "path": [
+        [
+          -0.118925541639328,
+          0.0440368689596653,
+          1.658939003944397
+        ],
+        [
+          -0.15892553329467773,
+          0.0440368689596653,
+          1.6709389686584473
+        ]
+      ],
+      "result": [
+        "FINISHED"
+      ],
+      "changed_vertices": 357,
+      "max_delta_m": 0.03549705812511656,
+      "fully_masked_vertices": 3881,
+      "fully_masked_max_delta_m": 0.0
+    }
+  ],
+  "joins": [
+    {
+      "object": "Head_and_Neck_P2",
+      "method": "ordered oval boundary fit and quad/triangle zipper bridge",
+      "boundary_loop_edges": [
+        48,
+        30
+      ],
+      "new_faces": 48,
+      "seam_edges_still_open": 0,
+      "ellipse_radius_m": [
+        0.05497295409440994,
+        0.06488764472305775
+      ],
+      "seam_gap_m": 0.0035
+    },
+    {
+      "object": "Arm_Hand_PosY_P2",
+      "method": "ordered oval boundary fit and quad/triangle zipper bridge",
+      "boundary_loop_edges": [
+        44,
+        42
+      ],
+      "new_faces": 44,
+      "seam_edges_still_open": 0,
+      "ellipse_radius_m": [
+        0.013771306723356247,
+        0.021796930581331253
+      ],
+      "seam_gap_m": 0.004
+    }
+  ],
+  "whole_body_remesh": false,
+  "rigged": false,
+  "new_api_credits": 0,
+  "hand_small_holes_repaired": 2,
+  "scalp_shell": {
+    "source": "Head_and_Neck_P2 upper skull only",
+    "normal_offset_m": 0.003,
+    "topology": {
+      "vertices": 948,
+      "polygons": 926,
+      "polygon_sides": {
+        "3": 84,
+        "4": 842
+      },
+      "boundary_edges": 126,
+      "nonmanifold_multiface_edges": 0
+    }
+  },
+  "final_topology": {
+    "Leg_PosY": {
+      "vertices": 1931,
+      "polygons": 2019,
+      "polygon_sides": {
+        "3": 180,
+        "4": 1839
+      },
+      "boundary_edges": 0,
+      "nonmanifold_multiface_edges": 0
+    },
+    "Arm_Hand_PosY_P2": {
+      "vertices": 4874,
+      "polygons": 5070,
+      "polygon_sides": {
+        "3": 423,
+        "4": 4647
+      },
+      "boundary_edges": 31,
+      "nonmanifold_multiface_edges": 0
+    },
+    "Head_and_Neck_P2": {
+      "vertices": 6443,
+      "polygons": 6609,
+      "polygon_sides": {
+        "3": 665,
+        "4": 5944
+      },
+      "boundary_edges": 345,
+      "nonmanifold_multiface_edges": 16
+    },
+    "Hair_P2_Independent": {
+      "vertices": 4317,
+      "polygons": 4637,
+      "polygon_sides": {
+        "3": 766,
+        "4": 3871
+      },
+      "boundary_edges": 140,
+      "nonmanifold_multiface_edges": 10
+    },
+    "Hair_Scalp_Base_Blender": {
+      "vertices": 948,
+      "polygons": 926,
+      "polygon_sides": {
+        "3": 84,
+        "4": 842
+      },
+      "boundary_edges": 126,
+      "nonmanifold_multiface_edges": 0
+    },
+    "Underlayer_Top": {
+      "vertices": 1482,
+      "polygons": 1575,
+      "polygon_sides": {
+        "3": 190,
+        "4": 1385
+      },
+      "boundary_edges": 0,
+      "nonmanifold_multiface_edges": 0
+    },
+    "Underlayer_Shorts": {
+      "vertices": 896,
+      "polygons": 966,
+      "polygon_sides": {
+        "3": 146,
+        "4": 820
+      },
+      "boundary_edges": 4,
+      "nonmanifold_multiface_edges": 0
+    }
+  },
+  "known_limitations": [
+    "Review candidate only; no UV, rig or deformation approval.",
+    "Generated head/hair eye islands and residual nonmanifold topology still need targeted review.",
+    "Base skin under the opaque top/shorts is not proven continuous; garments remain independent.",
+    "Palm/thumbnail orientation is fitted geometrically, not yet checked by finger articulation.",
+    "A separate head-derived scalp shell conceals gaps in generated hair; hair border topology still needs repair."
+  ],
+  "native_brush_replay": true,
+  "source_hashes_unchanged": true
+}

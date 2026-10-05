@@ -1,0 +1,449 @@
+{
+  "date": "2026-10-04",
+  "scope": "developer_character_generation",
+  "user_decision": "헤어만 기존 참고 이미지의 짧고 부드러운 메쉬 단발로 새 생성. 얼굴은 Blender에서 속눈썹·치아 색 보정, 눈알 분리, 입을 다문 미소 기본 상태로 수정.",
+  "generation_mode": "Tripo_HD_hair_only_and_Blender_local_face_cleanup",
+  "part_plan": {
+    "user_decision": "전체 신체부위(속옷 포함), 머리, 머리카락, 손, 상의, 하의, 신발",
+    "generation_groups": [
+      {
+        "id": "fullbody",
+        "label": "전체 신체부위(속옷 포함)",
+        "role": "continuous_fullbody_base_with_opaque_underwear",
+        "reference_keys": [
+          "fullbody_front",
+          "fullbody_back"
+        ],
+        "generation_mode": "Smart Mesh P2"
+      },
+      {
+        "id": "head",
+        "label": "머리",
+        "role": "front_left_right_integrated_head_for_balanced_lower_face_and_open_oral_cavity",
+        "generation_mode": "Smart Mesh P2",
+        "reference_files": [
+          "art/references/explorer_b_face_multiview_meshhair_v2/01_head_front.png",
+          "art/references/explorer_b_face_multiview_meshhair_v2/02_head_left.png",
+          "art/references/explorer_b_face_multiview_meshhair_v2/03_head_right.png"
+        ]
+      },
+      {
+        "id": "hair",
+        "label": "머리카락",
+        "role": "new_compact_solid_bob_no_cards",
+        "generation_mode": "HD",
+        "reference_files": [
+          "art/references/explorer_b_young_bob_face_cleanup_v3/01_hair_front.png",
+          "art/references/explorer_b_young_bob_face_cleanup_v3/02_hair_left.png",
+          "art/references/explorer_b_young_bob_face_cleanup_v3/03_hair_back.png",
+          "art/references/explorer_b_young_bob_face_cleanup_v3/04_hair_right.png"
+        ]
+      },
+      {
+        "id": "hand",
+        "label": "손",
+        "role": "separate_replacement_hand_pair_with_consistent_skin_tone",
+        "reference_file": "art/references/explorer_b_modular_v1/final_images/03_hand.png",
+        "generation_mode": "Smart Mesh P2"
+      },
+      {
+        "id": "upper_clothing",
+        "label": "상의",
+        "role": "upper_clothing_group_preserving_existing_design",
+        "existing_design_references": [
+          "art/references/explorer_b_modular_v1/final_images/05_jacket.png",
+          "art/references/explorer_b_modular_v1/final_images/06_shirt.png"
+        ],
+        "generation_mode": "Smart Mesh P2"
+      },
+      {
+        "id": "lower_clothing",
+        "label": "하의",
+        "role": "lower_clothing_group_with_attached_pockets_and_existing_belt_design",
+        "existing_design_references": [
+          "art/references/explorer_b_modular_v1/final_images/07_pants.png",
+          "art/references/explorer_b_modular_v1/final_images/09_belt.png"
+        ],
+        "generation_mode": "Smart Mesh P2"
+      },
+      {
+        "id": "footwear",
+        "label": "신발",
+        "role": "footwear_pair_with_reviewed_left_right_symmetry",
+        "reference_file": "art/references/explorer_b_modular_v1/final_images/08_boots.png",
+        "generation_mode": "Smart Mesh P2"
+      }
+    ],
+    "group_count": 7,
+    "all_groups_use_HD_geometry": false,
+    "whole_body_before_replacing_head_and_hands": true,
+    "skin_tone_consistent_across_body_head_hands": true,
+    "left_right_symmetry_review_required": true,
+    "fitting_and_join_work_after_geometry_review": true,
+    "upper_and_lower_group_reference_preparation_pending": false,
+    "old_nine_part_generation_plan_superseded": true
+  },
+  "default_geometry_model": "P2-20260801",
+  "api_model_version_status": "historically_verified; recheck model support before new paid submission",
+  "topology_preference": "Integrated P2 face source preserved for review; solid volumetric mesh hair, no cards; cleanup and hair reduction after form acceptance",
+  "restart_scope": "character_mesh_creation_only_keep_existing_approved_design",
+  "approved_reference_reuse": {
+    "fullbody_front": "art/references/explorer_b_fullbody_v2/front.png",
+    "fullbody_back": "art/references/explorer_b_fullbody_v2/back.png",
+    "individual_parts": "art/references/explorer_b_modular_v1/final_images",
+    "selection_record": "art/references/explorer_b_modular_v1/final_images_selection.json",
+    "design_and_reference_regeneration_required": false
+  },
+  "input_preference": "user_approved_character_or_individual_part_images",
+  "stage_gates": [
+    "reference_image_review",
+    "generated_geometry_review",
+    "Blender_fit_and_topology_review",
+    "final_uv_and_texture_review",
+    "body_hand_face_rig_review",
+    "animation_and_Godot_movement_review"
+  ],
+  "current_stage": "Original_mesh_reset_v13",
+  "new_HD_generation_submitted": true,
+  "prior_outputs_retained_as_reference": {
+    "P2_parts": "art/characters/explorer_b_fullbody_v2/04_replacement_parts_p2/manifest.json",
+    "textured_parts": "art/characters/explorer_b_fullbody_v2/06_textured_parts/preparation-report.json"
+  },
+  "previous_default_geometry_model": "P2-20260801",
+  "preserve_native_source": true,
+  "review_each_stage_before_advancing": true,
+  "API_credit_authorization_unchanged_by_this_design_decision": true,
+  "hand_counterpart_method": "mirror_one_validated_hand_in_Blender_after_geometry_review",
+  "source_parts_are_not_yet_fitted_or_rigged": true,
+  "current_batch_credit_cap": 2000,
+  "current_batch_actual_credits": 1290.0,
+  "mode_by_part": {
+    "hair": "New separate HD solid bob -> Blender fit -> later game reduction",
+    "eyebrow": "Included in Tripo integrated head",
+    "eyelashes_upper": "Existing integrated geometry, smooth UV vertex color repair",
+    "eyelashes_lower": "Existing integrated geometry, UV preserved",
+    "default_other_parts": "Smart Mesh P2",
+    "head": "Existing 3-view P2 face -> local material cleanup -> separate eyes -> closed smile morph -> later facial rig",
+    "eyeball": "Separate left/right globe objects with centered origins"
+  },
+  "hd_geometry_model": "v3.1-20260211",
+  "historical_HD_outputs": "art\\characters\\explorer_b_hd_restart_v1\\generation-manifest.json",
+  "symmetry_policy": "Generate one side of symmetric parts; mirror in Blender. Upper and lower lashes are separate masters.",
+  "new_reference_batch": "art/references/explorer_b_young_bob_face_cleanup_v3/manifest.json",
+  "current_hybrid_output": "art/characters/explorer_b_mesh_reset_v13",
+  "next_head_pose": "relaxed_open_mouth_with_visible_oral_depth",
+  "current_head_output": "art/characters/explorer_b_face_multiview_meshhair_v2/head",
+  "default_face_pose": "relaxed_closed_smile",
+  "preserve_open_mouth_source": true,
+  "decision_date": "2026-10-05",
+  "current_batch_remaining_credits": 710.0,
+  "latest_user_override": {
+    "date": "2026-10-05",
+    "user_instruction": "헤어만 따로 생성하고 나머지는 블렌더 작업. 기존 이미지의 단발, 속눈썹·치아 색 보정, 눈알 분리, 입을 다문 미소.",
+    "reference_approval": "이 4방향 헤어로 생성",
+    "hair": "New separate HD solid sculptural bob, no cards",
+    "face": "Existing 3-view P2 source edited locally, not regenerated",
+    "default_pose": "closed gentle smile",
+    "original_open_pose": "preserved as mouth_open morph",
+    "credit_cap_unchanged": 2000
+  },
+  "head_generation_views": [
+    "front",
+    "left",
+    "right"
+  ],
+  "hair_cards": false,
+  "current_review_face_pose": "relaxed_closed_smile",
+  "latest_local_refinement_v4": {
+    "date": "2026-10-05",
+    "user_instruction": "눈동자 쏠림, 턱 중앙 돌출, 죽어보이는 눈, 살구색 속눈썹, 높은 입꼬리와 보이는 치아를 보정. 헤어 정수리를 참고 이미지처럼 조금 납작하게.",
+    "state": {
+      "date": "2026-10-05",
+      "state": "Blender_face_balance_crown_lowered_v4",
+      "blend": "art/characters/explorer_b_face_balance_v4/assembly/explorer_b_balanced_face_v4.blend",
+      "glb": "art/characters/explorer_b_face_balance_v4/assembly/explorer_b_balanced_face_v4.glb",
+      "face_source": "art/characters/explorer_b_face_multiview_meshhair_v2/head/model.fbx",
+      "hair_source": "art/characters/explorer_b_young_bob_face_cleanup_v3/hair/model.glb",
+      "hair_cards": false,
+      "head_regenerated": false,
+      "hair_regenerated": false,
+      "new_total_credits": 0,
+      "remaining_credits": 710.0,
+      "total_scope_credits": 1290.0,
+      "mouth_pose": "relaxed closed smile",
+      "original_open_pose_preserved": true,
+      "mouth_control": "FACE_CONTROLS[\"mouth_open\"]",
+      "eyes": "Separate globe objects with forward-facing brown irises, small catchlights, controlled reflections",
+      "lashes": "Contour-traced dark pigment, original skin atlas preserved",
+      "chin": "Front center gently raised/rounded",
+      "mouth_corners": "Slightly lowered, posterior lower molars tucked behind closed lip contour",
+      "teeth_exposure_test": "0 exposed tooth face centers in 6 sampled views",
+      "crown": "Upper height reduced by 0.0344 scene units; fringe and bob ends retained",
+      "full_face_rig": false,
+      "game_low_poly_final": false,
+      "review_url": "http://127.0.0.1:8842/character-face-balance-v4/"
+    },
+    "no_new_generation": true,
+    "credits": 0
+  },
+  "latest_local_refinement_v5": {
+    "date": "2026-10-05",
+    "user_instruction": "눈 주변 검은 텍스처 번짐과 턱 아래 얕은 M자 굴곡을 수정. 게임 렌더링과 Blender 렌더의 차이 확인.",
+    "state": {
+      "date": "2026-10-05",
+      "state": "Blender_clean_lash_boundary_rounded_chin_v5",
+      "blend": "art/characters/explorer_b_clean_edges_v5/assembly/explorer_b_clean_edges_v5.blend",
+      "glb": "art/characters/explorer_b_clean_edges_v5/assembly/explorer_b_clean_edges_v5.glb",
+      "new_total_credits": 0,
+      "head_regenerated": false,
+      "hair_regenerated": false,
+      "hair_cards": false,
+      "mouth_pose": "relaxed closed smile",
+      "mouth_control": "FACE_CONTROLS[\"mouth_open\"]",
+      "original_open_pose_preserved": true,
+      "eyes": "Separate forward-looking globes and iris caps retained",
+      "lashes": "Five upper-lash UV surface charts use uniform dark material; skin and tear duct charts retain original atlas; skin vertex tint removed",
+      "chin": "Broad lower-face surface fairing; smooth U contour",
+      "game_preview": "Actual Godot Compatibility/OpenGL capture with review lighting; not the gameplay scene",
+      "full_face_rig": false,
+      "game_low_poly_final": false,
+      "review_url": "http://127.0.0.1:8842/character-clean-edges-v5/"
+    },
+    "credits": 0
+  },
+  "latest_local_refinement_v6": {
+    "date": "2026-10-05",
+    "state": "Blender_repaired_Rigify_animation_v6",
+    "blend": "art/characters/explorer_b_face_animated_v6/explorer_b_repaired_rigify_v6.blend",
+    "glb": "art/characters/explorer_b_face_animated_v6/explorer_b_repaired_rigify_v6.glb",
+    "new_total_credits": 0,
+    "head_regenerated": false,
+    "hair_regenerated": false,
+    "hair_cards": false,
+    "mouth_pose": "closed gentle smile",
+    "eyes_separate": true,
+    "rigged": true,
+    "addon": "Rigify",
+    "animation_seconds": 12,
+    "fps": 30,
+    "full_production_facial_rig": false,
+    "audio_lipsync": false,
+    "review_url": "http://127.0.0.1:8842/character-face-animated-v6/"
+  },
+  "latest_expression_animation_v7": {
+    "date": "2026-10-05",
+    "state": "Blender_hair_clearance_expression_clips_v7",
+    "blend": "art/characters/explorer_b_expressions_v7/explorer_b_expressions_v7.blend",
+    "glb": "art/characters/explorer_b_expressions_v7/explorer_b_expressions_v7.glb",
+    "new_total_credits": 0,
+    "head_regenerated": false,
+    "hair_regenerated": false,
+    "hair_cards": false,
+    "mouth_pose": "closed gentle smile",
+    "rigged": true,
+    "eyes_separate": true,
+    "addon": "Rigify",
+    "animation_seconds": 24,
+    "expression_clips": [
+      {
+        "action": "Face_Neutral_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      },
+      {
+        "action": "Face_Happy_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      },
+      {
+        "action": "Face_Curious_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      },
+      {
+        "action": "Face_Concern_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      },
+      {
+        "action": "Face_Determined_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      },
+      {
+        "action": "Face_Surprise_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      }
+    ],
+    "fps": 30,
+    "review_url": "http://127.0.0.1:8842/character-expressions-v7/"
+  },
+  "latest_original_identity_v9": {
+    "date": "2026-10-05",
+    "state": "Original_user_GLb_identity_restored_v9",
+    "blend": "art/characters/explorer_b_original_identity_v9/original_face_mpfb_rigify_v9.blend",
+    "glb": "art/characters/explorer_b_original_identity_v9/original_face_mpfb_rigify_v9.glb",
+    "original_face_preserved": true,
+    "original_eyes_preserved": true,
+    "addons": [
+      "MPFB",
+      "Rigify"
+    ],
+    "MPFB_units": 19,
+    "full_blink_complete": false,
+    "animation_seconds": 15,
+    "review_url": "http://127.0.0.1:8842/character-original-identity-v9/",
+    "credits": 0
+  },
+  "latest_game_face_rig_v10": {
+    "date": "2026-10-05",
+    "state": "Original_preserved_closed_rest_independent_game_clips_v10",
+    "blend": "art/characters/explorer_b_game_face_v10/original_preserved_face_rig_v10.blend",
+    "glb": "art/characters/explorer_b_game_face_v10/character_face_clips_v10.glb",
+    "game_demo": "labs/face_rig_v10",
+    "source_basis_preserved": true,
+    "neutral": "reversible closed-mouth pose",
+    "original_open_pose_recoverable": true,
+    "facial_controls": 36,
+    "gaze_controls": 2,
+    "clips": [
+      "IdleClosed",
+      "Smile",
+      "Happy",
+      "Concern",
+      "Determined",
+      "Surprise",
+      "Pucker",
+      "TalkOpen",
+      "Blink",
+      "WinkLeft",
+      "WinkRight",
+      "LookAround"
+    ],
+    "game_engine_verified": "Godot 4.7.2 OpenGL Compatibility",
+    "hair_triangles": 31200,
+    "review_url": "http://127.0.0.1:8842/character-game-face-rig-v10/",
+    "credits": 0
+  },
+  "latest_hair_swap_v11": {
+    "date": "2026-10-05",
+    "state": "User_brown_hair_swap_v11",
+    "blend": "art/characters/explorer_b_hair_swap_v11/original_face_user_hair_v11.blend",
+    "glb": "art/characters/explorer_b_hair_swap_v11/character_user_hair_v11.glb",
+    "hair_source": "C:/Users/dd/Downloads/brown hair 3d model.glb",
+    "face_and_shape_keys_unchanged": true,
+    "clips": [
+      "Blink",
+      "Concern",
+      "Determined",
+      "Happy",
+      "IdleClosed",
+      "LookAround",
+      "Pucker",
+      "Smile",
+      "Surprise",
+      "TalkOpen",
+      "WinkLeft",
+      "WinkRight"
+    ],
+    "review_url": "http://127.0.0.1:8842/character-user-hair-v11/",
+    "credits": 0
+  },
+  "latest_soft_smile_v12": {
+    "state": "Soft_closed_smile_v12",
+    "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_soft_smile_v12\\original_face_soft_smile_v12.blend",
+    "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_soft_smile_v12\\character_soft_smile_v12.glb",
+    "review_url": "http://127.0.0.1:8842/character-soft-smile-v12/",
+    "original_author_basis_unchanged": true,
+    "clips": 12
+  },
+  "latest_mesh_reset_v13": {
+    "state": "Original_mesh_reset_v13",
+    "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_mesh_reset_v13\\original_mesh_with_user_hair_v13.blend",
+    "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_mesh_reset_v13\\original_mesh_with_user_hair_v13.glb",
+    "review_url": "http://127.0.0.1:8842/character-mesh-reset-v13/",
+    "rigged": false,
+    "mouth": "original_open",
+    "next": "Professional facial rigging tool; not chosen or installed yet"
+  },
+  "latest_tripo_retopology_v14": {
+    "state": "Tripo_smart_retopology_v14",
+    "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_tripo_retopo_v14\\face_retopology_assembly_v14.blend",
+    "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_tripo_retopo_v14\\face_retopology_assembly_v14.glb",
+    "review_url": "http://127.0.0.1:8842/character-tripo-retopo-v14/",
+    "credits_consumed": 30.0,
+    "rigged": false,
+    "facial_deformation_verified": false,
+    "accepted": false,
+    "superseded_by": "Original_mesh_reset_v13",
+    "user_decision": "리토폴로지 결과를 사용하지 않고 v13 원본 메쉬로 복귀"
+  },
+  "retopology_decision": {
+    "date": "2026-10-05",
+    "use_retopology": false,
+    "working_version": "v13",
+    "original_mesh_with_user_hair": true
+  },
+  "latest_static_npc_cast": {
+    "state": "Closed_mouth_static_NPC_cast_v2",
+    "characters": [
+      {
+        "id": "sora",
+        "name": "소라",
+        "triangles": 21910,
+        "height_m": 1.65,
+        "credits": 110.0,
+        "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\sora\\sora_static.blend",
+        "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\sora\\sora_static.glb"
+      },
+      {
+        "id": "moru",
+        "name": "모루",
+        "triangles": 21143,
+        "height_m": 1.65,
+        "credits": 110.0,
+        "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\moru\\moru_static.blend",
+        "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\moru\\moru_static.glb"
+      },
+      {
+        "id": "naru",
+        "name": "나루",
+        "triangles": 21740,
+        "height_m": 1.55,
+        "credits": 110.0,
+        "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\naru\\naru_static.blend",
+        "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\naru\\naru_static.glb"
+      },
+      {
+        "id": "haeru",
+        "name": "해루",
+        "triangles": 22284,
+        "height_m": 1.85,
+        "credits": 110.0,
+        "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\haeru\\haeru_static.blend",
+        "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\haeru\\haeru_static.glb"
+      }
+    ],
+    "existing_character": "v13 unchanged",
+    "face_rig": false,
+    "body_rig": false,
+    "credits_closed_cast": 440,
+    "credits_obsolete_open_tasks": 220,
+    "approved_budget_remaining": 20,
+    "review_url": "http://127.0.0.1:8842/characters-closed-mouth-v2/",
+    "archive": "C:\\lsm26\\triphthonS1\\output\\npc-closed-mouth-static-v2-20261005.zip"
+  }
+}

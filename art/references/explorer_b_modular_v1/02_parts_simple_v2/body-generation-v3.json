@@ -1,0 +1,34 @@
+{
+  "id": "body",
+  "revision": "v3",
+  "date": "2026-10-04",
+  "file": "body-v3.png",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "prompt": "Use case: precise-object-edit.\nMake ONE improved, clearly CLOTHED adult technical clothing-fit mannequin reference based on image 1.\nThe figure wears an OPAQUE MATTE WARM-PEACH full-length, long-sleeved foundation JUMPSUIT, with a high crew-neck collar, small sewn wrist hems, subtle normal garment seams, modest fully covered torso and loose-neutral fully covered pelvis, and opaque matching footed fabric. Clearly visibly a clothed artificial display model. A unisex adult slim explorer figure, no head or hands. No bare chest, no bare pelvis, no underwear, no intimate anatomy, no visible anatomy through the garment.\nRefine the current blocky, generic figure into a polished stylized game-character modeling reference: natural modest shoulder width, balanced slim ribcage and waist, clean neck/shoulder transition, correctly placed gentle elbows and wrists, slender balanced thighs, visible but soft knee construction, natural calf taper and distinct ankles. The feet should have a correctly shaped heel, instep and forefoot silhouette beneath the footed fabric, not shapeless rounded blocks. No exaggerated muscles, inflated limbs, pinched waist or waxy plastic shine.\nKeep the body, both arms and both legs continuously connected, no separate mesh-part diagrams, no mechanical joints, no rings or caps. Keep a symmetrical neutral A-pose with arms 25 degrees outward, feet slightly apart, perfectly level soles, front orthographic view. Uniform warm-peach garment color throughout, elegant soft matte fabric rendering, soft neutral studio lighting, light contact shadow, solid white background. One complete neck-to-feet silhouette centered with generous margin, portrait composition, no text, no labels, no collage, no extra views. This is a clothing-fit design reference, not an anatomical or nude figure.",
+  "reference_inputs": [
+    "art/references/explorer_b_modular_v1/02_parts_simple_v2/body-v2.png"
+  ],
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-e8c70dd9-1e12-4c31-b5f0-820daed08e46.png",
+  "approval": null,
+  "review_status": "awaiting_user_review",
+  "reference_scope": "opaque_foundation_suit_shape_reference",
+  "limitations": [
+    "피부 몸체 최종 원안이 아니라 불투명 기본 수트 상태의 비율·형상 검토안.",
+    "발가락과 신체 표면의 세부 형상은 이 이미지에서 확인할 수 없음.",
+    "새 3D·리깅은 진행하지 않았음."
+  ],
+  "accounting": {
+    "image_generation_attempts": 2,
+    "successful_images": 1,
+    "blocked_attempts": 1,
+    "new_tripo_calls": 0,
+    "new_scenario_calls": 0
+  },
+  "first_attempt": {
+    "prompt": "Use case: precise-object-edit / stylized-concept.\nAsset type: one standalone, refined technical character-body modeling reference for direct human review.\nInput image 1 is the artificial peach clothing-fit mannequin BODY to improve. Image 2 is the approved CLOTHED B explorer and supplies only body proportions and the soft stylized art direction. Image 3 supplies the exact warm peach color used by the head.\nCreate a substantially better version of image 1. Retain a single continuous headless, handless artificial clothing-fit mannequin from neck to feet, front orthographic view, neutral symmetrical A-pose, same general framing, white studio background. Entire opaque warm-peach foundation surface, featureless modest torso and hip surfaces, like an adult unisex shop mannequin covered in a perfectly smooth seamless opaque foundation suit. Keep the silhouette of an adult slim stylized explorer; do not depict a child's body or human intimate anatomy.\nImprove the MODELING QUALITY, not just the lighting:\n- Refine the torso into the approved explorer's slim, balanced medium body proportions: gently narrower shoulder span, softly shaped ribcage, modest waist taper, smooth balanced hips. Avoid broad muscular shoulders, exaggerated waist pinching, inflated limbs, bulky thighs or a generic rubber doll look.\n- Subtle, carefully sculpted neck-to-shoulder transitions and shallow collarbone planes, clean underarm forms. Light, refined structural modeling, not pronounced muscles or detailed chest anatomy.\n- Give both upper arms and forearms believable smooth transitions, visible but gentle elbow landmarks and realistic wrist taper. Arms held about 25 degrees out.\n- Slender balanced upper legs, clearly placed knees, delicately modeled kneecaps, natural calf taper, small ankle landmarks. Legs and soles consistent lengths, feet slightly apart.\n- Replace rounded block/mitten-like feet with FULLY modeled stylized feet: recognizable heel, instep, arch, ankles, FIVE distinct rounded toes on each foot, plausible longest big toe and progressively smaller outer toes. No shoes, socks, sole lumps or featureless foot blocks.\n- Keep all shoulders, elbows, wrists, hips, knees and ankles smoothly connected, no separate limb pieces, joint balls, cylinders, cap rings, or hard mechanical sockets. The only clean component boundaries are top of neck and the two wrists.\nMaterial and rendering: the SAME warm peach BASE COLOR as image 3 everywhere, elegant matte soft stylized surface with subtle microtexture, controlled highlights and crisp readable form. No glossy wax, no dirty patches, no orange oversaturation, no coarse low-poly facets or smeared detail. Neutral soft studio key/fill lighting, restrained contact shadow only. Higher quality polished game-character concept render with clearly readable joint construction, not a medical anatomy chart.\nOutput ONE body only. Entire neck-to-toes silhouette fits with margin, no head, no hands, no garments/props, no labels, no grids, no alternative views, no collage or extra images. Keep the approved B explorer's art style.",
+    "outcome": "image_generation_safety_rejection",
+    "saved_image": null
+  },
+  "presentation": "individual_images_only"
+}

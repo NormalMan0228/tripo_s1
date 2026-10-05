@@ -62,3 +62,7 @@ Godot가 공용 GLB를 PackedScene으로 가져와 배포 PCK에 포함한다. �
 정적 가구는 하나의 메시, 동적 가구는 별도 정적 부품을 제한된 숫자 프로그램으로 조립·동작시킨다. 이번 가구 동작은 Tripo 리타깃 애니메이션이 아니다. Tripo의 뼈대 애니메이션 기능과 가구의 힌지/회전/접근 반응은 다른 경로다. 손가락·얼굴이나 연성 물체를 이 가구 파이프라인이 자동 리깅하지 않는다.
 
 0.8.1의 화덕·조리 냄비·장작(`build_authored_camp.py`), 채석장 층암과 눈 덮인 얼음 기둥(`build_authored_region_props.py`), 부드러운 층형 수관(`build_authored_cedar.py`)은 개발자가 Blender에서 만든 공용 환경 메시다. `.blend`는 `artifacts/authored-environment`, 실행용 GLB는 `game/assets/storybook_*_v1.glb`에 있다. 생성 API나 Scenario 크레딧을 쓰지 않았다. 수관은 하나의 재질 표면을 공유하고 나무마다 색·방향·높이와 캐릭터 가림 투명도를 별도로 적용한다. 장애물 중심·서버 반경은 유지한다. 불꽃은 `camp_flame.gdshader`의 절차적 효과다.
+
+## 해루 낚시꾼 디자인 기준 · 2026-10-02
+
+사용자가 제공한 해루 디자인 시트를 `game/assets/npc_haeru_design.png`로 보존한다. 핵심 특징은 자연스럽게 흐르는 짙은 남색 머리, 황갈색 낚시 조끼와 밝은 이너, 진청 바지, 갈색 장화, 밝고 느긋한 인상이다. 기존 마을 NPC `tinker.glb`의 부위 색을 이에 맞추고, Godot 대화창은 원본 시트의 초상 영역을 `AtlasTexture`로 표시한다. 이는 **기존 3D 모델의 색 조정과 2D 초상 적용**이며, 시트의 정면·측면·후면을 재현한 신규 3D 모델이나 얼굴 표정 애니메이션을 완성했다는 뜻이 아니다. 새 Tripo·Scenario 생성 비용은 사용하지 않았다.

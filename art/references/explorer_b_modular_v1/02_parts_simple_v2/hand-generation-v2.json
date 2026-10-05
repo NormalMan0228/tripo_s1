@@ -1,0 +1,16 @@
+{
+  "id": "hand",
+  "label": "손（한쪽 기준）",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "prompt": "Use case: precise-object-edit / identity-preserve.\nImage 1 is the exact RIGHT HAND reference to retain. Image 2 is the warm peach mannequin body used ONLY as the shared skin base color and rendering-material reference.\nKeep the entire hand silhouette, wrist, palm shape, FIVE correctly distinct digits (one thumb and four fingers), finger lengths, knuckle/joint contours, small nails and relaxed open pose of image 1 unchanged. Change ONLY the skin material and overall color to match the body's warm peach skin base in image 2 under the same neutral studio lighting. Reduce the overly photorealistic fine surface texture if necessary to harmonize with the body's soft polished stylized rendering. Maintain believable finger joint details and natural nail tone, no flat low-poly mitten shape, no extra/fused fingers. Back of hand facing viewer, fingertips upward, thumb on the viewer's LEFT, clean wrist cut, no forearm or other body pieces. One right hand centered on white, full hand and wrist fit with margins, no labels or extra copies.",
+  "reference_inputs": [
+    "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/hand-r-dorsal-v1.png",
+    "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts_simple_v2/body-v2.png"
+  ],
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-92618654-d384-47c2-a320-f534aaf42e71.png",
+  "file": "hand-v2.png",
+  "approval": null,
+  "new_tripo_calls": 0,
+  "new_scenario_calls": 0
+}

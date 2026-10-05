@@ -1,0 +1,15 @@
+{
+  "id": "jacket",
+  "label": "재킷（몸판·소매 일체）",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "prompt": "Use case: stylized-concept / identity-preserve.\nAsset type: simple isolated 2D component reference for the approved Tripothon B explorer, for direct human image review.\nReference image 1 is the approved character turnaround: preserve its exact proportions, costume design and soft polished stylized 3D illustration language. Do not redesign the explorer.\nOne centered component, complete silhouette, straight FRONT orthographic view, white background, broad clear margins, soft even neutral studio lighting. No scene, labels, explanatory diagram, exploded view, hardware connectors or detached fragments.\nGenerate the COMPLETE mustard-yellow open explorer JACKET as ONE garment, BOTH SLEEVES already sewn to the torso. Include the original folded/rolled cuffs at forearms, collar, front zipper trim, shoulder seams, integrated welt pockets and waist hem exactly as the approved turnaround. Empty garment on an invisible mannequin, arms held at matching 25-degree A-pose, NO skin, head, hands, shirt, trousers, hanger or mannequin. Show open center with the inside jacket fabric visible; naturally dimensional sleeves with clean rolled openings. Preserve the original casual relaxed cropped jacket, not a vest and not a puffer coat. Both sleeves connected organically to the shoulder on each side, no detached sleeve/cuff pieces, consistent fabric thickness and mustard color. Full jacket and both sleeves fit in the frame.",
+  "reference_inputs": [
+    "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+  ],
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-f1ece20c-f685-4eab-a64f-c94154ef40c4.png",
+  "file": "jacket-v2.png",
+  "approval": null,
+  "new_tripo_calls": 0,
+  "new_scenario_calls": 0
+}

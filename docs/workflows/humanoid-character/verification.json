@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "checked_date_kst": "2026-10-05",
+  "workflow_json_loads": true,
+  "unique_ids": true,
+  "known_tools_and_dependencies": true,
+  "acyclic_stage_dependencies": true,
+  "readme_local_links_exist": true,
+  "tools": 48,
+  "stages": 14,
+  "variants": 11,
+  "source_turns": 107,
+  "source_messages": 596,
+  "reference_documents": 10,
+  "artifacts_indexed": 3714,
+  "references_indexed": 388,
+  "model_generation_calls": 0,
+  "new_model_validation": false
+}

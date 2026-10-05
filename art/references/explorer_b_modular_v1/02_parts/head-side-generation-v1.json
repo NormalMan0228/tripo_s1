@@ -1,0 +1,12 @@
+{
+  "id": "head-side",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-0137cc62-727a-471d-bc02-ecbbf08bd0d6.png",
+  "prompt": "Use case: identity-preserve / precise-object-edit. Image 1 is the newly generated isolated component; image 2 is the approved full-character design. Generate a NEW image showing ONLY that exact same component from the requested new angle. Keep shape, proportions, materials, neutral pose, all details and facial expression unchanged; change viewpoint only. One full component centered at large scale on solid white background, neutral soft lighting, no labels, no extra copies, no environment or props.\nShow the SAME bald explorer head with ears, brows and the short neck connector in a strict RIGHT PROFILE facing image-right, 90 degrees, no three-quarter view. Preserve face profile and expression; no scalp hair, shoulders or clothing.",
+  "reference_inputs": [
+    "art/references/explorer_b_modular_v1/02_parts/head-front-v1.png",
+    "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+  ],
+  "approval": null
+}

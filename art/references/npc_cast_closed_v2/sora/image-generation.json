@@ -1,0 +1,8 @@
+{
+  "tool": "built-in image_gen",
+  "source": "art/references/npc_cast_v1/sora/03_body-turnaround.png",
+  "edit": "Close front/profile mouth, slight relaxed smile, no teeth or tongue. Preserve identity, hairstyle, outfit, anatomy, A-pose and view layout.",
+  "user_authorization": "그리고 입을 다문 이미지를 생성해서 만드세요.",
+  "generation_path": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-3bdab458-016a-456e-b761-3d8c1a5d7438.png",
+  "prompt": "Precise minimal edit of the supplied sora character turnaround reference. Preserve the SAME character identity, eyes, brows, nose, chin, hairstyle, outfit, accessories, skin tone, body proportions, hand pose, full body A pose, view orientation, backdrop, lighting, and three-column layout exactly. Change ONLY the mouth in FRONT and RIGHT PROFILE views: naturally relaxed CLOSED lips with a very slight friendly smile, no visible teeth, tongue, dark mouth gap, or exaggerated upturned corners. Preserve jaw and chin shape and face length, do not reshape the whole face or make younger. Back view unchanged. Output the complete same three-view full-body modeling reference sheet: FRONT, RIGHT (profile facing screen right), BACK, same character and scale across views. Keep all hair and boots and hands fully inside frame, ample margins, soft white studio background. Preserve existing tall stylized proportions and landscape 3:2 sheet. This is a mouth-closing edit, not a redesign. No additional figures or inset portraits."
+}

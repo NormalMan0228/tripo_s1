@@ -5,3 +5,7 @@ server-data
 game/.godot
 **/__pycache__
 .git
+ops/secrets
+ops/production.env
+ops/backups
+builds

@@ -1,0 +1,720 @@
+{
+  "schema_version": 1,
+  "name": "Explorer B: Tripo models + Blender cleanup + addon facial rigging",
+  "reviewed_date": "2026-10-04",
+  "status": "Original_mesh_reset_v13",
+  "scope": "Character production only; retain existing Godot game and original character design",
+  "previous_work": {
+    "preserve_versions": true,
+    "manual_face_patch_iterations": "discontinued as the primary production route",
+    "reference_only": "art/characters/explorer_b_face_rig_manual_v2i/explorer_lids_profile_v2i.blend"
+  },
+  "environment_observed": {
+    "authoring_blender": "4.5.3 portable",
+    "gpu": "NVIDIA GeForce RTX 2070",
+    "target_engine": "Godot",
+    "new_addons_installed_this_turn": [],
+    "api_credits_spent_this_turn": 0
+  },
+  "free_blender_stack": {
+    "MPFB": {
+      "role": "Separate installation and template expression test only; not the production character modeling route",
+      "feature_baseline_verified": "2.0.16",
+      "install_version": "2.0.17",
+      "required_packs": [
+        "MakeHuman system assets",
+        "Faceunits 01"
+      ],
+      "optional_packs": [
+        "Visemes 01",
+        "Visemes 02"
+      ],
+      "asset_license": "CC0 for these listed official packs; other third-party assets require individual checking",
+      "limitation": "Styling and expression correction remain necessary; not an automatic conversion of arbitrary Tripo heads"
+    },
+    "Rigify": {
+      "role": "Installed free facial rigging candidate for cleaned Tripo meshes; fit metarig, skin weights and validate eyelid/jaw deformations on the actual model",
+      "constraint": "The template test is not validation on Tripo meshes. Avoid double deformation by facial bones and equivalent shape keys.",
+      "install_version": "0.6.10 (bundled with Blender 4.5.3)"
+    },
+    "native_blender": [
+      "Mirror",
+      "Poly Build",
+      "Shrinkwrap with restricted masks",
+      "Corrective sculpting",
+      "Shape Keys",
+      "Graph Editor",
+      "glTF export"
+    ],
+    "retopoflow": "Optional local retopology tool; verify packaged release, Blender compatibility and non-code asset license before adoption"
+  },
+  "tripo_api": {
+    "base_url": "https://openapi.tripo3d.ai/v3",
+    "role": [
+      "Primary production model generation: face, head-neck-clavicle bust and body",
+      "Separate hair, clothing, shoes and accessories"
+    ],
+    "p2_model": "P2-20260801",
+    "multiview_order": [
+      "front",
+      "left",
+      "back",
+      "right"
+    ],
+    "top_bottom_images": "Local inspection references, not P2 multiview input slots",
+    "reference_review": "User reviews new reference images before paid generation",
+    "face_topology": "Generated quads and automatic retopology are not accepted as facial deformation topology without inspection",
+    "facial_rig": "Do not assume humanoid auto-rig produces eyelid/lip rigs or ARKit blendshapes",
+    "budget_ledger": "artifacts/character-hd-restart-20261004/budget.json",
+    "automatic_resubmit": false,
+    "geometry_before_texture": true
+  },
+  "external_programs": {
+    "Rhubarb Lip Sync": {
+      "adoption": "First lip-sync candidate",
+      "role": "Audio to timed mouth-shape cues, mapped to existing 3D visemes with smoothing",
+      "non_english_recognizer": "phonetic",
+      "limitation": "Does not model, rig or generate missing 3D mouth shapes; Korean audio accuracy needs a short sample test"
+    },
+    "NVIDIA Audio2Face-3D": {
+      "adoption": "Optional second-stage evaluation",
+      "role": "Audio-driven facial animation data",
+      "prerequisites": [
+        "Working face shape keys and retargeting map",
+        "Exact SDK/model license review",
+        "RTX 2070 compatibility and memory test for the chosen runtime"
+      ],
+      "limitation": "SDK, model weights and sample datasets have different licenses; Blender integrations may be third-party"
+    },
+    "AccuRIG": "Optional body rigging only; free edition does not provide facial rigging",
+    "MetaHuman": "Separate alternative to evaluate only if template styling fails; no engine migration selected",
+    "Cascadeur": "Optional body animation later; not selected as a hair reconstruction tool"
+  },
+  "execution_order": [
+    "Use user-approved reference images; retain the existing character design. New references require user review before paid generation.",
+    "Generate the head-neck-clavicle bust and required parts with Tripo. Preserve source meshes and generation records.",
+    "Refine the Tripo model in Blender: silhouette, neutral closed mouth, eyelid thickness, separate eyeballs/lashes and oral parts.",
+    "Retopologize as needed for facial deformation while preserving the Tripo design. Review front, three-quarter and profile.",
+    "Fit an addon facial rig to the cleaned mesh. Use installed Rigify as the free candidate; test its actual fit before expanding expressions.",
+    "Correct weights and deformation; test incremental blink, gaze, jaw, smile, lashes and combined motions.",
+    "Add smooth animation and mapped visemes, then export and verify in Godot."
+  ],
+  "acceptance": {
+    "geometry": [
+      "Connected upper/lower eyelid thickness",
+      "No exposed socket gaps",
+      "Medial eyelashes seated",
+      "Closed neutral lips",
+      "Balanced front and side silhouette"
+    ],
+    "motion": [
+      "Blink at 0/25/50/75/100 percent",
+      "Gaze combined with blink",
+      "Jaw/smile/pucker combinations",
+      "Continuous floating-point controls",
+      "No omitted mouth animation"
+    ],
+    "review": "Numerical collision checks supplement visual review; they do not establish aesthetic quality or production readiness.",
+    "stop_rule": "If the actual Tripo face fails deformation checks, correct its topology, rig fit or weights before expanding expressions. Do not substitute a template-generated character."
+  },
+  "sources": {
+    "mpfb_expressions": "https://static.makehumancommunity.org/mpfb/releases/release_2016.html",
+    "mpfb_license": "https://static.makehumancommunity.org/about/license.html",
+    "mpfb_assets": "https://static.makehumancommunity.org/assets/assetpacks.html",
+    "rigify_face": "https://docs.blender.org/manual/en/5.1/addons/rigging/rigify/rig_types/face.html",
+    "tripo_multiview": "https://developers.tripo3d.ai/en/docs/generation-multiview-to-model/p",
+    "tripo_rig": "https://developers.tripo3d.ai/en/docs/animations-rig",
+    "rhubarb": "https://github.com/DanielSWolf/rhubarb-lip-sync",
+    "audio2face": "https://github.com/NVIDIA/Audio2Face-3D",
+    "accurig": "https://www.reallusion.com/auto-rig/accurig/default.html",
+    "facebuilder": "https://keentools.io/download/facebuilder-for-blender",
+    "ml_deformer": "https://dev.epicgames.com/documentation/unreal-engine/ml-deformer-framework-in-unreal-engine?lang=en-US",
+    "retopoflow": "https://github.com/CGCookie/retopoflow"
+  },
+  "installation": {
+    "profile": ".tools/blender-profiles/face-v3",
+    "launcher": "Face_Tools_Blender.cmd",
+    "packs": [
+      "makehuman_system_assets",
+      "faceunits01",
+      "visemes01",
+      "visemes02"
+    ],
+    "blender_file": "art/characters/explorer_b_pipeline_v3/01_template_test/mpfb_template_face_test.blend",
+    "results": "artifacts/face-stack-test-20261004/test-results.json",
+    "reopen_verification": "artifacts/face-stack-test-20261004/reopen-verification.json",
+    "api_credits_used": 0,
+    "scope": "MPFB and bundled Rigify installation and basic template test only; Rhubarb/Audio2Face not installed"
+  },
+  "clavicle_bust": {
+    "version": 1,
+    "date": "2026-10-04",
+    "status": "separate_tool_test_not_production; user_rejected_MPFB_as_model_source",
+    "blend": "art/characters/explorer_b_pipeline_v3/02_clavicle_bust/explorer_b_clavicle_bust_v1.blend",
+    "reference": "art/references/explorer_b_faceit_comparison_v1/03_head_neck_clavicle.png",
+    "launcher": "Character_Clavicle_Bust_Blender.cmd",
+    "review": "artifacts/mpfb-clavicle-bust-20261004/contact-sheet.jpg",
+    "verification": "artifacts/mpfb-clavicle-bust-20261004/verification.json",
+    "neutral": "closed lips, open eyes",
+    "skin_base_vertices": 4635,
+    "facial_units": 52,
+    "animation": "18-second slowed shape-key review; no skeletal facial rig in this isolated bust",
+    "limitations": [
+      "Proportions remain a design review draft, not an exact reference reconstruction.",
+      "Only listed basic expressions and combinations were checked; the entire 89-target library is not artistically validated.",
+      "No game-engine export performed."
+    ],
+    "paid_api_calls": 0,
+    "user_correction": "Preserve this test artifact, but create production models with Tripo and use addons only at facial rigging stage."
+  },
+  "model_origin": "tripo",
+  "user_direction": {
+    "date": "2026-10-05",
+    "instruction": "모델은 Tripo로 만들고 다듬은 다음 페이스 리깅만 애드온을 사용한다.",
+    "modeling": "Tripo, including face and clavicle bust",
+    "cleanup": "Blender sculpting and deformation-ready retopology",
+    "facial_rigging": "Addon fitted to cleaned Tripo mesh; Rigify is the installed free candidate, not yet validated on the production Tripo face",
+    "do_not_replace_with_MPFB_template": true,
+    "generation_modes": {
+      "Smart Mesh P2": "Existing 3-view face reused",
+      "HD": "New approved 4-view solid mesh bob",
+      "Blender": "Eye separation, UV lash vertex tint, enamel/gum materials, closed gentle smile and original-open morph"
+    },
+    "new_image_review_required": true,
+    "latest_hair_instruction": "Regenerate only compact sculptural mesh bob matching original reference",
+    "latest_face_instruction": "Local Blender lash/tooth color repair, independent eyes, closed gentle smile; no face regeneration",
+    "latest_local_refinement": "Lower crown, forward gaze, lively eyes, dark lashes, softened chin and relaxed closed smile with hidden teeth"
+  },
+  "separate_hair_parts": {
+    "user_requested": true,
+    "model_source": "art/characters/explorer_b_young_bob_face_cleanup_v3/hair/model.glb",
+    "parts": [
+      "eyebrow_left",
+      "eyebrow_right",
+      "eyelashes_upper_left",
+      "eyelashes_lower_left",
+      "eyelashes_upper_right",
+      "eyelashes_lower_right",
+      "hair"
+    ],
+    "eyelid_skin": "Keep connected to facial skin; eyelashes are separate.",
+    "realism_goal": "Refine strand direction, taper, grouping, density and material response while retaining the character design.",
+    "refinement_candidates": [
+      "Blender native Hair Curves guides and density masks",
+      "Interpolate Hair Curves",
+      "Clump Hair Curves",
+      "Attach Hair Curves to Surface + Deform Curves on Surface"
+    ],
+    "status": "new_compact_solid_bob_generated_fitted",
+    "validation": "Test lashes at partial/full blink and brows during expressions; validate exported game meshes separately from Blender curves.",
+    "symmetry_policy": "Create one side for symmetric parts, then mirror across the facial center plane. Do not pay for separate left and right generations.",
+    "authoring_masters": [
+      "one_eyebrow",
+      "one_upper_eyelash",
+      "one_lower_eyelash",
+      "hair_with_mirrored_regions_where_design_is_symmetric"
+    ],
+    "rigging_symmetry": "Mirror geometry first; final left/right eyebrows and lids remain independently controllable. Preserve asymmetric hairstyle design.",
+    "automatic_conversion_research": {
+      "status": "official_documentation_checked; not installed or tested",
+      "preferred_candidate": "Hair Tool 4 for Blender (paid); Curves from Grid Surface / Strands from Prism Mesh Guide -> cards",
+      "input_requirement": "Prepared quad grid with marked root edge, or valid prism guide. Arbitrary fused Tripo mesh is not a guaranteed direct input.",
+      "alternatives": [
+        "Unreal Hair Card Generator: strand groom input; experimental, version-specific setup",
+        "Houdini Generate Hair Cards: groom curves or guides input"
+      ],
+      "test_sample": "One Tripo hair lock, plus one upper-eyelash strip; test root/tip flow, silhouette, atlas/alpha, triangle count and Godot import before whole-hair adoption.",
+      "purchase_authorized": false,
+      "remembered_note": "Hair Tool automates strands/cards from prepared guides, not guaranteed automatic reconstruction from arbitrary Tripo solids. Purchase not yet made. Preserve mirrored single-side authorship and separate left/right animation controls.",
+      "active_in_current_workflow": false
+    },
+    "generation_mode": "per_part; see user_direction.generation_modes",
+    "image_batch": "art/references/explorer_b_hybrid_hair_hd_v1",
+    "brow_lash_workflow": {
+      "geometry": "One fitted brow surface and separate curved upper/lower lash strips, then mirror",
+      "texture": "Transparent alpha hair texture; current white-background images are design references only",
+      "rigging": "Bind brows to forehead deformation and lashes to corresponding eyelid deformation; independent left/right controls",
+      "validation": [
+        "No floating medial lash roots",
+        "Blink 0/25/50/75/100 percent",
+        "Gaze combined with blink",
+        "Alpha edges and transparency in Godot"
+      ],
+      "tripo_generation": false,
+      "superseded_by": "2026-10-05 user now requests integrated Tripo eyelids and lashes"
+    },
+    "hair_multiview_policy": "Front/left/back/right individual approved images for generation; top/underside for inspection. Review sheet is not direct API input. Verify HD input support before submitting.",
+    "hair_internal_shape": "Avoid inward spikes, filled face plates, neck plugs and round bowl interiors; inspect fitted head clearance.",
+    "active_hair_method": "New mesh grouped locks, no cards"
+  },
+  "current_hybrid_bust": {
+    "state": "Original_mesh_reset_v13",
+    "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_mesh_reset_v13\\original_mesh_with_user_hair_v13.blend",
+    "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_mesh_reset_v13\\original_mesh_with_user_hair_v13.glb",
+    "review_url": "http://127.0.0.1:8842/character-mesh-reset-v13/",
+    "rigged": false,
+    "mouth": "original_open",
+    "next": "Professional facial rigging tool; not chosen or installed yet"
+  },
+  "next_head_generation": {
+    "date": "2026-10-04",
+    "status": "P2_generation_complete",
+    "image": "art/references/explorer_b_open_mouth_v1/01_head_open_mouth_front.png",
+    "prompt_file": "art/references/explorer_b_open_mouth_v1/prompts.json",
+    "identity_source": "art/references/explorer_b_hybrid_hair_hd_v1/01_head_neck_clavicle_smartmesh.png",
+    "request": "Generate an open-mouth head in Tripo from the source image, instead of opening the closed-mouth generated head afterward.",
+    "inspection": "Front view; mouth visibly open; upper/lower lips separated; oral cavity, upper/lower tooth edges and tongue visible; bald head, no brows/lashes; neck ends at clavicles.",
+    "next_model": "Tripo Smart Mesh P2",
+    "existing_hair_and_brow_lash_assets": "retain for refitting after head geometry review",
+    "review_gate_source": "User instruction: review newly generated images before Tripo submission.",
+    "tripo_submitted": true,
+    "tripo_credits_spent": 100.0,
+    "generation_checks": [
+      "Oral opening must be real geometry, not a painted patch",
+      "Inspect cavity depth, lip boundary and any teeth/skin fusion",
+      "Inspect topology before facial rigging"
+    ]
+  },
+  "current_head_hd": {
+    "source": "art/characters/explorer_b_open_mouth_hd_v1/model.glb",
+    "blend": "art/characters/explorer_b_open_mouth_hd_v1/explorer_b_open_mouth_HD_workbench.blend",
+    "state": "HD_generated_initial_cleanup_ready_for_form_review",
+    "workflow": [
+      "HD generation",
+      "shape refinement",
+      "retopology",
+      "UV/bake/textures",
+      "facial rigging"
+    ],
+    "retopology_complete": false,
+    "rigged": false,
+    "generation_credits": 40.0,
+    "remaining_budget": 140.0,
+    "oral_geometry_review": "Lips separated and recessed surface present, but cavity is shallow with fused tooth/tongue relief. Needs reconstruction and separation during form refinement.",
+    "eye_geometry_review": "Generated iris and catchlight are relief in the head mesh; replace with separate eyeballs during form refinement."
+  },
+  "current_head_p2": {
+    "source": "art/characters/explorer_b_face_multiview_meshhair_v2/head/model.fbx",
+    "blend": "art/characters/explorer_b_expressions_v7/explorer_b_expressions_v7.blend",
+    "state": "Blender_hair_clearance_expression_clips_v7",
+    "generated": true,
+    "rigged": true,
+    "credits": 120,
+    "views": [
+      "front",
+      "left",
+      "right"
+    ],
+    "previous_source_preserved": "art/characters/explorer_b_integrated_face_haircards_v1/head",
+    "oral_cavity_present": true,
+    "mouth_rest_prepared": true,
+    "topology_cleanup_required": true,
+    "eyes_separate": true
+  },
+  "next_generation": {
+    "status": "completed_hair_only",
+    "reference_directory": "art/references/explorer_b_young_bob_face_cleanup_v3",
+    "task_id": "bec78fb4-f468-4e12-be63-d5fa27d1f09c",
+    "hair_source_reused": false,
+    "face_source_reused": true,
+    "hair_cards": false,
+    "remaining_credits": 710.0,
+    "next_stage": "review_local_cleanup_then_facial_rig",
+    "paid_addon_purchase_authorized": false
+  },
+  "current_integrated_face": {
+    "state": "Original_mesh_reset_v13",
+    "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_mesh_reset_v13\\original_mesh_with_user_hair_v13.blend",
+    "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_mesh_reset_v13\\original_mesh_with_user_hair_v13.glb",
+    "review_url": "http://127.0.0.1:8842/character-mesh-reset-v13/",
+    "rigged": false,
+    "mouth": "original_open",
+    "next": "Professional facial rigging tool; not chosen or installed yet"
+  },
+  "historical_haircard_prototype_v1": {
+    "date": "2026-10-05",
+    "state": "Tripo_integrated_face_and_separate_HD_hair_card_prototype_review",
+    "blend": "art/characters/explorer_b_integrated_face_haircards_v1/assembly/explorer_b_integrated_face_haircards_v1.blend",
+    "glb": "art/characters/explorer_b_integrated_face_haircards_v1/assembly/explorer_b_integrated_face_haircards_v1.glb",
+    "original_open_workbench": "art/characters/explorer_b_integrated_face_haircards_v1/head/explorer_b_integrated_face_open_workbench.blend",
+    "face_task_id": "38676a32-c0e8-4ccf-b30f-bc3b0fdb2af0",
+    "hair_task_id": "8fd3d067-0859-46a7-87df-1df9b333b5eb",
+    "default_mouth": "closed_gentle_smile",
+    "inspection_control": "FACE_CONTROLS[\"mouth_open\"] 0..1",
+    "original_open_pose_preserved": true,
+    "face_parts": "Original generated eyelids, brows, lashes and eye surfaces preserved together",
+    "hair": "254 editable guides, RGBA UV cards, scalp base and sampled low-poly bob support",
+    "hair_triangles": 34876,
+    "hair_card_triangles": 27484,
+    "hair_source_triangles": 478625,
+    "new_api_credits": 165,
+    "total_scope_credits": 1125.0,
+    "remaining_credits": 875.0,
+    "full_face_rig": false,
+    "blink_rig": false,
+    "review_url": "http://127.0.0.1:8842/character-integrated-face-haircards/",
+    "remaining": [
+      "Hair card flow, scalp parting and layer seams need art refinement",
+      "Facial topology cleanup before rigging",
+      "Blink/gaze/face rigging not applied"
+    ]
+  },
+  "historical_multiview_meshhair_v2": {
+    "date": "2026-10-05",
+    "state": "Tripo_front_left_right_face_and_solid_mesh_hair_geometry_review",
+    "blend": "art/characters/explorer_b_face_multiview_meshhair_v2/assembly/explorer_b_multiview_mesh_hair_v2.blend",
+    "glb": "art/characters/explorer_b_face_multiview_meshhair_v2/assembly/explorer_b_multiview_mesh_hair_v2.glb",
+    "head_source": "art/characters/explorer_b_face_multiview_meshhair_v2/head/model.fbx",
+    "head_workbench": "art/characters/explorer_b_face_multiview_meshhair_v2/head/explorer_b_integrated_face_open_workbench.blend",
+    "face_task_id": "b3750b15-9b51-4c5b-bfca-879ee9847d8b",
+    "face_views": [
+      "front",
+      "left",
+      "right"
+    ],
+    "hair_source": "art/characters/explorer_b_integrated_face_haircards_v1/hair/model.glb",
+    "hair_cards": false,
+    "hair_method": "Original separate HD mesh with volumetric grouped locks; smooth scalp fit preserves lock thickness",
+    "head_geometry_unmodified": true,
+    "mouth_pose": "original_open_for_jaw_and_oral_geometry_review",
+    "game_default_target": "closed_mouth_gentle_smile_after_geometry_review",
+    "closed_rest_prepared": false,
+    "new_face_credits": 120,
+    "texture_conversion_credits": 5,
+    "new_hair_credits": 0,
+    "new_total_credits": 125,
+    "total_scope_credits": 1250.0,
+    "remaining_credits": 750.0,
+    "full_face_rig": false,
+    "game_low_poly_final": false,
+    "review_url": "http://127.0.0.1:8842/character-face-multiview-meshhair-v2/",
+    "remaining": [
+      "Review generated jaw/lip/eyelid form before cleanup",
+      "Inspect and fix generated open boundaries/nonmanifold edges",
+      "Fine scalp/temple/ear mesh hair fitting",
+      "Reduce/bake mesh hair after form acceptance",
+      "Closed gentle rest and facial rigging after geometry review"
+    ]
+  },
+  "historical_young_bob_cleanup_v3": {
+    "date": "2026-10-05",
+    "state": "new_compact_mesh_bob_local_face_cleanup_closed_smile",
+    "blend": "art/characters/explorer_b_young_bob_face_cleanup_v3/assembly/explorer_b_young_bob_closed_smile_v3.blend",
+    "glb": "art/characters/explorer_b_young_bob_face_cleanup_v3/assembly/explorer_b_young_bob_closed_smile_v3.glb",
+    "face_source": "art/characters/explorer_b_face_multiview_meshhair_v2/head/model.fbx",
+    "face_regenerated": false,
+    "hair_source": "art/characters/explorer_b_young_bob_face_cleanup_v3/hair/model.glb",
+    "hair_task_id": "bec78fb4-f468-4e12-be63-d5fa27d1f09c",
+    "hair_cards": false,
+    "hair_method": "Separate approved 4-view HD solid sculptural bob, fitted in Blender",
+    "eyes_separate": [
+      "EYEBALL_L",
+      "EYEBALL_R"
+    ],
+    "lashes": "Smooth Blender vertex tint multiplies original packed 4096 UV atlas; portable glTF COLOR_0",
+    "teeth": "Ivory enamel material, separate pink gums and tongue",
+    "mouth_pose": "closed gentle smile",
+    "mouth_original_open_preserved": true,
+    "mouth_control": "FACE_CONTROLS[\"mouth_open\"]: 0 closed / 1 original open",
+    "new_face_credits": 0,
+    "new_hair_credits": 40,
+    "new_total_credits": 40,
+    "total_scope_credits": 1290.0,
+    "remaining_credits": 710.0,
+    "full_face_rig": false,
+    "game_low_poly_final": false,
+    "review_url": "http://127.0.0.1:8842/character-young-bob-closed-smile-v3/",
+    "remaining": [
+      "HD hair reduction/bake for game runtime",
+      "Full blink/gaze/facial rig, facial topology cleanup"
+    ]
+  },
+  "historical_face_balance_v4": {
+    "date": "2026-10-05",
+    "state": "Blender_face_balance_crown_lowered_v4",
+    "blend": "art/characters/explorer_b_face_balance_v4/assembly/explorer_b_balanced_face_v4.blend",
+    "glb": "art/characters/explorer_b_face_balance_v4/assembly/explorer_b_balanced_face_v4.glb",
+    "face_source": "art/characters/explorer_b_face_multiview_meshhair_v2/head/model.fbx",
+    "hair_source": "art/characters/explorer_b_young_bob_face_cleanup_v3/hair/model.glb",
+    "hair_cards": false,
+    "head_regenerated": false,
+    "hair_regenerated": false,
+    "new_total_credits": 0,
+    "remaining_credits": 710.0,
+    "total_scope_credits": 1290.0,
+    "mouth_pose": "relaxed closed smile",
+    "original_open_pose_preserved": true,
+    "mouth_control": "FACE_CONTROLS[\"mouth_open\"]",
+    "eyes": "Separate globe objects with forward-facing brown irises, small catchlights, controlled reflections",
+    "lashes": "Contour-traced dark pigment, original skin atlas preserved",
+    "chin": "Front center gently raised/rounded",
+    "mouth_corners": "Slightly lowered, posterior lower molars tucked behind closed lip contour",
+    "teeth_exposure_test": "0 exposed tooth face centers in 6 sampled views",
+    "crown": "Upper height reduced by 0.0344 scene units; fringe and bob ends retained",
+    "full_face_rig": false,
+    "game_low_poly_final": false,
+    "review_url": "http://127.0.0.1:8842/character-face-balance-v4/"
+  },
+  "historical_clean_edges_v5": {
+    "date": "2026-10-05",
+    "state": "Blender_clean_lash_boundary_rounded_chin_v5",
+    "blend": "art/characters/explorer_b_clean_edges_v5/assembly/explorer_b_clean_edges_v5.blend",
+    "glb": "art/characters/explorer_b_clean_edges_v5/assembly/explorer_b_clean_edges_v5.glb",
+    "new_total_credits": 0,
+    "head_regenerated": false,
+    "hair_regenerated": false,
+    "hair_cards": false,
+    "mouth_pose": "relaxed closed smile",
+    "mouth_control": "FACE_CONTROLS[\"mouth_open\"]",
+    "original_open_pose_preserved": true,
+    "eyes": "Separate forward-looking globes and iris caps retained",
+    "lashes": "Five upper-lash UV surface charts use uniform dark material; skin and tear duct charts retain original atlas; skin vertex tint removed",
+    "chin": "Broad lower-face surface fairing; smooth U contour",
+    "game_preview": "Actual Godot Compatibility/OpenGL capture with review lighting; not the gameplay scene",
+    "full_face_rig": false,
+    "game_low_poly_final": false,
+    "review_url": "http://127.0.0.1:8842/character-clean-edges-v5/"
+  },
+  "historical_animated_face_v6": {
+    "date": "2026-10-05",
+    "state": "Blender_repaired_Rigify_animation_v6",
+    "blend": "art/characters/explorer_b_face_animated_v6/explorer_b_repaired_rigify_v6.blend",
+    "glb": "art/characters/explorer_b_face_animated_v6/explorer_b_repaired_rigify_v6.glb",
+    "new_total_credits": 0,
+    "head_regenerated": false,
+    "hair_regenerated": false,
+    "hair_cards": false,
+    "mouth_pose": "closed gentle smile",
+    "eyes_separate": true,
+    "rigged": true,
+    "addon": "Rigify",
+    "animation_seconds": 12,
+    "fps": 30,
+    "full_production_facial_rig": false,
+    "audio_lipsync": false,
+    "review_url": "http://127.0.0.1:8842/character-face-animated-v6/"
+  },
+  "latest_original_identity_v9": {
+    "date": "2026-10-05",
+    "state": "Original_user_GLb_identity_restored_v9",
+    "blend": "art/characters/explorer_b_original_identity_v9/original_face_mpfb_rigify_v9.blend",
+    "glb": "art/characters/explorer_b_original_identity_v9/original_face_mpfb_rigify_v9.glb",
+    "original_face_preserved": true,
+    "original_eyes_preserved": true,
+    "addons": [
+      "MPFB",
+      "Rigify"
+    ],
+    "MPFB_units": 19,
+    "full_blink_complete": false,
+    "animation_seconds": 15,
+    "review_url": "http://127.0.0.1:8842/character-original-identity-v9/",
+    "credits": 0
+  },
+  "historical_expression_face_v7": {
+    "date": "2026-10-05",
+    "state": "Blender_hair_clearance_expression_clips_v7",
+    "blend": "art/characters/explorer_b_expressions_v7/explorer_b_expressions_v7.blend",
+    "glb": "art/characters/explorer_b_expressions_v7/explorer_b_expressions_v7.glb",
+    "new_total_credits": 0,
+    "head_regenerated": false,
+    "hair_regenerated": false,
+    "hair_cards": false,
+    "mouth_pose": "closed gentle smile",
+    "rigged": true,
+    "eyes_separate": true,
+    "addon": "Rigify",
+    "animation_seconds": 24,
+    "expression_clips": [
+      {
+        "action": "Face_Neutral_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      },
+      {
+        "action": "Face_Happy_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      },
+      {
+        "action": "Face_Curious_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      },
+      {
+        "action": "Face_Concern_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      },
+      {
+        "action": "Face_Determined_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      },
+      {
+        "action": "Face_Surprise_Loop",
+        "frames": 90,
+        "fps": 30,
+        "seconds": 3,
+        "loop": true
+      }
+    ],
+    "fps": 30,
+    "review_url": "http://127.0.0.1:8842/character-expressions-v7/"
+  },
+  "current_head_source": {
+    "type": "original user supplied GLB",
+    "source": "art/characters/explorer_b_user_head_v8/source_user_head.glb",
+    "author_blend": "art/characters/explorer_b_game_face_v10/original_preserved_face_rig_v10.blend",
+    "source_basis_preserved": true,
+    "default_closed_is_pose": true
+  },
+  "latest_game_face_rig_v10": {
+    "date": "2026-10-05",
+    "state": "Original_preserved_closed_rest_independent_game_clips_v10",
+    "blend": "art/characters/explorer_b_game_face_v10/original_preserved_face_rig_v10.blend",
+    "glb": "art/characters/explorer_b_game_face_v10/character_face_clips_v10.glb",
+    "game_demo": "labs/face_rig_v10",
+    "source_basis_preserved": true,
+    "neutral": "reversible closed-mouth pose",
+    "original_open_pose_recoverable": true,
+    "facial_controls": 36,
+    "gaze_controls": 2,
+    "clips": [
+      "IdleClosed",
+      "Smile",
+      "Happy",
+      "Concern",
+      "Determined",
+      "Surprise",
+      "Pucker",
+      "TalkOpen",
+      "Blink",
+      "WinkLeft",
+      "WinkRight",
+      "LookAround"
+    ],
+    "game_engine_verified": "Godot 4.7.2 OpenGL Compatibility",
+    "hair_triangles": 31200,
+    "review_url": "http://127.0.0.1:8842/character-game-face-rig-v10/",
+    "credits": 0
+  },
+  "latest_hair_swap_v11": {
+    "date": "2026-10-05",
+    "state": "User_brown_hair_swap_v11",
+    "blend": "art/characters/explorer_b_hair_swap_v11/original_face_user_hair_v11.blend",
+    "glb": "art/characters/explorer_b_hair_swap_v11/character_user_hair_v11.glb",
+    "hair_source": "C:/Users/dd/Downloads/brown hair 3d model.glb",
+    "face_and_shape_keys_unchanged": true,
+    "clips": [
+      "Blink",
+      "Concern",
+      "Determined",
+      "Happy",
+      "IdleClosed",
+      "LookAround",
+      "Pucker",
+      "Smile",
+      "Surprise",
+      "TalkOpen",
+      "WinkLeft",
+      "WinkRight"
+    ],
+    "review_url": "http://127.0.0.1:8842/character-user-hair-v11/",
+    "credits": 0
+  },
+  "latest_soft_smile_v12": {
+    "state": "Soft_closed_smile_v12",
+    "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_soft_smile_v12\\original_face_soft_smile_v12.blend",
+    "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_soft_smile_v12\\character_soft_smile_v12.glb",
+    "review_url": "http://127.0.0.1:8842/character-soft-smile-v12/",
+    "original_author_basis_unchanged": true,
+    "clips": 12
+  },
+  "latest_mesh_reset_v13": {
+    "state": "Original_mesh_reset_v13",
+    "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_mesh_reset_v13\\original_mesh_with_user_hair_v13.blend",
+    "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_mesh_reset_v13\\original_mesh_with_user_hair_v13.glb",
+    "review_url": "http://127.0.0.1:8842/character-mesh-reset-v13/",
+    "rigged": false,
+    "mouth": "original_open",
+    "next": "Professional facial rigging tool; not chosen or installed yet"
+  },
+  "latest_tripo_retopology_v14": {
+    "state": "Tripo_smart_retopology_v14",
+    "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_tripo_retopo_v14\\face_retopology_assembly_v14.blend",
+    "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\explorer_b_tripo_retopo_v14\\face_retopology_assembly_v14.glb",
+    "review_url": "http://127.0.0.1:8842/character-tripo-retopo-v14/",
+    "credits_consumed": 30.0,
+    "rigged": false,
+    "facial_deformation_verified": false,
+    "accepted": false,
+    "superseded_by": "Original_mesh_reset_v13",
+    "user_decision": "리토폴로지 결과를 사용하지 않고 v13 원본 메쉬로 복귀"
+  },
+  "retopology_decision": {
+    "date": "2026-10-05",
+    "use_retopology": false,
+    "working_version": "v13",
+    "original_mesh_with_user_hair": true
+  },
+  "latest_static_npc_cast": {
+    "state": "Closed_mouth_static_NPC_cast_v2",
+    "characters": [
+      {
+        "id": "sora",
+        "name": "소라",
+        "triangles": 21910,
+        "height_m": 1.65,
+        "credits": 110.0,
+        "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\sora\\sora_static.blend",
+        "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\sora\\sora_static.glb"
+      },
+      {
+        "id": "moru",
+        "name": "모루",
+        "triangles": 21143,
+        "height_m": 1.65,
+        "credits": 110.0,
+        "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\moru\\moru_static.blend",
+        "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\moru\\moru_static.glb"
+      },
+      {
+        "id": "naru",
+        "name": "나루",
+        "triangles": 21740,
+        "height_m": 1.55,
+        "credits": 110.0,
+        "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\naru\\naru_static.blend",
+        "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\naru\\naru_static.glb"
+      },
+      {
+        "id": "haeru",
+        "name": "해루",
+        "triangles": 22284,
+        "height_m": 1.85,
+        "credits": 110.0,
+        "blend": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\haeru\\haeru_static.blend",
+        "glb": "C:\\lsm26\\triphthonS1\\art\\characters\\npc_cast_closed_v2\\haeru\\haeru_static.glb"
+      }
+    ],
+    "existing_character": "v13 unchanged",
+    "face_rig": false,
+    "body_rig": false,
+    "credits_closed_cast": 440,
+    "credits_obsolete_open_tasks": 220,
+    "approved_budget_remaining": 20,
+    "review_url": "http://127.0.0.1:8842/characters-closed-mouth-v2/",
+    "archive": "C:\\lsm26\\triphthonS1\\output\\npc-closed-mouth-static-v2-20261005.zip"
+  }
+}

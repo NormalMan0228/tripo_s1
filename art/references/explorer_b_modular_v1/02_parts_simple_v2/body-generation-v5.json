@@ -1,0 +1,30 @@
+{
+  "id": "body",
+  "revision": "v5",
+  "date": "2026-10-04",
+  "file": "body-v5.png",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "prompt": "Use case: precise-object-edit / identity-preserve.\nAsset type: ONE standalone body modeling reference of the approved female B explorer, dressed in modest plain underlayers.\nImage 1 is the current BODY reference to correct: its generic adult unisex shape has come out too broad-shouldered, muscular and masculine. Image 2 is the APPROVED fully clothed FEMALE B explorer. Image 2 is the authoritative identity, stylized proportions and art-style reference. Follow her own slender soft body proportions, not a different muscular male mannequin.\nGenerate a refined headless, handless adult FEMALE stylized explorer body in neutral symmetrical A-pose. The model remains fully covered at chest/torso/pelvis by a plain opaque white sleeveless UNDERSHIRT with wide practical straps and modest neckline, plus plain opaque white high-waisted MID-THIGH SAFETY UNDERSHORTS. The top overlaps the shorts waistband. Comfortable flat garment panels, NO masculine fly or central cup seam, no bulging underwear pouch. No sheer fabric, lace, lingerie decoration, exposed midriff or intimate anatomical detail. Neutral technical modeling presentation.\nCorrect the silhouette:\n- Narrower gently sloping shoulders matching the female B reference; shoulder width approximately balanced with or a little narrower than hip width, not a broad male V-shaped upper torso.\n- Slimmer graceful neck with a natural base, softly indicated collarbones and relaxed shoulder transitions.\n- Slim upper arms and forearms with subtle elbows and clean wrist taper. Remove large deltoid/biceps bulges and heavy athletic arm mass.\n- A soft slim ribcage and modest natural waist taper under the undershirt, balanced rounded hips. Feminine but NOT exaggerated, sensual or hourglass anatomy. No pronounced bust shaping; preserve a modest clothed silhouette.\n- Slimmer balanced thighs and calves, softly modeled knees and ankles, leg lengths and torso-to-leg ratio consistent with the B design. No bulky quadriceps, muscular calves or heavy masculine leg silhouette.\n- Delicate naturally proportioned feet with believable heels, insteps, ankles and FIVE separate rounded toes per foot. Feet fit her existing hiking boots, not oversized male feet or mitten blocks.\nKeep one continuously connected body from neck through torso, both arms to wrists, hips and both legs to bare feet. No head, no hands, no detached parts, no toy joints, no mechanical rings. A-pose arms about 25 degrees outward, legs a little apart, hips level, soles level, both sides matching. The only part boundaries are neck top and wrists.\nMaintain the approved warm peach skin base on all exposed regions, refined matte skin shading, restrained subtle detail and soft stylized forms. High-quality polished stylized game-character illustration rather than realistic anatomical bodybuilding render. Clear joint construction and clean silhouette, neutral soft studio illumination, white background, minimal contact shadow. One FRONT ORTHOGRAPHIC body only, full neck-to-toes silhouette fits with generous margin. No captions, no labels, no collage, no secondary views, no props.\nThe new result must visibly read as the approved FEMALE explorer's slender body proportions even without a head.",
+  "reference_inputs": [
+    "art/references/explorer_b_modular_v1/02_parts_simple_v2/body-v4.png",
+    "art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png"
+  ],
+  "generated_source": "C:\\Users\\dd\\.codex\\generated_images\\01a0f276-190b-72b3-bbcb-8277fd264084\\exec-26d1babe-2d86-4c04-bbf3-d5cc6b0a26ed.png",
+  "approval": null,
+  "review_status": "awaiting_user_review",
+  "decision_source": "User corrected the previous masculine-looking body: preserve the approved female B explorer",
+  "character_body": "female_B_explorer",
+  "clothing": "opaque white sleeveless undershirt and plain mid-thigh safety undershorts",
+  "presentation": "individual_images_only",
+  "accounting": {
+    "image_generation_attempts": 1,
+    "successful_images": 1,
+    "new_tripo_calls": 0,
+    "new_scenario_calls": 0
+  },
+  "limitations": [
+    "2D reference only. Covered torso and pelvis do not prove underlying geometry.",
+    "No new 3D, UV, rig or animation was generated."
+  ]
+}

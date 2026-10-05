@@ -1,0 +1,32 @@
+name: Server checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test authoritative server
+        run: |
+          python -m pip install -r server/requirements.txt pytest
+          python -m pytest server/tests -q
+      - name: Validate deployment and build API image
+        env:
+          TRIPOTHON_DOMAIN: game.example.com
+        run: |
+          bash -n ops/bootstrap-gcp-free.sh
+          mkdir -p ops/secrets
+          printf 'ci-only-registration-code-with-sufficient-length\n' > ops/secrets/registration-code
+          printf 'ci-only-openai-placeholder\n' > ops/secrets/openai-key
+          printf 'ci-only-tripo-placeholder\n' > ops/secrets/tripo-key
+          docker compose -f ops/compose.yaml config --quiet
+          docker compose -f ops/compose.yaml -f ops/compose.paid.yaml config --quiet
+          docker compose -f ops/compose.yaml -f ops/compose.gcp-free.yaml config --quiet
+          docker compose -f ops/compose.yaml build api

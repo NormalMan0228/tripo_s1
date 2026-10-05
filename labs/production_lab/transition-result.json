@@ -1,0 +1,13 @@
+{
+  "max_foot_stage": "walk_to_run",
+  "max_foot_step_m_per_60hz": 0.1668691188097,
+  "max_joint_bone": "R_Calf",
+  "max_joint_step_deg_per_60hz": 19.5398393285183,
+  "max_motor_excess_m": 0.0,
+  "pass": true,
+  "provider_calls": 0,
+  "ramp": true,
+  "samples": 460,
+  "stop_idle": true,
+  "wall_stop": true
+}

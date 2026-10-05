@@ -1,0 +1,71 @@
+import bpy,json,itertools,math
+import numpy as np
+from pathlib import Path
+from mathutils import Vector
+from mathutils.bvhtree import BVHTree
+R=Path(__file__).resolve().parents[1];O=R/'art/characters/explorer_b_face_rig_manual_v2h';F=O/'explorer_living_face_v2h.blend'
+bpy.ops.wm.open_mainfile(filepath=str(F));sc=bpy.context.scene;sc.frame_set(1);rig=bpy.data.objects['FACE_RIG__select_Custom_Properties'];h=bpy.data.objects['01_Face_skin_neck']
+action=rig.animation_data.action
+for p in ['blink_L','blink_R','jaw_open','smile','frown','pucker','brow_up','brow_frown','look_lr','look_ud']:rig[p]=float(rig[p])
+for fc in action.fcurves:fc.update_autoflags(rig)
+rig.animation_data.action=None
+props=['blink_L','blink_R','jaw_open','smile','frown','pucker','brow_up','brow_frown','look_lr','look_ud']
+def pose(lr,ud,blink,headangle):
+ for p in props:rig[p]=0.
+ rig['look_lr']=float(lr);rig['look_ud']=float(ud);rig['blink_L']=float(blink);rig['blink_R']=float(blink)
+ rig.pose.bones['head'].rotation_mode='XYZ';rig.pose.bones['head'].rotation_euler=(0,headangle,headangle*.5)
+ rig.update_tag();bpy.context.view_layer.update()
+def coords(obj,deps,inv):
+ ev=obj.evaluated_get(deps);me=ev.to_mesh();p=[inv@v.co for v in me.vertices];faces=[list(f.vertices) for f in me.polygons];ev.to_mesh_clear();return p,faces
+baseline={};worst=0.;maxpenetration=0.;penetrating=0;cases=0;examples=[]
+tests=[(0,0,0,0)]+list(itertools.product([-1,0,1],[-1,0,1],[0,.5,1],[0,.20]))
+for lr,ud,blink,ha in tests:
+ pose(lr,ud,blink,ha);deps=bpy.context.evaluated_depsgraph_get();M=rig.pose.bones['head'].matrix@rig.data.bones['head'].matrix_local.inverted();inv=M.inverted()
+ hp,hf=coords(h,deps,inv);bvh=BVHTree.FromPolygons(hp,hf)
+ for side,sign in [('L',1),('R',-1)]:
+  center=np.array([.197,.149*sign,.061]);radii=np.array([.066,.083,.085])
+  for name in ['Eye_white.'+side,'Iris_pupil.'+side]:
+   points,_=coords(bpy.data.objects[name],deps,inv);arr=np.array(points);assert np.isfinite(arr).all();radius=np.linalg.norm((arr-center)/radii,axis=1)
+   if name not in baseline:baseline[name]=radius
+   error=float(np.max(np.abs(radius-baseline[name])));worst=max(worst,error)
+   for p in points:
+    if p.x<.19:continue
+    hit=bvh.ray_cast(Vector((1,p.y,p.z)),Vector((-1,0,0)),2)[0]
+    if hit is not None and hit.x>.16:
+     pen=p.x-hit.x;maxpenetration=max(maxpenetration,pen)
+     if pen>.0005:
+      penetrating+=1
+      if len(examples)<8:examples.append([name,lr,ud,blink,ha,list(p),list(hit),pen])
+ cases+=1
+print('ENVELOPE',worst,'PENETRATION',maxpenetration,penetrating,examples,flush=True)
+assert worst<.00003, 'Eye envelope changes under gaze or posed head transform'
+pose(0,0,0,0);rig.animation_data.action=action;sc.frame_set(1)
+# Verify that all mouth/chin rest vertices remain exactly from the approved V2e source.
+with bpy.data.libraries.load(str(R/'art/characters/explorer_b_face_rig_manual_v2e/explorer_face_contours_v2e.blend')) as (a,b):b.objects=['01_Face_skin_neck']
+source=b.objects[0]
+def mouthset(obj):return {tuple(round(c,7) for c in v.co) for v in obj.data.shape_keys.key_blocks['Basis'].data if v.co.z<-.12}
+assert mouthset(source)==mouthset(h)
+bpy.data.objects.remove(source,do_unlink=True)
+report=json.loads((O/'refinement-report.json').read_text());report['verification']={'pose_cases':cases,'head_rotation_tested':True,'max_normalized_eye_radius_change':worst,'max_frontal_skin_penetration':maxpenetration,'skin_penetration_samples_over_0_0005':penetrating,'examples':examples,'mouth_and_chin_basis_unchanged':True,'scope':'Discrete gaze/blink grid; vertex-to-frontal-skin ray tests, not a continuous triangle collision proof.'}
+(O/'refinement-report.json').write_text(json.dumps(report,indent=2))
+
+assert sc.frame_end==288 and sc.render.fps==24
+samples=[];first=None;prev=None;maxstep=0.;max_loop=0.
+objects=[h]+[bpy.data.objects[n] for n in ['07_Upper_lash_candidate_negY','08_Upper_lash_candidate_posY','Eye_white.L','Eye_white.R','Iris_pupil.L','Iris_pupil.R']]
+for frame in range(1,290):
+ sc.frame_set(frame);deps=bpy.context.evaluated_depsgraph_get();arr=[]
+ for obj in objects:
+  ev=obj.evaluated_get(deps);me=ev.to_mesh();arr.extend([v.co[:] for v in me.vertices]);ev.to_mesh_clear()
+ arr=np.array(arr);assert np.isfinite(arr).all()
+ if first is None:first=arr.copy()
+ if prev is not None:maxstep=max(maxstep,float(np.linalg.norm(arr-prev,axis=1).max()))
+ prev=arr
+ if frame==289:max_loop=float(np.max(np.abs(arr-first)))
+assert max_loop<1e-6
+sc.frame_set(55);assert .1<rig['blink_L']<.95, 'Blink must retain floating point intermediates'
+sc.frame_set(58);assert .8<rig['blink_L']<1
+assert maxstep<.04, 'Unexpected frame jump'
+report['animation_validation']={'sampled_frames':289,'fps':24,'playback_seconds':12,'loop_coordinate_difference':max_loop,'max_vertex_displacement_per_frame':maxstep,'all_samples_finite':True}
+report['status']='Static closeups and all 289 animation frames checked; gaze/blink grid checked.'
+(O/'refinement-report.json').write_text(json.dumps(report,indent=2))
+sc.frame_set(1);bpy.context.preferences.filepaths.save_version=0;bpy.ops.wm.save_as_mainfile(filepath=str(F));print('V2H_VALIDATED',flush=True)

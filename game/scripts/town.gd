@@ -79,6 +79,7 @@ func _ready() -> void:
 		var label := A.label3d(self,place.title,p+Vector3(0,2.9,0),Color("f5e5b7"))
 		label.font_size=36
 		label.no_depth_test=false
+		label.add_to_group("place_nameplates")
 	var rng := RandomNumberGenerator.new()
 	rng.seed=7719
 	for i in 125:
@@ -87,13 +88,19 @@ func _ready() -> void:
 		if absf(p.x-river_x(p.y))<4: continue
 		if height_at(p.x,p.y)<0: continue
 		if p.x< -14 and p.y> -13 and p.y<21: continue
+		if p.distance_to(Vector2(31.5,22.3))<4.2: continue
 		if absf(p.x)<3 or absf(p.x-27)<3 or absf(p.y+5)<2.6 or absf(p.y-18)<2.6: continue
 		var tree := A.tree(self,point(p),p.y< -16,true)
 		tree.scale*=rng.randf_range(0.8,1.3)
 	for p in [Vector2(-13,2),Vector2(-16,11),Vector2(0,-16),Vector2(23,-5),Vector2(25,18),Vector2(9,14)]: L.lantern(self,point(p))
 	L.bench(self,point(Vector2(29,-29)),0)
 	L.bench(self,point(Vector2(-28,18)),PI*0.5)
-	A.label3d(self,"← 텃밭 / 과수원      언덕 ↑      강변 / 해변 →",Vector3(0,2.3,6),Color("eadfbd")).font_size=24
+	var sign_at := point(Vector2(4.6,7.8))
+	L.cylinder(self,sign_at+Vector3(0,.65,0),.075,1.3,Color("806b4f"),8)
+	for row in 2:
+		A.box(self,sign_at+Vector3(0,1.23-row*.3,0),Vector3(1.5,.25,.10),Color("aa875c"))
+		var sign := A.label3d(self,"← 텃밭 / 과수원" if row==0 else "해변 / 강변 →",sign_at+Vector3(0,1.23-row*.3,.065),Color("fff0ce"))
+		sign.font_size=23;sign.pixel_size=.004;sign.billboard=BaseMaterial3D.BILLBOARD_DISABLED;sign.no_depth_test=false
 	float_root=Node3D.new()
 	add_child(float_root)
 	bobber=A.sphere(float_root,Vector3.ZERO,Vector3(0.17,0.25,0.17),Color("e77f56"))
@@ -166,6 +173,36 @@ func path(from: Vector2,to: Vector2,width: float) -> void:
 	node.material_override=mat
 	node.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(node)
+	# Small, irregular stone inlays break up long flat ribbons without adding
+	# hundreds of separate draw calls or changing the authoritative paths.
+	var count := maxi(1,int(from.distance_to(to)*1.05))
+	var stones := MultiMesh.new()
+	var stone_mesh := SphereMesh.new()
+	stone_mesh.radius=0.5
+	stone_mesh.height=1
+	stone_mesh.radial_segments=8
+	stone_mesh.rings=4
+	stones.mesh=stone_mesh
+	stones.transform_format=MultiMesh.TRANSFORM_3D
+	stones.use_colors=true
+	stones.instance_count=count
+	var rng := RandomNumberGenerator.new()
+	rng.seed=abs(int(from.x*911+from.y*433+to.x*127+to.y*619))
+	var direction := (to-from).normalized()
+	var cross := direction.orthogonal()
+	for i in count:
+		var t := (i+0.45+rng.randf_range(-0.3,0.3))/count
+		var here := from.lerp(to,clampf(t,0.0,1.0))+cross*rng.randf_range(-width*0.39,width*0.39)
+		var basis := Basis(Vector3.UP,rng.randf_range(-0.34,0.34)).scaled(Vector3(rng.randf_range(0.40,0.70),0.045,rng.randf_range(0.34,0.61)))
+		stones.set_instance_transform(i,Transform3D(basis,point(here,0.039)))
+		stones.set_instance_color(i,[Color("c4b898"),Color("afa68e"),Color("d3c8a8")][i%3])
+	var inlays := MultiMeshInstance3D.new()
+	inlays.multimesh=stones
+	var stone_material := A.material(Color.WHITE)
+	stone_material.vertex_color_use_as_albedo=true
+	inlays.material_override=stone_material
+	inlays.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(inlays)
 
 func bridge(z: float) -> void:
 	var x := river_x(z)
@@ -195,13 +232,19 @@ func build_farm() -> void:
 	A.sphere(self,scare+Vector3(0,1.95,0),Vector3(0.5,0.5,0.5),Color("ddb77d"))
 	L.cylinder(self,scare+Vector3(0,2.15,0),0.43,0.13,Color("b8864e"))
 	A.box(self,scare+Vector3(0,1.5,0),Vector3(0.55,0.6,0.3),Color("6f94a0"))
-	var stall := Node3D.new()
-	add_child(stall)
-	stall.position=point(Vector2(-17,-0.9))
-	A.box(stall,Vector3(0,0.7,0),Vector3(2.7,1.4,1.2),Color("c39262"),true)
-	for x in [-1.3,1.3]: A.box(stall,Vector3(x,1.5,0),Vector3(0.1,3,0.12),Color("876643"))
-	for i in 7: A.box(stall,Vector3(-1.5+i*0.5,2.8,0),Vector3(0.5,0.18,2.1),Color("e6d3a0") if i%2 else Color("759479"))
-	for i in 4: L.pot(stall,Vector3(-0.9+i*0.6,1.4,0),false)
+	if not A.authored_prop(self,"res://assets/seed_shop.glb",point(Vector2(-13.8,-2.0)),4.7,4.4):
+		var stall := Node3D.new()
+		add_child(stall)
+		stall.position=point(Vector2(-17,-0.9))
+		A.box(stall,Vector3(0,0.7,0),Vector3(2.7,1.4,1.2),Color("c39262"),true)
+		for x in [-1.3,1.3]: A.box(stall,Vector3(x,1.5,0),Vector3(0.1,3,0.12),Color("876643"))
+		for i in 7: A.box(stall,Vector3(-1.5+i*0.5,2.8,0),Vector3(0.5,0.18,2.1),Color("e6d3a0") if i%2 else Color("759479"))
+		for i in 4: L.pot(stall,Vector3(-0.9+i*0.6,1.4,0),false)
+	else:
+		# The awning faces the path. Match the visible walls with a compact collider.
+		A.box(self,point(Vector2(-13.8,-2.8))+Vector3(0,1.25,0),Vector3(3.1,2.5,2.5),Color.WHITE,true).visible=false
+		path(Vector2(-17,0),Vector2(-14,0),1.65)
+		L.pot(self,point(Vector2(-16.1,.7)),true)
 	A.label3d(self,"햇살 텃밭 · 씨앗을 심고 물을 주세요",point(Vector2(-22,-11),3),Color("f2dfaa"))
 	var mill := point(Vector2(-30,-9))
 	L.cylinder(self,mill+Vector3(0,1.5,0),1.1,3,Color("d5c79d"),10,0.75)
@@ -226,6 +269,12 @@ func build_orchard() -> void:
 			leaf.rotation.z=sin(j)*0.5
 
 func build_beach() -> void:
+	A.authored_prop(self,"res://assets/fishing_shack.glb",point(Vector2(31.5,22.3)),4.2,4.4)
+	A.box(self,point(Vector2(31.5,21.8))+Vector3(0,1.1,0),Vector3(2.65,2.2,2.8),Color.WHITE,true).visible=false
+	if ResourceLoader.exists("res://assets/shore_rowboat.glb"):
+		var boat := (load("res://assets/shore_rowboat.glb") as PackedScene).instantiate() as Node3D
+		add_child(boat);boat.position=point(Vector2(31,28),.025);boat.rotation.y=-.38
+		A.box(boat,Vector3(0,.3,0),Vector3(1.15,.6,2.75),Color.WHITE,true).visible=false
 	# Walkable boardwalk ends at a visibly railed ocean casting point.
 	for i in 11: A.box(self,Vector3(26,-0.08,27+i*0.48),Vector3(2.6,0.16,0.45),Color("c4a883"),true)
 	for x in [24.6,27.4]: L.fence(self,Vector3(x,0,27),Vector3(x,0,32))

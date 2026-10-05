@@ -1,4 +1,4 @@
-param([switch]$Capture, [switch]$Night, [switch]$Packaged, [switch]$PortableServer, [switch]$EngineDiagnostics, [switch]$FullRun, [switch]$Combat, [switch]$Loss, [switch]$Expansion, [switch]$Village, [switch]$SkipServerTests, [string]$Region = 'forest', [string]$Difficulty = 'standard', [string]$Chapter = '')
+param([switch]$Capture, [switch]$Night, [switch]$Packaged, [switch]$Developer, [switch]$PortableServer, [switch]$EngineDiagnostics, [switch]$FullRun, [switch]$Combat, [switch]$Loss, [switch]$Expansion, [switch]$Village, [switch]$SkipServerTests, [string]$Region = 'forest', [string]$Difficulty = 'standard', [string]$Chapter = '', [string]$ClientScript = '', [string]$ClientPack = '')
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $taskRoot
@@ -18,7 +18,26 @@ if ($Packaged) {
     if ($Village) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Tripothon.pck'),'--script',(Join-Path $taskRoot 'game\tests\village_life.gd')) }
     if ($FullRun) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Tripothon.pck'),'--script',(Join-Path $taskRoot 'game\tests\seven_days.gd')) }
 }
+if ($ClientScript) {
+    if ($ClientScript -notmatch '^[a-z0-9_]+$') { throw 'ClientScript must be a test name without a path or extension.' }
+    $taskScript = Join-Path $taskRoot ('game\tests\' + $ClientScript + '.gd')
+    if (-not (Test-Path -LiteralPath $taskScript)) { throw 'Client test was not found.' }
+    $taskGameArguments = @('--path',(Join-Path $taskRoot 'game'),'--script',('res://tests/' + $ClientScript + '.gd'))
+    if ($Packaged) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Tripothon.pck'),'--script',$taskScript) }
+}
 if ($EngineDiagnostics) { $taskGameArguments = @('--verbose') + $taskGameArguments }
+if ($ClientPack) {
+    if (-not $Packaged) { throw 'ClientPack requires Packaged.' }
+    $taskSelectedPack = (Resolve-Path -LiteralPath $ClientPack).Path
+    $taskGameArguments = @($taskGameArguments | ForEach-Object {
+        if ($_ -eq (Join-Path $taskRoot 'builds\windows\Tripothon.pck')) { $taskSelectedPack } else { $_ }
+    })
+}
+if ($Packaged -and $Developer) {
+    $taskGameArguments = @($taskGameArguments | ForEach-Object {
+        if ($_ -eq (Join-Path $taskRoot 'builds\windows\Tripothon.pck')) { Join-Path $taskRoot 'builds\windows\Tripothon_Developer.pck' } else { $_ }
+    })
+}
 if ($Loss -and ($Combat -or $FullRun)) { throw 'Loss extends the standard integration test; run it without Combat/FullRun.' }
 if (-not $SkipServerTests) {
     & $taskPython -m pytest server/tests -q
@@ -48,6 +67,7 @@ try {
         if ($Night) { $taskArguments += '--night' }
         if ($Loss) { $taskArguments += '--loss' }
         if ($Chapter) { $taskArguments += ('--chapter=' + $Chapter) }
+        if ($Developer) { $taskArguments += '--developer' }
         $taskProcess = Start-Process -FilePath $taskGodot -ArgumentList $taskArguments -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput 'artifacts\integration-render.log' -RedirectStandardError 'artifacts\integration-render-error.log'
         Get-Content artifacts\integration-render.log
         Get-Content artifacts\integration-render-error.log
@@ -57,6 +77,7 @@ try {
         $taskArguments = @('--headless') + $taskGameArguments + @('--','--mute',('--region=' + $Region),('--difficulty=' + $Difficulty))
         if ($Loss) { $taskArguments += '--loss' }
         if ($Chapter) { $taskArguments += ('--chapter=' + $Chapter) }
+        if ($Developer) { $taskArguments += '--developer' }
         $taskProcess = Start-Process -FilePath $taskGodot -ArgumentList $taskArguments -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput 'artifacts\integration-headless.log' -RedirectStandardError 'artifacts\integration-headless-error.log'
         Get-Content artifacts\integration-headless.log
         Get-Content artifacts\integration-headless-error.log

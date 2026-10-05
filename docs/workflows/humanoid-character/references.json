@@ -1,0 +1,4948 @@
+{
+  "schema_version": "1.0",
+  "count": 388,
+  "references": [
+    {
+      "id": "reference-0445f1d507ed",
+      "target": "https://developers.tripo3d.ai/en/docs/generation-multiview-to-model/p",
+      "kind": "web",
+      "labels": [
+        "원본에서 사용한 멀티뷰 문서",
+        "공식 P2 API",
+        "공식 입력 규격",
+        "공식 문서",
+        "Tripo P2 멀티뷰 문서"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a6f6e35ff68e",
+      "target": "https://joseconseco.github.io/HairTool_3_Documentation/main_workflows/hair_from_surface.html",
+      "kind": "web",
+      "labels": [
+        "제작자 문서",
+        "입력 메시 조건",
+        "입력 조건과 예시"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a2407a8fc98a",
+      "target": "https://superhivemarket.com/products/faceit",
+      "kind": "web",
+      "labels": [
+        "Faceit 공식 판매처",
+        "공식 자료",
+        "공식 판매처",
+        "공식 판매 페이지"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-7b53df0a2d50",
+      "target": "https://magazine.reallusion.com/2025/06/30/free-accurig-versus-cc-advanced-accurig/amp/",
+      "kind": "web",
+      "labels": [
+        "Reallusion 비교 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b9e15e1c1289",
+      "target": "https://developers.tripo3d.ai/en/docs/generation-image-to-model/p",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c93d5559cb1d",
+      "target": "https://developers.tripo3d.ai/en/docs/generation-image-to-model/standard",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-537bb0a6abda",
+      "target": "https://www.tripo3d.ai/blog/tripo-studio-tutorial-english",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "Tripo Studio",
+        "Tripo 공식 Studio 튜토리얼",
+        "Tripo Studio Tutorial과 Segmentation"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-30f75c799560",
+      "target": "https://developers.tripo3d.ai/en/docs/animations-rig",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "Tripo 공식 API 문서"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cb5ca71f9457",
+      "target": "https://developers.tripo3d.ai/en/pricing",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "공식 요금표"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-10c38833207c",
+      "target": "https://www.blender.org/",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c4c314653aac",
+      "target": "https://docs.blender.org/manual/en/4.5/addons/rigging/rigify/index.html",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-44e6be1f5519",
+      "target": "https://extensions.blender.org/add-ons/mpfb/",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "MPFB 공식 배포"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d97eb0e6f988",
+      "target": "https://static.makehumancommunity.org/assets/assetpacks.html",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "공식 자산 팩과 라이선스",
+        "공식 자산 팩"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5c0ac7e9a13d",
+      "target": "https://bartoszstyperek.gumroad.com/l/hairtool?layout=profile&recommended_by=more_like_this",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "제작자 판매처",
+        "버전 안내"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-69b597bdd1fe",
+      "target": "https://docs.blender.org/manual/en/4.5/modeling/geometry_nodes/hair/generation/interpolate_hair_curves.html",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "공식 문서",
+        "Interpolate Hair Curves"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-57f44a3e4976",
+      "target": "https://dev.epicgames.com/documentation/en-us/unreal-engine/hair-card-generator-for-grooms-in-unreal-engine",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "공식 문서"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f3ed31576d0f",
+      "target": "https://www.sidefx.com/docs/houdini/shelf/groom_haircardgen.html",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "공식 문서"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-514ecff83bc4",
+      "target": "https://github.com/CGCookie/retopoflow",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "공식 저장소"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9ac71e662120",
+      "target": "https://www.maxon.net/en/zbrush",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "ZBrush"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-db56e8ea0db8",
+      "target": "https://docs.faceform.com/Wrap/",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "Faceform Wrap"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-51209e2c8186",
+      "target": "https://www.reallusion.com/auto-rig/accurig/default.html",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "기능 비교"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-bde5b2f24e5d",
+      "target": "https://www.mixamo.com/",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0fb7c8e9b07d",
+      "target": "https://krita.org/en/download/",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "Krita 다운로드"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/ART_TOOLS_AND_VILLAGE_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-bb93cf422ec6",
+      "target": "https://github.com/RodZill4/material-maker",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-686cf537493c",
+      "target": "https://www.adobe.com/products/substance3d/apps/painter.html",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "Substance Painter 공식 페이지"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/ART_TOOLS_AND_VILLAGE_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5de65758fdc0",
+      "target": "https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b1c3d61efbb8",
+      "target": "https://github.com/cgtinker/BlendArMocap",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "원 제작자 코드"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-241519435d59",
+      "target": "https://github.com/DanielSWolf/rhubarb-lip-sync",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "공식 저장소",
+        "Rhubarb 설명"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-8a5aaa98ea91",
+      "target": "https://github.com/NVIDIA/Audio2Face-3D-SDK",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "Audio2Face 3D SDK",
+        "공식 SDK"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cc34a2f02e7e",
+      "target": "https://www.reallusion.com/character-creator/",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b8deb3bb3a2d",
+      "target": "https://www.reallusion.com/character-creator/headshot/",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "Character Creator 5 + Headshot 3"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3d523d45aac3",
+      "target": "https://www.reallusion.com/iclone/",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0e78c0efdd67",
+      "target": "https://magazine.reallusion.com/2026/07/30/accuface-2-grand-launch-professional-grade-facial-mocap-for-cc5-hd-characters/",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "AccuFACE 2 공식 발표"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0e48d5fe9906",
+      "target": "https://keentools.io/products/facebuilder-for-blender",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "공식 제품 안내",
+        "KeenTools FaceBuilder"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a442ed6640dd",
+      "target": "https://keentools.io/products/facetracker-for-blender",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "FaceTracker 현재 제품 안내"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-14a72f155d16",
+      "target": "https://vrm-addon-for-blender.info/en/",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5877010fabed",
+      "target": "https://github.com/GAP-LAB-CUHK-SZ/HairStep",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "HairStep",
+        "HairStep CVPR 2023",
+        "HairStep 공식 저장소"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-823159af24d9",
+      "target": "https://samsunglabs.github.io/NeuralHaircut/",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "Neural Haircut",
+        "Neural Haircut ICCV 2023"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-fab956f6c33b",
+      "target": "https://www.scenario.com/",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-78cafc8df407",
+      "target": "https://godotengine.org/",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-110511923a49",
+      "target": "https://unity.com/",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5df38c4591b4",
+      "target": "https://dev.epicgames.com/documentation/unreal-engine/ml-deformer-framework-in-unreal-engine?lang=en-US",
+      "kind": "web",
+      "labels": [
+        "공식 자료",
+        "공식 설명"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c37c1965a06f",
+      "target": "https://github.com/jpcy/xatlas",
+      "kind": "web",
+      "labels": [
+        "공식 자료"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ab298785b741",
+      "target": "https://cascadeur.com/plans",
+      "kind": "web",
+      "labels": [
+        "Cascadeur"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-91b7c9300784",
+      "target": "https://www.metahuman.com/license",
+      "kind": "web",
+      "labels": [
+        "MetaHuman Mesh to MetaHuman DNA Groom"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5c0fc3fbc1c7",
+      "target": "https://hyper3d.ai/",
+      "kind": "web",
+      "labels": [
+        "Hyper3D Rodin"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d42b584bb90f",
+      "target": "https://apps.apple.com/us/app/live-link-face/id1495370836",
+      "kind": "web",
+      "labels": [
+        "Live Link Face"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3c653049a741",
+      "target": "https://www.autodesk.com/products/flow-studio/overview",
+      "kind": "web",
+      "labels": [
+        "Wonder Dynamics Wonder Studio 및 Flow Studio"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e9c44f89ab09",
+      "target": "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md",
+      "kind": "local",
+      "labels": [
+        "보존한 자료집"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-692fc020d5ed",
+      "target": "https://www.youtube.com/watch?v=3nPGTjupIwE",
+      "kind": "web",
+      "labels": [
+        "Stefan From AI to Talking 3D Avatar",
+        "https://www.youtube.com/watch?v=3nPGTjupIwE",
+        "Stefan — From AI to Talking 3D Avatar"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-521785230ffc",
+      "target": "https://www.youtube.com/watch?v=5FaV2MqwWPA",
+      "kind": "web",
+      "labels": [
+        "블렌더걸 Mixamo Face rig",
+        "https://www.youtube.com/watch?v=5FaV2MqwWPA",
+        "블렌더걸 — Mixamo Face rig 얼굴 리깅"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-484b61f05933",
+      "target": "https://www.youtube.com/watch?v=KQ32KRYq6RA",
+      "kind": "web",
+      "labels": [
+        "CGDive Faceit Tutorial 1",
+        "CGDive Faceit 입문",
+        "CGDive — Faceit Tutorial 1",
+        "https://www.youtube.com/watch?v=KQ32KRYq6RA",
+        "CGDive — This addon automates Facial Animation, FACEIT Tut 1",
+        "This addon automates Facial Animation FACEIT Tut 1"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-6fa462b2ba0b",
+      "target": "https://www.youtube.com/watch?v=MnZzj8OUH_0",
+      "kind": "web",
+      "labels": [
+        "CGDive Faceit Tutorial 2",
+        "CGDive — Faceit Tutorial 2",
+        "FaceIt Tutorial 2 Body rigs and FaceIt mocap Blender"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c932c4284d81",
+      "target": "https://www.youtube.com/watch?v=_g277CtsnJk",
+      "kind": "web",
+      "labels": [
+        "Csaba Kiss Blender Facial Animation Faceit",
+        "Csaba Kiss",
+        "Csaba Kiss — Blender Facial Animation Faceit",
+        "Blender Facial Animation Faceit"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c8a3dc7ae135",
+      "target": "https://www.youtube.com/watch?v=uUqQw6VpFP8",
+      "kind": "web",
+      "labels": [
+        "夏森轄 평면에서 시작하는 얼굴 모델링",
+        "https://www.youtube.com/watch?v=uUqQw6VpFP8",
+        "夏森轄 — 평면에서 시작하는 얼굴 모델링"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-41d567af4e34",
+      "target": "https://www.youtube.com/watch?v=9OjS2rU-Jr0&t=2909s",
+      "kind": "web",
+      "labels": [
+        "CG Cookie RetopoFlow 얼굴 리토폴로지",
+        "CG Cookie — RetopoFlow 전체 제작 강의"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-21475af15796",
+      "target": "https://www.youtube.com/watch?v=cjZt0ICfutQ",
+      "kind": "web",
+      "labels": [
+        "Danny Mac stylized head ZBrush Part 1",
+        "Danny Mac 3D — How to sculpt a stylized head in ZBrush, Part 1"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-46b92951dbbe",
+      "target": "https://www.youtube.com/watch?v=_Tv_h7n3RuE",
+      "kind": "web",
+      "labels": [
+        "Grant Abbitt Stylized Face Details",
+        "Grant Abbitt — Sculpting a Stylized Face, Part 2: The Details"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ffb2437ef361",
+      "target": "https://www.youtube.com/watch?v=tETtRwCnLyg",
+      "kind": "web",
+      "labels": [
+        "KeenTools FaceBuilder 튜토리얼",
+        "KeenTools — 공식 FaceBuilder 튜토리얼"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d5dd4a8679dc",
+      "target": "https://www.youtube.com/watch?v=Etztivmjny4",
+      "kind": "web",
+      "labels": [
+        "NVIDIA Audio2Face Blender Part 1",
+        "Part 1",
+        "NVIDIA Audio2Face Part 1",
+        "Audio2Face and Blender Part 1 Generating Facial Shape Keys"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-fbb65bfbae9f",
+      "target": "https://www.youtube.com/watch?v=TIkpVjKEkvY",
+      "kind": "web",
+      "labels": [
+        "Part 2",
+        "Audio2Face and Blender Part 2 Loading AI Generated Lip Sync Clips"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-afbd0078aed1",
+      "target": "https://www.youtube.com/watch?v=pji6IHNCnAk",
+      "kind": "web",
+      "labels": [
+        "cg tinker BlendArMocap",
+        "BlendArMocap AR Pose Hand Face Detection in Blender Beta Release"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f6783b3d38f0",
+      "target": "https://www.youtube.com/watch?v=U9G2VlG9HbA",
+      "kind": "web",
+      "labels": [
+        "개선 릴리스",
+        "개선 릴리스 영상"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3fbba38847e0",
+      "target": "https://www.youtube.com/watch?v=fiiuYBCZF20",
+      "kind": "web",
+      "labels": [
+        "AccuFACE 2 공식",
+        "AccuFACE 2 공식 강의",
+        "Getting Started with AccuFACE 2 iClone 8 Tutorial"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a8a3b86f71ab",
+      "target": "https://www.youtube.com/watch?v=dFdzR48MkXU",
+      "kind": "web",
+      "labels": [
+        "이전 입문",
+        "이전 입문 영상 · 03:44 영상 입력 · 07:44 스무딩 · 08:13 노이즈 제거"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-1bf2388fe066",
+      "target": "https://www.youtube.com/watch?v=OSZuiGmc-ig",
+      "kind": "web",
+      "labels": [
+        "PhiBix Digital Clone",
+        "PhiBix",
+        "Building a Realistic 3D Digital Clone"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3b0cd88c9e00",
+      "target": "https://www.youtube.com/watch?v=uK08MPGbKaQ",
+      "kind": "web",
+      "labels": [
+        "Headshot 3 Stylized CC5 Blender",
+        "Headshot 3·Blender 사례",
+        "Reallusion — Headshot 3 Stylized Image to 3D",
+        "Headshot 3 Stylized Image to 3D CC5 and Blender"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c5eb8455e080",
+      "target": "https://www.youtube.com/watch?v=Lc8w2aZ5Mwk",
+      "kind": "web",
+      "labels": [
+        "KeenTools FaceTracker",
+        "Facial Mocap and 3D Facial Animation in One FaceTracker for Blender Tutorial"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-36e063cce206",
+      "target": "https://www.youtube.com/watch?v=uEWQl8xw1ZA",
+      "kind": "web",
+      "labels": [
+        "기초 영상",
+        "기초 영상 · 02:09 얼굴 메시 · 07:20 추적 개선 · 09:52 내보내기"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2b99527b7444",
+      "target": "https://www.youtube.com/watch?v=UBjgJM6D18A",
+      "kind": "web",
+      "labels": [
+        "Stefan Dream Game AI Characters",
+        "Building My Dream Game With AI Characters and Animations",
+        "Stefan 캐릭터와 애니메이션 시연"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md",
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-634dd16768fb",
+      "target": "https://note.com/osushi_san/n/n0c2a7b88276f",
+      "kind": "web",
+      "labels": [
+        "Tripo P2 Astra Blender 제작 사례",
+        "Tripo P2.0 × Astra × Blender 캐릭터 제작 — お寿司職人"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5c20f50757af",
+      "target": "https://www.tripo3d.ai/blog/gpt-6-astra-3d-character-workflow",
+      "kind": "web",
+      "labels": [
+        "Tripo 공식 Astra Blender 캐릭터 워크플로우",
+        "Tripo 공식 — Astra와 Blender로 캐릭터 조립·리깅·표정 제작"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cccdc313edf3",
+      "target": "https://www.tripo3d.ai/blog/retopo-an-ai-character-model-for-animation",
+      "kind": "web",
+      "labels": [
+        "Tripo AI 캐릭터 리토폴로지",
+        "Tripo 공식 — AI 캐릭터 리토폴로지"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2169b1d9d0c1",
+      "target": "https://www.tripo3d.ai/blog/tripo-dcc-bridge-for-zbrush",
+      "kind": "web",
+      "labels": [
+        "Tripo ZBrush Bridge",
+        "Tripo 공식 — ZBrush Bridge 설치·사용"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d41119143537",
+      "target": "https://x.com/Dstudio_ai/status/2096475126942560677",
+      "kind": "web",
+      "labels": [
+        "Nano 캐릭터 제작 게시물",
+        "Nano의 캐릭터 제작 영상 게시물"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-bc80ddc88ea5",
+      "target": "https://faceit-doc.readthedocs.io/en/latest/geometry/",
+      "kind": "web",
+      "labels": [
+        "Faceit Geometry",
+        "Faceit 얼굴 메시 준비 문서"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-024ac8a42b40",
+      "target": "https://faceit-doc.readthedocs.io/en/latest/expressions/",
+      "kind": "web",
+      "labels": [
+        "Expressions",
+        "표정 편집 문서"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d38b8da06822",
+      "target": "https://faceit-doc.readthedocs.io/en/latest/bake/",
+      "kind": "web",
+      "labels": [
+        "Bake",
+        "베이크 문서"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a9ac171727c0",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/character__lesson-01-hints.txt",
+      "kind": "local",
+      "labels": [
+        "참조 이미지 힌트"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ea2a93f9e77e",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/character__3_sculpting.txt",
+      "kind": "local",
+      "labels": [
+        "Sculpting",
+        "Stefan 3강 Sculpting"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-562f7352c6c5",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/character__4_retopology_and_optimization.txt",
+      "kind": "local",
+      "labels": [
+        "Retopology"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e1ec559f3b75",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/character__8_rigging_and_weight.txt",
+      "kind": "local",
+      "labels": [
+        "Rigging and Weight",
+        "character__8_rigging_and_weight.txt"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c08781d65ed9",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/character__b3_tripo_smart_mesh_p2.txt",
+      "kind": "local",
+      "labels": [
+        "Tripo Smart Mesh P2",
+        "character__b3_tripo_smart_mesh_p2.txt"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-bdfce6aea0eb",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/character__b2_master_tripo_generation.txt",
+      "kind": "local",
+      "labels": [
+        "Tripo Generation 심화",
+        "Stefan — Tripo 생성 심화 강의 자막"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-45d4c939f735",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/character__b1_claude_in_blender.txt",
+      "kind": "local",
+      "labels": [
+        "Claude in Blender",
+        "character__b1_claude_in_blender.txt"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-720f4a5bae33",
+      "target": "https://www.learn3d.ai/",
+      "kind": "web",
+      "labels": [
+        "보유 수업 사이트",
+        "Tripo Smart Mesh P2 강의",
+        "Rigging and Weight 강의",
+        "Claude in Blender 강의"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d72ff09f2977",
+      "target": "artifact-index.json",
+      "kind": "local",
+      "labels": [
+        "artifact-index.json"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-50f2511c4cf2",
+      "target": "C:/lsm26/triphthonS1/art/source/explorer_b_v5.blend",
+      "kind": "local",
+      "labels": [
+        "explorer_b_v5.blend"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d8198ca85f41",
+      "target": "C:/lsm26/triphthonS1/art/source/explorer_b_parts_20261003.blend",
+      "kind": "local",
+      "labels": [
+        "explorer_b_parts_20261003.blend",
+        "부위별 캐릭터 원본"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-7e6a63caf8da",
+      "target": "C:/lsm26/triphthonS1/art/source/open_hand_rigged_20261003.blend",
+      "kind": "local",
+      "labels": [
+        "open_hand_rigged_20261003.blend"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5fe18dc4e081",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_hd_restart_v1/explorer_b_HD_parts_workbench.blend",
+      "kind": "local",
+      "labels": [
+        "HD parts workbench",
+        "통합 Blender 파일"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ce8fb12f2a24",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_structure_v1/explorer_b_HD_face_structure_trial.blend",
+      "kind": "local",
+      "labels": [
+        "HD face structure",
+        "Blender 작업본"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b9b70d487611",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_refined_v2/explorer_b_face_refined_v2.blend",
+      "kind": "local",
+      "labels": [
+        "face refined v2"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-05c0d92abc37",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2h/explorer_living_face_v2h.blend",
+      "kind": "local",
+      "labels": [
+        "manual v2h",
+        "수정된 Blender 파일"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-baed6a2c410d",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_pipeline_v3/01_template_test/mpfb_template_face_test.blend",
+      "kind": "local",
+      "labels": [
+        "template face test",
+        "mpfb_template_face_test.blend"
+      ],
+      "source_documents": [
+        "README.md",
+        "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-710e34e26aeb",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_pipeline_v3/02_clavicle_bust/explorer_b_clavicle_bust_v1.blend",
+      "kind": "local",
+      "labels": [
+        "clavicle bust",
+        "Blender 파일"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-776ad36f3274",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_hybrid_bust_v1/explorer_b_hybrid_bust_v1.blend",
+      "kind": "local",
+      "labels": [
+        "hybrid v1",
+        "Blender 파일"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-4dd8bb2a0a95",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_hybrid_bust_v2/explorer_b_hybrid_bust_v2.blend",
+      "kind": "local",
+      "labels": [
+        "hybrid v2",
+        "Blender 파일"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-641616a08c07",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_open_mouth_hd_v1/explorer_b_open_mouth_HD_workbench.blend",
+      "kind": "local",
+      "labels": [
+        "HD workbench",
+        "Blender 파일"
+      ],
+      "source_documents": [
+        "README.md",
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-1587530b8d5f",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_open_mouth_p2_v1/explorer_b_open_mouth_P2_workbench.blend",
+      "kind": "local",
+      "labels": [
+        "P2 workbench"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0be43b130f75",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_p2_closed_assembly_v1/explorer_b_P2_closed_assembly_v1.blend",
+      "kind": "local",
+      "labels": [
+        "P2 closed assembly"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-034833945c90",
+      "target": "workflow.json",
+      "kind": "local",
+      "labels": [
+        "workflow.json"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f4a5075d5927",
+      "target": "source-archive.md",
+      "kind": "local",
+      "labels": [
+        "source-archive.md"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b4dbd8330e2a",
+      "target": "source-archive.json",
+      "kind": "local",
+      "labels": [
+        "source-archive.json"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-804a54635c2c",
+      "target": "reference-documents",
+      "kind": "local",
+      "labels": [
+        "reference-documents"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-38954ca3e512",
+      "target": "https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html",
+      "kind": "web",
+      "labels": [
+        "Adobe FAQ"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9ba6209dc7b9",
+      "target": "https://www.vseeface.icu/",
+      "kind": "web",
+      "labels": [
+        "VSeeFace 공식"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9001bf97d1c4",
+      "target": "/C:/lsm26/triphthonS1/Play.cmd",
+      "kind": "local",
+      "labels": [
+        "실행하기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3953ec8aac0b",
+      "target": "/C:/lsm26/triphthonS1/README.md",
+      "kind": "local",
+      "labels": [
+        "실행 방법과 구현 범위"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-373cbb4bc267",
+      "target": "/C:/lsm26/triphthonS1/artifacts/Tripothon_Source_20261001.zip",
+      "kind": "local",
+      "labels": [
+        "소스 압축본",
+        "소스 ZIP"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a45a80af2dd9",
+      "target": "/C:/lsm26/triphthonS1/artifacts/village-online.png",
+      "kind": "local",
+      "labels": [
+        "구현한 마을 화면"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a93f52aa32d6",
+      "target": "C:/lsm26/triphthonS1/artifacts/Tripothon_Windows_Demo_20261001.zip",
+      "kind": "local",
+      "labels": [
+        "Windows 데모 다운로드"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-4bae893d6866",
+      "target": "C:/lsm26/triphthonS1/README.md",
+      "kind": "local",
+      "labels": [
+        "실행 안내와 변경 파일",
+        "실행 안내",
+        "README"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ac62582c1073",
+      "target": "C:/lsm26/triphthonS1/artifacts/Tripothon_Source_20261001.zip",
+      "kind": "local",
+      "labels": [
+        "전체 소스"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5bc17efc4dbe",
+      "target": "C:/lsm26/triphthonS1/docs/TEST_REPORT.md",
+      "kind": "local",
+      "labels": [
+        "검증 기록"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-73346ee6b40c",
+      "target": "C:/lsm26/triphthonS1/artifacts/village-online.png",
+      "kind": "local",
+      "labels": [
+        "마을 실행 화면"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2074535da51c",
+      "target": "C:/lsm26/triphthonS1/artifacts/scenario-cottage.png",
+      "kind": "local",
+      "labels": [
+        "Scenario 공방 생성 결과"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3bd41be399dc",
+      "target": "/C:/lsm26/triphthonS1/artifacts/wardrobe-customized.png",
+      "kind": "local",
+      "labels": [
+        "실제 게임의 캐릭터 커스터마이징"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-48d86f1902e3",
+      "target": "/C:/lsm26/triphthonS1/builds/Tripothon_Demo/StopServer.cmd",
+      "kind": "local",
+      "labels": [
+        "구버전 서버 종료"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-071a3a8c6087",
+      "target": "/C:/lsm26/triphthonS1/builds/Tripothon_Demo_06/Play.cmd",
+      "kind": "local",
+      "labels": [
+        "새 버전 Play.cmd"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3a29d3c5393c",
+      "target": "/C:/lsm26/triphthonS1/artifacts/Tripothon_Windows_Demo_20261001.zip",
+      "kind": "local",
+      "labels": [
+        "배포 ZIP"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f9edcddfd34f",
+      "target": "/C:/lsm26/triphthonS1/docs/TEST_REPORT.md",
+      "kind": "local",
+      "labels": [
+        "검증 기록"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-31bf9c4f85f3",
+      "target": "/C:/lsm26/triphthonS1/artifacts/scenario-parts-06.jpg",
+      "kind": "local",
+      "labels": [
+        "Scenario Tripo 부위 분리 확인"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c6d05af20d6d",
+      "target": "/C:/lsm26/triphthonS1/artifacts/town-overview-07.png",
+      "kind": "local",
+      "labels": [
+        "확장된 물결빛 마을"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-41081f04a3f0",
+      "target": "/C:/lsm26/triphthonS1/builds/Tripothon_Demo_07/Play.cmd",
+      "kind": "local",
+      "labels": [
+        "새 게임 실행"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-710652068213",
+      "target": "/C:/lsm26/triphthonS1/docs/VILLAGE.md",
+      "kind": "local",
+      "labels": [
+        "조작·구현 상세"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-6f07478a12c0",
+      "target": "/C:/lsm26/triphthonS1/artifacts/concepts/20261001/village-direction-a.png",
+      "kind": "local",
+      "labels": [
+        "마을 분위기·시점안"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-287e5d7c5979",
+      "target": "/C:/lsm26/triphthonS1/artifacts/concepts/20261001/buildings-proportions-a.png",
+      "kind": "local",
+      "labels": [
+        "건물 구조·캐릭터 비율안"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f775b39ff959",
+      "target": "/C:/lsm26/triphthonS1/artifacts/concepts/20261001/prompts-and-direction.json",
+      "kind": "local",
+      "labels": [
+        "생성 프롬프트·방향 기록"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d3bc9629328e",
+      "target": "/C:/lsm26/triphthonS1/artifacts/concepts/20261001/set-10/index.html",
+      "kind": "local",
+      "labels": [
+        "10장 모아보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-76888fc00b18",
+      "target": "/C:/lsm26/triphthonS1/artifacts/Tripothon_Concepts_10_20261001.zip",
+      "kind": "local",
+      "labels": [
+        "원본 10장 ZIP 다운로드"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-eb35e2dd9741",
+      "target": "/C:/lsm26/triphthonS1/artifacts/concepts/20261001/set-10/prompts.json",
+      "kind": "local",
+      "labels": [
+        "생성 프롬프트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a51a2a12970b",
+      "target": "C:/lsm26/triphthonS1/artifacts/concepts/20261001/variety-10/index.html",
+      "kind": "local",
+      "labels": [
+        "10장 비교 갤러리"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cc16ae2d5717",
+      "target": "C:/lsm26/triphthonS1/artifacts/Tripothon_Concepts_Diverse_10_20261001.zip",
+      "kind": "local",
+      "labels": [
+        "전체 이미지 ZIP"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-4a572a60f362",
+      "target": "C:/lsm26/triphthonS1/artifacts/concepts/20261001/variety-10/prompts.json",
+      "kind": "local",
+      "labels": [
+        "생성 프롬프트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a20b422fc313",
+      "target": "C:/lsm26/triphthonS1/artifacts/characters/explorer-b-v1/index.html",
+      "kind": "local",
+      "labels": [
+        "동영상 미리보기",
+        "동작별 재생 페이지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a305b2f3ce44",
+      "target": "C:/lsm26/triphthonS1/artifacts/characters/explorer-b-v1/explorer-b-custom.blend",
+      "kind": "local",
+      "labels": [
+        "Blender 편집 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-bfeaeb791863",
+      "target": "C:/lsm26/triphthonS1/artifacts/Tripothon_ExplorerB_OriginalMotion_20261001.zip",
+      "kind": "local",
+      "labels": [
+        "전체 다운로드"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2554cbffc56d",
+      "target": "C:/lsm26/triphthonS1/artifacts/characters/explorer-b-v1/B_Scout-1.png",
+      "kind": "local",
+      "labels": [
+        "B형 탐험가"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2542aecca572",
+      "target": "C:/lsm26/triphthonS1/artifacts/characters/explorer-b-v1/showcase.mp4",
+      "kind": "local",
+      "labels": [
+        "전용 애니메이션 미리보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a9df9ee9c83e",
+      "target": "C:/lsm26/triphthonS1/artifacts/characters/explorer-b-v1/explorer-b-custom.glb",
+      "kind": "local",
+      "labels": [
+        "애니메이션 포함 GLB"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-12a1f80931e4",
+      "target": "https://platform.tripo3d.ai/docs/billing",
+      "kind": "web",
+      "labels": [
+        "모델별 요금"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-04cbd1f5738f",
+      "target": "https://developers.tripo3d.ai/en/docs/generation-text-to-model/standard",
+      "kind": "web",
+      "labels": [
+        "생성 옵션"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d08c25dac1d0",
+      "target": "C:/lsm26/triphthonS1/artifacts/characters/explorer-b-tripo-walk/tripo-walk.mp4",
+      "kind": "local",
+      "labels": [
+        "Tripo 걷기 결과 — 3회 반복"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-20a7b4ac6a00",
+      "target": "C:/lsm26/triphthonS1/artifacts/characters/explorer-b-tripo-walk/Preview.cmd",
+      "kind": "local",
+      "labels": [
+        "테스트 실행"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-fd8644f7b1e9",
+      "target": "C:/lsm26/triphthonS1/artifacts/characters/explorer-b-tripo-walk/tripo-walk-original.glb",
+      "kind": "local",
+      "labels": [
+        "애니메이션 원본 GLB"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-25ee006d9416",
+      "target": "/C:/lsm26/triphthonS1/builds/Tripothon_Demo_081/Play.cmd",
+      "kind": "local",
+      "labels": [
+        "게임 실행"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-76f2d1d17f4e",
+      "target": "/C:/lsm26/triphthonS1/Open_Studio.cmd",
+      "kind": "local",
+      "labels": [
+        "실제 생성 가구 비교 공방"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-8d99d80ab3fc",
+      "target": "/C:/lsm26/triphthonS1/artifacts/review/index.html",
+      "kind": "local",
+      "labels": [
+        "영상·비용·모델 비교 전체 보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f50616da2683",
+      "target": "/C:/lsm26/triphthonS1/artifacts/Tripothon_Windows_Demo_20261002.zip",
+      "kind": "local",
+      "labels": [
+        "배포 ZIP"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-6fb43d133858",
+      "target": "/C:/lsm26/triphthonS1/artifacts/Tripothon_Source_20261002.zip",
+      "kind": "local",
+      "labels": [
+        "소스 ZIP"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-7359a067eebe",
+      "target": "C:/lsm26/triphthonS1/artifacts/picture-furniture-20261002/public/comparison.mp4",
+      "kind": "local",
+      "labels": [
+        "그림 입력 가구 비교 영상"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-adba732d9ad5",
+      "target": "http://127.0.0.1:8788/picture-experiment/",
+      "kind": "web",
+      "labels": [
+        "전체 결과·모델·effort·비용 보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-71e9fd7e3549",
+      "target": "C:/lsm26/triphthonS1/artifacts/review/picture-experiment/specs.csv",
+      "kind": "local",
+      "labels": [
+        "명세 CSV"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5d13c51f5cbd",
+      "target": "C:/lsm26/triphthonS1/game/scripts/main.gd",
+      "kind": "local",
+      "labels": [
+        "게임 화면·카메라"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ad74bf02b959",
+      "target": "C:/lsm26/triphthonS1/game/scripts/studio.gd",
+      "kind": "local",
+      "labels": [
+        "가구 배치 UI"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c7ae91443c17",
+      "target": "C:/lsm26/triphthonS1/game/scripts/town.gd",
+      "kind": "local",
+      "labels": [
+        "마을 구성"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0534b247e33b",
+      "target": "C:/lsm26/triphthonS1/tools/build_haeru.py",
+      "kind": "local",
+      "labels": [
+        "해루 제작 도구"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-696b66741926",
+      "target": "C:/lsm26/triphthonS1/artifacts/content-placement.png",
+      "kind": "local",
+      "labels": [
+        "집 내부와 가구 배치 화면"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a7eff4664471",
+      "target": "http://127.0.0.1:8841/tripothon-roadmap.html",
+      "kind": "web",
+      "labels": [
+        "기존 탭을 게임 기획도 버전으로 바꿨습니다"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ab0825a87477",
+      "target": "C:/Users/dd/.codex/visualizations/2026/09/30/01a0f276-190b-72b3-bbcb-8277fd264084/game-planning-preview.png",
+      "kind": "local",
+      "labels": [
+        "마을 동선 기획도"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0840714f8297",
+      "target": "https://github.com/NormalMan0228/tripo_s1/pull/1",
+      "kind": "web",
+      "labels": [
+        "PR #1"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-4157b80de91a",
+      "target": "/C:/lsm26/triphthonS1/builds/Tripothon_Baseline_091/Play.cmd",
+      "kind": "local",
+      "labels": [
+        "플레이어용 로컬 데모"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f5d6a9c8e29f",
+      "target": "/C:/lsm26/triphthonS1/builds/Tripothon_Baseline_091/Play_Developer.cmd",
+      "kind": "local",
+      "labels": [
+        "개발용 로컬 데모"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b29151ce4300",
+      "target": "/C:/lsm26/triphthonS1/docs/BASELINE_091.md",
+      "kind": "local",
+      "labels": [
+        "변경 파일·실행 방법·검증 기록"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-89a79f8d285c",
+      "target": "https://docs.cloud.google.com/compute/docs/general-purpose-machines#shared-core_vms",
+      "kind": "web",
+      "labels": [
+        "Google E2 사양",
+        "Google 공식 설명"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5542a69f24ed",
+      "target": "https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-a/instances/tripothon-demo?project=praxis-dolphin-467814-i6",
+      "kind": "web",
+      "labels": [
+        "Google Cloud 서버 상세 페이지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5a274bf76e25",
+      "target": "C:/lsm26/triphthonS1/builds/Tripothon_Baseline_092/Play.cmd",
+      "kind": "local",
+      "labels": [
+        "플레이용 실행"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2b5481ace7a0",
+      "target": "C:/lsm26/triphthonS1/builds/Tripothon_Baseline_092/Play_Developer.cmd",
+      "kind": "local",
+      "labels": [
+        "개발용 실행"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-076276a3be9f",
+      "target": "C:/lsm26/triphthonS1/docs/CONTROLLER_092.md",
+      "kind": "local",
+      "labels": [
+        "변경·검증 보고서",
+        "컨트롤러 기록",
+        "본 게임의 확인된 범위",
+        "CONTROLLER_092"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ff19e40d9a52",
+      "target": "C:/lsm26/triphthonS1/docs/media/controller-motion-092.mp4",
+      "kind": "local",
+      "labels": [
+        "이동 애니메이션 영상"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-530cc0810f63",
+      "target": "https://docs.worldlabs.ai/marble/export/gaussian-splat",
+      "kind": "web",
+      "labels": [
+        "공식 내보내기 안내"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-bd7649b167e9",
+      "target": "https://docs.platform.pixverse.ai/pixverse-api-llm-txt-2109771m0",
+      "kind": "web",
+      "labels": [
+        "공식 기능 안내"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f2e2508cbcd9",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/Tripothon_Stefan_Review.txt",
+      "kind": "local",
+      "labels": [
+        "자료 검토·제작 적용안"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f7a078634524",
+      "target": "/C:/lsm26/triphthonS1/docs/AI_CHARACTER_DETAIL_REFERENCES_20261003.md",
+      "kind": "local",
+      "labels": [
+        "문서로 저장했습니다"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5815542e2041",
+      "target": "/C:/lsm26/triphthonS1/artifacts/stefan-study/character__b3_tripo_smart_mesh_p2.txt",
+      "kind": "local",
+      "labels": [
+        "Stefan P2 강의 — 보유 자막"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-991c0208705d",
+      "target": "https://faceit-doc.readthedocs.io/en/latest/",
+      "kind": "web",
+      "labels": [
+        "Faceit 공식 문서",
+        "버전 비교",
+        "공식 설명"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-7b478f35feab",
+      "target": "/C:/lsm26/triphthonS1/artifacts/character-detail-research-20261003/guide-preview.png",
+      "kind": "local",
+      "labels": [
+        "자료집 미리보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-10a252e4ab93",
+      "target": "http://127.0.0.1:8842/art-slice.html",
+      "kind": "web",
+      "labels": [
+        "실제 영상·결과 페이지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d18414d80bef",
+      "target": "/C:/lsm26/triphthonS1/docs/ART_TOOLS_AND_VILLAGE_20261003.md",
+      "kind": "local",
+      "labels": [
+        "상세 문서"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-8da100f824c8",
+      "target": "/C:/lsm26/triphthonS1/artifacts/detail-map-20261003/Tripothon_Art_Slice_20261003.zip",
+      "kind": "local",
+      "labels": [
+        "프로젝트·편집 원본 ZIP"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-27e9b88293d8",
+      "target": "/C:/lsm26/triphthonS1/Village_Art_Lab.cmd",
+      "kind": "local",
+      "labels": [
+        "Village_Art_Lab.cmd"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-15a63cc1f886",
+      "target": "/C:/lsm26/triphthonS1/artifacts/detail-map-20261003/report-proof.png",
+      "kind": "local",
+      "labels": [
+        "실제 결과 페이지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-dfbde6a241a8",
+      "target": "http://127.0.0.1:8842/master-handoff/index.html",
+      "kind": "web",
+      "labels": [
+        "통합 문서 열기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ce96cf2a6341",
+      "target": "C:/lsm26/triphthonS1/docs/TRIPOTHON_MASTER_HANDOFF_20261003.md",
+      "kind": "local",
+      "labels": [
+        "편집 가능한 원본",
+        "10월 3일 통합 인계 문서"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-fa0816c120e3",
+      "target": "C:/lsm26/triphthonS1/artifacts/production-lab-20261003/review/Tripothon_Master_Handoff_20261003.zip",
+      "kind": "local",
+      "labels": [
+        "문서·참고 자료·영상 오프라인 묶음"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b823560c9c37",
+      "target": "C:/lsm26/triphthonS1/artifacts/master-handoff-20261003/document-preview.png",
+      "kind": "local",
+      "labels": [
+        "문서 미리보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-7e8bd2beb072",
+      "target": "C:/lsm26/triphthonS1/artifacts/video-motion-20261003/explorer_video_motions.blend",
+      "kind": "local",
+      "labels": [
+        "캐릭터 Blender 원본"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9a78feba8e9d",
+      "target": "C:/lsm26/triphthonS1/artifacts/video-motion-20261003/explorer_mesh_review.blend",
+      "kind": "local",
+      "labels": [
+        "확인용 Blender 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c901def26943",
+      "target": "C:/lsm26/triphthonS1/artifacts/video-motion-20261003/explorer_mesh_review.png",
+      "kind": "local",
+      "labels": [
+        "캐릭터 메시 확인"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0a2d3bbee170",
+      "target": "C:/lsm26/triphthonS1/artifacts/video-motion-20261003/explorer_mesh_edit.blend",
+      "kind": "local",
+      "labels": [
+        "선택·편집 가능한 Blender 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-34538146f046",
+      "target": "http://127.0.0.1:8842/master-handoff/references/docs--CHARACTER_ANIMATION_WORKFLOW_20261003.html",
+      "kind": "web",
+      "labels": [
+        "제작 과정 문서 열기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-4e5a15b8beb5",
+      "target": "C:/lsm26/triphthonS1/docs/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+      "kind": "local",
+      "labels": [
+        "편집 가능한 원본",
+        "현재 생성·애니메이션 실험 기록",
+        "기존 생성·애니메이션 실험 기록"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.md",
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3834d67c4162",
+      "target": "http://127.0.0.1:8842/master-handoff/references/docs--CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.html",
+      "kind": "web",
+      "labels": [
+        "제작 기준과 완료 조건 보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-025a5106ba29",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/01_design/explorer_b_turnaround_v1.png",
+      "kind": "local",
+      "labels": [
+        "B형 탐험가 전신 원안 v1",
+        "원본 이미지",
+        "B형 탐험가 전신 2D 원안 v1: 정면·우측면·후면"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a8ed5150af4d",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_modular_v1/03_generated/review_images/01_head.png",
+      "kind": "local",
+      "labels": [
+        "머리"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3da423250678",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_modular_v1/03_generated/review_images/02_body.png",
+      "kind": "local",
+      "labels": [
+        "몸"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-506c1d61ea49",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_modular_v1/03_generated/review_images/03_hand.png",
+      "kind": "local",
+      "labels": [
+        "손"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-72ea02081300",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_modular_v1/03_generated/review_images/04_hair.png",
+      "kind": "local",
+      "labels": [
+        "헤어"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e199ade69b6d",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_modular_v1/03_generated/review_images/05_jacket.png",
+      "kind": "local",
+      "labels": [
+        "재킷"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c900e825ac6e",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_modular_v1/03_generated/review_images/06_shirt.png",
+      "kind": "local",
+      "labels": [
+        "셔츠"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-90a673dfd793",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_modular_v1/03_generated/review_images/07_pants.png",
+      "kind": "local",
+      "labels": [
+        "바지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0250894df4fa",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_modular_v1/03_generated/review_images/08_boots.png",
+      "kind": "local",
+      "labels": [
+        "부츠"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-442132b89a3e",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_modular_v1/03_generated/review_images/09_belt.png",
+      "kind": "local",
+      "labels": [
+        "벨트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9718b675bbff",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_modular_v1/Tripothon_B_3D_Parts_20261004.zip",
+      "kind": "local",
+      "labels": [
+        "전체 결과 다운로드 — 개별 GLB·Blender 파일·검수 이미지, 약 191MB"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9969e8a6e3c1",
+      "target": "https://learn3dai.teachable.com/l/dashboard",
+      "kind": "web",
+      "labels": [
+        "https://learn3dai.teachable.com/l/dashboard"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9617a1e7a341",
+      "target": "C:/lsm26/triphthonS1/docs/stefan-course-review-20261004/index.html",
+      "kind": "local",
+      "labels": [
+        "문서로 저장",
+        "검토 문서"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-7051ec56cd32",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-course-audit-20261004/previews/review-page.jpg",
+      "kind": "local",
+      "labels": [
+        "검토 문서"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3a328295fd4b",
+      "target": "C:/lsm26/triphthonS1/docs/stefan-course-review-20261004/index.html#supplement",
+      "kind": "local",
+      "labels": [
+        "검토 문서"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e25986b31cd9",
+      "target": "http://127.0.0.1:8842/character-p2-parts/",
+      "kind": "web",
+      "labels": [
+        "검토 페이지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a7cdeb577ef3",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_fullbody_v2/04_replacement_parts_p2/review-page.jpg",
+      "kind": "local",
+      "labels": [
+        "P2 독립 부품 결과"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f7aa1488bd5f",
+      "target": "https://learn3dai.teachable.com/courses/ai-x-3d/lectures/65393569",
+      "kind": "web",
+      "labels": [
+        "스컬프팅 강의"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-8c75afe49489",
+      "target": "/C:/lsm26/triphthonS1/docs/stefan-course-review-20261004/index.html",
+      "kind": "local",
+      "labels": [
+        "기존 검토 문서",
+        "검토 문서"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a8935a275cd4",
+      "target": "http://127.0.0.1:8842/character-sculpt-trial/",
+      "kind": "web",
+      "labels": [
+        "검토 탭"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2cf2da534cd9",
+      "target": "/C:/lsm26/triphthonS1/art/characters/explorer_b_fullbody_v2/05_sculpt_trial/03_sculpt_candidate.blend",
+      "kind": "local",
+      "labels": [
+        "Blender 결과 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5e6fd1dedbe1",
+      "target": "/C:/lsm26/triphthonS1/art/characters/explorer_b_fullbody_v2/05_sculpt_trial/review-page.png",
+      "kind": "local",
+      "labels": [
+        "실제 수정 전후 비교"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f3bf992ce87a",
+      "target": "/C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/final_images",
+      "kind": "local",
+      "labels": [
+        "최종 부위별 이미지 9장"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-8a1ea2a0be4a",
+      "target": "/C:/lsm26/triphthonS1/art/references/explorer_b_fullbody_v2",
+      "kind": "local",
+      "labels": [
+        "최신 전신 정면·후면 이미지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-70d46946cb6f",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_fullbody_v2/06_textured_parts/explorer_b_textured_parts_workbench.blend",
+      "kind": "local",
+      "labels": [
+        "Blender 작업 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a408c83d1099",
+      "target": "C:/lsm26/triphthonS1/Character_Textured_Parts_Blender.cmd",
+      "kind": "local",
+      "labels": [
+        "다시 열기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-809156f08f36",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_fullbody_v2/06_textured_parts/workbench-preview.png",
+      "kind": "local",
+      "labels": [
+        "실제 텍스처 적용 메쉬"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-44a71047c2c7",
+      "target": "http://127.0.0.1:8842/character-hd-restart/",
+      "kind": "web",
+      "labels": [
+        "7개 파츠 검토 페이지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-874dce44e837",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_hd_restart_v1/head/preview-front.png",
+      "kind": "local",
+      "labels": [
+        "HD 머리 실제 결과"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-22ac1ce7d369",
+      "target": "C:/lsm26/triphthonS1/docs/AI_CHARACTER_DETAIL_REFERENCES_20261003.md",
+      "kind": "local",
+      "labels": [
+        "AI 캐릭터 세부 제작 자료집",
+        "Stefan 강의 자료",
+        "얼굴과 머리카락 제작 참고 자료",
+        "캐릭터 세부 제작 영상과 문서 목록",
+        "Stefan 강의 검토 기록"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b87bba319591",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/character__lesson-01-hints.txt:120",
+      "kind": "local",
+      "labels": [
+        "Stefan 1강 힌트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e12b959126c2",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/character__4_retopology_and_optimization.txt:143",
+      "kind": "local",
+      "labels": [
+        "Stefan 4강 Retopology"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-1cb565c4c0c8",
+      "target": "https://addons.cgdive.com/tools/faceit",
+      "kind": "web",
+      "labels": [
+        "제작자의 강의 안내",
+        "Faceit 안내",
+        "제작자 자료 페이지",
+        "CGDive의 Faceit 자료 모음"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-acaeb413673c",
+      "target": "https://faceit-doc.readthedocs.io/en/latest/getting_started/",
+      "kind": "web",
+      "labels": [
+        "Faceit 공식 시작 문서",
+        "Faceit",
+        "Faceit 시작 문서"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-17820b3f136a",
+      "target": "https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker",
+      "kind": "web",
+      "labels": [
+        "MediaPipe 공식 문서",
+        "MediaPipe 공식 가이드",
+        "MediaPipe 얼굴 추적 공식 가이드"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f8af647f1dc0",
+      "target": "C:/lsm26/triphthonS1/docs/ART_TOOLS_AND_VILLAGE_20261003.md:52",
+      "kind": "local",
+      "labels": [
+        "기존 작업 기록"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-1e33e9f58ffb",
+      "target": "https://docs.retopoflow.com/",
+      "kind": "web",
+      "labels": [
+        "RetopoFlow",
+        "RetopoFlow 강의 안내"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-296ff76f2f98",
+      "target": "https://keentools.io/download/facebuilder-for-blender",
+      "kind": "web",
+      "labels": [
+        "FaceBuilder 안내",
+        "공식 안내"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-975d55c7186d",
+      "target": "https://magazine.reallusion.com/2026/06/26/headshot-3-stylized-image-to-3d-building-a-bodybuilder-caricature-in-cc5-and-blender/",
+      "kind": "web",
+      "labels": [
+        "제작 과정 설명",
+        "Headshot 제작 설명",
+        "제작 과정과 수동 보정 설명"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-02adaf5646b2",
+      "target": "http://127.0.0.1:8842/character-face-structure/",
+      "kind": "web",
+      "labels": [
+        "검토 페이지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c1546a7c3ece",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_structure_v1/face-angle.png",
+      "kind": "local",
+      "labels": [
+        "실제 Blender 근접 렌더"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e0e74794aec4",
+      "target": "https://www.youtube.com/watch?v=3nPGTjupIwE&t=70s",
+      "kind": "web",
+      "labels": [
+        "1:10~1:44"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-25013631f4b0",
+      "target": "https://www.youtube.com/watch?v=3nPGTjupIwE&t=208s",
+      "kind": "web",
+      "labels": [
+        "3:28~6:20"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5d1d7c9a36be",
+      "target": "https://www.youtube.com/watch?v=3nPGTjupIwE&t=420s",
+      "kind": "web",
+      "labels": [
+        "7:00~9:47"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-885164ae8961",
+      "target": "https://www.youtube.com/watch?v=3nPGTjupIwE&t=589s",
+      "kind": "web",
+      "labels": [
+        "9:49~11:47"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f840dad82d37",
+      "target": "https://www.youtube.com/watch?v=3nPGTjupIwE&t=710s",
+      "kind": "web",
+      "labels": [
+        "11:50~13:08"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b12d9b3347bf",
+      "target": "https://www.youtube.com/watch?v=3nPGTjupIwE&t=789s",
+      "kind": "web",
+      "labels": [
+        "13:09~17:12"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-bed954be9dd2",
+      "target": "https://www.youtube.com/watch?v=3nPGTjupIwE&t=1034s",
+      "kind": "web",
+      "labels": [
+        "17:14~19:25"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a98b800b8d85",
+      "target": "https://www.youtube.com/watch?v=3nPGTjupIwE&t=1172s",
+      "kind": "web",
+      "labels": [
+        "19:32~24:49"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0ac7a4371cd6",
+      "target": "https://docs.blender.org/manual/en/4.5/animation/shape_keys/introduction.html",
+      "kind": "web",
+      "labels": [
+        "Blender 문서"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0d3368993315",
+      "target": "https://www.youtube.com/watch?v=uUqQw6VpFP8&t=1523s",
+      "kind": "web",
+      "labels": [
+        "25:23부터"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2ee9d3fac2b4",
+      "target": "https://www.youtube.com/watch?v=uUqQw6VpFP8&t=2898s",
+      "kind": "web",
+      "labels": [
+        "48:18부터"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-57e06e20fde3",
+      "target": "https://www.youtube.com/watch?v=KQ32KRYq6RA&t=679s",
+      "kind": "web",
+      "labels": [
+        "11:19~20:32"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a3d78348ac24",
+      "target": "https://www.youtube.com/watch?v=KQ32KRYq6RA&t=1239s",
+      "kind": "web",
+      "labels": [
+        "20:39~26:57"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9181471ee271",
+      "target": "https://www.youtube.com/watch?v=KQ32KRYq6RA&t=1822s",
+      "kind": "web",
+      "labels": [
+        "30:22~33:58"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-923691c09629",
+      "target": "https://www.youtube.com/watch?v=KQ32KRYq6RA&t=2041s",
+      "kind": "web",
+      "labels": [
+        "34:01~41:39"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-159e0741b5d2",
+      "target": "https://www.youtube.com/watch?v=KQ32KRYq6RA&t=2503s",
+      "kind": "web",
+      "labels": [
+        "41:43~44:07"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d979169c2400",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_faceit_comparison_v1/01_head_front_open_mouth.png",
+      "kind": "local",
+      "labels": [
+        "이미지 원본"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-73cc4b6dec30",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_faceit_comparison_v1/generation-prompt.txt",
+      "kind": "local",
+      "labels": [
+        "생성 프롬프트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cb89db785da9",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_faceit_comparison_v1/02_bust_front_open_mouth.png",
+      "kind": "local",
+      "labels": [
+        "이미지 원본"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a3c961c5a5cb",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_faceit_comparison_v1/02_bust-prompt.txt",
+      "kind": "local",
+      "labels": [
+        "생성 프롬프트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-35ae7353093b",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_faceit_comparison_v1/03_head_neck_clavicle.png",
+      "kind": "local",
+      "labels": [
+        "이미지 원본"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-54f80815fed9",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_faceit_comparison_v1/03_head_neck_clavicle-prompt.txt",
+      "kind": "local",
+      "labels": [
+        "생성 프롬프트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9caaf610aa11",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_faceit_comparison_v1/04_hair_front.png",
+      "kind": "local",
+      "labels": [
+        "이미지 원본"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-bb2e5c94ff30",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_faceit_comparison_v1/04_hair-prompt.txt",
+      "kind": "local",
+      "labels": [
+        "생성 프롬프트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ec133a32101d",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/head/preview-angle.png",
+      "kind": "local",
+      "labels": [
+        "얼굴·목 메쉬"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f712d4c08657",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/hair/preview-front.png",
+      "kind": "local",
+      "labels": [
+        "머리카락 메쉬"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-edc77602caa9",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/head/review.blend",
+      "kind": "local",
+      "labels": [
+        "얼굴·목"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2a50a8b45738",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/hair/review.blend",
+      "kind": "local",
+      "labels": [
+        "머리카락"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-99e487035b65",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/explorer_b_P2_head_hair_workbench.blend",
+      "kind": "local",
+      "labels": [
+        "Blender 작업 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-612582a73084",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/explorer_b_P2_head_hair_v2_workbench.blend",
+      "kind": "local",
+      "labels": [
+        "새 Blender 작업 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f0ae1ecada03",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/hair_v3/fit-angle.png",
+      "kind": "local",
+      "labels": [
+        "실제 모델 임시 조립"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-55e1a236ed70",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/hair_v3/preview-inside.png",
+      "kind": "local",
+      "labels": [
+        "내부 검수 이미지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-91f003d44159",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/hair_v3/head_hair_v3_fit_review.blend",
+      "kind": "local",
+      "labels": [
+        "블렌더 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-603df2ca1d77",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_hair_multiview_v3/prompts.json",
+      "kind": "local",
+      "labels": [
+        "프롬프트 기록"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-207abebe9c5f",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/hair_v3_cleanup/character_face_preparation.blend",
+      "kind": "local",
+      "labels": [
+        "수정된 블렌더 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-adb44e817a92",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/hair_v3_cleanup_v2/inside.png",
+      "kind": "local",
+      "labels": [
+        "돌출부 제거 후 내부"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-384384f1c3c4",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/hair_v3_cleanup_v2/character_face_preparation_v2.blend",
+      "kind": "local",
+      "labels": [
+        "수정된 블렌더 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0d29ac952235",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/hair_v3_nape_locks_v2/back-angle.png",
+      "kind": "local",
+      "labels": [
+        "속머리 수정 결과"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-18ffd677e77d",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_faceit_comparison_p2_v1/hair_v3_nape_locks_v2/character_nape_hair_locks.blend",
+      "kind": "local",
+      "labels": [
+        "블렌더 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b61c11b73ceb",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v1/manual-face-rig-preview.mp4",
+      "kind": "local",
+      "labels": [
+        "페이스 리깅 테스트 영상"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d4fafc7b67c0",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v1/explorer_manual_face_rig.blend",
+      "kind": "local",
+      "labels": [
+        "편집 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c4f0808bb189",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v1/사용안내.txt",
+      "kind": "local",
+      "labels": [
+        "컨트롤 사용 안내"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9045fcacef12",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2b/profile-after.png",
+      "kind": "local",
+      "labels": [
+        "수정한 옆모습"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cf512c81562b",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2b/eye-side-after.png",
+      "kind": "local",
+      "labels": [
+        "눈 옆면 확대"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-080c1e849359",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2b/front-after.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-40c84d4238b8",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2b/explorer_profile_eye_v2b.blend",
+      "kind": "local",
+      "labels": [
+        "Blender 파일"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-12beb8535979",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2d/neutral.png",
+      "kind": "local",
+      "labels": [
+        "수정한 기본 표정"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d5a01d1917b2",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2d/explorer_expression_v2d.blend",
+      "kind": "local",
+      "labels": [
+        "Blender 수정본"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-35792acf7c1d",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2e/explorer_face_contours_v2e.blend",
+      "kind": "local",
+      "labels": [
+        "수정본을 Blender에 열었습니다."
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f2a2da80de50",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2e/blink-inspection.mp4",
+      "kind": "local",
+      "labels": [
+        "깜빡임 확인 영상—검수를 위해 머리카락만 숨김"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-1fd5cf09634a",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2g/explorer_clean_eyes_v2g.blend",
+      "kind": "local",
+      "labels": [
+        "수정본을 Blender에 열었습니다."
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b51b45aa3a9d",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2g/eye-neutral-front.png",
+      "kind": "local",
+      "labels": [
+        "수정한 눈 주변"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cd62af872079",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_face_rig_manual_v2h/face-idle-12s.mp4",
+      "kind": "local",
+      "labels": [
+        "12초 애니메이션 미리보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-446f94e50a59",
+      "target": "https://static.makehumancommunity.org/mpfb/releases/release_2016.html",
+      "kind": "web",
+      "labels": [
+        "공식 설명",
+        "MPFB 표정 기능"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e94e0c7db571",
+      "target": "https://docs.blender.org/manual/en/5.1/addons/rigging/rigify/rig_types/face.html",
+      "kind": "web",
+      "labels": [
+        "얼굴 리그 기능"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5ef17e3a3661",
+      "target": "https://github.com/NVIDIA/Audio2Face-3D",
+      "kind": "web",
+      "labels": [
+        "공식 프로젝트",
+        "현재 Audio2Face 3D 저장소"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-19ecae00a848",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_pipeline_v3/pipeline.json",
+      "kind": "local",
+      "labels": [
+        "새 파이프라인 정의",
+        "최신 캐릭터 파이프라인 상태",
+        "새 제작 파이프라인 명세",
+        "새 파이프라인 명세와 출처 목록",
+        "pipeline.json"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f3aab2e9809c",
+      "target": "http://127.0.0.1:8842/project-overview/index.html",
+      "kind": "web",
+      "labels": [
+        "안내서 보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b8f2574d30ba",
+      "target": "C:/lsm26/triphthonS1/docs/TRIPOTHON_OVERVIEW_20261004.md",
+      "kind": "local",
+      "labels": [
+        "편집 가능한 원본"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b9541aa4dcb3",
+      "target": "C:/lsm26/triphthonS1/artifacts/production-lab-20261003/review/project-overview/preview.png",
+      "kind": "local",
+      "labels": [
+        "안내서 미리보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-05cbb399a97e",
+      "target": "C:/lsm26/triphthonS1/Face_Tools_Blender.cmd",
+      "kind": "local",
+      "labels": [
+        "Blender 시험 파일 실행",
+        "Face_Tools_Blender.cmd"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9b731d598c18",
+      "target": "C:/lsm26/triphthonS1/docs/FREE_FACE_ADDONS_TEST_20261004.md",
+      "kind": "local",
+      "labels": [
+        "상세 결과",
+        "설치·시험 기록"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ca2394deaba3",
+      "target": "C:/lsm26/triphthonS1/artifacts/face-stack-test-20261004/contact-sheet.jpg",
+      "kind": "local",
+      "labels": [
+        "무료 애드온 얼굴 테스트",
+        "기본 얼굴의 표정 시험"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-15d8ecfcd6c0",
+      "target": "C:/lsm26/triphthonS1/artifacts/mpfb-clavicle-bust-20261004/contact-sheet.jpg",
+      "kind": "local",
+      "labels": [
+        "흉상과 표정 검토"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cac34b27bec8",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-course-audit-20261004/supplied-materials/character/lesson-03-hints/lesson-03-hints.md",
+      "kind": "local",
+      "labels": [
+        "스컬프팅 힌트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3ee877452bee",
+      "target": "https://docs.blender.org/manual/sl/4.5/modeling/geometry_nodes/hair/guides/clump_hair_curves.html",
+      "kind": "web",
+      "labels": [
+        "공식 문서",
+        "Clump Hair Curves"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a4d01c55474e",
+      "target": "https://docs.blender.org/manual/id/4.5/modeling/geometry_nodes/curve/operations/deform_curves_on_surface.html",
+      "kind": "web",
+      "labels": [
+        "공식 문서",
+        "Deform Curves on Surface"
+      ],
+      "source_documents": [
+        "source-archive.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-7c32c6458c94",
+      "target": "https://joseconseco.github.io/HairTool_3_Documentation/",
+      "kind": "web",
+      "labels": [
+        "제작자 문서",
+        "기능 설명",
+        "공식 문서에 소개된 아티스트 작업"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a66b90e34f07",
+      "target": "https://bartoszstyperek.gumroad.com/l/hairtool",
+      "kind": "web",
+      "labels": [
+        "공식 구매 페이지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-54d4c659d91f",
+      "target": "https://joseconseco.github.io/HairTool_3_Documentation/img/ellinor-moren-artstation-image-03.jpg",
+      "kind": "web",
+      "labels": [
+        "Hair Tool 제작 예시 — Ellinor Morén"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a45d86e12e4b",
+      "target": "https://joseconseco.github.io/HairTool_3_Documentation/img/ht_exaaample3.jpg",
+      "kind": "web",
+      "labels": [
+        "Hair Tool 제작 예시 — Colin Nitta"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-6cb0615bf222",
+      "target": "http://127.0.0.1:8842/character-hybrid-hair-hd/",
+      "kind": "web",
+      "labels": [
+        "검토 페이지",
+        "결과 이미지 보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d4cab0a69405",
+      "target": "/C:/lsm26/triphthonS1/art/references/explorer_b_hybrid_hair_hd_v1/prompts.json",
+      "kind": "local",
+      "labels": [
+        "사용한 프롬프트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b517f8c70288",
+      "target": "http://127.0.0.1:8842/character-hybrid-refined/",
+      "kind": "web",
+      "labels": [
+        "수정 결과 보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-858b5f5b9d9e",
+      "target": "http://127.0.0.1:8842/character-open-mouth-reference/",
+      "kind": "web",
+      "labels": [
+        "기존 이미지와 비교하기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f0371498f4f9",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_open_mouth_v1/01_head_open_mouth_front.png",
+      "kind": "local",
+      "labels": [
+        "저장 이미지"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9162a8c0bb76",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_open_mouth_v1/prompts.json",
+      "kind": "local",
+      "labels": [
+        "프롬프트"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-25c7f21f9b08",
+      "target": "http://127.0.0.1:8842/character-open-mouth-hd/",
+      "kind": "web",
+      "labels": [
+        "결과 보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cbdbbb091169",
+      "target": "http://127.0.0.1:8842/character-open-mouth-p2/",
+      "kind": "web",
+      "labels": [
+        "입 내부·단면 비교 보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-6a67493f830a",
+      "target": "http://127.0.0.1:8842/character-p2-closed-assembly/",
+      "kind": "web",
+      "labels": [
+        "결과 보기"
+      ],
+      "source_documents": [
+        "source-archive.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a467499271ce",
+      "target": "https://developers.tripo3d.ai/en/docs/mesh-segment",
+      "kind": "web",
+      "labels": [
+        "Mesh Segment API"
+      ],
+      "source_documents": [
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-3ba457e28319",
+      "target": "https://developers.tripo3d.ai/en/docs/mesh-complete",
+      "kind": "web",
+      "labels": [
+        "Mesh Complete API"
+      ],
+      "source_documents": [
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b6ae9fd8b4b1",
+      "target": "https://manual.reallusion.com/actorcore-accurig-1/content/enu/1.1/07-Hand-Rig/Setting-and-Mirroring-Joints.htm",
+      "kind": "web",
+      "labels": [
+        "AccuRIG 손가락 관절과 엄지 방향"
+      ],
+      "source_documents": [
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-97ff698be5a4",
+      "target": "https://manual.reallusion.com/AccuRig-2/2.0/01-welcome/welcome.htm",
+      "kind": "web",
+      "labels": [
+        "AccuRIG 2 공식 매뉴얼"
+      ],
+      "source_documents": [
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-5a1b55aaf3b7",
+      "target": "https://developer.nvidia.com/omniverse/legacy-tools",
+      "kind": "web",
+      "labels": [
+        "Launcher 변경 안내",
+        "NVIDIA 현행 안내"
+      ],
+      "source_documents": [
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cf5f5526400b",
+      "target": "https://github.com/Ivangeraldo/BlendArMocap-UpdatedAPIPort-2026",
+      "kind": "web",
+      "labels": [
+        "현행 API 포크 · 미검증 후보",
+        "포크 README"
+      ],
+      "source_documents": [
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-cd08b243a703",
+      "target": "https://magazine.reallusion.com/2026/08/11/digital-double-from-photos-phibixs-photorealistic-workflow-with-cc5-and-headshot-3-1/",
+      "kind": "web",
+      "labels": [
+        "AI 보완 단계가 정리된 공식 사례"
+      ],
+      "source_documents": [
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-b5b0285af0ee",
+      "target": "C:/lsm26/triphthonS1/artifacts/stefan-study/youtube/UBjgJM6D18A-transcript.txt",
+      "kind": "local",
+      "labels": [
+        "UBjgJM6D18A-transcript.txt"
+      ],
+      "source_documents": [
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-63341dc40344",
+      "target": "https://github.com/Vanessik/NeuralHaircut",
+      "kind": "web",
+      "labels": [
+        "공식 추론 코드",
+        "Neural Haircut 공식 코드"
+      ],
+      "source_documents": [
+        "reference-documents/AI_CHARACTER_DETAIL_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-47350c400e47",
+      "target": "https://docs.krita.org/en/reference_manual/linux_command_line.html",
+      "kind": "web",
+      "labels": [
+        "CLI 파일 변환"
+      ],
+      "source_documents": [
+        "reference-documents/ART_TOOLS_AND_VILLAGE_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-273b14fd51f7",
+      "target": "https://github.com/RodZill4/material-maker/releases/tag/1.7",
+      "kind": "web",
+      "labels": [
+        "Material Maker 공식 릴리스"
+      ],
+      "source_documents": [
+        "reference-documents/ART_TOOLS_AND_VILLAGE_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e059a74c6374",
+      "target": "https://rodzilla.itch.io/material-maker",
+      "kind": "web",
+      "labels": [
+        "기능 설명"
+      ],
+      "source_documents": [
+        "reference-documents/ART_TOOLS_AND_VILLAGE_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-6063c89c56fb",
+      "target": "https://docs.blender.org/manual/en/latest/addons/rigging/rigify/introduction.html",
+      "kind": "web",
+      "labels": [
+        "Blender Rigify"
+      ],
+      "source_documents": [
+        "reference-documents/ART_TOOLS_AND_VILLAGE_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-7df87f935968",
+      "target": "https://ai.google.dev/edge/mediapipe/solutions/vision/hand_landmarker/python",
+      "kind": "web",
+      "labels": [
+        "MediaPipe Hand Landmarker"
+      ],
+      "source_documents": [
+        "reference-documents/ART_TOOLS_AND_VILLAGE_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-88c3a1473319",
+      "target": "https://platform.tripo3d.ai/docs",
+      "kind": "web",
+      "labels": [
+        "Tripo 공식 문서"
+      ],
+      "source_documents": [
+        "reference-documents/ART_TOOLS_AND_VILLAGE_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-88d41dc172fa",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts_simple_v2/simple-parts-v2.jpg",
+      "kind": "local",
+      "labels": [
+        "수정 이미지 6장"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+        "reference-documents/CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d7a51d3a5c2f",
+      "target": "C:/lsm26/triphthonS1/docs/CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.md",
+      "kind": "local",
+      "labels": [
+        "확정한 부위별 제작 기준",
+        "제작 기준",
+        "부위별 제작 기준과 Stefan 강의 적용 순서",
+        "부위별 제작 기준"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md",
+        "reference-documents/EXPLORER_PARTS_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-1d2c11c55b71",
+      "target": "C:/lsm26/triphthonS1/docs/CHARACTER_PART_REFERENCES_20261003.md",
+      "kind": "local",
+      "labels": [
+        "부위별 2D 참조 19종·27장",
+        "27장 목록·미확정 사항·생성 기록"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+        "reference-documents/CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-57092d706b55",
+      "target": "C:/lsm26/triphthonS1/docs/EXPLORER_PARTS_20261003.md",
+      "kind": "local",
+      "labels": [
+        "부위별 목록과 검사 결과",
+        "부위 분리 편집본",
+        "기존 40부위 편집본 검사",
+        "40개 메시·41개 뼈대의 표면 분리 기록"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+        "reference-documents/CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.md",
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-8c69f80eb93f",
+      "target": "http://127.0.0.1:8842/video-animations.html#compare",
+      "kind": "web",
+      "labels": [
+        "원본 영상과 3D 동작 비교"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-6ac290ce0a2e",
+      "target": "http://127.0.0.1:8842/master-handoff/index.html#hand-video",
+      "kind": "web",
+      "labels": [
+        "독립 손 Godot 재생 영상"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a1d0180c76cc",
+      "target": "C:/lsm26/triphthonS1/docs/TRIPOTHON_MASTER_HANDOFF_20261003.md#character",
+      "kind": "local",
+      "labels": [
+        "전체 제작 인계 문서",
+        "통합 인계 문서"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md",
+        "reference-documents/CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.md",
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-bc759d14ca6f",
+      "target": "https://github.com/witnesstodark/mr-mak-workspace",
+      "kind": "web",
+      "labels": [
+        "Mr.Mak 워크스페이스"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_ANIMATION_WORKFLOW_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-74e8fa0a0304",
+      "target": "http://127.0.0.1:8842/character-parts-2d/",
+      "kind": "web",
+      "labels": [
+        "이미지 확대·시점 비교 페이지",
+        "부품 확대·시점 비교 페이지"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_MODULAR_PRODUCTION_STANDARD_20261003.md",
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-4f15ab93f50c",
+      "target": "C:/lsm26/triphthonS1/artifacts/production-lab-20261003/review/character-parts-2d/contact-sheet-v1.jpg",
+      "kind": "local",
+      "labels": [
+        "19종 부위별 2D 참조 모음"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-7a4a4de017e8",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/head-front-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-985d00f3a406",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/head-side-v1.png",
+      "kind": "local",
+      "labels": [
+        "우측면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-dd4eeec1163a",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/head-back-v1.png",
+      "kind": "local",
+      "labels": [
+        "후면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-562a7ae710b0",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/neck-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-fd00bfef8775",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/torso-v2.png",
+      "kind": "local",
+      "labels": [
+        "연결 경계 수정안 v2"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9eca4f66ba32",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/torso-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-98183a8b346a",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/pelvis-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-01e9e9f46c63",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/upper-arm-r-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-1b7116df5744",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/forearm-r-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-225b9430f0ab",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/hand-r-dorsal-v1.png",
+      "kind": "local",
+      "labels": [
+        "손등"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-f7749fbed0a2",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/hand-r-palm-v1.png",
+      "kind": "local",
+      "labels": [
+        "손바닥"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-9fb0aaf30dde",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/hand-r-side-v1.png",
+      "kind": "local",
+      "labels": [
+        "3/4 시점（초기 측면 요청）"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-4a64e7bbfa54",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/hand-r-profile-v1.png",
+      "kind": "local",
+      "labels": [
+        "정확한 엄지 측면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-dc01c3a2b487",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/thigh-r-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-38a902b765b6",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/calf-r-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-bd6b667c8fa0",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/foot-r-v1.png",
+      "kind": "local",
+      "labels": [
+        "앞·안쪽 3/4"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-fdee0f0e1452",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/hair-v1.png",
+      "kind": "local",
+      "labels": [
+        "앞쪽（정면에 가까운 시점）"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-849d99430caf",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/hair-back-v1.png",
+      "kind": "local",
+      "labels": [
+        "후면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-29c87428d2d3",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/jacket-body-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-37fdd50f03ae",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/jacket-body-back-v1.png",
+      "kind": "local",
+      "labels": [
+        "후면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c0b080e0bbda",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/jacket-sleeve-r-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면 3/4"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-a47d141a60c7",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/shirt-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e4ffd231ad92",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/pants-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-d6aae58a67e6",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/boot-r-v1.png",
+      "kind": "local",
+      "labels": [
+        "앞·바깥 3/4"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-312fe002b44a",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/belt-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면 3/4"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2323f023c9a7",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/buckle-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면 3/4"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2a65efbae231",
+      "target": "C:/lsm26/triphthonS1/art/references/explorer_b_modular_v1/02_parts/cargo-pocket-v1.png",
+      "kind": "local",
+      "labels": [
+        "정면 3/4"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-17641c89d62b",
+      "target": "C:/lsm26/triphthonS1/artifacts/production-lab-20261003/review/Tripothon_Part_References_2D_v1_20261003.zip",
+      "kind": "local",
+      "labels": [
+        "오프라인 검토 ZIP"
+      ],
+      "source_documents": [
+        "reference-documents/CHARACTER_PART_REFERENCES_20261003.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0800f991e074",
+      "target": "C:/lsm26/triphthonS1/.tools/face-tools/downloads.json",
+      "kind": "local",
+      "labels": [
+        "downloads.json"
+      ],
+      "source_documents": [
+        "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-16e8ce8f4559",
+      "target": "C:/lsm26/triphthonS1/artifacts/face-stack-test-20261004/test-results.json",
+      "kind": "local",
+      "labels": [
+        "생성·표정 검사 결과"
+      ],
+      "source_documents": [
+        "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-32c4161a8b11",
+      "target": "C:/lsm26/triphthonS1/artifacts/face-stack-test-20261004/reopen-verification.json",
+      "kind": "local",
+      "labels": [
+        "재열기·연속 동작 검사 결과"
+      ],
+      "source_documents": [
+        "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2cedc9dccae1",
+      "target": "https://static.makehumancommunity.org/mpfb/releases/release_2017.html",
+      "kind": "web",
+      "labels": [
+        "2.0.17 릴리스 기록"
+      ],
+      "source_documents": [
+        "reference-documents/FREE_FACE_ADDONS_TEST_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e7d25e46bfec",
+      "target": "C:/lsm26/triphthonS1/docs/MULTIPLAYER_20261004.md",
+      "kind": "local",
+      "labels": [
+        "멀티플레이 개발 기록",
+        "멀티플레이 기록",
+        "MULTIPLAYER_20261004"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-1d82b7c579fb",
+      "target": "C:/lsm26/triphthonS1/game/scripts/api.gd",
+      "kind": "local",
+      "labels": [
+        "api.gd"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-965b9f86e627",
+      "target": "C:/lsm26/triphthonS1/server/app.py",
+      "kind": "local",
+      "labels": [
+        "app.py"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-e9d4bb6a4c39",
+      "target": "C:/lsm26/triphthonS1/server/asset_studio.py",
+      "kind": "local",
+      "labels": [
+        "asset_studio.py"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-aa69f5c26efc",
+      "target": "C:/lsm26/triphthonS1/server/provider.py",
+      "kind": "local",
+      "labels": [
+        "provider.py"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ed0f7a0c75bf",
+      "target": "C:/lsm26/triphthonS1/server/design_provider.py",
+      "kind": "local",
+      "labels": [
+        "design_provider.py"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-10e0135f3d0b",
+      "target": "C:/lsm26/triphthonS1/game/scripts/model_loader.gd",
+      "kind": "local",
+      "labels": [
+        "model_loader.gd"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-aa6c84ec69ca",
+      "target": "C:/lsm26/triphthonS1/server/multiplayer.py",
+      "kind": "local",
+      "labels": [
+        "multiplayer.py"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-4bf8cf943c70",
+      "target": "C:/lsm26/triphthonS1/server/coop.py",
+      "kind": "local",
+      "labels": [
+        "coop.py"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-c8d50ff43143",
+      "target": "C:/lsm26/triphthonS1/game/scripts/social.gd",
+      "kind": "local",
+      "labels": [
+        "social.gd"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-576d9413a9db",
+      "target": "C:/lsm26/triphthonS1/server/database.py",
+      "kind": "local",
+      "labels": [
+        "database.py"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-58cffb6b8bc0",
+      "target": "C:/lsm26/triphthonS1/artifacts/character-hd-restart-20261004/budget.json",
+      "kind": "local",
+      "labels": [
+        "제작 예산 기록"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-ffe5c548a983",
+      "target": "C:/lsm26/triphthonS1/docs/BASELINE_091.md",
+      "kind": "local",
+      "labels": [
+        "BASELINE_091"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-0e83251faac1",
+      "target": "C:/lsm26/triphthonS1/docs/SERVER_STATUS_20261003.md",
+      "kind": "local",
+      "labels": [
+        "SERVER_STATUS_20261003"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-31e3701b0e6a",
+      "target": "C:/lsm26/triphthonS1/docs/CHARACTER_GENERATION_POLICY.json",
+      "kind": "local",
+      "labels": [
+        "CHARACTER_GENERATION_POLICY.json"
+      ],
+      "source_documents": [
+        "reference-documents/TRIPOTHON_OVERVIEW_20261004.md"
+      ],
+      "verification": "원본에 기록된 링크; 현재 웹 내용 전체 재검증 아님"
+    },
+    {
+      "id": "reference-2c9fd46f33c9",
+      "target": "C:/lsm26/triphthonS1/art/characters/explorer_b_p2_rest_refined_v2/explorer_b_P2_rest_refined_v2.blend",
+      "kind": "local",
+      "labels": [
+        "P2 rest refined v2"
+      ],
+      "source_documents": [
+        "README.md"
+      ],
+      "verification": "file_exists_at_capture; final approval unconfirmed"
+    }
+  ]
+}

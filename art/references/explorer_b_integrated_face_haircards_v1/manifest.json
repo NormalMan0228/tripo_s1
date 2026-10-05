@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-05",
+  "status": "Tripo_face_and_HD_hair_generated_card_prototype_ready",
+  "identity_reference": "00_user_identity_reference.png",
+  "face": {
+    "image": "01_head_open_mouth_front.png",
+    "approved": true,
+    "task_id": "38676a32-c0e8-4ccf-b30f-bc3b0fdb2af0",
+    "credits_consumed": 120,
+    "includes": [
+      "eyelids",
+      "upper/lower eyelashes",
+      "brows",
+      "open mouth"
+    ],
+    "generated": true,
+    "texture_export_task_id": "ce7aa5db-5e26-4718-86e1-c7528cae5d72"
+  },
+  "hair": {
+    "images": {
+      "front": "02_hair_front.png",
+      "left": "02_hair_left.png",
+      "back": "02_hair_back.png",
+      "right": "02_hair_right.png"
+    },
+    "approved": true,
+    "generated": true,
+    "planned_source": "Tripo HD v3.1",
+    "planned_final": "Blender groom guides -> UV ribbons -> hair atlas/cards",
+    "automatic_fused_mesh_to_strands_promised": false,
+    "task_id": "8fd3d067-0859-46a7-87df-1df9b333b5eb",
+    "credits_consumed": 40,
+    "card_prototype": "art/characters/explorer_b_integrated_face_haircards_v1/assembly",
+    "card_only": false,
+    "final_method": "UV strand cards plus scalp and low-poly bob support; native Blender"
+  },
+  "review_gate_source": "User requested to review new images before paid Tripo generation",
+  "total_cap": 2000,
+  "spent": 1125.0,
+  "remaining": 875.0,
+  "image_tool": "built-in image_gen",
+  "prompt_file": "prompts.json"
+}

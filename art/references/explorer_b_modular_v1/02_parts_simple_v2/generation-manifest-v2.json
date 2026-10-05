@@ -1,0 +1,116 @@
+{
+  "revision": "simple_v2",
+  "status": "awaiting_user_review",
+  "approval": null,
+  "date": "2026-10-03",
+  "decision": "신체는 머리·몸·손만 분리. 재킷은 몸판·양쪽 소매 포함, 바지는 카고 주머니 포함, 벨트는 버클 포함.",
+  "generation_tool": "built-in image_gen",
+  "model_id": "not_exposed_by_tool",
+  "accounting": {
+    "image_generation_attempts": 11,
+    "successful_images": 9,
+    "unsuccessful_body_attempts": 2,
+    "new_tripo_calls": 0,
+    "new_scenario_calls": 0
+  },
+  "skin_color_reference": "head-v2.png; uniform warm peach target for exposed body and hands",
+  "assets": [
+    {
+      "id": "head",
+      "label": "머리",
+      "file": "head-v2.png",
+      "record": "head-generation-v2.json",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1312,
+        1199
+      ],
+      "sha256": "b68ca8ff8a904687d993c3e616c0ffb84a5752851f208cf82e422c62ce5a14ef"
+    },
+    {
+      "id": "body",
+      "label": "몸（목·몸통·팔·다리·발 일체）",
+      "file": "body-v5.png",
+      "record": "body-generation-v5.json",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "1b441bf70164df0141b16bd17039e61a64010ab8542c0e84672b1f6c71e881d7",
+      "previous_versions": [
+        {
+          "file": "body-v2.png",
+          "review_status": "changes_requested"
+        },
+        {
+          "file": "body-v3.png",
+          "review_status": "superseded_by_underwear_request"
+        },
+        {
+          "file": "body-v4.png",
+          "review_status": "changes_requested_masculine_shape"
+        }
+      ]
+    },
+    {
+      "id": "hand",
+      "label": "손（한쪽 기준）",
+      "file": "hand-v2.png",
+      "record": "hand-generation-v2.json",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "62e3361d43b31bb2c77eae43cb706672af41f0feae679ab63dccd0f6dbf1c952"
+    },
+    {
+      "id": "jacket",
+      "label": "재킷（몸판·소매 일체）",
+      "file": "jacket-v2.png",
+      "record": "jacket-generation-v2.json",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "cc700708ad76e1d1a77bd099bae4e475b7c2797632071e4bcf2ee35fb5472376"
+    },
+    {
+      "id": "pants",
+      "label": "바지（주머니 포함）",
+      "file": "pants-v2.png",
+      "record": "pants-generation-v2.json",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1024,
+        1536
+      ],
+      "sha256": "3d8b20a1a09aa3f8138986570c864999e882d03ec4cbdb788f452808b7a0502b"
+    },
+    {
+      "id": "belt",
+      "label": "벨트（버클 포함）",
+      "file": "belt-v2.png",
+      "record": "belt-generation-v2.json",
+      "review_status": "awaiting_user_review",
+      "pixels": [
+        1536,
+        1024
+      ],
+      "sha256": "51b5cf9fdc76784e1c36668286bf209167ed3f4908890f495bcd3929c3da017b"
+    }
+  ],
+  "notes": [
+    "신체의 몸 참조는 목·몸통·양쪽 팔·다리·발이 이어진 연속 형태이며 머리와 손은 포함하지 않음.",
+    "손은 한쪽을 기준으로 만들고 반대쪽은 3D에서 대칭 제작할 계획.",
+    "피부색은 이미지에서 공통 기준으로 맞춤. 실제 재질·UV·3D 조립은 아직 진행하지 않음.",
+    "기존 헤어·셔츠·부츠 참조는 유지. 이전 19종 분할안은 과거 검토안으로 보관.",
+    "현재는 이미지 검토만 진행하며 신규 3D나 리깅 산출물 없음."
+  ],
+  "last_updated": "2026-10-04",
+  "presentation": "individual_images_only",
+  "character_body": "approved_female_B_explorer",
+  "historical_preview": "simple-parts-v2.jpg"
+}

@@ -73,6 +73,15 @@ class Database:
         return db
 
     @contextmanager
+    def read(self):
+        """Read-only work must not reserve SQLite's single writer slot."""
+        db = self.connect()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    @contextmanager
     def transaction(self):
         db = self.connect()
         try:

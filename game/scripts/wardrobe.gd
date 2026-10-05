@@ -48,7 +48,7 @@ func _ready() -> void:
 	controls.add_child(row)
 	for id in ["explorer_b","explorer","ranger","tinker"]:
 		var b := Button.new()
-		b.text={"explorer_b":"B 여행자","explorer":"루","ranger":"미라","tinker":"테오"}[id]
+		b.text={"explorer_b":"여행자","explorer":"루","ranger":"미라","tinker":"테오"}[id]
 		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		b.set_meta("character",id)
 		b.toggle_mode=true
@@ -103,5 +103,5 @@ func refresh() -> void:
 		if b.has_meta("part"):
 			b.text="◆" if avatar[b.get_meta("part")]==b.get_meta("color") else "●"
 			b.disabled=avatar.character=="explorer_b" and b.get_meta("part") in ["hair","skin"]
-			if b.disabled:b.tooltip_text="B 여행자는 원본 얼굴·머리·손 색을 유지합니다."
+			if b.disabled:b.tooltip_text="이 여행자의 머리와 피부는 고유한 모습으로 유지돼요. 옷과 소품을 바꿔 보세요."
 	if actor.animation_player and actor.animation_player.has_animation("idle"): actor.animation_player.play("idle",0.18)

@@ -1,0 +1,32 @@
+{
+  "state": "awaiting_user_sculpt_review",
+  "date": "2026-10-04",
+  "stage": "sculpt_trial",
+  "blender": "4.5.3",
+  "api_credits": 0,
+  "source_hashes": {
+    "body": {
+      "path": "art/characters/explorer_b_fullbody_v2/03_generated_p2/model.fbx",
+      "sha256": "803ece7fad0d8d77e536599e7ebc04344d4dd30e1031bde30b592fd80e10fb23"
+    },
+    "head": {
+      "path": "art/characters/explorer_b_fullbody_v2/04_replacement_parts_p2/head/model.fbx",
+      "sha256": "3367e5b65938f84c1be8933f8d7ab515c154f9bfd651e8c80f940d4a76bdcb5e"
+    },
+    "hand": {
+      "path": "art/characters/explorer_b_fullbody_v2/04_replacement_parts_p2/hand/model.fbx",
+      "sha256": "7b4314c8cc965f9e6f871e1f343feec8110f6f9d337d131abdb274885a77e1a1"
+    },
+    "hair": {
+      "path": "art/characters/explorer_b_fullbody_v2/04_replacement_parts_p2/hair/model.fbx",
+      "sha256": "b1c4371d4914ca2d117a53ec251fc9b2d3571e739cd31a660e38eef4a6682e4b"
+    }
+  },
+  "native_mask_slices": 4,
+  "native_brush_strokes": 31,
+  "rigged": false,
+  "uv_texture_approved": false,
+  "user_approved": false,
+  "url": "http://127.0.0.1:8842/character-sculpt-trial/",
+  "candidate": "art/characters/explorer_b_fullbody_v2/05_sculpt_trial/03_sculpt_candidate.blend"
+}
