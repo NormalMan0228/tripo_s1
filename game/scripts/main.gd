@@ -313,6 +313,7 @@ func error_message(code: String) -> String:
 		"invalid_request":tr("입력 형식을 확인하세요. 이름 3~24자, 비밀번호 10자 이상입니다."),
 		"insufficient_shards":tr("별씨가 부족합니다. 생존 도전을 완료해 보세요."),"placement_overlap":tr("다른 물건과 겹칩니다."),
 		"room_render_budget_exceeded":tr("꾸미기 용량이 꽉 찼습니다. 가구 일부를 회수한 뒤 배치해 주세요."),
+		"invalid_invitation":tr("이 서버는 초대 코드가 있어야 가입할 수 있어요. 초대 코드를 넣거나 '이 PC 서버'를 고르세요."),
 		"spawn_area_reserved":tr("중앙 광장에는 놓을 수 없습니다."),"workshop_area_reserved":tr("공방 입구 앞은 비워 주세요."),"reserved_area":tr("길과 입구 앞은 비워 주세요."),
 		"gate_area_reserved":tr("숲 입구에는 놓을 수 없습니다."),"daily_generation_limit":tr("오늘 생성 한도에 도달했습니다."),
 		"live_generation_disabled":tr("Tripo 실생성이 아직 설정되지 않았습니다."),"generation_pending":tr("진행 중인 생성이 있습니다."),
@@ -468,8 +469,10 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	social.enabled = social.feature_enabled() and int(health.data.get("multiplayer_protocol", 0)) == 1
 	api.token = result.data.token
 	api.mode = result.data.mode
-	I18n.remember("server",host)
-	I18n.remember("username",username.strip_edges())
+	# Only the real game remembers the login; test harnesses add Main to the root directly.
+	if get_tree().current_scene==self:
+		I18n.remember("server",host)
+		I18n.remember("username",username.strip_edges())
 	var veil := Transition.of(get_tree())
 	await veil.fade_out(0.5)
 	await enter_village()

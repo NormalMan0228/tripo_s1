@@ -2284,6 +2284,10 @@
    "en": "You don't have permission to use this item.",
    "zh": "你没有使用此物品的权限。"
   },
+  "이 서버는 초대 코드가 있어야 가입할 수 있어요. 초대 코드를 넣거나 '이 PC 서버'를 고르세요.": {
+   "en": "This server needs an invite code to sign up. Enter the code or choose \"This PC's Server\".",
+   "zh": "该服务器需要邀请码才能注册。请输入邀请码，或选择“本机服务器”。"
+  },
   "이 서버는 함께하기 업데이트가 필요합니다.": {
    "en": "This server needs the Play Together update.",
    "zh": "此服务器需要更新一起玩功能。"
