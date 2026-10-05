@@ -185,6 +185,7 @@ func build_ui() -> void:
 	add_child(placement_tools);placement_tools.visible=false
 	var tools := VBoxContainer.new();tools.add_theme_constant_override("separation",8);placement_tools.add_child(tools)
 	placement_title=label(tools,tr("가구 놓기"),18)
+	placement_title.auto_translate_mode=Node.AUTO_TRANSLATE_MODE_DISABLED
 	placement_title.max_lines_visible=1;placement_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
 	placement_feedback=label(tools,tr("빈자리를 골라 주세요"),13)
 	var rotate_row := row(tools)
@@ -231,6 +232,7 @@ func build_ui() -> void:
 	var create := VBoxContainer.new();create.size_flags_horizontal=Control.SIZE_EXPAND_FILL;create.add_theme_constant_override("separation",10);create_scroll.add_child(create)
 	label(create,tr("어떤 물건을 만들까요?"),20)
 	prompt=TextEdit.new();prompt.custom_minimum_size.y=112;prompt.wrap_mode=TextEdit.LINE_WRAPPING_BOUNDARY;prompt.text=tr("다가가면 꽃잎이 열리는 꽃 조명");create.add_child(prompt)
+	prompt.auto_translate_mode=Node.AUTO_TRANSLATE_MODE_DISABLED
 	var presets := row(create)
 	button(presets,tr("꽃 조명"),func(): prompt.text=tr("다가가면 여섯 꽃잎이 열리고 떠나면 닫히는 꽃 조명"))
 	button(presets,tr("상자"),func(): prompt.text=tr("클릭하면 뚜껑이 부드럽게 열리고 다시 클릭하면 닫히는 나무 상자"))
@@ -264,6 +266,7 @@ func build_ui() -> void:
 	label(own,tr("내가 만든 작은 세계"),19)
 	room_capacity=label(own,tr("배치한 가구를 확인하고 있어요"),12)
 	inventory=ItemList.new();inventory.custom_minimum_size.y=135;inventory.size_flags_vertical=Control.SIZE_EXPAND_FILL;inventory.fixed_icon_size=Vector2i(26,26);own.add_child(inventory);inventory.item_selected.connect(select_item)
+	inventory.auto_translate_mode=Node.AUTO_TRANSLATE_MODE_DISABLED
 	var preview_view := SubViewportContainer.new();preview_view.custom_minimum_size.y=190;preview_view.stretch=true;own.add_child(preview_view)
 	var preview_port := SubViewport.new();preview_port.size=Vector2i(330,190);preview_port.own_world_3d=true;preview_port.render_target_update_mode=SubViewport.UPDATE_ALWAYS;preview_port.msaa_3d=Viewport.MSAA_4X;preview_view.add_child(preview_port)
 	preview_stage=Node3D.new();preview_port.add_child(preview_stage)
@@ -274,6 +277,7 @@ func build_ui() -> void:
 	preview_view.gui_input.connect(preview_input)
 	label(own,tr("미리보기 · 드래그 회전 / 휠 확대"),11).modulate=Color("817960")
 	detail=label(own,tr("가구를 고르면 모습을 살펴볼 수 있어요"),13)
+	detail.auto_translate_mode=Node.AUTO_TRANSLATE_MODE_DISABLED
 	var actions := row(own)
 	button(actions,tr("바닥에 배치"),begin_place);button(actions,tr("회수"),retrieve);button(actions,tr("사용"),interact_selected)
 	part_choice=option(own,[tr("전체 색칠")])
@@ -742,6 +746,14 @@ func begin_place() -> void:
 		# When moving furniture, hide its old instance until confirmation or cancel.
 		if placed.has(object_id):placed[object_id].visible=false
 		for mesh in ghost.find_children("*","MeshInstance3D",true,false):
+			# Downloaded single-mesh objects use a whole-instance material override.
+			# Apply the preview to that material instead of adding hidden surface overrides.
+			if mesh.material_override is StandardMaterial3D:
+				var translucent: StandardMaterial3D=mesh.material_override.duplicate()
+				translucent.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+				translucent.albedo_color.a=.62
+				mesh.material_override=translucent
+				continue
 			for index in mesh.mesh.get_surface_count():
 				var source: Material=mesh.get_active_material(index)
 				if source is StandardMaterial3D:

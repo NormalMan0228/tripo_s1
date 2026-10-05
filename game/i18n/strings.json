@@ -1653,7 +1653,7 @@
    "zh": "密码 · 10个字符以上"
   },
   "비밀번호 · 10자 이상, 대문자와 특수문자 포함": {
-   "en": "Password · 10+ characters with an uppercase letter and a symbol",
+   "en": "Password · 10+ chars, uppercase + symbol",
    "zh": "密码 · 至少10位，含大写字母和特殊字符"
   },
   "비밀번호에는 대문자와 특수문자가 하나 이상 들어가야 해요. (10자 이상)": {
@@ -1817,7 +1817,7 @@
    "zh": "正在等待服务器响应。连接恢复后将继续。"
   },
   "서버 주소 · 예: http://100.101.1.2:8765 (Tailscale)": {
-   "en": "Server address · e.g. http://100.101.1.2:8765 (Tailscale)",
+   "en": "Server URL · http://100.101.1.2:8765",
    "zh": "服务器地址 · 例如 http://100.101.1.2:8765（Tailscale）"
   },
   "서버 주소 직접 입력 (https://...)": {
@@ -3263,6 +3263,130 @@
   "흙이 말라 있어요. 물을 주세요.": {
    "en": "The soil is dry. Give it some water.",
    "zh": "土壤干了，请浇水。"
+  },
+  "이곳은 나의 집이에요": {
+   "en": "This is your home",
+   "zh": "这里是你的家"
+  },
+  "사과를 모아 보세요": {
+   "en": "Gather some apples",
+   "zh": "采集苹果"
+  },
+  "사과를 팔아 잎전을 얻어요": {
+   "en": "Sell an apple for Leaf coins",
+   "zh": "出售苹果赚取叶币"
+  },
+  "두 가지 재화를 알아봐요": {
+   "en": "Two kinds of currency",
+   "zh": "认识两种货币"
+  },
+  "원하는 물건을 의뢰해요": {
+   "en": "Commission your own item",
+   "zh": "委托制作想要的物品"
+  },
+  "물건을 놓고 자유롭게 즐겨요": {
+   "en": "Place an item, then play freely",
+   "zh": "摆放物品，自由游玩"
+  },
+  "WASD로 움직여 금빛 표식을 따라 내 집 문 앞에 가 보세요. 집과 공방 문 앞에서는 E로 들어갈 수 있어요.": {
+   "en": "Use WASD to follow the gold marker to your front door. Press E at the door to enter your home or workshop.",
+   "zh": "用WASD移动，跟随金色标记到家门口。在家或工坊门前按E进入。"
+  },
+  "사과 과수원으로 가서 E를 눌러 사과를 모으세요. 직접 얻은 물건은 B 생활 창고에서 확인할 수 있어요.": {
+   "en": "Go to the Apple Orchard and press E to gather apples. B opens Storage to show what you have collected.",
+   "zh": "前往苹果园，按E采集苹果。按B打开生活仓库查看采集的物品。"
+  },
+  "씨앗 가게 앞에서 E를 누르고 사과를 한 개 팔아 보세요. 판매가 실제로 끝나면 다음 안내로 이어집니다.": {
+   "en": "Press E at the Seed Shop and sell one apple. The guide moves on after the sale succeeds.",
+   "zh": "在种子商店前按E，出售一个苹果。交易成功后才会进入下一步。"
+  },
+  "방금 판매한 사과로 잎전을 얻었어요. 잎전은 씨앗·미끼에, 별씨는 물건 제작에 써요. 별씨는 탐험에서 일곱 밤을 완주해 얻습니다.": {
+   "en": "Your apple sale earned Leaf coins for seeds and bait. Starseeds pay for crafting; earn them by surviving seven nights on an expedition.",
+   "zh": "出售苹果获得的叶币可购买种子和鱼饵。星种用于制作物品，完成七夜探险即可获得。"
+  },
+  "C 제작에서 원하는 물건을 문장으로 적어 보세요. 의뢰 후 견적을 확인하고, 제작 확정을 눌러야 만들기 시작해요. 완성까지 다른 활동을 즐겨도 괜찮아요.": {
+   "en": "Press C and describe your item in a sentence. Check the quote, then confirm to start crafting. You can do other activities while it is being made.",
+   "zh": "按C，用一句话描述想要的物品。查看报价并确认后才会开始制作。等待期间可进行其他活动。"
+  },
+  "I 가방에서 보관 중인 물건을 골라 배치하세요. 바닥 클릭으로 놓기, R 회전, Esc 취소. 완성한 제작물도 가방에서 받을 수 있고 C로 진행을 확인해요.": {
+   "en": "Press I, select a stored item and place it. Click the ground to place, R to rotate, Esc to cancel. Finished items arrive in your bag; check crafting with C.",
+   "zh": "按I选择背包中的物品。点击地面放置，R旋转，Esc取消。成品会进入背包，按C查看制作进度。"
+  },
+  "처음 안내 진행을 저장하지 못했어요. 다음 접속에서 안내가 다시 나올 수 있어요.": {
+   "en": "Could not save your guide progress. The guide may appear again next time.",
+   "zh": "无法保存新手指南进度，下次登录可能会再次显示。"
+  },
+  "F1 · 처음 안내": {
+   "en": "F1 · Getting Started",
+   "zh": "F1 · 新手指南"
+  },
+  "안내 건너뛰기": {
+   "en": "Skip Guide",
+   "zh": "跳过指南"
+  },
+  "처음 안내를 마쳤어요! 자유롭게 즐기고, F1로 안내를 다시 볼 수 있어요.": {
+   "en": "Guide complete! Explore freely. Press F1 to review the guide.",
+   "zh": "新手指南已完成！自由探索吧，按F1可再次查看。"
+  },
+  "안내를 건너뛰었어요. 마을에서 F1을 누르면 이어서 볼 수 있어요.": {
+   "en": "Guide skipped. Press F1 in the village to resume it.",
+   "zh": "已跳过指南。在村庄中按F1可继续查看。"
+  },
+  "금빛 표식을 따라가세요. 가까이에서 E로 상호작용할 수 있어요.": {
+   "en": "Follow the gold marker. Press E when you are close to interact.",
+   "zh": "跟随金色标记，靠近后按E互动。"
+  },
+  "처음 안내 · %d/%d": {
+   "en": "Getting Started · %d/%d",
+   "zh": "新手指南 · %d/%d"
+  },
+  "이 서버는 새 제작이 꺼져 있어요. 가입 때 받은 기존 물건으로 배치를 연습해요. 실시간 생성 체험이 아닙니다.": {
+   "en": "Crafting is off here. Practise placement with your existing welcome item; this is not live generation.",
+   "zh": "此服务器未开放制作。请用注册时获得的已有物品练习摆放，这不是实时生成体验。"
+  },
+  "지금은 제작할 별씨가 부족해요. 기존 물건으로 배치를 연습하고, 탐험 보상으로 제작비를 모으세요.": {
+   "en": "You need more Starseeds to craft. Practise with an existing item and earn crafting funds on expeditions.",
+   "zh": "目前星种不足。先用已有物品练习摆放，再通过探险奖励积攒制作费用。"
+  },
+  "\n맡긴 의뢰는 C에서 견적과 진행을 확인하세요. 완성을 기다리지 않고 기존 물건으로 먼저 연습할 수 있어요.": {
+   "en": "\nPress C to check your pending quote and progress. Practise with an existing item while you wait.",
+   "zh": "\n按C查看报价和制作进度。等待时可先用已有物品练习摆放。"
+  },
+  "길잡이 표시": {
+   "en": "Show Route",
+   "zh": "显示路线"
+  },
+  "이해했어요": {
+   "en": "Got It",
+   "zh": "明白了"
+  },
+  "기존 물건으로 배치 연습": {
+   "en": "Practise with an Existing Item",
+   "zh": "用已有物品练习摆放"
+  },
+  "제작 의뢰 열기": {
+   "en": "Open Commission",
+   "zh": "打开制作委托"
+  },
+  "가방 열기": {
+   "en": "Open Bag",
+   "zh": "打开背包"
+  },
+  "처음 안내와 조작": {
+   "en": "Getting Started and Controls",
+   "zh": "新手指南与操作"
+  },
+  "처음부터 다시 따라하기": {
+   "en": "Follow Again from the Start",
+   "zh": "从头再练习"
+  },
+  "안내 이어보기": {
+   "en": "Resume Guide",
+   "zh": "继续指南"
+  },
+  "WASD 이동 · E 상호작용 · I 가방 · C 제작 · Tab 지도\nR 배치 회전 · Esc 취소/닫기 · M 소리\n\n1. 내 집 문 앞까지 금빛 표식을 따라가요.\n2. 사과 과수원에서 E로 사과를 모아요.\n3. 씨앗 가게에서 사과를 팔아 잎전을 얻어요.\n4. 잎전은 씨앗·미끼, 별씨는 제작에 써요. 별씨는 일곱 밤 탐험의 완주 보상이에요.\n5. C에서 자연어 의뢰와 견적·진행을 확인해요. 확정 전 비용을 확인하고, 완성될 때까지 다른 활동을 즐겨요.\n6. I에서 물건을 골라 놓고 공간을 꾸며요. 제작 제한·재화 부족이면 기존 물건으로 연습해요.": {
+   "en": "WASD move · E interact · I bag · C craft · Tab map\nR rotate placement · Esc cancel/close · M sound\n\n1. Follow the gold marker to your front door.\n2. Press E at the Apple Orchard to gather apples.\n3. Sell an apple at the Seed Shop to earn Leaf coins.\n4. Leaf coins buy seeds and bait. Starseeds pay for crafting; earn them by completing a seven-night expedition.\n5. Press C to write a commission and check its quote and progress. Review the cost before confirming. Explore while crafting continues.\n6. Select an item with I and place it. If crafting is off or funds are short, practise with an existing item.",
+   "zh": "WASD移动 · E互动 · I背包 · C制作 · Tab地图\nR旋转摆放 · Esc取消/关闭 · M声音\n\n1. 跟随金色标记到家门口。\n2. 在苹果园按E采集苹果。\n3. 在种子商店出售苹果赚取叶币。\n4. 叶币购买种子和鱼饵，星种用于制作；完成七夜探险可获得星种。\n5. 按C写下制作委托并查看报价和进度。确认前查看费用，等待期间可自由探索。\n6. 按I选择并摆放物品。制作未开放或资金不足时，可用已有物品练习。"
   }
  },
  "templates": []

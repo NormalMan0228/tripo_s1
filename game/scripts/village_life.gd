@@ -172,7 +172,7 @@ func open_shop() -> void:
 	v.add_child(row)
 	for item in ["turnip_seed","pumpkin_seed","bait"]:
 		var cost: int={"turnip_seed":2,"pumpkin_seed":4,"bait":1}[item]
-		var b: Button=app.button(row,tr("%s +1 · %d잎전")%[state.catalog.names[item],cost],func():
+		var b: Button=app.button(row,tr("%s +1 · %d잎전")%[tr(state.catalog.names[item]),cost],func():
 			await action("buy",{"item":item})
 			if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
 		b.disabled=state.coins<cost
@@ -181,7 +181,7 @@ func open_shop() -> void:
 	grid.columns=3
 	v.add_child(grid)
 	for item in state.catalog.prices:
-		var b: Button=app.button(grid,tr("%s %d개 · +%d잎전")%[state.catalog.names[item],state.bag.get(item,0),state.catalog.prices[item]],func():
+		var b: Button=app.button(grid,tr("%s %d개 · +%d잎전")%[tr(state.catalog.names[item]),state.bag.get(item,0),state.catalog.prices[item]],func():
 			await action("sell",{"item":item})
 			if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
 		b.disabled=state.bag.get(item,0)<1

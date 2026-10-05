@@ -152,14 +152,15 @@ static func menu_button(parent: Node, value: String, callback: Callable, width :
 	return b
 
 ## Text field matching the title card.
-static func field(parent: Node, placeholder: String, secret := false) -> LineEdit:
+static func field(parent: Node, placeholder: String, secret := false, width := 320.0) -> LineEdit:
 	var line := LineEdit.new()
 	line.placeholder_text = placeholder
+	line.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	line.secret = secret
-	line.custom_minimum_size = Vector2(320, 44)
+	line.custom_minimum_size = Vector2(width, 44)
 	line.add_theme_font_size_override("font_size", 16)
 	line.add_theme_color_override("font_color", INK)
-	line.add_theme_color_override("font_placeholder_color", Color(1,1,1,.42))
+	line.add_theme_color_override("font_placeholder_color", Color("d4cbb8"))
 	line.add_theme_stylebox_override("normal", style(Color(0.05,0.07,0.08,.7), 8, Color(GOLD,.45), 1))
 	line.add_theme_stylebox_override("focus", style(Color(0.05,0.07,0.08,.8), 8, GOLD, 2))
 	parent.add_child(line)

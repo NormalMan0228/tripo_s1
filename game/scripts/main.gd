@@ -116,6 +116,7 @@ var chosen_map := "forest"
 var chosen_difficulty := "standard"
 var town: Node3D
 var life: Node
+var tutorial: Node
 var camera_focus := Vector3.ZERO
 var camera_focus_ready := false
 var camera_zoom_target := ControllerProfile.CAMERA_DEFAULT
@@ -137,6 +138,9 @@ func _ready() -> void:
 	life=preload("res://scripts/village_life.gd").new()
 	life.app=self
 	add_child(life)
+	tutorial=preload("res://scripts/tutorial.gd").new()
+	tutorial.app=self
+	add_child(tutorial)
 	ControllerProfile.ensure_input()
 	var e := WorldEnvironment.new()
 	environment = Environment.new()
@@ -365,7 +369,7 @@ func login_ui(page := "menu") -> void:
 	RpgUi.label(heading,tr("일곱 밤, 나의 마을"),54)
 	RpgUi.label(heading,tr("돌아올 마을이 있어, 숲으로 떠납니다."),18,Color("e8e2cf"))
 	var body := VBoxContainer.new()
-	body.position = Vector2(92,318)
+	body.position = Vector2(92,268 if page=="login" else 318)
 	body.add_theme_constant_override("separation",12)
 	ui.add_child(body)
 	match page:
@@ -402,16 +406,17 @@ func login_ui(page := "menu") -> void:
 			column.add_theme_constant_override("separation",8)
 			card.add_child(column)
 			RpgUi.label(column,tr("모험가 로그인"),20,RpgUi.GOLD)
-			var username := RpgUi.field(column,tr("아이디 · 영문·숫자·밑줄 3~24자"))
+			var username := RpgUi.field(column,tr("아이디 · 영문·숫자·밑줄 3~24자"),false,440)
 			username.text = str(I18n.setting("username",""))
-			var password := RpgUi.field(column,tr("비밀번호 · 10자 이상, 대문자와 특수문자 포함"),true)
-			var invitation := RpgUi.field(column,tr("초대 코드 · 서버가 요구할 때만"),true)
+			var password := RpgUi.field(column,tr("비밀번호 · 10자 이상, 대문자와 특수문자 포함"),true,440)
+			password.tooltip_text = tr("비밀번호에는 대문자와 특수문자가 하나 이상 들어가야 해요. (10자 이상)")
+			var invitation := RpgUi.field(column,tr("초대 코드 · 서버가 요구할 때만"),true,440)
 			RpgUi.label(column,tr("서버"),14,RpgUi.GOLD)
 			var servers := OptionButton.new()
-			servers.custom_minimum_size = Vector2(320,40)
+			servers.custom_minimum_size = Vector2(440,40)
 			servers.focus_mode = Control.FOCUS_NONE
 			column.add_child(servers)
-			var custom := RpgUi.field(column,tr("서버 주소 · 예: http://100.101.1.2:8765 (Tailscale)"))
+			var custom := RpgUi.field(column,tr("서버 주소 · 예: http://100.101.1.2:8765 (Tailscale)"),false,440)
 			var saved := str(I18n.setting("server",SERVERS[0][1]))
 			var chosen := SERVERS.size()
 			for i in SERVERS.size():
@@ -429,7 +434,7 @@ func login_ui(page := "menu") -> void:
 			RpgUi.menu_button(actions,tr("로그인"),func(): authenticate(false,host.call(),username.text,password.text,invitation.text),156)
 			RpgUi.menu_button(actions,tr("계정 만들기"),func(): authenticate(true,host.call(),username.text,password.text,invitation.text),156)
 			notice = RpgUi.label(column,"",14,Color("ffd9a0"))
-			notice.custom_minimum_size.x = 320
+			notice.custom_minimum_size.x = 440
 			notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			password.text_submitted.connect(func(_value): authenticate(false,host.call(),username.text,password.text,invitation.text))
 			RpgUi.menu_button(body,tr("뒤로"),func(): login_ui("menu"))
@@ -626,6 +631,7 @@ func enter_village() -> void:
 	build_world(false)
 	clear_ui()
 	frame = RpgUi.player_frame(ui,"res://assets/ui/portrait_explorer.png")
+	frame.name.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	left = frame.column
 	wallet = frame.status
 	reward_button=button(left,tr("받지 않은 생존 보상 받기"),claim_pending_reward,"primary")
@@ -636,10 +642,12 @@ func enter_village() -> void:
 	text(drawer_title,tr("나의 보관함"),22).size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	button(drawer_title,"×",toggle_drawer)
 	objects_list = ItemList.new()
+	objects_list.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	objects_list.custom_minimum_size = Vector2(252,155)
 	objects_list.item_selected.connect(select_object)
 	right.add_child(objects_list)
 	object_info = text(right,tr("물건을 선택하세요."),13)
+	object_info.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
 	object_info.custom_minimum_size.x = 250
 	object_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var palette := HBoxContainer.new()
@@ -679,6 +687,7 @@ func enter_village() -> void:
 	player.controls_enabled = true
 	hint=RpgUi.prompt(ui,560)
 	message(tr("물결빛 마을에 오신 것을 환영해요! 다리를 건너 다섯 섬을 둘러보세요."))
+	tutorial.bind()
 
 func toggle_drawer() -> void:
 	if screen == "village" and social.visiting():
@@ -1388,8 +1397,8 @@ func update_run() -> void:
 		elif run.inventory.axe==0: objective.text=tr("도끼를 만들면 채집이 빨라져요\n목재 3 + 돌 2를 모으세요.\nI · 가방에서 도구 만들기")
 		else: objective.text=tr("다음 밤을 준비하세요\n열매와 목재를 비축하고,\n창으로 그림자 짐승에 맞서세요.")
 		if run.get("story") is Dictionary and run.status=="active":
-			objective.text=run.story.title+"\n"
-			for goal in run.story.goals:objective.text+="%s  %d / %d\n"%[goal.label,goal.current,goal.target]
+			objective.text=I18n.t(run.story.title)+"\n"
+			for goal in run.story.goals:objective.text+="%s  %d / %d\n"%[I18n.t(goal.label),goal.current,goal.target]
 			objective.text+="\n"+(tr("Q · 먼저 음식을 드세요") if run.hunger<35 else tr("I 제작 · F 모닥불 · Q 식사"))
 	for recipe in craft_buttons:
 		var can_make: bool=run.status=="active"
@@ -1615,7 +1624,7 @@ func show_results() -> void:
 	text(card,tr("보상  %d 별씨") % run.get("reward",0) if won else tr("완주 보상은 7일 생존 후 받을 수 있어요."),22 if won else 14)
 	if run.get("story") is Dictionary:
 		var story_text := tr("목표가 남아 있어 이야기는 다음 도전에서 이어집니다.")
-		if run.story.objectives_met:story_text=run.story.ending+tr("\n첫 완료 보너스 %d 별씨")%int(run.get("story_bonus",0))
+		if run.story.objectives_met:story_text=I18n.t(run.story.ending)+tr("\n첫 완료 보너스 %d 별씨")%int(run.get("story_bonus",0))
 		var story_note := text(card,story_text,14);story_note.custom_minimum_size.x=420;story_note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	if not won:
 		var lesson := tr("밤에는 목재 2개를 남기고 야영지의 불을 지키세요.")
@@ -1694,6 +1703,7 @@ func text_input_active() -> bool:
 	return focus is LineEdit or focus is TextEdit
 
 func world_movement_allowed() -> bool:
+	if is_instance_valid(tutorial) and tutorial.blocks_input(): return false
 	if busy or text_input_active() or is_instance_valid(village_modal) or is_instance_valid(preview):return false
 	if is_instance_valid(right) and right.get_parent().visible:return false
 	if screen=="village":return true
@@ -1832,6 +1842,11 @@ func update_harvest_hint() -> void:
 		hint.text=tr("탐험이 끝났습니다. 마을로 돌아가 결과를 확인하세요.")
 
 func _unhandled_input(event: InputEvent) -> void:
+	if screen=="village" and event is InputEventKey and event.pressed and not event.echo and event.physical_keycode==KEY_F1:
+		tutorial.show_help();get_viewport().set_input_as_handled();return
+	if is_instance_valid(tutorial) and tutorial.blocks_input():
+		if event is InputEventKey and event.pressed and event.physical_keycode==KEY_ESCAPE: tutorial.close_help()
+		return
 	if is_instance_valid(village_modal):
 		if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode==KEY_E and life.mode=="fish": life.reel()
 		if event is InputEventKey and event.pressed and event.physical_keycode==KEY_ESCAPE: close_village_modal()
@@ -1935,29 +1950,31 @@ func open_expedition() -> void:
 	v.add_child(diff_row)
 	var estimate := text(v,"",15)
 	estimate.custom_minimum_size.y=60
+	estimate.custom_minimum_size.x=700
+	estimate.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	var maps: Array=me.get("catalog",{}).get("maps",[])
 	var difficulties: Array=me.get("catalog",{}).get("difficulties",[])
 	var refresh := func():
 		var multiplier := 1.0
 		for region in maps:
 			if region.id==chosen_map:
-				details.text=region.name+"\n"+region.description
+				details.text=I18n.t(region.name)+"\n"+I18n.t(region.description)
 				multiplier*=float(region.reward_multiplier)
 		for difficulty in difficulties:
 			if difficulty.id==chosen_difficulty:
 				multiplier*=float(difficulty.reward_multiplier)
-				estimate.text=difficulty.description+tr("\n완주하면 성과에 따라 별씨 %d–%d개를 받을 수 있어요.") % [int(floor(35*multiplier+0.000001)),int(floor(100*multiplier+0.000001))]
+				estimate.text=I18n.t(difficulty.description)+tr("\n완주하면 성과에 따라 별씨 %d–%d개를 받을 수 있어요.") % [int(floor(35*multiplier+0.000001)),int(floor(100*multiplier+0.000001))]
 				if preload("res://scripts/build_mode.gd").developer():estimate.text+=tr("  ·  보상 계수 ×%.3f")%multiplier
 		for b in region_row.get_children(): b.button_pressed=b.get_meta("id")==chosen_map
 		for b in diff_row.get_children(): b.button_pressed=b.get_meta("id")==chosen_difficulty
 	for region in maps:
-		var b := button(region_row,region.name,func(): chosen_map=region.id; refresh.call())
+		var b := button(region_row,I18n.t(region.name),func(): chosen_map=region.id; refresh.call())
 		b.set_meta("id",region.id)
 		b.toggle_mode=true
 		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		b.custom_minimum_size.y=90
 	for difficulty in difficulties:
-		var b := button(diff_row,difficulty.name,func(): chosen_difficulty=difficulty.id; refresh.call())
+		var b := button(diff_row,I18n.t(difficulty.name),func(): chosen_difficulty=difficulty.id; refresh.call())
 		b.set_meta("id",difficulty.id)
 		b.toggle_mode=true
 		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -1970,21 +1987,23 @@ func open_story() -> void:
 	text(v,tr("첫 완료 시 별씨와 집 앞 기념등이 추가됩니다. 자유 탐험은 지역 제한 없이 계속할 수 있어요."),13)
 	var choice := HBoxContainer.new();v.add_child(choice)
 	var description := text(v,"",16);description.custom_minimum_size=Vector2(700,140);description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	var goals := text(v,"",15);goals.custom_minimum_size.y=100
+	var goals := text(v,"",15);goals.custom_minimum_size=Vector2(700,100);goals.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	var difficulty := OptionButton.new();difficulty.add_item(tr("산책 · 천천히 이야기 즐기기"));difficulty.add_item(tr("탐험 · 기본 생존"));difficulty.add_item(tr("개척 · 더 강한 적"));difficulty.select(1);v.add_child(difficulty)
 	var start := button(v,tr("이야기 시작"),func():pass)
 	var selected_story := {"id":""}
 	var select_chapter := func(chapter):
 		selected_story.id=chapter.id
-		description.text=chapter.speaker+tr("의 부탁\n\n")+chapter.intro
-		goals.text=tr("이번 탐험의 목표\n")+" · ".join(chapter.objectives)+"\n\n"+(tr("첫 완료 보상 수령 완료 · 다시 도전할 수 있어요") if chapter.completed else tr("첫 완료 보상 +%d 별씨 · %s")%[chapter.bonus,tr("도전 가능") if chapter.unlocked else tr("이전 장을 먼저 완료하세요")])
+		description.text=I18n.t(chapter.speaker)+tr("의 부탁\n\n")+I18n.t(chapter.intro)
+		var translated_goals := PackedStringArray()
+		for goal in chapter.objectives: translated_goals.append(I18n.server(goal))
+		goals.text=tr("이번 탐험의 목표\n")+" · ".join(translated_goals)+"\n\n"+(tr("첫 완료 보상 수령 완료 · 다시 도전할 수 있어요") if chapter.completed else tr("첫 완료 보상 +%d 별씨 · %s")%[chapter.bonus,tr("도전 가능") if chapter.unlocked else tr("이전 장을 먼저 완료하세요")])
 		start.disabled=not chapter.unlocked
 		for child in choice.get_children():child.button_pressed=child.get_meta("id")==chapter.id
 	start.pressed.connect(func():
 		for chapter in me.get("campaign",[]):
 			if chapter.id==selected_story.id:start_run(chapter.map_id,["relaxed","standard","veteran"][difficulty.selected],chapter.id))
 	for chapter in me.get("campaign",[]):
-		var b := button(choice,chapter.title+(" ✓" if chapter.completed else ""),func():select_chapter.call(chapter));b.toggle_mode=true;b.set_meta("id",chapter.id);b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		var b := button(choice,I18n.t(chapter.title)+(" ✓" if chapter.completed else ""),func():select_chapter.call(chapter));b.toggle_mode=true;b.set_meta("id",chapter.id);b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	var chapters: Array=me.get("campaign",[])
 	if chapters.is_empty():description.text=tr("서버를 업데이트한 뒤 다시 접속해 주세요");start.disabled=true
 	else:
@@ -2135,6 +2154,7 @@ func open_craft() -> void:
 	if not craft_job.is_empty(): follow_craft()
 	elif not craft_done.is_empty(): render_craft(craft_done)
 	else: render_craft({})
+	tutorial.opened_craft()
 
 func render_craft(job: Dictionary) -> void:
 	if not is_instance_valid(craft_box): return
@@ -2145,6 +2165,8 @@ func render_craft(job: Dictionary) -> void:
 		text(craft_box,tr("만들고 싶은 물건을 짧게 적어 주세요. 가장 간단한 한 덩어리 모양으로 만들어 드려요."),16).autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		var idea := LineEdit.new()
 		idea.placeholder_text = tr("예: 작은 버섯 모양 의자")
+		idea.auto_translate_mode = Node.AUTO_TRANSLATE_MODE_DISABLED
+		idea.add_theme_color_override("font_placeholder_color",Color("74664c"))
 		idea.max_length = 120
 		craft_box.add_child(idea)
 		idea.grab_focus.call_deferred()
@@ -2154,6 +2176,9 @@ func render_craft(job: Dictionary) -> void:
 		if not me.get("studio_tripo_enabled",false):
 			ask.disabled = true
 			text(craft_box,tr("이 서버에서는 지금 새 물건을 만들 수 없어요."),14).modulate=Color("b0503c")
+		elif int(me.get("shards",0))<20:
+			ask.disabled = true
+			text(craft_box,tr("별씨가 부족해요. 탐험 보상을 모아 보세요."),14).modulate=Color("b0503c")
 		return
 	var titles := {"queued":tr("주문을 접수했어요"),"planning":tr("장인이 설계도를 그리고 있어요…"),"awaiting_confirmation":tr("설계가 끝났어요!"),
 		"building":tr("공방에서 만들고 있어요…"),"submitting":tr("공방에서 만들고 있어요…"),"unknown":tr("제작 결과를 확인하고 있어요…"),"ready":tr("완성했어요!")}
@@ -2191,6 +2216,7 @@ func request_craft(idea: String) -> void:
 	busy = false
 	if not check(response): return
 	craft_job = response.data.id
+	tutorial.accepted_craft(response.data)
 	await refresh_inventory()
 	follow_craft()
 
@@ -2222,6 +2248,7 @@ func follow_craft() -> void:
 		var response: Dictionary = await api.request("/v1/studio/jobs/"+craft_job)
 		if epoch!=world_epoch or not response.ok: break
 		var job: Dictionary = response.data
+		tutorial.accepted_craft(job)
 		render_craft(job)
 		if job.state=="awaiting_confirmation": break
 		if job.state in ["ready","failed","cancelled"]:
