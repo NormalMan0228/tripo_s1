@@ -117,6 +117,9 @@ def price(body):
 
 def fail(code,status=409):raise HTTPException(status,code)
 
+# Player-facing wording of user_total_generation_limit for the room studio (see queue()).
+TRIAL_USED_UP='체험판 제작 %d회를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!'
+
 def billing(parts):
     reported=[];missing=False
     for part in parts.values():
@@ -129,6 +132,22 @@ def billing(parts):
 
 # A quote awaiting the owner's confirmation has not reached Tripo, so it must
 # not block other players. The single-provider limit is enforced again at confirm.
+def tripo_requests(conn,user_id,exclude=''):
+    """Tripo submissions an account has made: every part sent to Tripo (mesh or image task),
+    failed and cancelled jobs included, and at least one for a job confirmed into the build.
+    The per-account trial cap (TRIPO_USER_TOTAL_REQUEST_LIMIT) is checked against this."""
+    total=0
+    for row in conn.execute('SELECT state,request,parts FROM studio_jobs WHERE owner_id=? AND id!=?',(user_id,exclude)):
+        try:
+            if json.loads(row['request']).get('geometry')!='tripo':continue
+            parts=json.loads(row['parts'] or '{}')
+        except (TypeError,ValueError):parts={}
+        sent=sum(1 for p in parts.values() if isinstance(p,dict) for k in ('task','image_task') if p.get(k))
+        if row['state'] in ('building','submitting','unknown','ready'):sent=max(sent,1)
+        total+=sent
+    return total
+
+
 def provider_busy(conn,exclude=''):
     return conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled','awaiting_confirmation') AND id!=?",(exclude,)).fetchone() or         conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone()
 
@@ -173,6 +192,8 @@ class Studio:
                     'room_usage':{room:room_budget.usage(conn,assets,user['id'],room) for room in ('home','workshop','village')},
                     'geometry_enabled':bool(settings.paid_enabled and settings.tripo_key),
                     'max_tripo_credits':settings.max_credits_per_craft if settings.mode=='live' else 0,
+                    'tripo_requests_used':tripo_requests(conn,user['id']),
+                    'tripo_requests_limit':settings.user_total_generation_limit if settings.mode=='live' else 0,
                     'prices':{'static_mesh':20,'static_textured':40,'dynamic_mesh':30,'dynamic_textured':50},
                     'tripo_estimate':{'models':{'v3.1-20260211':{'text_mesh':10,'text_textured':20,'image_mesh':20,'image_textured':30},'P2-20260801':{'text_mesh':100,'text_textured':110,'image_mesh':100,'image_textured':110}},'image_refinement_per_part':5,'source':'official_rates_and_measured_2026_10_02','max_parts':8,'confirmation_required':True},
                     'jobs':[dict(r) for r in conn.execute('SELECT id,state,cost,object_id,error,created FROM studio_jobs WHERE owner_id=? ORDER BY created DESC LIMIT 30',(user['id'],))],
@@ -207,9 +228,14 @@ class Studio:
                     user_count=conn.execute('SELECT count(*) FROM studio_jobs WHERE owner_id=? AND created>=?',
                                             (user['id'],int(clock()//86400)*86400)).fetchone()[0]
                     if user_count>=settings.user_daily_generation_limit:fail('user_daily_generation_limit',429)
-                    if settings.user_total_generation_limit and conn.execute(
-                            "SELECT count(*) FROM studio_jobs WHERE owner_id=? AND state!='failed'",(user['id'],)).fetchone()[0]>=settings.user_total_generation_limit:
-                        fail('user_total_generation_limit',429)
+                    limit=settings.user_total_generation_limit
+                    # Failed jobs may already have used Tripo: the cap also counts every Tripo request.
+                    if limit and (conn.execute("SELECT count(*) FROM studio_jobs WHERE owner_id=? AND state!='failed'",(user['id'],)).fetchone()[0]>=limit
+                                  or (body.geometry=='tripo' and tripo_requests(conn,user['id'])>=limit)):
+                        # The village craft window (main.gd) words the code itself. The room studio of
+                        # released clients (<= 0.10.2) prints the detail after its own prefix, so it gets
+                        # the sentence; it is the only caller that sends image_mode.
+                        fail(TRIAL_USED_UP % limit if 'image_mode' in body.model_fields_set else 'user_total_generation_limit',429)
                 job_id=str(uuid.uuid4());cost=price(body)
                 money(conn,user['id'],-cost,'studio_charge',job_id)
                 conn.execute('INSERT INTO studio_jobs(id,owner_id,request,state,cost,created,updated) VALUES (?,?,?,?,?,?,?)',
@@ -266,6 +292,8 @@ class Studio:
                 if row['state']!='awaiting_confirmation':fail('not_awaiting_confirmation')
                 if not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
                 if provider_busy(conn,job_id):fail('provider_busy')
+                if settings.mode=='live' and settings.user_total_generation_limit and tripo_requests(conn,user['id'],job_id)>=settings.user_total_generation_limit:
+                    fail('user_total_generation_limit',429)
                 quote=json.loads(row['provenance'])
                 total=max(row['cost'],int(quote.get('quoted_game_cost',row['cost'])))
                 if total>row['cost']:money(conn,user['id'],row['cost']-total,'studio_quote_charge',job_id)
@@ -401,6 +429,15 @@ class Studio:
             conn.execute('UPDATE studio_jobs SET '+','.join(k+'=?' for k in fields)+' WHERE id=?',(*fields.values(),job_id))
             conn.execute('UPDATE studio_leases SET expires=? WHERE job_id=? AND token=?',(self.clock()+600,job_id,self.claims.get(job_id,'')))
 
+    def guard_tripo_cap(self,job,parts):
+        """Last check before a new Tripo request: the account's earlier requests plus the ones
+        this job already sent must leave room for one more (live trial cap)."""
+        limit=self.settings.user_total_generation_limit if self.settings.mode=='live' else 0
+        if not limit:return
+        with self.db.transaction() as conn:used=tripo_requests(conn,job['owner_id'],job['id'])
+        sent=sum(1 for p in parts.values() for k in ('task','image_task') if p.get(k))
+        if used+sent>=limit:raise ProviderError('user_total_generation_limit')
+
     def refund(self,conn,row):
         entries=conn.execute("SELECT reason,amount FROM ledger WHERE user_id=? AND reference=? AND reason IN ('studio_charge','studio_quote_charge','studio_refund','studio_resume_charge','studio_resume_refund')",(row['owner_id'],row['id'])).fetchall()
         outstanding=-sum(r['amount'] for r in entries)
@@ -510,6 +547,7 @@ class Studio:
                 if body.geometry=='proxy':blob=fixture_glb(p['shape'],textured)
                 else:
                     if entry['state']=='pending' and body.image_mode=='refine':
+                        self.guard_tripo_cap(job,parts)
                         tripo=await self.pick_provider(5)
                         entry['key']=getattr(tripo,'fingerprint','')
                         reference=await tripo.upload_image(body.image)
@@ -529,6 +567,7 @@ class Studio:
                         entry.update(state='image_ready',image_credits_consumed=result.get('credits_consumed'))
                         self.update(job_id,state='building',parts=json.dumps(parts))
                     if entry['state'] in ('pending','image_ready'):
+                        if entry['state']=='pending':self.guard_tripo_cap(job,parts)
                         predicted=mesh_credits(mesh_model,textured,bool(body.image and (len(parts)==1 or body.image_mode=='refine')))
                         # A refined image belongs to the key that made it; otherwise any key with credit.
                         if entry.get('key'):
