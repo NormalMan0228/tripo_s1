@@ -235,6 +235,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def health(): return {'ok':True,'service':'tripothon','mode':settings.mode,'version':'0.10.0','protocol':6,
                           'studio_tripo_enabled':bool(settings.tripo_key and settings.paid_enabled),
                           'studio_llm':settings.studio_llm, 'multiplayer_protocol':1, 'max_party_members':3,
+                          'tripo_keys':len(settings.tripo_keys) or (1 if settings.tripo_key else 0),
                           'open_registration':bool(settings.mode=='live' and settings.open_registration)}
 
     def life_state(conn,user_id):

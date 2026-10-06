@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from server.app import create_app
 from server.backups import create_backup, restore_backup, verify_backup, BackupError
-from server.config import Settings, read_tripo_key, configured_tripo_key
+from server.config import Settings, read_tripo_key, read_tripo_keys, configured_tripo_key
 
 
 def test_secret_file_formats_and_safe_errors(tmp_path,monkeypatch):
@@ -22,7 +22,14 @@ def test_secret_file_formats_and_safe_errors(tmp_path,monkeypatch):
     monkeypatch.setenv('TRIPO_API_KEY','second-test-secret')
     with pytest.raises(ValueError,match='configure_only_one_tripo_key_source'):
         configured_tripo_key()
-    for bad in ('unit-test-secret\r\nsecond-line','', 'x'*4097, 'Bearer unit-test-secret'):
+    # Several keys: one per line, comments and blank lines ignored, duplicates dropped.
+    key.write_text('# first account\nunit-test-secret\r\n\nsecond-line\nunit-test-secret\n',encoding='utf-8')
+    assert read_tripo_keys(key)==('unit-test-secret','second-line')
+    assert read_tripo_key(key)=='unit-test-secret'
+    monkeypatch.delenv('TRIPO_API_KEY',raising=False)
+    settings=Settings()
+    assert settings.tripo_keys==('unit-test-secret','second-line') and 'second-line' not in repr(settings)
+    for bad in ('', '# only a comment', 'x'*4097, 'Bearer unit-test-secret', 'good-key\nBearer bad key'):
         key.write_text(bad,encoding='utf-8')
         with pytest.raises(ValueError) as caught: read_tripo_key(key)
         assert str(caught.value)=='invalid_tripo_key_file'
