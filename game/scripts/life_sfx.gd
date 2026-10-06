@@ -23,7 +23,12 @@ func play(kind: String, pitch := 1.0, volume := 0.0) -> void:
 	p.volume_db=-13+volume
 	p.play()
 
-func make(kind: String) -> AudioStreamWAV:
+## Recorded gathering sounds (shared with the expedition harvest), used for forage pick-ups.
+const SAMPLES := {"dig_stone":"res://assets/sfx/combat/harvest_stone_1.wav","dig_grass":"res://assets/sfx/combat/harvest_fiber_1.wav",
+	"chop_wood":"res://assets/sfx/combat/harvest_tree_1.wav"}
+
+func make(kind: String) -> AudioStream:
+	if SAMPLES.has(kind) and ResourceLoader.exists(SAMPLES[kind]): return load(SAMPLES[kind])
 	var length: float={"hoe":0.26,"seed":0.3,"water":0.75,"pop":0.22,"collect":0.42,"cast":0.4,"plop":0.22,"nibble":0.09,
 		"bite":0.5,"tick":0.035,"catch":1.1,"escape":0.45,"rock":0.22,"rustle":0.32,"shell":0.2,"card":0.35}.get(kind,0.2)
 	var n := int(length*RATE)

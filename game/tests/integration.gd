@@ -38,7 +38,7 @@ func run_test() -> void:
 		quit(1)
 		return
 	expect(app.me.shards==80,"server wallet received")
-	expect(app.sound.music[app.sound.music_index].stream!=null and app.sound.music[app.sound.music_index].playing and app.sound.music_mode=="village","village music is included and playing")
+	expect(app.sound.music[app.sound.music_index].stream!=null and app.sound.music[app.sound.music_index].playing and app.sound.music_mode in ["village_day","village_night"],"village music is included and playing")
 	expect(not app.right.get_parent().visible,"compact HUD starts with inventory drawer closed")
 	await app.paint_object("#70afa3")
 	expect(app.selected.color=="#70afa3","paint saved via API")

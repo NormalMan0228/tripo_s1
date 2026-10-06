@@ -60,6 +60,7 @@ func effect(kind: String) -> void:
 	var player := voices[voice_index]
 	voice_index=(voice_index+1)%voices.size()
 	player.stream=effects[kind]
+	player.volume_db=-16
 	player.bus=GameSettings.BUS_UI if kind in UI_EFFECTS else GameSettings.BUS_SFX
 	player.play()
 
@@ -89,6 +90,16 @@ func play_music(mode: String) -> void:
 	fade.tween_property(previous,"volume_db",-60.0,1.2)
 	fade.tween_property(next,"volume_db",-14.0,1.2)
 	fade.chain().tween_callback(previous.stop)
+
+## A recorded one-shot (portal, door) on the SFX bus, over the music.
+func stinger(path: String, volume_db := -10.0) -> void:
+	if not ResourceLoader.exists(path): return
+	var player := voices[voice_index]
+	voice_index=(voice_index+1)%voices.size()
+	player.stream=load(path)
+	player.bus=GameSettings.BUS_SFX
+	player.volume_db=volume_db
+	player.play()
 
 func make_effect(kind: String) -> AudioStreamWAV:
 	var length := 0.15

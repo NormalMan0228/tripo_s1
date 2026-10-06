@@ -4,7 +4,7 @@
     .tools/art-venv/Scripts/python.exe tools/package_release.py
 
 Writes builds/release/:
-  Villagen_<version>_Windows.zip        the game for players and judges: Villagen.exe +
+  Villagen_Windows.zip                  the game for players and judges: Villagen.exe +
                                          Villagen.pck (every map, NPC, interior, monster and
                                          UI asset inside), connects to the online world
   Villagen_<version>_DevAssets_Map.zip   game/maps/archipelago/assets (git-ignored)
@@ -17,6 +17,7 @@ invitation codes, server data or player databases are packaged.
 from __future__ import annotations
 
 import hashlib
+import sys
 import re
 import zipfile
 from pathlib import Path
@@ -98,7 +99,8 @@ def game_zip(tag: str) -> Path:
     exe, pck = BUILD / "Villagen.exe", BUILD / "Villagen.pck"
     for item in (exe, pck):
         if not item.is_file(): raise SystemExit(f"missing {item}; run tools/build_game.ps1 first")
-    target = OUT / f"Villagen_{tag}_Windows.zip"
+    # A fixed name, so .../releases/latest/download/Villagen_Windows.zip always points at the newest game.
+    target = OUT / "Villagen_Windows.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         archive.write(exe, "Villagen/Villagen.exe")
         archive.write(pck, "Villagen/Villagen.pck")
@@ -131,7 +133,8 @@ def assets_zip(tag: str, name: str, folders: list[str]) -> Path:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     tag = "v" + version()
-    files = [game_zip(tag), assets_zip(tag, "Map", MAP_ASSETS), assets_zip(tag, "Art", ART_ASSETS)]
+    # --game-only: just the player ZIP (the DevAssets archives change rarely; reuse the last ones).
+    files = [game_zip(tag)] if "--game-only" in sys.argv else [game_zip(tag), assets_zip(tag, "Map", MAP_ASSETS), assets_zip(tag, "Art", ART_ASSETS)]
     sums = OUT / "SHA256SUMS.txt"
     sums.write_text("".join(f"{sha256(f)}  {f.name}\n" for f in files), encoding="utf-8")
     for item in files + [sums]:
