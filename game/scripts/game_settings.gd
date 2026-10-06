@@ -32,6 +32,7 @@ extends RefCounted
 ##   shadow_quality() "off"/"low"/"high"      lod_multiplier()  prop LOD distance
 ##   night_grade()     bool                   typing_seconds(chars) dialogue typewriter
 ##   show_nameplates() / show_prompts()       minimap_rotates() / format_clock(h, m)
+##   show_route_guide() route guide trail
 ##   shake_scale()     0..1 camera shake      particle_scale()  0..1 particle counts
 ##   flashes_allowed() bool                   reduced_motion()  bool
 ##   zoom_step(wheel_button) signed zoom      running()         run key held/toggled
@@ -51,7 +52,7 @@ const CATEGORIES := {
 	"graphics": ["preset","window_mode","render_scale","vsync","fps_cap","shadows","msaa","view_detail","night_grade","brightness"],
 	"audio": ["master","music","sfx","ambience","voice","ui","mute_all","background_mute"],
 	"controls": ["zoom_speed","run_mode","zoom_invert"],
-	"gameplay": ["language","text_speed","nameplates","prompts","minimap_rotate","clock_24h","reduce_shake"],
+	"gameplay": ["language","text_speed","nameplates","prompts","route_guide","minimap_rotate","clock_24h","reduce_shake"],
 	"accessibility": ["ui_scale","large_text","reduced_motion"],
 }
 const DEFAULTS := {
@@ -60,7 +61,7 @@ const DEFAULTS := {
 	"master": 100, "music": 100, "sfx": 100, "ambience": 100, "voice": 100, "ui": 100,
 	"mute_all": false, "background_mute": false,
 	"zoom_speed": 100, "run_mode": "hold", "zoom_invert": false,
-	"language": "ko", "text_speed": "normal", "nameplates": true, "prompts": true,
+	"language": "ko", "text_speed": "normal", "nameplates": true, "prompts": true, "route_guide": true,
 	"minimap_rotate": false, "clock_24h": false, "reduce_shake": false,
 	"ui_scale": 100, "large_text": false, "reduced_motion": false,
 }
@@ -116,6 +117,7 @@ const ACTIONS := [
 	["wardrobe","옷장",[KEY_O,KEY_NONE]],
 	["rotate","가구 돌리기",[KEY_R,KEY_NONE]],
 	["toggle_sound","소리 켜기/끄기",[KEY_M,KEY_NONE]],
+	["toggle_hud","HUD 접기/펼치기",[KEY_U,KEY_NONE]],
 ]
 ## Keys that cannot be bound (Esc opens the pause menu and cancels a rebind; F3/F9 are tools).
 const RESERVED_KEYS := [KEY_ESCAPE,KEY_F3,KEY_F9,KEY_ENTER,KEY_KP_ENTER]
@@ -574,6 +576,10 @@ static func show_nameplates() -> bool:
 
 static func show_prompts() -> bool:
 	return bool(get_value("prompts"))
+
+## Route guide trail and pillar (guide.gd); the minimap flag shows either way.
+static func show_route_guide() -> bool:
+	return bool(get_value("route_guide"))
 
 static func minimap_rotates() -> bool:
 	return bool(get_value("minimap_rotate"))

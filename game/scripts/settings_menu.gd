@@ -202,6 +202,7 @@ func _gameplay() -> void:
 	_heading(tr("화면 표시"))
 	_toggle("nameplates", tr("이름표 표시"), tr("주민과 장소 위에 이름을 띄워요."))
 	_toggle("prompts", tr("상호작용 안내 표시"), tr("가까이 가면 'E · 대화하기' 같은 안내를 보여 줘요."))
+	_toggle("route_guide", tr("길 안내 표시"), tr("목적지까지 빛나는 길과 표식을 보여 줘요."))
 	_choice_bool("minimap_rotate", tr("미니맵"), tr("북쪽 고정"), tr("바라보는 방향"))
 	_choice_bool("clock_24h", tr("시계"), tr("12시간"), tr("24시간"))
 	_toggle("reduce_shake", tr("화면 흔들림·번쩍임 줄이기"))

@@ -284,6 +284,7 @@ func open_plot(index: int) -> void:
 		b.focus_mode=Control.FOCUS_NONE
 		b.disabled=count<1
 		b.name="Seed_"+crop
+		RpgUi.name_tip(b,"%s ×%d" % [tr(str(state.get("catalog",{}).get("names",{}).get(crop+"_seed",data.name))),count],str(seed_choices.size()+1))
 		for look in ["normal","hover","pressed","disabled"]:
 			b.add_theme_stylebox_override(look,RpgUi.frame({"normal":"slot_paper","hover":"slot_paper_hover","pressed":"slot_paper_hover","disabled":"slot_paper_empty"}[look]))
 		var stack := VBoxContainer.new()
@@ -583,9 +584,15 @@ func open_shop() -> void:
 	order.disabled=not state.order_available or state.bag.get("turnip",0)<2 or state.bag.get("perch",0)<1
 
 func open_map() -> void:
+	# Tab again folds the map away.
+	if mode=="map" and is_instance_valid(app.village_modal):
+		app.close_village_modal()
+		return
+	# The route guide (guide.gd) takes the picks: pins, glowing roads, the window stays.
+	var guide: Node=preload("res://scripts/guide.gd").current
 	var v: VBoxContainer=app.modal_card(tr("물결빛 마을 산책 지도"))
 	mode="map"
-	app.text(v,tr("목적지를 고르면 길잡이 표식이 생겨요. 섬과 섬은 다리로 이어져 있어요."),14)
+	app.text(v,tr("장소나 지도 위를 누르면 빛나는 길이 이어져요.") if guide else tr("목적지를 고르면 길잡이 표식이 생겨요. 섬과 섬은 다리로 이어져 있어요."),14)
 	var row := HBoxContainer.new()
 	v.add_child(row)
 	map_view=Map.new()
@@ -595,10 +602,14 @@ func open_map() -> void:
 	for i in Town.PLACES.size():
 		var place: Dictionary=Town.PLACES[i]
 		var b: Button=app.button(list,"%d  %s"%[i+1,tr(place.title)],func():
+			if is_instance_valid(guide):
+				guide.pick_place(place.id)
+				return
 			goal=place
 			app.close_village_modal()
 			app.message(tr(place.title)+tr("에 길잡이를 표시했어요.")))
 		b.custom_minimum_size.x=315
+	if is_instance_valid(guide): guide.attach_map(map_view,list)
 	app.button(v,tr("B · 생활 창고 열기"),open_storage)
 
 func closed() -> void:
@@ -635,8 +646,13 @@ func _process(delta: float) -> void:
 	forage.highlight(f.get("id","") if f.get("kind","")=="forage" else "")
 	if mode=="map" and is_instance_valid(map_view):
 		map_view.player_at=Vector2(app.player.position.x,app.player.position.z)
-		map_view.has_destination=not goal.is_empty()
-		if not goal.is_empty(): map_view.destination=goal.at
+		var guide: Node=preload("res://scripts/guide.gd").current
+		if is_instance_valid(guide) and guide.active():
+			map_view.has_destination=true
+			map_view.destination=guide.target.at
+		else:
+			map_view.has_destination=not goal.is_empty()
+			if not goal.is_empty(): map_view.destination=goal.at
 		map_view.queue_redraw()
 	if not goal.is_empty():
 		if not is_instance_valid(marker):

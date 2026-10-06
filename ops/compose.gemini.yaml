@@ -1,0 +1,15 @@
+# LLM design step with Google Gemini (server -> Gemini -> Tripo). Add on top of
+# compose.tripo.yaml when ops/secrets/gemini-key exists; the update script does this.
+# The key comes from Google AI Studio (free tier works for small judging servers).
+# TRIPOTHON_GEMINI_MODELS is tried in order; a model the key cannot use falls through.
+services:
+  api:
+    environment:
+      TRIPOTHON_STUDIO_LLM: gemini
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_key
+      TRIPOTHON_GEMINI_MODELS: ${TRIPOTHON_GEMINI_MODELS:-gemini-3.8-flash,gemini-3.5-flash,gemini-2.5-flash}
+    secrets: [gemini_key]
+
+secrets:
+  gemini_key:
+    file: ./secrets/gemini-key

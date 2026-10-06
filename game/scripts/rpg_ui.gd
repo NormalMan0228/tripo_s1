@@ -29,50 +29,63 @@ const FONT_NUMBERS: Font = preload("res://assets/fonts/ui_numbers.tres")
 
 ## name: [texture margins, expand margins, content margins] at 2x (from frames.json).
 const FRAMES := {
-	"panel_paper":[[54, 50, 54, 62],[14, 10, 14, 22],[26, 22, 26, 22]],
-	"panel_night":[[54, 50, 54, 62],[14, 10, 14, 22],[26, 22, 26, 22]],
-	"panel_night_plain":[[54, 50, 54, 62],[14, 10, 14, 22],[26, 22, 26, 22]],
-	"panel_paper_plain":[[54, 50, 54, 62],[14, 10, 14, 22],[26, 22, 26, 22]],
-	"pill_night":[[37, 33, 37, 37],[8, 6, 8, 12],[22, 9, 22, 9]],
-	"pill_paper":[[37, 33, 37, 37],[8, 6, 8, 12],[22, 9, 22, 9]],
-	"tooltip":[[29, 25, 29, 29],[8, 6, 8, 12],[22, 9, 22, 9]],
-	"btn_paper_normal":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_paper_hover":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_paper_pressed":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 9, 16, 9]],
-	"btn_paper_disabled":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_green_normal":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_green_hover":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_green_pressed":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 9, 16, 9]],
-	"btn_green_disabled":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_gold_normal":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_gold_hover":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_gold_pressed":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 9, 16, 9]],
-	"btn_gold_disabled":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_night_normal":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_night_hover":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
-	"btn_night_pressed":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 9, 16, 9]],
-	"btn_night_disabled":[[28, 26, 28, 30],[6, 6, 6, 6],[16, 7, 16, 15]],
+	"panel_paper":[[76, 48, 70, 72],[12, 8, 12, 16],[52, 24, 46, 40]],
+	"panel_night":[[73, 76, 72, 65],[12, 8, 12, 16],[47, 50, 46, 31]],
+	"panel_night_plain":[[73, 76, 72, 65],[12, 8, 12, 16],[47, 50, 46, 31]],
+	"panel_paper_plain":[[76, 48, 70, 72],[12, 8, 12, 16],[52, 24, 46, 40]],
+	"pill_night":[[60, 35, 60, 40],[8, 5, 8, 10],[26, 9, 26, 9]],
+	"pill_paper":[[42, 35, 42, 40],[8, 5, 8, 10],[22, 9, 22, 9]],
+	"tooltip":[[46, 26, 46, 30],[6, 4, 6, 8],[22, 9, 22, 9]],
+	"btn_paper_normal":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_paper_hover":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_paper_pressed":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 12, 18, 10]],
+	"btn_paper_disabled":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_green_normal":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_green_hover":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_green_pressed":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 12, 18, 10]],
+	"btn_green_disabled":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_gold_normal":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_gold_hover":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_gold_pressed":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 12, 18, 10]],
+	"btn_gold_disabled":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_night_normal":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_night_hover":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
+	"btn_night_pressed":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 12, 18, 10]],
+	"btn_night_disabled":[[36, 28, 36, 35],[6, 4, 6, 9],[18, 9, 18, 13]],
 	"focus":[[28, 28, 28, 28],[6, 6, 6, 6],[]],
-	"slot_night":[[32, 32, 32, 32],[4, 4, 4, 4],[8, 8, 8, 8]],
-	"slot_night_hover":[[32, 32, 32, 32],[4, 4, 4, 4],[8, 8, 8, 8]],
-	"slot_night_pressed":[[32, 32, 32, 32],[4, 4, 4, 4],[8, 8, 8, 8]],
-	"slot_night_primary":[[32, 32, 32, 32],[4, 4, 4, 4],[8, 8, 8, 8]],
-	"slot_paper":[[32, 32, 32, 32],[4, 4, 4, 4],[8, 8, 8, 8]],
-	"slot_paper_hover":[[32, 32, 32, 32],[4, 4, 4, 4],[8, 8, 8, 8]],
-	"slot_paper_empty":[[32, 32, 32, 32],[4, 4, 4, 4],[8, 8, 8, 8]],
-	"field_paper":[[20, 20, 20, 20],[4, 4, 4, 4],[14, 9, 14, 9]],
-	"field_paper_focus":[[20, 20, 20, 20],[4, 4, 4, 4],[14, 9, 14, 9]],
-	"field_night":[[20, 20, 20, 20],[4, 4, 4, 4],[14, 9, 14, 9]],
-	"field_night_focus":[[20, 20, 20, 20],[4, 4, 4, 4],[14, 9, 14, 9]],
-	"bar_bg":[[16, 16, 16, 16],[0, 0, 0, 0],[]],
-	"bar_fill":[[16, 16, 16, 16],[0, 0, 0, 0],[]],
-	"ribbon":[[52, 30, 52, 30],[0, 0, 0, 0],[48, 6, 48, 10]],
-	"ribbon_teal":[[52, 30, 52, 30],[0, 0, 0, 0],[48, 6, 48, 10]],
-	"keycap":[[14, 14, 14, 16],[1, 1, 1, 1],[6, 1, 6, 3]],
+	"slot_night":[[34, 33, 34, 37],[4, 3, 4, 7],[10, 10, 10, 10]],
+	"slot_night_hover":[[34, 33, 34, 37],[4, 3, 4, 7],[10, 10, 10, 10]],
+	"slot_night_pressed":[[34, 33, 34, 37],[4, 3, 4, 7],[10, 10, 10, 10]],
+	"slot_night_primary":[[34, 33, 34, 37],[4, 3, 4, 7],[10, 10, 10, 10]],
+	"slot_paper":[[34, 33, 34, 37],[4, 3, 4, 7],[10, 10, 10, 10]],
+	"slot_paper_hover":[[34, 33, 34, 37],[4, 3, 4, 7],[10, 10, 10, 10]],
+	"slot_paper_empty":[[34, 33, 34, 37],[4, 3, 4, 7],[10, 10, 10, 10]],
+	"field_paper":[[22, 22, 22, 22],[0, 0, 0, 0],[14, 9, 14, 9]],
+	"field_paper_focus":[[22, 22, 22, 22],[0, 0, 0, 0],[14, 9, 14, 9]],
+	"field_night":[[22, 22, 22, 22],[0, 0, 0, 0],[14, 9, 14, 9]],
+	"field_night_focus":[[22, 22, 22, 22],[0, 0, 0, 0],[14, 9, 14, 9]],
+	"bar_bg":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
+	"bar_fill":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
+	"ribbon":[[83, 26, 83, 30],[6, 4, 6, 8],[71, 8, 71, 12]],
+	"ribbon_teal":[[83, 26, 83, 30],[6, 4, 6, 8],[71, 8, 71, 12]],
+	"keycap":[[14, 14, 14, 16],[0, 0, 0, 0],[6, 1, 6, 3]],
+	"portrait_ring":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"check_off":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"check_on":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"radio_off":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"radio_on":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"slider_grabber":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"slider_grabber_hover":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"arrow_down":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"arrow_down_light":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
 	"scroll_grabber":[[10, 10, 10, 10],[0, 0, 0, 0],[]],
 	"scroll_grabber_hover":[[10, 10, 10, 10],[0, 0, 0, 0],[]],
 	"scroll_track":[[10, 10, 10, 10],[0, 0, 0, 0],[]],
 	"card_frame":[[42, 38, 42, 50],[12, 8, 12, 20],[]],
+	"dialogue_box":[[78, 67, 77, 77],[12, 8, 12, 16],[56, 49, 55, 51]],
+	"bar_fill_red":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
+	"bar_fill_green":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
+	"bar_fill_gold":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
 }
 ## Design canvas the HUD is laid out on; pin() keeps pieces on their edge when the
 ## interface scale (GameSettings ui_scale) shrinks the logical canvas.
@@ -124,8 +137,14 @@ static func panel_style(kind := "night", padding := -1.0) -> StyleBoxTexture:
 	return box
 
 static func icon_texture(name: String) -> Texture2D:
-	var path := name if name.begins_with("res://") else "res://assets/ui/%s.svg" % name
+	var path := painted(name if name.begins_with("res://") else "res://assets/ui/%s.svg" % name)
 	return load(path) if ResourceLoader.exists(path) else null
+
+## The painted icon (assets/ui/icons/<name>.png, tools/build_ui_kit.py) that replaces an
+## SVG icon of the same name; other paths are returned unchanged.
+static func painted(path: String) -> String:
+	var painted_path := "res://assets/ui/icons/%s.png" % path.get_file().get_basename()
+	return painted_path if ResourceLoader.exists(painted_path) else path
 
 ## Flat box kept for older callers (studio, settings); softer shadow, AA corners.
 static func style(fill: Color, radius := 14, border := GOLD, width := 2) -> StyleBoxFlat:
@@ -242,9 +261,7 @@ static func theme() -> Theme:
 	for item in ["font_color","font_hover_color","font_accelerator_color"]: t.set_color(item, "PopupMenu", PAPER_INK)
 	t.set_color("font_disabled_color", "PopupMenu", Color(PAPER_INK,.45))
 	t.set_constant("v_separation", "PopupMenu", 8)
-	t.set_stylebox("panel", "TooltipPanel", frame("tooltip"))
-	t.set_color("font_color", "TooltipLabel", INK)
-	t.set_font_size("font_size", "TooltipLabel", 13)
+	tooltip_theme(t)
 	# Meters, sliders and scroll bars.
 	t.set_stylebox("background", "ProgressBar", frame("bar_bg"))
 	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", Color("e9b552")))
@@ -302,6 +319,52 @@ static func theme() -> Theme:
 	t.set_color("font_color", "CaptionLabel", PAPER_MUTED)
 	_theme = t
 	return t
+
+# ------------------------------------------------------------------ names on hover
+
+## Paint swatches' names (translated where shown).
+const COLOR_NAMES := {"#f6eee0":"상아색","#edbc63":"꿀색","#d98477":"산호색","#70afa3":"청록색","#7c9ec6":"하늘색",
+	"#f1dfb8":"크림색","#dfa958":"황토색","#789887":"세이지색","#bd7f75":"장밋빛 갈색","#7d9ca3":"안개 파랑",
+	"#30595b":"짙은 청록","#774f3d":"밤색","#d5a250":"겨자색","#c47b50":"구리색","#ab789f":"연보라","#e6dfce":"모래색","#526552":"이끼색","#6889a1":"청회색",
+	"#f0cdb1":"밝은 복숭아빛","#e4b587":"살구빛","#bc865c":"황갈색","#895b43":"갈색","#604431":"짙은 갈색"}
+## What each fold key does, per fold id: [while open, while folded].
+const FOLD_TIPS := {"objective":["목표 접기","목표 펼치기"],"survival_objective":["목표 접기","목표 펼치기"],"minimap":["미니맵 접기","미니맵 펼치기"],
+	"hotbar":["퀵슬롯 접기","퀵슬롯 펼치기"],"profile":["프로필 접기","프로필 펼치기"],"toolbar":["도구 막대 접기","도구 막대 펼치기"]}
+
+## Hover names: a night pill (the painted "tooltip" frame) with cream outlined text.
+## Used by theme(), night_theme() and the studio's theme.
+static func tooltip_theme(t: Theme) -> void:
+	var pill := frame("tooltip")
+	# Room for the laurel ends; one line of text sits centred on the pill.
+	pill.content_margin_left = 21
+	pill.content_margin_right = 21
+	pill.content_margin_top = 5
+	pill.content_margin_bottom = 6
+	t.set_stylebox("panel", "TooltipPanel", pill)
+	t.set_font("font", "TooltipLabel", FONT_STRONG)
+	t.set_font_size("font_size", "TooltipLabel", 14)
+	t.set_color("font_color", "TooltipLabel", INK)
+	t.set_color("font_outline_color", "TooltipLabel", OUTLINE)
+	t.set_constant("outline_size", "TooltipLabel", 4)
+	t.set_color("font_shadow_color", "TooltipLabel", Color(0,0,0,0))
+
+## Names a picture-only control on hover (name, then "  ·  " and its key). A picture that
+## ignores the mouse starts passing it so the hover reaches it; only call this on
+## informational pictures, not on art lying over clickable things. Returns c.
+static func name_tip(c: Control, name: String, key := "") -> Control:
+	c.tooltip_text = name if key.is_empty() else name + "  ·  " + key
+	if c.mouse_filter == Control.MOUSE_FILTER_IGNORE: c.mouse_filter = Control.MOUSE_FILTER_PASS
+	return c
+
+## A paint colour's name ("#d98477" -> 산호색); the code itself when unnamed.
+static func color_name(hex: String) -> String:
+	var key := ("#" + hex.trim_prefix("#")).to_lower()
+	return TranslationServer.translate(COLOR_NAMES[key]) if COLOR_NAMES.has(key) else key
+
+## The fold key's name for a panel: "목표 접기" open, "목표 펼치기" folded.
+static func fold_tip(id: String, shut: bool) -> String:
+	var pair: Array = FOLD_TIPS.get(id, ["접기", "펼치기"])
+	return TranslationServer.translate(pair[1] if shut else pair[0])
 
 # ------------------------------------------------------------------ sound
 
@@ -502,7 +565,7 @@ static func keycap(parent: Node, key: String, size := 12) -> Label:
 
 static func icon(path: String, size: float) -> TextureRect:
 	var image := TextureRect.new()
-	image.texture = load(path)
+	image.texture = load(painted(path))
 	image.custom_minimum_size = Vector2(size,size)
 	image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -513,6 +576,7 @@ static func icon(path: String, size: float) -> TextureRect:
 static func meter(parent: Node, title: String, color: Color, icon_name := "") -> Dictionary:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
+	name_tip(row, title)
 	parent.add_child(row)
 	if not icon_name.is_empty() and icon_texture(icon_name):
 		var art := icon(icon_texture(icon_name).resource_path, 24)
@@ -537,7 +601,8 @@ static func meter(parent: Node, title: String, color: Color, icon_name := "") ->
 # ------------------------------------------------------------------ HUD pieces
 
 ## Portrait medallion, name and the two currencies. Returns the labels to update.
-static func player_frame(ui: Control, portrait: String) -> Dictionary:
+## With a fold_id a chevron badge on the medal folds the plate down to the medal.
+static func player_frame(ui: Control, portrait: String, fold_id := "") -> Dictionary:
 	var shell := PanelContainer.new()
 	shell.position = Vector2(14,12)
 	var plate := panel_style("pill")
@@ -565,7 +630,7 @@ static func player_frame(ui: Control, portrait: String) -> Dictionary:
 	medal.size = Vector2(60,60)
 	medal.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(medal)
-	var face := icon(portrait, 60)
+	var face := name_tip(icon(portrait, 60), TranslationServer.translate("내 캐릭터"))
 	medal.add_child(face)
 	var ring := TextureRect.new()
 	ring.texture = half("portrait_ring")
@@ -584,20 +649,34 @@ static func player_frame(ui: Control, portrait: String) -> Dictionary:
 	var coins := HBoxContainer.new()
 	coins.add_theme_constant_override("separation", 5)
 	column.add_child(coins)
-	coins.add_child(icon("res://assets/starseed.svg", 24))
+	# The two currencies show only a picture and a number: each names itself on hover.
+	var star_name := TranslationServer.translate("별씨")
+	var leaf_name := TranslationServer.translate("잎전")
+	coins.add_child(name_tip(icon("res://assets/starseed.svg", 24), star_name))
 	var stars := numbers(label(coins, "0", 17, Color("ffe08a")), 17)
 	stars.custom_minimum_size.x = 34
-	stars.tooltip_text = TranslationServer.translate("별씨")
-	var gap := Control.new(); gap.custom_minimum_size.x = 6; coins.add_child(gap)
-	coins.add_child(icon("res://assets/ui/leaf.svg", 22))
+	name_tip(stars, star_name)
+	var gap := Control.new(); gap.custom_minimum_size.x = 6; gap.mouse_filter = Control.MOUSE_FILTER_IGNORE; coins.add_child(gap)
+	coins.add_child(name_tip(icon("res://assets/ui/leaf.svg", 22), leaf_name))
 	var leaves := numbers(label(coins, "0", 17, Color("c8ec9f")), 17)
 	leaves.custom_minimum_size.x = 34
+	name_tip(leaves, leaf_name)
 	var status := label(column, "", 12, SOFT)
 	status.visible = false
+	if not fold_id.is_empty():
+		# Folded: the name/coins column rolls into the medal and the plate fades away.
+		fold_toggle(holder, fold_id, Vector2.LEFT).position = Vector2(50, 48)
+		var clip := fold_clip(column, false)
+		foldable(clip, fold_id, func(shut: bool, animate: bool):
+			roll(clip, shell, shut, animate, false)
+			var tw := _fold_tween(shell, "plate_tween", animate)
+			if tw: tw.tween_property(shell, "self_modulate:a", 0.0 if shut else 1.0, FOLD_TIME)
+			else: shell.self_modulate.a = 0.0 if shut else 1.0)
 	return {"panel":shell, "name":name, "stars":stars, "leaves":leaves, "status":status, "column":column, "portrait":face}
 
-## Square slots with an icon, a key cap and a caption on a glass tray.
-static func hotbar(ui: Control, slots: Array, y: float) -> HBoxContainer:
+## Square slots with an icon, a key cap and a caption on a glass tray. With a
+## fold_id a chevron key at the tray's right end slides it below the screen.
+static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxContainer:
 	const SLOT := 70.0
 	const GAP := 10.0
 	var tray := PanelContainer.new()
@@ -627,7 +706,7 @@ static func hotbar(ui: Control, slots: Array, y: float) -> HBoxContainer:
 		b.custom_minimum_size = Vector2(SLOT, SLOT)
 		b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		b.focus_mode = Control.FOCUS_NONE
-		b.tooltip_text = slot.label
+		name_tip(b, slot.label, str(slot.get("key", "")))
 		b.theme_type_variation = "HudSlot"
 		if slot.get("primary", false):
 			b.add_theme_stylebox_override("normal", frame("slot_night_primary"))
@@ -649,6 +728,7 @@ static func hotbar(ui: Control, slots: Array, y: float) -> HBoxContainer:
 		b.pressed.connect(slot.call)
 		hover_motion(b, 1.08, Vector2(0.5, 1.0))
 		bar.add_child(b)
+	if not fold_id.is_empty(): fold_dock(ui, fold_id, [tray, bar], 640.0 + width * 0.5, y + 6 + (SLOT + 8) * 0.5)
 	return bar
 
 ## Floating interaction chip above the hotbar; hidden while empty. The leading
@@ -726,6 +806,262 @@ static func pin(c: Control, h := 0.0, v := 0.0, design_at := Vector2(-1, -1)) ->
 	c.offset_top = top
 	return c
 
+# ------------------------------------------------------------------ folding
+
+## HUD panels fold to a compact form (a header row, a chip, a handle tab) and
+## remember it per panel id ("objective", "minimap", "hotbar", "profile",
+## "survival_objective", "toolbar") in [hud] of the settings file. Pieces register
+## with foldable(id, apply); set_folded(), a panel's chevron key and the HUD key
+## (toggle_all_folds) drive every piece of that id. Instant with reduced motion.
+const FOLD_TIME := 0.22
+const FOLD_GROUP := &"hud_fold"
+static var _folds := {}
+static var _folds_loaded := false
+
+static func folded(id: String) -> bool:
+	if not _folds_loaded:
+		_folds_loaded = true
+		var config := ConfigFile.new()
+		if config.load(GameSettings.I18n.settings_path()) == OK and config.has_section("hud"):
+			for key in config.get_section_keys("hud"): _folds[key] = bool(config.get_value("hud", key, false))
+	return bool(_folds.get(id, false))
+
+## Forget the cached fold states (tests re-read the settings file).
+static func reload_folds() -> void:
+	_folds.clear()
+	_folds_loaded = false
+
+static func set_folded(id: String, shut: bool, animate := true) -> void:
+	set_folds([id], shut, animate)
+
+## Folds or unfolds every piece registered under ids and saves the choice.
+static func set_folds(ids: Array, shut: bool, animate := true) -> void:
+	folded("")
+	for id in ids: _folds[id] = shut
+	var config := ConfigFile.new()
+	config.load(GameSettings.I18n.settings_path())
+	for id in _folds: config.set_value("hud", id, _folds[id])
+	config.save(GameSettings.I18n.settings_path())
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null: return
+	for host in tree.get_nodes_in_group(FOLD_GROUP):
+		for entry in host.get_meta("folds", []):
+			if entry[0] in ids: (entry[1] as Callable).call(shut, animate and not calm())
+
+static func toggle_fold(id: String) -> void:
+	var shut := not folded(id)
+	set_folded(id, shut)
+	sfx("close" if shut else "open", -8.0)
+
+## The HUD key: folds every panel on screen, or unfolds them all when all are
+## folded. Returns true when the panels are now folded.
+static func toggle_all_folds() -> bool:
+	var ids := fold_ids()
+	if ids.is_empty(): return false
+	var shut := ids.any(func(id): return not folded(id))
+	set_folds(ids, shut)
+	sfx("close" if shut else "open", -8.0)
+	return shut
+
+## Fold ids of the pieces currently in the tree.
+static func fold_ids() -> Array:
+	var ids := []
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null: return ids
+	for host in tree.get_nodes_in_group(FOLD_GROUP):
+		for entry in host.get_meta("folds", []):
+			if not ids.has(entry[0]): ids.append(entry[0])
+	return ids
+
+## Registers a piece under a fold id. apply(folded, animate) moves it between its
+## open and folded looks; it runs once now, unanimated, with the saved state.
+static func foldable(host: Node, id: String, apply: Callable) -> void:
+	var entries: Array = host.get_meta("folds", [])
+	entries.append([id, apply])
+	host.set_meta("folds", entries)
+	host.add_to_group(FOLD_GROUP)
+	apply.call(folded(id), false)
+
+## Replaces the fold tween in a node's slot; null when the change should be instant.
+static func _fold_tween(c: Node, slot := "fold_tween", animate := true) -> Tween:
+	if c.has_meta(slot):
+		var old: Tween = c.get_meta(slot)
+		if old and old.is_valid(): old.kill()
+		c.remove_meta(slot)
+	if not animate or not c.is_inside_tree(): return null
+	var tw := c.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	c.set_meta(slot, tw)
+	return tw
+
+## The white chevron (pointing up) centred in a key; rotate it to point elsewhere.
+static func _chevron(host: Control, inset: Vector4) -> TextureRect:
+	var art := TextureRect.new()
+	art.name = "Chevron"
+	art.texture = icon_texture("chevron")
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art.set_anchors_preset(Control.PRESET_FULL_RECT)
+	art.offset_left = inset.x; art.offset_top = inset.y; art.offset_right = -inset.z; art.offset_bottom = -inset.w
+	art.modulate = INK
+	art.resized.connect(func(): art.pivot_offset = art.size * 0.5)
+	host.add_child(art)
+	return art
+
+## A small night key whose chevron points where its panel goes: `toward` while open
+## (folding), the opposite way while folded. Pressing it toggles fold id.
+static func fold_toggle(parent: Node, id: String, toward := Vector2.UP, side := 28.0) -> Button:
+	var key := Button.new()
+	key.name = "Fold"
+	key.custom_minimum_size = Vector2(side, side)
+	key.size = key.custom_minimum_size
+	key.focus_mode = Control.FOCUS_NONE
+	for state in ["normal","hover","pressed","disabled"]: key.add_theme_stylebox_override(state, frame("btn_night_" + state))
+	key.add_theme_stylebox_override("hover_pressed", frame("btn_night_pressed"))
+	key.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	var art := _chevron(key, Vector4(5, 4, 5, 6))
+	key.pressed.connect(func(): toggle_fold(id))
+	hover_motion(key, 1.12, Vector2(0.5, 0.5), false)
+	key.mouse_entered.connect(func(): sfx("hover"))
+	parent.add_child(key)
+	foldable(key, id, func(shut: bool, animate: bool):
+		key.tooltip_text = fold_tip(id, shut)
+		var angle := (-toward if shut else toward).angle() + PI * 0.5
+		var tw := _fold_tween(art, "fold_tween", animate)
+		if tw: tw.tween_property(art, "rotation", angle, FOLD_TIME)
+		else: art.rotation = angle)
+	return key
+
+## Moves body into a clipping holder that rolls shut along one axis (height when
+## vertical). Open, the holder takes the body's minimum size, so the card around it
+## still follows the body's text as it changes.
+static func fold_clip(body: Control, vertical := true) -> Control:
+	var clip := Control.new()
+	clip.name = "FoldClip"
+	clip.clip_contents = true
+	clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	clip.size_flags_horizontal = body.size_flags_horizontal
+	clip.size_flags_vertical = body.size_flags_vertical
+	clip.set_meta("open", 1.0)
+	var parent := body.get_parent()
+	if parent:
+		var at := body.get_index()
+		parent.remove_child(body)
+		parent.add_child(clip)
+		parent.move_child(clip, at)
+	clip.add_child(body)
+	body.set_anchors_preset(Control.PRESET_TOP_WIDE if vertical else Control.PRESET_LEFT_WIDE)
+	body.offset_left = 0; body.offset_top = 0; body.offset_right = 0; body.offset_bottom = 0
+	var fit := func() -> void:
+		if not is_instance_valid(clip) or not is_instance_valid(body): return
+		var need := body.get_combined_minimum_size()
+		var open: float = clip.get_meta("open", 1.0)
+		clip.custom_minimum_size = Vector2(need.x, need.y * open) if vertical else Vector2(need.x * open, need.y)
+	clip.set_meta("fit", fit)
+	body.minimum_size_changed.connect(fit)
+	fit.call()
+	return clip
+
+## Rolls a fold_clip() shut or open; `card` (the panel around it) shrinks with it.
+static func roll(clip: Control, card: Control, shut: bool, animate: bool, vertical := true) -> void:
+	var body := clip.get_child(0) as Control
+	var fit: Callable = clip.get_meta("fit")
+	var step := func(t: float) -> void:
+		if not is_instance_valid(clip): return
+		clip.set_meta("open", t)
+		fit.call()
+		if is_instance_valid(body): body.modulate.a = t
+		if is_instance_valid(card): _snug(card, vertical)
+	if not shut: clip.visible = true
+	var tw := _fold_tween(clip, "fold_tween", animate)
+	if tw: tw.tween_method(step, float(clip.get_meta("open", 1.0)), 0.0 if shut else 1.0, FOLD_TIME)
+	else: step.call(0.0 if shut else 1.0)
+	if shut:
+		var done := func() -> void:
+			if not is_instance_valid(clip): return
+			clip.visible = false
+			if is_instance_valid(card): _snug(card, vertical)
+		if tw: tw.tween_callback(done)
+		else: done.call()
+
+## Lets a card shrink back to its content along one axis (containers only grow by
+## themselves), keeping its pinned edge in place.
+static func _snug(card: Control, vertical := true) -> void:
+	var need := card.get_combined_minimum_size()
+	if vertical:
+		if card.grow_vertical == Control.GROW_DIRECTION_BEGIN: card.offset_top = card.offset_bottom - need.y
+		else: card.offset_bottom = card.offset_top + need.y
+	elif card.grow_horizontal == Control.GROW_DIRECTION_BEGIN: card.offset_left = card.offset_right - need.x
+	else: card.offset_right = card.offset_left + need.x
+
+## A HUD card that folds to its header row: `body` (everything under `head`) rolls
+## up into a clip, the card shrinks to the header, and a chevron key closes the
+## header row. Returns the key.
+static func fold_card(card: Control, head: HBoxContainer, body: Control, id: String) -> Button:
+	for part in head.get_children():
+		if part is Label: (part as Label).vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(spacer)
+	var key := fold_toggle(head, id, Vector2.UP)
+	key.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var clip := fold_clip(body)
+	# Shorter text lets the card shrink again (a container only grows by itself).
+	body.minimum_size_changed.connect(func(): if is_instance_valid(card) and clip.visible: _snug(card))
+	foldable(clip, id, func(shut: bool, animate: bool): roll(clip, card, shut, animate))
+	return key
+
+## Slides a piece by `offset` as its id folds. mode "hide": fades out and hides when
+## folded; "show": the reverse (a handle shown only while folded); "move": stays
+## visible and only moves (its visibility belongs to someone else).
+static func fold_shift(c: Control, id: String, offset: Vector2, mode := "hide") -> void:
+	var alpha := c.modulate.a
+	c.set_meta("fold_at", 0.0)
+	var place := func(t: float) -> void:
+		if not is_instance_valid(c): return
+		var by: Vector2 = offset * (t - float(c.get_meta("fold_at", 0.0)))
+		c.set_meta("fold_at", t)
+		c.offset_left += by.x; c.offset_right += by.x
+		c.offset_top += by.y; c.offset_bottom += by.y
+		if mode != "move": c.modulate.a = alpha * (1.0 - t)
+	foldable(c, id, func(shut: bool, animate: bool):
+		var target := (1.0 if shut else 0.0) if mode != "show" else (0.0 if shut else 1.0)
+		var away := mode != "move" and target > 0.0
+		if mode != "move" and not away: c.visible = true
+		var tw := _fold_tween(c, "fold_tween", animate)
+		if tw: tw.tween_method(place, float(c.get_meta("fold_at", 0.0)), target, FOLD_TIME)
+		else: place.call(target)
+		if away:
+			if tw: tw.tween_callback(func(): if is_instance_valid(c): c.visible = false)
+			else: c.visible = false)
+
+## Bottom docks (slot hotbar, field toolbar): a chevron key beside the dock's right
+## edge (`right`, centred on `mid` of the design canvas) slides `parts` below the
+## screen; folded, a small handle tab with an up chevron waits at the bottom centre.
+static func fold_dock(ui: Control, id: String, parts: Array, right: float, mid: float) -> Button:
+	var key := fold_toggle(ui, id, Vector2.DOWN)
+	key.position = Vector2(right + 8.0, mid - 14.0)
+	pin(key, 0.5, 1.0)
+	var handle := Button.new()
+	handle.name = "FoldHandle"
+	handle.focus_mode = Control.FOCUS_NONE
+	handle.tooltip_text = fold_tip(id, true)
+	for state in ["normal","hover","pressed","hover_pressed","disabled"]: handle.add_theme_stylebox_override(state, frame("pill_night"))
+	handle.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	handle.custom_minimum_size = Vector2(76, 36)
+	handle.size = handle.custom_minimum_size
+	handle.position = Vector2(CANVAS.x * 0.5 - 38.0, CANVAS.y - 46.0)
+	_chevron(handle, Vector4(8, 7, 8, 9))
+	handle.pressed.connect(func(): toggle_fold(id))
+	hover_motion(handle, 1.08, Vector2(0.5, 1.0), false)
+	handle.mouse_entered.connect(func(): sfx("hover"))
+	ui.add_child(handle)
+	pin(handle, 0.5, 1.0)
+	for part in parts + [key]: fold_shift(part, id, Vector2(0, 130))
+	fold_shift(handle, id, Vector2(0, 60), "show")
+	return key
+
 ## Overrides for controls on night glass: cream text with an outline, night keys.
 static func night_theme() -> Theme:
 	if _night_theme: return _night_theme
@@ -758,6 +1094,7 @@ static func night_theme() -> Theme:
 		t.set_color("font_color",type,INK)
 		t.set_color("caret_color",type,GOLD)
 		t.set_color("font_placeholder_color",type,Color(1,1,1,.42))
+	tooltip_theme(t)
 	_night_theme=t
 	return t
 
@@ -784,11 +1121,30 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 	shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(shade)
-	var has_card := not portrait.is_empty() and ResourceLoader.exists(portrait)
+	# A background-free illustration (assets/.../standee/<name>.png) stands behind the
+	# box's left end; without one the painted card frame is used.
+	var standee_file := standee_path(portrait)
+	var has_card := standee_file.is_empty() and not portrait.is_empty() and ResourceLoader.exists(portrait)
+	var standee: TextureRect = null
+	if not standee_file.is_empty():
+		standee = TextureRect.new()
+		standee.name = "Standee"
+		standee.texture = load(standee_file)
+		standee.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		standee.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		standee.anchor_left = 0.0; standee.anchor_right = 0.0; standee.anchor_top = 1.0; standee.anchor_bottom = 1.0
+		standee.offset_left = STANDEE_RECT.position.x; standee.offset_right = STANDEE_RECT.end.x
+		standee.offset_top = STANDEE_RECT.position.y; standee.offset_bottom = STANDEE_RECT.end.y
+		standee.pivot_offset = Vector2(STANDEE_RECT.size.x * 0.5, STANDEE_RECT.size.y)
+		standee.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		standee.set_meta("portrait", portrait)
+		standee.set_meta("mood", "neutral")
+		root.add_child(standee)
 	# The text box: bottom, full width inside safe margins.
 	var box := PanelContainer.new()
 	box.name = "Box"
-	var style := panel_style("night")
+	# The painted dialogue box (tools/build_ui_kit.py), or the night panel without it.
+	var style := frame("dialogue_box") if ResourceLoader.exists("res://assets/ui/frames/dialogue_box.png") else panel_style("night")
 	style.content_margin_left = 52
 	style.content_margin_right = 52
 	style.content_margin_top = 46
@@ -799,6 +1155,21 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 	box.offset_left = 64; box.offset_right = -64; box.offset_top = -224; box.offset_bottom = -26
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(box)
+	# Gold crest on the box's top edge, centred.
+	if ResourceLoader.exists("res://assets/ui/frames/window_crest.png"):
+		var crest := TextureRect.new()
+		crest.name = "Crest"
+		crest.texture = half("window_crest")
+		crest.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var crest_size := crest.texture.get_size()
+		crest.anchor_left = 0.5; crest.anchor_right = 0.5; crest.anchor_top = 1.0; crest.anchor_bottom = 1.0
+		crest.offset_left = -crest_size.x * 0.5; crest.offset_right = crest_size.x * 0.5
+		crest.offset_top = -224 - crest_size.y + 3; crest.offset_bottom = -224 + 3
+		root.add_child(crest)
+		box.visibility_changed.connect(func(): if is_instance_valid(crest): crest.visible = box.visible)
+		if not calm():
+			crest.modulate.a = 0.0
+			crest.create_tween().tween_property(crest, "modulate:a", 1.0, 0.2).set_delay(0.18)
 	var body := Label.new()
 	body.name = "Body"
 	body.add_theme_font_override("font", FONT_BODY)
@@ -833,12 +1204,14 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 		rim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(rim)
 		box.get_theme_stylebox("panel").content_margin_top = 52
-	# Speaker ribbon: tied under the card, or on the box's top-left edge.
+	if standee:
+		box.get_theme_stylebox("panel").content_margin_left = STANDEE_RECT.end.x - 64.0 + 18.0
+	# Speaker ribbon: tied under the card, next to the standee, or on the box's top-left edge.
 	var plate := ribbon(root, speaker, true, 21)
 	plate.name = "Plate"
 	plate.anchor_left = 0.0; plate.anchor_right = 0.0; plate.anchor_top = 1.0; plate.anchor_bottom = 1.0
 	var plate_width: float = maxf(plate.get_combined_minimum_size().x, 210.0 if has_card else 0.0)
-	var plate_x := 92.0 + 135.0 - plate_width * 0.5 if has_card else 92.0
+	var plate_x := 92.0 + 135.0 - plate_width * 0.5 if has_card else (STANDEE_RECT.end.x + 6.0 if standee else 92.0)
 	plate.offset_left = plate_x; plate.offset_right = plate_x + plate_width
 	plate.offset_top = -224 - 22; plate.offset_bottom = -224 + 20
 	# Advance indicator: a gold chevron bobbing at the box's bottom-right.
@@ -869,6 +1242,16 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 	choices.theme = night_theme()
 	root.add_child(choices)
 	# Entrance: card slides in from the left, box rises, ribbon pops.
+	if standee and not calm():
+		standee.modulate.a = 0.0
+		var enter := standee.create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		enter.tween_property(standee, "offset_left", standee.offset_left, 0.36).from(standee.offset_left - 54)
+		enter.tween_property(standee, "offset_right", standee.offset_right, 0.36).from(standee.offset_right - 54)
+		enter.tween_property(standee, "modulate:a", 1.0, 0.28)
+		# Breathing: a slow, barely visible rise of the shoulders.
+		var breathe := standee.create_tween().set_loops()
+		breathe.tween_property(standee, "scale", Vector2(1.0, 1.007), 1.6).set_trans(Tween.TRANS_SINE)
+		breathe.tween_property(standee, "scale", Vector2.ONE, 1.6).set_trans(Tween.TRANS_SINE)
 	if not calm():
 		if card:
 			card.modulate.a = 0.0
@@ -884,7 +1267,43 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 		plate.modulate.a = 0.0
 		plate.create_tween().tween_property(plate, "modulate:a", 1.0, 0.2).set_delay(0.12)
 	sfx("open", -10.0)
-	return {"root":root, "shade":shade, "box":box, "body":body, "more":more, "choices":choices, "card":card, "plate":plate}
+	return {"root":root, "shade":shade, "box":box, "body":body, "more":more, "choices":choices, "card":card, "plate":plate, "standee":standee}
+
+## Where the standee stands on the 1280x800 canvas (bottom-left anchored offsets):
+## its lower part sits behind the text box, which hides the waist crop.
+const STANDEE_RECT := Rect2(28, -26 - 560, 420, 560)
+
+## The background-free illustration for a portrait (<dir>/standee/<name>[_mood].png),
+## falling back to the neutral one; empty when none was made.
+static func standee_path(portrait: String, mood := "neutral") -> String:
+	if portrait.is_empty(): return ""
+	var base := portrait.get_base_dir().path_join("standee").path_join(portrait.get_file().get_basename())
+	if mood != "neutral" and ResourceLoader.exists(base + "_" + mood + ".png"): return base + "_" + mood + ".png"
+	return base + ".png" if ResourceLoader.exists(base + ".png") else ""
+
+## The face a line calls for: questions look curious/surprised, exclamations happy.
+static func line_mood(line: String) -> String:
+	var text := line.strip_edges()
+	if text.ends_with("?") or text.ends_with("？") or text.contains("?!") or text.contains("？！"): return "curious"
+	for mark in ["!", "！", "♪", "하하", "헤헤", "ㅎㅎ", "哈哈"]:
+		if text.contains(mark): return "happy"
+	return "neutral"
+
+## Call when a dialogue line starts: the standee changes expression with a small hop.
+static func dialogue_line(d: Dictionary, line: String) -> void:
+	var standee: TextureRect = d.get("standee")
+	if not is_instance_valid(standee): return
+	var mood := line_mood(line)
+	var path := standee_path(str(standee.get_meta("portrait", "")), mood)
+	if path.is_empty() or standee.get_meta("mood", "") == mood: return
+	standee.set_meta("mood", mood)
+	standee.texture = load(path)
+	if calm(): return
+	var rest: float = standee.get_meta("rest_y", standee.position.y)
+	standee.set_meta("rest_y", rest)
+	var hop := standee.create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	hop.tween_property(standee, "position:y", rest - (9.0 if mood == "happy" else 5.0), 0.09)
+	hop.tween_property(standee, "position:y", rest, 0.16).set_ease(Tween.EASE_IN)
 
 ## Fills the dialogue's choice list: entries are [text, Callable]. Keyboard / pad
 ## focus starts on the first; number keys 1-9 pick directly. Returns the buttons.

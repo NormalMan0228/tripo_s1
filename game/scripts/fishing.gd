@@ -454,7 +454,7 @@ func build_hud() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation",12)
 	pill.add_child(row)
-	row.add_child(Icon.make("bait",40))
+	row.add_child(RpgUi.name_tip(Icon.make("bait",40),tr("미끼")))
 	var column := VBoxContainer.new()
 	column.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	row.add_child(column)

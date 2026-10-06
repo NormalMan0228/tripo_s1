@@ -232,7 +232,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                             headers={'Cache-Control':'no-store'})
 
     @app.get('/health')
-    def health(): return {'ok':True,'service':'tripothon','mode':settings.mode,'version':'0.8.1','protocol':6,
+    def health(): return {'ok':True,'service':'tripothon','mode':settings.mode,'version':'0.10.0','protocol':6,
                           'studio_tripo_enabled':bool(settings.tripo_key and settings.paid_enabled),
                           'studio_llm':settings.studio_llm, 'multiplayer_protocol':1, 'max_party_members':3}
 
@@ -313,6 +313,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             except sqlite3.IntegrityError: fail('username_unavailable')
             new_object(conn,user_id,'starter','환영의 나무 의자')
             if settings.mode=='demo': money(conn,user_id,80,'demo_welcome',user_id)
+            elif settings.welcome_stars: money(conn,user_id,settings.welcome_stars,'live_welcome',user_id)
             record_event(conn,'register',user_id,{'username':body.username.lower(),'ip':client_ip(request)},clock())
             return session(conn,user_id)
 

@@ -109,3 +109,31 @@ def test_paid_live_limits_user_and_model_before_any_provider_call(tmp_path):
         denied = request()
         assert denied.status_code == 429
         assert denied.json()['detail'] == 'user_daily_generation_limit'
+
+
+def test_judging_server_welcome_stars_and_lifetime_craft_limit(tmp_path):
+    settings = Settings(data_dir=tmp_path, mode='live', paid_enabled=True, tripo_key='test-only-key',
+                        studio_llm='gemini', gemini_key='test-only-key',
+                        registration_code='test-only-invitation-123456',
+                        daily_generation_limit=100, user_daily_generation_limit=50,
+                        user_total_generation_limit=2, welcome_stars=150)
+    app = create_app(settings, worker_enabled=False)
+    with TestClient(app, base_url='https://testserver') as client:
+        token = client.post('/v1/auth/register', json={
+            'username': 'judge_one', 'password': 'Test-password-123',
+            'invitation': settings.registration_code}).json()['token']
+        headers = {'Authorization': 'Bearer ' + token}
+        with app.state.db.transaction() as db:
+            assert db.execute("SELECT shards FROM users WHERE username='judge_one'").fetchone()[0] == 150
+
+        def request():
+            return client.post('/v1/studio/jobs', headers=headers, json={
+                'request_id': str(uuid.uuid4()), 'prompt': 'wooden chair', 'designer': 'llm', 'geometry': 'tripo'})
+
+        for i in range(2):
+            accepted = request()
+            assert accepted.status_code == 200, accepted.json()
+            with app.state.db.transaction() as db:
+                db.execute("UPDATE studio_jobs SET state='ready' WHERE id=?", (accepted.json()['id'],))
+        denied = request()
+        assert denied.status_code == 429 and denied.json()['detail'] == 'user_total_generation_limit'

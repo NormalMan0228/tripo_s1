@@ -78,6 +78,8 @@ func run() -> void:
 		quit(0)
 		return
 	if "--walk" in OS.get_cmdline_user_args():
+		# --no-guide: the same walk without the route guide (scripts/guide.gd) for A/B.
+		if "--no-guide" in OS.get_cmdline_user_args(): toggle(module("guide"), false)
 		await walk_route()
 		quit(0)
 		return
@@ -92,7 +94,7 @@ func run() -> void:
 	report("square baseline", await sample())
 	lights(false); report("no omni lights", await sample()); lights(true)
 	app.sun.shadow_enabled = false; report("no sun shadow", await sample()); app.sun.shadow_enabled = true
-	for part in ["shadow_folk","field_objects","building_dressing","occluder_fade"]:
+	for part in ["shadow_folk","field_objects","building_dressing","occluder_fade","guide"]:
 		var m := module(part)
 		toggle(m, false); report("without "+part, await sample()); toggle(m, true)
 	var map: Node = app.town.map

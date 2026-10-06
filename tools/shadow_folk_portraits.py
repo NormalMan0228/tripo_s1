@@ -5,6 +5,8 @@ painted cards on cream paper. The shadow folk get the same card: cream paper wit
 grain, a watercolour wash in the role's tint (FOLK[].tint in shadow_folk.gd) with
 pooled pigment edges, and the figure as an ink-wash silhouette with a rough brush
 edge, a hand-inked outline and the glowing white eyes.
+Each figure is also written without the paper to game/assets/ui/standee/ for the
+dialogue window, which stands background-free illustrations over its box.
 
 The figure comes from the transparent 960x1200 renders written by
 game/tests/shadow_folk_portraits.gd (artifacts/shadow-folk-portraits/<id>.png). When a
@@ -130,6 +132,35 @@ def paint(ident: str, tint) -> Image.Image:
     return Image.fromarray((np.clip(colour, 0, 1) * 255 + 0.5).astype(np.uint8), "RGB")
 
 
+def standee(ident: str, tint) -> Image.Image:
+    """The same ink figure with no paper: a transparent cut-out for the dialogue window."""
+    w, h = SIZE
+    y, x = np.mgrid[0:h, 0:w].astype(np.float32)
+    seed = sum(map(ord, ident))
+    body, eyes = figure_masks(ident)
+    jitter_x = (noise((h, w), 14, seed + 5) - 0.5) * 3.5
+    jitter_y = (noise((h, w), 14, seed + 6) - 0.5) * 3.5
+    body = cv2.remap(body, (x + jitter_x).astype(np.float32), (y + jitter_y).astype(np.float32), cv2.INTER_LINEAR)
+    body = cv2.GaussianBlur(body, (0, 0), 1.1)
+    dry = noise((h, w), 3, seed + 7)
+    fill = INK * (0.92 + dry[..., None] * 0.25) + tint * 0.06
+    inner = cv2.erode((body > 0.5).astype(np.uint8), np.ones((7, 7), np.uint8)).astype(np.float32)
+    inner = cv2.GaussianBlur(inner, (0, 0), 4)
+    colour = fill * (0.82 + inner[..., None] * 0.18)
+    # A thin rim of the role's tint where the light catches the silhouette.
+    rim = np.clip(cv2.GaussianBlur((body > 0.5).astype(np.float32), (0, 0), 2.0) - inner, 0, 1)
+    colour = colour * (1 - rim[..., None] * 0.35) + (tint * 0.8)[None, None, :] * rim[..., None] * 0.35
+    edge = cv2.dilate((body > 0.35).astype(np.uint8), np.ones((5, 5), np.uint8)).astype(np.float32) - (body > 0.6)
+    edge = np.clip(cv2.GaussianBlur(edge, (0, 0), 0.9), 0, 1) * (0.55 + noise((h, w), 12, seed + 8) * 0.45)
+    colour = colour * (1 - edge[..., None] * 0.9) + (INK * 0.6) * edge[..., None] * 0.9
+    glow = cv2.GaussianBlur(eyes, (0, 0), 6) * 0.35
+    colour = colour * (1 - glow[..., None]) + np.array([1.0, 0.97, 0.86]) * glow[..., None]
+    colour = colour * (1 - eyes[..., None]) + np.array([1.0, 0.985, 0.94]) * eyes[..., None]
+    alpha = np.clip(np.maximum(body, edge * 0.9) + eyes, 0, 1)
+    rgba = np.dstack([np.clip(colour, 0, 1), alpha])
+    return Image.fromarray((rgba * 255 + 0.5).astype(np.uint8), "RGBA")
+
+
 def main() -> None:
     BACKUP.mkdir(parents=True, exist_ok=True)
     palette = tints()
@@ -142,7 +173,10 @@ def main() -> None:
         out = paint(ident, palette.get(ident, np.array([0.8, 0.8, 0.85], np.float32)))
         path = TARGET / f"shadow_{ident}.png"
         out.save(path, optimize=True)
-        print(path.name, path.stat().st_size // 1024, "KB")
+        cut = TARGET / "standee" / f"shadow_{ident}.png"
+        cut.parent.mkdir(parents=True, exist_ok=True)
+        standee(ident, palette.get(ident, np.array([0.8, 0.8, 0.85], np.float32))).save(cut, optimize=True)
+        print(path.name, path.stat().st_size // 1024, "KB +", cut.stat().st_size // 1024, "KB standee")
 
 
 if __name__ == "__main__":

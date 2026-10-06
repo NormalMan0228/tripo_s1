@@ -475,6 +475,8 @@ func make_signpost(entry: Dictionary) -> void:
 		if key == island: continue
 		var direction: Vector2 = (hubs[key]-entry.at).normalized()
 		var arm := Node3D.new()
+		# guide.gd lights the board pointing to the guided goal's island.
+		arm.set_meta("island", key)
 		root.add_child(arm)
 		arm.position.y = 2.05-row*0.27
 		# Boards point at the other islands in world space, whatever the post's yaw.

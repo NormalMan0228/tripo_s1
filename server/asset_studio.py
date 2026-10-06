@@ -20,7 +20,7 @@ from .models import Mutation
 from .homestead import village_reserved, village_inside
 from .asset_assembly import demo_design, fixture_glb, validate_plan, static_plan, simple_plan
 from .asset_vm import AssetVM, ProgramError, exercise_extended as exercise
-from .design_provider import DesignProvider, DesignFailure, MODELS, EFFORTS
+from .design_provider import DesignProvider, DesignFailure, MODELS, EFFORTS, provider_name
 from .provider import ProviderError, validate_glb
 from .studio_pricing import mesh_credits,estimate
 from . import room_budget
@@ -199,6 +199,9 @@ class Studio:
                     user_count=conn.execute('SELECT count(*) FROM studio_jobs WHERE owner_id=? AND created>=?',
                                             (user['id'],int(clock()//86400)*86400)).fetchone()[0]
                     if user_count>=settings.user_daily_generation_limit:fail('user_daily_generation_limit',429)
+                    if settings.user_total_generation_limit and conn.execute(
+                            "SELECT count(*) FROM studio_jobs WHERE owner_id=? AND state!='failed'",(user['id'],)).fetchone()[0]>=settings.user_total_generation_limit:
+                        fail('user_total_generation_limit',429)
                 job_id=str(uuid.uuid4());cost=price(body)
                 money(conn,user['id'],-cost,'studio_charge',job_id)
                 conn.execute('INSERT INTO studio_jobs(id,owner_id,request,state,cost,created,updated) VALUES (?,?,?,?,?,?,?)',
@@ -561,7 +564,7 @@ class Studio:
         except ProviderError as error:
             if isinstance(error,DesignFailure):
                 # Rejected output still consumed LLM tokens; never label it free.
-                self.update(job_id,provenance=json.dumps({'provider':'codex_subscription_development' if self.settings.studio_llm=='codex' else 'openai',
+                self.update(job_id,provenance=json.dumps({'provider':provider_name(self.settings),
                     'model':body.model,'effort':body.effort,'usage':error.usage,'attempts':error.attempts,
                     'tripo_credits_consumed':0,'known_tripo_credits':0,'billing_complete':True}))
             # Poll/download errors keep the paid task ID. Never submit it again.

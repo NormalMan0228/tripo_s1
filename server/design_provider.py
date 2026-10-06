@@ -1,4 +1,4 @@
-"""Replaceable design provider. Codex is development-only, Responses is production."""
+"""Replaceable design provider. Codex is development-only; OpenAI Responses and Gemini are production."""
 import asyncio
 import json
 import os
@@ -36,15 +36,23 @@ async def terminate_owned_process(proc):
     elif proc.returncode is None:proc.kill()
     await proc.wait()
 
+def provider_name(settings):
+    return {'codex':'codex_subscription_development','gemini':'gemini'}.get(settings.studio_llm,'openai')
+
 class DesignProvider:
     def __init__(self,settings,transport=None):
         self.settings,self.transport=settings,transport
+        # The Gemini model that last answered (the first one the key may use).
+        models=getattr(settings,'gemini_models',())
+        self.gemini_model=models[0] if models else ''
 
     async def generate(self,prompt,model,effort,image=None):
         feedback='';attempts=[]
         for attempt in range(2):
             if self.settings.studio_llm=='codex':
                 raw,usage=await self._codex(prompt,model,effort,image,feedback)
+            elif self.settings.studio_llm=='gemini':
+                raw,usage=await self._gemini(prompt,image,feedback)
             else:raw,usage=await self._openai(prompt,model,effort,image,feedback)
             entry={'usage':usage};attempts.append(entry)
             try:
@@ -66,8 +74,8 @@ class DesignProvider:
                 continue
             entry['valid']=True
             combined=usage_total(attempts)
-            return plan,program,dict(provider='codex_subscription_development' if self.settings.studio_llm=='codex' else 'openai',
-                model=model,effort=effort,format=self.settings.studio_design_format,usage=combined,attempts=attempts,validation=report)
+            return plan,program,dict(provider=provider_name(self.settings),
+                model=self.gemini_model if self.settings.studio_llm=='gemini' else model,effort=effort,format=self.settings.studio_design_format,usage=combined,attempts=attempts,validation=report)
 
     async def _openai(self,prompt,model,effort,image,feedback):
         if self.settings.studio_llm!='openai' or not self.settings.llm_key:
@@ -87,6 +95,42 @@ class DesignProvider:
             if body.get('status')!='completed':raise ProviderError('llm_incomplete')
             raw=''.join(c.get('text','') for item in body.get('output',[]) for c in item.get('content',[]) if c.get('type')=='output_text')
             return raw,body.get('usage',{})
+        except ProviderError:raise
+        except Exception:raise ProviderError('llm_invalid_design') from None
+
+    async def _gemini(self,prompt,image,feedback):
+        """Google Gemini generateContent in JSON mode. The design is validated by the same
+        parser as the other providers; a model the key cannot use falls through to the next."""
+        if self.settings.studio_llm!='gemini' or not self.settings.gemini_key:
+            raise ProviderError('llm_not_configured')
+        structured=self.settings.studio_design_format=='structured'
+        parts=[{'text':(prompt_for_structured if structured else prompt_for)(prompt,feedback)}]
+        if image:
+            header,_,payload=image.partition(',')
+            mime='image/png' if header.startswith('data:image/png') else 'image/jpeg'
+            parts.append({'inline_data':{'mime_type':mime,'data':payload}})
+        body={'contents':[{'role':'user','parts':parts}],
+              'generationConfig':{'responseMimeType':'application/json','maxOutputTokens':12000,'temperature':0.6}}
+        models=[self.gemini_model]+[m for m in self.settings.gemini_models if m!=self.gemini_model]
+        try:
+            async with httpx.AsyncClient(transport=self.transport,timeout=180,follow_redirects=False) as client:
+                for name in models:
+                    response=await client.post(f'https://generativelanguage.googleapis.com/v1beta/models/{name}:generateContent',
+                        headers={'x-goog-api-key':self.settings.gemini_key},json=body)
+                    if response.status_code==404:continue
+                    if response.status_code==429:raise ProviderError('llm_rate_limited')
+                    if response.status_code!=200 or len(response.content)>500000:raise ProviderError('llm_request_failed')
+                    self.gemini_model=name
+                    reply=response.json()
+                    candidates=reply.get('candidates') or []
+                    if not candidates or candidates[0].get('finishReason') not in (None,'STOP','MAX_TOKENS'):
+                        raise ProviderError('llm_incomplete')
+                    raw=''.join(p.get('text','') for p in candidates[0].get('content',{}).get('parts',[]) if not p.get('thought'))
+                    meta=reply.get('usageMetadata',{})
+                    usage={'input_tokens':meta.get('promptTokenCount',0),'cached_input_tokens':meta.get('cachedContentTokenCount',0),
+                           'output_tokens':meta.get('candidatesTokenCount',0),'reasoning_output_tokens':meta.get('thoughtsTokenCount',0)}
+                    return raw,usage
+            raise ProviderError('llm_model_unavailable')
         except ProviderError:raise
         except Exception:raise ProviderError('llm_invalid_design') from None
 

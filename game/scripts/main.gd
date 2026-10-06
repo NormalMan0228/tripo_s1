@@ -86,6 +86,8 @@ var world_epoch := 0
 var craft_buttons: Dictionary = {}
 var harvest_marker: MeshInstance3D
 var objective: Label
+## The card around `objective` (village tracker or the field's goal card).
+var objective_card: Control
 var minimap: Control
 var frame: Dictionary = {}
 var craft_job := ""
@@ -134,7 +136,7 @@ var npcs: Array[Node3D]=[]
 ##   interact(entry: Dictionary)         E pressed on what closest() returned
 ##   leave()                             the village is about to be torn down
 ## Missing scripts are skipped, so each add-on can land on its own.
-const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd"]
+const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd"]
 var modules: Array[Node]=[]
 var prompt_wait := 0.0
 var chosen_map := "forest"
@@ -502,7 +504,8 @@ func login_ui(page := "menu") -> void:
 			servers.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			column.add_child(servers)
 			var custom := RpgUi.field(column,tr("월드 주소 · 예: http://100.101.1.2:8765"))
-			var saved := str(I18n.setting("server",SERVERS[0][1]))
+			# Player builds (the judging ZIP) start on the online world; source runs on this PC.
+			var saved := str(I18n.setting("server",SERVERS[1][1] if OS.has_feature("tripothon_player") else SERVERS[0][1]))
 			var chosen := SERVERS.size()
 			for i in SERVERS.size():
 				servers.add_item(tr(SERVERS[i][2])+"  ·  "+SERVERS[i][1].trim_prefix("https://").trim_prefix("http://"))
@@ -785,7 +788,7 @@ func enter_village() -> void:
 	screen = "loading"
 	build_world(false)
 	clear_ui()
-	frame = RpgUi.player_frame(ui,"res://assets/ui/portrait_explorer.png")
+	frame = RpgUi.player_frame(ui,"res://assets/ui/portrait_explorer.png","profile")
 	left = frame.column
 	wallet = frame.status
 	reward_button=button(left,tr("받지 않은 생존 보상 받기"),claim_pending_reward,"primary")
@@ -796,7 +799,7 @@ func enter_village() -> void:
 	right.add_child(drawer_title)
 	drawer_title.add_child(RpgUi.icon("res://assets/ui/bag.svg",30))
 	text(drawer_title,tr("나의 보관함"),24).size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	close_button(drawer_title,toggle_drawer)
+	close_button(drawer_title,toggle_drawer,"I")
 	rule(right)
 	objects_list = ItemList.new()
 	objects_list.custom_minimum_size = Vector2(252,150)
@@ -809,7 +812,7 @@ func enter_village() -> void:
 	palette.add_theme_constant_override("separation",8)
 	palette.alignment = BoxContainer.ALIGNMENT_CENTER
 	right.add_child(palette)
-	for color in COLORS: swatch(palette,Color(color),func(): paint_object(color))
+	for color in COLORS: RpgUi.name_tip(swatch(palette,Color(color),func(): paint_object(color)),RpgUi.color_name(color))
 	button(right,tr("선택한 물건 놓기"),begin_place)
 	button(right,tr("선택한 물건 회수"),retrieve_object)
 	button(right,tr("선택한 가구 사용"),func():await village_furniture_event(selected.get("id",""),"click"))
@@ -881,7 +884,7 @@ func toggle_drawer() -> void:
 		RpgUi.sfx("open",-8.0)
 	else: RpgUi.sfx("close",-10.0)
 	if screen=="village":player.controls_enabled=world_movement_allowed()
-	if is_instance_valid(objective): objective.get_parent().get_parent().visible=not opening
+	if is_instance_valid(objective_card): objective_card.visible=not opening
 	if is_instance_valid(minimap): minimap.visible=not opening
 	if is_instance_valid(inspect_panel): inspect_panel.visible=opening
 	if is_instance_valid(inspect_view): inspect_view.render_target_update_mode=SubViewport.UPDATE_ALWAYS if opening else SubViewport.UPDATE_DISABLED
@@ -963,13 +966,24 @@ func build_village_hud() -> void:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation",6)
 	column.add_child(head)
-	head.add_child(RpgUi.icon("res://assets/ui/book.svg",22))
+	head.add_child(RpgUi.name_tip(RpgUi.icon("res://assets/ui/book.svg",22),tr("목표")))
 	RpgUi.label(head,tr("목표"),15,RpgUi.GOLD)
-	RpgUi.divider(column,Color(RpgUi.GOLD,.55))
-	objective = RpgUi.label(column,"",14,RpgUi.INK,false)
+	# Folding rolls the divider and the goals up into the header row.
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation",4)
+	column.add_child(body)
+	RpgUi.divider(body,Color(RpgUi.GOLD,.55))
+	objective = RpgUi.label(body,"",14,RpgUi.INK,false)
 	objective.add_theme_constant_override("line_spacing",4)
 	objective.custom_minimum_size.x = 240
 	objective.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	objective_card = tracker
+	RpgUi.fold_card(tracker,head,body,"objective")
+	# A folded minimap is just its chip: the tracker rises to sit under it.
+	RpgUi.fold_shift(tracker,"minimap",Vector2(0,-Minimap.FOLD_LIFT),"move")
+	# The social chip under the character frame folds away with it.
+	var social_chip := ui.get_node_or_null("SocialChip")
+	if social_chip is Control: RpgUi.fold_shift(social_chip,"profile",Vector2(-36,0))
 	var slots := []
 	for spec in [["bag.svg","I",tr("가방"),toggle_drawer],["craft.svg","C",tr("제작"),open_craft],["map.svg","Tab",tr("지도"),life.open_map],
 			["chest.svg","B",tr("창고"),life.open_storage],["wardrobe.svg","O",tr("옷장"),open_wardrobe],["expedition.svg","",tr("탐험"),open_expedition]]+(
@@ -977,7 +991,7 @@ func build_village_hud() -> void:
 		var action: Callable = spec[3]
 		slots.append({"icon":"res://assets/ui/"+spec[0],"key":spec[1],"label":tr(spec[2]),"primary":spec[0]=="expedition.svg",
 			"call":func(): action.call()})
-	var bar := RpgUi.hotbar(ui,slots,700)
+	var bar := RpgUi.hotbar(ui,slots,700,"hotbar")
 	expedition_button = bar.get_child(5)
 	make_toast(Vector2(380,94),520)
 	if preload("res://scripts/build_mode.gd").developer():
@@ -997,18 +1011,24 @@ func build_play_hud(survival: bool) -> void:
 	var task_head := HBoxContainer.new()
 	task_head.add_theme_constant_override("separation",6)
 	task_card.add_child(task_head)
-	task_head.add_child(RpgUi.icon("res://assets/ui/book.svg",22))
+	task_head.add_child(RpgUi.name_tip(RpgUi.icon("res://assets/ui/book.svg",22),tr("목표")))
 	RpgUi.label(task_head,tr("✦  일곱 밤의 목표").trim_prefix("✦  ") if survival else tr("✦  오늘의 마을 이야기").trim_prefix("✦  "),15,RpgUi.GOLD)
-	RpgUi.divider(task_card,Color(RpgUi.GOLD,.55))
-	objective=text(task_card,"",14)
+	var task_body := VBoxContainer.new()
+	task_body.add_theme_constant_override("separation",8)
+	task_card.add_child(task_body)
+	RpgUi.divider(task_body,Color(RpgUi.GOLD,.55))
+	objective=text(task_body,"",14)
 	objective.custom_minimum_size.x=254
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	objective_card=task_card.get_parent()
+	RpgUi.fold_card(objective_card,task_head,task_body,"survival_objective")
 	var toolbar := panel(Vector2(300,612 if survival else 634),680,"toolbar")
 	if survival:
 		var quick_row := HBoxContainer.new();quick_row.alignment=BoxContainer.ALIGNMENT_CENTER
 		quick_row.add_theme_constant_override("separation",8);toolbar.add_child(quick_row)
 		for item in ["wood","stone","berry","fiber"]:
 			var chip := HBoxContainer.new();chip.add_theme_constant_override("separation",4);quick_row.add_child(chip)
+			RpgUi.name_tip(chip,tr(ITEM_NAMES[item]))
 			var icon := TextureRect.new();icon.texture=load("res://assets/items/"+item+".svg")
 			icon.custom_minimum_size=Vector2(26,26);icon.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
 			icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED;icon.tooltip_text=tr(ITEM_NAMES[item]);chip.add_child(icon)
@@ -1037,6 +1057,8 @@ func build_play_hud(survival: bool) -> void:
 	var bar_height: float = bar_panel.get_combined_minimum_size().y
 	bar_panel.size = Vector2(680,bar_height)
 	RpgUi.pin(bar_panel,0.5,1.0,Vector2(300,800-22-bar_height))
+	# Folds to a handle tab like the village hotbar; the keys keep working.
+	RpgUi.fold_dock(ui,"toolbar",[bar_panel],980,800-22-bar_height*0.5)
 	make_toast(Vector2(380,520 if survival else 548),520)
 	if survival:
 		var tracker := PanelContainer.new()
@@ -1049,6 +1071,7 @@ func build_play_hud(survival: bool) -> void:
 		RpgUi.pin(tracker,0.5,0.0)
 		day_track=RpgUi.numbers(RpgUi.label(tracker,"",18,RpgUi.INK),18)
 		day_track.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+		RpgUi.name_tip(day_track,tr("일곱 밤 중 지나온 날"))
 	if preload("res://scripts/build_mode.gd").developer():
 		var debug_box := panel(Vector2(20,520),252,"night")
 		developer_panel=debug_box.get_parent()
@@ -1426,6 +1449,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	var navigation := panel(Vector2(20,318),256,"night")
 	field_map=preload("res://scripts/field_map.gd").new()
 	navigation.add_child(field_map)
+	RpgUi.name_tip(field_map,tr("주변 지도"))
 	camp_status=text(navigation,"",12)
 	right=panel(Vector2(948,20),308,"hero")
 	RpgUi.pin(right.get_parent(),1.0,0.0)
@@ -1433,7 +1457,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	right.add_child(drawer_title)
 	drawer_title.add_child(RpgUi.icon("res://assets/ui/bag.svg",30))
 	text(drawer_title,tr("탐험 가방"),24).size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	close_button(drawer_title,toggle_drawer)
+	close_button(drawer_title,toggle_drawer,"I")
 	pack=RpgUi.caption(right,"",13)
 	var inventory_grid := GridContainer.new()
 	inventory_grid.columns=4
@@ -1446,7 +1470,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		slot.focus_mode=Control.FOCUS_NONE
 		slot.theme_type_variation="SlotButton"
 		RpgUi.hover_motion(slot,1.06)
-		slot.tooltip_text=ITEM_NAMES[item]+(tr(" · 클릭해서 먹기") if item in ["berry","soup"] else tr(" · 클릭해서 치료") if item=="bandage" else "")
+		RpgUi.name_tip(slot,tr(ITEM_NAMES[item])+(tr(" · 클릭해서 먹기") if item in ["berry","soup"] else tr(" · 클릭해서 치료") if item=="bandage" else ""))
 		slot.pressed.connect(func():
 			if item in ["berry","soup"]: intent("eat",item)
 			elif item=="bandage": intent("heal"))
@@ -2161,6 +2185,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if key==KEY_M:
 			sound.toggle()
 			message(tr("소리를 껐습니다. M으로 다시 켤 수 있습니다.") if sound.muted else tr("소리를 켰습니다."))
+		# HUD key (U): fold every HUD panel at once, or open them all again.
+		if screen in ["village","survival"] and key==KEY_U:
+			RpgUi.toggle_all_folds()
+			return
 		if screen in ["village","survival"] and key==KEY_I:
 			toggle_drawer()
 			return
@@ -2248,15 +2276,15 @@ func modal_card(title: String) -> VBoxContainer:
 	player.controls_enabled=false
 	return v
 
-## Round "×" key for drawers and side panels.
-func close_button(parent: Node, callback: Callable) -> Button:
+## Round "×" key for drawers and side panels; named "닫기" (with the panel's key).
+func close_button(parent: Node, callback: Callable, key := "") -> Button:
 	var b := Button.new()
 	b.icon=RpgUi.icon_texture("close")
 	b.expand_icon=true
 	b.custom_minimum_size=Vector2(34,34)
 	b.focus_mode=Control.FOCUS_NONE
 	b.flat=true
-	b.tooltip_text=tr("닫기")
+	RpgUi.name_tip(b,tr("닫기"),key)
 	b.size_flags_vertical=Control.SIZE_SHRINK_CENTER
 	RpgUi.hover_motion(b,1.12)
 	b.pressed.connect(func(): callback.call())
@@ -2474,7 +2502,7 @@ func npc_script(role: String) -> Dictionary:
 	var plan: Dictionary={"lines":[tr("좋은 하루예요!")],"choices":[[tr("안녕"),Callable()]]}
 	match role:
 		"map": plan={"lines":[tr("어서 와! 나는 길잡이 나루야."),tr("캠프 초원의 돌문을 지나면 일곱 밤의 숲이 시작돼."),tr("처음이라면 '산책'으로 길을 익혀 봐. 어려운 길일수록 별씨를 많이 받아.")],
-			"choices":[[tr("탐험 지도 펼치기"),open_expedition],[tr("다음에 올게"),Callable()]]}
+			"choices":[[tr("탐험 지도 펼치기"),open_expedition],[tr("길 안내 받기"),life.open_map],[tr("다음에 올게"),Callable()]]}
 		"wardrobe": plan={"lines":[tr("어머, 반가워! 재단사 소라예요."),tr("오늘은 어떤 차림으로 섬을 걸어 볼까요?"),tr("옷 색과 모자, 배낭까지 마음대로 골라 보세요.")],
 			"choices":[[tr("옷장 열기"),open_wardrobe],[tr("지금은 괜찮아"),Callable()]]}
 		"guide": plan={"lines":[tr("모루라고 해. 숲에서 밤을 버티는 법이라면 맡겨 줘."),tr("첫날엔 목재와 돌을 모아 도끼부터 만들어."),tr("밤엔 모닥불 곁을 지키고, 붉은 원이 보이면 바로 피해!")],
@@ -2507,6 +2535,7 @@ func open_dialogue(speaker: String, cast: String, lines: Array, choices: Array) 
 	var show_page := func(index: int) -> void:
 		body.text=lines[index]
 		body.visible_ratio=0.0
+		RpgUi.dialogue_line(window,lines[index])
 		var typing := create_tween()
 		typing.tween_property(body,"visible_ratio",1.0,GameSettings.typing_seconds(lines[index].length()))
 		VoiceBabble.speak(self,cast,lines[index],0.0,body)
@@ -2597,6 +2626,9 @@ const CRAFT_REQUEST := {"material":"mesh","motion":"static","designer":"simple",
 	"mesh_model":"v3.1-20260211","model":"gpt-6-luna","effort":"high"}
 var craft_box: VBoxContainer
 var craft_polling := false
+## The server's design step ("fixture" = none): with an LLM the craft is designed first
+## (server -> LLM -> Tripo), otherwise the words go straight to Tripo as one mesh.
+var craft_llm := "fixture"
 var craft_done: Dictionary = {}
 
 func open_craft() -> void:
@@ -2608,9 +2640,10 @@ func open_craft() -> void:
 	craft_box = VBoxContainer.new()
 	craft_box.add_theme_constant_override("separation",10)
 	v.add_child(craft_box)
-	if craft_job.is_empty():
-		var studio: Dictionary = await api.request("/v1/studio")
-		if studio.ok:
+	var studio: Dictionary = await api.request("/v1/studio")
+	if studio.ok:
+		craft_llm = str(studio.data.get("llm","fixture"))
+		if craft_job.is_empty():
 			for job in studio.data.get("jobs",[]):
 				if job.state not in ["ready","failed","cancelled"]: craft_job=job.id;break
 	if not craft_job.is_empty(): follow_craft()
@@ -2623,7 +2656,8 @@ func render_craft(job: Dictionary) -> void:
 	var state: String = job.get("state","")
 	if state.is_empty() or state in ["failed","cancelled"]:
 		if state=="failed": RpgUi.caption(craft_box,tr("제작에 실패했어요. 맡긴 별씨는 돌려드렸어요."),15,RpgUi.ACCENT)
-		text(craft_box,tr("만들고 싶은 물건을 짧게 적어 주세요. 가장 간단한 한 덩어리 모양으로 만들어 드려요."),16).autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		var intro := tr("만들고 싶은 물건을 적어 주세요. 장인이 AI로 설계도를 그린 뒤 3D로 만들어 드려요.") if craft_designs() else tr("만들고 싶은 물건을 짧게 적어 주세요. 가장 간단한 한 덩어리 모양으로 만들어 드려요.")
+		text(craft_box,intro,16).autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		var idea := LineEdit.new()
 		idea.placeholder_text = tr("예: 작은 버섯 모양 의자")
 		idea.max_length = 120
@@ -2672,12 +2706,17 @@ func request_craft(idea: String) -> void:
 	busy = true
 	var body := CRAFT_REQUEST.duplicate()
 	body.prompt = idea
+	if craft_designs(): body.designer = "llm"
 	var response: Dictionary = await api.post("/v1/studio/jobs",api.mutation(body))
 	busy = false
 	if not check(response): return
 	craft_job = response.data.id
 	await refresh_inventory()
 	follow_craft()
+
+## True when the server designs crafts with an LLM before Tripo builds them.
+func craft_designs() -> bool:
+	return craft_llm not in ["fixture",""]
 
 func confirm_craft() -> void:
 	if craft_job.is_empty() or busy: return

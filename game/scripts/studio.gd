@@ -222,7 +222,7 @@ func theme_style() -> Theme:
 	var t := Theme.new()
 	t.default_font=RpgUi.FONT_BODY;t.default_font_size=14
 	t.set_font("font","Button",RpgUi.FONT_STRONG)
-	t.set_stylebox("panel","TooltipPanel",RpgUi.frame("tooltip"));t.set_color("font_color","TooltipLabel",RpgUi.INK)
+	RpgUi.tooltip_theme(t)
 	for type in ["VScrollBar","HScrollBar"]:
 		t.set_stylebox("scroll",type,RpgUi.frame("scroll_track"));t.set_stylebox("grabber",type,RpgUi.frame("scroll_grabber"))
 		t.set_stylebox("grabber_highlight",type,RpgUi.frame("scroll_grabber_hover"));t.set_stylebox("grabber_pressed",type,RpgUi.frame("scroll_grabber_hover"))
@@ -390,7 +390,7 @@ func build_ui() -> void:
 	dock.offset_left=-412;dock.offset_right=-14;dock.offset_top=14;dock.offset_bottom=-112
 	add_child(dock)
 	dock_toggle=Button.new();dock_toggle.name="DockToggle";dock_toggle.custom_minimum_size=Vector2(78,78);dock_toggle.focus_mode=Control.FOCUS_NONE
-	dock_toggle.tooltip_text=tr("제작")
+	RpgUi.name_tip(dock_toggle,tr("제작"),"C")
 	for state in ["normal","hover","pressed"]:
 		dock_toggle.add_theme_stylebox_override(state,RpgUi.frame({"normal":"slot_night","hover":"slot_night_hover","pressed":"slot_night_pressed"}[state]))
 	RpgUi.hover_motion(dock_toggle,1.08,Vector2(0.5,1.0))
@@ -482,6 +482,7 @@ func build_ui() -> void:
 	var palette := row(own)
 	for color in ["#f1dfb8","#dfa958","#789887","#bd7f75","#7d9ca3"]:
 		var b := button(palette,"●",func(): await paint(color));b.modulate=Color(color);b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		RpgUi.name_tip(b,RpgUi.color_name(color))
 	var custom_row := row(own)
 	var custom_color := ColorPickerButton.new();custom_color.text=tr("직접 색 고르기");custom_color.edit_alpha=false;custom_color.color=Color("dfa958");custom_color.size_flags_horizontal=Control.SIZE_EXPAND_FILL;custom_row.add_child(custom_color)
 	custom_color.popup_closed.connect(func():await paint("#"+custom_color.color.to_html(false)))
@@ -2303,6 +2304,7 @@ func show_talk_page() -> void:
 	if not is_instance_valid(talk_box): return
 	talk_body.text=str(talk_lines[talk_page])
 	talk_body.visible_ratio=0.0
+	RpgUi.dialogue_line(talk_window,talk_body.text)
 	var typing := talk_body.create_tween()
 	typing.tween_property(talk_body,"visible_ratio",1.0,GameSettings.typing_seconds(talk_body.text.length()))
 	if talk_page<talk_lines.size()-1:

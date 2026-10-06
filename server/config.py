@@ -59,6 +59,10 @@ class Settings:
     registration_code: str = field(default_factory=lambda: configured_secret('TRIPOTHON_REGISTRATION_CODE'), repr=False)
     daily_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_DAILY_REQUEST_LIMIT', '5')))
     user_daily_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_USER_DAILY_REQUEST_LIMIT', '2')))
+    # Crafts one account may ever start (0 = no lifetime limit; the daily limits still apply).
+    user_total_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_USER_TOTAL_REQUEST_LIMIT', '0')))
+    # Stars a new live account starts with (judging servers let visitors craft right away).
+    welcome_stars: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_WELCOME_STARS', '0')))
     legacy_generation_enabled: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_ENABLE_LEGACY_GENERATION', 'false').lower() == 'true')
     credit_reserve: int = field(default_factory=lambda: int(os.getenv('TRIPO_RESERVE_PER_JOB', '200')))
     session_seconds: int = 12 * 60 * 60
@@ -67,11 +71,15 @@ class Settings:
     studio_design_format: str = field(default_factory=lambda: os.getenv('TRIPOTHON_DESIGN_FORMAT','classic'))
     studio_credit_rate: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_STARS_PER_CREDIT','1')))
     llm_key: str = field(default_factory=lambda: configured_secret('OPENAI_API_KEY'), repr=False)
+    gemini_key: str = field(default_factory=lambda: configured_secret('GEMINI_API_KEY'), repr=False)
+    # Tried in order; a model the key cannot use (404) falls through to the next.
+    gemini_models: tuple = field(default_factory=lambda: tuple(m.strip() for m in os.getenv(
+        'TRIPOTHON_GEMINI_MODELS', 'gemini-3.8-flash,gemini-3.5-flash,gemini-2.5-flash').split(',') if m.strip()))
 
     def validate(self):
         if self.mode not in ('demo', 'live'):
             raise ValueError('TRIPOTHON_MODE must be demo or live')
-        if self.studio_llm not in ('fixture','codex','openai'):
+        if self.studio_llm not in ('fixture','codex','openai','gemini'):
             raise ValueError('Invalid studio LLM provider')
         if self.studio_design_format not in ('classic','structured'):
             raise ValueError('Invalid studio design format')
@@ -79,6 +87,8 @@ class Settings:
             raise ValueError('Codex subscription experiments are local development only')
         if self.mode == 'live' and len(self.registration_code) < 24:
             raise ValueError('Live mode requires a registration invitation code of at least 24 characters')
+        if not 0 <= self.user_total_generation_limit <= 1000 or not 0 <= self.welcome_stars <= 10000:
+            raise ValueError('Invalid account craft limit or welcome stars')
         if self.credit_reserve <= 0 or self.daily_generation_limit < 1 or self.user_daily_generation_limit < 1:
             raise ValueError('Generation budget must be positive')
         if self.mode == 'live' and self.paid_enabled and not self.tripo_key:
@@ -87,6 +97,10 @@ class Settings:
         # one-mesh designer (the player's prompt goes straight to Tripo).
         if self.mode == 'live' and self.paid_enabled and self.studio_llm == 'openai' and not self.llm_key:
             raise ValueError('Paid live mode with OpenAI design requires an OpenAI server secret')
+        if self.mode == 'live' and self.paid_enabled and self.studio_llm == 'gemini' and not self.gemini_key:
+            raise ValueError('Paid live mode with Gemini design requires a Gemini server secret')
+        if self.studio_llm == 'gemini' and not self.gemini_models:
+            raise ValueError('Gemini design needs at least one model name')
         if not math.isfinite(self.studio_credit_rate) or not .1<=self.studio_credit_rate<=100:
             raise ValueError('Invalid reward currency conversion')
         self.data_dir.mkdir(parents=True, exist_ok=True)

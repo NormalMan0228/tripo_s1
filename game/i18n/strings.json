@@ -420,6 +420,10 @@
    "en": "H3 · Regular furniture / Lower cost",
    "zh": "H3 · 普通家具 / 低费用"
   },
+  "HUD 접기/펼치기": {
+   "en": "Collapse/expand HUD",
+   "zh": "收起/展开 HUD"
+  },
   "H로 사용하면 체력 30을 회복합니다. 체력이 가득 차면 소모하지 않습니다.": {
    "en": "Press H to restore 30 Health. Not used when Health is full.",
    "zh": "按 H 使用可恢复30点生命。生命已满时不会消耗。"
@@ -816,6 +820,10 @@
    "en": "Rustle the reeds",
    "zh": "摇动芦苇"
   },
+  "갈색": {
+   "en": "Brown",
+   "zh": "棕色"
+  },
   "갓 구운 빵 냄새가 나요.": {
    "en": "It smells of freshly baked bread.",
    "zh": "有刚烤好的面包香味。"
@@ -935,6 +943,10 @@
   "게임플레이": {
    "en": "Gameplay",
    "zh": "游戏"
+  },
+  "겨자색": {
+   "en": "Mustard",
+   "zh": "芥末黄"
   },
   "격자": {
    "en": "Grid",
@@ -1108,6 +1120,10 @@
    "en": "Copper Ore",
    "zh": "铜矿石"
   },
+  "구리색": {
+   "en": "Copper",
+   "zh": "铜色"
+  },
   "구매": {
    "en": "Buy",
    "zh": "购买"
@@ -1248,6 +1264,18 @@
    "en": "Tension",
    "zh": "张力"
   },
+  "길 안내 끄기": {
+   "en": "Stop guiding",
+   "zh": "关闭导航"
+  },
+  "길 안내 받기": {
+   "en": "Show me the way",
+   "zh": "请帮我指路"
+  },
+  "길 안내 표시": {
+   "en": "Show route guide",
+   "zh": "显示路线导航"
+  },
   "길가 덤불을 뒤져 보면 향초가 숨어 있을 때도 있어요.": {
    "en": "Sometimes herbs are hiding in the roadside bushes.",
    "zh": "翻翻路边的灌木丛，有时会藏着香草。"
@@ -1303,6 +1331,10 @@
   "꾸민 모습이 저장됐어요 · ": {
    "en": "Your decorated look was saved · ",
    "zh": "装饰已保存 · "
+  },
+  "꿀색": {
+   "en": "Honey",
+   "zh": "蜂蜜色"
   },
   "끄기": {
    "en": "Off",
@@ -1528,6 +1560,10 @@
    "en": "My Home",
    "zh": "我的家"
   },
+  "내 캐릭터": {
+   "en": "My character",
+   "zh": "我的角色"
+  },
   "내 호미! 정말 고마워요.": {
    "en": "My hoe! Thank you so much.",
    "zh": "我的锄头！太谢谢了。"
@@ -1627,6 +1663,10 @@
   "누르고 있기": {
    "en": "Hold",
    "zh": "按住"
+  },
+  "누르면 길 안내": {
+   "en": "Click to guide the way",
+   "zh": "点击开始导航"
   },
   "눌러서 전환": {
    "en": "Toggle",
@@ -1744,6 +1784,10 @@
    "en": "As the five islands fall asleep, at last I open my eyes.",
    "zh": "当五座岛入睡时，我才终于睁开眼睛。"
   },
+  "다시 누르면 길 안내를 꺼요": {
+   "en": "Click again to stop guiding",
+   "zh": "再次点击关闭导航"
+  },
   "다시 로그인해 주세요.": {
    "en": "Please log in again.",
    "zh": "请重新登录。"
@@ -1831,6 +1875,14 @@
   "데엥— 징 소리가 섬 전체에 울려 퍼져요.": {
    "en": "Bwong— the gong echoes across the whole island.",
    "zh": "咚——锣声响彻整座岛。"
+  },
+  "도구 막대 접기": {
+   "en": "Collapse toolbar",
+   "zh": "收起工具栏"
+  },
+  "도구 막대 펼치기": {
+   "en": "Expand toolbar",
+   "zh": "展开工具栏"
   },
   "도끼": {
    "en": "Axe",
@@ -2304,6 +2356,10 @@
    "en": "Describe the item you want in at least three characters.",
    "zh": "请写下想制作的物品（至少三个字）。"
   },
+  "만들고 싶은 물건을 적어 주세요. 장인이 AI로 설계도를 그린 뒤 3D로 만들어 드려요.": {
+   "en": "Describe what you'd like made. The artisan draws a blueprint with AI, then builds it in 3D.",
+   "zh": "写下你想做的物品。工匠会先用 AI 画出设计图，再做成 3D 模型。"
+  },
   "만들고 싶은 물건을 짧게 적어 주세요. 가장 간단한 한 덩어리 모양으로 만들어 드려요.": {
    "en": "Briefly describe the item you want. We'll make it as one simple solid shape.",
    "zh": "请简短写下想制作的物品。我们会做成最简单的一体造型。"
@@ -2504,6 +2560,10 @@
    "en": "Mute all sound",
    "zh": "关闭所有声音"
   },
+  "모래색": {
+   "en": "Sand",
+   "zh": "沙色"
+  },
   "모루": {
    "en": "Moru",
    "zh": "莫鲁"
@@ -2556,6 +2616,10 @@
    "en": "You need two pieces of wood.",
    "zh": "需要两块木材。"
   },
+  "목적지까지 빛나는 길과 표식을 보여 줘요.": {
+   "en": "Shows a glowing path and marker to your destination.",
+   "zh": "显示通往目的地的发光路径和标记。"
+  },
   "목적지를 고르면 길잡이 표식이 생겨요. 섬과 섬은 다리로 이어져 있어요.": {
    "en": "Choose a destination to place a guide marker. The islands are linked by bridges.",
    "zh": "选择目的地后会出现指引标记。岛与岛之间有桥相连。"
@@ -2571,6 +2635,14 @@
   "목표": {
    "en": "Goals",
    "zh": "目标"
+  },
+  "목표 접기": {
+   "en": "Collapse goals",
+   "zh": "收起目标"
+  },
+  "목표 펼치기": {
+   "en": "Expand goals",
+   "zh": "展开目标"
   },
   "목표가 남아 있어 이야기는 다음 도전에서 이어집니다.": {
    "en": "Some goals remain, so the story continues in your next challenge.",
@@ -2748,6 +2820,14 @@
    "en": "Minimap",
    "zh": "小地图"
   },
+  "미니맵 접기": {
+   "en": "Collapse minimap",
+   "zh": "收起小地图"
+  },
+  "미니맵 펼치기": {
+   "en": "Expand minimap",
+   "zh": "展开小地图"
+  },
   "미라": {
    "en": "Mira",
    "zh": "米拉"
@@ -2896,6 +2976,10 @@
    "en": "Brightness",
    "zh": "亮度"
   },
+  "밝은 복숭아빛": {
+   "en": "Light peach",
+   "zh": "浅桃色"
+  },
   "밤": {
    "en": "Night",
    "zh": "夜晚"
@@ -2935,6 +3019,10 @@
   "밤바다는 찌가 안 보여서 오늘은 여기까지예요.": {
    "en": "I can't see the float on the night sea, so that's it for today.",
    "zh": "夜里的海看不见浮漂，今天就到这儿吧。"
+  },
+  "밤색": {
+   "en": "Chestnut",
+   "zh": "栗色"
   },
   "밤에는 낙엽 대신 별빛을 쓸어요. …농담이에요.": {
    "en": "At night I sweep up starlight instead of leaves. …Just kidding.",
@@ -3580,6 +3668,14 @@
    "en": "Cherry Salmon",
    "zh": "山女鳟"
   },
+  "산호색": {
+   "en": "Coral",
+   "zh": "珊瑚色"
+  },
+  "살구빛": {
+   "en": "Apricot",
+   "zh": "杏色"
+  },
   "살펴보기": {
    "en": "Look",
    "zh": "查看"
@@ -3591,6 +3687,10 @@
   "상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요": {
    "en": "Make the furniture you imagine, paint it, and place it in your space",
    "zh": "构想家具，涂上颜色，摆进自己的空间"
+  },
+  "상아색": {
+   "en": "Ivory",
+   "zh": "象牙白"
   },
   "상의": {
    "en": "Top",
@@ -3903,6 +4003,10 @@
   "세션이 만료되었습니다. 다시 로그인해 주세요.": {
    "en": "Your session has expired. Please log in again.",
    "zh": "登录已过期，请重新登录。"
+  },
+  "세이지색": {
+   "en": "Sage",
+   "zh": "鼠尾草绿"
   },
   "소라": {
    "en": "Sora",
@@ -4344,6 +4448,14 @@
    "en": "Once the morning dew dries, I'll take the tent down.",
    "zh": "等晨露干了就收帐篷。"
   },
+  "안개 파랑": {
+   "en": "Mist blue",
+   "zh": "雾蓝色"
+  },
+  "안내 중": {
+   "en": "Guiding",
+   "zh": "导航中"
+  },
   "안내판 읽기": {
    "en": "Read the signboard",
    "zh": "阅读告示牌"
@@ -4535,6 +4647,10 @@
   "연못 부두 끝에 서 있으면 꼬마 그림자가 놀러 와요. 장난꾸러기예요.": {
    "en": "Stand at the end of the pond pier and the kid shadow comes to play. A little rascal.",
    "zh": "站在池塘码头尽头，小家伙影子就会来玩。是个调皮鬼。"
+  },
+  "연보라": {
+   "en": "Mauve",
+   "zh": "淡紫色"
   },
   "연장이 크기순으로 걸려 있어요.": {
    "en": "Tools hang in order of size.",
@@ -5084,6 +5200,10 @@
    "en": "Moss Guardian",
    "zh": "苔藓守护者"
   },
+  "이끼색": {
+   "en": "Moss green",
+   "zh": "苔绿色"
+  },
   "이동": {
    "en": "Move",
    "zh": "移动"
@@ -5228,6 +5348,10 @@
    "en": "Survive Seven Nights",
    "zh": "生存七夜"
   },
+  "일곱 밤 중 지나온 날": {
+   "en": "Days survived of the seven nights",
+   "zh": "七夜中已度过的天数"
+  },
   "일곱 밤, 나의 마을": {
    "en": "Seven Nights, My Village",
    "zh": "七夜，我的村庄"
@@ -5299,6 +5423,10 @@
   "잎이 반짝반짝 윤이 나요.": {
    "en": "The leaves are glossy and bright.",
    "zh": "叶子亮晶晶的。"
+  },
+  "잎전": {
+   "en": "Leaf coins",
+   "zh": "叶币"
   },
   "잎전 %d  ·  수확 %d개  ·  낚은 물고기 %d마리": {
    "en": "Leaf coins %d  ·  Harvested %d  ·  Fish caught %d",
@@ -5416,6 +5544,14 @@
    "en": "The general store opens around nine in the morning and closes around seven in the evening.",
    "zh": "杂货店早上九点左右开门，晚上七点左右关门。"
   },
+  "장밋빛 갈색": {
+   "en": "Rosewood",
+   "zh": "玫瑰棕"
+  },
+  "장소나 지도 위를 누르면 빛나는 길이 이어져요.": {
+   "en": "Click a place or the map and a glowing path leads the way.",
+   "zh": "点击地点或地图，发光的小路会为你指引方向。"
+  },
   "장인이 설계도를 그리고 있어요…": {
    "en": "The artisan is drawing up the design…",
    "zh": "工匠正在绘制设计图…"
@@ -5507,6 +5643,10 @@
   "접근성": {
    "en": "Accessibility",
    "zh": "辅助功能"
+  },
+  "접기": {
+   "en": "Collapse",
+   "zh": "收起"
   },
   "정답! …역시 눈썰미가 좋네요.": {
    "en": "Correct! …You've got a sharp eye.",
@@ -5740,6 +5880,10 @@
    "en": "Kitchen",
    "zh": "厨房"
   },
+  "주변 지도": {
+   "en": "Area map",
+   "zh": "周边地图"
+  },
   "주인 방": {
    "en": "Owner's Room",
    "zh": "主人房"
@@ -5848,6 +5992,10 @@
    "en": "Head back to the ▲ in the middle of the map",
    "zh": "回到地图中央的 ▲"
   },
+  "지도 표시": {
+   "en": "Map pin",
+   "zh": "地图标记"
+  },
   "지도에서 텃밭과 낚시터 찾기": {
    "en": "Find Garden Plots and Fishing Spots on the Map",
    "zh": "在地图上查找菜园和钓场"
@@ -5891,6 +6039,14 @@
   "징 치기": {
    "en": "Strike the gong",
    "zh": "敲锣"
+  },
+  "짙은 갈색": {
+   "en": "Dark brown",
+   "zh": "深棕色"
+  },
+  "짙은 청록": {
+   "en": "Deep teal",
+   "zh": "深青色"
   },
   "째깍째깍, 지금은 %d시 %02d분이에요.": {
    "en": "Tick-tock, it's %d:%02d.",
@@ -6100,6 +6256,10 @@
    "en": "Cream house with a teal roof",
    "zh": "青绿屋顶奶油色住宅"
   },
+  "청록색": {
+   "en": "Teal",
+   "zh": "青绿色"
+  },
   "청색 지붕 목조 주택": {
    "en": "Timber house with a blue roof",
    "zh": "蓝顶木屋"
@@ -6107,6 +6267,10 @@
   "청색 지붕 크림색 주택": {
    "en": "Cream house with a blue roof",
    "zh": "蓝顶奶油色住宅"
+  },
+  "청회색": {
+   "en": "Slate blue",
+   "zh": "灰蓝色"
   },
   "체력": {
    "en": "Health",
@@ -6320,6 +6484,14 @@
    "en": "Zzz… fast asleep.",
    "zh": "呼呼……睡得正香。"
   },
+  "퀵슬롯 접기": {
+   "en": "Collapse quick slots",
+   "zh": "收起快捷栏"
+  },
+  "퀵슬롯 펼치기": {
+   "en": "Expand quick slots",
+   "zh": "展开快捷栏"
+  },
   "크기 · m": {
    "en": "Size · m",
    "zh": "尺寸 · m"
@@ -6327,6 +6499,10 @@
   "크림": {
    "en": "Cream",
    "zh": "奶油"
+  },
+  "크림색": {
+   "en": "Cream",
+   "zh": "奶油色"
   },
   "큰 글씨": {
    "en": "Large text",
@@ -6596,6 +6772,10 @@
    "en": "Got the letter · please give it to %s",
    "zh": "收到了信 · 请交给%s"
   },
+  "펼치기": {
+   "en": "Expand",
+   "zh": "展开"
+  },
   "포근한 이불과 작은 창이 있는 침실이에요.": {
    "en": "A bedroom with a fluffy quilt and a small window.",
    "zh": "有松软被子和小窗户的卧室。"
@@ -6680,6 +6860,14 @@
    "en": "Look at the weather vane",
    "zh": "看看风向标"
   },
+  "프로필 접기": {
+   "en": "Collapse profile",
+   "zh": "收起角色信息"
+  },
+  "프로필 펼치기": {
+   "en": "Expand profile",
+   "zh": "展开角色信息"
+  },
   "피부": {
    "en": "Skin",
    "zh": "肤色"
@@ -6700,6 +6888,10 @@
    "en": "If you need anything, just ask.",
    "zh": "需要什么尽管说。"
   },
+  "하늘색": {
+   "en": "Sky blue",
+   "zh": "天蓝色"
+  },
   "하늘색 손수건 · 등대섬 부두에서 주웠어요": {
    "en": "Sky-blue handkerchief · found on the lighthouse pier",
    "zh": "天蓝色手帕 · 在灯塔岛码头捡到"
@@ -6715,6 +6907,10 @@
   "하의": {
    "en": "Bottoms",
    "zh": "下装"
+  },
+  "하하": {
+   "en": "haha",
+   "zh": "哈哈"
   },
   "한 수 들어 보실래요?": {
    "en": "Would you like to hear one?",
@@ -6880,6 +7076,10 @@
    "en": "That action isn't allowed.",
    "zh": "不允许的操作。"
   },
+  "헤헤": {
+   "en": "hehe",
+   "zh": "嘿嘿"
+  },
   "헤헤, 깜짝 놀랐지?": {
    "en": "Hehe, got you, didn't I?",
    "zh": "嘿嘿，吓一跳吧？"
@@ -7008,9 +7208,17 @@
    "en": "Welcome Wooden Chair",
    "zh": "迎宾木椅"
   },
+  "황갈색": {
+   "en": "Tan",
+   "zh": "小麦色"
+  },
   "황금 비단잉어": {
    "en": "Golden Koi",
    "zh": "金色锦鲤"
+  },
+  "황토색": {
+   "en": "Ochre",
+   "zh": "赭黄色"
   },
   "회복했습니다": {
    "en": "Healed",
