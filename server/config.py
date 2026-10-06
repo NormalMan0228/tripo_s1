@@ -63,6 +63,9 @@ class Settings:
     user_total_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_USER_TOTAL_REQUEST_LIMIT', '0')))
     # Stars a new live account starts with (judging servers let visitors craft right away).
     welcome_stars: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_WELCOME_STARS', '0')))
+    # Trial servers: most Tripo credits one craft may spend (0 = no cap). 10 allows the
+    # cheapest craft only (one untextured H3 mesh from text).
+    max_credits_per_craft: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_MAX_CREDITS_PER_CRAFT', '0')))
     # Open sign-up: live accounts without the invitation code, within these limits.
     open_registration: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_OPEN_REGISTRATION', 'false').lower() == 'true')
     signups_per_ip_day: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SIGNUPS_PER_IP_DAY', '3')))
@@ -91,6 +94,8 @@ class Settings:
             raise ValueError('Codex subscription experiments are local development only')
         if self.mode == 'live' and len(self.registration_code) < 24:
             raise ValueError('Live mode requires a registration invitation code of at least 24 characters')
+        if not 0 <= self.max_credits_per_craft <= 100000:
+            raise ValueError('Invalid craft credit cap')
         if not 1 <= self.signups_per_ip_day <= 1000 or not 1 <= self.signups_per_day <= 100000:
             raise ValueError('Invalid open sign-up limits')
         if not 0 <= self.user_total_generation_limit <= 1000 or not 0 <= self.welcome_stars <= 10000:

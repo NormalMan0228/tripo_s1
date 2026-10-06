@@ -6,7 +6,7 @@
 
 ## 바로 플레이 (심사·친구용) · 0.10.0
 
-**설치 없이 플레이:** [GitHub Releases](https://github.com/NormalMan0228/tripo_s1/releases)에서 `Tripothon_v0.10.0_Windows.zip`을 받아 압축을 풀고 `Tripothon.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정을 만들 때 운영자에게 받은 초대 코드를 넣습니다(서버에서 공개 가입을 켜면 초대 코드 없이 가입합니다). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 계정당 3회 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다.
+**설치 없이 플레이:** [GitHub Releases](https://github.com/NormalMan0228/tripo_s1/releases)에서 `Tripothon_v0.10.0_Windows.zip`을 받아 압축을 풀고 `Tripothon.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정은 아이디·비밀번호만으로 만듭니다(초대 코드 없음, 공개 가입). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 체험판 규칙으로 계정당 3회, 1회 Tripo 10크레딧(직접 색칠하는 정적인 가구 한 덩어리) 안에서 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다.
 
 **소스로 개발하는 협업자:** 저장소에는 용량이 큰 모델 폴더(`game/maps/archipelago/assets`, `game/assets/interior`, `game/assets/monsters`, `game/maps/survival/assets`, `game/assets/portraits`, `game/assets/npc`)가 없습니다. 같은 Release의 `Tripothon_v0.10.0_DevAssets_Map.zip`과 `..._DevAssets_Art.zip`을 **저장소 최상위 폴더에서** 압축 풀면 그대로 채워집니다. 그다음 Godot 4.7.2로 `game/project.godot`을 열고, 서버는 `tools/run_server.ps1`로 켭니다.
 

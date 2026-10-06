@@ -375,7 +375,7 @@ func error_message(code: String) -> String:
 		"admin_grant_limit":tr("오늘 지급할 수 있는 양을 모두 썼어요."),
 		"message_empty":tr("보낼 말을 적어 주세요."),
 		"weak_password":tr("비밀번호에는 대문자와 특수문자가 하나 이상 들어가야 해요. (10자 이상)"),
-		"invalid_invitation":tr("이 월드는 초대받은 모험가만 가입할 수 있어요. 초대 코드를 넣거나 '이 PC 월드'를 골라 주세요."),
+		"invalid_invitation":tr("이 월드는 지금 새 모험가를 받지 않아요. 잠시 뒤 다시 시도하거나 '이 PC 월드'를 골라 주세요."),
 		"spawn_area_reserved":tr("중앙 광장에는 놓을 수 없습니다."),"workshop_area_reserved":tr("공방 입구 앞은 비워 주세요."),"reserved_area":tr("길과 입구 앞은 비워 주세요."),
 		"gate_area_reserved":tr("숲 입구에는 놓을 수 없습니다."),"daily_generation_limit":tr("오늘 생성 한도에 도달했습니다."),
 		"live_generation_disabled":tr("공방 장인이 아직 자리를 비웠어요."),"generation_pending":tr("진행 중인 생성이 있습니다."),
@@ -386,7 +386,8 @@ func error_message(code: String) -> String:
 		"user_daily_generation_limit":tr("오늘 맡길 수 있는 제작을 모두 썼어요. 내일 다시 찾아와 주세요."),
 		"provider_busy":tr("공방 장인이 다른 의뢰를 만들고 있어요. 조금 뒤에 다시 맡겨 주세요."),
 		"too_many_registrations":tr("이 곳에서는 오늘 계정을 더 만들 수 없어요. 만든 계정으로 로그인해 주세요."),
-		"registration_closed_today":tr("오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요.")}
+		"registration_closed_today":tr("오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요."),
+		"craft_over_trial_limit":tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요.")}
 	if not preload("res://scripts/build_mode.gd").developer():
 		messages.live_generation_disabled=tr("새 가구 제작을 준비하고 있어요. 지금은 보관함의 물건으로 꾸며 보세요.")
 		messages.insufficient_provider_credit=tr("지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요.")
@@ -499,7 +500,6 @@ func login_ui(page := "menu") -> void:
 			var username := RpgUi.field(column,tr("아이디 · 영문·숫자·밑줄 3~24자"))
 			username.text = str(I18n.setting("username",""))
 			var password := RpgUi.field(column,tr("비밀번호 · 10자 이상, 대문자와 특수문자 포함"),true)
-			var invitation := RpgUi.field(column,tr("초대 코드 · 필요한 월드에서만"),true)
 			RpgUi.label(column,tr("월드"),14,RpgUi.GOLD)
 			var servers := OptionButton.new()
 			servers.custom_minimum_size = Vector2(340,42)
@@ -524,14 +524,14 @@ func login_ui(page := "menu") -> void:
 			var actions := HBoxContainer.new()
 			actions.add_theme_constant_override("separation",8)
 			column.add_child(actions)
-			var enter := RpgUi.menu_button(actions,tr("로그인"),func(): authenticate(false,host.call(),username.text,password.text,invitation.text),166)
+			var enter := RpgUi.menu_button(actions,tr("로그인"),func(): authenticate(false,host.call(),username.text,password.text,""),166)
 			enter.theme_type_variation = "GoldButton"
 			enter.add_theme_color_override("font_hover_color",RpgUi.PAPER_INK)
-			RpgUi.menu_button(actions,tr("계정 만들기"),func(): authenticate(true,host.call(),username.text,password.text,invitation.text),166)
+			RpgUi.menu_button(actions,tr("계정 만들기"),func(): authenticate(true,host.call(),username.text,password.text,""),166)
 			notice = RpgUi.label(column,"",14,Color("ffd9a0"))
 			notice.custom_minimum_size.x = 320
 			notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			password.text_submitted.connect(func(_value): authenticate(false,host.call(),username.text,password.text,invitation.text))
+			password.text_submitted.connect(func(_value): authenticate(false,host.call(),username.text,password.text,""))
 			RpgUi.menu_button(body,tr("뒤로"),func(): login_ui("menu"))
 			if username.text.is_empty(): username.grab_focus.call_deferred()
 			else: password.grab_focus.call_deferred()

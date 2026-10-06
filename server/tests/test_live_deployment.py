@@ -172,3 +172,68 @@ def test_open_registration_daily_ceiling_and_default_stays_invite_only(tmp_path)
         denied = client.post('/v1/auth/register', json={'username': 'no_code', 'password': 'Test-password-123', 'invitation': ''})
         assert denied.status_code == 403 and denied.json()['detail'] == 'invalid_invitation'
         assert client.get('/health').json()['open_registration'] is False
+
+
+def test_trial_credit_cap_allows_only_the_cheapest_craft(tmp_path):
+    from server.asset_assembly import demo_design
+
+    class ManyParts:
+        async def generate(self, prompt, model, effort, image=None):
+            plan, program = demo_design('flower')  # eight parts
+            return plan, program, {'provider': 'gemini', 'model': 'test'}
+
+    settings = Settings(data_dir=tmp_path, mode='live', paid_enabled=True, tripo_key='test-only-key',
+                        studio_llm='gemini', gemini_key='test-only-key', registration_code='test-only-invitation-123456',
+                        daily_generation_limit=100, user_daily_generation_limit=100, max_credits_per_craft=10)
+    app = create_app(settings, worker_enabled=False, designer=ManyParts())
+    with TestClient(app, base_url='https://testserver') as client:
+        token = client.post('/v1/auth/register', json={'username': 'trial_judge', 'password': 'Test-password-123',
+                                                        'invitation': settings.registration_code}).json()['token']
+        headers = {'Authorization': 'Bearer ' + token}
+        with app.state.db.transaction() as db:
+            db.execute('UPDATE users SET shards=500')
+        assert client.get('/v1/studio', headers=headers).json()['max_tripo_credits'] == 10
+
+        def request(**changes):
+            body = {'request_id': str(uuid.uuid4()), 'prompt': 'wooden chair', 'designer': 'llm', 'geometry': 'tripo',
+                    'material': 'mesh', 'motion': 'static', 'mesh_model': 'v3.1-20260211', **changes}
+            return client.post('/v1/studio/jobs', headers=headers, json=body)
+
+        for changes in ({'material': 'textured'}, {'motion': 'dynamic'}, {'mesh_model': 'P2-20260801'}, {'mesh_model': 'configured'}):
+            refused = request(**changes)
+            assert refused.status_code == 403 and refused.json()['detail'] == 'craft_over_trial_limit', changes
+        # The cheapest craft: the eight-part design is merged into one static mesh = 10 credits.
+        accepted = request()
+        assert accepted.status_code == 200, accepted.json()
+        asyncio.run(app.state.studio.process(accepted.json()['id']))
+        job = client.get('/v1/studio/jobs/' + accepted.json()['id'], headers=headers).json()
+        assert job['state'] == 'awaiting_confirmation' and job['provenance']['estimated_tripo_credits'] == 10
+
+
+def test_trial_credit_cap_fails_and_refunds_a_design_over_the_cap(tmp_path):
+    from server.asset_assembly import demo_design
+
+    class ManyParts:
+        async def generate(self, prompt, model, effort, image=None):
+            plan, program = demo_design('flower')
+            return plan, program, {'provider': 'gemini', 'model': 'test'}
+
+    settings = Settings(data_dir=tmp_path, mode='live', paid_enabled=True, tripo_key='test-only-key',
+                        studio_llm='gemini', gemini_key='test-only-key', registration_code='test-only-invitation-123456',
+                        daily_generation_limit=100, user_daily_generation_limit=100, max_credits_per_craft=25)
+    app = create_app(settings, worker_enabled=False, designer=ManyParts())
+    with TestClient(app, base_url='https://testserver') as client:
+        token = client.post('/v1/auth/register', json={'username': 'trial_two', 'password': 'Test-password-123',
+                                                        'invitation': settings.registration_code}).json()['token']
+        headers = {'Authorization': 'Bearer ' + token}
+        with app.state.db.transaction() as db:
+            db.execute('UPDATE users SET shards=500')
+        job = client.post('/v1/studio/jobs', headers=headers, json={
+            'request_id': str(uuid.uuid4()), 'prompt': 'flower lamp', 'designer': 'llm', 'geometry': 'tripo',
+            'material': 'mesh', 'motion': 'dynamic', 'mesh_model': 'v3.1-20260211'})
+        assert job.status_code == 200, job.json()
+        asyncio.run(app.state.studio.process(job.json()['id']))
+        status = client.get('/v1/studio/jobs/' + job.json()['id'], headers=headers).json()
+        assert status['state'] == 'failed' and status['error'] == 'craft_over_trial_limit'
+        with app.state.db.transaction() as db:
+            assert db.execute("SELECT shards FROM users WHERE username='trial_two'").fetchone()[0] == 500
