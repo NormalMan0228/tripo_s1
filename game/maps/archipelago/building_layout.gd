@@ -27,12 +27,49 @@ func install(owner_node: Node3D, terrain: Node3D) -> void:
 		# Building collision is separate from ground sampling (layer 2).
 		for item in building.find_children("*", "MeshInstance3D", true, false):
 			var mesh := item as MeshInstance3D
-			mesh.create_trimesh_collision()
+			_add_collision(mesh)
 			for child in mesh.get_children():
 				if child is StaticBody3D:
 					child.collision_layer = 2
 					child.collision_mask = 0
 	print("BUILDING_LAYOUT_READY count=", placed.size(), " level_pad_vertices=", touched_vertices)
+
+## Hole patches (tools/patch_building_holes.py) are small quads appended to a
+## building's main surface, tucked into cracks behind the outer walls. Their texcoords
+## are shifted by whole atlas tiles (u >= PATCH_U_MIN). For the collision their
+## vertices collapse onto one point a metre under the building's pad, so the patch
+## triangles have no area and the walkable space is the original model's. (The
+## importer reorders vertices, so they are found by texcoord.)
+const PATCH_U_MIN := 3.0
+
+func _add_collision(mesh: MeshInstance3D) -> void:
+	var source := mesh.mesh
+	var proxy := ArrayMesh.new()
+	var patched := 0
+	var aabb := source.get_aabb()
+	var sink := Vector3(aabb.get_center().x, aabb.position.y-1.0, aabb.get_center().z)
+	for surface in source.get_surface_count():
+		var arrays := source.surface_get_arrays(surface)
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		if arrays[Mesh.ARRAY_TEX_UV] is PackedVector2Array:
+			var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+			for i in uv.size():
+				if uv[i].x >= PATCH_U_MIN:
+					vertices[i] = sink
+					patched += 1
+		var shape := []
+		shape.resize(Mesh.ARRAY_MAX)
+		shape[Mesh.ARRAY_VERTEX] = vertices
+		shape[Mesh.ARRAY_INDEX] = arrays[Mesh.ARRAY_INDEX]
+		proxy.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, shape)
+	if patched == 0:
+		mesh.create_trimesh_collision()
+		return
+	var body := StaticBody3D.new()
+	var collider := CollisionShape3D.new()
+	collider.shape = proxy.create_trimesh_shape()
+	body.add_child(collider)
+	mesh.add_child(body)
 
 func _pad_weight(world: Vector3, spec: Dictionary) -> float:
 	var offset := Vector2(world.x - float(spec.position[0]), world.z - float(spec.position[2]))

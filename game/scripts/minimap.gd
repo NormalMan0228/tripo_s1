@@ -15,8 +15,11 @@ func _ready() -> void:
 	if ResourceLoader.exists(TownMap.MAP_IMAGE): background = load(TownMap.MAP_IMAGE)
 	font = get_theme_default_font()
 
+var last_minute := -1
 func follow(at: Vector2, heading: float) -> void:
-	if at.distance_to(player_at) < 0.05 and absf(heading-facing) < 0.02: return
+	var minute: int = Time.get_datetime_dict_from_system().minute
+	if at.distance_to(player_at) < 0.05 and absf(heading-facing) < 0.02 and minute==last_minute: return
+	last_minute = minute
 	player_at = at
 	facing = heading
 	var name := island_name(at)
@@ -68,7 +71,11 @@ func _draw() -> void:
 	draw_colored_polygon(PackedVector2Array([frame.get_center()+tip, frame.get_center()+left, frame.get_center()+right]), Color("fff4d6"))
 	draw_polyline(PackedVector2Array([frame.get_center()+tip, frame.get_center()+left, frame.get_center()+right, frame.get_center()+tip]), Color("3b2d1c"), 1.5)
 	draw_string(font, Vector2(frame.get_center().x-5, 22), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("fff4d6"))
-	var label := tr(area)
+	# The village clock follows the player's real local time (day/night cycle).
+	var now := Time.get_datetime_dict_from_system()
+	var hour: int = now.hour
+	var clock := (tr("오전 %d:%02d") if hour<12 else tr("오후 %d:%02d")) % [12 if hour%12==0 else hour%12, now.minute]
+	var label := tr(area)+"  ·  "+clock
 	var width := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 	var plate := StyleBoxFlat.new()
 	plate.bg_color = Color(0.13,0.16,0.17,.86)

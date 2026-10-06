@@ -12,9 +12,13 @@ const I18n = preload("res://scripts/i18n.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const Transition = preload("res://scripts/transition.gd")
 const Minimap = preload("res://scripts/minimap.gd")
+const NpcBody = preload("res://scripts/npc.gd")
+const WorldAudio = preload("res://scripts/world_audio.gd")
+const Roads = preload("res://scripts/roads.gd")
+const Daylight = preload("res://scripts/daylight.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
-const SERVERS := [["local","http://127.0.0.1:8765","이 PC 서버"],["online","https://34-28-65-113.sslip.io","온라인 서버"]]
+const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
 # Trading is deferred while the village / survival / generation loop is developed.
 const TRADING_UI_ENABLED := false
 const ITEM_NAMES := {"wood":"목재","stone":"돌","berry":"열매","fiber":"섬유","axe":"도끼","spear":"창","soup":"수프","bandage":"붕대"}
@@ -79,6 +83,11 @@ var objective: Label
 var minimap: Control
 var frame: Dictionary = {}
 var craft_job := ""
+var world_audio: Node
+var daylight: Node
+var step_distance := 0.0
+var last_step_at := Vector3.ZERO
+var ambience_elapsed := 10.0
 var craft_status: Label
 var day_track: Label
 var toast_panel: PanelContainer
@@ -112,6 +121,16 @@ var quick_counts: Dictionary = {}
 var expedition_button: Button
 var village_modal: Control
 var npcs: Array[Node3D]=[]
+## Village add-ons plug in here without touching this file. Each script is a Node
+## (usually Node3D) added under the village world, with optional methods:
+##   setup(app)                          once the walker and the NPCs exist
+##   closest(at: Vector3) -> Dictionary   {"prompt":String,"distance":float,...} or {}
+##   interact(entry: Dictionary)         E pressed on what closest() returned
+##   leave()                             the village is about to be torn down
+## Missing scripts are skipped, so each add-on can land on its own.
+const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd"]
+var modules: Array[Node]=[]
+var prompt_wait := 0.0
 var chosen_map := "forest"
 var chosen_difficulty := "standard"
 var town: Node3D
@@ -134,6 +153,9 @@ func _ready() -> void:
 	add_child(social)
 	sound = Sound.new()
 	add_child(sound)
+	world_audio = WorldAudio.new()
+	add_child(world_audio)
+	world_audio.setup()
 	life=preload("res://scripts/village_life.gd").new()
 	life.app=self
 	add_child(life)
@@ -154,7 +176,13 @@ func _ready() -> void:
 	sun.light_energy = 0.25
 	sun.shadow_enabled = true
 	add_child(sun)
+	daylight = Daylight.new()
+	daylight.name = "Daylight"
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--hour="): daylight.override_hour = clampf(float(arg.trim_prefix("--hour=")),0.0,23.99)
+	add_child(daylight)
 	sun_defaults={"rotation":sun.rotation_degrees,"bias":sun.shadow_bias,"normal_bias":sun.shadow_normal_bias,"distance":sun.directional_shadow_max_distance}
+	apply_graphics()
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.size = ControllerProfile.CAMERA_DEFAULT
@@ -175,9 +203,9 @@ func _ready() -> void:
 		var server_status: Dictionary = await api.request("/health")
 		social.enabled = social.feature_enabled() and server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
 		await enter_village()
-		player.position=TownLayout.point(TownLayout.HOME_RETURN_AT if session.get("room")=="home" else TownLayout.WORKSHOP_RETURN_AT,.3)
+		player.position=TownLayout.door_return(str(session.get("room","workshop")))
 		follow_camera(1)
-		veil.play_door("close")
+		veil.play_door("close",str(session.get("room","workshop")))
 		veil.fade_in(0.55)
 	else:
 		login_ui()
@@ -307,20 +335,24 @@ func message(value: String) -> void:
 		toast_panel.visible=true
 
 func error_message(code: String) -> String:
-	var messages := {"connection_failed":tr("서버 연결이 끊겼습니다. 서버를 실행한 뒤 다시 접속하세요."),
-		"server_update_required":tr("이전 서버가 실행 중입니다. 서버를 종료한 뒤 새 실행본으로 다시 시작하세요."),
+	var messages := {"connection_failed":tr("마을과의 연결이 끊어졌어요. 잠시 뒤 다시 들어와 주세요."),
+		"server_update_required":tr("월드가 새 단장을 하고 있어요. 잠시 뒤 다시 들어와 주세요."),
 		"invalid_credentials":tr("아이디 또는 비밀번호를 확인하세요."),"username_unavailable":tr("이미 사용 중인 이름입니다."),
 		"invalid_request":tr("입력 형식을 확인하세요. 이름 3~24자, 비밀번호 10자 이상입니다."),
 		"insufficient_shards":tr("별씨가 부족합니다. 생존 도전을 완료해 보세요."),"placement_overlap":tr("다른 물건과 겹칩니다."),
 		"room_render_budget_exceeded":tr("꾸미기 용량이 꽉 찼습니다. 가구 일부를 회수한 뒤 배치해 주세요."),
+		"login_locked":tr("비밀번호를 여러 번 틀려 잠시 잠겼어요. 15분 뒤에 다시 시도해 주세요."),
+		"username_reserved":tr("이 이름은 쓸 수 없어요. 다른 모험가 이름을 골라 주세요."),
+		"admin_grant_limit":tr("오늘 지급할 수 있는 양을 모두 썼어요."),
+		"message_empty":tr("보낼 말을 적어 주세요."),
 		"weak_password":tr("비밀번호에는 대문자와 특수문자가 하나 이상 들어가야 해요. (10자 이상)"),
-		"invalid_invitation":tr("이 서버는 초대 코드가 있어야 가입할 수 있어요. 초대 코드를 넣거나 '이 PC 서버'를 고르세요."),
+		"invalid_invitation":tr("이 월드는 초대받은 모험가만 가입할 수 있어요. 초대 코드를 넣거나 '이 PC 월드'를 골라 주세요."),
 		"spawn_area_reserved":tr("중앙 광장에는 놓을 수 없습니다."),"workshop_area_reserved":tr("공방 입구 앞은 비워 주세요."),"reserved_area":tr("길과 입구 앞은 비워 주세요."),
 		"gate_area_reserved":tr("숲 입구에는 놓을 수 없습니다."),"daily_generation_limit":tr("오늘 생성 한도에 도달했습니다."),
-		"live_generation_disabled":tr("Tripo 실생성이 아직 설정되지 않았습니다."),"generation_pending":tr("진행 중인 생성이 있습니다."),
-		"session_expired":tr("로그인이 만료됐습니다. 다시 접속하세요."),"object_not_found":tr("이 물건을 사용할 권한이 없습니다."),
-		"stale_object_version":tr("물건 상태가 바뀌었습니다. 목록을 새로고침하세요."),"object_is_listed":tr("판매 중인 물건입니다. 판매를 취소하세요."),
-		"insufficient_provider_credit":tr("Tripo 크레딧이 부족합니다. 별씨는 환불됩니다.")}
+		"live_generation_disabled":tr("공방 장인이 아직 자리를 비웠어요."),"generation_pending":tr("진행 중인 생성이 있습니다."),
+		"session_expired":tr("오래 쉬어서 다시 들어와야 해요."),"object_not_found":tr("내 물건이 아니에요."),
+		"stale_object_version":tr("물건이 그새 바뀌었어요. 가방을 다시 열어 주세요."),"object_is_listed":tr("판매 중인 물건입니다. 판매를 취소하세요."),
+		"insufficient_provider_credit":tr("공방 재료가 떨어졌어요. 맡긴 별씨는 돌려드려요.")}
 	if not preload("res://scripts/build_mode.gd").developer():
 		messages.live_generation_disabled=tr("새 가구 제작을 준비하고 있어요. 지금은 보관함의 물건으로 꾸며 보세요.")
 		messages.insufficient_provider_credit=tr("지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요.")
@@ -389,6 +421,17 @@ func login_ui(page := "menu") -> void:
 					I18n.set_language(entry[0])
 					login_ui("settings"),110)
 				if TranslationServer.get_locale().begins_with(entry[0]): choice.add_theme_color_override("font_color",Color("ffe08a"))
+			RpgUi.label(column,tr("그래픽"),17,RpgUi.GOLD)
+			var qualities := HBoxContainer.new()
+			qualities.add_theme_constant_override("separation",8)
+			column.add_child(qualities)
+			for entry in GRAPHICS:
+				var pick := RpgUi.menu_button(qualities,tr(entry[1]),func():
+					I18n.remember("graphics",entry[0])
+					apply_graphics()
+					login_ui("settings"),110)
+				if graphics_level()==entry[0]: pick.add_theme_color_override("font_color",Color("ffe08a"))
+			RpgUi.label(column,tr("높음은 그림자와 가장자리가 가장 매끈하고, 낮음은 느린 PC에서 부드럽게 움직여요."),12,RpgUi.INK,false).custom_minimum_size.x=340
 			RpgUi.label(column,tr("소리"),17,RpgUi.GOLD)
 			RpgUi.menu_button(column,tr("소리 켜기") if sound.muted else tr("소리 끄기"),func():
 				sound.toggle()
@@ -405,13 +448,13 @@ func login_ui(page := "menu") -> void:
 			var username := RpgUi.field(column,tr("아이디 · 영문·숫자·밑줄 3~24자"))
 			username.text = str(I18n.setting("username",""))
 			var password := RpgUi.field(column,tr("비밀번호 · 10자 이상, 대문자와 특수문자 포함"),true)
-			var invitation := RpgUi.field(column,tr("초대 코드 · 서버가 요구할 때만"),true)
-			RpgUi.label(column,tr("서버"),14,RpgUi.GOLD)
+			var invitation := RpgUi.field(column,tr("초대 코드 · 필요한 월드에서만"),true)
+			RpgUi.label(column,tr("월드"),14,RpgUi.GOLD)
 			var servers := OptionButton.new()
 			servers.custom_minimum_size = Vector2(320,40)
 			servers.focus_mode = Control.FOCUS_NONE
 			column.add_child(servers)
-			var custom := RpgUi.field(column,tr("서버 주소 · 예: http://100.101.1.2:8765 (Tailscale)"))
+			var custom := RpgUi.field(column,tr("월드 주소 · 예: http://100.101.1.2:8765"))
 			var saved := str(I18n.setting("server",SERVERS[0][1]))
 			var chosen := SERVERS.size()
 			for i in SERVERS.size():
@@ -448,7 +491,7 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	# *.ts.net; Tailscale encrypts the link). Anything else on the internet needs HTTPS.
 	local_pattern.compile("^http://(127\\.0\\.0\\.1|localhost|10(\\.[0-9]{1,3}){3}|192\\.168(\\.[0-9]{1,3}){2}|172\\.(1[6-9]|2[0-9]|3[01])(\\.[0-9]{1,3}){2}|100\\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])(\\.[0-9]{1,3}){2}|[a-z0-9-]+(\\.[a-z0-9-]+)*\\.ts\\.net):[0-9]{1,5}$")
 	if not (host.begins_with("https://") or local_pattern.search(host)!=null):
-		message(tr("원격 서버는 HTTPS 주소를 사용하세요."))
+		message(tr("멀리 있는 월드는 https:// 주소로 들어가요."))
 		return
 	if username.strip_edges().is_empty() or password.is_empty():
 		message(tr("아이디와 비밀번호를 입력하세요."))
@@ -456,7 +499,7 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	busy = true
 	api.base_url = host
 	api.token = ""
-	message(tr("서버에 접속 중…"))
+	message(tr("마을로 가는 중…"))
 	var health: Dictionary=await api.request("/health")
 	if not check(health):
 		busy=false
@@ -479,6 +522,11 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		I18n.remember("username",username.strip_edges())
 	var veil := Transition.of(get_tree())
 	await veil.fade_out(0.5)
+	if get_tree().current_scene==self:
+		# A new session starts at home; walking out of the front door opens the village.
+		Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":"home","multiplayer":social.enabled})
+		get_tree().change_scene_to_file("res://scenes/studio.tscn")
+		return
 	await enter_village()
 	veil.fade_in(0.8)
 
@@ -492,6 +540,7 @@ func build_world(survival: bool) -> void:
 	prior_day=1
 	prior_night=false
 	sound.play_music("forest" if survival else "village")
+	leave_modules()
 	if is_instance_valid(town): town.release_map()
 	if is_instance_valid(world):
 		remove_child(world)
@@ -524,6 +573,7 @@ func build_world(survival: bool) -> void:
 	world.add_child(player)
 	player.apply_avatar(me.get("profile",{}).get("avatar",{}))
 	if not survival: spawn_villagers()
+	if not survival: spawn_modules()
 	player.position = TownLayout.point(TownLayout.SPAWN,.3) if not survival else Vector3(run.get("x",0),0.1,run.get("z",1.4))
 	player.min_ground_y = TownLayout.SHORE_MIN_Y if not survival else -INF
 	flame = Node3D.new()
@@ -616,9 +666,50 @@ func build_world(survival: bool) -> void:
 	camera.size = ControllerProfile.CAMERA_DEFAULT
 	if not survival:
 		TownLayout.Archipelago.apply_lighting(environment,sun)
+		daylight.attach(environment,sun,town.map if is_instance_valid(town) else null)
 		camera.size = ControllerProfile.VILLAGE_CAMERA_DEFAULT
+	else:
+		daylight.detach()
+	fit_shadow_to_camera()
 	camera_zoom_active=false
 	follow_camera(1)
+
+## Shadow splits keep their old distances from the walker after the camera moved
+## back (CAMERA_PULLBACK), so shadows stay as sharp as before.
+var shadow_fitted := false
+func fit_shadow_to_camera() -> void:
+	shadow_fitted=true
+	var back := ControllerProfile.CAMERA_OFFSET.length()*(ControllerProfile.CAMERA_PULLBACK-1.0)
+	var base := sun.directional_shadow_max_distance
+	sun.directional_shadow_max_distance=base+back
+	sun.directional_shadow_split_1=(back+base*0.1)/(base+back)
+	sun.directional_shadow_split_2=(back+base*0.2)/(base+back)
+	sun.directional_shadow_split_3=(back+base*0.5)/(base+back)
+	if graphics_level()!="high":
+		# Two splits: the near one stops just short of what the camera frames.
+		sun.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+		sun.directional_shadow_split_1=(back+base*0.25)/(base+back)
+	else:
+		sun.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun.shadow_enabled=graphics_level()!="low"
+
+## Graphics presets (title screen settings). Medium is the default: lighter
+## antialiasing and two shadow splits. Low drops shadows and renders 3D at 80%.
+const GRAPHICS := [["high","높음"],["medium","보통"],["low","낮음"]]
+func graphics_level() -> String:
+	var level := str(I18n.setting("graphics","medium"))
+	return level if level in ["high","medium","low"] else "medium"
+
+func apply_graphics() -> void:
+	var view := get_tree().root
+	var level := graphics_level()
+	view.msaa_3d=Viewport.MSAA_4X if level=="high" else (Viewport.MSAA_2X if level=="medium" else Viewport.MSAA_DISABLED)
+	view.scaling_3d_mode=Viewport.SCALING_3D_MODE_BILINEAR
+	view.scaling_3d_scale=0.8 if level=="low" else 1.0
+	if is_instance_valid(sun) and shadow_fitted:
+		# Undo the camera pull-back added last time, then fit again for the new preset.
+		sun.directional_shadow_max_distance-=ControllerProfile.CAMERA_OFFSET.length()*(ControllerProfile.CAMERA_PULLBACK-1.0)
+		fit_shadow_to_camera()
 
 func enter_village() -> void:
 	coop_run = false
@@ -667,7 +758,7 @@ func enter_village() -> void:
 	prompt.visible=false # Retained for legacy integration/recovery, outside the player flow.
 	var utilities := HBoxContainer.new()
 	right.add_child(utilities)
-	button(utilities,tr("새로고침"),refresh_inventory)
+	button(utilities,tr("가방 정리"),refresh_inventory)
 	button(utilities,tr("로그아웃"),logout)
 	right.get_parent().visible=false
 	build_play_hud(false)
@@ -679,6 +770,32 @@ func enter_village() -> void:
 	player.controls_enabled = true
 	hint=RpgUi.prompt(ui,560)
 	message(tr("물결빛 마을에 오신 것을 환영해요! 다리를 건너 다섯 섬을 둘러보세요."))
+	await warm_up_shaders()
+
+## The first time the village opens in a session, draw the whole archipelago once
+## from far above while the screen is still dark. Materials compile now instead of
+## hitching the first time each one walks into view.
+static var shaders_warm := false
+var warming := false
+func warm_up_shaders() -> void:
+	if shaders_warm or not is_instance_valid(town) or not is_instance_valid(town.map): return
+	# Nothing is drawn without a window (headless tests), so there is nothing to warm.
+	if DisplayServer.get_name()=="headless": return
+	shaders_warm=true
+	warming=true
+	var keep_size := camera.size
+	var keep_far := camera.far
+	camera.size=200.0
+	camera.far=2000.0
+	var centre := Vector3(2.5,0,10)
+	camera.global_position=centre+ControllerProfile.CAMERA_OFFSET.normalized()*400.0
+	camera.look_at(centre)
+	# Each idle frame ends in a draw, so three frames have drawn the wide view.
+	for i in 3: await get_tree().process_frame
+	camera.size=keep_size
+	camera.far=keep_far
+	warming=false
+	follow_camera(1)
 
 func toggle_drawer() -> void:
 	if screen == "village" and social.visiting():
@@ -754,8 +871,8 @@ func build_village_hud() -> void:
 	minimap.position = Vector2(1060,12)
 	ui.add_child(minimap)
 	var tracker := PanelContainer.new()
-	tracker.position = Vector2(1026,254)
-	tracker.custom_minimum_size.x = 238
+	tracker.position = Vector2(996,254)
+	tracker.custom_minimum_size.x = 268
 	tracker.add_theme_stylebox_override("panel",RpgUi.style(RpgUi.NIGHT,12))
 	tracker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(tracker)
@@ -763,7 +880,7 @@ func build_village_hud() -> void:
 	tracker.add_child(column)
 	RpgUi.label(column,tr("목표"),14,RpgUi.GOLD)
 	objective = RpgUi.label(column,"",14,RpgUi.INK,false)
-	objective.custom_minimum_size.x = 214
+	objective.custom_minimum_size.x = 244
 	objective.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var slots := []
 	for spec in [["bag.svg","I",tr("가방"),toggle_drawer],["craft.svg","C",tr("제작"),open_craft],["map.svg","Tab",tr("지도"),life.open_map],
@@ -916,6 +1033,7 @@ func refresh_inventory() -> void:
 	if me.get("pending_job")!=null and job_id.is_empty(): job_id=me.pending_job
 	if frame.has("name") and is_instance_valid(frame.name):
 		frame.name.text = me.username
+		show_portrait()
 		frame.stars.text = str(int(me.shards))
 		wallet.visible = false
 	else: wallet.text = "%s  ·  %s %d" % [me.username,tr("별씨"),me.shards]
@@ -993,7 +1111,7 @@ func load_object(obj: Dictionary, prefix: String="/v1/objects/") -> Node3D:
 	if not check(response): return null
 	var model := Loader.load_bytes(response.bytes)
 	if model: Loader.paint(model,Color(obj.color))
-	else: message(tr("모델을 읽을 수 없습니다."))
+	else: message(tr("물건을 꺼내지 못했어요."))
 	return model
 
 func edit_object(extra: Dictionary) -> bool:
@@ -1020,7 +1138,7 @@ func paint_object(color: String) -> void:
 		message(tr("가구의 모든 부품 색상을 저장했어요."))
 		return
 	if await edit_object({"action":"paint","color":color}):
-		message(tr("색상이 서버에 저장됐습니다."))
+		message(tr("새 색으로 칠했어요."))
 		if is_instance_valid(preview): Loader.paint(preview,Color(color))
 		if loaded.has(selected.id): Loader.paint(loaded[selected.id],Color(color))
 		if is_instance_valid(inspect_model): Loader.paint(inspect_model,Color(color))
@@ -1296,7 +1414,7 @@ func tick_run() -> void:
 		return
 	if not result.ok:
 		network_failures+=1
-		message(tr("서버 응답을 기다리고 있습니다. 연결을 복구하면 이어집니다."))
+		message(tr("숲과의 연결을 다시 잇는 중이에요…"))
 		# An uncertain response may have committed. Resync sequence before sending again.
 		var snapshot: Dictionary = await api.request(run_route())
 		if epoch!=world_epoch:
@@ -1669,20 +1787,73 @@ func _exit_tree() -> void:
 	# A pending studio session means the map is only travelling to a room and back.
 	if not Engine.has_meta("studio_session"): TownLayout.discard_kept()
 
+## Footsteps follow the ground under the walker (bridges and floors are wood,
+## paths gravel, beaches sand, the water's edge shallow) and its pace; the
+## ambience beds follow time of day, the sea, the waterfall and the screen.
+func update_world_audio(delta: float) -> void:
+	if not is_instance_valid(world_audio) or not is_instance_valid(player): return
+	ambience_elapsed+=delta
+	if ambience_elapsed>0.5:
+		ambience_elapsed=0.0
+		var day := 1.0
+		if is_instance_valid(daylight) and daylight.has_method("current_hour"):
+			day=float(Daylight.sample(daylight.current_hour()).get("daylight",1.0))
+		if screen=="village":
+			var waterfall := clampf(1.0-Vector2(player.position.x-1.0,player.position.z+7.9).length()/24.0,0.0,1.0)
+			world_audio.set_ambience({"day":day,"coast":clampf((2.6-player.position.y)/1.7,0.15,1.0),"wind":0.2+0.25*(1.0-day),"waterfall":waterfall,"indoor":false})
+		elif screen=="survival":
+			world_audio.set_ambience({"day":0.0 if run.get("night",false) else 1.0,"coast":0.0,"wind":0.3,"waterfall":0.0,"indoor":false})
+		else:
+			world_audio.set_ambience({"day":day,"coast":0.45,"wind":0.15,"waterfall":0.0,"indoor":false})
+	if screen not in ["village","survival"]:
+		last_step_at=player.position
+		return
+	var moved := Vector2(player.position.x-last_step_at.x,player.position.z-last_step_at.z).length()
+	last_step_at=player.position
+	if moved>1.5 or delta<=0.0: return
+	var speed := moved/delta
+	if speed<0.4 or (screen=="village" and not player.is_on_floor()):
+		step_distance=0.0
+		return
+	step_distance+=moved
+	if step_distance>=(0.98 if speed>3.6 else 0.74):
+		step_distance=0.0
+		world_audio.footstep(ground_surface() if screen=="village" else "grass",speed)
+
+func ground_surface() -> String:
+	var from := player.global_position+Vector3(0,0.6,0)
+	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(from,from+Vector3(0,-1.6,0),1|2))
+	if not hit.is_empty() and hit.collider is CollisionObject3D:
+		if hit.collider.collision_layer&2: return "wood"
+		var owner_name := str(hit.collider.get_parent().name) if hit.collider.get_parent() else ""
+		if "rock" in owner_name.to_lower(): return "rock"
+	if Roads.on_road(Vector2(player.position.x,player.position.z)): return "stone"
+	if player.position.y<0.8: return "shallow"
+	if player.position.y<1.55: return "sand"
+	return "grass"
+
+## The HUD medallion shows the face of the character the player wears.
+func show_portrait() -> void:
+	if not frame.has("portrait") or not is_instance_valid(frame.portrait): return
+	var character := str(me.get("profile",{}).get("avatar",{}).get("character","explorer_b"))
+	var path := "res://assets/ui/portrait_%s.png" % character
+	if ResourceLoader.exists(path): frame.portrait.texture=load(path)
+
 ## Village distance on the ground plane; island terrain heights vary by metres.
 func near(at: Vector2, radius: float) -> bool:
 	return is_instance_valid(player) and Vector2(player.position.x,player.position.z).distance_to(at)<radius
 
 func follow_camera(delta: float) -> void:
-	if not is_instance_valid(player): return
+	if not is_instance_valid(player) or warming: return
 	if is_instance_valid(ambience) and screen=="village": ambience.position=player.position+Vector3(0,1.6,0)
-	var target := player.position+ControllerProfile.CAMERA_FOCUS_OFFSET
+	# The walker's drawn position, between physics ticks, so the view glides with it.
+	var target: Vector3=(player.render_position() if player.has_method("render_position") else player.position)+ControllerProfile.CAMERA_FOCUS_OFFSET
 	if not camera_focus_ready or delta>=1.0:
 		camera_focus=target;camera_focus_ready=true
 	else: camera_focus=camera_focus.lerp(target,ControllerProfile.damping(ControllerProfile.CAMERA_RESPONSE,delta))
 	# One smoothed focus and a fixed offset keep pitch constant during movement.
 	# Independently smoothing position made the view nod on starts and stops.
-	camera.position=camera_focus+ControllerProfile.CAMERA_OFFSET
+	camera.position=camera_focus+ControllerProfile.CAMERA_OFFSET*ControllerProfile.CAMERA_PULLBACK
 	camera.look_at(camera_focus)
 	if camera_zoom_active:
 		camera.size=lerpf(camera.size,camera_zoom_target,ControllerProfile.damping(10.0,delta))
@@ -1704,6 +1875,7 @@ func movement_input() -> Vector2:
 
 func _process(delta: float) -> void:
 	follow_camera(delta)
+	update_world_audio(delta)
 	if is_instance_valid(developer_label) and is_instance_valid(developer_panel) and developer_panel.visible:
 		developer_label.text=tr("개발 화면 · F3 닫기\nFPS %d  |  %s\n위치 %.1f, %.1f\n서버 %s\nTripo %s") % [Engine.get_frames_per_second(),screen,player.position.x,player.position.z,api.base_url,tr("사용 가능") if me.get("studio_tripo_enabled",false) else tr("비활성")]
 		developer_label.text+=tr("\n이동 %.2f m/s · 시야 %.1f\n입력 %s") % [player.locomotion_velocity.length(),camera.size,tr("허용") if world_movement_allowed() else tr("잠금")]
@@ -1755,17 +1927,27 @@ func _process(delta: float) -> void:
 			if not is_instance_valid(preview) and (not life.goal.is_empty() or not me.get("active_run_summary") is Dictionary): objective.text=life.goal_text()
 		if not is_instance_valid(preview):
 			player.controls_enabled=world_movement_allowed()
-			if is_instance_valid(hint):
+			# The E prompt scans doors, villagers, add-ons and ~600 props; ten times a
+			# second is plenty and keeps the frame free.
+			prompt_wait-=delta
+			if is_instance_valid(hint) and prompt_wait<=0.0:
+				prompt_wait=0.1
 				var npc := nearest_npc()
 				var activity: Dictionary=life.closest()
+				var module_entry := module_closest()
+				var prop: Dictionary=town.nearest_prop(Vector2(player.position.x,player.position.z))
 				var prompt_text := ""
 				if not activity.is_empty() and social.visiting() and activity.get("id","")=="home": prompt_text="E  "+tr("%s님의 집 들어가기") % str(social.data.get("host_name",tr("친구")))
+				elif not activity.is_empty() and activity.has("prompt"): prompt_text="E  "+activity.prompt
 				elif not activity.is_empty(): prompt_text="E  "+tr(activity.title)
 				elif npc: prompt_text="E  "+tr("%s와 대화") % tr(npc.get_meta("title"))
+				elif not module_entry.is_empty(): prompt_text="E  "+str(module_entry.get("prompt",""))
+				elif not prop.is_empty(): prompt_text="E  "+town.prop_prompt(prop)
 				elif near(TownLayout.GATE,3): prompt_text="E  "+tr("탐험 떠나기")
 				elif near(TownLayout.HOME_DOOR,2): prompt_text="E  "+tr("나의 집 들어가기")
 				elif near(TownLayout.WORKSHOP_DOOR,2.5): prompt_text="E  "+tr("별씨 공방 들어가기")
 				elif not nearest_furniture().is_empty(): prompt_text="E  "+tr("가구 사용하기")
+				if is_instance_valid(village_modal): prompt_text=""
 				hint.text=prompt_text
 				hint.visible=not prompt_text.is_empty()
 			if is_instance_valid(minimap): minimap.follow(Vector2(player.position.x,player.position.z),-player.visual.rotation.y)
@@ -1866,6 +2048,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				KEY_H: intent("heal")
 				KEY_SPACE: intent("attack")
 		elif screen=="village":
+			if is_instance_valid(village_modal) and village_modal.has_meta("advance") and event.physical_keycode in [KEY_E,KEY_SPACE,KEY_ENTER]:
+				village_modal.get_meta("advance").call()
+				return
 			if event.physical_keycode==KEY_TAB: life.open_map()
 			if event.physical_keycode==KEY_B: life.open_storage()
 			if event.physical_keycode==KEY_C and not is_instance_valid(village_modal): open_craft()
@@ -1875,6 +2060,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.physical_keycode==KEY_R: preview_rotation=(preview_rotation+90)%360
 			if event.physical_keycode==KEY_E and not life.closest().is_empty(): life.interact()
 			elif event.physical_keycode==KEY_E and nearest_npc(): talk_to(nearest_npc())
+			elif event.physical_keycode==KEY_E and not module_closest().is_empty(): use_module(module_closest())
+			elif event.physical_keycode==KEY_E and is_instance_valid(town) and not town.nearest_prop(Vector2(player.position.x,player.position.z)).is_empty(): town.use_prop(self,town.nearest_prop(Vector2(player.position.x,player.position.z)))
 			elif event.physical_keycode==KEY_E and near(TownLayout.GATE,3): open_expedition()
 			elif event.physical_keycode==KEY_E and near(TownLayout.HOME_DOOR,2): open_studio("home")
 			elif event.physical_keycode==KEY_E and near(TownLayout.WORKSHOP_DOOR,2.5): open_studio()
@@ -1890,6 +2077,7 @@ func difficulty_name(id: String) -> String:
 
 func close_village_modal() -> void:
 	if is_instance_valid(life): life.closed()
+	restore_hud()
 	if is_instance_valid(village_modal):
 		village_modal.get_parent().remove_child(village_modal)
 		village_modal.queue_free()
@@ -1986,89 +2174,248 @@ func open_story() -> void:
 	for chapter in me.get("campaign",[]):
 		var b := button(choice,chapter.title+(" ✓" if chapter.completed else ""),func():select_chapter.call(chapter));b.toggle_mode=true;b.set_meta("id",chapter.id);b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	var chapters: Array=me.get("campaign",[])
-	if chapters.is_empty():description.text=tr("서버를 업데이트한 뒤 다시 접속해 주세요");start.disabled=true
+	if chapters.is_empty():description.text=tr("월드가 새 단장을 마치면 다시 열려요");start.disabled=true
 	else:
 		var current: Dictionary=chapters[0]
 		for chapter in chapters:
 			if chapter.unlocked and not chapter.completed:current=chapter;break
 		select_chapter.call(current)
 
+## The four authored NPCs: Naru (expedition guide), Sora (tailor), Moru (camp
+## expert) and Haeru (angler). Without the local cast files a stand-in walker is used.
+const CAST := [
+	{"cast":"naru","title":"나루 · 길잡이","role":"map","coat":"#70afa3"},
+	{"cast":"sora","title":"소라 · 재단사","role":"wardrobe","coat":"#ab789f"},
+	{"cast":"moru","title":"모루 · 야영 전문가","role":"guide","coat":"#6889a1"},
+	{"cast":"haeru","title":"해루 · 낚시꾼","role":"angler","coat":"#ad803b"}]
+
+func spawn_modules() -> void:
+	modules.clear()
+	for path in VILLAGE_MODULES:
+		if not ResourceLoader.exists(path): continue
+		var script: Script=load(path)
+		if script==null or not script.can_instantiate(): continue
+		var module: Node=script.new()
+		world.add_child(module)
+		modules.append(module)
+		if module.has_method("setup"): module.setup(self)
+
+func leave_modules() -> void:
+	for module in modules:
+		if is_instance_valid(module) and module.has_method("leave"): module.leave()
+	modules.clear()
+
+func module_closest() -> Dictionary:
+	var best := {}
+	if not is_instance_valid(player): return best
+	for module in modules:
+		if not is_instance_valid(module) or not module.has_method("closest"): continue
+		var entry: Dictionary=module.closest(player.position)
+		if entry.is_empty(): continue
+		if best.is_empty() or float(entry.get("distance",99.0))<float(best.get("distance",99.0)):
+			best=entry.duplicate()
+			best["module"]=module
+	return best
+
+func use_module(entry: Dictionary) -> void:
+	var module: Node=entry.get("module")
+	if is_instance_valid(module) and module.has_method("interact"): module.interact(entry)
+
 func spawn_villagers() -> void:
-	var entries := [
-		{"title":tr("나루 · 길잡이"),"role":"map","character":"explorer_b","coat":"#70afa3"},
-		{"title":tr("소라 · 재단사"),"role":"wardrobe","character":"explorer_b","coat":"#ab789f"},
-		{"title":tr("모루 · 야영 전문가"),"role":"guide","character":"explorer_b","coat":"#6889a1"},
-		{"title":tr("단비 · 씨앗지기"),"role":"farmer","character":"explorer_b","coat":"#70afa3"},
-		{"title":tr("해루 · 낚시꾼"),"role":"angler","character":"haeru","coat":"#ad803b"}]
-	for entry in entries:
-		var npc := Player.new()
-		npc.controls_enabled=false
-		npc.avatar={"character":entry.character,"coat":entry.coat,"pants":"#51574b","boots":"#826345","backpack":entry.role=="map","headwear":"cap" if entry.role=="guide" else "beret" if entry.role=="wardrobe" else "none"}
-		if entry.role=="angler":
-			# Haeru has a reviewed authored palette; do not tint his facial texture.
-			npc.avatar={"character":"haeru","backpack":false,"headwear":"none"}
-		world.add_child(npc)
-		if entry.role!="angler":preload("res://scripts/villager_accessories.gd").dress(npc,entry.role)
-		if entry.role=="angler": npc.equip("rod")
-		npc.position=TownLayout.point(TownLayout.VILLAGERS[entry.role],.1)
-		npc.facing=Vector3(0,0,1)
-		npc.set_meta("title",entry.title)
+	for entry in CAST:
+		var npc: Node3D
+		if NpcBody.available(entry.cast):
+			npc=NpcBody.new()
+			world.add_child(npc)
+			npc.setup(entry.cast,0.0)
+			npc.player=player
+		else:
+			var walker := Player.new()
+			walker.controls_enabled=false
+			walker.avatar={"character":"explorer_b","coat":entry.coat,"pants":"#51574b","boots":"#826345","backpack":entry.role=="map","headwear":"none"}
+			world.add_child(walker)
+			walker.facing=Vector3(0,0,1)
+			npc=walker
+		npc.position=TownLayout.point(TownLayout.VILLAGERS[entry.role],.02)
+		npc.set_meta("title",tr(entry.title))
 		npc.set_meta("role",entry.role)
-		var nameplate := Art.label3d(npc,entry.title,Vector3(0,2.02,0),Color("f0dfba"))
+		npc.set_meta("cast",entry.cast)
+		var nameplate := Art.label3d(npc,entry.title,Vector3(0,2.05,0),Color("f0dfba"))
 		nameplate.font_size=30;nameplate.outline_size=4;nameplate.no_depth_test=false
 		nameplate.add_to_group("npc_nameplates")
 		npcs.append(npc)
+		# Out at their spot only while residents.gd says so (npc.gd).
+		if npc.has_method("follow_schedule"): npc.follow_schedule(self,entry.cast)
 
 func nearest_npc() -> Node3D:
 	var found: Node3D
 	var distance := 2.1
 	for npc in npcs:
-		if not is_instance_valid(npc): continue
+		if not is_instance_valid(npc) or not npc.visible: continue
 		var d := player.position.distance_to(npc.position)
 		if d<distance:
 			distance=d
 			found=npc
 	return found
 
+## What each NPC says (one line per page) and what the player can do next. The
+## first line fits the hour and what the villager is doing now (residents.gd).
+func npc_script(role: String) -> Dictionary:
+	var cast := ""
+	for entry in CAST: if entry.role==role: cast=entry.cast
+	var Residents := preload("res://scripts/residents.gd")
+	var hour: float=daylight.current_hour() if is_instance_valid(daylight) else 12.0
+	var doing: String=str(Residents.now(cast,hour,int(Residents.clock().day)).get("activity",""))
+	var band := "night" if hour<5.0 or hour>=21.0 else ("morning" if hour<11.0 else ("afternoon" if hour<17.0 else "evening"))
+	if doing=="stroll": band="rest"
+	var openers: Dictionary={
+		"map":{"morning":["좋은 아침! 돌문 앞은 아침 공기가 제일 맑아.","일찍 나왔네! 오늘 길은 내가 먼저 살펴 뒀어."],
+			"afternoon":["오후엔 탐험 떠나는 사람이 제일 많아.","햇살 좋다! 숲에 가기 딱 좋은 날이야."],
+			"evening":["곧 해가 져. 숲은 밤이 길다는 거 잊지 마.","저녁이네. 오늘 탐험은 어땠어?"],
+			"night":["이렇게 늦게까지? 나도 이제 들어가 쉬려고.","밤엔 돌문도 조용해. 별이 잘 보이지?"],
+			"rest":["잠깐 쉬는 중이야. 길잡이도 산책은 해야지!","여기 바람이 좋아서 자주 와."]},
+		"wardrobe":{"morning":["아침부터 손님이네요! 바늘에 실 꿰던 참이에요.","좋은 아침이에요. 오늘은 어떤 색이 끌려요?"],
+			"afternoon":["오후 햇살엔 밝은 색 옷이 잘 어울려요.","점심 먹고 나니 손이 더 잘 움직여요."],
+			"evening":["저녁엔 차분한 색이 예쁘죠. 하나 골라 볼까요?","노을빛 옷감이 오늘 막 들어왔어요."],
+			"night":["늦었네요. 그래도 옷 고르는 건 언제든 환영이에요.","밤엔 실 색이 잘 안 보여서… 조심조심 골라요."],
+			"rest":["일 쉬는 중이에요. 바람 쐬면 새 무늬가 떠오르거든요.","잠깐 산책 나왔어요. 저 꽃 색, 옷감으로 쓰면 예쁘겠죠?"]},
+		"guide":{"morning":["좋은 아침. 모닥불 재부터 정리하던 참이야.","아침이슬이 마르면 텐트를 걷어야지."],
+			"afternoon":["낮이라고 방심하면 안 돼. 숲은 금방 어두워져.","오후엔 장작 패기 좋은 시간이야."],
+			"evening":["해 질 녘이야. 숲이라면 지금쯤 모닥불을 지펴야 해.","저녁엔 캠프 냄새가 제일 좋아."],
+			"night":["밤엔 모닥불 곁이 최고지. 너도 쉬어.","이 시간엔 숲 쪽을 보지 마. 눈이 마주칠지도."],
+			"rest":["잠깐 쉬는 중. 캠프 밖 공기도 나쁘지 않네.","가끔은 텐트 말고 하늘 아래서 쉬어야 해."]},
+		"angler":{"morning":["새벽 물때가 제일 좋아요. 벌써 몇 마리 놓쳤지만요.","아침 바다는 거울 같아요. 찌가 또렷하게 보여요."],
+			"afternoon":["오후엔 입질이 뜸해요. 그래도 기다리는 게 낚시죠.","해가 높을 땐 물고기도 낮잠을 자나 봐요."],
+			"evening":["저녁 물때예요. 노을 지는 바다에 찌가 반짝여요.","해 질 녘엔 은빛 도미가 올라와요."],
+			"night":["밤바다는 찌가 안 보여서 오늘은 여기까지예요.","별빛 아래 파도 소리, 좋죠?"],
+			"rest":["오늘은 낚싯대 내려놓고 쉬는 중이에요.","바다만 보다가 가끔은 마을도 걸어요."]}}
+	var pool: Array=openers.get(role,{}).get(band,[])
+	var opener: String=tr(pool[randi()%pool.size()]) if not pool.is_empty() else ""
+	var plan: Dictionary={"lines":[tr("좋은 하루예요!")],"choices":[[tr("안녕"),Callable()]]}
+	match role:
+		"map": plan={"lines":[tr("어서 와! 나는 길잡이 나루야."),tr("캠프 초원의 돌문을 지나면 일곱 밤의 숲이 시작돼."),tr("처음이라면 '산책'으로 길을 익혀 봐. 어려운 길일수록 별씨를 많이 받아.")],
+			"choices":[[tr("탐험 지도 펼치기"),open_expedition],[tr("다음에 올게"),Callable()]]}
+		"wardrobe": plan={"lines":[tr("어머, 반가워! 재단사 소라예요."),tr("오늘은 어떤 차림으로 섬을 걸어 볼까요?"),tr("옷 색과 모자, 배낭까지 마음대로 골라 보세요.")],
+			"choices":[[tr("옷장 열기"),open_wardrobe],[tr("지금은 괜찮아"),Callable()]]}
+		"guide": plan={"lines":[tr("모루라고 해. 숲에서 밤을 버티는 법이라면 맡겨 줘."),tr("첫날엔 목재와 돌을 모아 도끼부터 만들어."),tr("밤엔 모닥불 곁을 지키고, 붉은 원이 보이면 바로 피해!")],
+			"choices":[[tr("준비하러 갈게"),Callable()]]}
+		"angler": plan={"lines":[tr("오늘 물때가 좋아요."),tr("미끼를 달고 찌를 던진 뒤, 금빛 입질이 오면 바로 당기면 돼요."),tr("바다 쪽엔 은빛 도미가 더 많답니다.")],
+			"choices":[[tr("낚시 도감 보기"),life.open_storage],[tr("고마워요"),Callable()]]}
+	if not opener.is_empty(): plan.lines.insert(0,opener)
+	return plan
+
 func talk_to(npc: Node3D) -> void:
 	npc.face_point(player.position)
-	var v := modal_card(npc.get_meta("title"))
-	var role: String=npc.get_meta("role")
-	if role=="angler":
-		var conversation := HBoxContainer.new()
-		conversation.add_theme_constant_override("separation",18)
-		v.add_child(conversation)
-		var portrait := TextureRect.new()
-		var crop := AtlasTexture.new()
-		crop.atlas=preload("res://assets/npc_haeru_design.png")
-		crop.region=Rect2(26,29,390,493)
-		portrait.texture=crop
-		portrait.custom_minimum_size=Vector2(205,260)
-		portrait.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
-		portrait.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		conversation.add_child(portrait)
-		var speech := VBoxContainer.new()
-		speech.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-		speech.add_theme_constant_override("separation",14)
-		conversation.add_child(speech)
-		text(speech,tr("해루  /  낚시꾼"),13).modulate=Color("e4c989")
-		text(speech,tr("오늘 물때가 좋아요.\n낚시하러 가볼까요?"),24)
-		rule(speech)
-		var advice := text(speech,tr("미끼를 챙겨 찌를 던져 보세요.\n금빛 입질이 오면 E로 당기면 돼요.\n바다에는 은빛 도미가 더 많아요."),15)
-		advice.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-		button(v,tr("낚시 도감과 생활 창고"),life.open_storage,"primary")
-		return
-	if role=="farmer":
-		text(v,tr("순무는 90초, 호박은 150초면 자라요.\n심은 뒤 물을 한 번 주고 마을을 돌아보세요.\n수확물과 물고기는 잎전으로 바꾸거나 식탁에 배달할 수 있어요."),17)
-		button(v,tr("씨앗과 미끼 가게"),life.open_shop)
-		return
-	var words: String={"map":tr("숲을 지나면 뜨거운 채석장, 더 먼 곳에는 서리빛 분지가 있어요.\n처음이라면 산책 난이도로 길을 익혀 보세요.\n도전이 어려울수록 완주했을 때 받는 별씨도 늘어납니다."),"wardrobe":tr("여행에도 나다운 옷차림이 필요하죠!\n머리와 옷, 바지, 신발 색을 따로 골라 보세요.\n외형은 생존 능력에 영향을 주지 않아요."),"guide":tr("첫날에는 목재와 돌을 모아 도끼부터 만드세요.\n밤에는 모닥불 곁에서 몸을 녹이고, 빨간 공격 예고 밖으로 피하세요.\n이끼 수호자는 느리지만 강하고, 불씨 도깨비는 먼 곳에서도 공격해요.\n서리 지역에서는 식량과 땔감을 평소보다 넉넉히 준비하세요.")}.get(role,"")
-	var label := text(v,words,17)
-	label.custom_minimum_size.y=160
-	label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	if role=="map": button(v,tr("탐험 지도 펼치기"),open_expedition)
-	elif role=="wardrobe": button(v,tr("옷장 열기"),open_wardrobe)
-	else: button(v,tr("준비하러 가기"),close_village_modal)
+	player.face_point(npc.position)
+	var plan := npc_script(npc.get_meta("role"))
+	open_dialogue(str(npc.get_meta("title")),str(npc.get_meta("cast","")),plan.lines,plan.choices)
+
+## RPG dialogue: an illustration on the left, a name plate and a box that types
+## each line out. E, Space or a click advances; choices appear on the last line.
+func open_dialogue(speaker: String, cast: String, lines: Array, choices: Array) -> void:
+	close_village_modal()
+	cancel_preview()
+	village_modal=Control.new()
+	village_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ui.add_child(village_modal)
+	hide_hud()
+	player.controls_enabled=false
+	var shade := TextureRect.new()
+	var fade := GradientTexture2D.new()
+	fade.fill_from=Vector2(0,0);fade.fill_to=Vector2(0,1)
+	fade.gradient=Gradient.new()
+	fade.gradient.set_color(0,Color(0.02,0.03,0.04,0.12))
+	fade.gradient.set_color(1,Color(0.02,0.03,0.04,0.62))
+	shade.texture=fade
+	shade.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	village_modal.add_child(shade)
+	var portrait_path := cast if cast.begins_with("res://") else "res://assets/portraits/%s.png" % cast
+	if ResourceLoader.exists(portrait_path):
+		var art := TextureRect.new()
+		art.texture=load(portrait_path)
+		art.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		art.position=Vector2(156,232)
+		art.size=Vector2(330,412)
+		art.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		village_modal.add_child(art)
+	var box := PanelContainer.new()
+	box.position=Vector2(150,598)
+	box.size=Vector2(980,178)
+	var box_style := RpgUi.style(Color(0.08,0.09,0.1,.97),18,RpgUi.GOLD,2)
+	box_style.content_margin_left=34;box_style.content_margin_right=26
+	box_style.content_margin_top=26;box_style.content_margin_bottom=16
+	box.add_theme_stylebox_override("panel",box_style)
+	village_modal.add_child(box)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation",10)
+	box.add_child(column)
+	var plate := Label.new()
+	plate.text=speaker
+	plate.add_theme_font_size_override("font_size",19)
+	plate.add_theme_color_override("font_color",Color("2b2112"))
+	var plate_style := RpgUi.style(RpgUi.GOLD,10,Color("8c6a2c"),2)
+	plate_style.content_margin_left=18;plate_style.content_margin_right=18
+	plate_style.content_margin_top=4;plate_style.content_margin_bottom=4
+	plate.add_theme_stylebox_override("normal",plate_style)
+	plate.position=Vector2(506,574)
+	village_modal.add_child(plate)
+	var body := Label.new()
+	body.add_theme_font_size_override("font_size",22)
+	body.add_theme_constant_override("line_spacing",6)
+	body.add_theme_color_override("font_color",RpgUi.INK)
+	body.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	body.custom_minimum_size=Vector2(940,84)
+	column.add_child(body)
+	var footer := HBoxContainer.new()
+	footer.alignment=BoxContainer.ALIGNMENT_END
+	footer.add_theme_constant_override("separation",8)
+	column.add_child(footer)
+	var page := [0]
+	var show_page := func(index: int) -> void:
+		body.text=lines[index]
+		body.visible_ratio=0.0
+		var typing := create_tween()
+		typing.tween_property(body,"visible_ratio",1.0,clampf(lines[index].length()*0.028,0.25,1.6))
+		for child in footer.get_children(): child.queue_free()
+		if index<lines.size()-1:
+			var more := RpgUi.label(footer,"▼",16,RpgUi.GOLD)
+			var bob := more.create_tween().set_loops()
+			bob.tween_property(more,"modulate:a",0.35,0.45)
+			bob.tween_property(more,"modulate:a",1.0,0.45)
+		else:
+			for choice in choices:
+				var action: Callable=choice[1]
+				RpgUi.menu_button(footer,choice[0],func():
+					sound.effect("click")
+					close_village_modal()
+					if action.is_valid(): action.call(),190).custom_minimum_size.y=40
+	var advance := func() -> void:
+		if body.visible_ratio<1.0:
+			body.visible_ratio=1.0
+		elif page[0]<lines.size()-1:
+			page[0]+=1
+			sound.effect("click")
+			show_page.call(page[0])
+	village_modal.set_meta("advance",advance)
+	shade.gui_input.connect(func(event):
+		if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT: advance.call())
+	show_page.call(0)
+
+## Conversations hide the HUD, the way story scenes do in console RPGs; closing the
+## window brings back exactly the panels that were showing.
+var hidden_hud: Array[CanvasItem] = []
+func hide_hud() -> void:
+	for child in ui.get_children():
+		if child!=village_modal and child is CanvasItem and (child as CanvasItem).visible:
+			(child as CanvasItem).visible=false
+			hidden_hud.append(child)
+
+func restore_hud() -> void:
+	for item in hidden_hud:
+		if is_instance_valid(item): item.visible=true
+	hidden_hud.clear()
 
 func open_wardrobe() -> void:
 	if screen!="village": return
@@ -2083,10 +2430,11 @@ func open_wardrobe() -> void:
 		if result.ok:
 			me.profile=result.data
 			player.apply_avatar(me.profile.avatar)
+			show_portrait()
 			close_village_modal()
 			message(tr("새로운 여행자 모습이 저장되었습니다."))
 		else:
-			status.text=tr("저장하지 못했습니다. 옷장을 닫고 새로고침한 뒤 다시 시도하세요.")
+			status.text=tr("옷을 갈아입지 못했어요. 옷장을 다시 열어 주세요.")
 	)
 	save.custom_minimum_size.y=42
 
@@ -2094,18 +2442,20 @@ func open_wardrobe() -> void:
 func open_studio(destination: String="workshop") -> void:
 	var session := {"token":api.token,"url":api.base_url,"room":destination,"multiplayer":social.enabled}
 	if social.visiting():
-		# Friends may step into the host's home to look around; the workshop stays private.
-		if destination!="home":
+		# Friends may step into the host's home and public buildings; the workshop stays private.
+		if destination=="workshop":
 			message(tr("친구의 공방은 들어갈 수 없어요. 친구 집에는 놀러 갈 수 있어요."))
 			return
-		session.visit_host=str(social.data.get("host_id",""))
-		session.visit_name=str(social.data.get("host_name",tr("친구")))
+		if destination=="home":
+			session.visit_host=str(social.data.get("host_id",""))
+			session.visit_name=str(social.data.get("host_name",tr("친구")))
 	if busy or api.token.is_empty(): return
 	Engine.set_meta("studio_session",session)
 	var veil := Transition.of(get_tree())
-	veil.play_door("open")
+	veil.play_door("open",destination)
 	player.controls_enabled=false
 	await veil.fade_out(0.45)
+	leave_modules()
 	if is_instance_valid(town): town.release_map()
 	get_tree().change_scene_to_file("res://scenes/studio.tscn")
 
@@ -2153,7 +2503,7 @@ func render_craft(job: Dictionary) -> void:
 		idea.text_submitted.connect(func(_v): request_craft(idea.text))
 		if not me.get("studio_tripo_enabled",false):
 			ask.disabled = true
-			text(craft_box,tr("이 서버에서는 지금 새 물건을 만들 수 없어요."),14).modulate=Color("b0503c")
+			text(craft_box,tr("공방 장인이 자리를 비워 지금은 제작할 수 없어요."),14).modulate=Color("b0503c")
 		return
 	var titles := {"queued":tr("주문을 접수했어요"),"planning":tr("장인이 설계도를 그리고 있어요…"),"awaiting_confirmation":tr("설계가 끝났어요!"),
 		"building":tr("공방에서 만들고 있어요…"),"submitting":tr("공방에서 만들고 있어요…"),"unknown":tr("제작 결과를 확인하고 있어요…"),"ready":tr("완성했어요!")}

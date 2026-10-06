@@ -37,8 +37,11 @@ func _ready() -> void:
 	actor=preload("res://scripts/player.gd").new()
 	actor.avatar=avatar.duplicate(true)
 	actor.controls_enabled=false
+	# visual_only keeps the idle animation ticking without moving the body.
+	actor.visual_only=true
+	# Face the preview camera; the walker turns its model toward `facing`.
+	actor.facing=Vector3(0,0,1)
 	preview.add_child(actor)
-	actor.set_physics_process(false)
 	actor.visual.rotation.y=PI
 	if actor.animation_player and actor.animation_player.has_animation("idle"): actor.animation_player.play("idle")
 	var controls := VBoxContainer.new()
@@ -92,7 +95,7 @@ func _ready() -> void:
 	turn.min_value=-180
 	turn.max_value=180
 	turn.tooltip_text=tr("미리보기 회전")
-	turn.value_changed.connect(func(value): actor.visual.rotation.y=PI+deg_to_rad(value))
+	turn.value_changed.connect(func(value): actor.facing=Vector3(sin(deg_to_rad(value)),0,cos(deg_to_rad(value))))
 	controls.add_child(turn)
 	refresh()
 

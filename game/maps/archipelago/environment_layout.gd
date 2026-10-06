@@ -15,6 +15,11 @@ var lod_meshes: Dictionary = {}
 var lod_entries: Array[Dictionary] = []
 var lod_timer := 0.0
 var output_path := "res://../art/maps/archipelago_environment_v1/"
+## Every Tripo prop is ~20k triangles; their LODs are 1.2k-5k. Ground cover reads the
+## same from the follow camera with its LOD up to a close zoom, so it switches much
+## later, and its tiny shadows are not worth a pass in every shadow split.
+const GROUND_COVER := ["40_shrub","41_planter","42_white_flowers","43_yellow_flowers","44_pink_flowers","45_reeds","27_lamp"]
+const NO_SHADOW := ["41_planter","42_white_flowers","43_yellow_flowers","44_pink_flowers","45_reeds"]
 
 func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 	host = owner_node
@@ -66,6 +71,7 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 		prop_nodes.append(prop)
 		for mesh: MeshInstance3D in prop.find_children("*","MeshInstance3D",true,false):
 			mesh.lod_bias = .12 if spec.id in ["40_shrub","42_white_flowers","43_yellow_flowers","44_pink_flowers","45_reeds"] else .35
+			if spec.id in NO_SHADOW: mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			_register_prop_lod(mesh,String(spec.id))
 		if spec.id == "27_lamp":
 			_light_lantern(prop)
@@ -152,7 +158,9 @@ func _register_prop_lod(mesh: MeshInstance3D,ident: String) -> void:
 		source.free()
 	var extent := mesh.get_aabb().size
 	var scale := mesh.global_basis.get_scale()
-	lod_entries.append({"node":mesh,"high":mesh.mesh,"low":lod_meshes[ident],"low_active":false,"size":maxf(extent.x,maxf(extent.y,extent.z))*maxf(scale.x,maxf(scale.y,scale.z))})
+	# Pixel heights below which the LOD shows (enter, leave): ground cover and trees switch late.
+	var limits := Vector2(260,300) if ident in GROUND_COVER else (Vector2(150,180) if ident in ["37_round_tree","38_conifer","39_palm"] else Vector2(72,92))
+	lod_entries.append({"node":mesh,"high":mesh.mesh,"low":lod_meshes[ident],"low_active":false,"limits":limits,"size":maxf(extent.x,maxf(extent.y,extent.z))*maxf(scale.x,maxf(scale.y,scale.z))})
 
 func _update_prop_lods() -> void:
 	if host.camera == null:
@@ -166,7 +174,8 @@ func _update_prop_lods() -> void:
 		if camera.projection == Camera3D.PROJECTION_PERSPECTIVE:
 			var depth := maxf(.1,-(view*mesh.global_position).z)
 			projected = entry.size*pixels/(2.0*tan(deg_to_rad(camera.fov)*.5)*depth)
-		var use_low := projected < (92.0 if entry.low_active else 72.0)
+		var limits: Vector2 = entry.limits
+		var use_low := projected < (limits.y if entry.low_active else limits.x)
 		if use_low != bool(entry.low_active):
 			mesh.mesh = entry.low if use_low else entry.high
 			entry.low_active = use_low

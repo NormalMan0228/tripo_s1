@@ -20,6 +20,15 @@ def strong_password(value: str) -> bool:
     return any(c.isupper() for c in value) and any(not c.isalnum() for c in value)
 
 
+# Staff-looking names are reserved for operator accounts, which are created by
+# tools/admin_accounts.py and never through public registration.
+RESERVED_USERNAME_PREFIXES = ('admin', 'root', 'gm', 'operator', 'system', 'moderator', 'polytech')
+
+
+def reserved_username(value: str) -> bool:
+    return value.lower().startswith(RESERVED_USERNAME_PREFIXES)
+
+
 class AdminGrant(Mutation):
     shards: int = Field(default=0, ge=0, le=100000)
     coins: int = Field(default=0, ge=0, le=100000)
@@ -45,11 +54,16 @@ class AvatarEdit(Mutation):
 
 class LifeAction(Mutation):
     version: int = Field(ge=0)
-    action: Literal['plant','water','harvest','cast','reel','cancel_fishing','gather','buy','sell','order']
-    plot: int = Field(default=0,ge=0,le=5)
+    action: Literal['plant','water','harvest','till','untill','cast','reel','cancel_fishing','gather','shake','pickup','buy','sell','order']
+    plot: int = Field(default=0,ge=0,le=17)
     item: str = Field(default='',max_length=24)
-    spot: Literal['pond','sea'] = 'pond'
+    spot: Literal['pond','sea','river'] = 'pond'
     quantity: int = Field(default=1,ge=1,le=20)
+    # Tilled plot centre in map metres (homestead.FARM_ZONES bounds it further).
+    x: float = Field(default=0,ge=-200,le=200)
+    z: float = Field(default=0,ge=-200,le=200)
+    node: str = Field(default='',max_length=24,pattern=r'^[a-z0-9_]*$')
+    outcome: Literal['','landed','lost'] = ''
 
 class ObjectEdit(Mutation):
     version: int = Field(ge=1)

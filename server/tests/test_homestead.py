@@ -32,9 +32,9 @@ def test_life_auth_owner_version_idempotency_and_injection(world):
     first=c.post('/v1/homestead',headers=a,json=payload)
     assert first.status_code==200
     assert c.post('/v1/homestead',headers=a,json=payload).json()==first.json()
-    assert not get(c,b)['plots'][2]
+    assert 'crop' not in get(c,b)['plots'][2]
     assert c.post('/v1/homestead',headers=a,json=mutation(version=0,action='buy',item='bait')).status_code==409
-    for injected in [{'owner_id':'life_bob'},{'ready_at':0},{'coins':999},{'quantity':-1},{'plot':-1},{'plot':6}]:
+    for injected in [{'owner_id':'life_bob'},{'ready_at':0},{'coins':999},{'quantity':-1},{'plot':-1},{'plot':18},{'node':'../x'},{'spot':'lava'},{'x':1e9}]:
         assert c.post('/v1/homestead',headers=a,json=payload|injected).status_code==422
     assert do(c,a,'plant',item='../../key',plot=0).status_code==409
 
@@ -48,8 +48,14 @@ def test_fishing_consumes_bait_and_timing_cannot_be_skipped(world):
     assert early['caught']==0 and early['fishing'] is None
     state=do(c,a,'cast',spot='sea').json()
     t[0]=state['fishing']['bite_at']+.5
-    payload=mutation(version=state['version'],action='reel')
+    hooked=do(c,a,'reel').json()
+    assert hooked['caught']==0 and hooked['fishing']['phase']=='hooked' and 'catch' not in hooked['fishing']
+    # The reel fight cannot be skipped: landing before its minimum is refused.
+    assert do(c,a,'reel',outcome='landed').status_code==409
+    t[0]+=hooked['fishing']['fight_min']
+    payload=mutation(version=hooked['version'],action='reel',outcome='landed')
     caught=c.post('/v1/homestead',headers=a,json=payload).json()
+    assert caught['reward']['kind']=='fish' and caught['reward']['first']
     assert caught['caught']==1 and sum(caught['collection'].values())==1
     assert c.post('/v1/homestead',headers=a,json=payload).json()==caught
     assert do(c,a,'reel').status_code==409
@@ -88,11 +94,12 @@ def test_daily_order_is_atomic_even_when_partial_ingredients_exist(world,monkeyp
     before=get(c,a)
     assert do(c,a,'order').status_code==409
     assert get(c,a)['bag']==before['bag']
-    # Catch through the actual rules; pond has a 85% perch probability.
+    # Catch through the actual rules; the pinned roll lands the last pond fish (perch).
     for _ in range(30):
         do(c,a,'buy',item='bait')
         cast=do(c,a,'cast').json(); t[0]=cast['fishing']['bite_at']+.1
-        do(c,a,'reel')
+        hooked=do(c,a,'reel').json(); t[0]+=hooked['fishing']['fight_min']
+        do(c,a,'reel',outcome='landed')
         if get(c,a)['bag'].get('perch',0): break
     assert get(c,a)['bag'].get('perch',0)>0
     coins=get(c,a)['coins']

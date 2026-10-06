@@ -1,0 +1,781 @@
+{
+  "version": 1,
+  "generated": "2026-10-06T00:48:10",
+  "source": "Tripo text-to-model via tools/generate_interior_assets.py",
+  "style_prompt": "Single isolated game-ready 3D interior prop for a cozy colorful storybook island village game with adult 1.70m cartoon people. Smooth stylized 3D cartoon sculpt like Animal Crossing furniture: soft rounded bevels, chunky friendly proportions, clean solid geometry, warm hand-painted materials with subtle grain, matte surfaces. One complete object, centered and upright. No ground plane, floor, walls or room, no background, no people, no text, letters, numbers or logos.",
+  "notes": "glTF +Y up. Raw Tripo output is normalised to about one unit; scale uniformly by suggested_uniform_scale (scale_reference.metres / source extent along scale_reference.measure). Front-facing direction is not guaranteed; check orientation when placing. longest_horizontal = max(X, Z) extent.",
+  "total_credits_consumed": 750.0,
+  "items": [
+    {
+      "id": "bed",
+      "file": "res://assets/interior/bed.glb",
+      "category": "bedroom",
+      "model": "P2-20260801",
+      "model_label": "Tripo P2 textured",
+      "credits_consumed": 110.0,
+      "task_id": "435d8728-4230-494d-be87-f6173e05c154",
+      "size_m": {
+        "width_x": 1.45,
+        "height_y": 1.1,
+        "depth_z": 2.05
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 2.05
+      },
+      "source_extent": [
+        0.99951,
+        0.55615,
+        0.82959
+      ],
+      "suggested_uniform_scale": 2.051,
+      "bytes": 2361924,
+      "sha256": "0828bc0534976dbf2a3b0a8f6d6b7b4e4c0f5ab62d6818d2e758c5b477573f5b",
+      "triangles": 16326,
+      "vertices": 11531,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A cozy single wooden bed for one adult, 2.0m long, 1.4m wide, mattress top 0.55m high. Warm honey-oak frame with a tall softly arched headboard, a lower footboard and four short turned corner posts with round knob finials. Plump cream mattress, a thick sage-green quilted patchwork blanket neatly folded back, two fluffy white pillows. Short sturdy legs. No canopy, no rug, no nightstand."
+    },
+    {
+      "id": "wardrobe_closet",
+      "file": "res://assets/interior/wardrobe_closet.glb",
+      "category": "bedroom",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "f7ebeb6e-c3cf-4176-be6c-0e82e81e7826",
+      "size_m": {
+        "width_x": 1.1,
+        "height_y": 1.9,
+        "depth_z": 0.6
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.9
+      },
+      "source_extent": [
+        0.37743,
+        1.0,
+        0.58561
+      ],
+      "suggested_uniform_scale": 1.9,
+      "bytes": 3290388,
+      "sha256": "6caff993786804e25a9524fb06a2ea9b9823910ebe409dbeab43499e526ab095",
+      "triangles": 7390,
+      "vertices": 5551,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A tall two-door wooden wardrobe closet, 1.9m tall, 1.1m wide, 0.6m deep. Warm honey wood body with a rounded crown moulding on top, two closed panelled doors with small round brass knobs, one wide drawer at the bottom with two knobs, four short bun feet. Doors closed."
+    },
+    {
+      "id": "bookshelf",
+      "file": "res://assets/interior/bookshelf.glb",
+      "category": "general",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "8af99bf5-08f8-4815-b284-c0ac1190a233",
+      "size_m": {
+        "width_x": 1.0,
+        "height_y": 1.8,
+        "depth_z": 0.35
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.8
+      },
+      "source_extent": [
+        0.25198,
+        1.0,
+        0.36606
+      ],
+      "suggested_uniform_scale": 1.8,
+      "bytes": 2505932,
+      "sha256": "a1dd138c8a90d93b6d54a9dafb461d89e87455d2cdd6522d7bcd4f2f1c4d4cb2",
+      "triangles": 8857,
+      "vertices": 7072,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A tall open wooden bookshelf, 1.8m tall, 1.0m wide, 0.35m deep, honey wood with rounded top. Four shelves filled with chunky colorful books in soft red, teal, mustard and cream, some leaning, one small potted plant and a round ceramic jar on the top shelf. Plain book spines without any lettering."
+    },
+    {
+      "id": "dining_table",
+      "file": "res://assets/interior/dining_table.glb",
+      "category": "kitchen",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "ebd520a7-22f3-46b1-9acb-8594c707c816",
+      "size_m": {
+        "width_x": 1.4,
+        "height_y": 0.76,
+        "depth_z": 0.85
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 1.4
+      },
+      "source_extent": [
+        0.75604,
+        0.48417,
+        1.0
+      ],
+      "suggested_uniform_scale": 1.4,
+      "bytes": 3490032,
+      "sha256": "a2e9a70d55cfee4d69040660defed781d21d732fdc17d52fc6433c7fd1d0f079",
+      "triangles": 5513,
+      "vertices": 3897,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A rectangular wooden dining table for four, 1.4m long, 0.85m wide, 0.76m tall. Thick warm honey plank top with softly rounded edges and corners, four chunky turned legs with a simple apron underneath. Empty tabletop, no tablecloth, no dishes, no chairs."
+    },
+    {
+      "id": "wooden_chair",
+      "file": "res://assets/interior/wooden_chair.glb",
+      "category": "kitchen",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "e6ada611-447b-4dbd-b73b-a795806fc89f",
+      "size_m": {
+        "width_x": 0.45,
+        "height_y": 0.9,
+        "depth_z": 0.5
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 0.9
+      },
+      "source_extent": [
+        0.56141,
+        1.0,
+        0.62061
+      ],
+      "suggested_uniform_scale": 0.9,
+      "bytes": 3053604,
+      "sha256": "98e819ea5f9186989b1267af098fbdc0b488d2553b4f3c13faa720074b1c3cf2",
+      "triangles": 5672,
+      "vertices": 3954,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A single wooden dining chair, 0.9m tall, seat height 0.45m. Honey wood spindle back with a curved top rail, a thick rounded seat with a small sage-green tie-on cushion, four slightly splayed sturdy legs with stretchers. No armrests, no table."
+    },
+    {
+      "id": "sofa",
+      "file": "res://assets/interior/sofa.glb",
+      "category": "general",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "f6a95645-c1f6-4c98-b634-9e6522440341",
+      "size_m": {
+        "width_x": 1.9,
+        "height_y": 0.85,
+        "depth_z": 0.9
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 1.9
+      },
+      "source_extent": [
+        0.4725,
+        0.47492,
+        1.0
+      ],
+      "suggested_uniform_scale": 1.9,
+      "bytes": 2588416,
+      "sha256": "eb8ce8998f10f7d7ffc06a1f07e63cc74c1e582d2fa0c004f150be9ddadfe1d6",
+      "triangles": 7552,
+      "vertices": 5202,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A plump cozy three-seat sofa, 1.9m wide, 0.85m tall, 0.9m deep. Soft dusty terracotta-rose fabric upholstery with rounded rolled arms, three puffy seat cushions, a tufted back, two small cream throw pillows, short round honey wood feet. Soft fabric folds and stitched seams."
+    },
+    {
+      "id": "kitchen_counter",
+      "file": "res://assets/interior/kitchen_counter.glb",
+      "category": "kitchen",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "ed3e5909-e507-4a98-90a0-d1c249008ada",
+      "size_m": {
+        "width_x": 1.6,
+        "height_y": 1.0,
+        "depth_z": 0.65
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 1.6
+      },
+      "source_extent": [
+        0.54945,
+        1.0,
+        0.93353
+      ],
+      "suggested_uniform_scale": 1.71392,
+      "bytes": 2613156,
+      "sha256": "3a865657fcb2d6ea8d38db138ef1000108940bfd6d4536b16ceb9318e772f80a",
+      "triangles": 9128,
+      "vertices": 6102,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A kitchen counter cabinet with a sink, 1.6m wide, 0.92m tall, 0.65m deep. Cream painted base cabinet with mint-green panel doors and two drawers with round wooden knobs, a thick butcher-block wooden countertop, a white ceramic farmhouse sink basin set into the top and a curved brass faucet. Free standing, no wall, no shelves above."
+    },
+    {
+      "id": "cooking_stove",
+      "file": "res://assets/interior/cooking_stove.glb",
+      "category": "kitchen",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "6216fb17-49c6-449e-b2c5-ff6426f3e5b3",
+      "size_m": {
+        "width_x": 0.8,
+        "height_y": 0.95,
+        "depth_z": 0.65
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 0.95
+      },
+      "source_extent": [
+        1.0,
+        0.73833,
+        0.93427
+      ],
+      "suggested_uniform_scale": 1.28669,
+      "bytes": 2290980,
+      "sha256": "d661d69146c0d93d6306bd2de01c74e07300a519e8f3a84952a3d6f2688444bc",
+      "triangles": 7433,
+      "vertices": 5061,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A cozy vintage kitchen cooking stove range, 0.8m wide, 0.92m tall. Rounded enamel body in warm cream with a dark charcoal cooktop, four round black burners, a front oven door with a small dark window and a brass bar handle, a row of round brass control knobs, short stubby legs. Nothing on top."
+    },
+    {
+      "id": "potted_plant",
+      "file": "res://assets/interior/potted_plant.glb",
+      "category": "general",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "63f4e102-6d1e-4773-b36e-dbe6692a4c74",
+      "size_m": {
+        "width_x": 0.55,
+        "height_y": 1.1,
+        "depth_z": 0.55
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.1
+      },
+      "source_extent": [
+        0.92088,
+        1.0,
+        0.91257
+      ],
+      "suggested_uniform_scale": 1.1,
+      "bytes": 2899884,
+      "sha256": "651e44b6dbca3de54c27886dae6550fb860e45d4eeb9de7a78096b90c7a338db",
+      "triangles": 9924,
+      "vertices": 7485,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A leafy indoor potted house plant, 1.1m tall overall. A round glazed terracotta pot with a broad rim and dark soil, holding a lush plant of broad glossy split monstera leaves in fresh greens on curved stems. Thick volumetric sculpted leaves, no flat leaf cards, no saucer spill."
+    },
+    {
+      "id": "floor_lamp",
+      "file": "res://assets/interior/floor_lamp.glb",
+      "category": "general",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "f804de4c-eb63-416d-abec-c7d6ea42786a",
+      "size_m": {
+        "width_x": 0.45,
+        "height_y": 1.6,
+        "depth_z": 0.45
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.6
+      },
+      "source_extent": [
+        0.44798,
+        1.0,
+        0.45321
+      ],
+      "suggested_uniform_scale": 1.6,
+      "bytes": 1964644,
+      "sha256": "d439fa716db913cc828138a54d98ee358888e87f169c03648490906a22486d3b",
+      "triangles": 5631,
+      "vertices": 3894,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A standing floor lamp, 1.6m tall. A slim honey wood pole with small brass rings, a round weighted wooden base, and a warm cream fabric drum lampshade with a scalloped mustard trim on top. Solid lampshade, no cable, no glow."
+    },
+    {
+      "id": "shop_counter",
+      "file": "res://assets/interior/shop_counter.glb",
+      "category": "shop",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "45fc8b85-97dd-48b8-8244-bc89d907862e",
+      "size_m": {
+        "width_x": 1.6,
+        "height_y": 1.25,
+        "depth_z": 0.7
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 1.6
+      },
+      "source_extent": [
+        1.0,
+        0.55451,
+        0.49099
+      ],
+      "suggested_uniform_scale": 1.6,
+      "bytes": 3198736,
+      "sha256": "31805eb40c063b357390c5e90a32c0f8ab6aca694d2c9a6ad657b962c7ae256f",
+      "triangles": 9424,
+      "vertices": 6293,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A village general store shop counter with a cash register, counter 1.6m wide, 1.0m tall, 0.7m deep. Front of vertical honey wood planks with mint-green trim and a cream top border, a thick polished wooden countertop, an old-fashioned brass cash register with round blank keys sitting on one end, and a small brass service bell. Blank register, no numbers."
+    },
+    {
+      "id": "display_shelf",
+      "file": "res://assets/interior/display_shelf.glb",
+      "category": "shop",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "00e05cf9-83d7-4f0d-8ea6-dc37af4aab25",
+      "size_m": {
+        "width_x": 1.4,
+        "height_y": 1.7,
+        "depth_z": 0.45
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.7
+      },
+      "source_extent": [
+        0.42055,
+        1.0,
+        0.69734
+      ],
+      "suggested_uniform_scale": 1.7,
+      "bytes": 2688936,
+      "sha256": "c14b743c5472aa83ca3b1211d911bda8ab31237f895670ed71bf465921ba3dfd",
+      "triangles": 9173,
+      "vertices": 7568,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "An open wooden shop display shelf unit, 1.7m tall, 1.4m wide, 0.45m deep, honey wood with a rounded top. Three shelves stocked with goods: glass jars of colorful candies, small burlap sacks, wrapped brown paper parcels tied with string, a basket of red apples and rows of little bottles. No labels."
+    },
+    {
+      "id": "crate_stack",
+      "file": "res://assets/interior/crate_stack.glb",
+      "category": "shop",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "07f9db41-45ce-4184-bad7-7a8d8cf26d4a",
+      "size_m": {
+        "width_x": 1.0,
+        "height_y": 1.1,
+        "depth_z": 0.7
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.1
+      },
+      "source_extent": [
+        0.55631,
+        1.0,
+        0.56254
+      ],
+      "suggested_uniform_scale": 1.1,
+      "bytes": 2932772,
+      "sha256": "3f2dfbe837fbae3b6c47de864d077e8b94aea67c5cc1dc0ad26c92f80aa93066",
+      "triangles": 5587,
+      "vertices": 4892,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A stack of three wooden storage crates, about 1.1m tall overall: two crates side by side on the bottom and one crate on top slightly rotated. Chunky honey and light pine slats with darker corner posts, visible wood grain, sturdy and solid, closed tops. No stencils or labels."
+    },
+    {
+      "id": "barrel",
+      "file": "res://assets/interior/barrel.glb",
+      "category": "general",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "4af761a0-73f2-4db0-ae13-a0777c1cb3a3",
+      "size_m": {
+        "width_x": 0.6,
+        "height_y": 0.85,
+        "depth_z": 0.6
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 0.85
+      },
+      "source_extent": [
+        0.83436,
+        1.0,
+        0.82216
+      ],
+      "suggested_uniform_scale": 0.85,
+      "bytes": 3073072,
+      "sha256": "c8658a52d70e3da67084a85af881f506b9cb125acaf5b495cb812bb26988328f",
+      "triangles": 4550,
+      "vertices": 3645,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A single wooden storage barrel, 0.85m tall, 0.6m diameter. Bulging warm oak staves with visible grain, two dark iron hoops near top and bottom, a closed round wooden lid. Solid, upright."
+    },
+    {
+      "id": "workbench",
+      "file": "res://assets/interior/workbench.glb",
+      "category": "workshop",
+      "model": "P2-20260801",
+      "model_label": "Tripo P2 textured",
+      "credits_consumed": 110.0,
+      "task_id": "60f281a7-aa05-4c44-be23-a9591cdbf5b8",
+      "size_m": {
+        "width_x": 1.8,
+        "height_y": 1.5,
+        "depth_z": 0.8
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 1.8
+      },
+      "source_extent": [
+        0.6665,
+        0.9458,
+        0.99951
+      ],
+      "suggested_uniform_scale": 1.80088,
+      "bytes": 3711856,
+      "sha256": "68681c407ca7ac5a10f2d92d70de55dde3c2e7a11a88065cd92d5e540274968b",
+      "triangles": 20952,
+      "vertices": 24388,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A big sturdy carpenter's workbench with tools, 1.8m long, 0.8m deep, work surface 0.9m high. Thick butcher-block honey wood top with a wooden bench vise at one end, chunky square legs and a lower shelf holding a red toolbox and short planks. On top: a hammer, a hand saw, a wood plane, two clamps and a few curly wood shavings. A pegboard panel rising 0.6m at the back with hanging wrench, screwdriver and pliers."
+    },
+    {
+      "id": "telescope",
+      "file": "res://assets/interior/telescope.glb",
+      "category": "observatory",
+      "model": "P2-20260801",
+      "model_label": "Tripo P2 textured",
+      "credits_consumed": 110.0,
+      "task_id": "04ffd31e-7a6b-44e5-8001-cd4249eb21c6",
+      "size_m": {
+        "width_x": 0.9,
+        "height_y": 1.8,
+        "depth_z": 1.2
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.8
+      },
+      "source_extent": [
+        0.38916,
+        0.99951,
+        0.65869
+      ],
+      "suggested_uniform_scale": 1.80088,
+      "bytes": 4180880,
+      "sha256": "3f35f9fbcc8f312e0a18c4e6c49de6ad72c463ec0b28a2f32f0d520d8f56a9a5",
+      "triangles": 15764,
+      "vertices": 17494,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A large antique brass telescope on a sturdy wooden tripod, 1.8m tall overall. A long polished brass tube with decorative rings and an eyepiece, pointing diagonally up at the sky, a small finder scope on top, an adjustable brass mount with round knobs, three honey wood tripod legs with brass feet joined by a small round accessory tray."
+    },
+    {
+      "id": "seedling_bench",
+      "file": "res://assets/interior/seedling_bench.glb",
+      "category": "greenhouse",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "2202cd24-22d8-4677-861c-869409b991d7",
+      "size_m": {
+        "width_x": 1.5,
+        "height_y": 0.9,
+        "depth_z": 0.6
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 1.5
+      },
+      "source_extent": [
+        0.54551,
+        0.7572,
+        1.0
+      ],
+      "suggested_uniform_scale": 1.5,
+      "bytes": 2754100,
+      "sha256": "566da442d50eb8f52654b2a0e1a0941ee72979cedd33cb951f1569f6eca4fc6e",
+      "triangles": 8778,
+      "vertices": 7114,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A wooden greenhouse potting bench, 1.5m long, 0.9m tall, 0.6m deep. A slatted weathered wood top holding rows of small terracotta pots with bright green seedlings and a tray of sprouts, a little watering can, and a lower slatted shelf with stacked empty pots and a soil sack."
+    },
+    {
+      "id": "cafe_counter",
+      "file": "res://assets/interior/cafe_counter.glb",
+      "category": "cafe",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "ae14d454-d5e1-4247-86ce-3c3ccdd2ab76",
+      "size_m": {
+        "width_x": 1.8,
+        "height_y": 1.45,
+        "depth_z": 0.7
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 1.8
+      },
+      "source_extent": [
+        1.0,
+        0.65805,
+        0.49023
+      ],
+      "suggested_uniform_scale": 1.8,
+      "bytes": 2964072,
+      "sha256": "c042b8278a0062a7d451b05fa1746feb04cb2acf400d44f474e8a8c8b3b33082",
+      "triangles": 9340,
+      "vertices": 7418,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A cozy cafe counter, 1.8m long, 1.05m tall, 0.7m deep. Front of rounded pastel mint wooden panels with cream trim, a honey wood countertop, a chunky retro chrome and cream espresso machine with two portafilters and a pressure gauge on one end, and a small glass pastry display case with cakes on the other end. Two cups beside the machine. No menu board."
+    },
+    {
+      "id": "round_cafe_table",
+      "file": "res://assets/interior/round_cafe_table.glb",
+      "category": "cafe",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "9e063e00-4d0b-4824-b094-12555f17cf6d",
+      "size_m": {
+        "width_x": 0.7,
+        "height_y": 0.75,
+        "depth_z": 0.7
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 0.75
+      },
+      "source_extent": [
+        0.99736,
+        0.9692,
+        1.0
+      ],
+      "suggested_uniform_scale": 0.77383,
+      "bytes": 2069940,
+      "sha256": "8027d5e53a98b05713296f91c7e13210de9d4f1218b9ddc4057b90816d0751ed",
+      "triangles": 4849,
+      "vertices": 3364,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A small round bistro cafe table for two, 0.75m tall, 0.7m diameter. A creamy white marble-look round top with a thin brass rim, a single curved dark wrought-iron pedestal column and three scrolled feet. Empty top, no chairs."
+    },
+    {
+      "id": "piano",
+      "file": "res://assets/interior/piano.glb",
+      "category": "general",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "da98892e-e88b-4040-860c-cd9ceb8db095",
+      "size_m": {
+        "width_x": 1.5,
+        "height_y": 1.3,
+        "depth_z": 0.65
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 1.5
+      },
+      "source_extent": [
+        0.48743,
+        0.80243,
+        1.0
+      ],
+      "suggested_uniform_scale": 1.5,
+      "bytes": 2966420,
+      "sha256": "aa0c2ec5a315e3c3eb2b0113e34136d5ac8e1c255342abb249332d79a49e4f54",
+      "triangles": 8969,
+      "vertices": 6195,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "An upright piano, 1.5m wide, 1.3m tall, 0.65m deep. Warm reddish-brown mahogany wood case with a rounded top and softly carved side cheeks, the key lid open showing a row of white and black keys, a small music rest, two brass pedals at the bottom. No bench, no sheet music."
+    },
+    {
+      "id": "fireplace",
+      "file": "res://assets/interior/fireplace.glb",
+      "category": "general",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "7247aea3-81cd-4100-9243-aa6f1f4e1809",
+      "size_m": {
+        "width_x": 1.6,
+        "height_y": 1.3,
+        "depth_z": 0.6
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 1.6
+      },
+      "source_extent": [
+        0.77041,
+        0.76919,
+        1.0
+      ],
+      "suggested_uniform_scale": 1.6,
+      "bytes": 2592772,
+      "sha256": "69e50a53fb0662d3c975dbe8296318123dfd125ee82939c49661474025a75948",
+      "triangles": 9528,
+      "vertices": 6165,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A cozy free-standing stone fireplace with a wooden mantel, 1.6m wide, 1.3m tall, 0.6m deep, flat back. Rounded cream and soft gray river stones, a thick honey wood mantel shelf on top, a dark arched firebox opening with three stacked logs inside, a small stone hearth step in front. No flames, no glow, no chimney."
+    },
+    {
+      "id": "lighthouse_lens",
+      "file": "res://assets/interior/lighthouse_lens.glb",
+      "category": "lighthouse",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "61e906d0-ae31-4d14-82f2-a169f282e65f",
+      "size_m": {
+        "width_x": 1.1,
+        "height_y": 1.7,
+        "depth_z": 1.1
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.7
+      },
+      "source_extent": [
+        0.52213,
+        1.0,
+        0.51927
+      ],
+      "suggested_uniform_scale": 1.7,
+      "bytes": 3183832,
+      "sha256": "16dae2229fb3e160cb96a01340f227042c5c38b517e8de95dc1a4eea0e5a26c8",
+      "triangles": 9405,
+      "vertices": 6391,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A big lighthouse Fresnel lamp lens, 1.7m tall. A beehive-shaped barrel lens made of stacked concentric ribbed glass prism rings in pale aqua-tinted glass, held by polished brass frame bands, with a domed brass top cap and vent, mounted on a round brass and dark green iron pedestal base. Solid glass, no light beam."
+    },
+    {
+      "id": "rug",
+      "file": "res://assets/interior/rug.glb",
+      "category": "general",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "f75449f4-d47c-4cc9-88ad-621cac0c5e4c",
+      "size_m": {
+        "width_x": 1.8,
+        "height_y": 0.03,
+        "depth_z": 1.8
+      },
+      "scale_reference": {
+        "measure": "longest_horizontal",
+        "metres": 1.8
+      },
+      "source_extent": [
+        1.03943,
+        0.01559,
+        0.99998
+      ],
+      "suggested_uniform_scale": 1.73172,
+      "bytes": 3577808,
+      "sha256": "7ebf66513b6b725c411f4bf769ec28d5095299c3f5e969791d1d5af8d9d409d4",
+      "triangles": 2864,
+      "vertices": 2115,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": {
+        "tilt_degrees_removed": 37.65,
+        "thickness_ratio": 0.015
+      },
+      "description": "A round woven braided rag rug lying perfectly flat, 1.8m diameter and only 2cm thick, a thin flat disc. Concentric braided rings in warm terracotta, mustard yellow, sage green and cream, soft woven fabric texture, gently rounded edge. Flat, no fringe, nothing on it."
+    },
+    {
+      "id": "wall_clock",
+      "file": "res://assets/interior/wall_clock.glb",
+      "category": "general",
+      "model": "v3.1-20260211",
+      "model_label": "Tripo H3 (v3.1) textured",
+      "credits_consumed": 20.0,
+      "task_id": "bd7fb015-bba1-4aeb-b2c4-ba08b632b00c",
+      "size_m": {
+        "width_x": 0.32,
+        "height_y": 0.65,
+        "depth_z": 0.12
+      },
+      "scale_reference": {
+        "measure": "height",
+        "metres": 0.65
+      },
+      "source_extent": [
+        0.27556,
+        1.0,
+        0.55202
+      ],
+      "suggested_uniform_scale": 0.65,
+      "bytes": 2364364,
+      "sha256": "96842c310f72feaa4afc1f5e2a80af2759530f0215d9b2386d18d90212af5caa",
+      "triangles": 4554,
+      "vertices": 3569,
+      "texture_pixels": 12582912,
+      "textures_reencoded": false,
+      "post_processing": null,
+      "description": "A cozy wooden pendulum wall clock, 0.65m tall, 0.32m wide, 0.12m deep, flat back for hanging on a wall. A round cream clock face with simple dot hour markers and two dark hands set in a honey wood case with a small peaked top, and below it a narrow glass-front case showing a round brass pendulum. No numbers."
+    }
+  ]
+}

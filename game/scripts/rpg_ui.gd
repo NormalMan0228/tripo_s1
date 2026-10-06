@@ -56,7 +56,8 @@ static func player_frame(ui: Control, portrait: String) -> Dictionary:
 	medal.add_theme_stylebox_override("panel", ring)
 	medal.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
 	row.add_child(medal)
-	medal.add_child(icon(portrait, 60))
+	var face := icon(portrait, 60)
+	medal.add_child(face)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 3)
 	row.add_child(column)
@@ -71,7 +72,7 @@ static func player_frame(ui: Control, portrait: String) -> Dictionary:
 	var leaves := label(coins, "0", 16, Color("bfe59c"))
 	var status := label(column, "", 12, Color("d8e3d4"))
 	status.visible = false
-	return {"panel":shell, "name":name, "stars":stars, "leaves":leaves, "status":status, "column":column}
+	return {"panel":shell, "name":name, "stars":stars, "leaves":leaves, "status":status, "column":column, "portrait":face}
 
 ## Square slots with an icon, a key cap and a caption.
 static func hotbar(ui: Control, slots: Array, y: float) -> HBoxContainer:

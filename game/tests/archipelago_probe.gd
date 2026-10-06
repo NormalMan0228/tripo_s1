@@ -21,6 +21,13 @@ func run() -> void:
 	map.build(camera)
 	print("MAP_BUILD_MS ", Time.get_ticks_msec()-started)
 	for i in 4: await physics_frame
+	if "--roads" in OS.get_cmdline_user_args():
+		for i in 4: await physics_frame
+		var roads: Node3D = preload("res://scripts/roads.gd").new()
+		map.add_child(roads)
+		var t := Time.get_ticks_msec()
+		roads.build(map.get_world_3d().direct_space_state, map.get_node("Environment"))
+		print("ROADS_MS ", Time.get_ticks_msec()-t)
 	var space := map.get_world_3d().direct_space_state
 	var sites := {}
 	for arg in OS.get_cmdline_user_args():

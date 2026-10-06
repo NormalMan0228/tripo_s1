@@ -1,4 +1,4 @@
-param([switch]$Capture, [switch]$Night, [switch]$Packaged, [switch]$Developer, [switch]$PortableServer, [switch]$EngineDiagnostics, [switch]$FullRun, [switch]$Combat, [switch]$Loss, [switch]$Expansion, [switch]$Village, [switch]$SkipServerTests, [string]$Region = 'forest', [string]$Difficulty = 'standard', [string]$Chapter = '', [string]$ClientScript = '', [string]$ClientPack = '')
+param([switch]$Capture, [switch]$Night, [switch]$Packaged, [switch]$Developer, [switch]$PortableServer, [switch]$EngineDiagnostics, [switch]$FullRun, [switch]$Combat, [switch]$Loss, [switch]$Expansion, [switch]$Village, [switch]$SkipServerTests, [string]$Region = 'forest', [string]$Difficulty = 'standard', [string]$Chapter = '', [string]$ClientScript = '', [string]$ClientPack = '', [string]$Hour = '')
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $taskRoot
@@ -63,21 +63,25 @@ try {
         try { $null = Invoke-RestMethod http://127.0.0.1:8766/health -TimeoutSec 1; break } catch {}
     }
     if ($Capture) {
-        $taskArguments = $taskGameArguments + @('--','--capture','--mute',('--region=' + $Region),('--difficulty=' + $Difficulty),('--artifacts=' + (Join-Path $taskRoot 'artifacts')))
+        $taskArguments = $taskGameArguments + @('--','--capture','--mute','--qa',('--region=' + $Region),('--difficulty=' + $Difficulty),('--artifacts=' + (Join-Path $taskRoot 'artifacts')))
         if ($Night) { $taskArguments += '--night' }
         if ($Loss) { $taskArguments += '--loss' }
         if ($Chapter) { $taskArguments += ('--chapter=' + $Chapter) }
         if ($Developer) { $taskArguments += '--developer' }
+        if ($Hour) { $taskArguments += ('--hour=' + $Hour) }
+        if ($env:TRIPOTHON_TEST_ARGS) { $taskArguments += $env:TRIPOTHON_TEST_ARGS.Split(' ') }
         $taskProcess = Start-Process -FilePath $taskGodot -ArgumentList $taskArguments -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput 'artifacts\integration-render.log' -RedirectStandardError 'artifacts\integration-render-error.log'
         Get-Content artifacts\integration-render.log
         Get-Content artifacts\integration-render-error.log
         if ($taskProcess.ExitCode -ne 0) { throw 'Rendered integration failed' }
         if ((Get-Content artifacts\integration-render-error.log -Raw) -match '(?m)^\s*(SCRIPT ERROR|ERROR):') { throw 'Godot reported runtime errors during rendered integration.' }
     } else {
-        $taskArguments = @('--headless') + $taskGameArguments + @('--','--mute',('--region=' + $Region),('--difficulty=' + $Difficulty))
+        $taskArguments = @('--headless') + $taskGameArguments + @('--','--mute','--qa',('--region=' + $Region),('--difficulty=' + $Difficulty))
         if ($Loss) { $taskArguments += '--loss' }
         if ($Chapter) { $taskArguments += ('--chapter=' + $Chapter) }
         if ($Developer) { $taskArguments += '--developer' }
+        if ($Hour) { $taskArguments += ('--hour=' + $Hour) }
+        if ($env:TRIPOTHON_TEST_ARGS) { $taskArguments += $env:TRIPOTHON_TEST_ARGS.Split(' ') }
         $taskProcess = Start-Process -FilePath $taskGodot -ArgumentList $taskArguments -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput 'artifacts\integration-headless.log' -RedirectStandardError 'artifacts\integration-headless-error.log'
         Get-Content artifacts\integration-headless.log
         Get-Content artifacts\integration-headless-error.log

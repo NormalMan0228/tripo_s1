@@ -21,7 +21,7 @@ def held(tmp_path):
     settings=Settings(data_dir=tmp_path,mode='live',registration_code='test-only-invitation-123456',tripo_key='test-placeholder',paid_enabled=True,legacy_generation_enabled=True)
     app=create_app(settings,provider=TripoProvider(settings,httpx.MockTransport(handler)),worker_enabled=False)
     with TestClient(app,base_url='https://testserver') as client:
-        response=client.post('/v1/auth/register',json={'username':'operator_test','password':'Testing-only-password','invitation':settings.registration_code})
+        response=client.post('/v1/auth/register',json={'username':'recon_test','password':'Testing-only-password','invitation':settings.registration_code})
         auth={'Authorization':'Bearer '+response.json()['token']}
         with app.state.db.transaction() as conn: conn.execute('UPDATE users SET shards=100')
         job=client.post('/v1/generations',headers=auth,json={'request_id':str(uuid.uuid4()),'prompt':'wooden stool'}).json()['id']

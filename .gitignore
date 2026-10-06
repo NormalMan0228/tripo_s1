@@ -37,3 +37,13 @@ labs/archipelago_object_lab/reviews/
 game/maps/archipelago/assets/
 # Working list written by tools/i18n_catalog.py extract.
 game/i18n/source.json
+.cc5_bridge/
+
+# NPC cast models and portraits stay local like the other NPC art (copied from art/characters/npc_cast_*).
+game/assets/npc/
+game/assets/portraits/
+
+# Tripo interior furniture (about 70 MB of GLBs plus imported textures) stays local like the map.
+# The manifest records every item, its model and credits; tools/generate_interior_assets.py rebuilds the set.
+game/assets/interior/*
+!game/assets/interior/manifest.json

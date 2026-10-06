@@ -16,10 +16,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from .config import Settings, ROOT
 from .database import Database
-from .models import strong_password, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction
+from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction
 from .provider import TripoProvider, ProviderError, validate_glb
 from . import simulation, catalog, homestead, campaign
-from .security import BodyLimitMiddleware
+from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
+                       LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER, ADMIN_DAILY_SHARD_LIMIT)
 from .stored_assets import read_glb
 
 def uid(): return str(uuid.uuid4())
@@ -59,10 +60,16 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         if not row: fail('session_expired',401)
         return row
 
+    def purge_sessions(conn):
+        conn.execute('DELETE FROM sessions WHERE expires<=?',(clock(),))
+
     def session(conn,user_id):
         token = secrets.token_urlsafe(32)
-        conn.execute('DELETE FROM sessions WHERE expires<?',(clock(),))
+        purge_sessions(conn)
         conn.execute('INSERT INTO sessions VALUES (?,?,?)',(digest(token),user_id,clock()+settings.session_seconds))
+        # Keep only the newest sessions per account; older devices must log in again.
+        conn.execute('DELETE FROM sessions WHERE user_id=? AND token_hash NOT IN (SELECT token_hash FROM sessions '
+                     'WHERE user_id=? ORDER BY expires DESC,rowid DESC LIMIT ?)',(user_id,user_id,MAX_SESSIONS_PER_USER))
         role = conn.execute('SELECT role FROM users WHERE id=?',(user_id,)).fetchone()[0]
         return {'token':token,'mode':settings.mode,'role':role}
 
@@ -79,8 +86,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
 
     def new_object(conn,user_id,asset_id,name):
         object_id = uid()
+        # Names come from prompts/LLM titles and are shown to other players.
         conn.execute('INSERT INTO objects(id,owner_id,creator_id,asset_id,name,created) VALUES (?,?,?,?,?,?)',
-                     (object_id,user_id,user_id,asset_id,name,clock()))
+                     (object_id,user_id,user_id,asset_id,clean_text(name) or 'object',clock()))
         return object_id
 
     def mutate(request, body, operation, callback):
@@ -211,10 +219,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         while queue and queue[0] <= now-60: queue.popleft()
         if len(queue) >= (20 if is_auth else 1200): return JSONResponse({'detail':'rate_limited'},429)
         queue.append(now)
-        response = await call_next(request)
-        response.headers['Cache-Control']='no-store'
-        response.headers['X-Content-Type-Options']='nosniff'
-        return response
+        # Security headers (nosniff, no-store, ...) are set by SecurityHeadersMiddleware.
+        return await call_next(request)
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request,exc):
@@ -245,7 +251,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         # Debug top-ups for operator accounts only; every grant is in the ledger.
         def grant(conn,user):
             if user['role']!='admin': fail('admin_only',403)
-            if body.shards: money(conn,user['id'],body.shards,'admin_grant',str(body.request_id))
+            if body.shards:
+                day=int(clock()//86400)*86400
+                granted=conn.execute("SELECT COALESCE(SUM(amount),0) FROM ledger WHERE user_id=? AND reason='admin_grant' AND created>=?",
+                                     (user['id'],day)).fetchone()[0]
+                if granted+body.shards>ADMIN_DAILY_SHARD_LIMIT: fail('admin_grant_limit',429)
+                money(conn,user['id'],body.shards,'admin_grant',str(body.request_id))
+            record_event(conn,'admin_grant',user['id'],{'shards':body.shards,'coins':body.coins,'request_id':str(body.request_id)},clock())
             if body.coins:
                 state=life_state(conn,user['id'])
                 state['coins']=state.get('coins',0)+body.coins
@@ -283,10 +295,15 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             return {'avatar':value,'version':version}
         return mutate(request,body,'profile_edit',save)
 
+    def client_ip(request):
+        return request.client.host if request.client else 'unknown'
+
     @app.post('/v1/auth/register')
-    def register(body:Credentials):
+    def register(body:Credentials,request:Request):
         if settings.mode=='live' and not secrets.compare_digest(body.invitation.encode(),settings.registration_code.encode()):
             fail('invalid_invitation',403)
+        # Operator accounts are provisioned by tools/admin_accounts.py, never here.
+        if reserved_username(body.username): fail('username_reserved',422)
         if not strong_password(body.password): fail('weak_password',422)
         password_hash = hasher.hash(body.password)
         with db.transaction() as conn:
@@ -296,16 +313,35 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             except sqlite3.IntegrityError: fail('username_unavailable')
             new_object(conn,user_id,'starter','환영의 나무 의자')
             if settings.mode=='demo': money(conn,user_id,80,'demo_welcome',user_id)
+            record_event(conn,'register',user_id,{'username':body.username.lower(),'ip':client_ip(request)},clock())
             return session(conn,user_id)
 
     @app.post('/v1/auth/login')
-    def login(body:Credentials):
-        with db.read() as conn:
-            user = conn.execute('SELECT * FROM users WHERE username=?',(body.username.lower(),)).fetchone()
-        try: hasher.verify(user['password_hash'] if user else dummy,body.password)
-        except VerificationError: fail('invalid_credentials',401)
-        if not user: fail('invalid_credentials',401)
+    def login(body:Credentials,request:Request):
+        name = body.username.lower()
         with db.transaction() as conn:
+            now = clock()
+            # Rows older than a full window plus lock can no longer affect any lock.
+            conn.execute('DELETE FROM login_attempts WHERE created<?',(now-LOGIN_WINDOW_SECONDS-LOGIN_LOCK_SECONDS,))
+            user = conn.execute('SELECT * FROM users WHERE username=?',(name,)).fetchone()
+            retry = login_retry_after(conn,name,now)
+            if retry:
+                record_event(conn,'login_locked',user['id'] if user else None,{'username':name,'ip':client_ip(request),'retry_after':retry},now)
+            else:
+                # Counted before the slow hash so parallel guesses cannot exceed the limit.
+                # Unknown usernames are counted the same way, so lockout reveals nothing.
+                conn.execute('INSERT INTO login_attempts(username,created) VALUES (?,?)',(name,now))
+        if retry: raise HTTPException(429,'login_locked',headers={'Retry-After':str(retry)})
+        # Unknown usernames verify against a dummy hash so timing does not reveal accounts.
+        try: valid = hasher.verify(user['password_hash'] if user else dummy,body.password) and user is not None
+        except VerificationError: valid = False
+        if not valid:
+            with db.transaction() as conn:
+                record_event(conn,'login_failed',user['id'] if user else None,{'username':name,'ip':client_ip(request)},clock())
+            fail('invalid_credentials',401)
+        with db.transaction() as conn:
+            # A successful login resets the failure count for this username.
+            conn.execute('DELETE FROM login_attempts WHERE username=?',(name,))
             return session(conn,user['id'])
 
     @app.post('/v1/auth/logout')
@@ -314,6 +350,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             user=auth(conn,request)
             conn.execute('DELETE FROM mp_presence WHERE user_id=?',(user['id'],))
             conn.execute('DELETE FROM sessions WHERE token_hash=?',(digest(request.headers['authorization'][7:]),))
+            purge_sessions(conn)
         return {'ok':True}
 
     @app.get('/v1/me')
@@ -520,4 +557,6 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     multiplayer=Multiplayer(app,db,settings,clock,auth,mutate,money,profile,assets)
     app.state.multiplayer=multiplayer
     app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':1500000})
+    # Outermost, so 413/429 replies from the layers above also carry the headers.
+    app.add_middleware(SecurityHeadersMiddleware)
     return app

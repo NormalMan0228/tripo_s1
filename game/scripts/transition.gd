@@ -51,12 +51,31 @@ func _fade(alpha: float, seconds: float) -> void:
 	await tween.finished
 	if alpha <= 0.0: veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-## "open" is a wooden latch and creak; "close" a soft thud.
-func play_door(kind: String) -> void:
+## Each building's door has its own pair of sounds (tools/make_village_sfx.py):
+## bells over the cafe, bakery and shop doors, the seed shop's bamboo chimes, the
+## greenhouse's glass slider, the observatory hatch, the windmill's wind, the
+## lighthouse's iron door and echo... Unknown rooms use the generic latch/thud.
+const DOOR_SOUNDS := "res://assets/sfx/doors/%s_%s.wav"
+## room+kind -> AudioStream, shared by every Transition instance.
+static var door_cache: Dictionary = {}
+
+## kind is "open" (entering) or "close" (stepping back outside); room is the
+## interior id ("home", "workshop", "01_cafe", ... "17_lighthouse").
+func play_door(kind: String, room := "") -> void:
 	# The node joins the root one idle step after a scene first asks for it.
 	if not door.is_inside_tree(): await ready
-	door.stream = door_sound(kind)
+	door.stream = door_stream(kind, room)
 	door.play()
+
+## The stream play_door uses: the room's own sound, else the generic synthesized one.
+static func door_stream(kind: String, room := "") -> AudioStream:
+	if kind != "open": kind = "close"
+	var key := room+"/"+kind
+	if not door_cache.has(key):
+		var path := DOOR_SOUNDS % [room, kind]
+		var stream: AudioStream = load(path) if not room.is_empty() and ResourceLoader.exists(path) else null
+		door_cache[key] = stream if stream != null else door_sound(kind)
+	return door_cache[key]
 
 static func door_sound(kind: String) -> AudioStreamWAV:
 	var rate := 22050

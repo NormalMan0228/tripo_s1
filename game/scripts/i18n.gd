@@ -5,6 +5,11 @@ extends RefCounted
 const CATALOG := "res://i18n/strings.json"
 const TEMPLATES := "res://i18n/templates.json"
 const SETTINGS := "user://settings.cfg"
+## Test runs (tools/test.ps1 passes --qa) keep their own settings, so switching
+## languages or logging in during QA never changes the player's language, world or name.
+const QA_SETTINGS := "user://settings_qa.cfg"
+static func settings_path() -> String:
+	return QA_SETTINGS if "--qa" in OS.get_cmdline_user_args() else SETTINGS
 const LANGUAGES := [["ko","한국어"],["en","English"],["zh","中文"]]
 static var installed := false
 static var templates: Array = []
@@ -30,7 +35,7 @@ static func setup() -> void:
 
 static func language() -> String:
 	var config := ConfigFile.new()
-	config.load(SETTINGS)
+	config.load(settings_path())
 	var code := String(config.get_value("game","language",""))
 	if code.is_empty():
 		var system := OS.get_locale_language()
@@ -39,21 +44,21 @@ static func language() -> String:
 
 static func set_language(code: String) -> void:
 	var config := ConfigFile.new()
-	config.load(SETTINGS)
+	config.load(settings_path())
 	config.set_value("game","language",code)
-	config.save(SETTINGS)
+	config.save(settings_path())
 	TranslationServer.set_locale(code)
 
 static func setting(key: String, fallback = "") -> Variant:
 	var config := ConfigFile.new()
-	config.load(SETTINGS)
+	config.load(settings_path())
 	return config.get_value("game",key,fallback)
 
 static func remember(key: String, value) -> void:
 	var config := ConfigFile.new()
-	config.load(SETTINGS)
+	config.load(settings_path())
 	config.set_value("game",key,value)
-	config.save(SETTINGS)
+	config.save(settings_path())
 
 static func t(source: String) -> String:
 	return TranslationServer.translate(source)

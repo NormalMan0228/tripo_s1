@@ -58,7 +58,8 @@ func update_status() -> void:
 	if not enabled or not is_instance_valid(status_label): return
 	var title: String = str(data.get("host_name", app.me.get("username", tr("나"))))+tr("님의 마을")
 	var party: Dictionary = data.get("party") if data.get("party") is Dictionary else {}
-	status_label.text = title+tr(" · 초대 %d개") % data.get("invites", []).size()
+	var invites: int = data.get("invites", []).size()
+	status_label.text = title+(tr(" · 초대 %d개") % invites if invites > 0 else "")
 	if not party.is_empty(): status_label.text += tr(" · 파티 %d/3명") % party.members.size()
 	if app.screen == "survival" and app.run.get("coop", false):
 		status_label.text = tr("협동 생존 · ")+", ".join(PackedStringArray(app.run.get("players", []).map(func(p): return "%s %d♥" % [p.username, p.hp])))
@@ -212,7 +213,7 @@ func perform(path: String, payload: Dictionary = {}) -> Dictionary:
 
 func open_menu() -> void:
 	if not enabled:
-		app.message(tr("이 서버는 함께하기 업데이트가 필요합니다."))
+		app.message(tr("이 월드에서는 아직 함께하기를 할 수 없어요."))
 		return
 	var response: Dictionary = await app.api.request("/v1/social")
 	if not app.check(response): return
@@ -293,7 +294,7 @@ func open_menu() -> void:
 	chat.text_submitted.connect(func(value):
 		send_message(value)
 		chat.clear())
-	app.button(content, tr("초대 / 상태 새로고침"), open_menu)
+	app.button(content, tr("초대 확인하기"), open_menu)
 	update_status()
 
 func answer(invitation: Dictionary, decision: String) -> void:
