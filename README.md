@@ -1,14 +1,20 @@
 # Villagen — village + generate
 
+| 🌐 한국어 | 🌐 English | 🌐 中文 |
+|:---:|:---:|:---:|
+| [**워크스루 보기**](docs/WALKTHROUGH_KO.md) | [**Walkthrough**](docs/WALKTHROUGH_EN.md) | [**游戏攻略**](docs/WALKTHROUGH_ZH.md) |
+| [⬇ 게임 받기 (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ Download (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ 下载游戏 (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) |
+| 설정 → 게임플레이 → 언어 → **한국어** | Settings → Gameplay → Language → **English** | 设置 → 游戏 → 语言 → **中文** |
+
 **Villagen**(빌리지 + 제너레이트)은 섬 마을을 가꾸고, 원하는 물건을 글로 적으면 AI가 3D로 만들어 주는 마을 생활 RPG입니다. (이전 작업명: Tripothon)
 
 [처음 보는 사람을 위한 전체 안내서](docs/TRIPOTHON_OVERVIEW_20261004.md)에서 게임 소개, 개발 8단계, 캐릭터 제작 방식의 변화, 최신 무료 도구 중심 파이프라인, 클라이언트·서버·DB와 AI 생성 흐름을 확인할 수 있습니다. **2026-10-04 기준으로 기준본·로컬 검증·실험·계획을 구분**했습니다. [HTML 파일](docs/TRIPOTHON_OVERVIEW_20261004.html) 또는 [로컬 HTML 뷰어](http://127.0.0.1:8842/project-overview/index.html)로도 읽을 수 있습니다.
 
 [제작 현황·자료·실행 계획 통합 문서](docs/TRIPOTHON_MASTER_HANDOFF_20261003.md)에서 상단 요약, 현재 완료 상태, 기존 8단계 계획, 추천 처리 순서, 영상·강의·공식 문서, 모델·비용과 실행 방법을 확인할 수 있습니다. [목차가 있는 HTML 뷰어](http://127.0.0.1:8842/master-handoff/index.html)는 로컬 보고서 서버에서 열립니다. 문서의 오프라인 묶음에는 선별 참고 문서·사진·검토 영상이 포함됩니다.
 
-## 바로 플레이 (심사·친구용) · 0.10.0
+## 바로 플레이 (심사·친구용) · 0.10.1
 
-**설치 없이 플레이:** **[⬇ Villagen_Windows.zip 바로 받기](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip)** (항상 최신판, [모든 릴리스](https://github.com/NormalMan0228/tripo_s1/releases))를 받아 압축을 풀고 `Villagen.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정은 아이디·비밀번호만으로 만듭니다(초대 코드 없음, 공개 가입). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 체험판 규칙으로 계정당 3회, 1회 Tripo 10크레딧(직접 색칠하는 정적인 가구 한 덩어리) 안에서 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다. **처음이라면 [15분 워크스루](docs/WALKTHROUGH_KO.md)를 따라 해 보세요.**
+**설치 없이 플레이:** **[⬇ Villagen_Windows.zip 바로 받기](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip)** (항상 최신판, [모든 릴리스](https://github.com/NormalMan0228/tripo_s1/releases))를 받아 압축을 풀고 `Villagen.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정은 아이디·비밀번호만으로 만듭니다(초대 코드 없음, 공개 가입). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 체험판 규칙으로 계정당 3회, 1회 Tripo 10크레딧(직접 색칠하는 정적인 가구 한 덩어리) 안에서 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다. **처음이라면 15분 워크스루를 따라 해 보세요: [한국어](docs/WALKTHROUGH_KO.md) · [English](docs/WALKTHROUGH_EN.md) · [中文](docs/WALKTHROUGH_ZH.md)**
 
 **소스로 개발하는 협업자:** 저장소에는 용량이 큰 모델 폴더(`game/maps/archipelago/assets`, `game/assets/interior`, `game/assets/monsters`, `game/maps/survival/assets`, `game/assets/portraits`, `game/assets/npc`)가 없습니다. 같은 Release의 `Villagen_v0.10.0_DevAssets_Map.zip`과 `..._DevAssets_Art.zip`을 **저장소 최상위 폴더에서** 압축 풀면 그대로 채워집니다. 그다음 Godot 4.7.2로 `game/project.godot`을 열고, 서버는 `tools/run_server.ps1`로 켭니다.
 

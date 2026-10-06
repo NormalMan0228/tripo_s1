@@ -3549,7 +3549,7 @@
    "zh": "密码 · 10个字符以上"
   },
   "비밀번호 · 10자 이상, 대문자와 특수문자 포함": {
-   "en": "Password · 10+ characters with an uppercase letter and a symbol",
+   "en": "Password · 10+ chars, A–Z and a symbol",
    "zh": "密码 · 至少10位，含大写字母和特殊字符"
   },
   "비밀번호를 여러 번 틀려 잠시 잠겼어요. 15분 뒤에 다시 시도해 주세요.": {
