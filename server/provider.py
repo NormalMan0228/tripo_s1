@@ -1,4 +1,5 @@
 """Tripo v3 adapter: no credentials or upstream response bodies in errors/logs."""
+import hashlib
 import json
 import math
 import struct
@@ -183,18 +184,42 @@ def validate_glb(blob, allow_textures=False, stats=None):
     except (KeyError, ValueError, TypeError, IndexError, AttributeError, RecursionError, OverflowError, struct.error):
         reject()
 
+def key_fingerprint(key):
+    """A short one-way label for a key, safe to store with tasks and show in logs."""
+    return hashlib.sha256(key.encode()).hexdigest()[:12] if key else ''
+
 class TripoProvider:
     BASE = 'https://openapi.tripo3d.ai/v3'
-    def __init__(self, settings, transport=None):
+    def __init__(self, settings, transport=None, key=None):
         self.settings, self.transport = settings, transport
+        self.key = key if key is not None else settings.tripo_key
+        self.fingerprint = key_fingerprint(self.key)
+
+    def keys(self):
+        """Every configured key in priority order (tripo_keys, else the single tripo_key)."""
+        configured = tuple(getattr(self.settings, 'tripo_keys', ()) or ())
+        return configured or ((self.settings.tripo_key,) if self.settings.tripo_key else ())
+
+    def pool(self):
+        """One provider per key, first choice first."""
+        return [TripoProvider(self.settings, self.transport, key) for key in self.keys()]
+
+    def for_key(self, fingerprint):
+        """The provider for a task's key; tasks without a label belong to the first key."""
+        if not fingerprint:
+            return self
+        for key in self.keys():
+            if key_fingerprint(key) == fingerprint:
+                return TripoProvider(self.settings, self.transport, key)
+        raise ProviderError('key_not_configured')
 
     async def request(self, method, route, payload=None):
-        if not self.settings.tripo_key:
+        if not self.key:
             raise ProviderError('key_not_configured')
         try:
             async with httpx.AsyncClient(transport=self.transport, timeout=25, follow_redirects=False) as client:
                 response = await client.request(method, self.BASE+route,
-                    headers={'Authorization':'Bearer '+self.settings.tripo_key}, json=payload)
+                    headers={'Authorization':'Bearer '+self.key}, json=payload)
         except httpx.HTTPError:
             raise ProviderError('upstream_unreachable', uncertain=method=='POST') from None
         if response.status_code == 401: raise ProviderError('upstream_authentication')
@@ -228,7 +253,7 @@ class TripoProvider:
         mime='image/png' if 'png' in header else 'image/jpeg'
         try:
             async with httpx.AsyncClient(transport=self.transport,timeout=45,follow_redirects=False) as client:
-                response=await client.post(self.BASE+'/files',headers={'Authorization':'Bearer '+self.settings.tripo_key},
+                response=await client.post(self.BASE+'/files',headers={'Authorization':'Bearer '+self.key},
                     files={'file':('reference.png' if mime=='image/png' else 'reference.jpg',blob,mime)})
             if response.status_code!=200 or len(response.content)>1024*1024:raise ProviderError('reference_upload_failed')
             value=response.json()

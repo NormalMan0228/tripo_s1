@@ -5,30 +5,51 @@ import math
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def read_tripo_key(path):
-    """Read a server-local secret without including file contents in errors."""
+def _tripo_key_line(value):
+    value = value.strip()
+    if value.startswith('TRIPO_API_KEY='):
+        value = value.split('=', 1)[1].strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+        value = value[1:-1]
+    if not value or len(value) > 2048 or any(ord(c) < 33 or ord(c) > 126 for c in value):
+        raise ValueError
+    return value
+
+def read_tripo_keys(path):
+    """All keys of a server-local key file: one per line, blank lines and # comments
+    ignored, first line first. Errors never include file contents."""
     try:
         with Path(path).open('rb') as source:
-            raw = source.read(4097)
-        if len(raw) > 4096:
+            raw = source.read(65537)
+        if len(raw) > 65536:
             raise ValueError
-        value = raw.decode('utf-8-sig').strip()
-        if value.startswith('TRIPO_API_KEY='):
-            value = value.split('=', 1)[1].strip()
-        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
-            value = value[1:-1]
-        if not value or len(value) > 2048 or any(ord(c) < 33 or ord(c) > 126 for c in value):
+        keys = []
+        for line in raw.decode('utf-8-sig').splitlines():
+            if line.strip() and not line.strip().startswith('#'):
+                key = _tripo_key_line(line)
+                if key not in keys: keys.append(key)
+        if not keys or len(keys) > 32:
             raise ValueError
-        return value
+        return tuple(keys)
     except (OSError, UnicodeError, ValueError):
         raise ValueError('invalid_tripo_key_file') from None
 
-def configured_tripo_key():
+def read_tripo_key(path):
+    """The first key of a key file (tools that need only one)."""
+    return read_tripo_keys(path)[0]
+
+def configured_tripo_keys():
     direct = os.getenv('TRIPO_API_KEY', '')
     path = os.getenv('TRIPO_API_KEY_FILE', '')
     if direct and path:
         raise ValueError('configure_only_one_tripo_key_source')
-    return read_tripo_key(path) if path else direct
+    if path:
+        return read_tripo_keys(path)
+    return (direct,) if direct else ()
+
+def configured_tripo_key():
+    keys = configured_tripo_keys()
+    return keys[0] if keys else ''
 
 def configured_secret(name):
     direct = os.getenv(name, '')
@@ -54,6 +75,9 @@ class Settings:
     data_dir: Path = field(default_factory=lambda: Path(os.getenv('TRIPOTHON_DATA_DIR', str(ROOT / 'server-data'))))
     mode: str = field(default_factory=lambda: os.getenv('TRIPOTHON_MODE', 'demo'))
     tripo_key: str = field(default_factory=configured_tripo_key, repr=False)
+    # Several Tripo accounts: new crafts use the first key with enough credit; each task
+    # keeps the key it was created with. Empty means just tripo_key.
+    tripo_keys: tuple = field(default_factory=configured_tripo_keys, repr=False)
     tripo_model: str = field(default_factory=lambda: os.getenv('TRIPO_MODEL', 'P2-20260801'))
     paid_enabled: bool = field(default_factory=lambda: os.getenv('TRIPO_ENABLE_PAID', 'false').lower() == 'true')
     registration_code: str = field(default_factory=lambda: configured_secret('TRIPOTHON_REGISTRATION_CODE'), repr=False)

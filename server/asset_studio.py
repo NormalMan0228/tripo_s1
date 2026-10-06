@@ -381,6 +381,20 @@ class Studio:
                 return {'version':obj['version']+1,'room':body.room,'state':'inventory' if body.action=='retrieve' else 'placed'}
             return mutate(request,body,'placement:'+object_id,edit)
 
+    def provider_for(self,fingerprint):
+        """The provider bound to the key a task was created with."""
+        return self.provider.for_key(fingerprint) if fingerprint and hasattr(self.provider,'for_key') else self.provider
+
+    async def pick_provider(self,predicted):
+        """The first configured Tripo key whose balance covers this submission plus the reserve."""
+        candidates=self.provider.pool() if hasattr(self.provider,'pool') else [self.provider]
+        for candidate in candidates:
+            try:
+                if await candidate.balance()-predicted>=self.settings.credit_reserve:return candidate
+            except ProviderError as error:
+                if error.code not in ('upstream_authentication','upstream_rejected'):raise
+        raise ProviderError('insufficient_provider_credit')
+
     def update(self,job_id,**fields):
         with self.db.transaction() as conn:
             fields['updated']=self.clock()
@@ -496,10 +510,11 @@ class Studio:
                 if body.geometry=='proxy':blob=fixture_glb(p['shape'],textured)
                 else:
                     if entry['state']=='pending' and body.image_mode=='refine':
-                        if await self.provider.balance()-5<self.settings.credit_reserve:raise ProviderError('insufficient_provider_credit')
-                        reference=await self.provider.upload_image(body.image)
+                        tripo=await self.pick_provider(5)
+                        entry['key']=getattr(tripo,'fingerprint','')
+                        reference=await tripo.upload_image(body.image)
                         self.update(job_id,state='submitting')
-                        data=await self.provider.request('POST','/generation/image-to-image',{'model':'seedream_v5','input':reference,
+                        data=await tripo.request('POST','/generation/image-to-image',{'model':'seedream_v5','input':reference,
                             'prompt':'Create a clean isolated product reference of ONLY this component: '+p['prompt']+'. Preserve the reference design and soft illustrated island style. Neutral background, no text, no other components.',
                             'size':'2K','output_format':'png'})
                         task=data.get('task_id')
@@ -507,7 +522,7 @@ class Studio:
                         entry.update(state='image_generating',image_task=task)
                         self.update(job_id,state='building',parts=json.dumps(parts));return
                     if entry['state']=='image_generating':
-                        result=await self.provider.task(entry['image_task'])
+                        result=await self.provider_for(entry.get('key')).task(entry['image_task'])
                         if result.get('status') in ('queued','running'):self.update(job_id,state='building');return
                         if result.get('status') in ('failed','cancelled'):raise ProviderError('image_refinement_failed')
                         if result.get('status')!='success':raise ProviderError('upstream_schema',uncertain=True)
@@ -515,7 +530,11 @@ class Studio:
                         self.update(job_id,state='building',parts=json.dumps(parts))
                     if entry['state'] in ('pending','image_ready'):
                         predicted=mesh_credits(mesh_model,textured,bool(body.image and (len(parts)==1 or body.image_mode=='refine')))
-                        if await self.provider.balance()-predicted<self.settings.credit_reserve:raise ProviderError('insufficient_provider_credit')
+                        # A refined image belongs to the key that made it; otherwise any key with credit.
+                        if entry.get('key'):
+                            tripo=self.provider_for(entry['key'])
+                            if await tripo.balance()-predicted<self.settings.credit_reserve:raise ProviderError('insufficient_provider_credit')
+                        else:tripo=await self.pick_provider(predicted)
                         payload={'model':mesh_model,
                             'prompt':p['prompt']+' Standalone isolated component. Cozy rounded matte game furniture. No other parts, no ground.',
                             'face_limit':3000,'texture':textured,'pbr':textured,'quad':False,'export_uv':textured}
@@ -524,25 +543,26 @@ class Studio:
                             payload.pop('prompt');payload['input']=entry['image_task'];route='/generation/image-to-model'
                             provenance['image_path']='llm_part_prompt_to_refined_image_to_tripo'
                         elif body.image and len(plan['parts'])==1:
-                            token=await self.provider.upload_image(body.image)
+                            token=await tripo.upload_image(body.image)
                             payload.pop('prompt');payload['input']=token;route='/generation/image-to-model'
                             provenance['image_path']='original_reference_to_tripo'
                         elif body.image:provenance['image_path']='llm_interpreted_part_prompts'
                         self.update(job_id,state='submitting')
-                        data=await self.provider.request('POST',route,payload)
+                        data=await tripo.request('POST',route,payload)
                         task=data.get('task_id')
                         if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)
-                        entry.update(state='generating',task=task)
+                        entry.update(state='generating',task=task,key=getattr(tripo,'fingerprint',''))
                         self.update(job_id,state='building',parts=json.dumps(parts),provenance=json.dumps(provenance))
                         return
-                    result=await self.provider.task(entry['task'])
+                    tripo=self.provider_for(entry.get('key'))
+                    result=await tripo.task(entry['task'])
                     if result.get('status') in ('queued','running'):self.update(job_id,state='building');return
                     if result.get('status') in ('failed','cancelled'):raise ProviderError('generation_failed')
                     if result.get('status')!='success':raise ProviderError('upstream_schema',uncertain=True)
                     entry['credits_consumed']=result.get('credits_consumed')
                     # Keep actual provider billing even if download/validation subsequently fails.
                     self.update(job_id,parts=json.dumps(parts))
-                    blob=await self.provider.download(result.get('output',{}).get('model_url',''),allow_textures=textured)
+                    blob=await tripo.download(result.get('output',{}).get('model_url',''),allow_textures=textured)
                 stats={}
                 validate_glb(blob,allow_textures=textured,stats=stats)
                 if len(blob)+sum(part.get('bytes',0) for part in parts.values())>48*1024*1024:raise ProviderError('assembly_too_large')
