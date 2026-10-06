@@ -2,13 +2,13 @@
 
 importer="wav"
 type="AudioStreamWAV"
-uid="uid://revrkkwgru86"
-path="res://.godot/imported/village.wav-5720b102c4f32d99d8508d16efeda328.sample"
+uid="uid://dknsgc58h0hrd"
+path="res://.godot/imported/portal.wav-9cb12fdd903cd117a11e1efcd90795df.sample"
 
 [deps]
 
-source_file="res://assets/audio/village.wav"
-dest_files=["res://.godot/imported/village.wav-5720b102c4f32d99d8508d16efeda328.sample"]
+source_file="res://assets/sfx/world/portal.wav"
+dest_files=["res://.godot/imported/portal.wav-9cb12fdd903cd117a11e1efcd90795df.sample"]
 
 [params]
 

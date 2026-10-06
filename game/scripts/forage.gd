@@ -26,7 +26,7 @@ const NODES := [
 ]
 const PROMPTS := {"rock":"돌 캐기","shell":"조개껍데기 줍기","flower":"들꽃 꺾기","mushroom":"버섯 따기","herb":"향초 뜯기","branch":"나뭇가지 줍기"}
 const PARTICLES := {"rock":"dust","shell":"sand","flower":"petal","mushroom":"spore","herb":"leaf","branch":"leaf"}
-const SOUNDS := {"rock":"rock","shell":"shell","flower":"rustle","mushroom":"pop","herb":"rustle","branch":"rustle"}
+const SOUNDS := {"rock":"dig_stone","shell":"shell","flower":"dig_grass","mushroom":"pop","herb":"dig_grass","branch":"chop_wood"}
 const REACH := 1.45
 var spots: Array=[]
 var busy := ""

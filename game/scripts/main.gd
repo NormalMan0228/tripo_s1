@@ -624,7 +624,7 @@ func build_world(survival: bool) -> void:
 	results_shown=false
 	prior_day=1
 	prior_night=false
-	sound.play_music("forest" if survival else "village")
+	sound.play_music(region_track() if survival else village_track())
 	leave_modules()
 	if is_instance_valid(town): town.release_map()
 	if is_instance_valid(world):
@@ -1419,6 +1419,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		busy=false
 		return
 	run_id=result.data.id
+	sound.stinger("res://assets/sfx/world/portal.wav")
 	var snapshot: Dictionary = await api.request(run_route())
 	if not check(snapshot):
 		busy=false
@@ -1938,6 +1939,7 @@ func update_world_audio(delta: float) -> void:
 		if is_instance_valid(daylight) and daylight.has_method("current_hour"):
 			day=float(Daylight.sample(daylight.current_hour()).get("daylight",1.0))
 		if screen=="village":
+			sound.play_music(village_track())
 			var waterfall := clampf(1.0-Vector2(player.position.x-1.0,player.position.z+7.9).length()/24.0,0.0,1.0)
 			world_audio.set_ambience({"day":day,"coast":clampf((2.6-player.position.y)/1.7,0.15,1.0),"wind":0.2+0.25*(1.0-day),"waterfall":waterfall,"indoor":false})
 		elif screen=="survival":
@@ -1958,6 +1960,20 @@ func update_world_audio(delta: float) -> void:
 	if step_distance>=(0.98 if speed>3.6 else 0.74):
 		step_distance=0.0
 		world_audio.footstep(ground_surface() if screen=="village" else "grass",speed)
+
+## Village music follows the hour: the night track once the light is mostly gone, the day
+## track again after dawn (the gap between the two thresholds stops it flipping at dusk).
+func village_track() -> String:
+	var day := 1.0
+	if is_instance_valid(daylight) and daylight.has_method("current_hour"):
+		day=float(Daylight.sample(daylight.current_hour()).get("daylight",1.0))
+	if sound.music_mode=="village_night" and day<0.5: return "village_night"
+	return "village_night" if day<0.3 else "village_day"
+
+## Each expedition region has its own track; 노을 채석장 borrows the forest's for now.
+func region_track() -> String:
+	var region: String=run.get("map_id","forest")
+	return region if region in ["forest","frost"] else "forest"
 
 func ground_surface() -> String:
 	var from := player.global_position+Vector3(0,0.6,0)

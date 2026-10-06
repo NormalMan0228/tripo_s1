@@ -2,7 +2,7 @@
 
 > 처음 하는 분은 붙여넣기만 하면 되는 [쉬운 안내(텍스트)](SERVER_UPDATE_GUIDE_KO.txt)를 따르세요.
 
-심사위원은 [GitHub Release](https://github.com/NormalMan0228/tripo_s1/releases)에서 `Villagen_<버전>_Windows.zip`만 받아 압축을 풀고 `Villagen.exe`를 실행합니다. 게임은 처음부터 **온라인 월드**(`https://34-28-65-113.sslip.io`)에 접속하고, 초대 코드 없이 가입합니다. 아래는 운영자(계정 주인)가 서버를 최신으로 올리고 제작을 켜는 절차입니다. API 키는 **서버에만** 두고 게임 ZIP·Git·채팅에는 넣지 않습니다.
+심사위원은 [GitHub Release](https://github.com/NormalMan0228/tripo_s1/releases)에서 `Villagen_Windows.zip`([바로 받기](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip))만 받아 압축을 풀고 `Villagen.exe`를 실행합니다. 게임은 처음부터 **온라인 월드**(`https://34-28-65-113.sslip.io`)에 접속하고, 초대 코드 없이 가입합니다. 아래는 운영자(계정 주인)가 서버를 최신으로 올리고 제작을 켜는 절차입니다. API 키는 **서버에만** 두고 게임 ZIP·Git·채팅에는 넣지 않습니다.
 
 ## 0. 준비할 키 두 개
 

@@ -192,6 +192,8 @@ func _ready() -> void:
 	veil.play_door("close",room)
 	tone_player=AudioStreamPlayer.new();tone_player.volume_db=-5;tone_player.bus=GameSettings.BUS_SFX;add_child(tone_player)
 	sfx_player=AudioStreamPlayer.new();sfx_player.volume_db=-8;sfx_player.bus=GameSettings.BUS_SFX;add_child(sfx_player)
+	# Indoor music (집 BGM) for the home and the other rooms.
+	var music := preload("res://scripts/sound.gd").new();add_child(music);music.play_music("home")
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--hour="): hour_override=clampf(float(arg.trim_prefix("--hour=")),0.0,23.99)
 	if Engine.has_meta("interior_hour"): hour_override=float(Engine.get_meta("interior_hour"))

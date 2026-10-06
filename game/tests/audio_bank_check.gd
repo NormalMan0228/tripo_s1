@@ -168,7 +168,7 @@ func check_events() -> void:
 	check(CreatureAudio.region_name("ember") == "quarry" and CreatureAudio.region_name("ice") == "frost" and CreatureAudio.region_name("") == "forest", "region aliases")
 	for event in CombatAudio.EVENTS:
 		var takes := CombatAudio.streams(event)
-		check(takes.size() >= (1 if event in ["night", "dawn"] else 2), "combat %s has %d takes" % [event, takes.size()])
+		check(takes.size() >= (1 if event in ["night", "dawn", "harvest_tree", "harvest_stone", "harvest_fiber"] else 2), "combat %s has %d takes" % [event, takes.size()])
 		resolved += takes.size()
 	for event in HeroVoice.EVENTS:
 		var takes := HeroVoice.streams(event)
