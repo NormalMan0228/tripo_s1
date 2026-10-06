@@ -2,7 +2,9 @@
 config_version=5
 
 [application]
-config/name="Tripothon — Seven Nights"
+config/name="Villagen"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="Godot/app_userdata/Tripothon — Seven Nights"
 config/version="0.10.0"
 config/icon="res://assets/starseed.svg"
 run/main_scene="res://scenes/main.tscn"

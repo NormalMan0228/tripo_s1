@@ -19,7 +19,7 @@ def main():
         raise SystemExit('Package directory already exists; choose a fresh version or preserve it separately.')
     package.mkdir(parents=True)
     hashes = {}
-    for name in ('Tripothon.exe', 'Tripothon.pck', 'Tripothon_Developer.exe', 'Tripothon_Developer.pck'):
+    for name in ('Villagen.exe', 'Villagen.pck', 'Villagen_Developer.exe', 'Villagen_Developer.pck'):
         source = ROOT / 'builds/windows' / name
         shutil.copy2(source, package / name)
         with source.open('rb') as stream:
@@ -47,7 +47,7 @@ def main():
     (package / 'README.txt').write_text(f'''Tripothon {version} — Windows x64
 
 ZIP 전체를 쓰기 가능한 폴더에 푼 뒤 실행하세요.
-온라인 플레이: Tripothon.exe (새 가입에는 초대 코드 필요)
+온라인 플레이: Villagen.exe (새 가입에는 초대 코드 필요)
 비용 없는 로컬 체험: Play.cmd
 개발 화면 포함 로컬 체험: Play_Developer.cmd
 로컬 서버 종료: 게임을 닫고 StopServer.cmd

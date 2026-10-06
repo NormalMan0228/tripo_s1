@@ -7,7 +7,7 @@ param([switch]$ServerOnly, [switch]$Lan, [switch]$Tailscale)
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskPython = Join-Path $taskRoot '.tools\server-venv\Scripts\python.exe'
-$taskGame = Join-Path $taskRoot 'builds\windows\Tripothon_Developer.exe'
+$taskGame = Join-Path $taskRoot 'builds\windows\Villagen_Developer.exe'
 $taskBuilds = Join-Path $taskRoot 'builds'
 $taskDataRoot = Join-Path $env:LOCALAPPDATA 'TripothonDemo'
 $taskData = Join-Path $taskDataRoot 'server-data'
@@ -93,7 +93,7 @@ if (-not $taskReuse -and (Test-Path -LiteralPath (Join-Path $taskData 'world.sql
 
 # Restart only this packaged game's window and its verified portable server.
 if (-not $ServerOnly) {
-    Get-CimInstance Win32_Process -Filter "Name='Tripothon_Developer.exe'" |
+    Get-CimInstance Win32_Process -Filter "Name='Villagen_Developer.exe'" |
         Where-Object { $_.ExecutablePath -eq $taskGame } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -ErrorAction Stop }
 }
@@ -140,4 +140,4 @@ if ($ServerOnly) {
     exit 0
 }
 Start-Process -FilePath $taskGame -WorkingDirectory (Split-Path -Parent $taskGame) -WindowStyle Normal
-Write-Output ('Tripothon is running with server-side Tripo access. Available provider credits: ' + $taskCheck.available_credits)
+Write-Output ('Villagen is running with server-side Tripo access. Available provider credits: ' + $taskCheck.available_credits)

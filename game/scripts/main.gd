@@ -449,17 +449,15 @@ func login_ui(page := "menu") -> void:
 	heading.position = Vector2(84,64)
 	heading.add_theme_constant_override("separation",0)
 	ui.add_child(heading)
-	var eyebrow := HBoxContainer.new()
-	eyebrow.add_theme_constant_override("separation",10)
-	heading.add_child(eyebrow)
-	eyebrow.add_child(RpgUi.icon("res://assets/starseed.svg",34))
-	var spaced := FontVariation.new()
-	spaced.base_font = RpgUi.FONT_BOLD
-	spaced.spacing_glyph = 5
-	var brand := RpgUi.label(eyebrow,"TRIPOTHON",15,RpgUi.GOLD)
-	brand.add_theme_font_override("font",spaced)
-	brand.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var title := RpgUi.label(heading,tr("일곱 밤, 나의 마을"),64)
+	# Villagen = village + generate: the name is the title, with the star seed beside it.
+	var name_row := HBoxContainer.new()
+	name_row.add_theme_constant_override("separation",14)
+	heading.add_child(name_row)
+	var seed := RpgUi.icon("res://assets/starseed.svg",58)
+	seed.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	name_row.add_child(seed)
+	var title := RpgUi.label(name_row,"Villagen",76)
+	title.add_theme_font_override("font",RpgUi.FONT_DISPLAY)
 	title.add_theme_constant_override("outline_size",10)
 	title.add_theme_color_override("font_outline_color",Color("2a1a0c"))
 	title.add_theme_constant_override("shadow_offset_y",5)
