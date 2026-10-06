@@ -67,6 +67,10 @@ var preview_rotation := 0
 var flame: Node3D
 var busy := false
 var ticking := false
+## Client-side prediction of the expedition walker (see predict_walker).
+var predicted := Vector2.INF
+var predict_fix := Vector2.ZERO
+var predict_log: Array = []
 var tick_elapsed := 0.0
 var poll_elapsed := 0.0
 var entitlement_elapsed := 0.0
@@ -638,6 +642,8 @@ func build_world(survival: bool) -> void:
 	pending_action=""
 	pending_target=""
 	tick_elapsed=0
+	predicted=Vector2.INF
+	predict_log.clear()
 	last_camp_warning=-100
 	world = Node3D.new()
 	add_child(world)
@@ -1542,7 +1548,8 @@ func tick_run() -> void:
 		pending_action=""
 		pending_target=""
 	var epoch := world_epoch
-	var result: Dictionary = await api.post(run_route()+"/input",payload)
+	var sent_at := Time.get_ticks_msec()
+	var result: Dictionary = await api.post_kept(run_route()+"/input",payload)
 	if epoch!=world_epoch:
 		ticking=false
 		return
@@ -1604,7 +1611,72 @@ func tick_run() -> void:
 			player.react("attack")
 			attack_sweep()
 	run=result.data
+	reconcile_walker(sent_at)
 	update_run()
+
+## Expedition movement is decided by the server, but waiting a round trip for every step feels
+## like lag on an online world. The walker moves at once by the server's own rules (speed,
+## sprint, ice, the same blockers and bounds), and each server answer folds back in however far
+## the two drifted apart, measured against where the walker was predicted to be at that time.
+func predict_walker(delta: float) -> Vector3:
+	var server := Vector2(float(run.get("x",0.0)),float(run.get("z",0.0)))
+	if predicted==Vector2.INF or run.get("status","")!="active" or paused or results_shown or network_failures>0:
+		predicted=server
+		predict_fix=Vector2.ZERO
+		predict_log.clear()
+		return Vector3(predicted.x,0.03,predicted.y)
+	var input := movement_input()
+	if input.length()>0.01:
+		var on_ice := false
+		for h in run.get("hazards",[]):
+			if str(h.get("kind",""))=="ice" and predicted.distance_to(Vector2(float(h.x),float(h.z)))<float(h.radius): on_ice=true
+		var sprint: bool=world_movement_allowed() and GameSettings.running() and (run.get("sprinting",false) or float(run.get("stamina",100.0))>20.0)
+		var step: Vector2=input/maxf(1.0,input.length())*(6.75 if sprint else 4.5)*(0.65 if on_ice else 1.0)*delta
+		var limit := walker_bounds()
+		var parts := maxi(1,ceili(maxf(absf(step.x),absf(step.y))/0.25))
+		for i in parts:
+			var nx := clampf(predicted.x+step.x/parts,-limit,limit)
+			if walker_clear(nx,predicted.y): predicted.x=nx
+			var nz := clampf(predicted.y+step.y/parts,-limit,limit)
+			if walker_clear(predicted.x,nz): predicted.y=nz
+	var fold := predict_fix*minf(1.0,delta*8.0)
+	predicted+=fold
+	predict_fix-=fold
+	var now := Time.get_ticks_msec()
+	predict_log.append([now,predicted+predict_fix])
+	while not predict_log.is_empty() and now-int(predict_log[0][0])>2000: predict_log.pop_front()
+	return Vector3(predicted.x,0.03,predicted.y)
+
+func reconcile_walker(sent_at: int) -> void:
+	if predicted==Vector2.INF or predict_log.is_empty(): return
+	var server := Vector2(float(run.get("x",0.0)),float(run.get("z",0.0)))
+	# The server moved the walker up to about halfway through the round trip.
+	var mid := (sent_at+Time.get_ticks_msec())/2
+	var then: Vector2=predict_log[0][1]
+	for entry in predict_log:
+		if int(entry[0])>mid: break
+		then=entry[1]
+	var error: Vector2=server-then
+	if error.length()>4.0:
+		predicted=server
+		predict_fix=Vector2.ZERO
+		predict_log.clear()
+		return
+	predict_fix+=error
+	for entry in predict_log: entry[1]+=error
+
+func walker_bounds() -> float:
+	var map: Node=world.get_node_or_null("SurvivalMap") if is_instance_valid(world) else null
+	return float(map.bounds) if map else 18.0
+
+## The server's clear_position: outside the fire pit, clear of obstacles and of standing trees and stones.
+func walker_clear(x: float, z: float) -> bool:
+	if Vector2(x,z).length()<1.05: return false
+	for o in run.get("obstacles",[]):
+		if Vector2(x-float(o.x),z-float(o.z)).length()<float(o.radius)+0.25: return false
+	for n in run.get("nodes",[]):
+		if str(n.get("kind","")) in ["tree","stone"] and float(n.get("quantity",0))>0 and Vector2(x-float(n.x),z-float(n.z)).length()<0.85: return false
+	return true
 
 func update_run() -> void:
 	if coop_run:
@@ -2055,7 +2127,7 @@ func _process(delta: float) -> void:
 			if Input.is_action_pressed("attack"): intent("attack")
 			elif Input.is_action_pressed("interact"): intent("harvest")
 		var previous_position: Vector3=player.position
-		player.position=player.position.lerp(Vector3(run.get("x",0),0.03,run.get("z",0)),ControllerProfile.damping(18.0,delta))
+		player.position=predict_walker(delta)
 		player.external_velocity=Vector2(player.position.x-previous_position.x,player.position.z-previous_position.z)/maxf(delta,.001)
 		player.external_motion=player.external_velocity.normalized() if world_movement_allowed() else Vector2.ZERO
 		if paused or results_shown or network_failures>0:player.external_velocity=Vector2.ZERO
