@@ -45,14 +45,34 @@ def test_gemini_reference_image_is_inline(tmp_path):
 
 @pytest.mark.parametrize('response,code',[
     (httpx.Response(429,text='quota exceeded for sensitive project'),'llm_rate_limited'),
+    (httpx.Response(503,text='sensitive: model is experiencing high demand'),'llm_busy'),
     (httpx.Response(403,text='sensitive upstream body'),'llm_request_failed'),
     (httpx.Response(200,json={'candidates':[{'finishReason':'SAFETY'}]}),'llm_incomplete'),
     (httpx.Response(404,json={}),'llm_model_unavailable')])
 def test_gemini_errors_are_sanitized(tmp_path,response,code):
     settings=Settings(data_dir=tmp_path,studio_llm='gemini',gemini_key='secret',gemini_models=('gemini-x',))
+    provider=DesignProvider(settings,httpx.MockTransport(lambda r:response));provider.retry_pause=0
     with pytest.raises(ProviderError) as error:
-        asyncio.run(DesignProvider(settings,httpx.MockTransport(lambda r:response)).generate('a chest','gpt-6-luna','high'))
+        asyncio.run(provider.generate('a chest','gpt-6-luna','high'))
     assert str(error.value)==code and 'sensitive' not in str(error.value) and 'secret' not in str(error.value)
+
+
+def test_gemini_busy_or_limited_models_fall_through_and_retry(tmp_path):
+    plan,program=demo_design('chest');calls=[]
+    def handle(request):
+        name=str(request.url).rsplit('/',1)[1].split(':')[0];calls.append(name)
+        if name=='busy-model':return httpx.Response(503,json={'error':{'message':'high demand'}})
+        if name=='limited-model':return httpx.Response(429,json={})
+        if name=='gone-model':return httpx.Response(404,json={})
+        # The good model is busy the first time, then answers on the retry round.
+        if calls.count('good-model')==1:return httpx.Response(503,json={})
+        return httpx.Response(200,json=reply(plan,program))
+    settings=Settings(data_dir=tmp_path,studio_llm='gemini',gemini_key='k',
+                      gemini_models=('busy-model','gone-model','limited-model','good-model'))
+    provider=DesignProvider(settings,httpx.MockTransport(handle));provider.retry_pause=0
+    _,_,meta=asyncio.run(provider.generate('chest','gpt-6-luna','high'))
+    assert meta['model']=='good-model'
+    assert calls==['busy-model','gone-model','limited-model','good-model','busy-model','gone-model','limited-model','good-model']
 
 def test_live_paid_gemini_requires_key(tmp_path):
     settings=Settings(data_dir=tmp_path,mode='live',registration_code='x'*30,paid_enabled=True,tripo_key='t',studio_llm='gemini',gemini_key='')

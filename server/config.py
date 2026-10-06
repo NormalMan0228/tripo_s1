@@ -105,7 +105,7 @@ class Settings:
     gemini_key: str = field(default_factory=lambda: configured_secret('GEMINI_API_KEY'), repr=False)
     # Tried in order; a model the key cannot use (404) falls through to the next.
     gemini_models: tuple = field(default_factory=lambda: tuple(m.strip() for m in os.getenv(
-        'TRIPOTHON_GEMINI_MODELS', 'gemini-3.8-flash,gemini-3.5-flash,gemini-2.5-flash').split(',') if m.strip()))
+        'TRIPOTHON_GEMINI_MODELS', 'gemini-3.5-flash,gemini-3.8-flash,gemini-3.1-flash-lite').split(',') if m.strip()))
 
     def validate(self):
         if self.mode not in ('demo', 'live'):

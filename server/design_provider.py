@@ -45,6 +45,7 @@ class DesignProvider:
         # The Gemini model that last answered (the first one the key may use).
         models=getattr(settings,'gemini_models',())
         self.gemini_model=models[0] if models else ''
+        self.retry_pause=4.0
 
     async def generate(self,prompt,model,effort,image=None):
         feedback='';attempts=[]
@@ -112,13 +113,24 @@ class DesignProvider:
         body={'contents':[{'role':'user','parts':parts}],
               'generationConfig':{'responseMimeType':'application/json','maxOutputTokens':12000,'temperature':0.6}}
         models=[self.gemini_model]+[m for m in self.settings.gemini_models if m!=self.gemini_model]
+        # Unknown (404), busy (5xx, "high demand") or rate-limited (429) models fall through to
+        # the next one; if every model was busy, one more round after a short pause.
+        outcome='llm_model_unavailable'
         try:
             async with httpx.AsyncClient(transport=self.transport,timeout=180,follow_redirects=False) as client:
+              for round_index in range(2):
+                if round_index:
+                    if outcome=='llm_model_unavailable':break
+                    await asyncio.sleep(self.retry_pause)
                 for name in models:
                     response=await client.post(f'https://generativelanguage.googleapis.com/v1beta/models/{name}:generateContent',
                         headers={'x-goog-api-key':self.settings.gemini_key},json=body)
                     if response.status_code==404:continue
-                    if response.status_code==429:raise ProviderError('llm_rate_limited')
+                    if response.status_code==429:
+                        outcome='llm_rate_limited';continue
+                    if response.status_code>=500:
+                        if outcome!='llm_rate_limited':outcome='llm_busy'
+                        continue
                     if response.status_code!=200 or len(response.content)>500000:raise ProviderError('llm_request_failed')
                     self.gemini_model=name
                     reply=response.json()
@@ -130,7 +142,7 @@ class DesignProvider:
                     usage={'input_tokens':meta.get('promptTokenCount',0),'cached_input_tokens':meta.get('cachedContentTokenCount',0),
                            'output_tokens':meta.get('candidatesTokenCount',0),'reasoning_output_tokens':meta.get('thoughtsTokenCount',0)}
                     return raw,usage
-            raise ProviderError('llm_model_unavailable')
+            raise ProviderError(outcome)
         except ProviderError:raise
         except Exception:raise ProviderError('llm_invalid_design') from None
 
