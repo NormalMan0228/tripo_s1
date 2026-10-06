@@ -167,7 +167,8 @@ func _update_prop_lods() -> void:
 		return
 	var camera := host.camera as Camera3D
 	var view := camera.global_transform.affine_inverse()
-	var pixels := get_viewport().get_visible_rect().size.y
+	# Settings "view detail": above 1 the full meshes stay on for smaller/farther props.
+	var pixels := get_viewport().get_visible_rect().size.y*preload("res://scripts/game_settings.gd").lod_multiplier()
 	for entry in lod_entries:
 		var mesh := entry.node as MeshInstance3D
 		var projected: float = entry.size*pixels/maxf(camera.size,.1)

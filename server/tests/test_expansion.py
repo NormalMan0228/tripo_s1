@@ -47,7 +47,8 @@ def test_region_resources_avoid_barriers_and_hazards(map_id):
             assert all(math.hypot(node['x']-o['x'],node['z']-o['z'])>=o['radius']+1.5 for o in s['obstacles']+s['hazards'])
         for barrier in s['obstacles']:
             assert not simulation.clear_position(s,barrier['x'],barrier['z'])
-            assert not navigation.segment_open(s,(-17,barrier['z']),(17,barrier['z']))
+            limit=simulation.map_bounds(s)
+            assert not navigation.segment_open(s,(-limit,barrier['z']),(limit,barrier['z']))
 
 
 def test_difficulty_changes_danger_and_server_reward():

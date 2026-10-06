@@ -260,14 +260,17 @@ func open_plot(index: int) -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel",RpgUi.style(RpgUi.NIGHT,18))
+	panel.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
 	panel.position=Vector2(250,500)
 	panel.custom_minimum_size=Vector2(780,0)
+	RpgUi.slide_in(panel,Vector2(0,24))
+	RpgUi.sfx("open",-10.0)
 	root.add_child(panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation",8)
 	panel.add_child(v)
-	RpgUi.label(v,tr("어떤 씨앗을 심을까요?"),18,RpgUi.GOLD)
+	RpgUi.label(v,tr("어떤 씨앗을 심을까요?"),22,RpgUi.GOLD)
+	RpgUi.divider(v,Color(RpgUi.GOLD,.55))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation",8)
 	v.add_child(row)
@@ -282,8 +285,7 @@ func open_plot(index: int) -> void:
 		b.disabled=count<1
 		b.name="Seed_"+crop
 		for look in ["normal","hover","pressed","disabled"]:
-			var box := RpgUi.style(Color("f4eddb") if look!="disabled" else Color("8d8a7c",0.6),12,Color("c9a25a") if look=="hover" else Color("a5a486",0.6),2)
-			b.add_theme_stylebox_override(look,box)
+			b.add_theme_stylebox_override(look,RpgUi.frame({"normal":"slot_paper","hover":"slot_paper_hover","pressed":"slot_paper_hover","disabled":"slot_paper_empty"}[look]))
 		var stack := VBoxContainer.new()
 		stack.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		stack.mouse_filter=Control.MOUSE_FILTER_IGNORE
@@ -484,10 +486,8 @@ func open_storage() -> void:
 
 func item_card(item: String, detail: String) -> PanelContainer:
 	var card := PanelContainer.new()
-	var paper := StyleBoxFlat.new()
-	paper.bg_color=Color("f2e6cf")
-	paper.set_corner_radius_all(9)
-	paper.set_content_margin_all(8)
+	var paper := RpgUi.frame("slot_paper")
+	paper.set_content_margin_all(9)
 	card.add_theme_stylebox_override("panel",paper)
 	card.custom_minimum_size=Vector2(166,58)
 	var row := HBoxContainer.new()
@@ -521,10 +521,8 @@ func open_log() -> void:
 		var data: Dictionary=fish[kind]
 		var caught: int=int(state.collection.get(kind,0))
 		var card := PanelContainer.new()
-		var paper := StyleBoxFlat.new()
-		paper.bg_color=Color("f2e6cf") if caught else Color("d9d3c4")
-		paper.set_corner_radius_all(10)
-		paper.set_content_margin_all(8)
+		var paper := RpgUi.frame("slot_paper" if caught else "slot_paper_empty")
+		paper.set_content_margin_all(9)
 		card.add_theme_stylebox_override("panel",paper)
 		card.custom_minimum_size=Vector2(166,150)
 		var col := VBoxContainer.new()

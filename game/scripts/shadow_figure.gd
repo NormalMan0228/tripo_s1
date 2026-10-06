@@ -258,9 +258,7 @@ func _ready() -> void:
 	nameplate = Label3D.new()
 	nameplate.text = title
 	nameplate.position.y = 1.88*height_scale+0.22
-	nameplate.pixel_size = 0.006
-	nameplate.font_size = 30
-	nameplate.outline_size = 4
+	preload("res://scripts/art.gd").style_nameplate(nameplate, 19)
 	nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	nameplate.no_depth_test = false
 	nameplate.modulate = Color("d4cdf2")

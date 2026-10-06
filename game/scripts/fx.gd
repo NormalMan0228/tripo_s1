@@ -49,6 +49,8 @@ extends RefCounted
 ## --- tests ------------------------------------------------------------------------
 ##   Fx.played: int   counts every effect started (harnesses check it went up).
 const Icon := preload("res://scripts/life_icon.gd")
+## Reduced motion (settings) thins every particle effect.
+const GameSettings := preload("res://scripts/game_settings.gd")
 const Art := preload("res://scripts/life_art.gd")
 const POOL_MAX := 6
 const TEX := 48
@@ -103,7 +105,7 @@ static func burst(parent: Node3D, at: Vector3, kind: String, amount := 12, tint 
 	_configure(e, kind, tint, radius)
 	e.one_shot = true
 	e.explosiveness = 0.88
-	e.amount = maxi(1, amount)
+	e.amount = maxi(1, roundi(amount*GameSettings.particle_scale()))
 	e.global_position = at
 	e.restart()
 
@@ -115,7 +117,7 @@ static func gust(parent: Node3D, at: Vector3, toward: Vector3, kind := "leaf", a
 	_configure(e, kind, Color(0,0,0,0), radius)
 	e.one_shot = true
 	e.explosiveness = 0.55
-	e.amount = maxi(1, amount)
+	e.amount = maxi(1, roundi(amount*GameSettings.particle_scale()))
 	e.direction = (toward.normalized()+Vector3(0,0.25,0)).normalized() if toward.length() > 0.01 else Vector3.UP
 	e.spread = 16.0
 	e.initial_velocity_min = 2.6
@@ -133,7 +135,7 @@ static func stream(parent: Node3D, at: Vector3, kind: String, seconds := 2.0, ra
 	_configure(e, kind, tint, radius)
 	e.one_shot = false
 	e.explosiveness = 0.0
-	e.amount = maxi(2, int(ceil(rate*e.lifetime)))
+	e.amount = maxi(2, int(ceil(rate*e.lifetime*GameSettings.particle_scale())))
 	e.global_position = at
 	e.restart()
 	var stop := e.create_tween()
@@ -604,7 +606,7 @@ static func sound(app, kind: String, at := Vector3.INF, pitch := 1.0, db := 0.0)
 			tree.root.add_child(holder)
 		for i in 5:
 			var v := AudioStreamPlayer.new()
-			v.bus = &"Master"
+			v.bus = &"SFX"
 			holder.add_child(v)
 			voices.append(v)
 	if not streams.has(kind): streams[kind] = _synth(kind)

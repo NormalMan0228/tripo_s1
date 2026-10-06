@@ -2,8 +2,10 @@ extends Node
 ## Footsteps and looping ambience beds, synthesized in code (mono 16-bit PCM, nothing imported).
 ## Streams are built once per session and shared through a static cache.
 ## Add the node, call setup(), then footstep() on every foot plant and set_ambience()
-## whenever the place or the hour changes. Everything plays on the Master bus.
+## whenever the place or the hour changes. Footsteps play on the SFX bus and the
+## beds on Ambience (game_settings.gd), so the player's volume sliders reach them.
 
+const GameSettings = preload("res://scripts/game_settings.gd")
 const RATE := 22050
 const SURFACES := ["grass", "sand", "stone", "wood", "rock", "shallow"]
 const VARIATIONS := 4
@@ -49,12 +51,12 @@ func setup() -> void:
 	rng.randomize()
 	for i in 4:
 		var player := AudioStreamPlayer.new()
-		player.bus = &"Master"
+		player.bus = GameSettings.BUS_SFX
 		add_child(player)
 		steps.append(player)
 	for key in BED_DB:
 		var player := AudioStreamPlayer.new()
-		player.bus = &"Master"
+		player.bus = GameSettings.BUS_AMBIENCE
 		player.stream = cache["bed/" + key]
 		add_child(player)
 		beds[key] = player

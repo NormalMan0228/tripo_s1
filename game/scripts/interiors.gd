@@ -1395,8 +1395,22 @@ static func prototype(path: String) -> Node3D:
 			var material := mesh.surface_get_material(surface)
 			if material is BaseMaterial3D: mesh.surface_set_material(surface,light_material(material,small))
 		instance.mesh=mesh
+	if prototypes.is_empty(): free_prototypes_with_tree()
 	prototypes[path]=model
 	return model
+
+## The copies live outside the scene tree, so they are freed together with it
+## (otherwise every model leaks at exit).
+static func free_prototypes_with_tree() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree==null or tree.root==null: return
+	var holder := Node.new()
+	holder.name="InteriorPrototypeCache"
+	holder.tree_exiting.connect(func():
+		for model in prototypes.values():
+			if is_instance_valid(model): model.free()
+		prototypes.clear())
+	tree.root.add_child.call_deferred(holder)
 
 static func light_material(source: BaseMaterial3D, small: Dictionary) -> BaseMaterial3D:
 	var copy := source.duplicate() as BaseMaterial3D

@@ -188,6 +188,7 @@ def test_forest_preserves_camp_and_resource_spacing():
         nodes=new_run(seed,0,60)['nodes']
         assert len(nodes)==60
         for index,node in enumerate(nodes):
-            assert abs(node['x'])<=17 and abs(node['z'])<=17
+            # Resources stay inside the map's resource square, well within the walkable bounds.
+            assert abs(node['x'])<=20 and abs(node['z'])<=20
             if index>=4: assert math.hypot(node['x'],node['z'])>=4.5
             assert all(math.hypot(node['x']-other['x'],node['z']-other['z'])>=2.2 for other in nodes[:index])

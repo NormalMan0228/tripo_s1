@@ -47,3 +47,15 @@ game/assets/portraits/
 # The manifest records every item, its model and credits; tools/generate_interior_assets.py rebuilds the set.
 game/assets/interior/*
 !game/assets/interior/manifest.json
+
+# Tripo survival monsters (15 rigged/animated GLBs, ~21 MB plus imported textures) stay local like the other
+# Tripo art. The manifest records every monster, Tripo task and credit; tools/generate_monsters.py
+# (re-download is free while the tasks exist) and tools/build_monsters.py rebuild the set.
+game/assets/monsters/*
+!game/assets/monsters/manifest.json
+
+# Tripo survival map props (GLBs + LOD1 + extracted textures, ~25 MB) stay local like the interiors.
+# manifest.json records every prop, its model and credits; tools/generate_survival_assets.py +
+# tools/build_survival_assets.py rebuild the set.
+game/maps/survival/assets/*
+!game/maps/survival/assets/manifest.json

@@ -31,18 +31,18 @@ func steer(target: Vector2) -> void:
 
 func plan_resource(kind: String) -> void:
 	var grid := AStarGrid2D.new()
-	grid.region=Rect2i(-18,-18,37,37)
+	grid.region=Rect2i(-22,-22,45,45)  # server/survival_maps.py BOUNDS
 	grid.diagonal_mode=AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 	grid.update()
 	for p in [Vector2i.ZERO,Vector2i(1,0),Vector2i(-1,0),Vector2i(0,1),Vector2i(0,-1)]: grid.set_point_solid(p)
 	for n in app.run.nodes:
 		if n.quantity<=0 or n.kind not in ["tree","stone"]: continue
-		for x in range(maxi(-18,int(n.x)-2),mini(19,int(n.x)+3)):
-			for z in range(maxi(-18,int(n.z)-2),mini(19,int(n.z)+3)):
+		for x in range(maxi(-22,int(n.x)-2),mini(23,int(n.x)+3)):
+			for z in range(maxi(-22,int(n.z)-2),mini(23,int(n.z)+3)):
 				if Vector2(x-n.x,z-n.z).length()<1.1: grid.set_point_solid(Vector2i(x,z))
 	for obstacle in app.run.get("obstacles",[])+app.run.get("hazards",[]):
-		for x in range(-18,19):
-			for z in range(-18,19):
+		for x in range(-22,23):
+			for z in range(-22,23):
 				if Vector2(x-obstacle.x,z-obstacle.z).length()<obstacle.radius+0.7: grid.set_point_solid(Vector2i(x,z))
 	var from := Vector2i(roundi(app.run.x),roundi(app.run.z))
 	grid.set_point_solid(from,false)

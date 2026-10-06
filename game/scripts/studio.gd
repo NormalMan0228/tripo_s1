@@ -11,6 +11,8 @@ const Interiors=preload("res://scripts/interiors.gd")
 const Daylight=preload("res://scripts/daylight.gd")
 const RpgUi=preload("res://scripts/rpg_ui.gd")
 const Residents=preload("res://scripts/residents.gd")
+const GameSettings=preload("res://scripts/game_settings.gd")
+const PauseMenu=preload("res://scripts/pause_menu.gd")
 var api: Node
 var viewport: SubViewport
 var view_container: SubViewportContainer
@@ -159,6 +161,8 @@ var cue_time := 0.0
 var talk_box: Control
 var talk_body: Label
 var talk_footer: HBoxContainer
+## The RpgUi.dialogue window parts while a resident is talking.
+var talk_window: Dictionary = {}
 var talk_lines: Array=[]
 var talk_choices: Array=[]
 var talk_page := 0
@@ -184,8 +188,8 @@ func _ready() -> void:
 	if not Interiors.has_interior(room): room="workshop"
 	public_room=Interiors.is_public(room)
 	veil.play_door("close",room)
-	tone_player=AudioStreamPlayer.new();tone_player.volume_db=-5;add_child(tone_player)
-	sfx_player=AudioStreamPlayer.new();sfx_player.volume_db=-8;add_child(sfx_player)
+	tone_player=AudioStreamPlayer.new();tone_player.volume_db=-5;tone_player.bus=GameSettings.BUS_SFX;add_child(tone_player)
+	sfx_player=AudioStreamPlayer.new();sfx_player.volume_db=-8;sfx_player.bus=GameSettings.BUS_SFX;add_child(sfx_player)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--hour="): hour_override=clampf(float(arg.trim_prefix("--hour=")),0.0,23.99)
 	if Engine.has_meta("interior_hour"): hour_override=float(Engine.get_meta("interior_hour"))
@@ -216,8 +220,15 @@ func load_avatar() -> void:
 
 func theme_style() -> Theme:
 	var t := Theme.new()
-	var font := SystemFont.new();font.font_names=PackedStringArray(["Malgun Gothic","sans-serif"])
-	t.default_font=font;t.default_font_size=14
+	t.default_font=RpgUi.FONT_BODY;t.default_font_size=14
+	t.set_font("font","Button",RpgUi.FONT_STRONG)
+	t.set_stylebox("panel","TooltipPanel",RpgUi.frame("tooltip"));t.set_color("font_color","TooltipLabel",RpgUi.INK)
+	for type in ["VScrollBar","HScrollBar"]:
+		t.set_stylebox("scroll",type,RpgUi.frame("scroll_track"));t.set_stylebox("grabber",type,RpgUi.frame("scroll_grabber"))
+		t.set_stylebox("grabber_highlight",type,RpgUi.frame("scroll_grabber_hover"));t.set_stylebox("grabber_pressed",type,RpgUi.frame("scroll_grabber_hover"))
+	for type in ["HSlider","VSlider"]:
+		t.set_stylebox("slider",type,RpgUi.frame("bar_bg"));t.set_stylebox("grabber_area",type,RpgUi.frame("bar_fill",Color("e9b552")))
+		t.set_icon("grabber",type,RpgUi.half("slider_grabber"));t.set_icon("grabber_highlight",type,RpgUi.half("slider_grabber_hover"))
 	for type in ["Label","Button","ColorPickerButton","OptionButton","LineEdit","TextEdit","ItemList","CheckButton","CodeEdit"]:
 		t.set_color("font_color",type,RpgUi.INK)
 		if type in ["Button","OptionButton","CheckButton","ColorPickerButton"]:
@@ -264,9 +275,8 @@ func key_cap(parent: Node, key: String) -> Label:
 	cap.text=key
 	cap.add_theme_font_size_override("font_size",12)
 	cap.add_theme_color_override("font_color",Color("2b2112"))
-	var plate := RpgUi.style(RpgUi.GOLD,5,Color("8c6a2c"),1)
-	plate.content_margin_left=5;plate.content_margin_right=5;plate.content_margin_top=0;plate.content_margin_bottom=0;plate.shadow_size=0
-	cap.add_theme_stylebox_override("normal",plate)
+	cap.add_theme_font_override("font",RpgUi.FONT_BOLD)
+	cap.add_theme_stylebox_override("normal",RpgUi.frame("keycap"))
 	cap.size_flags_vertical=Control.SIZE_SHRINK_CENTER
 	cap.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	parent.add_child(cap)
@@ -279,11 +289,12 @@ func hud_button(parent: Node, value: String, callback: Callable, key := "") -> B
 	b.focus_mode=Control.FOCUS_NONE
 	b.custom_minimum_size=Vector2(0,44)
 	b.add_theme_font_size_override("font_size",16)
+	b.add_theme_font_override("font",RpgUi.FONT_STRONG)
 	for state in ["normal","hover","pressed","disabled"]:
-		var fill := Color(0.09,0.12,0.13,.86) if state=="normal" else (Color(0.24,0.2,0.12,.92) if state=="hover" else Color(0.36,0.28,0.14,.95))
-		var plate := RpgUi.style(fill,10,RpgUi.GOLD if state=="hover" else Color(RpgUi.GOLD,.6),2)
+		var plate := RpgUi.frame("btn_night_"+state)
 		plate.content_margin_left=16 if key.is_empty() else 30
 		b.add_theme_stylebox_override(state,plate)
+	RpgUi.hover_motion(b,1.04)
 	for state in ["font_color","font_hover_color","font_pressed_color"]:
 		b.add_theme_color_override(state,Color("fff2cf") if state!="font_hover_color" else Color("ffe08a"))
 	b.pressed.connect(callback)
@@ -315,14 +326,15 @@ func build_ui() -> void:
 	# The room fills the whole screen; the HUD floats over it like the village's.
 	view_container=SubViewportContainer.new();view_container.stretch=true;view_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(view_container)
 	viewport=SubViewport.new();viewport.size=Vector2i(1280,800);viewport.own_world_3d=true;viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS;viewport.msaa_3d=Viewport.MSAA_4X;view_container.add_child(viewport)
+	GameSettings.track_viewport(viewport,view_container)
 	view_container.gui_input.connect(view_input)
 	# Top left: where you are (building, floor, room) and a short line about it.
 	name_panel=PanelContainer.new();name_panel.name="PlacePanel";name_panel.position=Vector2(18,16);name_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	name_panel.add_theme_stylebox_override("panel",RpgUi.style(RpgUi.NIGHT,14))
+	name_panel.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
 	add_child(name_panel)
 	var head := VBoxContainer.new();head.add_theme_constant_override("separation",2);name_panel.add_child(head)
 	var title_row := HBoxContainer.new();title_row.add_theme_constant_override("separation",10);head.add_child(title_row)
-	title_label=RpgUi.label(title_row,tr("물결빛 공방"),21)
+	title_label=RpgUi.label(title_row,tr("물결빛 공방"),23)
 	place_label=RpgUi.label(title_row,"",14,RpgUi.GOLD)
 	place_label.size_flags_vertical=Control.SIZE_SHRINK_END
 	subtitle_label=RpgUi.label(head,tr("상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요"),13,Color("d8e3d4"),false)
@@ -330,7 +342,7 @@ func build_ui() -> void:
 	if BuildMode.developer(): RpgUi.label(head,tr("개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다"),11,Color("e3b07a"),false)
 	# Top centre: what just happened (server replies, furniture lines).
 	toast_panel=PanelContainer.new();toast_panel.name="StatusToast";toast_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	toast_panel.add_theme_stylebox_override("panel",RpgUi.style(Color(0.1,0.12,0.13,.9),12))
+	toast_panel.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
 	toast_panel.set_anchors_preset(Control.PRESET_CENTER_TOP);toast_panel.grow_horizontal=Control.GROW_DIRECTION_BOTH
 	toast_panel.offset_top=92;toast_panel.offset_bottom=92
 	add_child(toast_panel)
@@ -339,7 +351,7 @@ func build_ui() -> void:
 	toast_panel.visible=false
 	# Bottom centre: a key chip for what E (or walking) does right here.
 	hint_chip=PanelContainer.new();hint_chip.name="HintChip";hint_chip.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	hint_chip.add_theme_stylebox_override("panel",RpgUi.style(Color(0.1,0.12,0.13,.88),18))
+	hint_chip.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
 	hint_chip.set_anchors_preset(Control.PRESET_CENTER_BOTTOM);hint_chip.grow_horizontal=Control.GROW_DIRECTION_BOTH;hint_chip.grow_vertical=Control.GROW_DIRECTION_BEGIN
 	add_child(hint_chip)
 	var chip_row := HBoxContainer.new();chip_row.add_theme_constant_override("separation",8);chip_row.mouse_filter=Control.MOUSE_FILTER_IGNORE;hint_chip.add_child(chip_row)
@@ -350,13 +362,15 @@ func build_ui() -> void:
 	nav.set_anchors_preset(Control.PRESET_BOTTOM_LEFT);nav.grow_vertical=Control.GROW_DIRECTION_BEGIN
 	nav.offset_left=18;nav.offset_right=18;nav.offset_top=-66;nav.offset_bottom=-22
 	add_child(nav)
-	leave_button=hud_button(nav,tr("마을로 나가기"),leave,"Esc")
+	leave_button=hud_button(nav,tr("마을로 나가기"),leave)
+	leave_button.icon=RpgUi.icon_texture("home");leave_button.expand_icon=false
+	leave_button.add_theme_constant_override("icon_max_width",24)
 	room_buttons.append(hud_button(nav,tr("내 집"),func(): await change_room("home")))
 	room_buttons.append(hud_button(nav,tr("공방"),func(): await change_room("workshop")))
 	# In-world dressing tools remain visible next to the furniture, not in dev tabs.
 	placement_tools=PanelContainer.new();placement_tools.name="PlacementTools"
 	placement_tools.position=Vector2(18,128);placement_tools.custom_minimum_size.x=345
-	placement_tools.add_theme_stylebox_override("panel",RpgUi.style(RpgUi.NIGHT,12))
+	placement_tools.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
 	add_child(placement_tools);placement_tools.visible=false
 	var tools := VBoxContainer.new();tools.add_theme_constant_override("separation",8);placement_tools.add_child(tools)
 	placement_title=label(tools,tr("가구 놓기"),18)
@@ -371,15 +385,15 @@ func build_ui() -> void:
 	button(confirm_row,tr("취소"),cancel_placement)
 	# Right: the crafting and decorating drawer, opened from a hotbar-style slot.
 	var dock := PanelContainer.new();dock_panel=dock;dock.name="Dock"
-	dock.add_theme_stylebox_override("panel",RpgUi.style(Color(0.09,0.11,0.12,.94),14))
+	dock.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
 	dock.set_anchors_preset(Control.PRESET_RIGHT_WIDE);dock.grow_horizontal=Control.GROW_DIRECTION_BEGIN
 	dock.offset_left=-412;dock.offset_right=-14;dock.offset_top=14;dock.offset_bottom=-112
 	add_child(dock)
 	dock_toggle=Button.new();dock_toggle.name="DockToggle";dock_toggle.custom_minimum_size=Vector2(78,78);dock_toggle.focus_mode=Control.FOCUS_NONE
 	dock_toggle.tooltip_text=tr("제작")
 	for state in ["normal","hover","pressed"]:
-		var fill := RpgUi.NIGHT if state=="normal" else (Color(0.2,0.27,0.27,.95) if state=="hover" else Color(0.35,0.3,0.2,.95))
-		dock_toggle.add_theme_stylebox_override(state,RpgUi.style(fill,14,RpgUi.GOLD if state!="normal" else Color(RpgUi.GOLD,.7),2))
+		dock_toggle.add_theme_stylebox_override(state,RpgUi.frame({"normal":"slot_night","hover":"slot_night_hover","pressed":"slot_night_pressed"}[state]))
+	RpgUi.hover_motion(dock_toggle,1.08,Vector2(0.5,1.0))
 	dock_toggle.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT);dock_toggle.grow_horizontal=Control.GROW_DIRECTION_BEGIN;dock_toggle.grow_vertical=Control.GROW_DIRECTION_BEGIN
 	dock_toggle.offset_left=-96;dock_toggle.offset_right=-18;dock_toggle.offset_top=-96;dock_toggle.offset_bottom=-18
 	add_child(dock_toggle)
@@ -569,6 +583,7 @@ func build_stage() -> void:
 	env.environment=environment;stage.add_child(env)
 	sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-56,18,0);sun.light_color=Color("fff1dc");sun.light_energy=0.55;sun.shadow_enabled=true
 	sun.directional_shadow_max_distance=28;stage.add_child(sun)
+	GameSettings.track_light(sun)
 	# Animal Crossing style: a perspective camera in front of the open front edge,
 	# above the door, looking down toward the back wall and following the walker.
 	camera=Camera3D.new();camera.projection=Camera3D.PROJECTION_PERSPECTIVE;camera.fov=40;camera.near=0.2;camera.far=80
@@ -1323,7 +1338,7 @@ func share_presence() -> void:
 			body.apply_avatar(record.get("avatar",{}))
 			body.position=Vector3(record.x,0,record.z)
 			var plate := Art.label3d(body,str(record.username),Vector3(0,2.05,0),Color("f0dfba"))
-			plate.font_size=30;plate.outline_size=4
+			Art.style_nameplate(plate)
 			peers[record.id]={"node":body,"target":Vector3(record.x,0,record.z)}
 		peers[record.id].target=Vector3(record.x,0,record.z)
 		if int(peers[record.id].get("floor",-1))!=level:
@@ -1363,8 +1378,10 @@ func leave() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():return
+	# Rebinding-aware: a key bound to Interact reports KEY_E (game_settings.gd).
+	var key := GameSettings.canonical_key(event)
 	if is_instance_valid(talk_box):
-		match event.physical_keycode:
+		match key:
 			KEY_E,KEY_SPACE,KEY_ENTER: advance_talk()
 			KEY_ESCAPE: close_talk()
 			KEY_1,KEY_2,KEY_3:
@@ -1378,12 +1395,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		if placement_mode: cancel_placement()
 		elif not resting.is_empty(): stand_up()
 		elif is_instance_valid(dock_panel) and dock_panel.visible: set_dock_open(false)
-		else: leave()
-	if event.physical_keycode==KEY_C and is_instance_valid(dock_toggle) and dock_toggle.visible:
+		else: PauseMenu.open(self)
+	if key==KEY_C and is_instance_valid(dock_toggle) and dock_toggle.visible:
 		set_dock_open(not dock_panel.visible)
-	if event.physical_keycode==KEY_R and placement_mode:
+	if key==KEY_R and placement_mode:
 		rotate_placement(90)
-	if event.physical_keycode==KEY_E:
+	if key==KEY_E:
 		if not resting.is_empty():stand_up()
 		elif is_instance_valid(hero) and floor_index==0 and Interiors.near_door(room_spec,hero.position):leave()
 		else:interact_nearest()
@@ -1527,6 +1544,12 @@ func default_hint() -> String:
 
 func set_chip(key: String, text: String) -> void:
 	if not is_instance_valid(hint_chip): return
+	if key=="E": key=GameSettings.key_label("interact")
+	# Interaction prompts can be switched off; the plain controls line stays.
+	hint_chip.modulate.a=1.0 if key.is_empty() or GameSettings.show_prompts() else 0.0
+	if is_instance_valid(hint_label):
+		hint_label.modulate.a=1.0 if GameSettings.show_prompts() else 0.0
+		if not key.is_empty() and key!="E": hint_label.text=hint_label.text.replace("E",key)
 	hint_key.visible=not key.is_empty()
 	hint_key.text=key
 	controls_label.text=text
@@ -1635,7 +1658,7 @@ func _process(delta: float) -> void:
 	if cue_time>3.5:cue_time=0;resident_cues()
 	if leaving:
 		walk_out_step(delta)
-	elif not placement_mode and not travelling and not is_instance_valid(talk_box):
+	elif not placement_mode and not travelling and not is_instance_valid(talk_box) and not PauseMenu.is_open():
 		var focus := get_viewport().gui_get_focus_owner()
 		if not (focus is TextEdit or focus is LineEdit):walk(delta)
 	update_camera(delta)
@@ -2263,46 +2286,15 @@ func open_talk(id: String) -> void:
 	if entry.body.has_method("smile"): entry.body.smile(3.0)
 	sfx_player.stream=Interiors.sfx("pop");sfx_player.play()
 	talk_box=Control.new();talk_box.name="TalkBox";talk_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	talk_box.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	add_child(talk_box)
-	var shade := TextureRect.new()
-	var fade := GradientTexture2D.new()
-	fade.fill_from=Vector2(0,0);fade.fill_to=Vector2(0,1)
-	fade.gradient=Gradient.new()
-	fade.gradient.set_color(0,Color(0.02,0.03,0.04,0.1))
-	fade.gradient.set_color(1,Color(0.02,0.03,0.04,0.6))
-	shade.texture=fade;shade.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(event):
+	# The same illustrated card + night box as the village (RpgUi.dialogue).
+	talk_window=RpgUi.dialogue(talk_box,tr(Interiors.resident_title(id)),Interiors.portrait(id))
+	talk_window.shade.gui_input.connect(func(event):
 		if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT: advance_talk())
-	talk_box.add_child(shade)
-	var path := Interiors.portrait(id)
-	if ResourceLoader.exists(path):
-		var art := TextureRect.new()
-		art.texture=load(path);art.expand_mode=TextureRect.EXPAND_IGNORE_SIZE;art.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		art.position=Vector2(156,232);art.size=Vector2(330,412);art.mouse_filter=Control.MOUSE_FILTER_IGNORE
-		talk_box.add_child(art)
-	var box := PanelContainer.new()
-	box.position=Vector2(150,598);box.size=Vector2(980,178)
-	var box_style := RpgUi.style(Color(0.08,0.09,0.1,.97),18,RpgUi.GOLD,2)
-	box_style.content_margin_left=34;box_style.content_margin_right=26;box_style.content_margin_top=26;box_style.content_margin_bottom=16
-	box.add_theme_stylebox_override("panel",box_style)
-	talk_box.add_child(box)
-	var column := VBoxContainer.new();column.add_theme_constant_override("separation",10);box.add_child(column)
-	var plate := Label.new()
-	plate.text=tr(Interiors.resident_title(id))
-	plate.add_theme_font_size_override("font_size",19);plate.add_theme_color_override("font_color",Color("2b2112"))
-	var plate_style := RpgUi.style(RpgUi.GOLD,10,Color("8c6a2c"),2)
-	plate_style.content_margin_left=18;plate_style.content_margin_right=18;plate_style.content_margin_top=4;plate_style.content_margin_bottom=4
-	plate.add_theme_stylebox_override("normal",plate_style)
-	plate.position=Vector2(506,574)
-	talk_box.add_child(plate)
-	talk_body=Label.new()
-	talk_body.add_theme_font_size_override("font_size",22);talk_body.add_theme_constant_override("line_spacing",6)
-	talk_body.add_theme_color_override("font_color",RpgUi.INK);talk_body.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	talk_body.custom_minimum_size=Vector2(940,84)
-	column.add_child(talk_body)
-	talk_footer=HBoxContainer.new();talk_footer.alignment=BoxContainer.ALIGNMENT_END;talk_footer.add_theme_constant_override("separation",8)
-	column.add_child(talk_footer)
+	talk_body=talk_window.body
+	# Kept for older callers; choices now live in talk_window.choices.
+	talk_footer=HBoxContainer.new();talk_footer.visible=false;talk_box.add_child(talk_footer)
 	for item in [name_panel,hint_chip,hint_label,bubble]:
 		if is_instance_valid(item): item.visible=false
 	show_talk_page()
@@ -2312,18 +2304,16 @@ func show_talk_page() -> void:
 	talk_body.text=str(talk_lines[talk_page])
 	talk_body.visible_ratio=0.0
 	var typing := talk_body.create_tween()
-	typing.tween_property(talk_body,"visible_ratio",1.0,clampf(talk_body.text.length()*0.028,0.25,1.6))
-	for child in talk_footer.get_children(): child.queue_free()
+	typing.tween_property(talk_body,"visible_ratio",1.0,GameSettings.typing_seconds(talk_body.text.length()))
 	if talk_page<talk_lines.size()-1:
-		var more := RpgUi.label(talk_footer,"▼",16,RpgUi.GOLD)
-		var blink := more.create_tween().set_loops()
-		blink.tween_property(more,"modulate:a",0.35,0.45)
-		blink.tween_property(more,"modulate:a",1.0,0.45)
+		RpgUi.dialogue_more(talk_window,true)
 	else:
+		RpgUi.dialogue_more(talk_window,false)
+		var entries := []
 		for choice in talk_choices:
 			var action := str(choice[1])
-			var b := RpgUi.menu_button(talk_footer,tr(str(choice[0])),func(): run_choice(action),190)
-			b.custom_minimum_size.y=40
+			entries.append([tr(str(choice[0])),func(): run_choice(action)])
+		RpgUi.dialogue_choices(talk_window,entries)
 
 func advance_talk() -> void:
 	if not is_instance_valid(talk_box): return
@@ -2339,6 +2329,7 @@ func advance_talk() -> void:
 func close_talk() -> void:
 	if is_instance_valid(talk_box): talk_box.queue_free()
 	talk_box=null
+	talk_window={}
 	talk_id=""
 	if is_instance_valid(hint_chip): hint_chip.visible=true
 

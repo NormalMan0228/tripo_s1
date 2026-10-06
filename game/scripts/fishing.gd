@@ -361,7 +361,7 @@ func show_bite() -> void:
 
 func fight(delta: float) -> void:
 	fight_time+=delta
-	var hold := Input.is_physical_key_pressed(KEY_E) or Input.is_physical_key_pressed(KEY_SPACE) or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var hold := Input.is_action_pressed("interact") or Input.is_action_pressed("attack") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	fish_clock-=delta
 	if fish_clock<=0:
 		fish_clock=randf_range(0.45,1.5)/(0.7+fish_speed)
@@ -446,7 +446,7 @@ func build_hud() -> void:
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hud.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	var pill := PanelContainer.new()
-	pill.add_theme_stylebox_override("panel",RpgUi.style(RpgUi.NIGHT,18))
+	pill.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
 	pill.position=Vector2(390,18)
 	pill.custom_minimum_size=Vector2(500,0)
 	pill.mouse_filter=Control.MOUSE_FILTER_IGNORE
@@ -498,8 +498,8 @@ func build_meter() -> void:
 
 func draw_meter() -> void:
 	var w := 600.0
-	var font := ThemeDB.fallback_font
-	meter.draw_style_box(RpgUi.style(Color(0.09,0.12,0.13,0.92),20),Rect2(0,0,w,104))
+	var font: Font = RpgUi.FONT_STRONG
+	meter.draw_style_box(RpgUi.panel_style("night_plain"),Rect2(0,0,w,104))
 	var lane := Rect2(24,20,w-48,42)
 	var water := StyleBoxFlat.new()
 	water.bg_color=Color("2f7f9a")
@@ -541,7 +541,7 @@ func build_card(reward: Dictionary) -> void:
 	if is_instance_valid(card): card.queue_free()
 	var data: Dictionary=life.state.get("catalog",{}).get("fish",{}).get(reward.item,{})
 	card=PanelContainer.new()
-	card.add_theme_stylebox_override("panel",RpgUi.style(Color("f6ecd6"),20,Color("c9a25a"),3))
+	card.add_theme_stylebox_override("panel",RpgUi.panel_style("paper"))
 	card.position=Vector2(860,250)
 	card.custom_minimum_size=Vector2(330,0)
 	card.mouse_filter=Control.MOUSE_FILTER_IGNORE

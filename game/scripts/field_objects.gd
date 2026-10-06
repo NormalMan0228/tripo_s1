@@ -88,7 +88,7 @@ func setup(main: Node) -> void:
 	rng.randomize()
 	for i in 4:
 		var voice := AudioStreamPlayer.new()
-		voice.bus = &"Master"
+		voice.bus = &"SFX"
 		add_child(voice)
 		voices.append(voice)
 	build()
@@ -430,8 +430,7 @@ func lamp(parent: Node3D, at: Vector3, size := 0.13, energy := 0.9, reach := 3.6
 
 func nameplate(parent: Node3D, text: String, at: Vector3, color := Color("f5e5b7")) -> Label3D:
 	var label := A.label3d(parent, text, at, color)
-	label.font_size = 30
-	label.outline_size = 5
+	A.style_nameplate(label, 18)
 	label.no_depth_test = false
 	label.add_to_group("place_nameplates")
 	return label
@@ -1269,6 +1268,8 @@ func snapshot() -> String:
 	return path if image.save_png(path) == OK else ""
 
 func flash() -> void:
+	# Settings: reduced motion / fewer flashes skips the white camera flash.
+	if not preload("res://scripts/game_settings.gd").flashes_allowed(): return
 	if not is_instance_valid(flash_layer):
 		flash_layer = CanvasLayer.new()
 		flash_layer.layer = 60

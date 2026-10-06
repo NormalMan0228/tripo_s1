@@ -159,7 +159,8 @@ static func apply(values: Dictionary, env: Environment, light: DirectionalLight3
 		env.fog_sun_scatter = 0.0
 		env.fog_density = density
 		var saturation: float = values.get("saturation", 1.0)
-		var grade: float = values.get("night", 0.0)
+		# The night colour grade can be switched off in the graphics settings.
+		var grade: float = values.get("night", 0.0) if preload("res://scripts/game_settings.gd").night_grade() else 0.0
 		env.adjustment_enabled = saturation < .995 or grade > .002
 		env.adjustment_saturation = saturation
 		_grade(env, grade)

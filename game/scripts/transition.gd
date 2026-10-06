@@ -24,6 +24,7 @@ func _init() -> void:
 	add_child(veil)
 	door = AudioStreamPlayer.new()
 	door.volume_db = -9
+	door.bus = &"SFX"
 	add_child(door)
 
 func _exit_tree() -> void:

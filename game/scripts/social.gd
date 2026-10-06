@@ -26,32 +26,39 @@ func visiting() -> bool:
 
 func install_hud(survival: bool) -> void:
 	if not feature_enabled() or not enabled: return
-	if survival:
-		var box: VBoxContainer = app.panel(Vector2(350, 88), 560, "hero")
-		var row := HBoxContainer.new()
-		box.add_child(row)
-		app.button(row, tr("함께하기 · 초대 / 파티"), open_menu)
-		app.button(row, tr("인사 보내기"), func(): send_message(tr("안녕하세요! 👋")))
-		status_label = app.text(box, tr("연결 상태 확인 중…"), 12)
-		status_label.custom_minimum_size.x = 520
-		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	else:
-		# Village: a compact party plate under the character frame.
-		var RpgUi = preload("res://scripts/rpg_ui.gd")
-		var plate := PanelContainer.new()
-		plate.position = Vector2(18, 112)
-		plate.add_theme_stylebox_override("panel", RpgUi.style(RpgUi.NIGHT, 12))
-		app.ui.add_child(plate)
-		var column := VBoxContainer.new()
-		plate.add_child(column)
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		column.add_child(row)
-		RpgUi.menu_button(row, tr("함께하기"), open_menu, 120).custom_minimum_size.y = 36
-		RpgUi.menu_button(row, tr("인사"), func(): send_message(tr("안녕하세요! 👋")), 80).custom_minimum_size.y = 36
-		status_label = RpgUi.label(column, tr("연결 상태 확인 중…"), 12, Color("d8e3d4"))
-		status_label.custom_minimum_size.x = 206
-		status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# A compact social chip: two icon keys (함께하기 menu, quick greeting) and a status
+	# line. Village: under the character frame. Survival: under the day counter.
+	var RpgUi = preload("res://scripts/rpg_ui.gd")
+	var plate := PanelContainer.new()
+	plate.name = "SocialChip"
+	var style: StyleBox = RpgUi.panel_style("pill")
+	style.content_margin_left = 10
+	style.content_margin_right = 16
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	plate.add_theme_stylebox_override("panel", style)
+	plate.position = Vector2(470, 74) if survival else Vector2(14, 108)
+	app.ui.add_child(plate)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	plate.add_child(row)
+	for spec in [["people", tr("함께하기"), open_menu], ["chat", tr("인사"), func(): send_message(tr("안녕하세요! 👋"))]]:
+		var key := Button.new()
+		key.custom_minimum_size = Vector2(42, 42)
+		key.focus_mode = Control.FOCUS_NONE
+		key.theme_type_variation = "HudSlot"
+		key.icon = RpgUi.icon_texture(spec[0])
+		key.expand_icon = true
+		key.tooltip_text = spec[1]
+		var action: Callable = spec[2]
+		key.pressed.connect(func(): action.call())
+		RpgUi.hover_motion(key, 1.1)
+		row.add_child(key)
+	status_label = RpgUi.label(row, tr("연결 상태 확인 중…"), 12, RpgUi.SOFT)
+	status_label.custom_minimum_size.x = 150 if not survival else 220
+	status_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if survival: RpgUi.pin(plate, 0.5, 0.0)
 	update_status()
 
 func update_status() -> void:

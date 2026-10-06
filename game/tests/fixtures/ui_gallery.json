@@ -1,0 +1,1255 @@
+{
+ "/health": {
+  "ok": true,
+  "service": "tripothon",
+  "mode": "demo",
+  "version": "0.8.1",
+  "protocol": 6,
+  "studio_tripo_enabled": false,
+  "studio_llm": "fixture",
+  "multiplayer_protocol": 1,
+  "max_party_members": 3
+ },
+ "/v1/homestead": {
+  "version": 1,
+  "coins": 12,
+  "bag": {
+   "turnip_seed": 2,
+   "pumpkin_seed": 1,
+   "carrot_seed": 2,
+   "bait": 5
+  },
+  "plots": [
+   {
+    "x": -20.2,
+    "z": -33.0,
+    "crop": "turnip",
+    "planted_at": 1000000.0,
+    "watered": false,
+    "ready_at": null,
+    "remaining": null,
+    "ready": false
+   },
+   {
+    "x": -18.4,
+    "z": -33.0
+   },
+   {
+    "x": -16.6,
+    "z": -33.0
+   },
+   {
+    "x": -20.2,
+    "z": -34.8
+   },
+   {
+    "x": -18.4,
+    "z": -34.8
+   },
+   {
+    "x": -16.6,
+    "z": -34.8
+   }
+  ],
+  "fishing": null,
+  "cooldowns": {},
+  "harvested": 0,
+  "caught": 0,
+  "collection": {},
+  "order_day": -1,
+  "records": {},
+  "nodes": {},
+  "drops": {},
+  "gathered": 0,
+  "last_gather": 0,
+  "server_time": 1000000.0,
+  "catalog": {
+   "crops": {
+    "turnip": {
+     "name": "순무",
+     "seconds": 90,
+     "yield": 2,
+     "seed_cost": 2,
+     "price": 3
+    },
+    "carrot": {
+     "name": "당근",
+     "seconds": 120,
+     "yield": 2,
+     "seed_cost": 3,
+     "price": 4
+    },
+    "pumpkin": {
+     "name": "호박",
+     "seconds": 150,
+     "yield": 2,
+     "seed_cost": 4,
+     "price": 6
+    },
+    "strawberry": {
+     "name": "딸기",
+     "seconds": 200,
+     "yield": 3,
+     "seed_cost": 5,
+     "price": 4
+    },
+    "sunflower": {
+     "name": "해바라기",
+     "seconds": 260,
+     "yield": 1,
+     "seed_cost": 6,
+     "price": 15
+    }
+   },
+   "prices": {
+    "turnip": 3,
+    "carrot": 4,
+    "pumpkin": 6,
+    "strawberry": 4,
+    "sunflower": 15,
+    "apple": 2,
+    "herb": 1,
+    "stone": 1,
+    "copper_ore": 6,
+    "shell": 2,
+    "conch": 7,
+    "pearl": 30,
+    "flower": 2,
+    "mushroom": 3,
+    "gold_mushroom": 16,
+    "branch": 1,
+    "pinecone": 2,
+    "coconut": 5,
+    "crucian": 3,
+    "carp": 9,
+    "catfish": 12,
+    "koi": 40,
+    "mackerel": 5,
+    "puffer": 12,
+    "squid": 11,
+    "tuna": 45,
+    "silverfish": 8,
+    "sweetfish": 7,
+    "rainbow": 14,
+    "eel": 24,
+    "trout": 6,
+    "perch": 4
+   },
+   "names": {
+    "apple": "사과",
+    "herb": "향초",
+    "bait": "미끼",
+    "stone": "돌멩이",
+    "copper_ore": "구리 원석",
+    "shell": "가리비 껍데기",
+    "conch": "소라 껍데기",
+    "pearl": "진주",
+    "flower": "들꽃",
+    "mushroom": "숲 버섯",
+    "gold_mushroom": "금빛 송이",
+    "branch": "나뭇가지",
+    "pinecone": "솔방울",
+    "coconut": "코코넛",
+    "turnip": "순무",
+    "carrot": "당근",
+    "pumpkin": "호박",
+    "strawberry": "딸기",
+    "sunflower": "해바라기",
+    "turnip_seed": "순무 씨앗",
+    "carrot_seed": "당근 씨앗",
+    "pumpkin_seed": "호박 씨앗",
+    "strawberry_seed": "딸기 씨앗",
+    "sunflower_seed": "해바라기 씨앗",
+    "crucian": "붕어",
+    "carp": "잉어",
+    "catfish": "메기",
+    "koi": "황금 비단잉어",
+    "mackerel": "고등어",
+    "puffer": "복어",
+    "squid": "달빛 오징어",
+    "tuna": "참다랑어",
+    "silverfish": "은빛 도미",
+    "sweetfish": "은어",
+    "rainbow": "무지개송어",
+    "eel": "뱀장어",
+    "trout": "산천어",
+    "perch": "강농어"
+   },
+   "fish": {
+    "crucian": {
+     "name": "붕어",
+     "spots": [
+      "pond",
+      "river"
+     ],
+     "time": "any",
+     "rarity": 1,
+     "weight": 30,
+     "size": [
+      12,
+      26
+     ],
+     "price": 3,
+     "difficulty": 1
+    },
+    "carp": {
+     "name": "잉어",
+     "spots": [
+      "pond"
+     ],
+     "time": "any",
+     "rarity": 2,
+     "weight": 14,
+     "size": [
+      35,
+      72
+     ],
+     "price": 9,
+     "difficulty": 3
+    },
+    "catfish": {
+     "name": "메기",
+     "spots": [
+      "pond",
+      "river"
+     ],
+     "time": "night",
+     "rarity": 2,
+     "weight": 16,
+     "size": [
+      40,
+      95
+     ],
+     "price": 12,
+     "difficulty": 3
+    },
+    "koi": {
+     "name": "황금 비단잉어",
+     "spots": [
+      "pond"
+     ],
+     "time": "day",
+     "rarity": 3,
+     "weight": 3,
+     "size": [
+      40,
+      70
+     ],
+     "price": 40,
+     "difficulty": 4
+    },
+    "mackerel": {
+     "name": "고등어",
+     "spots": [
+      "sea"
+     ],
+     "time": "any",
+     "rarity": 1,
+     "weight": 34,
+     "size": [
+      22,
+      40
+     ],
+     "price": 5,
+     "difficulty": 2
+    },
+    "puffer": {
+     "name": "복어",
+     "spots": [
+      "sea"
+     ],
+     "time": "any",
+     "rarity": 2,
+     "weight": 12,
+     "size": [
+      15,
+      32
+     ],
+     "price": 12,
+     "difficulty": 2
+    },
+    "squid": {
+     "name": "달빛 오징어",
+     "spots": [
+      "sea"
+     ],
+     "time": "night",
+     "rarity": 2,
+     "weight": 16,
+     "size": [
+      20,
+      45
+     ],
+     "price": 11,
+     "difficulty": 3
+    },
+    "tuna": {
+     "name": "참다랑어",
+     "spots": [
+      "sea"
+     ],
+     "time": "any",
+     "rarity": 3,
+     "weight": 3,
+     "size": [
+      90,
+      190
+     ],
+     "price": 45,
+     "difficulty": 5
+    },
+    "silverfish": {
+     "name": "은빛 도미",
+     "spots": [
+      "sea"
+     ],
+     "time": "any",
+     "rarity": 1,
+     "weight": 30,
+     "size": [
+      25,
+      52
+     ],
+     "price": 8,
+     "difficulty": 2
+    },
+    "sweetfish": {
+     "name": "은어",
+     "spots": [
+      "river"
+     ],
+     "time": "day",
+     "rarity": 1,
+     "weight": 26,
+     "size": [
+      15,
+      26
+     ],
+     "price": 7,
+     "difficulty": 1
+    },
+    "rainbow": {
+     "name": "무지개송어",
+     "spots": [
+      "river"
+     ],
+     "time": "any",
+     "rarity": 2,
+     "weight": 12,
+     "size": [
+      35,
+      62
+     ],
+     "price": 14,
+     "difficulty": 3
+    },
+    "eel": {
+     "name": "뱀장어",
+     "spots": [
+      "river",
+      "pond"
+     ],
+     "time": "night",
+     "rarity": 3,
+     "weight": 5,
+     "size": [
+      50,
+      110
+     ],
+     "price": 24,
+     "difficulty": 4
+    },
+    "trout": {
+     "name": "산천어",
+     "spots": [
+      "river"
+     ],
+     "time": "any",
+     "rarity": 1,
+     "weight": 36,
+     "size": [
+      20,
+      40
+     ],
+     "price": 6,
+     "difficulty": 2
+    },
+    "perch": {
+     "name": "강농어",
+     "spots": [
+      "pond"
+     ],
+     "time": "any",
+     "rarity": 1,
+     "weight": 36,
+     "size": [
+      18,
+      36
+     ],
+     "price": 4,
+     "difficulty": 1
+    }
+   },
+   "shop": {
+    "turnip_seed": 2,
+    "carrot_seed": 3,
+    "pumpkin_seed": 4,
+    "strawberry_seed": 5,
+    "sunflower_seed": 6,
+    "bait": 1
+   },
+   "max_plots": 18,
+   "starter_plots": 6,
+   "trees": {
+    "apple": {
+     "fruit": "apple",
+     "hang": [
+      2,
+      3
+     ],
+     "respawn": 600
+    },
+    "pine": {
+     "fruit": "pinecone",
+     "hang": [
+      2,
+      3
+     ],
+     "respawn": 540
+    },
+    "palm": {
+     "fruit": "coconut",
+     "hang": [
+      1,
+      2
+     ],
+     "respawn": 900
+    }
+   }
+  },
+  "order_available": true,
+  "night": true
+ },
+ "/v1/me": {
+  "username": "haneul",
+  "shards": 80,
+  "mode": "demo",
+  "role": "player",
+  "generation_enabled": true,
+  "studio_tripo_enabled": false,
+  "generation_cost": 25,
+  "profile": {
+   "avatar": {
+    "character": "explorer_b",
+    "hair": "#30595b",
+    "coat": "#dba448",
+    "pants": "#526552",
+    "boots": "#765744",
+    "skin": "#e4b587",
+    "headwear": "none",
+    "backpack": true
+   },
+   "version": 0
+  },
+  "catalog": {
+   "maps": [
+    {
+     "id": "forest",
+     "name": "솔바람 숲",
+     "description": "넉넉한 나무와 열매. 첫 탐험에 어울리는 숲.",
+     "reward_multiplier": 1.0
+    },
+    {
+     "id": "quarry",
+     "name": "노을 채석장",
+     "description": "바위 사이를 돌아 탐험하세요. 뜨거운 균열을 조심하세요.",
+     "reward_multiplier": 1.15
+    },
+    {
+     "id": "frost",
+     "name": "서리빛 분지",
+     "description": "찬 바람과 얼음 웅덩이. 모닥불과 식량을 먼저 준비하세요.",
+     "reward_multiplier": 1.3
+    }
+   ],
+   "difficulties": [
+    {
+     "id": "relaxed",
+     "name": "산책",
+     "description": "느린 허기, 약한 적. 지형과 생존을 익히세요.",
+     "reward_multiplier": 0.7
+    },
+    {
+     "id": "standard",
+     "name": "탐험",
+     "description": "기본 생존 규칙. 준비와 전투를 균형 있게.",
+     "reward_multiplier": 1.0
+    },
+    {
+     "id": "veteran",
+     "name": "개척",
+     "description": "더 빠르고 강한 적, 빠른 허기. 보상 1.6배.",
+     "reward_multiplier": 1.6
+    }
+   ],
+   "characters": [
+    {
+     "id": "explorer_b",
+     "name": "B · 여행자",
+     "description": "원래 얼굴과 손을 보존한 노란 재킷 여행자."
+    },
+    {
+     "id": "explorer",
+     "name": "루 · 탐험가",
+     "description": "노란 우비를 입은 섬의 첫 탐험가."
+    },
+    {
+     "id": "ranger",
+     "name": "미라 · 숲지기",
+     "description": "숲길을 좋아하는 구리빛 머리의 숲지기."
+    },
+    {
+     "id": "tinker",
+     "name": "테오 · 정비사",
+     "description": "작은 물건을 고치는 붉은 재킷의 정비사."
+    }
+   ]
+  },
+  "campaign": [
+   {
+    "id": "first_fire",
+    "title": "1장 · 첫 번째 불씨",
+    "map_id": "forest",
+    "bonus": 20,
+    "speaker": "나루",
+    "intro": "이 섬의 밤은 길어요. 숲에서 도끼를 만들고, 작은 불을 지켜 주세요. 일곱 번의 아침을 맞으면 오래된 채석장의 길을 알려 드릴게요.",
+    "ending": "밤을 버틴 불씨가 공방의 등을 밝혔습니다. 나루가 노을 채석장의 지도를 건넵니다.",
+    "completed": false,
+    "unlocked": true,
+    "objectives": [
+     "일곱 밤 생존",
+     "자원 채집 20",
+     "도끼 제작 1",
+     "모닥불 피우기 3"
+    ]
+   },
+   {
+    "id": "quiet_quarry",
+    "title": "2장 · 멈춘 돌바퀴",
+    "map_id": "quarry",
+    "bonus": 30,
+    "speaker": "테오",
+    "intro": "채석장의 돌바퀴가 멈춘 뒤로 섬의 종이 울리지 않아요. 위험한 틈을 돌아 재료를 모으고 창을 준비해 주세요. 일곱 밤의 기록이 있으면 북쪽 길을 찾을 수 있어요.",
+    "ending": "모아 온 기록으로 테오가 종탑의 돌바퀴를 고쳤습니다. 서리빛 분지로 향하는 길이 드러났습니다.",
+    "completed": false,
+    "unlocked": false,
+    "objectives": [
+     "일곱 밤 생존",
+     "자원 채집 35",
+     "창 제작 1",
+     "모닥불 피우기 5"
+    ]
+   },
+   {
+    "id": "returning_light",
+    "title": "3장 · 돌아오는 빛",
+    "map_id": "frost",
+    "bonus": 45,
+    "speaker": "모루",
+    "intro": "북쪽에서는 추위가 가장 큰 적이에요. 수프와 모닥불을 준비하고 일곱 밤을 건너세요. 돌아오면 그동안 모은 별씨로 집에 놓을 첫 작품을 만들어 봅시다.",
+    "ending": "일곱 번째 아침, 서리 너머에서 마을의 종소리가 들립니다. 이제 당신의 이야기를 담을 물건을 만들 차례입니다.",
+    "completed": false,
+    "unlocked": false,
+    "objectives": [
+     "일곱 밤 생존",
+     "자원 채집 40",
+     "수프 제작 2",
+     "모닥불 피우기 7"
+    ]
+   }
+  ],
+  "active_run": null,
+  "active_run_summary": null,
+  "pending_reward": null,
+  "pending_job": null,
+  "objects": [
+   {
+    "id": "c825b013-658d-4ec2-865e-df3e25acb706",
+    "name": "환영의 나무 의자",
+    "color": "#f6eee0",
+    "version": 1,
+    "state": "inventory",
+    "x": null,
+    "z": null,
+    "rotation": 0,
+    "room": "village",
+    "studio": false,
+    "runtime_version": null
+   }
+  ]
+ },
+ "/v1/social": {
+  "self_id": "c10e907a-d5ec-4e2a-801f-2d92e27e01c5",
+  "host_id": "c10e907a-d5ec-4e2a-801f-2d92e27e01c5",
+  "host_name": "haneul",
+  "visiting": false,
+  "party": null,
+  "invites": [],
+  "pending_rewards": [],
+  "messages": []
+ },
+ "/v1/studio": {
+  "mode": "demo",
+  "llm": "fixture",
+  "models": [
+   "gpt-6-luna",
+   "gpt-5.6-terra",
+   "gpt-6-sol",
+   "gpt-6-astra"
+  ],
+  "efforts": [
+   "low",
+   "medium",
+   "high",
+   "xhigh"
+  ],
+  "profile": {
+   "avatar": {
+    "character": "explorer_b",
+    "hair": "#30595b",
+    "coat": "#dba448",
+    "pants": "#526552",
+    "boots": "#765744",
+    "skin": "#e4b587",
+    "headwear": "none",
+    "backpack": true
+   },
+   "version": 0
+  },
+  "room_usage": {
+   "home": {
+    "count": 0,
+    "used": {
+     "bytes": 0,
+     "vertices": 0,
+     "draw_calls": 0,
+     "texture_pixels": 0
+    },
+    "limits": {
+     "bytes": 134217728,
+     "vertices": 1500000,
+     "draw_calls": 512,
+     "texture_pixels": 64000000
+    },
+    "percent": 0.0
+   },
+   "workshop": {
+    "count": 0,
+    "used": {
+     "bytes": 0,
+     "vertices": 0,
+     "draw_calls": 0,
+     "texture_pixels": 0
+    },
+    "limits": {
+     "bytes": 134217728,
+     "vertices": 1500000,
+     "draw_calls": 512,
+     "texture_pixels": 64000000
+    },
+    "percent": 0.0
+   },
+   "village": {
+    "count": 0,
+    "used": {
+     "bytes": 0,
+     "vertices": 0,
+     "draw_calls": 0,
+     "texture_pixels": 0
+    },
+    "limits": {
+     "bytes": 134217728,
+     "vertices": 1500000,
+     "draw_calls": 512,
+     "texture_pixels": 64000000
+    },
+    "percent": 0.0
+   }
+  },
+  "geometry_enabled": false,
+  "prices": {
+   "static_mesh": 20,
+   "static_textured": 40,
+   "dynamic_mesh": 30,
+   "dynamic_textured": 50
+  },
+  "tripo_estimate": {
+   "models": {
+    "v3.1-20260211": {
+     "text_mesh": 10,
+     "text_textured": 20,
+     "image_mesh": 20,
+     "image_textured": 30
+    },
+    "P2-20260801": {
+     "text_mesh": 100,
+     "text_textured": 110,
+     "image_mesh": 100,
+     "image_textured": 110
+    }
+   },
+   "image_refinement_per_part": 5,
+   "source": "official_rates_and_measured_2026_10_02",
+   "max_parts": 8,
+   "confirmation_required": true
+  },
+  "jobs": [],
+  "objects": [
+   {
+    "id": "c825b013-658d-4ec2-865e-df3e25acb706",
+    "name": "환영의 나무 의자",
+    "color": "#f6eee0",
+    "version": 1,
+    "state": "inventory",
+    "x": null,
+    "z": null,
+    "rotation": 0,
+    "room": "village",
+    "studio": 0,
+    "runtime_version": null
+   }
+  ],
+  "categories": [],
+  "shards": 80
+ },
+ "run": {
+  "id": "8b269c80-2bcc-4b93-aad5-63aa37f907a3",
+  "reward": 0,
+  "story_bonus": 0,
+  "claimed": false,
+  "map_id": "forest",
+  "difficulty": "standard",
+  "obstacles": [],
+  "hazards": [],
+  "x": 0.0,
+  "z": 1.4,
+  "hp": 100.0,
+  "hunger": 100.0,
+  "stamina": 100.0,
+  "sprinting": false,
+  "sprint_recover_at": 0.0,
+  "elapsed": 0.0,
+  "day_seconds": 60.0,
+  "inventory": {
+   "wood": 3,
+   "stone": 0,
+   "berry": 4,
+   "fiber": 0,
+   "axe": 0,
+   "spear": 0,
+   "soup": 0,
+   "bandage": 0
+  },
+  "nodes": [
+   {
+    "id": "n0",
+    "kind": "tree",
+    "x": 3,
+    "z": 0,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n1",
+    "kind": "berry",
+    "x": -3,
+    "z": 0,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n2",
+    "kind": "stone",
+    "x": 0,
+    "z": -3,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n3",
+    "kind": "fiber",
+    "x": 0,
+    "z": 3,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n4",
+    "kind": "tree",
+    "x": -5.42,
+    "z": -4.25,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n5",
+    "kind": "berry",
+    "x": -4.2,
+    "z": 7.8,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n6",
+    "kind": "stone",
+    "x": 10.53,
+    "z": 0.5,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n7",
+    "kind": "fiber",
+    "x": 3.02,
+    "z": -14.84,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n8",
+    "kind": "tree",
+    "x": 6.81,
+    "z": -5.54,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n9",
+    "kind": "berry",
+    "x": 6.45,
+    "z": 15.6,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n10",
+    "kind": "stone",
+    "x": 10.08,
+    "z": -3.93,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n11",
+    "kind": "fiber",
+    "x": -1.34,
+    "z": -14.48,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n12",
+    "kind": "tree",
+    "x": -16.27,
+    "z": 5.33,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n13",
+    "kind": "berry",
+    "x": 7.9,
+    "z": 10.25,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n14",
+    "kind": "stone",
+    "x": -12.5,
+    "z": 7.87,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n15",
+    "kind": "fiber",
+    "x": 3.64,
+    "z": 10.74,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n16",
+    "kind": "tree",
+    "x": -4.89,
+    "z": -15.24,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n17",
+    "kind": "berry",
+    "x": 3.46,
+    "z": -10.47,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n18",
+    "kind": "stone",
+    "x": -13.08,
+    "z": -4.72,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n19",
+    "kind": "fiber",
+    "x": 9.33,
+    "z": 6.76,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n20",
+    "kind": "tree",
+    "x": -3.56,
+    "z": 10.86,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n21",
+    "kind": "berry",
+    "x": 12.76,
+    "z": 13.02,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n22",
+    "kind": "stone",
+    "x": 10.68,
+    "z": 10.53,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n23",
+    "kind": "fiber",
+    "x": 10.84,
+    "z": -14.12,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n24",
+    "kind": "tree",
+    "x": -13.53,
+    "z": -2.52,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n25",
+    "kind": "berry",
+    "x": 5.49,
+    "z": -3.44,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n26",
+    "kind": "stone",
+    "x": -14.03,
+    "z": 13.34,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n27",
+    "kind": "fiber",
+    "x": -12.86,
+    "z": 5.65,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n28",
+    "kind": "tree",
+    "x": -13.08,
+    "z": -15.57,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n29",
+    "kind": "berry",
+    "x": 16.56,
+    "z": -14.46,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n30",
+    "kind": "stone",
+    "x": 11.11,
+    "z": -10.6,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n31",
+    "kind": "fiber",
+    "x": 12.91,
+    "z": -3.65,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n32",
+    "kind": "tree",
+    "x": 11.95,
+    "z": -7.44,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n33",
+    "kind": "berry",
+    "x": -9.51,
+    "z": 10.18,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n34",
+    "kind": "stone",
+    "x": 13.27,
+    "z": 9.12,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n35",
+    "kind": "fiber",
+    "x": 2.5,
+    "z": -5.76,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n36",
+    "kind": "tree",
+    "x": -13.3,
+    "z": 10.76,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n37",
+    "kind": "berry",
+    "x": -1.51,
+    "z": -6.77,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n38",
+    "kind": "stone",
+    "x": -3.85,
+    "z": 3.33,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n39",
+    "kind": "fiber",
+    "x": -5.09,
+    "z": -9.77,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n40",
+    "kind": "tree",
+    "x": -11.83,
+    "z": 1.31,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n41",
+    "kind": "berry",
+    "x": 5.93,
+    "z": -1.18,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n42",
+    "kind": "stone",
+    "x": 15.85,
+    "z": 11.07,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n43",
+    "kind": "fiber",
+    "x": -10.21,
+    "z": 14.94,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n44",
+    "kind": "tree",
+    "x": 5.04,
+    "z": -7.26,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n45",
+    "kind": "berry",
+    "x": -7.91,
+    "z": -4.68,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n46",
+    "kind": "stone",
+    "x": -9.45,
+    "z": -15.82,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n47",
+    "kind": "fiber",
+    "x": -2.94,
+    "z": -4.43,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n48",
+    "kind": "tree",
+    "x": 3.59,
+    "z": 5.41,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n49",
+    "kind": "berry",
+    "x": -15.92,
+    "z": -5.07,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n50",
+    "kind": "stone",
+    "x": -15.64,
+    "z": 16.0,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n51",
+    "kind": "fiber",
+    "x": 5.7,
+    "z": -10.19,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n52",
+    "kind": "tree",
+    "x": 14.04,
+    "z": -13.73,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n53",
+    "kind": "berry",
+    "x": -16.55,
+    "z": -1.26,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n54",
+    "kind": "stone",
+    "x": -6.3,
+    "z": 4.57,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n55",
+    "kind": "fiber",
+    "x": -5.76,
+    "z": -0.69,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n56",
+    "kind": "tree",
+    "x": 5.1,
+    "z": 13.29,
+    "quantity": 6,
+    "regrow_at": 0
+   },
+   {
+    "id": "n57",
+    "kind": "berry",
+    "x": -10.18,
+    "z": -1.92,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n58",
+    "kind": "stone",
+    "x": 16.2,
+    "z": 6.95,
+    "quantity": 4,
+    "regrow_at": 0
+   },
+   {
+    "id": "n59",
+    "kind": "fiber",
+    "x": -1.2,
+    "z": -10.19,
+    "quantity": 4,
+    "regrow_at": 0
+   }
+  ],
+  "enemies": [],
+  "fire_until": 0.0,
+  "harvested": 0,
+  "kills": 0,
+  "spawned_night": 0,
+  "sequence": 0,
+  "message": "낮에는 채집하고 밤에는 모닥불 곁을 지키세요.",
+  "status": "active",
+  "chapter_id": "",
+  "reward_multiplier": 1.0,
+  "day": 1,
+  "night": false,
+  "day_progress": 0.0,
+  "fire_remaining": 0.0,
+  "warm": false,
+  "phase_remaining": 39.0,
+  "action_cooldown": 0.0,
+  "attack_cooldown": 0.0,
+  "story": null
+ }
+}

@@ -33,14 +33,15 @@ func go() -> void:
 		beast.position.x=(i-1)*2.7
 		beast.update_snapshot({"x":beast.position.x,"z":0,"hp":45,"max_hp":45,"phase":"chase"},Vector3(beast.position.x,0,3))
 		creatures.append(beast)
-		A.label3d(world,["그림자 짐승","이끼 수호자","불씨 도깨비"][i],Vector3(beast.position.x,3.1,0),Color("e5c890"))
+		A.label3d(world,["그림자 늑대","이끼 수호자","불씨 도깨비"][i],Vector3(beast.position.x,3.1,0),Color("e5c890"))
 	await create_timer(0.4).timeout
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://../artifacts/monsters.png"))
 	for beast in creatures:
 		beast.update_snapshot({"x":beast.position.x,"z":0,"hp":40,"max_hp":45,"phase":"windup","target_x":beast.position.x,"target_z":1.5},Vector3(beast.position.x,0,3))
 	await create_timer(0.75).timeout
-	if creatures[1].animator==null or creatures[1].clip!="slash": failed=true
+	# Tripo monster GLB plays "attack"; the legacy brute.glb fallback plays "slash".
+	if creatures[1].animator==null or creatures[1].clip!=("attack" if creatures[1].monster else "slash"): failed=true
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://../artifacts/monsters-windup.png"))
 	world.queue_free()

@@ -1,6 +1,6 @@
 extends Node
 ## Small synthesized sounds for farming, fishing and foraging. They play on the
-## Master bus, so the game's M mute (sound.gd) silences them too.
+## SFX bus (game_settings.gd), under Master, so the M mute silences them too.
 const RATE := 22050
 var streams := {}
 var voices: Array[AudioStreamPlayer]=[]
@@ -10,6 +10,7 @@ func _ready() -> void:
 	for i in 6:
 		var p := AudioStreamPlayer.new()
 		p.volume_db=-13
+		p.bus=&"SFX"
 		add_child(p)
 		voices.append(p)
 

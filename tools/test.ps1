@@ -43,6 +43,10 @@ if (-not $SkipServerTests) {
     & $taskPython -m pytest server/tests -q
     if ($LASTEXITCODE -ne 0) { throw 'Server tests failed' }
 }
+# Every run starts from default QA settings (the --qa file), so a language or graphics
+# choice left by an earlier test cannot change what the next one sees.
+Get-ChildItem (Join-Path $env:APPDATA 'Godot\app_userdata') -Directory -Filter 'Tripothon*' -ErrorAction SilentlyContinue |
+    ForEach-Object { Remove-Item -LiteralPath (Join-Path $_.FullName 'settings_qa.cfg') -Force -ErrorAction SilentlyContinue }
 $taskOldData = $env:TRIPOTHON_DATA_DIR
 $taskOldMode = $env:TRIPOTHON_MODE
 $taskOldLimit = $env:TRIPO_DAILY_REQUEST_LIMIT

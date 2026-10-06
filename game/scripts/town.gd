@@ -152,7 +152,7 @@ func _ready() -> void:
 	for place in PLACES:
 		if place.id in ["farm","home","workshop"]: continue
 		var label := A.label3d(self,place.title,point(place.at)+Vector3(0,2.9,0),Color("f5e5b7"))
-		label.font_size=36
+		A.style_nameplate(label,20)
 		label.no_depth_test=false
 		label.add_to_group("place_nameplates")
 	float_root=Node3D.new()
@@ -402,7 +402,19 @@ func release_map() -> void:
 		remove_child(map)
 		# Only one map is kept; extra clients in one process (tests) free theirs.
 		if is_instance_valid(kept_map) and kept_map!=map: map.queue_free()
-		else: kept_map=map
+		else:
+			kept_map=map
+			free_kept_with_tree()
+
+## A kept map sits outside the scene tree while a room is open. If the game quits
+## then (or mid-way through the switch), free it with the tree instead of leaking it.
+static func free_kept_with_tree() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree==null or tree.root==null or tree.root.has_node("KeptTownMap"): return
+	var holder := Node.new()
+	holder.name="KeptTownMap"
+	holder.tree_exiting.connect(func(): discard_kept())
+	tree.root.add_child.call_deferred(holder)
 
 func _exit_tree() -> void:
 	space=null

@@ -135,7 +135,7 @@ func check_footsteps(audio: Node) -> void:
 			audio.footstep(surface, speed)
 			var player: AudioStreamPlayer = audio.steps[(audio.step_index + audio.steps.size() - 1) % audio.steps.size()]
 			check(player.stream == WorldAudio.cache.get("step/%s/%s/%d" % [surface, "run" if speed > 3.6 else "walk", audio.last_variation[surface + ("run" if speed > 3.6 else "walk")]]), "%s %.1f m/s stream" % [surface, speed])
-			check(player.bus == &"Master" and player.playing, "%s %.1f m/s not playing on Master" % [surface, speed])
+			check(player.bus == &"SFX" and player.playing, "%s %.1f m/s not playing on SFX" % [surface, speed])
 	audio.footstep("lava", 2.8) # unknown surfaces fall back instead of failing
 	var slow := average_step(audio, "stone", 1.2)
 	var walk := average_step(audio, "stone", 2.8)
@@ -182,7 +182,7 @@ func check_ambience(audio: Node) -> void:
 		for key in audio.beds:
 			var player: AudioStreamPlayer = audio.beds[key]
 			check(is_equal_approx(audio.gains[key], audio.targets[key]), "%s fade did not settle" % key)
-			check(player.bus == &"Master", key + " not on Master")
+			check(player.bus == &"Ambience", key + " not on Ambience")
 			check(player.playing == (audio.gains[key] > 0.0005), "%s playing=%s at gain %.3f" % [key, player.playing, audio.gains[key]])
 			if player.playing: audible.append(key)
 		print("AUDIO_AMBIENCE %s -> %s" % [JSON.stringify(case[0]), ", ".join(audible)])
