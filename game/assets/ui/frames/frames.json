@@ -1,0 +1,1275 @@
+{
+ "panel_paper": {
+  "size": [
+   178,
+   152
+  ],
+  "margins": [
+   76,
+   48,
+   70,
+   72
+  ],
+  "expand": [
+   12,
+   8,
+   12,
+   16
+  ],
+  "content": [
+   52,
+   24,
+   46,
+   40
+  ]
+ },
+ "panel_night": {
+  "size": [
+   177,
+   173
+  ],
+  "margins": [
+   73,
+   76,
+   72,
+   65
+  ],
+  "expand": [
+   12,
+   8,
+   12,
+   16
+  ],
+  "content": [
+   47,
+   50,
+   46,
+   31
+  ]
+ },
+ "panel_night_plain": {
+  "size": [
+   177,
+   173
+  ],
+  "margins": [
+   73,
+   76,
+   72,
+   65
+  ],
+  "expand": [
+   12,
+   8,
+   12,
+   16
+  ],
+  "content": [
+   47,
+   50,
+   46,
+   31
+  ]
+ },
+ "panel_paper_plain": {
+  "size": [
+   178,
+   152
+  ],
+  "margins": [
+   76,
+   48,
+   70,
+   72
+  ],
+  "expand": [
+   12,
+   8,
+   12,
+   16
+  ],
+  "content": [
+   52,
+   24,
+   46,
+   40
+  ]
+ },
+ "pill_night": {
+  "size": [
+   136,
+   91
+  ],
+  "margins": [
+   60,
+   35,
+   60,
+   40
+  ],
+  "expand": [
+   8,
+   5,
+   8,
+   10
+  ],
+  "content": [
+   26,
+   9,
+   26,
+   9
+  ]
+ },
+ "pill_paper": {
+  "size": [
+   100,
+   91
+  ],
+  "margins": [
+   42,
+   35,
+   42,
+   40
+  ],
+  "expand": [
+   8,
+   5,
+   8,
+   10
+  ],
+  "content": [
+   22,
+   9,
+   22,
+   9
+  ]
+ },
+ "tooltip": {
+  "size": [
+   104,
+   68
+  ],
+  "margins": [
+   46,
+   26,
+   46,
+   30
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   8
+  ],
+  "content": [
+   22,
+   9,
+   22,
+   9
+  ]
+ },
+ "btn_paper_normal": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_paper_hover": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_paper_pressed": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   12,
+   18,
+   10
+  ]
+ },
+ "btn_paper_disabled": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_green_normal": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_green_hover": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_green_pressed": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   12,
+   18,
+   10
+  ]
+ },
+ "btn_green_disabled": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_gold_normal": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_gold_hover": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_gold_pressed": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   12,
+   18,
+   10
+  ]
+ },
+ "btn_gold_disabled": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_night_normal": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_night_hover": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "btn_night_pressed": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   12,
+   18,
+   10
+  ]
+ },
+ "btn_night_disabled": {
+  "size": [
+   92,
+   83
+  ],
+  "margins": [
+   36,
+   28,
+   36,
+   35
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   9
+  ],
+  "content": [
+   18,
+   9,
+   18,
+   13
+  ]
+ },
+ "focus": {
+  "size": [
+   112,
+   76
+  ],
+  "margins": [
+   28,
+   28,
+   28,
+   28
+  ],
+  "expand": [
+   6,
+   6,
+   6,
+   6
+  ],
+  "content": null
+ },
+ "slot_night": {
+  "size": [
+   92,
+   94
+  ],
+  "margins": [
+   34,
+   33,
+   34,
+   37
+  ],
+  "expand": [
+   4,
+   3,
+   4,
+   7
+  ],
+  "content": [
+   10,
+   10,
+   10,
+   10
+  ]
+ },
+ "slot_night_hover": {
+  "size": [
+   92,
+   94
+  ],
+  "margins": [
+   34,
+   33,
+   34,
+   37
+  ],
+  "expand": [
+   4,
+   3,
+   4,
+   7
+  ],
+  "content": [
+   10,
+   10,
+   10,
+   10
+  ]
+ },
+ "slot_night_pressed": {
+  "size": [
+   92,
+   94
+  ],
+  "margins": [
+   34,
+   33,
+   34,
+   37
+  ],
+  "expand": [
+   4,
+   3,
+   4,
+   7
+  ],
+  "content": [
+   10,
+   10,
+   10,
+   10
+  ]
+ },
+ "slot_night_primary": {
+  "size": [
+   92,
+   94
+  ],
+  "margins": [
+   34,
+   33,
+   34,
+   37
+  ],
+  "expand": [
+   4,
+   3,
+   4,
+   7
+  ],
+  "content": [
+   10,
+   10,
+   10,
+   10
+  ]
+ },
+ "slot_paper": {
+  "size": [
+   92,
+   94
+  ],
+  "margins": [
+   34,
+   33,
+   34,
+   37
+  ],
+  "expand": [
+   4,
+   3,
+   4,
+   7
+  ],
+  "content": [
+   10,
+   10,
+   10,
+   10
+  ]
+ },
+ "slot_paper_hover": {
+  "size": [
+   92,
+   94
+  ],
+  "margins": [
+   34,
+   33,
+   34,
+   37
+  ],
+  "expand": [
+   4,
+   3,
+   4,
+   7
+  ],
+  "content": [
+   10,
+   10,
+   10,
+   10
+  ]
+ },
+ "slot_paper_empty": {
+  "size": [
+   92,
+   94
+  ],
+  "margins": [
+   34,
+   33,
+   34,
+   37
+  ],
+  "expand": [
+   4,
+   3,
+   4,
+   7
+  ],
+  "content": [
+   10,
+   10,
+   10,
+   10
+  ]
+ },
+ "field_paper": {
+  "size": [
+   64,
+   64
+  ],
+  "margins": [
+   22,
+   22,
+   22,
+   22
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": [
+   14,
+   9,
+   14,
+   9
+  ]
+ },
+ "field_paper_focus": {
+  "size": [
+   64,
+   64
+  ],
+  "margins": [
+   22,
+   22,
+   22,
+   22
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": [
+   14,
+   9,
+   14,
+   9
+  ]
+ },
+ "field_night": {
+  "size": [
+   64,
+   64
+  ],
+  "margins": [
+   22,
+   22,
+   22,
+   22
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": [
+   14,
+   9,
+   14,
+   9
+  ]
+ },
+ "field_night_focus": {
+  "size": [
+   64,
+   64
+  ],
+  "margins": [
+   22,
+   22,
+   22,
+   22
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": [
+   14,
+   9,
+   14,
+   9
+  ]
+ },
+ "bar_bg": {
+  "size": [
+   40,
+   32
+  ],
+  "margins": [
+   16,
+   12,
+   16,
+   12
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": []
+ },
+ "bar_fill": {
+  "size": [
+   40,
+   32
+  ],
+  "margins": [
+   16,
+   12,
+   16,
+   12
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": []
+ },
+ "ribbon": {
+  "size": [
+   190,
+   80
+  ],
+  "margins": [
+   83,
+   26,
+   83,
+   30
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   8
+  ],
+  "content": [
+   71,
+   8,
+   71,
+   12
+  ]
+ },
+ "ribbon_teal": {
+  "size": [
+   190,
+   80
+  ],
+  "margins": [
+   83,
+   26,
+   83,
+   30
+  ],
+  "expand": [
+   6,
+   4,
+   6,
+   8
+  ],
+  "content": [
+   71,
+   8,
+   71,
+   12
+  ]
+ },
+ "keycap": {
+  "size": [
+   40,
+   42
+  ],
+  "margins": [
+   14,
+   14,
+   14,
+   16
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": [
+   6,
+   1,
+   6,
+   3
+  ]
+ },
+ "portrait_ring": {
+  "size": [
+   168,
+   168
+  ],
+  "margins": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "check_off": {
+  "size": [
+   44,
+   44
+  ],
+  "margins": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "check_on": {
+  "size": [
+   44,
+   44
+  ],
+  "margins": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "radio_off": {
+  "size": [
+   44,
+   44
+  ],
+  "margins": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "radio_on": {
+  "size": [
+   44,
+   44
+  ],
+  "margins": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "slider_grabber": {
+  "size": [
+   40,
+   40
+  ],
+  "margins": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "slider_grabber_hover": {
+  "size": [
+   40,
+   40
+  ],
+  "margins": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "arrow_down": {
+  "size": [
+   32,
+   32
+  ],
+  "margins": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "arrow_down_light": {
+  "size": [
+   32,
+   32
+  ],
+  "margins": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "scroll_grabber": {
+  "size": [
+   20,
+   40
+  ],
+  "margins": [
+   10,
+   10,
+   10,
+   10
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "scroll_grabber_hover": {
+  "size": [
+   20,
+   40
+  ],
+  "margins": [
+   10,
+   10,
+   10,
+   10
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "scroll_track": {
+  "size": [
+   20,
+   40
+  ],
+  "margins": [
+   10,
+   10,
+   10,
+   10
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": null
+ },
+ "card_frame": {
+  "size": [
+   208,
+   240
+  ],
+  "margins": [
+   42,
+   38,
+   42,
+   50
+  ],
+  "expand": [
+   12,
+   8,
+   12,
+   20
+  ],
+  "content": null
+ },
+ "dialogue_box": {
+  "size": [
+   195,
+   184
+  ],
+  "margins": [
+   78,
+   67,
+   77,
+   77
+  ],
+  "expand": [
+   12,
+   8,
+   12,
+   16
+  ],
+  "content": [
+   56,
+   49,
+   55,
+   51
+  ]
+ },
+ "bar_fill_red": {
+  "size": [
+   40,
+   32
+  ],
+  "margins": [
+   16,
+   12,
+   16,
+   12
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": []
+ },
+ "bar_fill_green": {
+  "size": [
+   40,
+   32
+  ],
+  "margins": [
+   16,
+   12,
+   16,
+   12
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": []
+ },
+ "bar_fill_gold": {
+  "size": [
+   40,
+   32
+  ],
+  "margins": [
+   16,
+   12,
+   16,
+   12
+  ],
+  "expand": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "content": []
+ }
+}

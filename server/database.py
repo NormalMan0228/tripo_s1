@@ -53,6 +53,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS one_pending_job ON jobs(owner_id)
 CREATE TABLE IF NOT EXISTS audit (
  id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT, action TEXT NOT NULL, target TEXT,
  outcome TEXT NOT NULL, created REAL NOT NULL);
+-- Per-username login attempts (also for names that do not exist, so lockout
+-- never reveals which accounts are real). Cleared on a successful login.
+CREATE TABLE IF NOT EXISTS login_attempts (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL, created REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS login_attempts_username ON login_attempts(username,created);
+CREATE INDEX IF NOT EXISTS login_attempts_created ON login_attempts(created);
+-- Append-only security log: login_failed, login_locked, register, admin_grant.
+CREATE TABLE IF NOT EXISTS security_events (
+ id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, user_id TEXT, detail TEXT,
+ created REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS security_events_kind ON security_events(kind,created);
+CREATE INDEX IF NOT EXISTS security_events_created ON security_events(created);
+CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id,expires);
 '''
 
 class Database:

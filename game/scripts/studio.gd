@@ -7,6 +7,12 @@ const BuildMode=preload("res://scripts/build_mode.gd")
 const ControllerProfile=preload("res://scripts/controller_profile.gd")
 const Transition=preload("res://scripts/transition.gd")
 const I18n=preload("res://scripts/i18n.gd")
+const Interiors=preload("res://scripts/interiors.gd")
+const Daylight=preload("res://scripts/daylight.gd")
+const RpgUi=preload("res://scripts/rpg_ui.gd")
+const Residents=preload("res://scripts/residents.gd")
+const GameSettings=preload("res://scripts/game_settings.gd")
+const PauseMenu=preload("res://scripts/pause_menu.gd")
 var api: Node
 var viewport: SubViewport
 var view_container: SubViewportContainer
@@ -95,54 +101,159 @@ var placement_feedback: Label
 var place_button: Button
 var floor_grid: MeshInstance3D
 var grid_toggle: CheckButton
+## Interior rooms: "home" and "workshop" can be decorated; a building id such as
+## "01_cafe" opens that building's read-only public interior (scripts/interiors.gd).
+var room_spec: Dictionary={}
+var decor: Array=[]
+var public_room := false
+var subtitle_label: Label
+var controls_label: Label
+var environment: Environment
+var sun: DirectionalLight3D
+var cam_focus := Vector3.ZERO
+var interact_count := 0
+var bubble: PanelContainer
+var bubble_label: Label
+var bubble_anchor := Vector3.ZERO
+var bubble_tween: Tween
+var hint_label: Label
+var hint_anchor := Vector3.ZERO
+var hint_time := 0.0
+var tone_player: AudioStreamPlayer
+var leaving := false
+## Floors: the building spec, one root per floor (only the current one is shown)
+## and each floor's furniture/window records. room_spec is the current floor.
+var building_spec: Dictionary={}
+var floor_index := 0
+var floor_roots: Array=[]
+var decor_by_floor: Array=[]
+var travelling := false
+## Tests drive the walker directly and switch this off to keep it on one floor.
+var travel_enabled := true
+var sfx_player: AudioStreamPlayer
+var place_label: Label
+var current_room := -1
+var cam_distance := 9.0
+## Real-time outside light (Daylight); a test can pin the hour.
+var hour_override := -1.0
+var daylight_time := 0.0
+var daylight_sample: Dictionary={}
+## Sitting or lying on furniture.
+var rest_pose: SkeletonModifier3D
+var resting := ""
+var rest_return := Vector3.ZERO
+var walk_out := Vector3.ZERO
+## RPG-style HUD over the full-screen room view.
+var name_panel: PanelContainer
+var name_tween: Tween
+var toast_panel: PanelContainer
+var toast_tween: Tween
+var hint_chip: PanelContainer
+var hint_key: Label
+var dock_toggle: Button
+var leave_button: Button
+## The last piece of furniture used (tests read it).
+var last_used: Dictionary={}
+## Residents inside public buildings (scripts/residents.gd decides who is where).
+var npcs: Dictionary={}
+var residents_time := 0.0
+var cue_time := 0.0
+var talk_box: Control
+var talk_body: Label
+var talk_footer: HBoxContainer
+## The RpgUi.dialogue window parts while a resident is talking.
+var talk_window: Dictionary = {}
+var talk_lines: Array=[]
+var talk_choices: Array=[]
+var talk_page := 0
+var talk_id := ""
+var pick_cycle := 0
+var pick_spot := Vector3(INF,0,INF)
+var pick_time := -100.0
 
 func _ready() -> void:
 	I18n.setup()
 	var veil := Transition.of(get_tree())
 	veil.cover()
-	veil.play_door("close")
 	veil.fade_in(0.55)
 	api=Api.new();add_child(api)
 	if Engine.has_meta("studio_session"):
 		var session: Dictionary=Engine.get_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
-		room=session.get("room","workshop")
+		room=str(session.get("room","workshop"))
 		visit_host=str(session.get("visit_host",""))
 		visit_name=str(session.get("visit_name",""))
 		shared_presence=bool(session.get("multiplayer",false)) and room=="home"
 		Engine.remove_meta("studio_session")
+	if not Interiors.has_interior(room): room="workshop"
+	public_room=Interiors.is_public(room)
+	veil.play_door("close",room)
+	tone_player=AudioStreamPlayer.new();tone_player.volume_db=-5;tone_player.bus=GameSettings.BUS_SFX;add_child(tone_player)
+	sfx_player=AudioStreamPlayer.new();sfx_player.volume_db=-8;sfx_player.bus=GameSettings.BUS_SFX;add_child(sfx_player)
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--hour="): hour_override=clampf(float(arg.trim_prefix("--hour=")),0.0,23.99)
+	if Engine.has_meta("interior_hour"): hour_override=float(Engine.get_meta("interior_hour"))
 	build_ui()
 	build_stage()
+	set_dock_open(room=="workshop")
+	if public_room:
+		# Village buildings are only for looking around: no inventory, crafting or editing.
+		dock_panel.visible=false;dock_toggle.visible=false
+		for b in room_buttons: b.visible=false
+		message(tr(str(room_spec.flavour)))
+		if not api.token.is_empty(): load_avatar()
+		return
 	if not visit_host.is_empty():
 		# Visitors only look around: no inventory, crafting, room switching or editing.
-		dock_panel.visible=false
+		dock_panel.visible=false;dock_toggle.visible=false
 		for b in room_buttons: b.visible=false
 		message(tr("%s님의 집에 놀러 왔어요. 가구는 구경만 할 수 있어요.") % visit_name)
 	if api.token.is_empty():
 		message(tr("마을에서 로그인한 뒤 공방으로 들어오세요."))
 	else: await refresh()
 
+## Public rooms need no studio data; the walker still wears the player's look.
+func load_avatar() -> void:
+	var response: Dictionary=await api.request("/v1/studio")
+	if response.ok and is_instance_valid(hero) and response.data is Dictionary:
+		hero.apply_avatar(response.data.get("profile",{}).get("avatar",{}))
+
 func theme_style() -> Theme:
 	var t := Theme.new()
-	var font := SystemFont.new();font.font_names=PackedStringArray(["Malgun Gothic","sans-serif"])
-	t.default_font=font;t.default_font_size=14
-	for type in ["Label","Button","ColorPickerButton","OptionButton","LineEdit","TextEdit","ItemList","CheckButton"]:
-		t.set_color("font_color",type,Color("3f352a"))
-		if type in ["LineEdit","TextEdit"]:t.set_color("font_placeholder_color",type,Color("8d8373"))
+	t.default_font=RpgUi.FONT_BODY;t.default_font_size=14
+	t.set_font("font","Button",RpgUi.FONT_STRONG)
+	RpgUi.tooltip_theme(t)
+	for type in ["VScrollBar","HScrollBar"]:
+		t.set_stylebox("scroll",type,RpgUi.frame("scroll_track"));t.set_stylebox("grabber",type,RpgUi.frame("scroll_grabber"))
+		t.set_stylebox("grabber_highlight",type,RpgUi.frame("scroll_grabber_hover"));t.set_stylebox("grabber_pressed",type,RpgUi.frame("scroll_grabber_hover"))
+	for type in ["HSlider","VSlider"]:
+		t.set_stylebox("slider",type,RpgUi.frame("bar_bg"));t.set_stylebox("grabber_area",type,RpgUi.frame("bar_fill",Color("e9b552")))
+		t.set_icon("grabber",type,RpgUi.half("slider_grabber"));t.set_icon("grabber_highlight",type,RpgUi.half("slider_grabber_hover"))
+	for type in ["Label","Button","ColorPickerButton","OptionButton","LineEdit","TextEdit","ItemList","CheckButton","CodeEdit"]:
+		t.set_color("font_color",type,RpgUi.INK)
+		if type in ["Button","OptionButton","CheckButton","ColorPickerButton"]:
+			t.set_color("font_hover_color",type,Color("ffe08a"));t.set_color("font_pressed_color",type,Color("ffe08a"))
+			t.set_color("font_disabled_color",type,Color(RpgUi.INK,.4))
+		if type in ["LineEdit","TextEdit","CodeEdit"]:t.set_color("font_placeholder_color",type,Color(1,1,1,.42))
 		if type=="Label":continue
-		for state_name in ["normal","hover","pressed","focus","selected","read_only"]:
-			var style := StyleBoxFlat.new()
-			style.bg_color=Color("cfdfbf") if state_name in ["hover","selected"] else (Color("e7e9d6") if type in ["Button","OptionButton","CheckButton"] else Color("fffdf5"))
-			style.set_border_width_all(1);style.border_color=Color("ada88e")
-			style.set_corner_radius_all(8);style.content_margin_left=10;style.content_margin_right=10;style.content_margin_top=8;style.content_margin_bottom=8
+		for state_name in ["normal","hover","pressed","focus","selected","read_only","disabled"]:
+			var field: bool = type in ["LineEdit","TextEdit","CodeEdit"]
+			var fill := Color(0.05,0.07,0.08,.72) if field else (Color(0.24,0.2,0.12,.95) if state_name in ["hover","selected"] else (Color(0.36,0.28,0.14,.95) if state_name=="pressed" else Color(0.09,0.12,0.13,.9)))
+			var style := RpgUi.style(fill,8,RpgUi.GOLD if state_name in ["hover","focus","pressed"] else Color(RpgUi.GOLD,.45),1)
+			style.shadow_size=0
+			style.content_margin_left=10;style.content_margin_right=10;style.content_margin_top=7;style.content_margin_bottom=7
 			t.set_stylebox(state_name,type,style)
-	var list_panel := StyleBoxFlat.new();list_panel.bg_color=Color("faf6e9");list_panel.set_corner_radius_all(8)
-	list_panel.set_border_width_all(1);list_panel.border_color=Color("b9b39c")
-	list_panel.content_margin_left=6;list_panel.content_margin_right=6;list_panel.content_margin_top=6;list_panel.content_margin_bottom=6
+	var list_panel := RpgUi.style(Color(0.05,0.07,0.08,.6),8,Color(RpgUi.GOLD,.35),1)
+	list_panel.shadow_size=0
 	t.set_stylebox("panel","ItemList",list_panel)
-	var chosen := StyleBoxFlat.new();chosen.bg_color=Color("cfdfbf");chosen.set_corner_radius_all(6)
+	var chosen := RpgUi.style(Color(0.36,0.28,0.14,.9),6,RpgUi.GOLD,1);chosen.shadow_size=0
 	t.set_stylebox("selected","ItemList",chosen);t.set_stylebox("selected_focus","ItemList",chosen)
-	t.set_color("font_selected_color","ItemList",Color("2c4633"))
+	t.set_color("font_selected_color","ItemList",Color("ffe08a"))
+	var popup := RpgUi.style(Color(0.08,0.1,0.11,.97),8,Color(RpgUi.GOLD,.6),1)
+	t.set_stylebox("panel","PopupMenu",popup)
+	t.set_color("font_color","PopupMenu",RpgUi.INK);t.set_color("font_hover_color","PopupMenu",Color("ffe08a"))
+	t.set_stylebox("hover","PopupMenu",chosen)
+	t.set_color("font_color","SpinBox",RpgUi.INK)
 	return t
 
 func label(parent: Node,value: String,size_px:=14) -> Label:
@@ -158,30 +269,108 @@ func option(parent: Node,items: Array) -> OptionButton:
 	for value in items:o.add_item(value)
 	parent.add_child(o);return o
 
+## A small gold key cap ("E", "C", "Esc") like the village hotbar's.
+func key_cap(parent: Node, key: String) -> Label:
+	var cap := Label.new()
+	cap.text=key
+	cap.add_theme_font_size_override("font_size",12)
+	cap.add_theme_color_override("font_color",Color("2b2112"))
+	cap.add_theme_font_override("font",RpgUi.FONT_BOLD)
+	cap.add_theme_stylebox_override("normal",RpgUi.frame("keycap"))
+	cap.size_flags_vertical=Control.SIZE_SHRINK_CENTER
+	cap.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	parent.add_child(cap)
+	return cap
+
+## A compact dark RPG button for the HUD, with an optional key cap.
+func hud_button(parent: Node, value: String, callback: Callable, key := "") -> Button:
+	var b := Button.new()
+	b.text=value
+	b.focus_mode=Control.FOCUS_NONE
+	b.custom_minimum_size=Vector2(0,44)
+	b.add_theme_font_size_override("font_size",16)
+	b.add_theme_font_override("font",RpgUi.FONT_STRONG)
+	for state in ["normal","hover","pressed","disabled"]:
+		var plate := RpgUi.frame("btn_night_"+state)
+		plate.content_margin_left=16 if key.is_empty() else 30
+		b.add_theme_stylebox_override(state,plate)
+	RpgUi.hover_motion(b,1.04)
+	for state in ["font_color","font_hover_color","font_pressed_color"]:
+		b.add_theme_color_override(state,Color("fff2cf") if state!="font_hover_color" else Color("ffe08a"))
+	b.pressed.connect(callback)
+	parent.add_child(b)
+	if not key.is_empty():
+		var cap := key_cap(b,key)
+		cap.position=Vector2(-6,-9)
+	return b
+
+func set_dock_open(open: bool) -> void:
+	if not is_instance_valid(dock_panel): return
+	dock_panel.visible=open and visit_host.is_empty() and not public_room
+	if is_instance_valid(dock_toggle): dock_toggle.modulate=Color(1,1,1,1) if not dock_panel.visible else Color(1,0.92,0.75,1)
+
+## The place panel shows on arrival and on every room or floor change, then fades.
+func show_place_panel() -> void:
+	if not is_instance_valid(name_panel): return
+	if name_tween and name_tween.is_valid(): name_tween.kill()
+	name_panel.modulate.a=1.0
+	name_tween=create_tween()
+	name_tween.tween_interval(6.0)
+	name_tween.tween_property(name_panel,"modulate:a",0.0,0.8)
+
 func row(parent: Node) -> HBoxContainer:
 	var r := HBoxContainer.new();r.add_theme_constant_override("separation",8);parent.add_child(r);return r
 
 func build_ui() -> void:
 	theme=theme_style()
-	var bg := ColorRect.new();bg.color=Color("d6ddd0");bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(bg)
-	var layout := HBoxContainer.new();layout.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);layout.add_theme_constant_override("separation",0);add_child(layout)
-	var canvas := VBoxContainer.new();canvas.size_flags_horizontal=Control.SIZE_EXPAND_FILL;layout.add_child(canvas)
-	var header := MarginContainer.new();header.add_theme_constant_override("margin_left",24);header.add_theme_constant_override("margin_top",16);header.add_theme_constant_override("margin_bottom",10);canvas.add_child(header)
-	var head := VBoxContainer.new();header.add_child(head)
-	label(head,"TRIPOTHON  /  LITTLE THINGS, YOUR STORIES",12).modulate=Color("8b7850")
-	title_label=label(head,tr("물결빛 공방"),26)
-	label(head,tr("상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요"),13)
-	if BuildMode.developer(): label(head,tr("개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다"),11).modulate=Color("986b42")
-	view_container=SubViewportContainer.new();view_container.stretch=true;view_container.size_flags_vertical=Control.SIZE_EXPAND_FILL;canvas.add_child(view_container)
-	viewport=SubViewport.new();viewport.size=Vector2i(880,660);viewport.own_world_3d=true;viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS;viewport.msaa_3d=Viewport.MSAA_4X;view_container.add_child(viewport)
+	# The room fills the whole screen; the HUD floats over it like the village's.
+	view_container=SubViewportContainer.new();view_container.stretch=true;view_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(view_container)
+	viewport=SubViewport.new();viewport.size=Vector2i(1280,800);viewport.own_world_3d=true;viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS;viewport.msaa_3d=Viewport.MSAA_4X;view_container.add_child(viewport)
+	GameSettings.track_viewport(viewport,view_container)
 	view_container.gui_input.connect(view_input)
+	# Top left: where you are (building, floor, room) and a short line about it.
+	name_panel=PanelContainer.new();name_panel.name="PlacePanel";name_panel.position=Vector2(18,16);name_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	name_panel.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
+	add_child(name_panel)
+	var head := VBoxContainer.new();head.add_theme_constant_override("separation",2);name_panel.add_child(head)
+	var title_row := HBoxContainer.new();title_row.add_theme_constant_override("separation",10);head.add_child(title_row)
+	title_label=RpgUi.label(title_row,tr("물결빛 공방"),23)
+	place_label=RpgUi.label(title_row,"",14,RpgUi.GOLD)
+	place_label.size_flags_vertical=Control.SIZE_SHRINK_END
+	subtitle_label=RpgUi.label(head,tr("상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요"),13,Color("d8e3d4"),false)
+	subtitle_label.custom_minimum_size.x=0;subtitle_label.autowrap_mode=TextServer.AUTOWRAP_OFF
+	if BuildMode.developer(): RpgUi.label(head,tr("개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다"),11,Color("e3b07a"),false)
+	# Top centre: what just happened (server replies, furniture lines).
+	toast_panel=PanelContainer.new();toast_panel.name="StatusToast";toast_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	toast_panel.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
+	toast_panel.set_anchors_preset(Control.PRESET_CENTER_TOP);toast_panel.grow_horizontal=Control.GROW_DIRECTION_BOTH
+	toast_panel.offset_top=92;toast_panel.offset_bottom=92
+	add_child(toast_panel)
+	status_label=RpgUi.label(toast_panel,tr("서버에 연결하고 있어요"),15,RpgUi.INK,false)
+	status_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	toast_panel.visible=false
+	# Bottom centre: a key chip for what E (or walking) does right here.
+	hint_chip=PanelContainer.new();hint_chip.name="HintChip";hint_chip.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	hint_chip.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
+	hint_chip.set_anchors_preset(Control.PRESET_CENTER_BOTTOM);hint_chip.grow_horizontal=Control.GROW_DIRECTION_BOTH;hint_chip.grow_vertical=Control.GROW_DIRECTION_BEGIN
+	add_child(hint_chip)
+	var chip_row := HBoxContainer.new();chip_row.add_theme_constant_override("separation",8);chip_row.mouse_filter=Control.MOUSE_FILTER_IGNORE;hint_chip.add_child(chip_row)
+	hint_key=key_cap(chip_row,"E")
+	controls_label=RpgUi.label(chip_row,tr("WASD 이동   E 상호작용   R 회전   Esc 취소"),15,RpgUi.INK,false)
+	# Bottom left: the way out (and the player's two rooms).
+	var nav := HBoxContainer.new();nav.name="RoomNav";nav.add_theme_constant_override("separation",8)
+	nav.set_anchors_preset(Control.PRESET_BOTTOM_LEFT);nav.grow_vertical=Control.GROW_DIRECTION_BEGIN
+	nav.offset_left=18;nav.offset_right=18;nav.offset_top=-66;nav.offset_bottom=-22
+	add_child(nav)
+	leave_button=hud_button(nav,tr("마을로 나가기"),leave)
+	leave_button.icon=RpgUi.icon_texture("home");leave_button.expand_icon=false
+	leave_button.add_theme_constant_override("icon_max_width",24)
+	room_buttons.append(hud_button(nav,tr("내 집"),func(): await change_room("home")))
+	room_buttons.append(hud_button(nav,tr("공방"),func(): await change_room("workshop")))
 	# In-world dressing tools remain visible next to the furniture, not in dev tabs.
 	placement_tools=PanelContainer.new();placement_tools.name="PlacementTools"
-	placement_tools.position=Vector2(24,124);placement_tools.custom_minimum_size.x=345
-	var tool_style := StyleBoxFlat.new();tool_style.bg_color=Color("fff7e8",.97);tool_style.set_corner_radius_all(12)
-	tool_style.set_border_width_all(1);tool_style.border_color=Color("b5ab8c")
-	tool_style.content_margin_left=14;tool_style.content_margin_right=14;tool_style.content_margin_top=12;tool_style.content_margin_bottom=12
-	placement_tools.add_theme_stylebox_override("panel",tool_style)
+	placement_tools.position=Vector2(18,128);placement_tools.custom_minimum_size.x=345
+	placement_tools.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
 	add_child(placement_tools);placement_tools.visible=false
 	var tools := VBoxContainer.new();tools.add_theme_constant_override("separation",8);placement_tools.add_child(tools)
 	placement_title=label(tools,tr("가구 놓기"),18)
@@ -194,17 +383,28 @@ func build_ui() -> void:
 	var confirm_row := row(tools)
 	place_button=button(confirm_row,tr("여기에 놓기"),commit_place);place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	button(confirm_row,tr("취소"),cancel_placement)
-	var footer := MarginContainer.new();footer.add_theme_constant_override("margin_left",20);footer.add_theme_constant_override("margin_right",20);footer.add_theme_constant_override("margin_bottom",14);canvas.add_child(footer)
-	var f := VBoxContainer.new();footer.add_child(f)
-	status_label=label(f,tr("서버에 연결하고 있어요"),14)
-	label(f,tr("WASD 이동   E 상호작용   R 회전   Esc 취소"),12).modulate=Color("817960")
-	var nav := row(f)
-	room_buttons.append(button(nav,tr("내 집"),func(): await change_room("home")))
-	room_buttons.append(button(nav,tr("공방"),func(): await change_room("workshop")))
-	button(nav,tr("마을로 나가기"),leave)
-	var dock := MarginContainer.new();dock_panel=dock;dock.custom_minimum_size.x=380;dock.add_theme_constant_override("margin_left",16);dock.add_theme_constant_override("margin_right",16);dock.add_theme_constant_override("margin_top",14);layout.add_child(dock)
+	# Right: the crafting and decorating drawer, opened from a hotbar-style slot.
+	var dock := PanelContainer.new();dock_panel=dock;dock.name="Dock"
+	dock.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
+	dock.set_anchors_preset(Control.PRESET_RIGHT_WIDE);dock.grow_horizontal=Control.GROW_DIRECTION_BEGIN
+	dock.offset_left=-412;dock.offset_right=-14;dock.offset_top=14;dock.offset_bottom=-112
+	add_child(dock)
+	dock_toggle=Button.new();dock_toggle.name="DockToggle";dock_toggle.custom_minimum_size=Vector2(78,78);dock_toggle.focus_mode=Control.FOCUS_NONE
+	RpgUi.name_tip(dock_toggle,tr("제작"),"C")
+	for state in ["normal","hover","pressed"]:
+		dock_toggle.add_theme_stylebox_override(state,RpgUi.frame({"normal":"slot_night","hover":"slot_night_hover","pressed":"slot_night_pressed"}[state]))
+	RpgUi.hover_motion(dock_toggle,1.08,Vector2(0.5,1.0))
+	dock_toggle.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT);dock_toggle.grow_horizontal=Control.GROW_DIRECTION_BEGIN;dock_toggle.grow_vertical=Control.GROW_DIRECTION_BEGIN
+	dock_toggle.offset_left=-96;dock_toggle.offset_right=-18;dock_toggle.offset_top=-96;dock_toggle.offset_bottom=-18
+	add_child(dock_toggle)
+	var slot := VBoxContainer.new();slot.alignment=BoxContainer.ALIGNMENT_CENTER;slot.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	slot.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);slot.add_theme_constant_override("separation",0);dock_toggle.add_child(slot)
+	var art := RpgUi.icon("res://assets/ui/craft.svg",38);art.size_flags_horizontal=Control.SIZE_SHRINK_CENTER;slot.add_child(art)
+	var caption := RpgUi.label(slot,tr("제작"),12);caption.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;caption.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	var toggle_cap := key_cap(dock_toggle,"C");toggle_cap.position=Vector2(-6,-8)
+	dock_toggle.pressed.connect(func(): set_dock_open(not dock_panel.visible))
 	var box := VBoxContainer.new();dock.add_child(box)
-	wallet=label(box,tr("나의 공방"),18)
+	wallet=RpgUi.label(box,tr("나의 공방"),18,RpgUi.GOLD)
 	quote_panel=VBoxContainer.new();box.add_child(quote_panel);quote_panel.visible=false
 	quote_label=label(quote_panel,"",14)
 	var quote_actions := row(quote_panel)
@@ -212,21 +412,23 @@ func build_ui() -> void:
 	button(quote_actions,tr("이 설계로 생성") if BuildMode.developer() else tr("가구 완성하기"),confirm_job)
 	button(quote_actions,tr("취소 · 별씨 환불") if BuildMode.developer() else tr("취소"),cancel_job)
 	var tabs := TabContainer.new();tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL;box.add_child(tabs)
-	var tab_panel := StyleBoxFlat.new();tab_panel.bg_color=Color("fff7e8");tab_panel.set_corner_radius_all(12)
+	var tab_panel := StyleBoxFlat.new();tab_panel.bg_color=Color(0.05,0.07,0.08,.55);tab_panel.set_corner_radius_all(12)
 	tab_panel.content_margin_left=8;tab_panel.content_margin_right=8;tab_panel.content_margin_top=8;tab_panel.content_margin_bottom=8
 	tabs.add_theme_stylebox_override("panel",tab_panel)
 	var tab_bar := tabs.get_tab_bar()
 	for state_name in ["tab_selected","tab_unselected","tab_hovered"]:
 		var tab_style := StyleBoxFlat.new()
-		tab_style.bg_color=Color("c5d9b6") if state_name=="tab_selected" else Color("e9e4d5")
+		tab_style.bg_color=Color(0.36,0.28,0.14,.95) if state_name=="tab_selected" else Color(0.09,0.12,0.13,.9)
+		tab_style.set_border_width_all(1);tab_style.border_color=Color(RpgUi.GOLD,.8 if state_name=="tab_selected" else .4)
 		tab_style.set_corner_radius_all(7)
 		tab_style.content_margin_left=11;tab_style.content_margin_right=11;tab_style.content_margin_top=7;tab_style.content_margin_bottom=7
 		tab_bar.add_theme_stylebox_override(state_name,tab_style)
 		tabs.add_theme_stylebox_override(state_name,tab_style)
-	tab_bar.add_theme_color_override("font_selected_color",Color("304533"))
-	tab_bar.add_theme_color_override("font_unselected_color",Color("4e493d"))
-	tabs.add_theme_color_override("font_selected_color",Color("304533"))
-	tabs.add_theme_color_override("font_unselected_color",Color("4e493d"))
+	tab_bar.add_theme_color_override("font_selected_color",Color("ffe08a"))
+	tab_bar.add_theme_color_override("font_unselected_color",RpgUi.INK)
+	tab_bar.add_theme_color_override("font_hovered_color",Color("ffe08a"))
+	tabs.add_theme_color_override("font_selected_color",Color("ffe08a"))
+	tabs.add_theme_color_override("font_unselected_color",RpgUi.INK)
 	var create_scroll := ScrollContainer.new();create_scroll.name=tr("만들기");tabs.add_child(create_scroll)
 	var create := VBoxContainer.new();create.size_flags_horizontal=Control.SIZE_EXPAND_FILL;create.add_theme_constant_override("separation",10);create_scroll.add_child(create)
 	label(create,tr("어떤 물건을 만들까요?"),20)
@@ -280,6 +482,7 @@ func build_ui() -> void:
 	var palette := row(own)
 	for color in ["#f1dfb8","#dfa958","#789887","#bd7f75","#7d9ca3"]:
 		var b := button(palette,"●",func(): await paint(color));b.modulate=Color(color);b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		RpgUi.name_tip(b,RpgUi.color_name(color))
 	var custom_row := row(own)
 	var custom_color := ColorPickerButton.new();custom_color.text=tr("직접 색 고르기");custom_color.edit_alpha=false;custom_color.color=Color("dfa958");custom_color.size_flags_horizontal=Control.SIZE_EXPAND_FILL;custom_row.add_child(custom_color)
 	custom_color.popup_closed.connect(func():await paint("#"+custom_color.color.to_html(false)))
@@ -346,7 +549,7 @@ func update_price() -> void:
 		generation_button.text=tr("설계 먼저 · %d 별씨 예약")%cost
 	else:provider_price.text=tr("검증용 도형: Tripo 비용 0")
 
-func message(value: String) -> void:
+func message(value: String, toast := true) -> void:
 	value=value.replace("room_render_budget_exceeded",tr("꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요."))
 	if not BuildMode.developer():
 		var words := {"insufficient_shards":tr("별씨가 부족해요. 탐험 보상을 모아 보세요."),"stale_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"stale_runtime_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"not_found":tr("물건을 찾을 수 없어요. 보관함을 새로고침해 주세요."),"unauthorized":tr("다시 로그인해 주세요."),"geometry_disabled":tr("지금은 새 가구 제작을 준비하고 있어요."),"placement_overlap":tr("다른 가구와 겹쳐요."),"placement_out_of_bounds":tr("벽과 출입문에서 떨어진 곳에 놓아 주세요."),"model_download_failed":tr("가구를 읽지 못했어요. 잠시 뒤 다시 골라 주세요.")}
@@ -359,15 +562,33 @@ func message(value: String) -> void:
 			var code: String=match_value.get_string()
 			if words.has(code): value=value.replace(code,words[code])
 	status_label.text=value
+	if is_instance_valid(toast_panel) and is_inside_tree():
+		if not toast:
+			toast_panel.visible=false
+			return
+		toast_panel.visible=not value.is_empty()
+		toast_panel.modulate.a=1.0
+		toast_panel.reset_size()
+		var toast_width: float=toast_panel.get_combined_minimum_size().x
+		toast_panel.offset_left=-toast_width*0.5;toast_panel.offset_right=toast_width*0.5
+		if toast_tween and toast_tween.is_valid(): toast_tween.kill()
+		toast_tween=create_tween()
+		toast_tween.tween_interval(4.5)
+		toast_tween.tween_property(toast_panel,"modulate:a",0.0,0.6)
 
 func build_stage() -> void:
 	stage=Node3D.new();viewport.add_child(stage)
-	var env := WorldEnvironment.new();var environment := Environment.new()
-	environment.background_mode=Environment.BG_COLOR;environment.background_color=Color("b8c8bd")
-	environment.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;environment.ambient_light_color=Color("e6efd6");environment.ambient_light_energy=0.38
+	var env := WorldEnvironment.new();environment=Environment.new()
+	environment.background_mode=Environment.BG_COLOR;environment.background_color=Color("2a2420")
+	environment.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;environment.ambient_light_color=Color("f2e4cb");environment.ambient_light_energy=0.42
 	env.environment=environment;stage.add_child(env)
-	var sun := DirectionalLight3D.new();sun.rotation_degrees=Vector3(-52,-28,0);sun.light_color=Color("fff5e9");sun.light_energy=0.6;sun.shadow_enabled=true;stage.add_child(sun)
-	camera=Camera3D.new();camera.projection=Camera3D.PROJECTION_ORTHOGONAL;camera.size=12.5;camera.position=Vector3(10,13,15);stage.add_child(camera);camera.look_at(Vector3(0,0.8,0));camera.current=true
+	sun=DirectionalLight3D.new();sun.rotation_degrees=Vector3(-56,18,0);sun.light_color=Color("fff1dc");sun.light_energy=0.55;sun.shadow_enabled=true
+	sun.directional_shadow_max_distance=28;stage.add_child(sun)
+	GameSettings.track_light(sun)
+	# Animal Crossing style: a perspective camera in front of the open front edge,
+	# above the door, looking down toward the back wall and following the walker.
+	camera=Camera3D.new();camera.projection=Camera3D.PROJECTION_PERSPECTIVE;camera.fov=40;camera.near=0.2;camera.far=80
+	stage.add_child(camera);camera.current=true
 	furniture=Node3D.new();stage.add_child(furniture)
 	room_root=Node3D.new();stage.add_child(room_root)
 	placement_marker=Art.box(stage,Vector3(0,0.065,0),Vector3(1.95,0.015,1.95),Color("8ccbb1"))
@@ -385,53 +606,246 @@ func build_stage() -> void:
 	grid_material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED;floor_grid.material_override=grid_material
 	floor_grid.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	stage.add_child(floor_grid);floor_grid.visible=false
+	build_overlays()
 	build_room()
 	# Authored character is separate from all player-created furniture.
 	if ResourceLoader.exists("res://assets/explorer_b_reference.glb"):
-		hero=preload("res://scripts/player.gd").new();hero.controls_enabled=false;hero.visual_only=true;stage.add_child(hero);hero.position=Vector3(0,0,3)
+		hero=preload("res://scripts/player.gd").new();hero.controls_enabled=false;hero.visual_only=true;stage.add_child(hero)
+		place_hero_at_door()
 
+## Speech bubble and "E" badge drawn over the room view, pinned to 3D points.
+func build_overlays() -> void:
+	bubble=PanelContainer.new();bubble.name="InteractionBubble";bubble.mouse_filter=Control.MOUSE_FILTER_IGNORE;bubble.visible=false
+	var bubble_style := StyleBoxFlat.new();bubble_style.bg_color=Color("fffaf0",.97);bubble_style.set_corner_radius_all(16)
+	bubble_style.set_border_width_all(2);bubble_style.border_color=Color("c9b48a")
+	bubble_style.content_margin_left=16;bubble_style.content_margin_right=16;bubble_style.content_margin_top=10;bubble_style.content_margin_bottom=10
+	bubble_style.shadow_color=Color(0,0,0,.18);bubble_style.shadow_size=6;bubble_style.shadow_offset=Vector2(0,3)
+	bubble.add_theme_stylebox_override("panel",bubble_style)
+	bubble_label=Label.new();bubble_label.add_theme_font_size_override("font_size",17);bubble_label.add_theme_color_override("font_color",Color("4a3b2b"))
+	bubble_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;bubble.add_child(bubble_label)
+	add_child(bubble)
+	var tail := Polygon2D.new();tail.name="Tail";tail.color=Color("fffaf0");tail.polygon=PackedVector2Array([Vector2(-9,0),Vector2(9,0),Vector2(0,11)])
+	bubble.add_child(tail)
+	hint_label=Label.new();hint_label.name="InteractHint";hint_label.text="E";hint_label.mouse_filter=Control.MOUSE_FILTER_IGNORE;hint_label.visible=false
+	hint_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	var hint_style := StyleBoxFlat.new();hint_style.bg_color=Color("4a3b2b",.9);hint_style.set_corner_radius_all(14)
+	hint_style.content_margin_left=9;hint_style.content_margin_right=9;hint_style.content_margin_top=3;hint_style.content_margin_bottom=3
+	hint_label.add_theme_stylebox_override("normal",hint_style);hint_label.add_theme_color_override("font_color",Color("ffe9b0"));hint_label.add_theme_font_size_override("font_size",15)
+	add_child(hint_label)
+
+## Keeps an overlay control centred just above a 3D point of the room view.
+func pin_overlay(control: Control, anchor: Vector3, lift := 10.0) -> void:
+	if not control.visible or not is_instance_valid(camera): return
+	if camera.is_position_behind(anchor):
+		control.modulate.a=0.0;return
+	var at := view_container.global_position+camera.unproject_position(anchor)
+	control.reset_size()
+	var left := clampf(at.x-control.size.x*0.5,view_container.global_position.x+6,view_container.global_position.x+view_container.size.x-control.size.x-6)
+	control.global_position=Vector2(left,maxf(at.y-control.size.y-lift,view_container.global_position.y+6))
+	var tail := control.get_node_or_null("Tail") as Polygon2D
+	if tail: tail.position=Vector2(clampf(at.x-left,18,control.size.x-18),control.size.y-1)
+
+func place_hero_at_door() -> void:
+	if not is_instance_valid(hero): return
+	stand_up(false)
+	set_floor(0)
+	hero.position=Interiors.spawn_point(room_spec)
+	# Turned toward the camera, as if just stepping in through the door.
+	hero.facing=Vector3.BACK
+	update_camera(0.0,true)
+
+## Rebuilds every floor of the current building; the ground floor is shown.
 func build_room() -> void:
 	for child in room_root.get_children():child.queue_free()
+	npcs.clear()
+	close_talk()
+	building_spec=Interiors.spec(room)
+	public_room=bool(building_spec.public)
+	floor_roots.clear();decor_by_floor.clear()
+	for index in building_spec.floors.size():
+		var level := Node3D.new();level.name="Floor_%d" % index;room_root.add_child(level)
+		floor_roots.append(level)
+		decor_by_floor.append(Interiors.build(level,building_spec.floors[index]))
+	floor_index=-1
+	set_floor(0)
 	title_label.text=tr("나의 작은 집") if room=="home" else tr("물결빛 공방")
+	subtitle_label.text=tr("상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요")
 	if not visit_host.is_empty(): title_label.text=tr("%s님의 집") % visit_name
-	var shell_path := "res://assets/cozy_home.glb" if room=="home" else "res://assets/cozy_workshop.glb"
-	if ResourceLoader.exists(shell_path):
-		var shell := (load(shell_path) as PackedScene).instantiate() as Node3D
-		shell.name="AuthoredRoomShell";room_root.add_child(shell)
-		var exit_sign := Art.label3d(room_root,tr("마을 →"),Vector3(1.9,.45,4.85),Color("f1dfb7"));exit_sign.font_size=25
-		for x in [-1.1,1.1]:
-			var glow := OmniLight3D.new();glow.position=Vector3(x,2.6,-4.25);glow.light_color=Color("ffdba6");glow.light_energy=.18;glow.omni_range=3.0
-			room_root.add_child(glow)
-		return
-	Art.box(room_root,Vector3(0,-0.18,0),Vector3(10.4,0.35,10.4),Color("7a5940"))
-	for x in 20:
-		Art.box(room_root,Vector3(-4.75+x*0.5,-0.01,0),Vector3(0.48,0.06,10),Color("b68f62") if x%3==0 else Color("c4a477"))
-	Art.box(room_root,Vector3(0,1.7,-5),Vector3(10.4,3.5,0.22),Color("e1d4b4"))
-	Art.box(room_root,Vector3(-5,1.7,0),Vector3(0.22,3.5,10),Color("e1d4b4"))
-	for x in [-5,-2.5,0,2.5,5]:Art.box(room_root,Vector3(x,1.7,-4.82),Vector3(0.14,3.5,0.15),Color("775b43"))
-	for z in [-5,-2.5,0,2.5,5]:Art.box(room_root,Vector3(-4.82,1.7,z),Vector3(0.15,3.5,0.14),Color("775b43"))
-	for y in [0.18,3.3]:
-		Art.box(room_root,Vector3(0,y,-4.8),Vector3(10,0.18,0.18),Color("775b43"))
-		Art.box(room_root,Vector3(-4.8,y,0),Vector3(0.18,0.18,10),Color("775b43"))
-	for x in [-2.5,2.5]:
-		Art.box(room_root,Vector3(x,2.0,-4.65),Vector3(1.8,1.65,0.12),Color("628d89"))
-		Art.box(room_root,Vector3(x,2.0,-4.53),Vector3(0.08,1.65,0.12),Color("f1d7a4"))
-		Art.box(room_root,Vector3(x,2.0,-4.53),Vector3(1.8,0.08,0.12),Color("f1d7a4"))
-		Art.box(room_root,Vector3(x,1.14,-4.5),Vector3(2.1,0.13,0.4),Color("765c44"))
-	# Door threshold is kept clear by server placement rules.
-	Art.box(room_root,Vector3(0,0.06,4.8),Vector3(2.6,0.12,0.5),Color("e0ca91"))
-	# Cutaway front wall: a tall lintel hides the player at the entrance.
-	for x in [-1.25,1.25]:Art.box(room_root,Vector3(x,.35,5),Vector3(0.18,.7,0.22),Color("7b6248"))
-	var sign := Label3D.new();sign.text=tr("마을  →");sign.position=Vector3(1.9,.85,4.85);sign.font_size=32;sign.pixel_size=0.006;room_root.add_child(sign)
-	var rug := Art.box(room_root,Vector3(0,0.035,0),Vector3(3.8,0.02,3.2),Color("718d7c"))
-	rug.name="WovenRug"
-	for x in [-1.7,1.7]:Art.box(room_root,Vector3(x,0.049,0),Vector3(0.08,0.015,3),Color("d9c690"))
-	if room=="workshop":
-		Art.box(room_root,Vector3(-3.7,0.85,-3.1),Vector3(1.8,0.16,1.0),Color("8c6746"))
-		for x in [-4.4,-3]:
-			for z in [-3.5,-2.7]:Art.box(room_root,Vector3(x,0.4,z),Vector3(0.1,0.8,0.1),Color("785d43"))
+	if public_room:
+		title_label.text=tr(str(building_spec.name))
+		subtitle_label.text=tr(str(building_spec.kind))+"  ·  "+tr(str(building_spec.flavour))
+	set_chip("",default_hint())
+	show_place_panel()
+	apply_daylight(true)
+	refresh_residents(true)
+	apply_daylight(true)
+	if is_instance_valid(bubble): bubble.visible=false
+	if is_instance_valid(hint_label): hint_label.visible=false
+	update_camera(0.0,true)
+
+## Shows one floor; player-made furniture and visitors live on the ground floor.
+func set_floor(index: int) -> void:
+	if building_spec.is_empty(): return
+	index=clampi(index,0,building_spec.floors.size()-1)
+	floor_index=index
+	room_spec=building_spec.floors[index]
+	decor=decor_by_floor[index]
+	for i in floor_roots.size(): floor_roots[i].visible=i==index
+	if is_instance_valid(furniture): furniture.visible=index==0
+	if is_instance_valid(floor_grid): floor_grid.visible=false
+	for entry in peers.values():
+		if is_instance_valid(entry.node): entry.node.visible=int(entry.get("floor",0))==index
+	current_room=-1
+	update_place_label()
+
+func update_place_label() -> void:
+	if not is_instance_valid(place_label) or room_spec.is_empty(): return
+	var x: float=hero.position.x if is_instance_valid(hero) else 0.0
+	var index := Interiors.room_at(room_spec,x)
+	if index==current_room: return
+	current_room=index
+	var parts: PackedStringArray=[]
+	if int(room_spec.floors)>1 and not str(room_spec.label).is_empty(): parts.append(tr(str(room_spec.label)))
+	var room_name := tr(str(room_spec.rooms[index].name))
+	if parts.is_empty() or parts[0]!=room_name: parts.append(room_name)
+	place_label.text="·  "+"  ·  ".join(parts)
+	show_place_panel()
+
+## Stairs, ladders and hatches: a short fade with footsteps, then the other floor.
+func travel(record: Dictionary, instant := false) -> void:
+	if travelling or not record.has("link") or leaving: return
+	travelling=true
+	stand_up(false)
+	var link: Dictionary=record.link
+	var from_floor := floor_index
+	if is_instance_valid(bubble): bubble.visible=false
+	if not instant and is_instance_valid(hero):
+		# Walk onto the stair and up (or down into the hatch); the floors swap
+		# under a short fade near the end of the visible part of the climb.
+		sfx_player.stream=Interiors.sfx("steps");sfx_player.play()
+		var veil := Transition.of(get_tree())
+		var path: Array[Vector3]=Interiors.climb_path(record,hero.position)
+		await follow_path(path,1.15,0.62,veil,record.kind=="ladder",record)
+		if veil.veil.modulate.a<0.99: await veil.fade_out(0.12)
+	set_floor(int(link.to))
+	var counterpart := {}
+	for other in decor:
+		if other.has("link") and int(other.link.to)==from_floor: counterpart=other;break
+	if is_instance_valid(hero):
+		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
+		hero.position=link.arrive
+		hero.facing=Vector3.BACK
+	apply_daylight(true)
+	if not instant and is_instance_valid(hero) and not counterpart.is_empty():
+		# Step off the stair on the new floor instead of appearing on the spot.
+		var off: Array[Vector3]=Interiors.arrival_path(counterpart,link.arrive)
+		hero.position=off[0]
+		update_camera(0.0,true)
+		Transition.of(get_tree()).fade_in(0.3)
+		await follow_path(off,1.15,-1.0,null,counterpart.kind=="ladder",counterpart)
+	else:
+		update_camera(0.0,true)
+		if not instant: await Transition.of(get_tree()).fade_in(0.3)
+	if is_instance_valid(hero):
+		hero.position=link.arrive
+		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
+	travelling=false
+
+## Moves the walker along points (with height) at walking pace: the walk clip
+## runs from the real displacement, so steps never slide. On a ladder the
+## walker faces the rungs and rises with a little bob instead.
+func follow_path(points: Array[Vector3], speed: float, fade_at: float, veil: CanvasLayer, ladder := false, record := {}) -> void:
+	if points.size()<2 or not is_instance_valid(hero): return
+	var lengths: Array[float]=[]
+	var total := 0.0
+	for i in points.size()-1:
+		var length: float=points[i].distance_to(points[i+1])
+		lengths.append(length)
+		total+=length
+	if total<0.001: return
+	var face_ladder := Vector3.ZERO
+	if ladder and not record.is_empty(): face_ladder=Vector3(0,0,-1).rotated(Vector3.UP,float(record.yaw))
+	var travelled := 0.0
+	var faded := false
+	while travelled<total:
+		var delta := get_process_delta_time()
+		if delta<=0.0: delta=1.0/60.0
+		# One distance along the whole path, so steps keep an even pace across corners.
+		var segment := 0
+		var along := travelled
+		while segment<lengths.size()-1 and along>lengths[segment]:
+			along-=lengths[segment];segment+=1
+		var a: Vector3=points[segment]
+		var b: Vector3=points[segment+1]
+		var flat := Vector3(b.x-a.x,0,b.z-a.z)
+		var climbing_rungs: bool=ladder and flat.length()<0.05
+		travelled=minf(total,travelled+speed*delta*(0.6 if climbing_rungs else 1.0))
+		along=travelled
+		segment=0
+		while segment<lengths.size()-1 and along>lengths[segment]:
+			along-=lengths[segment];segment+=1
+		var before: Vector3=hero.position
+		hero.position=points[segment].lerp(points[segment+1],clampf(along/maxf(lengths[segment],0.0001),0.0,1.0))
+		var step := Vector2(hero.position.x-before.x,hero.position.z-before.z)
+		if climbing_rungs or step.length()<0.0005:
+			if climbing_rungs: hero.facing=face_ladder
+			hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
+		else:
+			hero.facing=Vector3(step.x,0,step.y).normalized()
+			# Steps are steep: the stepping clip keeps at least a gentle walking pace.
+			hero.external_velocity=step.normalized()*maxf(step.length()/delta,0.9)
+			hero.external_motion=step.normalized()
+		if fade_at>=0.0 and not faded and veil and travelled/total>=fade_at:
+			faded=true
+			veil.fade_out(0.3)
+		await get_tree().process_frame
+		if not is_instance_valid(hero): return
+	hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
+
+## Real-time light: windows, sunbeams, ambient, sun and room lamps follow the clock.
+func apply_daylight(force := false) -> void:
+	if building_spec.is_empty() or not is_instance_valid(environment): return
+	var hour := hour_override if hour_override>=0.0 else Daylight.clock_hour()
+	daylight_sample=Daylight.sample(hour)
+	var day: float=daylight_sample.daylight
+	var night: float=daylight_sample.night
+	var sun_color: Color=daylight_sample.sun_color
+	var tint := Color.WHITE.lerp(sun_color,0.55)*lerpf(0.82,1.08,day)
+	tint.a=1.0
+	for view in get_tree().get_nodes_in_group("window_view"):
+		if not room_root.is_ancestor_of(view): continue
+		var material: ShaderMaterial=view.material_override
+		material.set_shader_parameter("night",clampf(night*1.15,0.0,1.0))
+		material.set_shader_parameter("tint",tint)
+	for index in floor_roots.size():
+		if force or index==floor_index: Interiors.sunbeams(floor_roots[index],building_spec.floors[index],daylight_sample)
+	var colors: Dictionary=room_spec.colors
+	var theme_ambient := Color(str(colors.ambient))
+	environment.ambient_light_color=theme_ambient.lerp(daylight_sample.ambient_color,0.25+0.35*night)
+	environment.ambient_light_energy=lerpf(0.31,0.42,day)*(0.86 if room_spec.theme=="observatory" else 1.0)
+	environment.background_color=Color("2a2420").lerp(Color("0f1430"),night)
+	sun.light_color=sun_color if day>0.05 else Color("a3bcff")
+	sun.light_energy=lerpf(0.1,0.55,day)*(0.6 if room_spec.theme=="observatory" else 1.0)
+	var awake_rooms := {}
+	var sleeping_rooms := {}
+	for entry in npcs.values():
+		var where := "%d/%d" % [int(entry.floor),Interiors.room_at(building_spec.floors[entry.floor],float(entry.holder.position.x))]
+		if entry.state.get("asleep",false): sleeping_rooms[where]=true
+		else: awake_rooms[where]=true
+	for index in floor_roots.size():
+		for lamp in floor_roots[index].find_children("*","OmniLight3D",true,false):
+			if not lamp.is_in_group("room_lamp"): continue
+			var where := "%d/%d" % [index,int(lamp.get_meta("room",0))]
+			var dim := 0.3 if sleeping_rooms.has(where) and not awake_rooms.has(where) else 1.0
+			lamp.light_energy=float(lamp.get_meta("base_energy",0.5))*lerpf(0.8,1.45,night)*dim
+	for entry in npcs.values():
+		if entry.body.has_method("set_night"): entry.body.set_night(clampf(night,0.0,0.6))
+		# Rooms keep their own lamps only: a carried lantern stays unlit indoors.
+		var lantern = entry.body.get("lantern_light")
+		if lantern is OmniLight3D: lantern.visible=false
 
 func refresh() -> void:
+	if public_room: return
 	if not visit_host.is_empty():
 		await share_presence()
 		return
@@ -728,6 +1142,9 @@ func cancel_job() -> void:
 
 func begin_place() -> void:
 	if selected.is_empty() or pending:return
+	if floor_index!=0:
+		# Decorating happens on the ground floor, where the server keeps the furniture.
+		stand_up(false);set_floor(0);place_hero_at_door()
 	placement_epoch+=1;var placement_request := placement_epoch;var object_id: String=selected.id
 	placement_mode=true;placement_rotation=selected.rotation
 	if is_instance_valid(ghost):ghost.queue_free()
@@ -874,7 +1291,7 @@ func pick_image(path: String) -> void:
 func change_room(value: String) -> void:
 	clear_selection();room=value;build_room()
 	update_capacity()
-	if is_instance_valid(hero):hero.position=Vector3(0,0,3)
+	place_hero_at_door()
 	await reload_placed()
 
 func update_capacity() -> void:
@@ -887,11 +1304,12 @@ func _exit_tree() -> void:
 
 ## Shares this walker's spot inside the home and, for visitors, loads the host's
 ## furniture. Everyone in the same home sees the others (server: mp_presence).
+## The floor travels in y (3 m a floor) so walkers only meet on the same floor.
 func share_presence() -> void:
 	if presence_pending or not is_instance_valid(hero) or api.token.is_empty(): return
 	presence_pending=true
 	var heading: float=hero.visual.rotation.y if is_instance_valid(hero.visual) else 0.0
-	var response: Dictionary=await api.post("/v1/social/presence",{"scene":"home","x":hero.position.x,"z":hero.position.z,"y":0.0,"yaw":wrapf(heading,-PI,PI)})
+	var response: Dictionary=await api.post("/v1/social/presence",{"scene":"home","x":hero.position.x,"z":hero.position.z,"y":floor_index*3.0,"yaw":wrapf(heading,-PI,PI)})
 	presence_pending=false
 	if not response.ok or not is_inside_tree(): return
 	var space = response.data.get("space")
@@ -913,6 +1331,7 @@ func share_presence() -> void:
 	for record in space.players:
 		if str(record.id)==self_id: continue
 		present[record.id]=true
+		var level := int(roundf(float(record.get("y",0.0))/3.0))
 		if not peers.has(record.id):
 			var body: Node3D=preload("res://scripts/player.gd").new()
 			body.controls_enabled=false;body.visual_only=true
@@ -920,9 +1339,14 @@ func share_presence() -> void:
 			body.apply_avatar(record.get("avatar",{}))
 			body.position=Vector3(record.x,0,record.z)
 			var plate := Art.label3d(body,str(record.username),Vector3(0,2.05,0),Color("f0dfba"))
-			plate.font_size=30;plate.outline_size=4
+			Art.style_nameplate(plate)
 			peers[record.id]={"node":body,"target":Vector3(record.x,0,record.z)}
 		peers[record.id].target=Vector3(record.x,0,record.z)
+		if int(peers[record.id].get("floor",-1))!=level:
+			# Changing floors is a jump, not a glide across the room.
+			peers[record.id].node.position=peers[record.id].target
+		peers[record.id]["floor"]=level
+		peers[record.id].node.visible=level==floor_index
 	for id in peers.keys():
 		if not present.has(id):
 			if is_instance_valid(peers[id].node): peers[id].node.queue_free()
@@ -940,33 +1364,237 @@ func update_peers(delta: float) -> void:
 
 func leave() -> void:
 	var veil := Transition.of(get_tree())
-	if veil.veil.modulate.a > 0.5: return
-	veil.play_door("open")
+	if veil.veil.modulate.a > 0.5 or leaving: return
+	leaving=true
+	stand_up(false)
+	# The walker keeps walking out through the doorway while the veil falls.
+	if floor_index==0 and is_instance_valid(hero):
+		walk_out=Vector3(float(room_spec.get("door_x",0.0)),0,float(room_spec.size.y)*0.5+1.6)
+	veil.play_door("open",room)
 	await veil.fade_out(0.45)
+	if is_instance_valid(hero):
+		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
 	Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":room})
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if not event.is_pressed() or event.is_echo():return
+	# Rebinding-aware: a key bound to Interact reports KEY_E (game_settings.gd).
+	var key := GameSettings.canonical_key(event)
+	if is_instance_valid(talk_box):
+		match key:
+			KEY_E,KEY_SPACE,KEY_ENTER: advance_talk()
+			KEY_ESCAPE: close_talk()
+			KEY_1,KEY_2,KEY_3:
+				var index: int=event.physical_keycode-KEY_1
+				if talk_page>=talk_lines.size()-1 and index<talk_choices.size(): run_choice(str(talk_choices[index][1]))
+		get_viewport().set_input_as_handled()
+		return
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit:return
 	if event.physical_keycode==KEY_ESCAPE:
-		cancel_placement()
-	if event.physical_keycode==KEY_R and placement_mode:
+		if placement_mode: cancel_placement()
+		elif not resting.is_empty(): stand_up()
+		elif is_instance_valid(dock_panel) and dock_panel.visible: set_dock_open(false)
+		else: PauseMenu.open(self)
+	if key==KEY_C and is_instance_valid(dock_toggle) and dock_toggle.visible:
+		set_dock_open(not dock_panel.visible)
+	if key==KEY_R and placement_mode:
 		rotate_placement(90)
-	if event.physical_keycode==KEY_E:
-		if is_instance_valid(hero) and hero.position.z>3.6 and absf(hero.position.x)<1.5:leave()
+	if key==KEY_E:
+		if not resting.is_empty():stand_up()
+		elif is_instance_valid(hero) and floor_index==0 and Interiors.near_door(room_spec,hero.position):leave()
 		else:interact_nearest()
 
 func interact_nearest() -> void:
-	if not is_instance_valid(hero) or pending or not visit_host.is_empty():return
+	if not is_instance_valid(hero) or pending or travelling:return
+	var list := decor_candidates()
+	var pick := next_pick(list.size())
+	var fixed: Dictionary=list[pick] if not list.is_empty() else {}
 	var nearest := "";var distance := 2.3
-	for id in placed:
-		var d: float=hero.position.distance_to(placed[id].position)
-		if d<distance:nearest=id;distance=d
+	if visit_host.is_empty() and not public_room and floor_index==0:
+		for id in placed:
+			var d: float=hero.position.distance_to(placed[id].position)
+			if d<distance:nearest=id;distance=d
+	# Player-made furniture keeps its server interaction; room furniture talks locally.
+	if not fixed.is_empty() and (nearest.is_empty() or float(fixed.distance)+1.0<distance):
+		pick_cycle=pick;pick_spot=hero.position;pick_time=Time.get_ticks_msec()*0.001
+		use_decor(fixed.record)
+		return
 	if nearest.is_empty():return
 	for i in data.objects.size():
 		if data.objects[i].id==nearest:await select_item(i);await interact_selected();return
+
+## Everything within reach, best first: the piece the walker faces and is closest
+## to leads; pieces hanging above others (a clock over a wardrobe, a window over
+## the sink) follow, and pressing E again on the same spot moves on to them.
+func decor_candidates() -> Array:
+	var found: Array=[]
+	if not is_instance_valid(hero): return found
+	var facing: Vector3=hero.facing
+	facing.y=0
+	for record in decor:
+		if not record.interactive or not is_instance_valid(record.node): continue
+		var local: Vector3=(hero.position-record.center).rotated(Vector3.UP,-float(record.yaw))
+		var half: Vector2=record.half
+		var gap := Vector2(maxf(0.0,absf(local.x)-half.x),maxf(0.0,absf(local.z)-half.y)).length()
+		var reach := 1.35 if record.mounted else 0.85
+		if gap>=reach: continue
+		var toward: Vector3=record.center-hero.position
+		toward.y=0
+		var score := gap-0.45*(facing.normalized().dot(toward.normalized()) if toward.length()>0.01 and facing.length()>0.01 else 0.0)
+		found.append({"record":record,"distance":gap,"score":score})
+	found.sort_custom(func(a,b): return a.score<b.score)
+	return found
+
+## Which candidate the next E press uses (cycling while the walker stays put).
+func next_pick(count: int) -> int:
+	if count<=0 or not is_instance_valid(hero): return 0
+	if hero.position.distance_to(pick_spot)<0.25 and Time.get_ticks_msec()*0.001-pick_time<8.0: return (pick_cycle+1)%count
+	return 0
+
+## The piece of room furniture the next E press would use, as {record, distance}.
+func nearest_decor() -> Dictionary:
+	var list := decor_candidates()
+	if list.is_empty(): return {}
+	return list[next_pick(list.size())]
+
+func use_decor(record: Dictionary) -> void:
+	last_used=record
+	var who := str(record.get("id","")) if record.kind=="resident" else str(record.get("occupant",""))
+	if not who.is_empty() and npcs.has(who):
+		talk_to(who,record)
+		return
+	interact_count+=1
+	var hour: float=daylight_sample.get("hour",12.0)
+	var result: Dictionary=Interiors.interact(record,interact_count,hour,str(building_spec.get("outlook","meadow")))
+	if result.is_empty(): return
+	var action: String=result.get("action","look")
+	if action=="travel" and travel_enabled:
+		travel(record)
+		return
+	if is_instance_valid(hero) and action!="sit" and action!="lie": hero.face_point(record.center)
+	if result.has("chip"): say(str(result.chip),record)
+	elif not result.get("quiet",false): say(str(result.text),record)
+	var sound: String=result.get("sound","pop")
+	if sound=="piano":
+		tone_player.stream=Interiors.piano_stream(interact_count)
+		tone_player.play()
+	else:
+		sfx_player.stream=Interiors.sfx(sound);sfx_player.play()
+	play_effect(action,record)
+
+## A short speech bubble above the furniture, mirrored in the status bar.
+func say(text: String, record: Dictionary) -> void:
+	message(text,false)
+	if not is_instance_valid(bubble): return
+	var size: Vector3=record.get("size",Vector3.ONE)
+	var top: float=record.node.global_position.y+(size.y*0.5 if record.mounted else size.y)
+	var long_line := text.length()>28
+	bubble_label.text=text
+	bubble_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART if long_line else TextServer.AUTOWRAP_OFF
+	bubble_label.custom_minimum_size.x=340 if long_line else 0
+	bubble_anchor=Vector3(record.center.x,minf(top+0.25,float(room_spec.height)),record.center.z)
+	bubble.modulate.a=1.0;bubble.visible=true
+	hint_label.visible=false
+	pin_overlay(bubble,bubble_anchor,14)
+	if bubble_tween and bubble_tween.is_valid(): bubble_tween.kill()
+	bubble_tween=create_tween()
+	bubble_tween.tween_interval(3.4)
+	bubble_tween.tween_property(bubble,"modulate:a",0.0,0.45)
+	bubble_tween.tween_callback(func(): bubble.visible=false)
+
+## Shows a small "E" over whatever the walker can use (furniture or the door) and
+## the matching key chip at the bottom of the screen.
+func update_hint() -> void:
+	if not is_instance_valid(hint_label) or not is_instance_valid(hero) or placement_mode or travelling:
+		if is_instance_valid(hint_label): hint_label.visible=false
+		set_chip("",default_hint())
+		return
+	if not resting.is_empty():
+		hint_label.visible=false
+		set_chip("E",tr("일어나기"))
+		return
+	if floor_index==0 and Interiors.near_door(room_spec,hero.position):
+		hint_label.text="E"
+		hint_anchor=Vector3(float(room_spec.get("door_x",0.0)),1.45,float(room_spec.size.y)*0.5+0.3)
+		hint_label.visible=true
+		set_chip("E",tr("문 쪽으로 걸어 나가면 마을로"))
+		return
+	var fixed := nearest_decor()
+	if fixed.is_empty():
+		hint_label.visible=false
+		set_chip("",default_hint())
+		return
+	var record: Dictionary=fixed.record
+	var size: Vector3=record.get("size",Vector3.ONE)
+	var top: float=record.node.global_position.y+(size.y*0.5 if record.mounted else size.y)
+	var up: bool=record.has("link") and int(record.link.to)>floor_index
+	hint_label.text="E  ▲" if up else ("E  ▼" if record.has("link") else "E")
+	hint_anchor=Vector3(record.center.x,minf(top+0.15,float(room_spec.height)),record.center.z)
+	hint_label.visible=not bubble.visible
+	var who := str(record.get("id","")) if record.kind=="resident" else str(record.get("occupant",""))
+	if not who.is_empty() and npcs.has(who):
+		set_chip("E",tr("쉿, 자고 있어요") if npcs[who].state.get("asleep",false) else tr("말 걸기"))
+	elif record.has("link"): set_chip("E",(tr("▲ 계단 오르기") if up else tr("▼ 계단 내려가기")))
+	else: set_chip("E",tr(str(Interiors.ACTION_HINTS.get(str(Interiors.ACTIONS.get(str(record.kind),"look")),"살펴보기"))))
+
+func default_hint() -> String:
+	if public_room or not visit_host.is_empty(): return tr("WASD 이동   E 살펴보기")
+	return tr("WASD 이동   E 상호작용   R 회전   Esc 취소")
+
+func set_chip(key: String, text: String) -> void:
+	if not is_instance_valid(hint_chip): return
+	if key=="E": key=GameSettings.key_label("interact")
+	# Interaction prompts can be switched off; the plain controls line stays.
+	hint_chip.modulate.a=1.0 if key.is_empty() or GameSettings.show_prompts() else 0.0
+	if is_instance_valid(hint_label):
+		hint_label.modulate.a=1.0 if GameSettings.show_prompts() else 0.0
+		if not key.is_empty() and key!="E": hint_label.text=hint_label.text.replace("E",key)
+	hint_key.visible=not key.is_empty()
+	hint_key.text=key
+	controls_label.text=text
+	hint_chip.reset_size()
+	var chip: Vector2=hint_chip.get_combined_minimum_size()
+	hint_chip.offset_left=-chip.x*0.5;hint_chip.offset_right=chip.x*0.5
+	hint_chip.offset_top=-chip.y-28;hint_chip.offset_bottom=-28
+
+## Camera framing: in front of the open front edge, above the door side, framing
+## the room the walker is in (closer than outside); distance follows that room.
+func camera_rig() -> Dictionary:
+	var size: Vector2=room_spec.get("size",Vector2(10,10))
+	var rooms: Array=room_spec.get("rooms",[{"x0":-size.x*0.5,"x1":size.x*0.5}])
+	var index := Interiors.room_at(room_spec,hero.position.x) if is_instance_valid(hero) and not room_spec.is_empty() else 0
+	var x0: float=rooms[index].x0
+	var x1: float=rooms[index].x1
+	var aspect := 1.5
+	if is_instance_valid(viewport) and viewport.size.y>0: aspect=float(viewport.size.x)/float(viewport.size.y)
+	var pitch := deg_to_rad(30.0)
+	var width := x1-x0
+	# The view is full screen (1280x800): a little further back than the old
+	# letterboxed view so a whole room still fits around the walker.
+	var distance := clampf((4.4+maxf(size.y,width*0.85)*0.6)*1.2,9.0,13.4)
+	var half_width := distance*tan(deg_to_rad(camera.fov*0.5))*aspect
+	var limit := maxf(width*0.5+0.4-half_width*0.92,minf(0.9,width*0.09))
+	return {"offset":Vector3(0,sin(pitch),cos(pitch)),"distance":distance,"centre":(x0+x1)*0.5,"x_limit":limit}
+
+func update_camera(delta: float, snap := false) -> void:
+	if not is_instance_valid(camera) or room_spec.is_empty(): return
+	var size: Vector2=room_spec.size
+	var rig := camera_rig()
+	var at: Vector3=hero.position if is_instance_valid(hero) else Interiors.spawn_point(room_spec)
+	var limit: float=rig.x_limit
+	var centre: float=rig.centre
+	var target := Vector3(centre+clampf((at.x-centre)*0.65,-limit,limit),0.85+maxf(at.y,0.0)*0.6,clampf(lerpf(-size.y*0.12,at.z,0.55),-size.y*0.5+1.8,size.y*0.5-1.4))
+	var weight := ControllerProfile.damping(3.2,delta)
+	cam_focus=target if snap else cam_focus.lerp(target,weight)
+	cam_distance=float(rig.distance) if snap else lerpf(cam_distance,float(rig.distance),weight)
+	camera.position=cam_focus+(rig.offset as Vector3)*cam_distance
+	camera.look_at(cam_focus)
+	# With the drawer open the room slides left so it stays framed beside it.
+	var aspect := float(viewport.size.x)/maxf(1.0,float(viewport.size.y))
+	var shift := 0.16*2.0*cam_distance*tan(deg_to_rad(camera.fov*0.5))*aspect if is_instance_valid(dock_panel) and dock_panel.visible else 0.0
+	camera.h_offset=shift if snap else lerpf(camera.h_offset,shift,weight)
 
 func proximity() -> void:
 	if proximity_pending or pending or not is_instance_valid(hero) or not visit_host.is_empty():return
@@ -1008,7 +1636,7 @@ func _process(delta: float) -> void:
 		placement_marker.position=Vector3(place_at.x,0.065,place_at.z)
 		placement_marker.material_override.albedo_color=Color("87c7a7",.32) if placement_problem(place_at).is_empty() else Color("d27566",.32)
 	poll_time+=delta;auth_time+=delta
-	if visit_host.is_empty():
+	if visit_host.is_empty() and not public_room and not api.token.is_empty():
 		if poll_time>2.5:poll_time=0;poll_job()
 		if auth_time>20:auth_time=0;refresh()
 	presence_time+=delta
@@ -1021,24 +1649,92 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(hero):return
 	hero.external_motion=Vector2.ZERO
 	hero.external_velocity=Vector2.ZERO
-	if placement_mode:return
-	var focus := get_viewport().gui_get_focus_owner()
-	if focus is TextEdit or focus is LineEdit:return
+	hint_time+=delta
+	if hint_time>0.15:hint_time=0;update_hint();update_place_label();update_name_plates()
+	daylight_time+=delta
+	if daylight_time>20.0:daylight_time=0;apply_daylight()
+	residents_time+=delta
+	if residents_time>25.0:residents_time=0;refresh_residents(false);apply_daylight()
+	cue_time+=delta
+	if cue_time>3.5:cue_time=0;resident_cues()
+	if leaving:
+		walk_out_step(delta)
+	elif not placement_mode and not travelling and not is_instance_valid(talk_box) and not PauseMenu.is_open():
+		var focus := get_viewport().gui_get_focus_owner()
+		if not (focus is TextEdit or focus is LineEdit):walk(delta)
+	update_camera(delta)
+	if is_instance_valid(bubble) and bubble.visible: pin_overlay(bubble,bubble_anchor,14)
+	if is_instance_valid(hint_label) and hint_label.visible: pin_overlay(hint_label,hint_anchor,6)
+
+## Out through the doorway while the screen fades, at walking pace.
+func walk_out_step(delta: float) -> void:
+	if not is_instance_valid(hero) or walk_out==Vector3.ZERO: return
+	var before: Vector3=hero.position
+	hero.position=hero.position.move_toward(walk_out,ControllerProfile.ROOM_WALK*delta)
+	report_motion(before,delta)
+
+## WASD walking inside the room.
+func walk(delta: float) -> void:
 	var input_direction := Input.get_vector("move_left","move_right","move_forward","move_back")
 	var direction := Vector3(input_direction.x,0,input_direction.y)
-	if direction.length()>0:
-		var before: Vector3=hero.position
-		var step := direction.normalized()*delta*ControllerProfile.ROOM_WALK
-		var candidate: Vector3=hero.position+Vector3(step.x,0,0)
-		if not movement_blocked(candidate):hero.position=candidate
-		candidate=hero.position+Vector3(0,0,step.z)
-		if not movement_blocked(candidate):hero.position=candidate
-		hero.position.x=clampf(hero.position.x,-4.5,4.5);hero.position.z=clampf(hero.position.z,-4.5,4.65)
-		hero.external_velocity=Vector2(hero.position.x-before.x,hero.position.z-before.z)/maxf(delta,.001)
-		hero.external_motion=hero.external_velocity.normalized()
+	if direction.length()<=0:return
+	if not resting.is_empty():
+		stand_up()
+		return
+	move_hero(direction,delta)
+
+## One step of walking: stays on the floor, slides along furniture, eases into
+## doorways, climbs stairs it walks into and leaves through the front door.
+func move_hero(direction: Vector3, delta: float) -> void:
+	if not is_instance_valid(hero) or direction.length()<=0.0: return
+	var before: Vector3=hero.position
+	var step := direction.normalized()*delta*ControllerProfile.ROOM_WALK
+	var limits := Interiors.walk_limits(room_spec)
+	var door_x: float=limits.door_x
+	# Heading for the front door from a little to the side: ease into the doorway.
+	if room_spec.get("has_door",false) and step.z>0 and hero.position.z>float(limits.front)-0.25 and absf(hero.position.x-door_x)<Interiors.DOOR_HALF+0.4:
+		var eased := Vector3(move_toward(hero.position.x,door_x,delta*1.6),0,hero.position.z)
+		if can_stand(eased): hero.position=eased
+	# ...and the same for doorways between rooms.
+	for door in room_spec.get("doorways",[]):
+		var middle: float=(float(door.z0)+float(door.z1))*0.5
+		if absf(step.x)>0.001 and absf(hero.position.x-float(door.x))<0.9 and absf(hero.position.z-middle)<Interiors.DOORWAY*0.5+0.45:
+			var eased := Vector3(hero.position.x,0,move_toward(hero.position.z,middle,delta*1.6))
+			if can_stand(eased): hero.position=eased
+	var stuck := movement_blocked(hero.position)
+	var candidate: Vector3=hero.position+Vector3(step.x,0,0)
+	if can_stand(candidate,stuck):hero.position=candidate
+	else: try_stairs(candidate,direction)
+	candidate=hero.position+Vector3(0,0,step.z)
+	if can_stand(candidate,stuck):hero.position=candidate
+	else: try_stairs(candidate,direction)
+	report_motion(before,delta)
+	if room_spec.get("has_door",false) and step.z>0 and direction.normalized().z>0.5 and Interiors.at_door(room_spec,hero.position+Vector3(0,0,step.z)):leave()
+
+## The walk clip and contact IK follow where the walker really went: a blocked or
+## clamped step reads as standing still instead of marching in place.
+func report_motion(before: Vector3, delta: float) -> void:
+	var moved := Vector2(hero.position.x-before.x,hero.position.z-before.z)/maxf(delta,.001)
+	if moved.length()<0.25: moved=Vector2.ZERO
+	hero.external_velocity=moved
+	hero.external_motion=moved.normalized()
+
+## Walking into a staircase, ladder or hatch takes it.
+func try_stairs(at: Vector3, direction: Vector3) -> void:
+	if not travel_enabled or travelling: return
+	var record := blocking_record(at)
+	if record.is_empty() or not record.has("link"): return
+	var toward: Vector3=record.center-hero.position
+	toward.y=0
+	if toward.length()<0.01 or direction.normalized().dot(toward.normalized())>0.35: travel(record)
+
+func can_stand(at: Vector3, stuck := false) -> bool:
+	if not Interiors.walkable(room_spec,at):return false
+	return stuck or not movement_blocked(at)
 
 func movement_blocked(at: Vector3) -> bool:
-	if room=="workshop" and absf(at.x+3.7)<1.15 and absf(at.z+3.1)<0.75:return true
+	if not blocking_record(at).is_empty(): return true
+	if floor_index!=0: return false
 	for id in placed:
 		var item: Node3D=placed[id]
 		var size: Vector3=item.get_meta("size",Vector3(1.6,1.6,1.6))
@@ -1046,12 +1742,634 @@ func movement_blocked(at: Vector3) -> bool:
 		if absf(local.x)<size.x*0.5+ControllerProfile.BODY_RADIUS and absf(local.z)<size.z*0.5+ControllerProfile.BODY_RADIUS:return true
 	return false
 
+## The room furniture whose footprint the walker would stand in at this spot.
+func blocking_record(at: Vector3) -> Dictionary:
+	for record in decor:
+		if not record.solid:continue
+		var local: Vector3=(at-record.center).rotated(Vector3.UP,-float(record.yaw))
+		var half: Vector2=record.half
+		if absf(local.x)<half.x+ControllerProfile.BODY_RADIUS*0.8 and absf(local.z)<half.y+ControllerProfile.BODY_RADIUS*0.8:return record
+	return {}
+
+## Client-side check before asking the server; the server accepts x,z in [-4,4]
+## with the door strip (|x|<1.5, z>2.5) kept clear, for home and workshop only.
 func placement_problem(at: Vector3) -> String:
+	if public_room:return tr("이곳에는 가구를 놓을 수 없어요.")
+	if floor_index!=0:return tr("가구는 1층에만 놓을 수 있어요.")
 	if absf(at.x)>4 or absf(at.z)>4:return tr("벽에서 한 칸 안쪽에 놓아 주세요.")
 	if absf(at.x)<1.5 and at.z>2.5:return tr("출입문 앞은 비워 주세요.")
 	if room=="workshop" and at.x < -1.8 and at.z < -1.5:return tr("고정 작업대와 겹쳐요.")
+	for record in decor:
+		if not record.solid:continue
+		var half: Vector2=record.world_half
+		if absf(record.center.x-at.x)<half.x+0.75 and absf(record.center.z-at.z)<half.y+0.75:return tr("방에 원래 있던 가구와 겹쳐요.")
 	if is_instance_valid(hero) and absf(hero.position.x-at.x)<1.15 and absf(hero.position.z-at.z)<1.15:return tr("캐릭터가 서 있는 곳은 비워 주세요.")
 	for obj in data.get("objects",[]):
 		if obj.id==selected.get("id") or obj.state!="placed" or obj.room!=room:continue
 		if absf(obj.x-at.x)<2 and absf(obj.z-at.z)<2:return tr("다른 가구에서 두 칸 이상 떨어뜨려 주세요.")
 	return ""
+
+# ---------------------------------------------------------------- furniture feedback
+
+## What using furniture looks like: small, cheap effects instead of sentences.
+func play_effect(action: String, record: Dictionary) -> void:
+	var node: Node3D=record.node
+	var size: Vector3=record.get("size",Vector3.ONE)
+	var base_y: float=node.global_position.y
+	var top: Vector3=Vector3(record.center.x,base_y+(size.y*0.5 if record.mounted else size.y),record.center.z)
+	var front: Vector3=Vector3(0,0,1).rotated(Vector3.UP,float(record.yaw))
+	match action:
+		"sit": sit_on(record)
+		"lie": lie_on(record);sparkle(top+Vector3(0,0.2,0),Color("cfd8ff"),3)
+		"open":
+			if record.has("lid"):
+				var lid: Node3D=record.lid
+				var tween := lid.create_tween()
+				tween.tween_property(lid,"rotation:x",-1.1,0.35).set_trans(Tween.TRANS_BACK)
+				tween.tween_interval(1.4)
+				tween.tween_property(lid,"rotation:x",0.0,0.3)
+			else: wobble(node,Vector3(1.03,0.97,1.03))
+			sparkle(top+front*0.2,Color("ffe39a"),5)
+		"cook":
+			puff(top+Vector3(0,0.1,0),Color("f4f4f2",0.8),9,1.3,0.3,0.26)
+			puff(top+Vector3(0,0.05,0),Color("ffb347",0.9),5,0.35,0.2,0.04)
+		"wash":
+			bubbles(top+front*0.1+Vector3(0,0.05,0),9)
+			puff(top+Vector3(0,0.4,0),Color("7fc4ec",0.9),6,-0.5,0.2,0.05)
+		"water":
+			puff(top+Vector3(0,0.45,0),Color("7fc4ec",0.9),9,-0.55,0.3,0.06)
+			sparkle(top+Vector3(0,0.15,0),Color("c8f0b0"),3)
+			wobble(node,Vector3(1.02,1.05,1.02))
+		"warm": puff(Vector3(record.center.x,0.6,record.center.z)+front*(size.z*0.5),Color("ffb347",0.95),12,1.3,0.35,0.06)
+		"shine":
+			sparkle(top+Vector3(0,-size.y*0.35,0),Color("fff2b0"),8)
+			ring(top+Vector3(0,-size.y*0.4,0),Color("ffe39a",0.8),1.6)
+			for light in node.find_children("*","OmniLight3D",true,false):
+				var glow := light.create_tween()
+				glow.tween_property(light,"light_energy",light.light_energy*3.0,0.25)
+				glow.tween_property(light,"light_energy",light.light_energy,0.8)
+		"play":
+			for i in 4: note_pop(top+Vector3(randf_range(-0.4,0.4),0.1,0),"♪" if i%2==0 else "♫",i*0.18)
+		"read": pages(top+front*0.25,5)
+		"wind":
+			ring(top,Color("e9d29b",0.9),0.9)
+			spin_hands(node)
+		"ring":
+			ring(top+Vector3(0,0.1,0),Color("ffe39a",0.9),1.2)
+			note_pop(top+Vector3(0,0.2,0),"♪",0.0)
+		"sip":
+			puff(top+Vector3(0,0.05,0),Color("f4f4f2",0.6),4,0.6,0.12,0.08)
+			note_pop(top+Vector3(0,0.25,0),"♥",0.15)
+		"hammer":
+			burst(top+Vector3(0,0.05,0),Color("ffd36a"),8)
+			wobble(node,Vector3(1.03,0.96,1.03))
+		"pat","grind","pull":
+			puff(top,Color("f3ead6",0.8),9,0.6,0.35,0.12)
+			wobble(node,Vector3(1.03,0.96,1.03))
+			if record.has("bob"):
+				var sack: Node3D=record.bob
+				var lift := sack.create_tween()
+				lift.tween_property(sack,"position:y",sack.position.y+0.8,0.5).set_trans(Tween.TRANS_SINE)
+				lift.tween_property(sack,"position:y",sack.position.y,0.6).set_trans(Tween.TRANS_BOUNCE)
+		"knock":
+			puff(top,Color("c9b9a0",0.6),6,0.4,0.3,0.1)
+			wobble(node,Vector3(1.04,0.96,1.04))
+		"turn":
+			wobble(node,Vector3(1.03,0.97,1.03));turn_once(node,action)
+			sparkle(top,Color("fff2b0"),4)
+		"switch": ring(top,Color("ffcf86",0.7),0.6)
+		"look_out": sparkle(top,Color("fff2b0"),3)
+		_:
+			wobble(node,Vector3(1.02,1.02,1.02))
+			sparkle(top,Color("fff2b0"),3)
+	if is_instance_valid(hero) and action in ["read","wash","cook","warm","water","ring","hammer","wind","sip"]: hero.react("craft")
+
+## Shared little meshes and materials so effects never allocate much.
+var fx_meshes: Dictionary={}
+func fx_mesh(kind: String) -> Mesh:
+	if fx_meshes.has(kind): return fx_meshes[kind]
+	var mesh: Mesh
+	match kind:
+		"page":
+			var quad := QuadMesh.new();quad.size=Vector2(0.14,0.1);mesh=quad
+		"ring":
+			var torus := TorusMesh.new();torus.inner_radius=0.42;torus.outer_radius=0.5;torus.rings=24;torus.ring_segments=4;mesh=torus
+		_:
+			var ball := SphereMesh.new();ball.radius=0.5;ball.height=1.0;ball.radial_segments=8;ball.rings=4;mesh=ball
+	fx_meshes[kind]=mesh
+	return mesh
+
+func fx_node(kind: String, color: Color, at: Vector3, scale_value: float) -> MeshInstance3D:
+	var bit := MeshInstance3D.new()
+	bit.mesh=fx_mesh(kind)
+	var material := StandardMaterial3D.new()
+	material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.cull_mode=BaseMaterial3D.CULL_DISABLED
+	material.albedo_color=color
+	bit.material_override=material
+	bit.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	stage.add_child(bit)
+	bit.global_position=at
+	bit.scale=Vector3.ONE*scale_value
+	return bit
+
+## Little four-point stars that pop and fade.
+func sparkle(at: Vector3, color: Color, count: int) -> void:
+	for i in count:
+		var star := Art.label3d(stage,"✦",at+Vector3(randf_range(-0.35,0.35),randf_range(-0.1,0.3),randf_range(-0.2,0.2)),color)
+		star.font_size=58;star.outline_size=8;star.outline_modulate=Color(0.45,0.3,0.08,0.7);star.no_depth_test=true
+		star.scale=Vector3.ONE*0.2
+		var tween := star.create_tween()
+		tween.tween_interval(i*0.08)
+		tween.tween_property(star,"scale",Vector3.ONE,0.18).set_trans(Tween.TRANS_BACK)
+		tween.parallel().tween_property(star,"position:y",star.position.y+0.25,0.7)
+		tween.tween_property(star,"modulate:a",0.0,0.35)
+		tween.tween_callback(star.queue_free)
+
+func note_pop(at: Vector3, text: String, delay: float) -> void:
+	var note := Art.label3d(stage,text,at,Color("fff2c8"))
+	note.font_size=62;note.outline_size=8;note.outline_modulate=Color(0.25,0.18,0.3,0.8);note.no_depth_test=true;note.modulate.a=0.0
+	var tween := note.create_tween()
+	tween.tween_interval(delay)
+	tween.tween_property(note,"modulate:a",1.0,0.1)
+	tween.parallel().tween_property(note,"position",at+Vector3(randf_range(-0.3,0.3),0.7,0),1.1).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(note,"modulate:a",0.0,0.3)
+	tween.tween_callback(note.queue_free)
+
+## A soft ring that widens and fades (bells, clocks, lamps, the lens).
+func ring(at: Vector3, color: Color, width: float) -> void:
+	var halo := fx_node("ring",color,at,0.2)
+	var tween := halo.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(halo,"scale",Vector3(width,0.3,width),0.6).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(halo.material_override,"albedo_color:a",0.0,0.6)
+	tween.set_parallel(false)
+	tween.tween_callback(halo.queue_free)
+
+## Soap bubbles that wobble upward.
+func bubbles(at: Vector3, count: int) -> void:
+	for i in count:
+		var bubble_bit := fx_node("ball",Color("dff4ff",0.6),at+Vector3(randf_range(-0.3,0.3),0,randf_range(-0.15,0.15)),randf_range(0.09,0.17))
+		var tween := bubble_bit.create_tween()
+		tween.tween_interval(i*0.07)
+		tween.tween_property(bubble_bit,"global_position",bubble_bit.global_position+Vector3(randf_range(-0.2,0.2),randf_range(0.5,0.9),0),1.0).set_trans(Tween.TRANS_SINE)
+		tween.tween_callback(bubble_bit.queue_free)
+
+## Pages that flutter up out of a book.
+func pages(at: Vector3, count: int) -> void:
+	for i in count:
+		var page := fx_node("page",Color("fbf6e6",0.95),at+Vector3(randf_range(-0.2,0.2),0,0),1.8)
+		var tween := page.create_tween()
+		tween.tween_interval(i*0.09)
+		tween.set_parallel(true)
+		tween.tween_property(page,"global_position",page.global_position+Vector3(randf_range(-0.4,0.4),randf_range(0.5,0.9),randf_range(0.0,0.3)),0.9)
+		tween.tween_property(page,"rotation",Vector3(randf_range(-2,2),randf_range(-3,3),randf_range(-2,2)),0.9)
+		tween.tween_property(page.material_override,"albedo_color:a",0.0,0.9).set_delay(0.4)
+		tween.set_parallel(false)
+		tween.tween_callback(page.queue_free)
+
+## Sparks that jump out and fall (a hammer on the workbench).
+func burst(at: Vector3, color: Color, count: int) -> void:
+	for i in count:
+		var spark := fx_node("ball",color,at,0.05)
+		var out := Vector3(randf_range(-0.5,0.5),0,randf_range(-0.5,0.5))
+		var tween := spark.create_tween()
+		tween.tween_property(spark,"global_position",at+out*0.6+Vector3(0,0.35,0),0.18)
+		tween.tween_property(spark,"global_position",at+out+Vector3(0,-0.2,0),0.3).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		tween.tween_callback(spark.queue_free)
+
+## Clock hands whirl round once (built clocks); a generated clock just rings.
+func spin_hands(node: Node3D) -> void:
+	for hand in node.find_children("*","Node3D",true,false):
+		if hand.get_child_count()==1 and hand.get_child(0) is MeshInstance3D and absf(hand.position.z)>0.04 and absf(hand.position.z)<0.07:
+			var tween := hand.create_tween()
+			tween.tween_property(hand,"rotation:z",hand.rotation.z-TAU,0.8).set_trans(Tween.TRANS_CUBIC)
+
+func wobble(node: Node3D, peak: Vector3) -> void:
+	if not is_instance_valid(node) or node.has_meta("wobbling"): return
+	node.set_meta("wobbling",true)
+	var tween := node.create_tween()
+	tween.tween_property(node,"scale",peak,0.08)
+	tween.tween_property(node,"scale",Vector3.ONE,0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_callback(func(): node.remove_meta("wobbling"))
+
+func turn_once(node: Node3D, action: String) -> void:
+	if action!="turn": return
+	var model := node.get_node_or_null("Model") as Node3D
+	var target: Node3D=model if model else node
+	var tween := target.create_tween()
+	tween.tween_property(target,"rotation:y",target.rotation.y+0.5,0.5).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(target,"rotation:y",target.rotation.y,0.7).set_trans(Tween.TRANS_SINE)
+
+## A few soft particles (steam, water drops, embers, flour) that drift and fade.
+func puff(at: Vector3, color: Color, count: int, rise: float, spread: float, radius: float) -> void:
+	var material := StandardMaterial3D.new()
+	material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+	material.albedo_color=color
+	for i in count:
+		var bit := MeshInstance3D.new()
+		var ball := SphereMesh.new();ball.radius=radius;ball.height=radius*2;ball.radial_segments=8;ball.rings=4
+		bit.mesh=ball;bit.material_override=material.duplicate()
+		bit.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		stage.add_child(bit)
+		bit.global_position=at+Vector3(randf_range(-spread,spread),randf_range(0,0.15),randf_range(-spread,spread))
+		var tween := bit.create_tween()
+		tween.tween_interval(i*0.06)
+		tween.set_parallel(true)
+		tween.tween_property(bit,"global_position",bit.global_position+Vector3(randf_range(-0.15,0.15),rise,randf_range(-0.15,0.15)),0.9)
+		tween.tween_property(bit,"scale",Vector3.ONE*(1.8 if rise>0 else 0.6),0.9)
+		tween.tween_property(bit.material_override,"albedo_color:a",0.0,0.9)
+		tween.set_parallel(false)
+		tween.tween_callback(bit.queue_free)
+
+func ensure_rest_pose() -> bool:
+	if not is_instance_valid(hero) or not is_instance_valid(hero.hand_skeleton): return false
+	if not is_instance_valid(rest_pose) or rest_pose.get_parent()!=hero.hand_skeleton:
+		rest_pose=Interiors.RestPose.new()
+		hero.hand_skeleton.add_child(rest_pose)
+	rest_pose.body=hero.visual
+	return true
+
+func hip_height() -> float:
+	if not is_instance_valid(hero) or not is_instance_valid(hero.hand_skeleton): return 0.85
+	var skeleton: Skeleton3D=hero.hand_skeleton
+	var bone := skeleton.find_bone("L_Thigh")
+	if bone<0: return 0.85
+	var hip: Vector3=skeleton.global_transform*skeleton.get_bone_global_rest(bone).origin
+	return clampf(hip.y-hero.global_position.y,0.5,1.1)
+
+## Sits on a chair, sofa or bench: hips and knees bend and the walker settles on
+## the seat facing out. Any movement key or E gets up again.
+func sit_on(record: Dictionary) -> void:
+	if not is_instance_valid(hero) or not resting.is_empty(): return
+	var size: Vector3=record.size
+	var yaw: float=record.yaw
+	var front := Vector3(0,0,1).rotated(Vector3.UP,yaw)
+	var seat_x := 0.0
+	if record.kind=="sofa":
+		var local: Vector3=(hero.position-record.center).rotated(Vector3.UP,-yaw)
+		seat_x=clampf(local.x,-size.x*0.25,size.x*0.25)
+	var seat: Vector3=record.center+Vector3(seat_x,0,0.04).rotated(Vector3.UP,yaw)
+	rest_return=hero.position
+	resting="sit"
+	var height: float=size.y*0.5 if record.kind!="bench" else 0.47
+	hero.position=Vector3(seat.x,height-hip_height()+0.1,seat.z)
+	hero.facing=front
+	hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
+	if ensure_rest_pose(): rest_pose.mode="sit"
+
+## Lies down on a bed, head on the pillow.
+func lie_on(record: Dictionary) -> void:
+	if not is_instance_valid(hero) or not resting.is_empty(): return
+	var size: Vector3=record.size
+	var yaw: float=record.yaw
+	var head := Vector3(0,0,-1).rotated(Vector3.UP,yaw)
+	rest_return=hero.position
+	resting="lie"
+	var feet: Vector3=record.center-head*(size.z*0.5-0.2)
+	hero.facing=Vector3(0,0,-1)
+	var down := Vector3(0,-1,0)
+	hero.basis=Basis(head.cross(down),head,down)
+	hero.position=Vector3(feet.x,minf(size.y*0.5,0.62)+0.14,feet.z)
+	hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
+	if ensure_rest_pose(): rest_pose.mode=""
+
+func stand_up(face_away := true) -> void:
+	if resting.is_empty() or not is_instance_valid(hero): return
+	resting=""
+	hero.basis=Basis()
+	hero.position=Vector3(rest_return.x,0,rest_return.z)
+	if is_instance_valid(rest_pose): rest_pose.mode=""
+	if face_away: hero.facing=Vector3.BACK
+
+# ---------------------------------------------------------------- residents
+
+func resident_clock() -> Dictionary:
+	var day: int=int(Engine.get_meta("interior_day")) if Engine.has_meta("interior_day") else int(Residents.clock().day)
+	return {"hour":float(daylight_sample.get("hour",Daylight.clock_hour())),"day":day}
+
+## Brings the room in line with the schedule: leavers walk out, newcomers walk
+## in through the door, people whose activity changed move to their new spot.
+func refresh_residents(instant := false) -> void:
+	if not public_room or building_spec.is_empty(): return
+	var c := resident_clock()
+	var now: Array=Residents.occupants(str(building_spec.building),c.hour,c.day)
+	var wanted := {}
+	for occupant in now: wanted[str(occupant.id)]=occupant
+	var taken := {}
+	for id in npcs.keys():
+		var entry: Dictionary=npcs[id]
+		var next: Dictionary=wanted.get(id,{})
+		if next.is_empty(): remove_resident(id,not instant)
+		elif next.activity!=entry.state.activity or next.spot!=entry.state.spot or next.asleep!=entry.state.asleep:
+			var from: Vector3=entry.holder.position
+			var same_floor: bool=int(entry.floor)==floor_index
+			remove_resident(id,false)
+			place_resident(next,taken,from if same_floor and not instant else Vector3.INF)
+		else:
+			entry.state=next
+			if not entry.record.is_empty(): taken[entry.record.node.get_instance_id()]=true
+	for occupant in now:
+		var id := str(occupant.id)
+		if npcs.has(id): continue
+		var door := Vector3(float(building_spec.floors[0].get("door_x",0.0)),0,float(building_spec.floors[0].size.y)*0.5-0.45)
+		place_resident(occupant,taken,door if not instant and floor_index==0 else Vector3.INF)
+
+func place_resident(occupant: Dictionary, taken: Dictionary, walk_from := Vector3.INF) -> void:
+	var id := str(occupant.id)
+	var pick: Dictionary=Interiors.choose_spot(occupant,decor_by_floor,taken)
+	var level := int(pick.get("floor",0))
+	var record: Dictionary=pick.get("record",{})
+	if not record.is_empty(): taken[record.node.get_instance_id()]=true
+	var holder := Node3D.new();holder.name="Resident_"+id
+	floor_roots[level].add_child(holder)
+	var body := make_body(id,holder)
+	var entry := {"id":id,"holder":holder,"body":body,"state":occupant,"floor":level,"record":record,"pose":"stand","talk":{},"zzz":null}
+	npcs[id]=entry
+	pose_resident(entry)
+	if walk_from!=Vector3.INF and level==floor_index and entry.pose=="stand":
+		var target: Vector3=holder.position
+		holder.position=walk_from
+		walk_to(entry,target,func(): pass)
+
+## A still figure for a resident: shadow folk from shadow_figure.gd, the cast from npc.gd.
+func make_body(id: String, holder: Node3D) -> Node3D:
+	var info: Dictionary=Residents.resident(id)
+	if str(info.get("kind",""))=="cast":
+		var npc_script := load("res://scripts/npc.gd") as GDScript
+		if npc_script and npc_script.call("available",id):
+			var npc: Node3D=npc_script.new()
+			holder.add_child(npc)
+			npc.call("setup",id,0.0)
+			name_plate(holder,id)
+			return npc
+	else:
+		var shadow_script := load("res://scripts/shadow_figure.gd") as GDScript
+		if shadow_script and shadow_script.can_instantiate():
+			var figure = shadow_script.call("create_still",id)
+			if figure is Node3D:
+				holder.add_child(figure)
+				return figure
+	var stand_in := Interiors.stand_in_figure(id)
+	holder.add_child(stand_in)
+	name_plate(holder,id)
+	return stand_in
+
+func name_plate(holder: Node3D, id: String) -> void:
+	var plate := Art.label3d(holder,tr(Interiors.resident_title(id)),Vector3(0,2.1,0),Color("d4cdf2"))
+	plate.font_size=28;plate.outline_size=4;plate.name="NamePlate"
+
+## Puts a resident on their spot: lying in their bed, sitting on a seat, or
+## standing in front of the piece they use, facing it.
+func pose_resident(entry: Dictionary) -> void:
+	var record: Dictionary=entry.record
+	var occupant: Dictionary=entry.state
+	var holder: Node3D=entry.holder
+	var body: Node3D=entry.body
+	var level := int(entry.floor)
+	var f: Dictionary=building_spec.floors[level]
+	var still := body.has_method("set_pose")
+	holder.basis=Basis()
+	var kind := str(record.get("kind",""))
+	if occupant.get("asleep",false) and kind=="bed":
+		entry.pose="lie"
+		var size: Vector3=record.size
+		var head := Vector3(0,0,-1).rotated(Vector3.UP,float(record.yaw))
+		var top := minf(size.y*0.5,0.62)+0.02
+		if still:
+			holder.position=record.center+Vector3(0,top,0)
+			body.face(atan2(head.x,head.z))
+			body.set_pose("lie")
+		else:
+			holder.position=record.center-head*(size.z*0.5-0.2)+Vector3(0,top+0.12,0)
+			holder.basis=Basis(head.cross(Vector3.UP),head,Vector3.UP)
+		record["occupant"]=entry.id
+		var zzz := Label3D.new();zzz.text="Z z z";zzz.font_size=34;zzz.pixel_size=0.005;zzz.outline_size=6
+		zzz.billboard=BaseMaterial3D.BILLBOARD_ENABLED;zzz.modulate=Color("cfd8ff")
+		holder.get_parent().add_child(zzz)
+		zzz.position=record.center-head*(size.z*0.5-0.45)+Vector3(0,top+0.75,0)
+		var bob := zzz.create_tween().set_loops()
+		bob.tween_property(zzz,"position:y",zzz.position.y+0.18,1.2).set_trans(Tween.TRANS_SINE)
+		bob.tween_property(zzz,"position:y",zzz.position.y,1.2).set_trans(Tween.TRANS_SINE)
+		entry.zzz=zzz
+		hide_plate(holder,body,true)
+		return
+	if kind in Interiors.SEATS and still:
+		entry.pose="sit"
+		var size: Vector3=record.size
+		var height: float=size.y*0.5 if kind!="bench" else 0.47
+		holder.position=record.center+Vector3(0,0,0.04).rotated(Vector3.UP,float(record.yaw))+Vector3(0,height+0.02,0)
+		body.face(float(record.yaw))
+		body.set_pose("sit")
+		record["occupant"]=entry.id
+		return
+	entry.pose="stand"
+	var others: Array=[]
+	for other in npcs.values():
+		if other!=entry and int(other.floor)==level and other.pose=="stand": others.append(other.holder.position)
+	var at: Vector3=Interiors.stand_spot(record,f,decor_by_floor[level],others) if not record.is_empty() else Interiors.spawn_point(f)+Vector3(0.9,0,-0.6)
+	holder.position=at
+	var look: Vector3=(record.center if not record.is_empty() else at+Vector3(0,0,1))-at
+	face_body(entry,atan2(look.x,look.z) if Vector2(look.x,look.z).length()>0.05 else 0.0)
+	if still: body.set_pose("stand")
+	var talk := {"kind":"resident","id":entry.id,"node":holder,"center":at,"yaw":0.0,"mounted":false,"solid":true,"interactive":true,"glb":false,
+		"size":Vector3(0.6,1.75,0.6),"half":Vector2(0.28,0.28),"world_half":Vector2(0.28,0.28),"top":1.75,"floor":level,"room":Interiors.room_at(f,at.x)}
+	decor_by_floor[level].append(talk)
+	entry.talk=talk
+
+func face_body(entry: Dictionary, yaw: float) -> void:
+	var body: Node3D=entry.body
+	if body.has_method("face"): body.face(yaw)
+	elif body.get("turn_target")!=null:
+		body.set("turn_target",yaw);body.rotation.y=yaw
+	else: body.rotation.y=yaw
+
+func hide_plate(holder: Node3D, body: Node3D, hidden: bool) -> void:
+	var plate := holder.get_node_or_null("NamePlate") as Label3D
+	if plate: plate.visible=not hidden
+	var own = body.get("nameplate")
+	if own is Label3D: own.visible=not hidden
+
+func remove_resident(id: String, walk_out_door: bool) -> void:
+	var entry: Dictionary=npcs.get(id,{})
+	if entry.is_empty(): return
+	npcs.erase(id)
+	if talk_id==id: close_talk()
+	var record: Dictionary=entry.record
+	if str(record.get("occupant",""))==id: record.erase("occupant")
+	if not entry.talk.is_empty(): decor_by_floor[int(entry.floor)].erase(entry.talk)
+	if is_instance_valid(entry.zzz): entry.zzz.queue_free()
+	var holder: Node3D=entry.holder
+	if walk_out_door and int(entry.floor)==floor_index and entry.pose=="stand" and is_instance_valid(holder):
+		var f: Dictionary=building_spec.floors[int(entry.floor)]
+		var exit: Vector3
+		if int(entry.floor)==0: exit=Vector3(float(f.get("door_x",0.0)),0,float(f.size.y)*0.5+0.3)
+		else:
+			exit=holder.position
+			for other in decor_by_floor[int(entry.floor)]:
+				if other.has("link") and int(other.link.to)<int(entry.floor): exit=other.center
+		walk_to(entry,exit,func():
+			var fade := holder.create_tween()
+			fade.tween_property(holder,"scale",Vector3(0.9,0.05,0.9),0.35)
+			fade.tween_callback(holder.queue_free))
+	elif is_instance_valid(holder): holder.queue_free()
+
+## Walks a standing resident in place along a straight line (they are props: no collision).
+func walk_to(entry: Dictionary, target: Vector3, done: Callable) -> void:
+	var holder: Node3D=entry.holder
+	var body: Node3D=entry.body
+	var from: Vector3=holder.position
+	var offset := target-from
+	offset.y=0
+	if offset.length()<0.05:
+		done.call();return
+	face_body(entry,atan2(offset.x,offset.z))
+	if body.has_method("play_clip"): body.play_clip("walk")
+	var tween := holder.create_tween()
+	tween.tween_property(holder,"position",target,offset.length()/1.1)
+	tween.tween_callback(func():
+		if body.has_method("play_clip"): body.play_clip("idle")
+		if not entry.record.is_empty() and npcs.has(str(entry.id)):
+			var look: Vector3=entry.record.center-holder.position
+			face_body(entry,atan2(look.x,look.z))
+		done.call())
+
+## Small signs of life on the floor the walker is on: steam, notes, flour, stars.
+func resident_cues() -> void:
+	for entry in npcs.values():
+		if int(entry.floor)!=floor_index or entry.state.get("asleep",false) or entry.record.is_empty(): continue
+		var record: Dictionary=entry.record
+		var size: Vector3=record.get("size",Vector3.ONE)
+		var top := Vector3(record.center.x,record.node.global_position.y+size.y,record.center.z)
+		match str(entry.state.activity):
+			"cook": puff(top+Vector3(0,0.1,0),Color("f4f4f2",0.7),5,1.0,0.2,0.18)
+			"barista": if randf()<0.5: puff(top+Vector3(0,0.1,0),Color("f4f4f2",0.6),4,0.8,0.2,0.14)
+			"mill": puff(top,Color("f3ead6",0.7),5,0.5,0.4,0.12)
+			"tend": puff(top+Vector3(0,0.3,0),Color("7fc4ec",0.85),6,-0.45,0.25,0.06)
+			"piano": pop_over(entry,"♪")
+			"stargaze": pop_over(entry,"✦")
+			"read","tidy": if randf()<0.3: pop_over(entry,"…")
+
+func pop_over(entry: Dictionary, text: String) -> void:
+	var body: Node3D=entry.body
+	if body.has_method("pop"):
+		body.pop(text,1.6);return
+	var label := Art.label3d(entry.holder,text,Vector3(0,2.0,0),Color("fff2c8"))
+	label.font_size=40
+	var tween := label.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(label,"position:y",2.5,1.4)
+	tween.tween_property(label,"modulate:a",0.0,1.4)
+	tween.set_parallel(false)
+	tween.tween_callback(label.queue_free)
+
+## E on a resident: sleepers only murmur; everyone else talks.
+func talk_to(id: String, record: Dictionary) -> void:
+	var entry: Dictionary=npcs[id]
+	if is_instance_valid(hero): hero.face_point(entry.holder.global_position)
+	if entry.state.get("asleep",false):
+		say(tr("쿨쿨… 깊이 잠들었어요."),record)
+		return
+	open_talk(id)
+
+## The village's RPG dialogue box: portrait, name plate, typed lines, choices.
+func open_talk(id: String) -> void:
+	close_talk()
+	var entry: Dictionary=npcs[id]
+	var c := resident_clock()
+	var talk: Dictionary=Interiors.resident_talk(id,entry.state,building_spec,c.hour)
+	talk_id=id;talk_lines=talk.lines;talk_choices=talk.choices;talk_page=0
+	if entry.pose=="stand" and is_instance_valid(hero):
+		var look: Vector3=hero.global_position-entry.holder.global_position
+		face_body(entry,atan2(look.x,look.z))
+	if entry.body.has_method("smile"): entry.body.smile(3.0)
+	sfx_player.stream=Interiors.sfx("pop");sfx_player.play()
+	talk_box=Control.new();talk_box.name="TalkBox";talk_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	talk_box.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	add_child(talk_box)
+	# The same illustrated card + night box as the village (RpgUi.dialogue).
+	talk_window=RpgUi.dialogue(talk_box,tr(Interiors.resident_title(id)),Interiors.portrait(id))
+	talk_window.shade.gui_input.connect(func(event):
+		if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT: advance_talk())
+	talk_body=talk_window.body
+	# Kept for older callers; choices now live in talk_window.choices.
+	talk_footer=HBoxContainer.new();talk_footer.visible=false;talk_box.add_child(talk_footer)
+	for item in [name_panel,hint_chip,hint_label,bubble]:
+		if is_instance_valid(item): item.visible=false
+	show_talk_page()
+
+func show_talk_page() -> void:
+	if not is_instance_valid(talk_box): return
+	talk_body.text=str(talk_lines[talk_page])
+	talk_body.visible_ratio=0.0
+	RpgUi.dialogue_line(talk_window,talk_body.text)
+	var typing := talk_body.create_tween()
+	typing.tween_property(talk_body,"visible_ratio",1.0,GameSettings.typing_seconds(talk_body.text.length()))
+	if talk_page<talk_lines.size()-1:
+		RpgUi.dialogue_more(talk_window,true)
+	else:
+		RpgUi.dialogue_more(talk_window,false)
+		var entries := []
+		for choice in talk_choices:
+			var action := str(choice[1])
+			entries.append([tr(str(choice[0])),func(): run_choice(action)])
+		RpgUi.dialogue_choices(talk_window,entries)
+
+func advance_talk() -> void:
+	if not is_instance_valid(talk_box): return
+	if talk_body.visible_ratio<1.0:
+		talk_body.visible_ratio=1.0
+	elif talk_page<talk_lines.size()-1:
+		talk_page+=1
+		sfx_player.stream=Interiors.sfx("click");sfx_player.play()
+		show_talk_page()
+	elif not talk_choices.is_empty():
+		run_choice(str(talk_choices[0][1]))
+
+func close_talk() -> void:
+	if is_instance_valid(talk_box): talk_box.queue_free()
+	talk_box=null
+	talk_window={}
+	talk_id=""
+	if is_instance_valid(hint_chip): hint_chip.visible=true
+
+## What a dialogue choice does: small gifts and tips, or the telescope at night.
+func run_choice(action: String) -> void:
+	var id := talk_id
+	close_talk()
+	var head: Vector3=hero.global_position+Vector3(0,1.6,0) if is_instance_valid(hero) else Vector3.ZERO
+	match action:
+		"coffee":
+			message(tr("따뜻한 코코아를 받았어요. 달콤해요!"))
+			sfx_player.stream=Interiors.sfx("clink");sfx_player.play()
+			puff(head,Color("f4f4f2",0.7),5,0.8,0.15,0.12)
+		"seed_tip":
+			message(tr("추천: 별사탕 씨앗은 햇살 좋은 밭에서 잘 자라요."))
+			sfx_player.stream=Interiors.sfx("ding");sfx_player.play()
+		"shop_tip":
+			message(tr("오늘의 추천은 반짝이는 낚싯바늘이에요."))
+			sfx_player.stream=Interiors.sfx("ding");sfx_player.play()
+		"flour":
+			message(tr("밀가루 한 줌을 받았어요. 고소한 냄새가 나요."))
+			puff(head-Vector3(0,0.6,0),Color("f3ead6",0.8),8,0.5,0.3,0.12)
+		"flower":
+			message(tr("들꽃 한 송이를 받았어요. 향기가 좋아요."))
+			sfx_player.stream=Interiors.sfx("chime");sfx_player.play()
+		"fish_tip":
+			message(tr("물때가 바뀔 때 찌를 던져 보세요. 꼭 낚일 거예요!"))
+		"telescope":
+			for record in decor:
+				if record.kind=="telescope" and not record.has("occupant"):
+					use_decor(record);return
+			message(tr("별자리가 보여요. 오늘은 고래자리가 또렷해요!"))
+	if npcs.has(id) and npcs[id].body.has_method("smile"): npcs[id].body.smile(2.0)
+
+## Name plates show only for residents close to the walker, like in the village.
+func update_name_plates() -> void:
+	if npcs.is_empty() or not is_instance_valid(hero): return
+	for entry in npcs.values():
+		if int(entry.floor)!=floor_index: continue
+		var near: bool=entry.holder.global_position.distance_to(hero.global_position)<3.2 and entry.pose!="lie"
+		hide_plate(entry.holder,entry.body,not near)

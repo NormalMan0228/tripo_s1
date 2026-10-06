@@ -8,6 +8,7 @@ from fastapi.responses import Response
 from pydantic import Field
 from .models import Strict, Mutation, Input, RunStart
 from .stored_assets import read_glb
+from .security import clean_text
 from . import coop, homestead
 
 SCHEMA = '''
@@ -210,9 +211,10 @@ class Multiplayer:
         @app.post('/v1/social/messages')
         def message(body: Message, request: Request):
             def apply(conn, user):
-                value = ''.join(c for c in body.text.strip() if c.isprintable())
+                # Strip ASCII controls and bidi overrides that could spoof other players' chat.
+                value = clean_text(body.text)
                 if not value:
-                    fail('empty_message', 422)
+                    fail('message_empty', 422)
                 last = conn.execute('SELECT max(created) FROM mp_messages WHERE user_id=?', (user['id'],)).fetchone()[0]
                 if last is not None and clock()-last < 1:
                     fail('message_rate_limited', 429)

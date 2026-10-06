@@ -109,3 +109,66 @@ def test_paid_live_limits_user_and_model_before_any_provider_call(tmp_path):
         denied = request()
         assert denied.status_code == 429
         assert denied.json()['detail'] == 'user_daily_generation_limit'
+
+
+def test_judging_server_welcome_stars_and_lifetime_craft_limit(tmp_path):
+    settings = Settings(data_dir=tmp_path, mode='live', paid_enabled=True, tripo_key='test-only-key',
+                        studio_llm='gemini', gemini_key='test-only-key',
+                        registration_code='test-only-invitation-123456',
+                        daily_generation_limit=100, user_daily_generation_limit=50,
+                        user_total_generation_limit=2, welcome_stars=150)
+    app = create_app(settings, worker_enabled=False)
+    with TestClient(app, base_url='https://testserver') as client:
+        token = client.post('/v1/auth/register', json={
+            'username': 'judge_one', 'password': 'Test-password-123',
+            'invitation': settings.registration_code}).json()['token']
+        headers = {'Authorization': 'Bearer ' + token}
+        with app.state.db.transaction() as db:
+            assert db.execute("SELECT shards FROM users WHERE username='judge_one'").fetchone()[0] == 150
+
+        def request():
+            return client.post('/v1/studio/jobs', headers=headers, json={
+                'request_id': str(uuid.uuid4()), 'prompt': 'wooden chair', 'designer': 'llm', 'geometry': 'tripo'})
+
+        for i in range(2):
+            accepted = request()
+            assert accepted.status_code == 200, accepted.json()
+            with app.state.db.transaction() as db:
+                db.execute("UPDATE studio_jobs SET state='ready' WHERE id=?", (accepted.json()['id'],))
+        denied = request()
+        assert denied.status_code == 429 and denied.json()['detail'] == 'user_total_generation_limit'
+
+
+def test_open_registration_without_code_is_limited_per_address_and_day(tmp_path):
+    settings = Settings(data_dir=tmp_path, mode='live', registration_code='test-only-invitation-123456',
+                        open_registration=True, signups_per_ip_day=2, signups_per_day=3, welcome_stars=150)
+    app = create_app(settings, worker_enabled=False)
+    with TestClient(app, base_url='https://testserver') as client:
+        def register(name, invitation=''):
+            return client.post('/v1/auth/register', json={
+                'username': name, 'password': 'Test-password-123', 'invitation': invitation})
+        assert client.get('/health').json()['open_registration'] is True
+        assert register('open_one').status_code == 200
+        assert register('open_two').status_code == 200
+        third = register('open_three')
+        assert third.status_code == 429 and third.json()['detail'] == 'too_many_registrations'
+        # The invitation code still works and is not counted against the open limits.
+        assert register('invited_one', settings.registration_code).status_code == 200
+        with app.state.db.transaction() as db:
+            assert db.execute("SELECT shards FROM users WHERE username='open_one'").fetchone()[0] == 150
+
+
+def test_open_registration_daily_ceiling_and_default_stays_invite_only(tmp_path):
+    settings = Settings(data_dir=tmp_path / 'open', mode='live', registration_code='test-only-invitation-123456',
+                        open_registration=True, signups_per_ip_day=50, signups_per_day=1)
+    app = create_app(settings, worker_enabled=False)
+    with TestClient(app, base_url='https://testserver') as client:
+        body = {'password': 'Test-password-123', 'invitation': ''}
+        assert client.post('/v1/auth/register', json={'username': 'day_one', **body}).status_code == 200
+        closed = client.post('/v1/auth/register', json={'username': 'day_two', **body})
+        assert closed.status_code == 429 and closed.json()['detail'] == 'registration_closed_today'
+    closed_settings = Settings(data_dir=tmp_path / 'closed', mode='live', registration_code='test-only-invitation-123456')
+    with TestClient(create_app(closed_settings, worker_enabled=False), base_url='https://testserver') as client:
+        denied = client.post('/v1/auth/register', json={'username': 'no_code', 'password': 'Test-password-123', 'invitation': ''})
+        assert denied.status_code == 403 and denied.json()['detail'] == 'invalid_invitation'
+        assert client.get('/health').json()['open_registration'] is False

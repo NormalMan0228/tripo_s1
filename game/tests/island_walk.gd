@@ -91,7 +91,8 @@ func run_test() -> void:
 	expect(app.life.closest().get("id","")=="home","home prompt at its door")
 	await capture("home")
 	# Bridges are entered along their centre line; the rail end posts stand at the deck edges.
-	expect(await walk([Vector2(-42,33),Vector2(-28,35),Vector2(-20,34),Vector2(-12,33),Vector2(-12,27)],"bridge approach"),"walked to the rope bridge")
+	# Follow the town's paths to the rope bridge (the signboard by the bridge sits beside the road).
+	expect(await walk([Vector2(-50.5,27.5),Vector2(-46,33),Vector2(-40,34.5),Vector2(-33,37),Vector2(-26,36.5),Vector2(-20,35),Vector2(-15.5,36.2),Vector2(-14,33.4),Vector2(-13,31),Vector2(-12,27)],"bridge approach"),"walked to the rope bridge")
 	expect(await walk([Vector2(4,27)],"bridge middle"),"walked onto the rope bridge")
 	expect(app.player.position.y>0.9,"bridge deck holds the walker above the water")
 	await capture("bridge")

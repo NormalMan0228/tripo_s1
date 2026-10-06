@@ -1,0 +1,2140 @@
+{
+  "version": 1,
+  "generated": "2026-10-06T12:39:05",
+  "source": "Tripo P2 text-to-model + Tripo auto-rig + Tripo retarget via tools/generate_monsters.py; merged/authored in Blender by tools/build_monsters.py",
+  "notes": "glTF +Y up, creature faces +Z, feet on y=0, already scaled to scale_reference.metres (height). Variant = survival map (forest/quarry/frost). Loop clips: idle, walk, run. attack: the strike lands at attack_impact_seconds (= server wind-up). death ends lying down. Clips sourced \"blender\" were keyframed procedurally on the Tripo skeleton (Tripo has only a walk preset for quadrupeds, and no death preset).",
+  "credits_by_step": {
+    "gen": 1650.0,
+    "rigcheck": 0.0,
+    "rig": 375.0,
+    "anim": 550.0
+  },
+  "total_credits_consumed": 2575.0,
+  "monsters": [
+    {
+      "id": "wolf_forest",
+      "species": "wolf",
+      "variant": "forest",
+      "name": "그림자 늑대",
+      "built": true,
+      "file": "res://assets/monsters/wolf_forest.glb",
+      "bytes": 1077884,
+      "sha256": "45de61cf46fdb1d46e391a8f2dcf7b87048421c1190077e5495b55d205c69dff",
+      "rig": {
+        "type": "quadruped",
+        "model": "v2.5-20260210",
+        "bones": 31,
+        "root": "tripo_Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 13043,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "walk": {
+          "seconds": 2.567,
+          "frames": 78,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk"
+        },
+        "run": {
+          "seconds": 1.433,
+          "frames": 44,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk re-timed in Blender"
+        },
+        "idle": {
+          "seconds": 2.4,
+          "frames": 73,
+          "loop": true,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "attack": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "hurt": {
+          "seconds": 0.5,
+          "frames": 16,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 0.65,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.25,
+        "height_m": 1.25,
+        "source_height": 0.9976,
+        "uniform_scale": 1.25306,
+        "length_m": 1.252
+      },
+      "facing": {
+        "armature_forward": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0031,
+        "value_threshold": 0.72,
+        "hues": [
+          [
+            0.07,
+            0.21
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "e92b334b-4e43-4dba-8ada-31c59311498a",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "f759bd2b-e9a5-4300-b6ae-515c15524a1d",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "de2bf59a-ed44-40ad-b777-3abcae43ef65",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_walk": {
+          "task_id": "66f3facf-7ff8-48ad-96da-c7eb001efc95",
+          "credits": 10.0,
+          "status": "success",
+          "preset": [
+            "preset:quadruped:walk"
+          ]
+        }
+      },
+      "credits": 145.0,
+      "prompt_sha256": "232b7456bcabc1ce27913c0c5c01d640067c5e6f42555228b37da1c9c278ee86"
+    },
+    {
+      "id": "boar_forest",
+      "species": "boar",
+      "variant": "forest",
+      "name": "가시 멧돼지",
+      "built": true,
+      "file": "res://assets/monsters/boar_forest.glb",
+      "bytes": 1293644,
+      "sha256": "a7664751c2dba80f780b04e289335c1c9626f459a0a4643170c7ee87d768ce46",
+      "rig": {
+        "type": "quadruped",
+        "model": "v2.5-20260210",
+        "bones": 21,
+        "root": "tripo_Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 12944,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "walk": {
+          "seconds": 2.567,
+          "frames": 78,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk"
+        },
+        "run": {
+          "seconds": 1.233,
+          "frames": 38,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk re-timed in Blender"
+        },
+        "idle": {
+          "seconds": 2.4,
+          "frames": 73,
+          "loop": true,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "attack": {
+          "seconds": 1.667,
+          "frames": 51,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "hurt": {
+          "seconds": 0.5,
+          "frames": 16,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 0.9,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.1,
+        "height_m": 1.1,
+        "source_height": 0.6646,
+        "uniform_scale": 1.65525,
+        "length_m": 1.654
+      },
+      "facing": {
+        "armature_forward": [
+          -0.0,
+          -1.0,
+          0.0
+        ],
+        "turned_degrees": 0.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0058,
+        "value_threshold": 0.72,
+        "hues": [
+          [
+            0.07,
+            0.21
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "532a0b47-3c6e-41c2-adf3-8ffd1ebb9141",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "a2e54b87-dac0-45ca-9205-7e064c6a11e6",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "f6854f9b-5108-4ac6-964f-5623d62d7a9b",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_walk": {
+          "task_id": "87bd57dc-f048-409e-a9d7-9c695517d323",
+          "credits": 10.0,
+          "status": "success",
+          "preset": [
+            "preset:quadruped:walk"
+          ]
+        }
+      },
+      "credits": 145.0,
+      "prompt_sha256": "1e8dbede71b5c94e9e057b096811b47453e6eee5a5e2f2971516157118bf8b45"
+    },
+    {
+      "id": "brute_forest",
+      "species": "brute",
+      "variant": "forest",
+      "name": "이끼 수호자",
+      "built": true,
+      "file": "res://assets/monsters/brute_forest.glb",
+      "bytes": 2181508,
+      "sha256": "4946679db4eb30d4bc4c537efd36172f9fe9cdf3e36d1c38b5d2ccad24fc3811",
+      "rig": {
+        "type": "biped",
+        "model": "v1.0-20240301",
+        "bones": 41,
+        "root": "Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 13777,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "idle": {
+          "seconds": 4.0,
+          "frames": 121,
+          "loop": true,
+          "source": "tripo:idle (cropped/eased in Blender)"
+        },
+        "walk": {
+          "seconds": 2.333,
+          "frames": 71,
+          "loop": true,
+          "source": "tripo:walk"
+        },
+        "run": {
+          "seconds": 1.6,
+          "frames": 49,
+          "loop": true,
+          "source": "tripo:walk re-timed in Blender"
+        },
+        "attack": {
+          "seconds": 2.367,
+          "frames": 72,
+          "loop": false,
+          "source": "tripo:chop (cropped/eased in Blender)"
+        },
+        "hurt": {
+          "seconds": 0.9,
+          "frames": 28,
+          "loop": false,
+          "source": "tripo:hurt (cropped/eased in Blender)"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "roar": {
+          "seconds": 3.8,
+          "frames": 115,
+          "loop": false,
+          "source": "tripo:angry_01"
+        }
+      },
+      "attack_impact_seconds": 1.15,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 2.4,
+        "height_m": 2.4,
+        "source_height": 0.9624,
+        "uniform_scale": 2.49376,
+        "length_m": 1.562
+      },
+      "facing": {
+        "armature_forward": [
+          1.0,
+          -0.019,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0118,
+        "value_threshold": 0.72,
+        "hues": [
+          [
+            0.07,
+            0.21
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "f9c313ce-a6e6-461b-ac39-22473ed9759f",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "9be5f5b9-0c6e-4311-b2f8-5b571fed4319",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "148237b7-626c-4b48-8fdd-24dfaddf75bc",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_idle": {
+          "task_id": "0786cb8e-49b5-4351-80a6-b34eb470f36e",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:idle"
+        },
+        "anim_walk": {
+          "task_id": "92ebd79b-3afc-44c1-8a65-16eecfa085be",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:walk"
+        },
+        "anim_attack": {
+          "task_id": "918f22d7-206f-443f-a7fe-5a21eb0abe17",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:chop"
+        },
+        "anim_hurt": {
+          "task_id": "a8c3497d-7a32-4d5a-992d-71feb5486fd0",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:hurt"
+        },
+        "anim_roar": {
+          "task_id": "ac7c4431-d8c6-4e75-b355-2a3cfc645c8b",
+          "credits": 50.0,
+          "status": "success",
+          "preset": [
+            "preset:biped:idle",
+            "preset:biped:walk",
+            "preset:biped:chop",
+            "preset:biped:hurt",
+            "preset:biped:angry_01"
+          ],
+          "note": "Submitted as one 5-preset batch (idle, walk, chop, hurt, angry_01): billed 50 credits but model_url held only angry_01; kept as the roar clip. Lesson: one preset per retarget task."
+        }
+      },
+      "credits": 225.0,
+      "prompt_sha256": "17f34feafc962d1f5f962719bdf382b6f6ee3445349be2cc85a1e58ce011aaf6"
+    },
+    {
+      "id": "wisp_forest",
+      "species": "wisp",
+      "variant": "forest",
+      "name": "불씨 도깨비",
+      "built": true,
+      "file": "res://assets/monsters/wisp_forest.glb",
+      "bytes": 1599980,
+      "sha256": "f1cd41b845640038981140a831872bf6a14c5e7e244bd42e4322450e0076e55a",
+      "rig": {
+        "type": "biped",
+        "model": "v1.0-20240301",
+        "bones": 41,
+        "root": "Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 10950,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "idle": {
+          "seconds": 4.0,
+          "frames": 121,
+          "loop": true,
+          "source": "tripo:idle (cropped/eased in Blender)"
+        },
+        "walk": {
+          "seconds": 2.333,
+          "frames": 71,
+          "loop": true,
+          "source": "tripo:walk"
+        },
+        "run": {
+          "seconds": 1.233,
+          "frames": 38,
+          "loop": true,
+          "source": "tripo:run"
+        },
+        "attack": {
+          "seconds": 2.033,
+          "frames": 62,
+          "loop": false,
+          "source": "tripo:cast_a_spell (cropped/eased in Blender)"
+        },
+        "hurt": {
+          "seconds": 0.9,
+          "frames": 28,
+          "loop": false,
+          "source": "tripo:hurt (cropped/eased in Blender)"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 0.9,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.1,
+        "height_m": 1.1,
+        "source_height": 0.9995,
+        "uniform_scale": 1.10054,
+        "length_m": 0.452
+      },
+      "facing": {
+        "armature_forward": [
+          0.998,
+          0.056,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0142,
+        "value_threshold": 0.95,
+        "hues": [
+          [
+            0.07,
+            0.21
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "b4653a3e-1d67-4f7a-b16b-a39f2b89c6a8",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "f2c99800-8388-4de7-8de3-6f70186fbd9f",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "499cb781-7439-46b5-b8ed-8c3d2e40c058",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_idle": {
+          "task_id": "e48de5e5-73c8-424d-b807-4a905b925b68",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:idle"
+        },
+        "anim_walk": {
+          "task_id": "0376e96e-e087-427e-a43e-cf7d5512ec33",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:walk"
+        },
+        "anim_run": {
+          "task_id": "a7275684-e601-4f96-8ff3-d063bd6e479a",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:run"
+        },
+        "anim_attack": {
+          "task_id": "9b95c349-8b6a-4b0c-8ecb-afd500c2f32b",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:cast_a_spell"
+        },
+        "anim_hurt": {
+          "task_id": "22059985-b58a-4eb6-ae35-18bae6dd6fec",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:hurt"
+        }
+      },
+      "credits": 185.0,
+      "prompt_sha256": "5f739dcf8ac58d2a6657a15e4e2662b804c6535982a4008183186bd1271eba8d"
+    },
+    {
+      "id": "shroom_forest",
+      "species": "shroom",
+      "variant": "forest",
+      "name": "버섯 망령",
+      "built": true,
+      "file": "res://assets/monsters/shroom_forest.glb",
+      "bytes": 1186884,
+      "sha256": "2cdef45aa29434e66af4322897bc8c6f24292e0eb658e276b4118c2800e4c665",
+      "rig": {
+        "type": "biped",
+        "model": "v1.0-20240301",
+        "bones": 41,
+        "root": "Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 7762,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "idle": {
+          "seconds": 4.0,
+          "frames": 121,
+          "loop": true,
+          "source": "tripo:idle (cropped/eased in Blender)"
+        },
+        "walk": {
+          "seconds": 2.333,
+          "frames": 71,
+          "loop": true,
+          "source": "tripo:walk"
+        },
+        "run": {
+          "seconds": 1.233,
+          "frames": 38,
+          "loop": true,
+          "source": "tripo:run"
+        },
+        "attack": {
+          "seconds": 1.833,
+          "frames": 56,
+          "loop": false,
+          "source": "tripo:jump (cropped/eased in Blender)"
+        },
+        "hurt": {
+          "seconds": 0.9,
+          "frames": 28,
+          "loop": false,
+          "source": "tripo:hurt (cropped/eased in Blender)"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 1.0,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 0.95,
+        "height_m": 0.95,
+        "source_height": 0.9995,
+        "uniform_scale": 0.95046,
+        "length_m": 0.71
+      },
+      "facing": {
+        "armature_forward": [
+          0.999,
+          -0.042,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.005,
+        "value_threshold": 0.72,
+        "hues": [
+          [
+            0.07,
+            0.21
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "ff2798c1-255c-4443-9f32-fda9f40cd797",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "af97548d-5c93-4c10-b039-a05e1feb078c",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "a422ccd6-c095-4cef-8fe8-eafafc4944fd",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_idle": {
+          "task_id": "217f1c49-820c-4c52-9988-a0297a6d9ec1",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:idle"
+        },
+        "anim_walk": {
+          "task_id": "8e524ca0-91de-4fe0-8644-2e817541f2e5",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:walk"
+        },
+        "anim_run": {
+          "task_id": "99ef059e-bec7-4c77-b402-b16785385271",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:run"
+        },
+        "anim_attack": {
+          "task_id": "ca6bc078-5f70-4e0e-80ac-16854289babd",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:jump"
+        },
+        "anim_hurt": {
+          "task_id": "1b828498-9bbe-486c-bdc2-0cfd47122bad",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:hurt"
+        }
+      },
+      "credits": 185.0,
+      "prompt_sha256": "43a86ad05d4fae182feb473c6b3d938002878d65f6e33d1c947a522e0b45a38b"
+    },
+    {
+      "id": "wolf_quarry",
+      "species": "wolf",
+      "variant": "quarry",
+      "name": "그림자 늑대",
+      "built": true,
+      "file": "res://assets/monsters/wolf_quarry.glb",
+      "bytes": 1824860,
+      "sha256": "094629b4535fae4878b63a66490dc9923accaeff9bbe704abcb718cc33464c0f",
+      "rig": {
+        "type": "quadruped",
+        "model": "v2.5-20260210",
+        "bones": 58,
+        "root": "tripo_Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 13018,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "walk": {
+          "seconds": 2.567,
+          "frames": 78,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk"
+        },
+        "run": {
+          "seconds": 1.433,
+          "frames": 44,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk re-timed in Blender"
+        },
+        "idle": {
+          "seconds": 2.4,
+          "frames": 73,
+          "loop": true,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "attack": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "hurt": {
+          "seconds": 0.5,
+          "frames": 16,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 0.65,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.25,
+        "height_m": 1.25,
+        "source_height": 0.8433,
+        "uniform_scale": 1.48234,
+        "length_m": 1.482
+      },
+      "facing": {
+        "armature_forward": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0563,
+        "value_threshold": 0.78,
+        "hues": [
+          [
+            0.0,
+            0.13
+          ],
+          [
+            0.95,
+            1.0
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "3084167d-5d97-4f2a-ad8a-097c30353407",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "661801d0-4ef3-4ac4-97f9-32ce8e098999",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "b7ba7286-b15b-4dd9-bdde-57920bada577",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_walk": {
+          "task_id": "0766c465-f2b6-445a-9370-feba5d61b009",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:quadruped:walk"
+        }
+      },
+      "credits": 145.0,
+      "prompt_sha256": "d394f226e19580fcc484dcba174bc8c931f892b3f62e80287abcab9c60538699"
+    },
+    {
+      "id": "boar_quarry",
+      "species": "boar",
+      "variant": "quarry",
+      "name": "가시 멧돼지",
+      "built": true,
+      "file": "res://assets/monsters/boar_quarry.glb",
+      "bytes": 996460,
+      "sha256": "98e3d4bde5ea7b5474569f53fd65624d326b746a996b76412465e9fcef043fb5",
+      "rig": {
+        "type": "quadruped",
+        "model": "v2.5-20260210",
+        "bones": 24,
+        "root": "tripo_Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 11974,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "walk": {
+          "seconds": 2.567,
+          "frames": 78,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk"
+        },
+        "run": {
+          "seconds": 1.233,
+          "frames": 38,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk re-timed in Blender"
+        },
+        "idle": {
+          "seconds": 2.4,
+          "frames": 73,
+          "loop": true,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "attack": {
+          "seconds": 1.667,
+          "frames": 51,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "hurt": {
+          "seconds": 0.5,
+          "frames": 16,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 0.9,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.1,
+        "height_m": 1.1,
+        "source_height": 0.8618,
+        "uniform_scale": 1.27637,
+        "length_m": 1.276
+      },
+      "facing": {
+        "armature_forward": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0189,
+        "value_threshold": 0.72,
+        "hues": [
+          [
+            0.0,
+            0.13
+          ],
+          [
+            0.95,
+            1.0
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "3f85695c-a11c-40b7-8906-7d6aa59f3d4c",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "708d6045-df1f-462f-a6ce-ede82d36d6c0",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "94da163c-ecee-4dc2-991d-6e51703d391a",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_walk": {
+          "task_id": "063eb226-15f0-4410-ac7a-018c33cd177b",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:quadruped:walk"
+        }
+      },
+      "credits": 145.0,
+      "prompt_sha256": "de3eca75cc1cb4c6da258d2ece8562f7334a1b8bae82f5f830811341ab0e8709"
+    },
+    {
+      "id": "brute_quarry",
+      "species": "brute",
+      "variant": "quarry",
+      "name": "이끼 수호자",
+      "built": true,
+      "file": "res://assets/monsters/brute_quarry.glb",
+      "bytes": 1789432,
+      "sha256": "748088bad13604a533a5261d09e829529bca233b0001147ef9ad2414ed0a215e",
+      "rig": {
+        "type": "biped",
+        "model": "v1.0-20240301",
+        "bones": 41,
+        "root": "Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 15096,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "idle": {
+          "seconds": 4.0,
+          "frames": 121,
+          "loop": true,
+          "source": "tripo:idle (cropped/eased in Blender)"
+        },
+        "walk": {
+          "seconds": 2.333,
+          "frames": 71,
+          "loop": true,
+          "source": "tripo:walk"
+        },
+        "run": {
+          "seconds": 1.6,
+          "frames": 49,
+          "loop": true,
+          "source": "tripo:walk re-timed in Blender"
+        },
+        "attack": {
+          "seconds": 2.367,
+          "frames": 72,
+          "loop": false,
+          "source": "tripo:chop (cropped/eased in Blender)"
+        },
+        "hurt": {
+          "seconds": 0.9,
+          "frames": 28,
+          "loop": false,
+          "source": "tripo:hurt (cropped/eased in Blender)"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "roar": {
+          "seconds": 3.8,
+          "frames": 115,
+          "loop": false,
+          "source": "tripo:angry_01"
+        }
+      },
+      "attack_impact_seconds": 1.15,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 2.4,
+        "height_m": 2.4,
+        "source_height": 0.8403,
+        "uniform_scale": 2.85601,
+        "length_m": 1.768
+      },
+      "facing": {
+        "armature_forward": [
+          0.99,
+          -0.14,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.014,
+        "value_threshold": 0.72,
+        "hues": [
+          [
+            0.0,
+            0.13
+          ],
+          [
+            0.95,
+            1.0
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "43cdecb9-7bd5-49ed-a7ea-78aec5c8a404",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "7ef8117a-4180-415a-b3a1-4dfd5a7f7d85",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "25796095-8893-4fc3-9e1a-63e3cd8d248c",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_idle": {
+          "task_id": "3a8917c3-7f34-4ce8-b582-0716f2c96469",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:idle"
+        },
+        "anim_walk": {
+          "task_id": "093c077c-f4ea-4ed5-a0ee-9b0444abb118",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:walk"
+        },
+        "anim_attack": {
+          "task_id": "210d98e5-788d-4cf9-b466-1d0e1bf49bae",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:chop"
+        },
+        "anim_hurt": {
+          "task_id": "0b7a4007-cc5c-4323-8250-4d4a2edaa209",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:hurt"
+        },
+        "anim_roar": {
+          "task_id": "94bce780-be13-45b7-a5f7-540dcc62b061",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:angry_01"
+        }
+      },
+      "credits": 185.0,
+      "prompt_sha256": "b92747b0468689dccba7d114a0fde41f76c2ea2185d36c2484dd1d472f468879"
+    },
+    {
+      "id": "wisp_quarry",
+      "species": "wisp",
+      "variant": "quarry",
+      "name": "불씨 도깨비",
+      "built": true,
+      "file": "res://assets/monsters/wisp_quarry.glb",
+      "bytes": 1292744,
+      "sha256": "3aa6a276ebd02b30d525c08cb7b74da4e1248fd44a274c4e33239a15dcc1f4bd",
+      "rig": {
+        "type": "biped",
+        "model": "v1.0-20240301",
+        "bones": 41,
+        "root": "Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 10891,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "idle": {
+          "seconds": 4.0,
+          "frames": 121,
+          "loop": true,
+          "source": "tripo:idle (cropped/eased in Blender)"
+        },
+        "walk": {
+          "seconds": 2.333,
+          "frames": 71,
+          "loop": true,
+          "source": "tripo:walk"
+        },
+        "run": {
+          "seconds": 1.233,
+          "frames": 38,
+          "loop": true,
+          "source": "tripo:run"
+        },
+        "attack": {
+          "seconds": 2.033,
+          "frames": 62,
+          "loop": false,
+          "source": "tripo:cast_a_spell (cropped/eased in Blender)"
+        },
+        "hurt": {
+          "seconds": 0.9,
+          "frames": 28,
+          "loop": false,
+          "source": "tripo:hurt (cropped/eased in Blender)"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 0.9,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.1,
+        "height_m": 1.1,
+        "source_height": 0.9995,
+        "uniform_scale": 1.10054,
+        "length_m": 0.478
+      },
+      "facing": {
+        "armature_forward": [
+          0.997,
+          -0.081,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0052,
+        "value_threshold": 0.84,
+        "hues": [
+          [
+            0.0,
+            0.13
+          ],
+          [
+            0.95,
+            1.0
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "778fa249-4dd3-4980-bbed-76f6c0ef2c02",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "e5124be7-3ba4-4ea1-bcea-a705e9a59b72",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "18e1ab98-10b2-4840-9150-39abf1dbdb12",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_idle": {
+          "task_id": "16d299ff-7bc3-43d9-952f-f1fac078fe05",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:idle"
+        },
+        "anim_walk": {
+          "task_id": "14bbf936-a74b-4d5b-addb-5a56c30f5013",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:walk"
+        },
+        "anim_run": {
+          "task_id": "45831d7a-9593-4eab-9315-c2085ac4e330",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:run"
+        },
+        "anim_attack": {
+          "task_id": "74ec6e49-6bb6-4241-93bf-d04a0f0d880b",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:cast_a_spell"
+        },
+        "anim_hurt": {
+          "task_id": "37cb39cf-513f-4c83-bc96-4a7be090ed42",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:hurt"
+        }
+      },
+      "credits": 185.0,
+      "prompt_sha256": "682631dbdcc104afd760f589c9415a4dcf3d818a0cc2769cebdb8ae68ca429e0"
+    },
+    {
+      "id": "shroom_quarry",
+      "species": "shroom",
+      "variant": "quarry",
+      "name": "버섯 망령",
+      "built": true,
+      "file": "res://assets/monsters/shroom_quarry.glb",
+      "bytes": 1164172,
+      "sha256": "e731f4103e0b480b4933fb9c6a0536bc779574ecd746d416cd181c7c4d398f6a",
+      "rig": {
+        "type": "biped",
+        "model": "v1.0-20240301",
+        "bones": 41,
+        "root": "Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 7754,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "idle": {
+          "seconds": 4.0,
+          "frames": 121,
+          "loop": true,
+          "source": "tripo:idle (cropped/eased in Blender)"
+        },
+        "walk": {
+          "seconds": 2.333,
+          "frames": 71,
+          "loop": true,
+          "source": "tripo:walk"
+        },
+        "run": {
+          "seconds": 1.233,
+          "frames": 38,
+          "loop": true,
+          "source": "tripo:run"
+        },
+        "attack": {
+          "seconds": 1.833,
+          "frames": 56,
+          "loop": false,
+          "source": "tripo:jump (cropped/eased in Blender)"
+        },
+        "hurt": {
+          "seconds": 0.9,
+          "frames": 28,
+          "loop": false,
+          "source": "tripo:hurt (cropped/eased in Blender)"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 1.0,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 0.95,
+        "height_m": 0.95,
+        "source_height": 0.9995,
+        "uniform_scale": 0.95046,
+        "length_m": 0.671
+      },
+      "facing": {
+        "armature_forward": [
+          1.0,
+          0.019,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0003,
+        "value_threshold": 0.72,
+        "hues": [
+          [
+            0.0,
+            0.13
+          ],
+          [
+            0.95,
+            1.0
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "cd9a3e63-7101-4d5f-b8dc-7aa91aa0ea6e",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "a1c85785-04e7-4e94-aec4-d125307e1ff7",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "e1b8628d-22f7-443d-b98b-dfcab17582da",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_idle": {
+          "task_id": "e306631b-292e-4598-9fcd-38c743d07c1c",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:idle"
+        },
+        "anim_walk": {
+          "task_id": "eb01f361-ff6c-45bf-9c8b-b4e7e523d421",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:walk"
+        },
+        "anim_run": {
+          "task_id": "88c81ce3-7bb5-41eb-a817-492c1f4dc942",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:run"
+        },
+        "anim_attack": {
+          "task_id": "299b6db8-5431-4c55-a275-b30fc14dc2e6",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:jump"
+        },
+        "anim_hurt": {
+          "task_id": "618a712b-c241-4e86-b0ae-1f880c47234e",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:hurt"
+        }
+      },
+      "credits": 185.0,
+      "prompt_sha256": "ad2951a7523fbc952a0cc9ca3447d86d716132d024775cfc7474c4b4f4bb94c2"
+    },
+    {
+      "id": "wolf_frost",
+      "species": "wolf",
+      "variant": "frost",
+      "name": "그림자 늑대",
+      "built": true,
+      "file": "res://assets/monsters/wolf_frost.glb",
+      "bytes": 1081876,
+      "sha256": "e62c7b76a3a1597b3d7febe0fcb1c1afcf8c56b860aee030fa46f8376e8b7864",
+      "rig": {
+        "type": "quadruped",
+        "model": "v2.5-20260210",
+        "bones": 27,
+        "root": "tripo_Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 13164,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "walk": {
+          "seconds": 2.567,
+          "frames": 78,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk"
+        },
+        "run": {
+          "seconds": 1.433,
+          "frames": 44,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk re-timed in Blender"
+        },
+        "idle": {
+          "seconds": 2.4,
+          "frames": 73,
+          "loop": true,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "attack": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "hurt": {
+          "seconds": 0.5,
+          "frames": 16,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 0.65,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.25,
+        "height_m": 1.25,
+        "source_height": 0.8052,
+        "uniform_scale": 1.55246,
+        "length_m": 1.552
+      },
+      "facing": {
+        "armature_forward": [
+          1.0,
+          -0.0,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0305,
+        "value_threshold": 0.84,
+        "hues": [
+          [
+            0.45,
+            0.62
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "897a949c-f6ae-4058-bb9c-522cd31162cf",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "5c170379-2c0f-4973-af1a-50d8ca64e025",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "fef7f65f-be0e-40cc-a211-5d22dfbdce3a",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_walk": {
+          "task_id": "3898e057-e8e3-4830-aa50-97d0a35fff82",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:quadruped:walk"
+        }
+      },
+      "credits": 145.0,
+      "prompt_sha256": "4e4787907ca16a86137605d34376e7259828df22d3a927c098385ba621bc01bb"
+    },
+    {
+      "id": "boar_frost",
+      "species": "boar",
+      "variant": "frost",
+      "name": "가시 멧돼지",
+      "built": true,
+      "file": "res://assets/monsters/boar_frost.glb",
+      "bytes": 1249804,
+      "sha256": "42179503a741fe52939bc2e434c524e45e50311970c334a79f6155bf59d56ebb",
+      "rig": {
+        "type": "quadruped",
+        "model": "v2.5-20260210",
+        "bones": 13,
+        "root": "tripo_Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 11633,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "walk": {
+          "seconds": 2.567,
+          "frames": 78,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk"
+        },
+        "run": {
+          "seconds": 1.233,
+          "frames": 38,
+          "loop": true,
+          "source": "tripo:preset:quadruped:walk re-timed in Blender"
+        },
+        "idle": {
+          "seconds": 2.4,
+          "frames": 73,
+          "loop": true,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "attack": {
+          "seconds": 1.667,
+          "frames": 51,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "hurt": {
+          "seconds": 0.5,
+          "frames": 16,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 0.9,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.1,
+        "height_m": 1.1,
+        "source_height": 0.9067,
+        "uniform_scale": 1.21314,
+        "length_m": 1.213
+      },
+      "facing": {
+        "armature_forward": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0521,
+        "value_threshold": 0.72,
+        "hues": [
+          [
+            0.45,
+            0.62
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "d5d828bc-37ba-4ae6-9faa-05583e11ff82",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "79e1fb23-8909-4d09-a199-e212b420b8c5",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "2ccc41a8-5d70-49ba-9440-e7c94b09f2f8",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_walk": {
+          "task_id": "ada3bdc2-78ff-4cff-b88b-3e9f97e5ee2d",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:quadruped:walk"
+        }
+      },
+      "credits": 145.0,
+      "prompt_sha256": "759b3e2c0e481d16ae629266ecd248bb19ee23bc1aa152908c409b1bf04712ba"
+    },
+    {
+      "id": "brute_frost",
+      "species": "brute",
+      "variant": "frost",
+      "name": "이끼 수호자",
+      "built": true,
+      "file": "res://assets/monsters/brute_frost.glb",
+      "bytes": 1832152,
+      "sha256": "aad7466cf22aebfa3dc252d3fffd74e84dce38f3d3142050fd21940d1c2f74bc",
+      "rig": {
+        "type": "biped",
+        "model": "v1.0-20240301",
+        "bones": 41,
+        "root": "Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 15994,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "idle": {
+          "seconds": 4.0,
+          "frames": 121,
+          "loop": true,
+          "source": "tripo:idle (cropped/eased in Blender)"
+        },
+        "walk": {
+          "seconds": 2.333,
+          "frames": 71,
+          "loop": true,
+          "source": "tripo:walk"
+        },
+        "run": {
+          "seconds": 1.6,
+          "frames": 49,
+          "loop": true,
+          "source": "tripo:walk re-timed in Blender"
+        },
+        "attack": {
+          "seconds": 2.367,
+          "frames": 72,
+          "loop": false,
+          "source": "tripo:chop (cropped/eased in Blender)"
+        },
+        "hurt": {
+          "seconds": 0.9,
+          "frames": 28,
+          "loop": false,
+          "source": "tripo:hurt (cropped/eased in Blender)"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        },
+        "roar": {
+          "seconds": 3.8,
+          "frames": 115,
+          "loop": false,
+          "source": "tripo:angry_01"
+        }
+      },
+      "attack_impact_seconds": 1.15,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 2.4,
+        "height_m": 2.4,
+        "source_height": 0.8882,
+        "uniform_scale": 2.70214,
+        "length_m": 1.589
+      },
+      "facing": {
+        "armature_forward": [
+          0.997,
+          -0.077,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0211,
+        "value_threshold": 0.72,
+        "hues": [
+          [
+            0.45,
+            0.62
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "1f1b0f53-2f09-4d7b-b2c0-17f20fec3519",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "35fc7f26-8ff3-4b63-8b30-af8da5635d95",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "3a2fc0d6-5f8f-41ee-942c-4698109df63b",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_idle": {
+          "task_id": "def4ba40-5f8c-4d06-bbad-6fecdca87af5",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:idle"
+        },
+        "anim_walk": {
+          "task_id": "2b8f5549-8c36-4032-852a-1e730c3aa1e5",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:walk"
+        },
+        "anim_attack": {
+          "task_id": "06ed7fda-df9b-4e25-9a52-6410c2e450e2",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:chop"
+        },
+        "anim_hurt": {
+          "task_id": "b7f9b346-53ce-49c1-97d4-dcdf5b5a8b3c",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:hurt"
+        },
+        "anim_roar": {
+          "task_id": "2706180d-7b59-46df-948b-9bfeff07d54a",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:angry_01"
+        }
+      },
+      "credits": 185.0,
+      "prompt_sha256": "fdf2b540ad4048c6fae3b2916b4d7971a4555bca85164a05a3bf81a0acd03e01"
+    },
+    {
+      "id": "wisp_frost",
+      "species": "wisp",
+      "variant": "frost",
+      "name": "불씨 도깨비",
+      "built": true,
+      "file": "res://assets/monsters/wisp_frost.glb",
+      "bytes": 1273500,
+      "sha256": "e22043bdaba17ac57ca195ca93cc26d8dae4d881b256461397be71993cf2668a",
+      "rig": {
+        "type": "biped",
+        "model": "v1.0-20240301",
+        "bones": 41,
+        "root": "Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 10375,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "idle": {
+          "seconds": 4.0,
+          "frames": 121,
+          "loop": true,
+          "source": "tripo:idle (cropped/eased in Blender)"
+        },
+        "walk": {
+          "seconds": 2.333,
+          "frames": 71,
+          "loop": true,
+          "source": "tripo:walk"
+        },
+        "run": {
+          "seconds": 1.233,
+          "frames": 38,
+          "loop": true,
+          "source": "tripo:run"
+        },
+        "attack": {
+          "seconds": 2.033,
+          "frames": 62,
+          "loop": false,
+          "source": "tripo:cast_a_spell (cropped/eased in Blender)"
+        },
+        "hurt": {
+          "seconds": 0.9,
+          "frames": 28,
+          "loop": false,
+          "source": "tripo:hurt (cropped/eased in Blender)"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 0.9,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 1.1,
+        "height_m": 1.1,
+        "source_height": 0.9937,
+        "uniform_scale": 1.10703,
+        "length_m": 1.106
+      },
+      "facing": {
+        "armature_forward": [
+          1.0,
+          0.0,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.053,
+        "value_threshold": 0.9,
+        "hues": [
+          [
+            0.45,
+            0.62
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "a6f5ad4b-8377-4a20-a5c8-bba9acb34017",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "8b9c4bd8-f5fd-4bb7-80ed-77899318886e",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "dbdc4c2c-79d8-4422-a8ef-9375747ee754",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_idle": {
+          "task_id": "60842c86-e2a6-483c-bb2c-29f590527268",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:idle"
+        },
+        "anim_walk": {
+          "task_id": "65467fcf-a1a0-4d74-a158-40bc49f2addd",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:walk"
+        },
+        "anim_run": {
+          "task_id": "3ea8a5a3-8401-46dc-b1ee-b06965f25f61",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:run"
+        },
+        "anim_attack": {
+          "task_id": "13f15168-b104-45e6-8be5-aae4852f0940",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:cast_a_spell"
+        },
+        "anim_hurt": {
+          "task_id": "fbd5a40b-d558-4fe9-8e5f-c850b1ce8078",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:hurt"
+        }
+      },
+      "credits": 185.0,
+      "prompt_sha256": "a75b8777f14d56186ddfb39f0d749748aa860902cb183d48bb411691b96c072e"
+    },
+    {
+      "id": "shroom_frost",
+      "species": "shroom",
+      "variant": "frost",
+      "name": "버섯 망령",
+      "built": true,
+      "file": "res://assets/monsters/shroom_frost.glb",
+      "bytes": 1186176,
+      "sha256": "a66d389fdbb8b5d8ae36c28cddfe7a39a98c134dc31aac3d808f185acb9f3d21",
+      "rig": {
+        "type": "biped",
+        "model": "v1.0-20240301",
+        "bones": 41,
+        "root": "Root"
+      },
+      "generation_model": "P2-20260801",
+      "triangles": 7949,
+      "texture_sizes": [
+        [
+          512,
+          512
+        ],
+        [
+          1024,
+          1024
+        ],
+        [
+          1024,
+          1024
+        ]
+      ],
+      "clips": {
+        "idle": {
+          "seconds": 4.0,
+          "frames": 121,
+          "loop": true,
+          "source": "tripo:idle (cropped/eased in Blender)"
+        },
+        "walk": {
+          "seconds": 2.333,
+          "frames": 71,
+          "loop": true,
+          "source": "tripo:walk"
+        },
+        "run": {
+          "seconds": 1.233,
+          "frames": 38,
+          "loop": true,
+          "source": "tripo:run"
+        },
+        "attack": {
+          "seconds": 1.833,
+          "frames": 56,
+          "loop": false,
+          "source": "tripo:jump (cropped/eased in Blender)"
+        },
+        "hurt": {
+          "seconds": 0.9,
+          "frames": 28,
+          "loop": false,
+          "source": "tripo:hurt (cropped/eased in Blender)"
+        },
+        "death": {
+          "seconds": 1.4,
+          "frames": 43,
+          "loop": false,
+          "source": "blender: keyframed on the Tripo skeleton"
+        }
+      },
+      "attack_impact_seconds": 1.0,
+      "scale_reference": {
+        "measure": "height",
+        "metres": 0.95,
+        "height_m": 0.95,
+        "source_height": 0.9995,
+        "uniform_scale": 0.95046,
+        "length_m": 0.774
+      },
+      "facing": {
+        "armature_forward": [
+          1.0,
+          0.023,
+          0.0
+        ],
+        "turned_degrees": -90.0,
+        "gltf_forward": "+Z"
+      },
+      "emission": {
+        "cover": 0.0106,
+        "value_threshold": 0.9,
+        "hues": [
+          [
+            0.45,
+            0.62
+          ]
+        ]
+      },
+      "warnings": [],
+      "tripo": {
+        "gen": {
+          "task_id": "d114c6be-2454-4a4e-9df6-b97efcb48cf7",
+          "credits": 110.0,
+          "status": "success"
+        },
+        "rigcheck": {
+          "task_id": "cbbd51a2-1002-475a-80a5-3a42a884f203",
+          "credits": 0.0,
+          "status": "success"
+        },
+        "rig": {
+          "task_id": "d1ab7e9b-f776-40d7-bbb0-183c624e33ab",
+          "credits": 25.0,
+          "status": "success"
+        },
+        "anim_idle": {
+          "task_id": "46bb1142-b00d-460b-873f-cd6057b0104e",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:idle"
+        },
+        "anim_walk": {
+          "task_id": "97b640f6-32da-4479-bdd0-d64a5d132914",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:walk"
+        },
+        "anim_run": {
+          "task_id": "0d73f30d-8a79-4edf-8486-2be0c5abe27b",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:run"
+        },
+        "anim_attack": {
+          "task_id": "a0d62a8f-e1b3-471a-807a-f5933fd5de88",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:jump"
+        },
+        "anim_hurt": {
+          "task_id": "e0544cb2-caa0-4bd7-b994-c0c59644e4c3",
+          "credits": 10.0,
+          "status": "success",
+          "preset": "preset:biped:hurt"
+        }
+      },
+      "credits": 185.0,
+      "prompt_sha256": "cba347cd8b107d089e11b06eba739a51a39649907a20747f3c713cf6e25480c3"
+    }
+  ]
+}

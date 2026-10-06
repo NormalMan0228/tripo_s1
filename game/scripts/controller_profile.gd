@@ -10,6 +10,10 @@ const TURN_RESPONSE := 14.0
 const CAMERA_RESPONSE := 6.0
 const CAMERA_OFFSET := Vector3(0,8.8,16.5)
 const CAMERA_FOCUS_OFFSET := Vector3(0,1.0,-.55)
+## The orthographic follow camera sits this many offsets back. The framing is the
+## same at any distance, but a short one let the near plane slice tall roofs at the
+## bottom of the screen open and show the rooms inside.
+const CAMERA_PULLBACK := 2.5
 const CAMERA_DEFAULT := 14.5
 const CAMERA_MIN := 12.0
 const CAMERA_MAX := 26.0

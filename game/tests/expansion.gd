@@ -22,7 +22,8 @@ func run_test() -> void:
 	await app.authenticate(true,"http://127.0.0.1:8766",username,"Qa-expansion-123","")
 	expect(app.screen=="village","village loads on protocol 6")
 	if app.screen!="village": quit(1); return
-	expect(app.npcs.size()==5,"five villagers spawned including farmer and angler")
+	# main.gd CAST: Naru, Sora, Moru, Haeru (the shadow folk are a separate module).
+	expect(app.npcs.size()==4 and app.npcs.any(func(n): return n.get_meta("role","")=="angler"),"four villagers spawned including the angler")
 	app.player.position=app.npcs[1].position+Vector3(0,0,1.5)
 	expect(app.nearest_npc()==app.npcs[1],"proximity chooses tailor")
 	app.talk_to(app.npcs[1])
@@ -55,12 +56,16 @@ func run_test() -> void:
 		expect(app.player.avatar.character=="ranger","appearance follows expedition")
 		await create_timer(0.5).timeout
 		await capture("region-"+region)
-		if region!="forest": expect(app.run.hazards.size()==2 and app.run.obstacles.size()==3,"region hazards and obstacles received")
+		# Authored layouts (server/survival_maps.py): quarry 3 ember fissures, frost 4 ice circles, solid landmarks + camp kit.
+		var hazard_kind: String = {"forest":"","quarry":"ember","frost":"ice"}[region]
+		expect(app.run.obstacles.size()>=15 and app.run.hazards.all(func(h): return h.kind==hazard_kind) and (app.run.hazards.size()>=3)==(region!="forest"),"region hazards and obstacles received")
 		await app.leave_run()
 	await app.logout()
 	await app.authenticate(false,"http://127.0.0.1:8766",username,"Qa-expansion-123","")
 	expect(app.player.avatar.character=="ranger" and app.me.profile.version==1,"avatar persists across session replacement")
 	app.queue_free()
 	await process_frame
+	# Let the last door/UI sound finish: quitting mid-sound leaks the engine's playback at exit.
+	await create_timer(1.0).timeout
 	print("EXPANSION_COMPLETE")
 	quit(1 if failed else 0)

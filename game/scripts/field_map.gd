@@ -9,7 +9,7 @@ func _ready() -> void:
 	mouse_filter=Control.MOUSE_FILTER_IGNORE
 
 func map_point(x: float,z: float) -> Vector2:
-	return Vector2(107+x*3.65,87+z*3.65)
+	return Vector2(107+x*3.3,87+z*3.3)
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO,size),Color("f5eddb"),true)
@@ -20,8 +20,8 @@ func _draw() -> void:
 		draw_line(map_point(i,-20),map_point(i,20),Color("a5b69b",0.3))
 	var center := map_point(0,0)
 	for hazard in snapshot.get("hazards",[]):
-		draw_circle(map_point(hazard.x,hazard.z),hazard.radius*3.65,Color("9bcfdc") if hazard.kind=="ice" else Color("b96746"))
-	for obstacle in snapshot.get("obstacles",[]): draw_circle(map_point(obstacle.x,obstacle.z),obstacle.radius*3.65,Color("87958e"))
+		draw_circle(map_point(hazard.x,hazard.z),hazard.radius*3.3,Color("9bcfdc") if hazard.kind=="ice" else Color("b96746"))
+	for obstacle in snapshot.get("obstacles",[]): draw_circle(map_point(obstacle.x,obstacle.z),obstacle.radius*3.3,Color("87958e"))
 	draw_circle(center,14.6,Color(0.94,0.61,0.25,0.30) if snapshot.get("warm",false) else Color(0.58,0.58,0.41,0.16))
 	for item in snapshot.get("nodes",[]):
 		if item.quantity<=0: continue

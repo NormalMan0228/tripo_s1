@@ -12,6 +12,17 @@ var locomotion_velocity := Vector2.ZERO
 var locomotion_pose: SkeletonModifier3D
 var gait_phase := 0.0
 var stride := 0.0
+## Body lean: x leans into acceleration, y banks into turns (radians, eased).
+var lean := Vector2.ZERO
+var lean_speed := 0.0
+var lean_yaw := 0.0
+## The body moves in 60 Hz physics ticks but frames come faster, so the visual is
+## drawn between the last two tick positions (render_position()); the camera
+## follows the same point. Without it the walker and the view shuddered.
+var tick_from := Vector3.ZERO
+var tick_to := Vector3.ZERO
+var visual_lift := 0.0
+var reveal_pending := false
 var left_leg: Node3D
 var right_leg: Node3D
 var equipment: Node3D
@@ -35,6 +46,11 @@ var greeting_until := 0.0
 ## The island village keeps walkers out of the sea: below this height the body
 ## returns to its last grounded spot. Rooms and survival leave it unset.
 var min_ground_y := -INF
+## Walkers ease into and out of their pace instead of snapping, and climb low
+## ledges such as steps and the floors of open pavilions.
+const ACCELERATION := 14.0
+const DECELERATION := 18.0
+const STEP_HEIGHT := 0.36
 var safe_position := Vector3.ZERO
 var has_safe_position := false
 const Art = preload("res://scripts/art.gd")
@@ -46,7 +62,7 @@ func _ready() -> void:
 	# Island buildings, bridges and piers use layer 2, props and trees layer 8 and
 	# placed furniture layer 16.
 	collision_layer = 4
-	collision_mask = 1|2|4|8|16
+	collision_mask = 1|2|4|8|16|32
 	var shape := CollisionShape3D.new()
 	var capsule := CapsuleShape3D.new()
 	capsule.radius = Profile.BODY_RADIUS
@@ -99,6 +115,15 @@ func _build_explorer() -> void:
 		locomotion_pose.configure(self)
 		action_pose.modification_processed.disconnect(update_tool_pose)
 		locomotion_pose.modification_processed.connect(update_tool_pose)
+		# Pose the very first frame. The motor tick only advances the clip on the next
+		# physics step, and until then the rig showed its T-pose through scene fades.
+		animation_player.play("idle")
+		animation_player.advance(0)
+		current_clip="idle"
+		# The skeleton applies poses in the physics step, so a frame drawn before the
+		# first tick still showed the bind pose: stay hidden until that tick.
+		visual.visible=false
+		reveal_pending=true
 		return
 	# Authored fallback remains playable if the optional Scenario model is unavailable.
 	var hero_path: String="res://assets/"+str(avatar.get("character","explorer"))+".glb"
@@ -235,13 +260,46 @@ func update_tool_pose() -> void:
 	tool_node.basis=hand_world.basis.inverse()*visual.global_basis.orthonormalized()*Basis(Vector3.RIGHT,angle)
 	if equipped=="axe": tool_node.basis=tool_node.basis*Basis(Vector3.FORWARD,PI)
 
+## A few degrees of lean sells weight: forward when speeding up, back when stopping,
+## and inward on a turn. Kept small so tools and the camera never notice.
+func lean_body(delta: float) -> void:
+	var speed_now := locomotion_velocity.length()
+	var accel := (speed_now-lean_speed)/maxf(delta,0.001)
+	var yaw_rate := angle_difference(lean_yaw,visual.rotation.y)/maxf(delta,0.001)
+	lean_speed=speed_now
+	lean_yaw=visual.rotation.y
+	var pace := minf(speed_now/SPEED,1.0)
+	var target := Vector2(clampf(0.008*accel+0.03*pace,-0.07,0.1),clampf(0.03*yaw_rate*pace,-0.09,0.09))
+	if visual_only: target=Vector2.ZERO
+	lean=lean.lerp(target,1.0-exp(-7.0*delta))
+	visual.rotation.x=-lean.x
+	visual.rotation.z=lean.y
+
+func _process(_delta: float) -> void:
+	if not is_instance_valid(visual): return
+	# Moved outside the physics tick (spawn, door, teleport): no blending across it.
+	if global_position.distance_squared_to(tick_to) > 0.000001:
+		tick_from = global_position
+		tick_to = global_position
+	var offset := render_position()-global_position
+	visual.position = Vector3(offset.x, visual_lift+offset.y, offset.z)
+
+func render_position() -> Vector3:
+	return tick_from.lerp(tick_to, clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0))
+
 func _physics_process(delta: float) -> void:
+	tick_from = global_position
 	var movement := Vector2.ZERO
 	if controls_enabled:
 		movement = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var speed := Profile.VILLAGE_RUN if sprinting else SPEED
-	velocity.x = movement.x * speed
-	velocity.z = movement.y * speed
+	var wanted := Vector2(movement.x,movement.y)*speed
+	var current := Vector2(velocity.x,velocity.z)
+	# Turning sharply sheds a little speed so direction changes read as weight.
+	if wanted.length()>0.1 and current.length()>0.5 and wanted.normalized().dot(current.normalized())<0.2: current*=0.82
+	current=current.move_toward(wanted,(ACCELERATION if wanted.length()>current.length() else DECELERATION)*delta)
+	velocity.x = current.x
+	velocity.z = current.y
 	if visual_only:
 		velocity=Vector3.ZERO
 	elif not is_on_floor():
@@ -250,6 +308,7 @@ func _physics_process(delta: float) -> void:
 		velocity.y = 0.0
 	if not visual_only:
 		move_and_slide()
+		step_up(delta)
 		if position.y < min_ground_y and has_safe_position:
 			position = safe_position
 			velocity = Vector3.ZERO
@@ -264,6 +323,7 @@ func _physics_process(delta: float) -> void:
 		facing = Vector3(look_motion.x, 0.0, look_motion.y)
 	if facing.length_squared()>0.01:
 		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(-facing.x, -facing.z), Profile.damping(Profile.TURN_RESPONSE,delta))
+	lean_body(delta)
 	if is_instance_valid(action_pose): action_pose.body_basis=visual.global_basis.orthonormalized()
 	var moving := minf(1.0,locomotion_velocity.length()/SPEED)
 	stride+=delta*11*moving
@@ -288,14 +348,30 @@ func _physics_process(delta: float) -> void:
 			animation_player.advance(delta)
 			if desired in ["walk","run"]:
 				gait_phase=fposmod(animation_player.current_animation_position/animation_player.get_animation(desired).length,1.0)
-		visual.position.y=0
+		visual_lift=0.0
 	else:
-		visual.position.y=absf(sin(stride))*0.045*moving
+		visual_lift=absf(sin(stride))*0.045*moving
 	if is_instance_valid(left_leg):
 		left_leg.rotation.x=sin(stride)*0.5*moving
 		right_leg.rotation.x=-sin(stride)*0.5*moving
 	if position.y < -10.0:
 		position = safe_position if has_safe_position else Vector3(0, 0.2, 4)
+	tick_to = global_position
+	if reveal_pending:
+		reveal_pending=false
+		visual.visible=true
+
+## Lifts the walker onto a ledge up to STEP_HEIGHT when it walks into one.
+func step_up(delta: float) -> void:
+	if not controls_enabled or not is_on_floor() or not is_on_wall(): return
+	var motion := Vector3(velocity.x,0,velocity.z)*delta
+	if motion.length()<0.001: return
+	var lift := Vector3(0,STEP_HEIGHT,0)
+	if test_move(global_transform,lift): return
+	var raised := global_transform.translated(lift)
+	if test_move(raised,motion*2.0): return
+	global_position+=lift+motion*2.0
+	apply_floor_snap()
 
 func react(kind: String) -> void:
 	# Visual response only. The collision body and server position never change.

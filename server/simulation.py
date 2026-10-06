@@ -3,7 +3,7 @@ import math
 import random
 from copy import deepcopy
 from decimal import Decimal
-from . import navigation, catalog, campaign
+from . import navigation, catalog, campaign, survival_maps
 
 ITEMS = {'wood': '목재', 'stone': '돌', 'berry': '열매', 'fiber': '섬유',
          'axe': '돌도끼', 'spear': '창', 'soup': '열매 수프', 'bandage': '붕대'}
@@ -19,14 +19,57 @@ def clear_swing(s, a, b):
     return navigation.segment_open(s,(a['x'],a['z']),(b['x'],b['z']),.55,0)
 
 
+def map_bounds(s):
+    """Half extent of the walkable square (catalog layout; old prototype maps used 18)."""
+    return catalog.MAPS.get(s.get('map_id','forest'),catalog.MAPS['forest']).get('bounds',18.)
+
+
+def push_clear(s, actor):
+    """Move an actor that a new map layout left inside a solid to the nearest open spot."""
+    if clear_position(s, actor['x'], actor['z']):
+        return
+    limit=map_bounds(s)
+    for step in range(1,400):
+        angle,distance=step*2.39996,.3*math.sqrt(step)
+        x,z=actor['x']+math.cos(angle)*distance,actor['z']+math.sin(angle)*distance
+        if abs(x)<=limit and abs(z)<=limit and clear_position(s,x,z):
+            actor['x'],actor['z']=round(x,3),round(z,3)
+            return
+
+
+def ensure_layout(s):
+    """Saved runs from an older map layout adopt the current obstacles and hazards."""
+    region=catalog.MAPS.get(s.get('map_id','forest'),catalog.MAPS['forest'])
+    version=region.get('layout_version')
+    if not version or s.get('layout_version')==version:
+        return False
+    s['obstacles'],s['hazards'],s['layout_version']=deepcopy(region['obstacles']),deepcopy(region['hazards']),version
+    blockers=s['obstacles']+s['hazards']
+    extent=region.get('node_extent',17.)
+    for node in s.get('nodes',[]):
+        if all(math.hypot(node['x']-o['x'],node['z']-o['z'])>=o['radius']+1.2 for o in blockers): continue
+        for step in range(1,600):
+            angle,distance=step*2.39996,.3*math.sqrt(step)
+            x,z=node['x']+math.cos(angle)*distance,node['z']+math.sin(angle)*distance
+            if (abs(x)<=extent and abs(z)<=extent and math.hypot(x,z)>=4.5
+                    and all(math.hypot(x-o['x'],z-o['z'])>=o['radius']+1.6 for o in blockers)
+                    and all(m is node or math.hypot(x-m['x'],z-m['z'])>=2.2 for m in s['nodes'])):
+                node['x'],node['z']=round(x,2),round(z,2)
+                break
+    for enemy in s.get('enemies',[]): push_clear(s,enemy)
+    if 'x' in s: push_clear(s,s)
+    return True
+
+
 def move_actor(s, actor, dx, dz, speed, dt, radius=.85):
     length = max(1., math.hypot(dx, dz))
     distance_x,distance_z=dx/length*speed*dt,dz/length*speed*dt
     # Bounded substeps stop a lagged sprint from tunneling across a whole trunk.
     steps=max(1,math.ceil(max(abs(distance_x),abs(distance_z))/.25))
+    limit=map_bounds(s)
     for _ in range(steps):
-        nx = max(-18., min(18., actor['x'] + distance_x/steps))
-        nz = max(-18., min(18., actor['z'] + distance_z/steps))
+        nx = max(-limit, min(limit, actor['x'] + distance_x/steps))
+        nz = max(-limit, min(limit, actor['z'] + distance_z/steps))
         if clear_position(s, nx, actor['z'], radius): actor['x'] = nx
         if clear_position(s, actor['x'], nz, radius): actor['z'] = nz
 
@@ -66,12 +109,23 @@ def advance_enemy(s, enemy, dt, day, warm):
         else:
             seek_enemy(s,enemy,(enemy['x']-enemy['z']/distance,enemy['z']+enemy['x']/distance),.6,dt)
         return
+    behavior = enemy.get('behavior', 'melee')
     if enemy['phase'] == 'windup':
         if now >= enemy['phase_until']:
+            if behavior == 'charge':
+                # The dash is committed to the announced line; it passes the marked spot and overshoots.
+                dx, dz = enemy['target_x']-enemy['x'], enemy['target_z']-enemy['z']
+                length = max(.01, math.hypot(dx, dz))
+                enemy.update(phase='charge', phase_until=now+3., _charge_dx=dx/length, _charge_dz=dz/length,
+                             _charge_left=length+enemy.get('charge_overshoot', 2.), _charge_hit=False)
+                return
             if math.hypot(s['x']-enemy['target_x'], s['z']-enemy['target_z']) < enemy.get('impact',1.35) and clear_swing(s,enemy,s):
                 s['hp'] -= enemy.get('damage',8.)
             enemy['phase'] = 'recover'
             enemy['phase_until'] = now + .85
+        return
+    if enemy['phase'] == 'charge':
+        advance_charge(s, enemy, dt, now)
         return
     if enemy['phase'] == 'recover':
         if now >= enemy['phase_until']: enemy['phase'] = 'chase'
@@ -80,9 +134,58 @@ def advance_enemy(s, enemy, dt, day, warm):
     vx, vz = s['x']-enemy['x'], s['z']-enemy['z']
     distance = max(.01, math.hypot(vx, vz))
     if distance < enemy.get('reach',1.8) and clear_swing(s,enemy,s):
-        enemy.update(phase='windup', phase_until=now+enemy.get('windup',.65), target_x=s['x'], target_z=s['z'])
+        if behavior == 'spore':
+            # A spore puff is centred on the creature itself: step out of the ring to dodge.
+            enemy.update(phase='windup', phase_until=now+enemy.get('windup',1.), target_x=enemy['x'], target_z=enemy['z'])
+        else:
+            enemy.update(phase='windup', phase_until=now+enemy.get('windup',.65), target_x=s['x'], target_z=s['z'])
         return
     seek_enemy(s,enemy,(s['x'],s['z']),enemy.get('speed',1.2+day*.08),dt)
+
+
+def advance_charge(s, enemy, dt, now):
+    """Straight committed dash; hits the player once, stops at obstacles, then a long stunned recovery."""
+    step = min(enemy['_charge_left'], enemy.get('charge_speed', 7.)*dt)
+    before = (enemy['x'], enemy['z'])
+    move_actor(s, enemy, enemy['_charge_dx'], enemy['_charge_dz'], enemy.get('charge_speed', 7.), step/max(enemy.get('charge_speed', 7.),.01))
+    moved = math.hypot(enemy['x']-before[0], enemy['z']-before[1])
+    enemy['_charge_left'] -= step
+    if not enemy['_charge_hit'] and math.hypot(s['x']-enemy['x'], s['z']-enemy['z']) < enemy.get('impact', 1.1):
+        enemy['_charge_hit'] = True
+        s['hp'] -= enemy.get('damage', 12.)
+    if enemy['_charge_left'] <= 1e-6 or moved < step*.35 or enemy['_charge_hit'] or now >= enemy['phase_until']:
+        enemy.update(phase='recover', phase_until=now+enemy.get('stun', 1.4))
+
+
+def night_enemies(s, day):
+    """Server-chosen roster for one night: species per map/day, count per difficulty, swarms, variant art id."""
+    region, tuning = catalog.rules(s)
+    map_id = s.get('map_id', 'forest')
+    pool = catalog.night_species(map_id, day)
+    variant = catalog.creature_variant(map_id)
+    enemies = []
+    for i in range(max(1, min(2+day//3, 4)+tuning['extra_enemies'])):
+        angle = i*2.4+day
+        kind = pool[(i+day-1) % len(pool)]
+        stats = catalog.ENEMIES[kind]
+        for member in range(stats.get('swarm', 1)):
+            spread = angle+member*.22
+            enemy = {'id': f'e{day}_{i}' + (f'_{member}' if member else ''), 'x': math.cos(spread)*14,
+                     'z': math.sin(spread)*14, 'kind': kind, 'variant': variant, 'behavior': stats['behavior'],
+                     'hp': stats['hp']*tuning['hp'], 'max_hp': stats['hp']*tuning['hp'],
+                     'damage': stats['damage']*tuning['damage'],
+                     'speed': (stats['speed']+(day-1)*.08)*tuning['speed'],
+                     'windup': stats['windup'], 'reach': stats['reach'], 'impact': stats['impact'],
+                     'phase': 'chase', 'phase_until': 0.}
+            if stats['behavior'] == 'charge':
+                enemy.update(charge_speed=stats['charge_speed']*tuning['speed'],
+                             charge_overshoot=stats['charge_overshoot'], stun=stats['stun'])
+            for offset in range(16):
+                if clear_position(s, enemy['x'], enemy['z']):
+                    break
+                enemy['x'], enemy['z'] = math.cos(spread+offset*.25)*14, math.sin(spread+offset*.25)*14
+            enemies.append(enemy)
+    return enemies
 
 def new_run(seed, now, day_seconds, map_id='forest', difficulty='standard'):
     rng = random.Random(seed)
@@ -91,21 +194,23 @@ def new_run(seed, now, day_seconds, map_id='forest', difficulty='standard'):
     # Reserve camp and the four introductory resources before placing the forest.
     nodes = [dict(id=f'n{i}', kind=k, x=x, z=z, quantity=6, regrow_at=0)
              for i,(k,x,z) in enumerate([('tree', 3, 0), ('berry', -3, 0), ('stone', 0, -3), ('fiber', 0, 3)])]
+    extent=region.get('node_extent',17.)
+    cycle=survival_maps.RESOURCE_CYCLE[map_id]
     for i in range(4,60):
+        kind = cycle[i % len(cycle)]
         for attempt in range(5000):
-            x, z = round(rng.uniform(-17,17),2), round(rng.uniform(-17,17),2)
-            if (math.hypot(x,z)>=4.5 and all(math.hypot(x-n['x'],z-n['z'])>=2.2 for n in nodes)
-                and all(math.hypot(x-o['x'],z-o['z'])>=o['radius']+1.6 for o in region['obstacles']+region['hazards'])):
+            x, z = round(rng.uniform(-extent,extent),2), round(rng.uniform(-extent,extent),2)
+            # Trails stay open: trunks and rock piles never grow on a path.
+            if (math.hypot(x,z)>=survival_maps.CAMP_CLEAR and all(math.hypot(x-n['x'],z-n['z'])>=2.2 for n in nodes)
+                and all(math.hypot(x-o['x'],z-o['z'])>=o['radius']+1.6 for o in region['obstacles']+region['hazards'])
+                and (kind not in ('tree','stone') or not survival_maps.on_path(map_id,x,z,.9))):
                 break
         else:
             raise RuntimeError('forest_layout_exhausted')
-        kinds={'forest':['tree','berry','stone','fiber'], 'quarry':['stone','tree','berry','stone','fiber'],
-               'frost':['tree','fiber','stone','tree','berry']}
-        kind = kinds[map_id][i % len(kinds[map_id])]
         nodes.append({'id': f'n{i}', 'kind': kind, 'x': round(x, 2), 'z': round(z, 2),
                       'quantity': 6 if kind == 'tree' else 4, 'regrow_at': 0})
     return {'map_id':map_id,'difficulty':difficulty,'obstacles':deepcopy(region['obstacles']),
-            'hazards':deepcopy(region['hazards']), 'x': 0., 'z': 1.4, 'hp': 100., 'hunger': 100., 'stamina': 100., 'sprinting': False,
+            'hazards':deepcopy(region['hazards']), 'layout_version':region.get('layout_version'), 'x': 0., 'z': 1.4, 'hp': 100., 'hunger': 100., 'stamina': 100., 'sprinting': False,
             'sprint_recover_at': 0., 'elapsed': 0., 'last_wall': now,
             'day_seconds': day_seconds, 'inventory': {'wood': 5 if difficulty=='relaxed' else 3, 'stone': 0, 'berry': 6 if difficulty=='relaxed' else 4, 'fiber': 0,
             'axe': 0, 'spear': 0, 'soup': 0, 'bandage': 0}, 'nodes': nodes, 'enemies': [],
@@ -118,6 +223,7 @@ def advance(s, now, dx=0., dz=0., sprint=False):
     s['last_wall'] = now
     if s['status'] != 'active':
         return
+    ensure_layout(s)
     # Old saved prototypes started inside the now-solid fire pit.
     if math.hypot(s['x'],s['z'])<1.05:
         length=math.hypot(s['x'],s['z'])
@@ -144,21 +250,7 @@ def advance(s, now, dx=0., dz=0., sprint=False):
     if night:
         if s['spawned_night'] < day:
             s['spawned_night'] = day
-            for i in range(max(1,min(2 + day // 3,4)+tuning['extra_enemies'])):
-                angle = i * 2.4 + day
-                species=['wolf'] if day==1 and s.get('map_id','forest')=='forest' else ['wolf','wisp','brute']
-                kind=species[(i+day+(1 if s.get('map_id')=='quarry' else 0))%len(species)]
-                stats=catalog.ENEMIES[kind]
-                s['enemies'].append({'id': f'e{day}_{i}', 'x': math.cos(angle)*14,
-                                     'z': math.sin(angle)*14, 'kind':kind, 'hp':stats['hp']*tuning['hp'],
-                                     'max_hp':stats['hp']*tuning['hp'], 'damage':stats['damage']*tuning['damage'],
-                                     'speed':(stats['speed']+(day-1)*.08)*tuning['speed'],
-                                     'windup':stats['windup'],'reach':stats['reach'],'impact':stats['impact'],
-                                     'phase':'chase','phase_until':0.})
-                enemy=s['enemies'][-1]
-                for offset in range(16):
-                    if clear_position(s,enemy['x'],enemy['z']): break
-                    enemy['x'],enemy['z']=math.cos(angle+offset*.25)*14,math.sin(angle+offset*.25)*14
+            s['enemies'].extend(night_enemies(s, day))
         if not warm:
             s['hp'] -= dt * 0.28*region['cold']*tuning['cold']
         for enemy in s['enemies']:

@@ -19,7 +19,7 @@ func run() -> void:
 	await app.authenticate(true,"http://127.0.0.1:8766","content_"+str(Time.get_ticks_usec()),"Content-patch-test-password","")
 	expect(app.screen=="village","authenticated village opens")
 	if app.screen!="village":quit(1);return
-	expect(app.npcs.size()==5,"five village NPCs are available")
+	expect(app.npcs.size()==4,"four village NPCs are available")
 	await create_timer(.2).timeout
 	var camera_forward: Vector3=app.camera.global_basis.z.normalized()
 	var camera_stable := true
@@ -38,26 +38,24 @@ func run() -> void:
 	await capture("content-village")
 	var haeru: Node3D
 	for npc in app.npcs:
+		expect(not str(npc.get_meta("cast","")).is_empty(),"cast villager for "+str(npc.get_meta("role")))
 		if npc.get_meta("role")=="angler":haeru=npc
-		else:expect(npc.avatar.character=="explorer_b","consistent proportions for "+str(npc.get_meta("role")))
-	expect(haeru!=null and haeru.avatar.character=="haeru","new concept-derived Haeru is integrated")
+	expect(haeru!=null,"Haeru the angler is in the village")
 	if haeru:
-		expect(haeru.hand_skeleton.get_bone_count()==41,"Haeru original skin rig retained")
-		for clip in ["idle","walk","fishing","greet"]:expect(haeru.animation_player.has_animation(clip),"Haeru authored "+clip)
 		# Teleport only for art inspection, not a navigation or gameplay claim.
-		app.player.position=Vector3(29.4,.1,28.2);app.camera.size=8;app.follow_camera(1)
+		app.player.position=haeru.position+Vector3(0,0,1.6);app.camera.size=8;app.follow_camera(1)
 		await create_timer(.6).timeout
 		await capture("content-haeru-fishing")
 		app.talk_to(haeru);await create_timer(.85).timeout
-		expect(haeru.current_clip=="greet","talking plays Haeru's original greeting")
+		expect(is_instance_valid(app.village_modal),"talking to Haeru opens the illustrated dialogue")
 		await capture("content-haeru-dialogue")
-		app.close_village_modal();await create_timer(2.0).timeout
-		expect(haeru.current_clip=="fishing","Haeru returns to fishing after greeting")
+		app.close_village_modal();await create_timer(.5).timeout
+		expect(not is_instance_valid(app.village_modal),"the dialogue closes")
 	var token: String=app.api.token
 	app.queue_free();await process_frame
 	Engine.set_meta("studio_session",{"token":token,"url":"http://127.0.0.1:8766","room":"home"})
 	app=load("res://scenes/studio.tscn").instantiate();root.add_child(app);await create_timer(1.2).timeout
-	expect(not app.room_root.find_children("AuthoredRoomShell","Node3D",true,false).is_empty(),"authored home interior loads")
+	expect(not app.room_root.find_children("InteriorShell","Node3D",true,false).is_empty(),"authored home interior loads")
 	var tabs: TabContainer=app.find_children("*","TabContainer",true,false)[0]
 	expect(tabs.is_tab_hidden(2) and tabs.is_tab_hidden(3) and tabs.is_tab_hidden(4),"player cannot see code/model/fitting tabs")
 	app.message("model_download_failed")

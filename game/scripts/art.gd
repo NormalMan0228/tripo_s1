@@ -113,6 +113,16 @@ static func label3d(parent: Node3D, text: String, at: Vector3, color := Color("f
 	parent.add_child(l)
 	return l
 
+## Name tags over people: the same on-screen size at every zoom, drawn close to 1:1
+## so the letters stay crisp instead of a downscaled 44 px glyph.
+static func style_nameplate(l: Label3D, size := 21) -> void:
+	l.font = load("res://assets/fonts/ui_bold.tres")
+	l.font_size = size
+	l.pixel_size = 0.0021
+	l.fixed_size = true
+	l.outline_size = 7
+	l.outline_modulate = Color(0.1, 0.07, 0.05, 0.9)
+
 static func authored_prop(parent: Node3D, path: String, at: Vector3, span: float, height: float) -> bool:
 	if not ResourceLoader.exists(path): return false
 	var packed := load(path) as PackedScene

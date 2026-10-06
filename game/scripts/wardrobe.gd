@@ -2,6 +2,7 @@ extends HBoxContainer
 var avatar: Dictionary={}
 var preview: Node3D
 var actor: CharacterBody3D
+const RpgUi=preload("res://scripts/rpg_ui.gd")
 const DEFAULTS={"character":"explorer_b","hair":"#30595b","coat":"#dba448","pants":"#526552","boots":"#765744","skin":"#e4b587","headwear":"none","backpack":true}
 
 func _ready() -> void:
@@ -37,8 +38,11 @@ func _ready() -> void:
 	actor=preload("res://scripts/player.gd").new()
 	actor.avatar=avatar.duplicate(true)
 	actor.controls_enabled=false
+	# visual_only keeps the idle animation ticking without moving the body.
+	actor.visual_only=true
+	# Face the preview camera; the walker turns its model toward `facing`.
+	actor.facing=Vector3(0,0,1)
 	preview.add_child(actor)
-	actor.set_physics_process(false)
 	actor.visual.rotation.y=PI
 	if actor.animation_player and actor.animation_player.has_animation("idle"): actor.animation_player.play("idle")
 	var controls := VBoxContainer.new()
@@ -72,7 +76,8 @@ func _ready() -> void:
 			swatch.text="●"
 			swatch.custom_minimum_size=Vector2(36,32)
 			swatch.add_theme_color_override("font_color",Color(color))
-			swatch.tooltip_text=label.text+" "+color
+			RpgUi.name_tip(swatch,label.text+" · "+RpgUi.color_name(color))
+			swatch.set_meta("name",swatch.tooltip_text)
 			swatch.set_meta("part",key)
 			swatch.set_meta("color",color)
 			swatch.text="◆" if avatar[key]==color else "●"
@@ -92,7 +97,7 @@ func _ready() -> void:
 	turn.min_value=-180
 	turn.max_value=180
 	turn.tooltip_text=tr("미리보기 회전")
-	turn.value_changed.connect(func(value): actor.visual.rotation.y=PI+deg_to_rad(value))
+	turn.value_changed.connect(func(value): actor.facing=Vector3(sin(deg_to_rad(value)),0,cos(deg_to_rad(value))))
 	controls.add_child(turn)
 	refresh()
 
@@ -103,5 +108,5 @@ func refresh() -> void:
 		if b.has_meta("part"):
 			b.text="◆" if avatar[b.get_meta("part")]==b.get_meta("color") else "●"
 			b.disabled=avatar.character=="explorer_b" and b.get_meta("part") in ["hair","skin"]
-			if b.disabled:b.tooltip_text=tr("이 여행자의 머리와 피부는 고유한 모습으로 유지돼요. 옷과 소품을 바꿔 보세요.")
+			b.tooltip_text=tr("이 여행자의 머리와 피부는 고유한 모습으로 유지돼요. 옷과 소품을 바꿔 보세요.") if b.disabled else str(b.get_meta("name",""))
 	if actor.animation_player and actor.animation_player.has_animation("idle"): actor.animation_player.play("idle",0.18)

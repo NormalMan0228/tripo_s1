@@ -34,23 +34,8 @@ def actor_view(state, user_id):
 
 
 def spawn_enemies(world, day):
-    _, tuning = catalog.rules(world)
     world['spawned_night'] = day
-    for i in range(max(1, min(2+day//3, 4)+tuning['extra_enemies'])):
-        angle = i*2.4+day
-        species = ['wolf'] if day == 1 and world['map_id'] == 'forest' else ['wolf', 'wisp', 'brute']
-        kind = species[(i+day+(1 if world['map_id'] == 'quarry' else 0)) % len(species)]
-        stats = catalog.ENEMIES[kind]
-        enemy = dict(id=f'e{day}_{i}', x=math.cos(angle)*14, z=math.sin(angle)*14,
-                     kind=kind, hp=stats['hp']*tuning['hp'], max_hp=stats['hp']*tuning['hp'],
-                     damage=stats['damage']*tuning['damage'], speed=(stats['speed']+(day-1)*.08)*tuning['speed'],
-                     windup=stats['windup'], reach=stats['reach'], impact=stats['impact'],
-                     phase='chase', phase_until=0.)
-        for offset in range(16):
-            if simulation.clear_position(world, enemy['x'], enemy['z']):
-                break
-            enemy['x'], enemy['z'] = math.cos(angle+offset*.25)*14, math.sin(angle+offset*.25)*14
-        world['enemies'].append(enemy)
+    world['enemies'].extend(simulation.night_enemies(world, day))
 
 
 def advance(state, now):
@@ -59,6 +44,9 @@ def advance(state, now):
     world['last_wall'] = now
     if world['status'] != 'active':
         return
+    if simulation.ensure_layout(world):
+        for actor in players.values():
+            simulation.push_clear(world, actor)
     # No offline catch-up. A remaining connected member keeps the party running.
     online = any(not p['withdrawn'] and now-p['last_seen'] < PRESENCE_SECONDS for p in players.values())
     dt = max(0., min(now-previous, .3)) if online else 0.
@@ -84,7 +72,7 @@ def advance(state, now):
             spawn_enemies(world, day)
         for enemy in world['enemies']:
             target_id = enemy.get('target_user')
-            if enemy.get('phase') != 'windup' or target_id not in alive:
+            if enemy.get('phase') not in ('windup', 'charge') or target_id not in alive:
                 target_id = min(alive, key=lambda key: math.hypot(alive[key]['x']-enemy['x'], alive[key]['z']-enemy['z']))
             enemy['target_user'] = target_id
             actor = alive[target_id]

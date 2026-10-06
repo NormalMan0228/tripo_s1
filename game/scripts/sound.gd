@@ -1,4 +1,8 @@
 extends Node
+## Music and the small synthesized effects. Music plays on the Music bus, clicks and
+## error beeps on UI, everything else on SFX (GameSettings carries the volumes).
+const GameSettings = preload("res://scripts/game_settings.gd")
+const UI_EFFECTS := ["click","error"]
 
 var muted := false
 var effects: Dictionary = {}
@@ -10,24 +14,27 @@ var music_mode := ""
 var fade: Tween
 
 func _ready() -> void:
-	muted="--mute" in OS.get_cmdline_user_args()
+	muted=GameSettings.muted()
 	for kind in ["click","gather","craft","eat","fire","hit","hurt","error","reward"]:
 		effects[kind]=make_effect(kind)
 	for i in 5:
 		var player := AudioStreamPlayer.new()
 		player.volume_db=-16
+		player.bus=GameSettings.BUS_SFX
 		add_child(player)
 		voices.append(player)
 	for i in 2:
 		var player := AudioStreamPlayer.new()
 		player.volume_db=-60
+		player.bus=GameSettings.BUS_MUSIC
 		add_child(player)
 		music.append(player)
 	apply_mute()
 
 func apply_mute() -> void:
-	# This bus belongs to this game process; the system volume is unchanged.
-	AudioServer.set_bus_mute(AudioServer.get_bus_index("Master"),muted)
+	# The Master bus belongs to this game process; the system volume is unchanged.
+	GameSettings.apply_audio()
+	muted=GameSettings.muted()
 
 func _exit_tree() -> void:
 	if fade and fade.is_valid(): fade.kill()
@@ -38,15 +45,22 @@ func _exit_tree() -> void:
 			player.stream=null
 	effects.clear()
 
+## M key / menu: flips the saved "mute all" setting.
 func toggle() -> void:
-	muted=not muted
+	GameSettings.set_value("mute_all",not bool(GameSettings.get_value("mute_all")))
 	apply_mute()
 
 func effect(kind: String) -> void:
+	# Interface clicks share RpgUi's soft click (deduped, so a button hook and an
+	# older effect("click") call on the same press play it once).
+	if kind=="click":
+		preload("res://scripts/rpg_ui.gd").sfx("click")
+		return
 	if not effects.has(kind): return
 	var player := voices[voice_index]
 	voice_index=(voice_index+1)%voices.size()
 	player.stream=effects[kind]
+	player.bus=GameSettings.BUS_UI if kind in UI_EFFECTS else GameSettings.BUS_SFX
 	player.play()
 
 func play_music(mode: String) -> void:

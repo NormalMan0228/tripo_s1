@@ -70,4 +70,9 @@ func run() -> void:
 		await create_timer(0.25).timeout
 		if guest_room.visit_host.is_empty(): break
 	expect(guest_room.visit_host.is_empty(), "friend leaves when the visit ends")
+	# Quitting mid-sound leaks the engine's playback at exit: stop the door sound and give the
+	# audio thread a moment. (Quit before the room's switch to the village, which is not tested here.)
+	var veil = load("res://scripts/transition.gd").instance
+	if is_instance_valid(veil): veil.door.stop()
+	OS.delay_msec(100)
 	quit(1 if failed else 0)

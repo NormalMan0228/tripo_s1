@@ -2,6 +2,7 @@
 from functools import lru_cache
 import heapq
 import math
+from . import catalog
 
 
 def solids(state):
@@ -32,9 +33,10 @@ def blocked_cells(obstacles):
 
 
 def path_to(state,start,goal):
-    """At most 37x37 cells. Recomputed after depletion/regrowth or a moved target."""
-    start=(max(-18,min(18,round(start[0]))),max(-18,min(18,round(start[1]))))
-    goal=(max(-18,min(18,round(goal[0]))),max(-18,min(18,round(goal[1]))))
+    """At most 45x45 cells (the map bounds). Recomputed after depletion/regrowth or a moved target."""
+    limit=int(catalog.MAPS.get(state.get('map_id','forest'),catalog.MAPS['forest']).get('bounds',18))
+    start=(max(-limit,min(limit,round(start[0]))),max(-limit,min(limit,round(start[1]))))
+    goal=(max(-limit,min(limit,round(goal[0]))),max(-limit,min(limit,round(goal[1]))))
     blocked=blocked_cells(solids(state))-{start,goal}
     frontier=[(0.,start)]
     cost={start:0.}
@@ -50,7 +52,7 @@ def path_to(state,start,goal):
             return route[::-1]
         for dx,dz in directions:
             nxt=(current[0]+dx,current[1]+dz)
-            if max(abs(nxt[0]),abs(nxt[1]))>18 or nxt in blocked: continue
+            if max(abs(nxt[0]),abs(nxt[1]))>limit or nxt in blocked: continue
             if dx and dz and ((current[0]+dx,current[1]) in blocked or (current[0],current[1]+dz) in blocked): continue
             new_cost=cost[current]+(math.sqrt(2) if dx and dz else 1.)
             if new_cost>=cost.get(nxt,math.inf): continue
