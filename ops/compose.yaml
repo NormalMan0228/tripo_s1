@@ -25,7 +25,10 @@ services:
       TRIPOTHON_STARS_PER_CREDIT: ${TRIPOTHON_STARS_PER_CREDIT:-1}
       TRIPO_USER_TOTAL_REQUEST_LIMIT: ${TRIPO_USER_TOTAL_REQUEST_LIMIT:-0}
       TRIPOTHON_WELCOME_STARS: ${TRIPOTHON_WELCOME_STARS:-0}
-      TRIPOTHON_OPEN_REGISTRATION: ${TRIPOTHON_OPEN_REGISTRATION:-false}
+      # The trial game has no invitation field: sign-up is open by default (limited per address/day).
+      TRIPOTHON_OPEN_REGISTRATION: ${TRIPOTHON_OPEN_REGISTRATION:-true}
+      # Trial cap on Tripo credits per craft: 10 = one untextured H3 mesh from text.
+      TRIPOTHON_MAX_CREDITS_PER_CRAFT: ${TRIPOTHON_MAX_CREDITS_PER_CRAFT:-10}
       TRIPOTHON_SIGNUPS_PER_IP_DAY: ${TRIPOTHON_SIGNUPS_PER_IP_DAY:-3}
       TRIPOTHON_SIGNUPS_PER_DAY: ${TRIPOTHON_SIGNUPS_PER_DAY:-200}
     secrets: [registration_code]

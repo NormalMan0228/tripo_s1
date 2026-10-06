@@ -5100,6 +5100,10 @@
    "en": "This PC's World",
    "zh": "本机世界"
   },
+  "이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!": {
+   "en": "This account has used all its craft requests. Decorate your village with what you made!",
+   "zh": "这个账号的制作委托次数已用完。用做好的物品装饰村庄吧！"
+  },
   "이 곳에서는 오늘 계정을 더 만들 수 없어요. 만든 계정으로 로그인해 주세요.": {
    "en": "No more accounts can be created from here today. Please log in with the one you made.",
    "zh": "今天无法再从这里创建账号。请用已创建的账号登录。"
@@ -5167,6 +5171,10 @@
   "이 여행자의 머리와 피부는 고유한 모습으로 유지돼요. 옷과 소품을 바꿔 보세요.": {
    "en": "This traveler's hair and skin stay true to their look. Try changing clothes and accessories.",
    "zh": "这位旅行者的发型和肤色保持独有样貌。试试更换服装和配饰吧。"
+  },
+  "이 월드는 지금 새 모험가를 받지 않아요. 잠시 뒤 다시 시도하거나 '이 PC 월드'를 골라 주세요.": {
+   "en": "This world isn't taking new adventurers right now. Try again later or choose 'This PC world'.",
+   "zh": "这个世界现在不接收新的冒险者。请稍后再试，或选择“本机世界”。"
   },
   "이 월드는 초대받은 모험가만 가입할 수 있어요. 초대 코드를 넣거나 '이 PC 월드'를 골라 주세요.": {
    "en": "Only invited adventurers can join this world. Enter an invite code or choose \"This PC's World\".",
@@ -6296,6 +6304,14 @@
    "en": "Your health is fine. Save your bandages.",
    "zh": "体力充足，留着绷带吧。"
   },
+  "체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요.": {
+   "en": "The trial allows only the simplest craft (paint it yourself · static furniture · H3).",
+   "zh": "体验版只能进行最简单的制作（自己上色 · 静态家具 · H3）。"
+  },
+  "체험판에서는 글로 설명한 정적인 가구 한 덩어리를 만들어요.": {
+   "en": "In the trial, crafts are one static piece made from your description.",
+   "zh": "体验版会根据你的文字描述制作一件静态家具。"
+  },
   "초대 / 상태 새로고침": {
    "en": "Refresh Invites / Status",
    "zh": "邀请 / 刷新状态"
@@ -7287,10 +7303,6 @@
   "🔒 %s · 아무도 없어요": {
    "en": "🔒 %s · Nobody home",
    "zh": "🔒 %s · 没人在家"
-  },
-  "이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!": {
-   "en": "This account has used all its craft requests. Decorate your village with what you made!",
-   "zh": "这个账号的制作委托次数已用完。用做好的物品装饰村庄吧！"
   }
  },
  "templates": []

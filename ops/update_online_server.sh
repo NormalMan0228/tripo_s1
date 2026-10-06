@@ -3,6 +3,7 @@
 # checkout:
 #   sudo bash ops/update_online_server.sh [branch] [--per-account N] [--per-day N]
 #        [--craft-day-limit N] [--welcome-stars N] [--open-signup | --invite-only] [--signups-per-ip N]
+#        [--max-credits N]   (Tripo credits one craft may spend; 10 = cheapest craft only)
 # 1. Optionally writes the craft limits, welcome stars and sign-up mode into ops/production.env
 #    (--per-day sets the server-wide and per-account daily limits; --craft-day-limit only the
 #    server-wide one, which caps Tripo spending per day when sign-up is open).
@@ -24,6 +25,7 @@ while [ $# -gt 0 ]; do
     --open-signup) limits[TRIPOTHON_OPEN_REGISTRATION]="true"; shift ;;
     --invite-only) limits[TRIPOTHON_OPEN_REGISTRATION]="false"; shift ;;
     --signups-per-ip) limits[TRIPOTHON_SIGNUPS_PER_IP_DAY]="$2"; shift 2 ;;
+    --max-credits) limits[TRIPOTHON_MAX_CREDITS_PER_CRAFT]="$2"; shift 2 ;;
     -*) echo "Unknown option $1" >&2; exit 2 ;;
     *) branch="$1"; shift ;;
   esac
@@ -59,6 +61,10 @@ git checkout "$branch"
 git pull --ff-only origin "$branch"
 "${compose[@]}" config --quiet
 "${compose[@]}" up -d --build api
+if grep -qE '^TRIPOTHON_OPEN_REGISTRATION=false' ops/production.env; then
+  echo "WARNING: sign-up needs the invitation code, but the trial game has no code field." >&2
+  echo "         Run again with --open-signup so players can create accounts." >&2
+fi
 domain="$(grep -E '^TRIPOTHON_DOMAIN=' ops/production.env | cut -d= -f2-)"
 for attempt in $(seq 1 45); do
   if curl -fsS "https://$domain/health"; then echo; exit 0; fi

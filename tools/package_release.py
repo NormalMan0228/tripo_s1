@@ -38,13 +38,14 @@ README_KO = """트리포톤 — 일곱 밤, 나의 마을 (Windows)
 
 온라인 월드
 - 로그인 화면의 월드가 "온라인 월드"로 정해져 있습니다.
-- [계정 만들기]에서 아이디·비밀번호와 함께 운영자에게 받은 "초대 코드"를 입력합니다.
-- 계정을 만들면 물건 제작을 바로 해 볼 수 있는 별씨가 들어 있습니다(계정당 제작 3회).
+- [계정 만들기]에서 아이디와 비밀번호만 정하면 됩니다. (초대 코드 없음)
+- 계정을 만들면 물건 제작을 바로 해 볼 수 있는 별씨가 들어 있습니다(체험판: 계정당 제작 3회).
 
 물건 제작 (서버 → AI 설계 → Tripo 3D)
 - 마을에서 C(제작)를 누르거나 집·공방에 들어가 [만들기]를 고릅니다.
 - 만들고 싶은 물건을 문장으로 적으면 서버가 AI로 설계하고 Tripo로 3D 모델을 만듭니다.
-- 견적을 확인한 뒤 [이 설계로 생성]을 누르면 몇 분 뒤 가방에 들어옵니다. 방에 놓고 색칠할 수 있습니다.
+- 견적을 확인한 뒤 [제작 확정]을 누르면 몇 분 뒤 가방에 들어옵니다. 원하는 곳에 놓고 색칠할 수 있습니다.
+- 체험판에서는 직접 색칠하는 정적인 가구 한 덩어리를 만듭니다.
 
 조작
 - 이동 WASD · 달리기 Shift · 상호작용 E · 가방 I · 제작 C · 지도 Tab · 창고 B · 옷장 O
@@ -61,8 +62,8 @@ Run Tripothon.exe from the unzipped folder (no installer). If Windows SmartScree
 appears, choose "More info" -> "Run anyway".
 
 Online world: the login screen is set to the online world. Create an account with a
-username, a password and the invitation code from the organizer. New accounts start
-with enough stars to try crafting (3 crafts per account).
+username and a password (no invitation code). New accounts start with enough stars
+to try crafting (trial: 3 crafts per account, one static piece you paint yourself).
 
 Crafting (server -> AI design -> Tripo 3D): press C in the village (or enter a house or
 the workshop and choose Create), describe an object, check the estimate and confirm.

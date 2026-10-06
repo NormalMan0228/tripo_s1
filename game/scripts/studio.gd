@@ -87,6 +87,8 @@ var raw_args_toggle: CheckButton
 var function_result: Label
 var mesh_models: OptionButton
 var refine_reference: CheckButton
+## Reference-image buttons, locked on trial servers (one cheap craft only).
+var image_buttons: HBoxContainer
 var binding_part: OptionButton
 var binding_fields: Dictionary={}
 var binding_hint: Label
@@ -438,7 +440,7 @@ func build_ui() -> void:
 	button(presets,tr("상자"),func(): prompt.text=tr("클릭하면 뚜껑이 부드럽게 열리고 다시 클릭하면 닫히는 나무 상자"))
 	button(presets,tr("시계"),func(): prompt.text=tr("시침과 분침이 움직이고 클릭하면 멈추는 탁상 시계"))
 	image_label=label(create,tr("참고 그림을 추가할 수 있어요"),12)
-	var image_buttons := row(create)
+	image_buttons = row(create)
 	button(image_buttons,tr("이미지 선택"),func(): file_dialog.popup_centered_ratio(0.7))
 	button(image_buttons,tr("제거"),func(): image_data="";image_label.text=tr("참고 이미지 없음");update_price())
 	refine_reference=CheckButton.new();refine_reference.text=tr("그림을 먼저 정리해서 만들기");refine_reference.tooltip_text=tr("Tripo 이미지 편집: 부품당 예상 5크레딧 추가. 이후 이미지→3D 요금 적용.");create.add_child(refine_reference);refine_reference.toggled.connect(func(_value):update_price())
@@ -865,6 +867,18 @@ func refresh() -> void:
 	for i in range(efforts.get_item_count()):efforts.set_item_disabled(i,live and i!=2)
 	if live:
 		models.select(0);efforts.select(2)
+	# Trial servers cap Tripo credits per craft: only the cheapest craft is offered
+	# (paint it yourself · static · H3 · text only).
+	var trial: bool=int(data.get("max_tripo_credits",0))>0
+	surface_mode.set_item_disabled(1,trial);motion.set_item_disabled(0,trial);mesh_models.set_item_disabled(1,trial)
+	if trial:
+		surface_mode.select(0);motion.select(1);mesh_models.select(0)
+		image_data="";image_label.text=tr("체험판에서는 글로 설명한 정적인 가구 한 덩어리를 만들어요.")
+		refine_reference.button_pressed=false
+		update_price()
+	refine_reference.disabled=trial
+	for child in image_buttons.get_children():
+		if child is Button:child.disabled=trial
 	if is_instance_valid(hero):hero.apply_avatar(data.get("profile",{}).get("avatar",{}))
 	update_capacity()
 	history_list.clear()
@@ -1098,7 +1112,9 @@ func generate() -> void:
 	var body := {"prompt":prompt.text.strip_edges(),"material":"mesh" if surface_mode.selected==0 else "textured","motion":"dynamic" if motion.selected==0 else "static","designer":"fixture" if designer.selected==0 else "llm","geometry":"proxy" if geometry.selected==0 else "tripo","model":models.get_item_text(models.selected),"effort":efforts.get_item_text(efforts.selected),"image":image_data,"mesh_model":"v3.1-20260211" if mesh_models.selected==0 else "P2-20260801","image_mode":"refine" if geometry.selected==1 and not image_data.is_empty() and refine_reference.button_pressed else "original"}
 	var response: Dictionary=await api.post("/v1/studio/jobs",api.mutation(body))
 	pending=false;generation_button.disabled=false
-	if not response.ok:message(tr("생성을 시작하지 못했어요 · ")+response.error);return
+	if not response.ok:
+		message(tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요.") if response.error=="craft_over_trial_limit" else tr("생성을 시작하지 못했어요 · ")+response.error)
+		return
 	job_id=response.data.id;message(tr("설계를 준비하고 있어요. 다른 가구를 꾸미며 기다릴 수 있어요."));await refresh()
 
 func poll_job() -> void:

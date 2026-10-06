@@ -15,6 +15,8 @@ func capture(label: String) -> void:
 		if argument.begins_with("--artifacts="): path=argument.trim_prefix("--artifacts=").path_join(label+".png")
 	if root.get_texture().get_image().save_png(path)!=OK: failed=true
 func run_test() -> void:
+	# Villagers keep their work spots whatever the real clock says (evening runs found Sora off duty).
+	preload("res://scripts/npc.gd").pinned = true
 	app=Main.new()
 	root.add_child(app)
 	await process_frame

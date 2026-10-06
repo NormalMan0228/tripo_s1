@@ -172,6 +172,7 @@ class Studio:
                     'profile':profile(conn,user['id']) if profile else {},
                     'room_usage':{room:room_budget.usage(conn,assets,user['id'],room) for room in ('home','workshop','village')},
                     'geometry_enabled':bool(settings.paid_enabled and settings.tripo_key),
+                    'max_tripo_credits':settings.max_credits_per_craft if settings.mode=='live' else 0,
                     'prices':{'static_mesh':20,'static_textured':40,'dynamic_mesh':30,'dynamic_textured':50},
                     'tripo_estimate':{'models':{'v3.1-20260211':{'text_mesh':10,'text_textured':20,'image_mesh':20,'image_textured':30},'P2-20260801':{'text_mesh':100,'text_textured':110,'image_mesh':100,'image_textured':110}},'image_refinement_per_part':5,'source':'official_rates_and_measured_2026_10_02','max_parts':8,'confirmation_required':True},
                     'jobs':[dict(r) for r in conn.execute('SELECT id,state,cost,object_id,error,created FROM studio_jobs WHERE owner_id=? ORDER BY created DESC LIMIT 30',(user['id'],))],
@@ -193,6 +194,13 @@ class Studio:
                 if conn.execute("SELECT 1 FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled')",(user['id'],)).fetchone():fail('generation_pending')
                 if body.geometry=='tripo':
                     if provider_busy(conn):fail('provider_busy')
+                    cap=settings.max_credits_per_craft if settings.mode=='live' else 0
+                    if cap:
+                        try:
+                            # Moving furniture keeps separate parts: count at least two.
+                            least=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',2 if body.motion=='dynamic' else 1,bool(body.image),body.image_mode=='refine')
+                        except ProviderError:least=cap+1
+                        if least>cap:fail('craft_over_trial_limit',403)
                 count=conn.execute('SELECT count(*) FROM studio_jobs WHERE created>=?',(int(clock()//86400)*86400,)).fetchone()[0]
                 if count>=settings.daily_generation_limit:fail('daily_generation_limit',429)
                 if settings.mode=='live':
@@ -465,6 +473,8 @@ class Studio:
                 if body.geometry=='tripo':
                     provenance.update(tripo_model=mesh_model,estimated_tripo_credits=estimate(mesh_model,body.material=='textured',len(parts),bool(body.image),body.image_mode=='refine'),estimate_source='official_rates_and_measured_2026_10_02')
                     provenance.update(quoted_game_cost=max(job['cost'],math.ceil(provenance['estimated_tripo_credits']*self.settings.studio_credit_rate)),stars_per_credit=self.settings.studio_credit_rate,reserved_game_cost=job['cost'])
+                    cap=self.settings.max_credits_per_craft if self.settings.mode=='live' else 0
+                    if cap and provenance['estimated_tripo_credits']>cap:raise ProviderError('craft_over_trial_limit')
                 self.update(job_id,state='awaiting_confirmation' if body.geometry=='tripo' else 'building',plan=json.dumps(plan),program=json.dumps(program),provenance=json.dumps(provenance),parts=json.dumps(parts))
                 if body.geometry=='tripo':return
             else:
