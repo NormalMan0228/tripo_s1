@@ -1024,6 +1024,10 @@
    "en": "Please keep the Workshop entrance clear.",
    "zh": "请让工坊入口前保持空旷。"
   },
+  "공방 장인이 다른 의뢰를 만들고 있어요. 조금 뒤에 다시 맡겨 주세요.": {
+   "en": "The artisan is busy with another order. Please try again in a moment.",
+   "zh": "工匠正在制作其他委托。请稍后再试。"
+  },
   "공방 장인이 아직 자리를 비웠어요.": {
    "en": "The workshop artisan is away for now.",
    "zh": "工坊匠人暂时不在。"
@@ -4700,6 +4704,10 @@
    "en": "Found today\n%s",
    "zh": "今天收到的物品\n%s"
   },
+  "오늘 맡길 수 있는 제작을 모두 썼어요. 내일 다시 찾아와 주세요.": {
+   "en": "You've used today's crafting requests. Please come back tomorrow.",
+   "zh": "今天的制作委托已用完。请明天再来。"
+  },
   "오늘 물때가 좋아요.": {
    "en": "The tide is good today.",
    "zh": "今天潮水正好。"
@@ -4747,6 +4755,10 @@
   "오늘은 배달할 편지가 없네요. 그림자 우체국도 쉬는 날이 있어요.": {
    "en": "No letters to deliver today. Even the shadow post office takes days off.",
    "zh": "今天没有要送的信。影子邮局也有休息日。"
+  },
+  "오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요.": {
+   "en": "No new adventurers can join today. Please come back tomorrow.",
+   "zh": "今天无法再接收新的冒险者。请明天再来。"
   },
   "오늘은 순무 고랑을 하나 더 내 볼까 해요.": {
    "en": "I think I'll make one more turnip row today.",
@@ -5087,6 +5099,10 @@
   "이 PC 월드": {
    "en": "This PC's World",
    "zh": "本机世界"
+  },
+  "이 곳에서는 오늘 계정을 더 만들 수 없어요. 만든 계정으로 로그인해 주세요.": {
+   "en": "No more accounts can be created from here today. Please log in with the one you made.",
+   "zh": "今天无法再从这里创建账号。请用已创建的账号登录。"
   },
   "이 근처 길가 어딘가에 떨어뜨린 것 같아요.": {
    "en": "I think I dropped it somewhere along a road near here.",
@@ -7271,6 +7287,10 @@
   "🔒 %s · 아무도 없어요": {
    "en": "🔒 %s · Nobody home",
    "zh": "🔒 %s · 没人在家"
+  },
+  "이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!": {
+   "en": "This account has used all its craft requests. Decorate your village with what you made!",
+   "zh": "这个账号的制作委托次数已用完。用做好的物品装饰村庄吧！"
   }
  },
  "templates": []

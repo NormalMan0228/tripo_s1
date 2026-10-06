@@ -381,7 +381,12 @@ func error_message(code: String) -> String:
 		"live_generation_disabled":tr("공방 장인이 아직 자리를 비웠어요."),"generation_pending":tr("진행 중인 생성이 있습니다."),
 		"session_expired":tr("오래 쉬어서 다시 들어와야 해요."),"object_not_found":tr("내 물건이 아니에요."),
 		"stale_object_version":tr("물건이 그새 바뀌었어요. 가방을 다시 열어 주세요."),"object_is_listed":tr("판매 중인 물건입니다. 판매를 취소하세요."),
-		"insufficient_provider_credit":tr("공방 재료가 떨어졌어요. 맡긴 별씨는 돌려드려요.")}
+		"insufficient_provider_credit":tr("공방 재료가 떨어졌어요. 맡긴 별씨는 돌려드려요."),
+		"user_total_generation_limit":tr("이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!"),
+		"user_daily_generation_limit":tr("오늘 맡길 수 있는 제작을 모두 썼어요. 내일 다시 찾아와 주세요."),
+		"provider_busy":tr("공방 장인이 다른 의뢰를 만들고 있어요. 조금 뒤에 다시 맡겨 주세요."),
+		"too_many_registrations":tr("이 곳에서는 오늘 계정을 더 만들 수 없어요. 만든 계정으로 로그인해 주세요."),
+		"registration_closed_today":tr("오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요.")}
 	if not preload("res://scripts/build_mode.gd").developer():
 		messages.live_generation_disabled=tr("새 가구 제작을 준비하고 있어요. 지금은 보관함의 물건으로 꾸며 보세요.")
 		messages.insufficient_provider_credit=tr("지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요.")

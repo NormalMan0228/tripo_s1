@@ -234,7 +234,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     @app.get('/health')
     def health(): return {'ok':True,'service':'tripothon','mode':settings.mode,'version':'0.10.0','protocol':6,
                           'studio_tripo_enabled':bool(settings.tripo_key and settings.paid_enabled),
-                          'studio_llm':settings.studio_llm, 'multiplayer_protocol':1, 'max_party_members':3}
+                          'studio_llm':settings.studio_llm, 'multiplayer_protocol':1, 'max_party_members':3,
+                          'open_registration':bool(settings.mode=='live' and settings.open_registration)}
 
     def life_state(conn,user_id):
         row=conn.execute('SELECT state FROM homesteads WHERE user_id=?',(user_id,)).fetchone()
@@ -300,13 +301,22 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
 
     @app.post('/v1/auth/register')
     def register(body:Credentials,request:Request):
-        if settings.mode=='live' and not secrets.compare_digest(body.invitation.encode(),settings.registration_code.encode()):
+        invited = secrets.compare_digest(body.invitation.encode(),settings.registration_code.encode())
+        if settings.mode=='live' and not invited and not settings.open_registration:
             fail('invalid_invitation',403)
         # Operator accounts are provisioned by tools/admin_accounts.py, never here.
         if reserved_username(body.username): fail('username_reserved',422)
         if not strong_password(body.password): fail('weak_password',422)
         password_hash = hasher.hash(body.password)
         with db.transaction() as conn:
+            if settings.mode=='live' and not invited:
+                # Open sign-up: a few accounts per address and a daily ceiling for everyone.
+                day = int(clock()//86400)*86400
+                if conn.execute("SELECT count(*) FROM security_events WHERE kind='register' AND created>=?",(day,)).fetchone()[0] >= settings.signups_per_day:
+                    fail('registration_closed_today',429)
+                if conn.execute("SELECT count(*) FROM security_events WHERE kind='register' AND created>=? AND json_extract(detail,'$.ip')=?",
+                                (day,client_ip(request))).fetchone()[0] >= settings.signups_per_ip_day:
+                    fail('too_many_registrations',429)
             user_id = uid()
             try:
                 conn.execute('INSERT INTO users(id,username,password_hash,shards,created) VALUES (?,?,?,?,?)',(user_id,body.username.lower(),password_hash,0,clock()))

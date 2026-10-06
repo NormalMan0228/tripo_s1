@@ -63,6 +63,10 @@ class Settings:
     user_total_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_USER_TOTAL_REQUEST_LIMIT', '0')))
     # Stars a new live account starts with (judging servers let visitors craft right away).
     welcome_stars: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_WELCOME_STARS', '0')))
+    # Open sign-up: live accounts without the invitation code, within these limits.
+    open_registration: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_OPEN_REGISTRATION', 'false').lower() == 'true')
+    signups_per_ip_day: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SIGNUPS_PER_IP_DAY', '3')))
+    signups_per_day: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SIGNUPS_PER_DAY', '200')))
     legacy_generation_enabled: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_ENABLE_LEGACY_GENERATION', 'false').lower() == 'true')
     credit_reserve: int = field(default_factory=lambda: int(os.getenv('TRIPO_RESERVE_PER_JOB', '200')))
     session_seconds: int = 12 * 60 * 60
@@ -87,6 +91,8 @@ class Settings:
             raise ValueError('Codex subscription experiments are local development only')
         if self.mode == 'live' and len(self.registration_code) < 24:
             raise ValueError('Live mode requires a registration invitation code of at least 24 characters')
+        if not 1 <= self.signups_per_ip_day <= 1000 or not 1 <= self.signups_per_day <= 100000:
+            raise ValueError('Invalid open sign-up limits')
         if not 0 <= self.user_total_generation_limit <= 1000 or not 0 <= self.welcome_stars <= 10000:
             raise ValueError('Invalid account craft limit or welcome stars')
         if self.credit_reserve <= 0 or self.daily_generation_limit < 1 or self.user_daily_generation_limit < 1:

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Updates the Google Cloud demo server in place. Run on the VM from the repository
 # checkout:
-#   sudo bash ops/update_online_server.sh [branch] [--per-account N] [--per-day N] [--welcome-stars N]
-# 1. Optionally writes the craft limits / welcome stars into ops/production.env.
+#   sudo bash ops/update_online_server.sh [branch] [--per-account N] [--per-day N]
+#        [--craft-day-limit N] [--welcome-stars N] [--open-signup | --invite-only] [--signups-per-ip N]
+# 1. Optionally writes the craft limits, welcome stars and sign-up mode into ops/production.env
+#    (--per-day sets the server-wide and per-account daily limits; --craft-day-limit only the
+#    server-wide one, which caps Tripo spending per day when sign-up is open).
 # 2. Backs up /data (SQLite + private GLBs) and verifies the snapshot.
 # 3. Checks out the branch and rebuilds only the API container.
 # 4. Turns on crafting if ops/secrets/tripo-key exists (simple one-mesh craft), and the
@@ -17,6 +20,10 @@ while [ $# -gt 0 ]; do
     --per-account) limits[TRIPO_USER_TOTAL_REQUEST_LIMIT]="$2"; shift 2 ;;
     --per-day) limits[TRIPO_DAILY_REQUEST_LIMIT]="$2"; limits[TRIPO_USER_DAILY_REQUEST_LIMIT]="$2"; shift 2 ;;
     --welcome-stars) limits[TRIPOTHON_WELCOME_STARS]="$2"; shift 2 ;;
+    --craft-day-limit) limits[TRIPO_DAILY_REQUEST_LIMIT]="$2"; shift 2 ;;
+    --open-signup) limits[TRIPOTHON_OPEN_REGISTRATION]="true"; shift ;;
+    --invite-only) limits[TRIPOTHON_OPEN_REGISTRATION]="false"; shift ;;
+    --signups-per-ip) limits[TRIPOTHON_SIGNUPS_PER_IP_DAY]="$2"; shift 2 ;;
     -*) echo "Unknown option $1" >&2; exit 2 ;;
     *) branch="$1"; shift ;;
   esac
@@ -24,7 +31,7 @@ done
 cd "$(dirname "$0")/.."
 for key in "${!limits[@]}"; do
   value="${limits[$key]}"
-  [[ "$value" =~ ^[0-9]+$ ]] || { echo "$key must be a whole number" >&2; exit 2; }
+  [[ "$value" =~ ^([0-9]+|true|false)$ ]] || { echo "$key must be a whole number" >&2; exit 2; }
   if grep -qE "^$key=" ops/production.env; then sed -i "s/^$key=.*/$key=$value/" ops/production.env
   else echo "$key=$value" >> ops/production.env; fi
   echo "Set $key=$value"
