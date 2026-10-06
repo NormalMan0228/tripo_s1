@@ -9,4 +9,4 @@ New-Item -ItemType Directory -Path builds/windows -Force | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Godot export failed.' }
 & $taskGodot --headless --path game --export-release 'Windows Developer'
 if ($LASTEXITCODE -ne 0) { throw 'Godot developer export failed.' }
-Write-Output 'Built builds/windows/Tripothon.exe and Tripothon_Developer.exe. A separate server is required.'
+Write-Output 'Built builds/windows/Villagen.exe and Villagen_Developer.exe. A separate server is required.'

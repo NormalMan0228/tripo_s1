@@ -13,7 +13,7 @@ parser.add_argument('--package-dir',type=Path,default=root/'builds'/'Tripothon_D
 args=parser.parse_args()
 package=args.package_dir.resolve()
 package.mkdir(exist_ok=True)
-for name in ('Tripothon.exe','Tripothon.pck'):
+for name in ('Villagen.exe','Villagen.pck'):
     shutil.copy2(root/'builds'/'windows'/name,package/name)
 shutil.copytree(root/'builds'/'TripothonDemoServer',package/'server',dirs_exist_ok=True)
 shutil.copy2(root/'tools'/'portable_start.ps1',package/'Start.ps1')

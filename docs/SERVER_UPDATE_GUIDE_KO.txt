@@ -133,7 +133,7 @@ sudo bash ops/update_online_server.sh main --open-signup --per-account 3 --per-d
 
   https://github.com/NormalMan0228/tripo_s1/releases/tag/v0.10.0
 
-→ Tripothon_v0.10.0_Windows.zip 을 받아 압축을 풀고 Tripothon.exe 실행
+→ Villagen_v0.10.0_Windows.zip 을 받아 압축을 풀고 Villagen.exe 실행
 → 계정 만들기 (아이디 + 비밀번호만)
 → 마을에서 C 키 → 만들고 싶은 물건을 글로 적기 → 견적 확인 → 제작 확정
 

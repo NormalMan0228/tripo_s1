@@ -17,5 +17,5 @@ if (-not $taskHealth) {
     }
     if (-not $taskHealth) { throw 'Demo server did not become ready.' }
 }
-$taskClientName = if ($taskDeveloper) { 'Tripothon_Developer.exe' } else { 'Tripothon.exe' }
+$taskClientName = if ($taskDeveloper) { 'Villagen_Developer.exe' } else { 'Villagen.exe' }
 Start-Process -FilePath (Join-Path $taskRoot $taskClientName) -ArgumentList '--local-demo' -WorkingDirectory $taskRoot -WindowStyle Normal

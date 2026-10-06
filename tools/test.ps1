@@ -13,29 +13,29 @@ if ($Combat) {
     $taskGameArguments = @('--path',(Join-Path $taskRoot 'game'),'--script','res://tests/combat_play.gd')
 }
 if ($Packaged) {
-    $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Tripothon.pck'),'--script',(Join-Path $taskRoot 'game\tests\integration.gd'))
-    if ($Expansion) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Tripothon.pck'),'--script',(Join-Path $taskRoot 'game\tests\expansion.gd')) }
-    if ($Village) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Tripothon.pck'),'--script',(Join-Path $taskRoot 'game\tests\village_life.gd')) }
-    if ($FullRun) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Tripothon.pck'),'--script',(Join-Path $taskRoot 'game\tests\seven_days.gd')) }
+    $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Villagen.pck'),'--script',(Join-Path $taskRoot 'game\tests\integration.gd'))
+    if ($Expansion) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Villagen.pck'),'--script',(Join-Path $taskRoot 'game\tests\expansion.gd')) }
+    if ($Village) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Villagen.pck'),'--script',(Join-Path $taskRoot 'game\tests\village_life.gd')) }
+    if ($FullRun) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Villagen.pck'),'--script',(Join-Path $taskRoot 'game\tests\seven_days.gd')) }
 }
 if ($ClientScript) {
     if ($ClientScript -notmatch '^[a-z0-9_]+$') { throw 'ClientScript must be a test name without a path or extension.' }
     $taskScript = Join-Path $taskRoot ('game\tests\' + $ClientScript + '.gd')
     if (-not (Test-Path -LiteralPath $taskScript)) { throw 'Client test was not found.' }
     $taskGameArguments = @('--path',(Join-Path $taskRoot 'game'),'--script',('res://tests/' + $ClientScript + '.gd'))
-    if ($Packaged) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Tripothon.pck'),'--script',$taskScript) }
+    if ($Packaged) { $taskGameArguments = @('--main-pack',(Join-Path $taskRoot 'builds\windows\Villagen.pck'),'--script',$taskScript) }
 }
 if ($EngineDiagnostics) { $taskGameArguments = @('--verbose') + $taskGameArguments }
 if ($ClientPack) {
     if (-not $Packaged) { throw 'ClientPack requires Packaged.' }
     $taskSelectedPack = (Resolve-Path -LiteralPath $ClientPack).Path
     $taskGameArguments = @($taskGameArguments | ForEach-Object {
-        if ($_ -eq (Join-Path $taskRoot 'builds\windows\Tripothon.pck')) { $taskSelectedPack } else { $_ }
+        if ($_ -eq (Join-Path $taskRoot 'builds\windows\Villagen.pck')) { $taskSelectedPack } else { $_ }
     })
 }
 if ($Packaged -and $Developer) {
     $taskGameArguments = @($taskGameArguments | ForEach-Object {
-        if ($_ -eq (Join-Path $taskRoot 'builds\windows\Tripothon.pck')) { Join-Path $taskRoot 'builds\windows\Tripothon_Developer.pck' } else { $_ }
+        if ($_ -eq (Join-Path $taskRoot 'builds\windows\Villagen.pck')) { Join-Path $taskRoot 'builds\windows\Villagen_Developer.pck' } else { $_ }
     })
 }
 if ($Loss -and ($Combat -or $FullRun)) { throw 'Loss extends the standard integration test; run it without Combat/FullRun.' }

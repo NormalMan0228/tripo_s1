@@ -1,4 +1,6 @@
-# Tripothon — 일곱 밤, 나의 마을
+# Villagen — village + generate
+
+**Villagen**(빌리지 + 제너레이트)은 섬 마을을 가꾸고, 원하는 물건을 글로 적으면 AI가 3D로 만들어 주는 마을 생활 RPG입니다. (이전 작업명: Tripothon)
 
 [처음 보는 사람을 위한 전체 안내서](docs/TRIPOTHON_OVERVIEW_20261004.md)에서 게임 소개, 개발 8단계, 캐릭터 제작 방식의 변화, 최신 무료 도구 중심 파이프라인, 클라이언트·서버·DB와 AI 생성 흐름을 확인할 수 있습니다. **2026-10-04 기준으로 기준본·로컬 검증·실험·계획을 구분**했습니다. [HTML 파일](docs/TRIPOTHON_OVERVIEW_20261004.html) 또는 [로컬 HTML 뷰어](http://127.0.0.1:8842/project-overview/index.html)로도 읽을 수 있습니다.
 
@@ -6,9 +8,9 @@
 
 ## 바로 플레이 (심사·친구용) · 0.10.0
 
-**설치 없이 플레이:** [GitHub Releases](https://github.com/NormalMan0228/tripo_s1/releases)에서 `Tripothon_v0.10.0_Windows.zip`을 받아 압축을 풀고 `Tripothon.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정은 아이디·비밀번호만으로 만듭니다(초대 코드 없음, 공개 가입). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 체험판 규칙으로 계정당 3회, 1회 Tripo 10크레딧(직접 색칠하는 정적인 가구 한 덩어리) 안에서 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다.
+**설치 없이 플레이:** [GitHub Releases](https://github.com/NormalMan0228/tripo_s1/releases)에서 `Villagen_v0.10.0_Windows.zip`을 받아 압축을 풀고 `Villagen.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정은 아이디·비밀번호만으로 만듭니다(초대 코드 없음, 공개 가입). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 체험판 규칙으로 계정당 3회, 1회 Tripo 10크레딧(직접 색칠하는 정적인 가구 한 덩어리) 안에서 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다.
 
-**소스로 개발하는 협업자:** 저장소에는 용량이 큰 모델 폴더(`game/maps/archipelago/assets`, `game/assets/interior`, `game/assets/monsters`, `game/maps/survival/assets`, `game/assets/portraits`, `game/assets/npc`)가 없습니다. 같은 Release의 `Tripothon_v0.10.0_DevAssets_Map.zip`과 `..._DevAssets_Art.zip`을 **저장소 최상위 폴더에서** 압축 풀면 그대로 채워집니다. 그다음 Godot 4.7.2로 `game/project.godot`을 열고, 서버는 `tools/run_server.ps1`로 켭니다.
+**소스로 개발하는 협업자:** 저장소에는 용량이 큰 모델 폴더(`game/maps/archipelago/assets`, `game/assets/interior`, `game/assets/monsters`, `game/maps/survival/assets`, `game/assets/portraits`, `game/assets/npc`)가 없습니다. 같은 Release의 `Villagen_v0.10.0_DevAssets_Map.zip`과 `..._DevAssets_Art.zip`을 **저장소 최상위 폴더에서** 압축 풀면 그대로 채워집니다. 그다음 Godot 4.7.2로 `game/project.godot`을 열고, 서버는 `tools/run_server.ps1`로 켭니다.
 
 ## 전용 UI 이미지·배경 없는 일러스트·접는 HUD·길 안내 · 2026-10-06
 
@@ -113,13 +115,13 @@ Tripo 생성은 이 PC에서 [Play_Tripo.cmd](Play_Tripo.cmd)로 서버와 게�
 
 계획 2단계를 적용했습니다. 마을은 산책 2.8m/s·달리기 4.5m/s, 실내는 2.8m/s이며 생존 이동·기력·판정은 기존 서버 규칙을 따릅니다. 가방·대화·텍스트 입력·배치 중 이동과 의도하지 않은 행동을 막고, 벽에 막히면 대기 동작으로 돌아옵니다. 카메라는 고정 각도를 유지하면서 프레임 수에 맞춘 지수 보간으로 추적하고 휠 확대도 부드럽게 적용합니다. 주인공의 기존 메시·얼굴·손가락을 보존하며 다리에는 실제 이동에 맞춘 발 접지 보정을 추가했습니다. 캐릭터 높이 약 1.70m, 충돌 반경 0.32m를 공통 기준으로 정리했습니다.
 
-현재 실행 폴더는 `builds/Tripothon_Baseline_092`입니다. `Play.cmd`는 로컬 플레이어용, `Play_Developer.cmd`는 F3 진단을 포함한 로컬 개발용, `Tripothon.exe` 직접 실행은 온라인 데모입니다. [변경·검사·제한 사항](docs/CONTROLLER_092.md)과 [확인한 Google Cloud 서버 정보](docs/SERVER_STATUS_20261003.md)를 참고하세요. 추가 Tripo·LLM 유료 호출은 없습니다.
+현재 실행 폴더는 `builds/Tripothon_Baseline_092`입니다. `Play.cmd`는 로컬 플레이어용, `Play_Developer.cmd`는 F3 진단을 포함한 로컬 개발용, `Villagen.exe` 직접 실행은 온라인 데모입니다. [변경·검사·제한 사항](docs/CONTROLLER_092.md)과 [확인한 Google Cloud 서버 정보](docs/SERVER_STATUS_20261003.md)를 참고하세요. 추가 Tripo·LLM 유료 호출은 없습니다.
 
 ## 0.9.1 기준본 · 2026-10-02 (이전 단계)
 
 개발 계획 1단계인 **현재 수정본 검증·기준본 저장**을 마쳤습니다. 카메라는 주시점을 보간하고 고정 오프셋으로 따라가므로 이동 시작·방향 전환·정지에도 각도가 유지됩니다. 해루는 제공받은 컨셉을 바탕으로 만든 새 3D 메시와 41개 뼈대, Blender에서 직접 제작한 대기·걷기·낚시·인사 동작을 사용합니다. 기존 Explorer B hand-v4 주인공은 유지했습니다. 집·공방의 목재 실내, 출발 아치, 낚싯대·보트와 NPC 소품을 추가하고 가구 배치의 미리보기·회전·취소·부품 색칠을 다듬었습니다. [기준본의 실행·검증·제한 사항](docs/BASELINE_091.md)에 재현 방법과 실제 캡처를 정리했습니다.
 
-`powershell -ExecutionPolicy Bypass -File .\tools\build_game.ps1`는 두 실행본을 만듭니다. `builds/windows/Tripothon.exe`는 **플레이어용**으로 온라인 데모 서버에 연결하고 공방의 만들기·보관함만 표시합니다. 초대 코드는 로그인 화면에서 입력할 수 있습니다. `builds/windows/Tripothon_Developer.exe`는 **개발용**으로 기본 로컬 서버에 연결하며 F3 진단 정보, 생성 방식·모델·코드·부품 맞춤·기록을 표시합니다. 두 실행본 모두 별도의 서버가 필요합니다. API 키와 DB는 실행본에 넣지 않습니다. 온라인 데모의 유료 생성은 서버에서 꺼져 있으므로 플레이어 화면의 공방 사용 가능 여부도 서버 정책을 따릅니다. 로컬 유료 생성은 개발용 [Play_Tripo.cmd](Play_Tripo.cmd)에서만 서버 전용 키를 사용합니다.
+`powershell -ExecutionPolicy Bypass -File .\tools\build_game.ps1`는 두 실행본을 만듭니다. `builds/windows/Villagen.exe`는 **플레이어용**으로 온라인 데모 서버에 연결하고 공방의 만들기·보관함만 표시합니다. 초대 코드는 로그인 화면에서 입력할 수 있습니다. `builds/windows/Tripothon_Developer.exe`는 **개발용**으로 기본 로컬 서버에 연결하며 F3 진단 정보, 생성 방식·모델·코드·부품 맞춤·기록을 표시합니다. 두 실행본 모두 별도의 서버가 필요합니다. API 키와 DB는 실행본에 넣지 않습니다. 온라인 데모의 유료 생성은 서버에서 꺼져 있으므로 플레이어 화면의 공방 사용 가능 여부도 서버 정책을 따릅니다. 로컬 유료 생성은 개발용 [Play_Tripo.cmd](Play_Tripo.cmd)에서만 서버 전용 키를 사용합니다.
 
 편집 가능한 Blender 원본은 `art/source/`, 공개 게임 GLB는 `game/assets/`에 있습니다. 해루 제작에는 Tripo P2 이미지→3D **120크레딧**, 리깅 **25크레딧**, 합계 **145크레딧**을 사용했습니다. 리깅 후 색과 동작을 보완한 `haeru_v1.glb`를 빌드에 포함합니다. [아트 명세](art/haeru-manifest.json)에 출처와 동작 길이를 기록했습니다. 이번 기준본 검증의 추가 유료 호출은 **0회**입니다. 플레이어 런타임 생성 경로에는 Blender를 사용하지 않습니다.
 

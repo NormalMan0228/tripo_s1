@@ -1,14 +1,14 @@
-"""Builds the GitHub release files from an exported player build.
+"""Builds the GitHub release files (Villagen) from an exported player build.
 
     powershell -ExecutionPolicy Bypass -File tools/build_game.ps1   # exports builds/windows/
     .tools/art-venv/Scripts/python.exe tools/package_release.py
 
 Writes builds/release/:
-  Tripothon_<version>_Windows.zip       the game for players and judges: Tripothon.exe +
-                                         Tripothon.pck (every map, NPC, interior, monster and
+  Villagen_<version>_Windows.zip        the game for players and judges: Villagen.exe +
+                                         Villagen.pck (every map, NPC, interior, monster and
                                          UI asset inside), connects to the online world
-  Tripothon_<version>_DevAssets_Map.zip  game/maps/archipelago/assets (git-ignored)
-  Tripothon_<version>_DevAssets_Art.zip  the other git-ignored asset folders
+  Villagen_<version>_DevAssets_Map.zip   game/maps/archipelago/assets (git-ignored)
+  Villagen_<version>_DevAssets_Art.zip   the other git-ignored asset folders
   SHA256SUMS.txt
 The DevAssets archives keep repository-relative paths: unzip them in the repository
 root to run the game from source (Godot 4.7.2, game/project.godot). No keys,
@@ -30,10 +30,10 @@ ART_ASSETS = ["game/assets/interior", "game/assets/monsters", "game/maps/surviva
 SECRET_WORDS = ("tripo_key", "api_key", "registration-code", "secrets/", ".env")
 LIMIT = 2 * 1024 ** 3 - 16 * 1024 ** 2  # GitHub release files must stay under 2 GiB
 
-README_KO = """트리포톤 — 일곱 밤, 나의 마을 (Windows)
-==========================================
+README_KO = """Villagen — 빌리지 + 제너레이트 (Windows)
+========================================
 
-실행: 압축을 푼 폴더에서 Tripothon.exe 를 실행합니다. (설치 불필요)
+실행: 압축을 푼 폴더에서 Villagen.exe 를 실행합니다. (설치 불필요)
 처음 실행 때 Windows가 "PC 보호" 창을 띄우면 [추가 정보] → [실행]을 누르세요.
 
 온라인 월드
@@ -55,10 +55,10 @@ README_KO = """트리포톤 — 일곱 밤, 나의 마을 (Windows)
 문제가 생기면: 인터넷 연결과 Windows 방화벽을 확인하고, 다시 실행해 보세요.
 """
 
-README_EN = """Tripothon - Seven Nights, My Village (Windows)
-==============================================
+README_EN = """Villagen - village + generate (Windows)
+=======================================
 
-Run Tripothon.exe from the unzipped folder (no installer). If Windows SmartScreen
+Run Villagen.exe from the unzipped folder (no installer). If Windows SmartScreen
 appears, choose "More info" -> "Run anyway".
 
 Online world: the login screen is set to the online world. Create an account with a
@@ -95,23 +95,23 @@ def check(path: Path) -> Path:
 
 
 def game_zip(tag: str) -> Path:
-    exe, pck = BUILD / "Tripothon.exe", BUILD / "Tripothon.pck"
+    exe, pck = BUILD / "Villagen.exe", BUILD / "Villagen.pck"
     for item in (exe, pck):
         if not item.is_file(): raise SystemExit(f"missing {item}; run tools/build_game.ps1 first")
-    target = OUT / f"Tripothon_{tag}_Windows.zip"
+    target = OUT / f"Villagen_{tag}_Windows.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
-        archive.write(exe, "Tripothon/Tripothon.exe")
-        archive.write(pck, "Tripothon/Tripothon.pck")
-        archive.writestr("Tripothon/README_KO.txt", README_KO.replace("\n", "\r\n").encode("utf-8-sig"))
-        archive.writestr("Tripothon/README_EN.txt", README_EN.replace("\n", "\r\n"))
+        archive.write(exe, "Villagen/Villagen.exe")
+        archive.write(pck, "Villagen/Villagen.pck")
+        archive.writestr("Villagen/README_KO.txt", README_KO.replace("\n", "\r\n").encode("utf-8-sig"))
+        archive.writestr("Villagen/README_EN.txt", README_EN.replace("\n", "\r\n"))
         for licence in sorted((ROOT / "docs" / "licenses").glob("*")):
-            archive.write(licence, f"Tripothon/licenses/{licence.name}")
-        archive.write(ROOT / "game" / "assets" / "fonts" / "LICENSES.md", "Tripothon/licenses/Fonts-LICENSES.md")
+            archive.write(licence, f"Villagen/licenses/{licence.name}")
+        archive.write(ROOT / "game" / "assets" / "fonts" / "LICENSES.md", "Villagen/licenses/Fonts-LICENSES.md")
     return check(target)
 
 
 def assets_zip(tag: str, name: str, folders: list[str]) -> Path:
-    target = OUT / f"Tripothon_{tag}_DevAssets_{name}.zip"
+    target = OUT / f"Villagen_{tag}_DevAssets_{name}.zip"
     count = 0
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         for folder in folders:
