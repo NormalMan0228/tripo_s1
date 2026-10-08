@@ -2,6 +2,7 @@ extends Control
 const Api=preload("res://scripts/api.gd")
 const Assembly=preload("res://scripts/asset_assembly.gd")
 const Loader=preload("res://scripts/model_loader.gd")
+const PaintApply=preload("res://scripts/painter/paint_apply.gd")
 const Art=preload("res://scripts/art.gd")
 const BuildMode=preload("res://scripts/build_mode.gd")
 const ControllerProfile=preload("res://scripts/controller_profile.gd")
@@ -16,6 +17,10 @@ const PauseMenu=preload("res://scripts/pause_menu.gd")
 const CraftPanel=preload("res://scripts/craft_panel.gd")
 var api: Node
 var viewport: SubViewport
+## The painting workspace (scripts/painter/painter.gd) while open, and the 보관함 entry to it.
+var painter: Control
+var paint_button: Button
+var paint_rows: Array=[]
 var view_container: SubViewportContainer
 var stage: Node3D
 var furniture: Node3D
@@ -448,12 +453,18 @@ func build_ui() -> void:
 	detail=label(own,tr("가구를 고르면 모습을 살펴볼 수 있어요"),13)
 	var actions := row(own)
 	button(actions,tr("바닥에 배치"),begin_place);button(actions,tr("회수"),retrieve);button(actions,tr("사용"),interact_selected)
+	# Furniture with UVs is painted in the painting workspace; the colour rows below stay
+	# for furniture made without UVs (whole colour per part).
+	paint_button=button(own,tr("색칠하기"),open_painter)
+	paint_button.theme_type_variation="GoldButton";paint_button.tooltip_text=tr("붓·채우기·그라데이션으로 표면을 직접 칠해요")
 	part_choice=option(own,[tr("전체 색칠")])
 	var palette := row(own)
+	paint_rows=[part_choice,palette]
 	for color in ["#f1dfb8","#dfa958","#789887","#bd7f75","#7d9ca3"]:
 		var b := button(palette,"●",func(): await paint(color));b.modulate=Color(color);b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		RpgUi.name_tip(b,RpgUi.color_name(color))
 	var custom_row := row(own)
+	paint_rows.append(custom_row)
 	var custom_color := ColorPickerButton.new();custom_color.text=tr("직접 색 고르기");custom_color.edit_alpha=false;custom_color.color=Color("dfa958");custom_color.size_flags_horizontal=Control.SIZE_EXPAND_FILL;custom_row.add_child(custom_color)
 	custom_color.popup_closed.connect(func():await paint("#"+custom_color.color.to_html(false)))
 	button(custom_row,tr("원래 색 복원"),func():await paint("#ffffff",true))
@@ -879,12 +890,14 @@ func load_item(obj: Dictionary) -> Node3D:
 	# A visitor reads the host's furniture through the read-only guest routes.
 	var prefix := "/v1/objects/" if visit_host.is_empty() else "/v1/social/village/objects/"
 	var value: Node3D=await Assembly.fetch(api,obj.id,prefix)
-	if value:return value
-	if obj.get("studio",false):return null
-	var response: Dictionary=await api.request(prefix+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
-	if not response.ok:return null
-	value=Loader.load_bytes(response.bytes)
-	if value:Loader.paint(value,Color(obj.color))
+	if not value:
+		if obj.get("studio",false):return null
+		var response: Dictionary=await api.request(prefix+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
+		if not response.ok:return null
+		value=Loader.load_bytes(response.bytes)
+		if value:Loader.paint(value,Color(obj.color))
+	# The painted surface (painter/paint_apply.gd), cached by object and paint version.
+	if value:await PaintApply.attach(api,value,obj,prefix)
 	return value
 
 func reload_placed() -> void:
@@ -916,6 +929,9 @@ func reload_placed() -> void:
 					existing.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version});existing.paint(fresh.data.runtime.colors)
 				elif is_instance_valid(existing):existing.queue_free();placed.erase(obj.id)
 			elif not existing.get_meta("studio",false) and existing.get_meta("paint",Color.WHITE)!=Color(obj.color):Loader.paint(existing,Color(obj.color))
+			if is_instance_valid(existing) and str(existing.get_meta("paint_key",""))!=PaintApply.key_for(obj):
+				await PaintApply.attach(api,existing,obj,"/v1/objects/" if visit_host.is_empty() else "/v1/social/village/objects/")
+				if current!=epoch:return
 			continue
 		var item := await load_item(obj)
 		if current!=epoch:
@@ -955,7 +971,49 @@ func select_item(index: int) -> void:
 			detail.text+=tr("\n설계: ")+str(item.manifest.provenance.provider)+tr("\n메시: ")+str(item.manifest.provenance.geometry)
 			if item.manifest.provenance.geometry=="tripo":detail.text+=tr("\nTripo 실측: %s 크레딧")%str(item.manifest.provenance.get("tripo_credits_consumed",tr("미기록")))
 	else:code_view.text=tr("개발자가 제작한 일반 에셋");generated_functions.clear();load_function_fields(-1)
+	update_paint_entry(item)
 	message(tr("선택한 가구의 최신 상태를 불러왔어요."))
+
+## Furniture with UVs opens the painting workspace; furniture without keeps the per-part
+## colour rows (the workspace would only offer the whole colour with a reason).
+func update_paint_entry(item: Node3D) -> void:
+	if not is_instance_valid(paint_button):return
+	var paintable := PaintApply.has_uvs(item)
+	for node in paint_rows:node.visible=not paintable
+	paint_button.text=tr("색칠하기") if paintable else tr("전체 색 고르기")
+	paint_button.tooltip_text=tr("붓·채우기·그라데이션으로 표면을 직접 칠해요") if paintable else tr("이 물건은 표면 좌표(UV) 없이 만들어져 전체 색만 바꿀 수 있어요.")
+
+func open_painter() -> void:
+	if pending or selected.is_empty() or is_instance_valid(painter) or not visit_host.is_empty():return
+	if not is_instance_valid(inspected):message(tr("가구를 고르면 모습을 살펴볼 수 있어요"));return
+	var parts: Array=[]
+	for i in range(1,part_choice.item_count):parts.append([str(part_choice.get_item_metadata(i)),part_choice.get_item_text(i)])
+	var id: String=selected.id
+	painter=load("res://scripts/painter/painter.gd").new()
+	painter.setup(api,selected.duplicate(),inspected,{"views":[viewport],"parts":parts,
+		"saved":func(image,version):painter_saved(id,image,version),
+		"flat":func(hex: String,part: String,reset: bool):painter_flat(id,hex,part,reset)})
+	add_child(painter)
+
+## The painter saved (image) or cleared (null) a piece's paint: the preview and the placed copy show it.
+func painter_saved(id: String, image, version) -> void:
+	for obj in data.get("objects",[]):
+		if obj.id==id:obj.paint_version=version
+	if selected.get("id","")==id:selected.paint_version=version
+	var key := "" if version==null else id+":"+str(int(version))
+	for item in [inspected if selected.get("id","")==id else null,placed.get(id)]:
+		if not is_instance_valid(item):continue
+		if image==null:PaintApply.clear(item)
+		else:PaintApply.apply(item,image,key)
+	message(tr("칠한 모습을 저장했어요.") if image!=null else tr("처음 모습으로 되돌렸어요."))
+
+## Whole colour from the painter's fallback panel (furniture without UVs).
+func painter_flat(id: String, hex: String, part: String, reset: bool) -> void:
+	if selected.get("id","")!=id:return
+	part_choice.select(0)
+	for i in part_choice.item_count:
+		if str(part_choice.get_item_metadata(i))==part:part_choice.select(i)
+	await paint(hex,reset)
 
 func load_function_fields(index: int) -> void:
 	function_fields.clear()
@@ -1308,6 +1366,7 @@ func leave() -> void:
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	if is_instance_valid(painter):return
 	if not event.is_pressed() or event.is_echo():return
 	# Rebinding-aware: a key bound to Interact reports KEY_E (game_settings.gd).
 	var key := GameSettings.canonical_key(event)
@@ -1590,7 +1649,7 @@ func _process(delta: float) -> void:
 		walk_out_step(delta)
 	elif not placement_mode and not travelling and not is_instance_valid(talk_box) and not PauseMenu.is_open():
 		var focus := get_viewport().gui_get_focus_owner()
-		if not (focus is TextEdit or focus is LineEdit):walk(delta)
+		if not (focus is TextEdit or focus is LineEdit) and not is_instance_valid(painter):walk(delta)
 	update_camera(delta)
 	if is_instance_valid(bubble) and bubble.visible: pin_overlay(bubble,bubble_anchor,14)
 	if is_instance_valid(hint_label) and hint_label.visible: pin_overlay(hint_label,hint_anchor,6)

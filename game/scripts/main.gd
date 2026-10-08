@@ -2,6 +2,7 @@ extends Node3D
 
 const Art = preload("res://scripts/art.gd")
 const Loader = preload("res://scripts/model_loader.gd")
+const PaintApply = preload("res://scripts/painter/paint_apply.gd")
 const Player = preload("res://scripts/player.gd")
 const ControllerProfile=preload("res://scripts/controller_profile.gd")
 const Api = preload("res://scripts/api.gd")
@@ -140,6 +141,11 @@ var inventory_slots: Dictionary = {}
 var quick_counts: Dictionary = {}
 var expedition_button: Button
 var village_modal: Control
+## The painting workspace (scripts/painter/painter.gd) while it is open, and the bag's way in.
+var painter: Control
+var paint_palette: HBoxContainer
+var paint_button: Button
+var paint_hint: Label
 var npcs: Array[Node3D]=[]
 ## Village add-ons plug in here without touching this file. Each script is a Node
 ## (usually Node3D) added under the village world, with optional methods:
@@ -838,6 +844,14 @@ func enter_village() -> void:
 	palette.alignment = BoxContainer.ALIGNMENT_CENTER
 	right.add_child(palette)
 	for color in COLORS: RpgUi.name_tip(swatch(palette,Color(color),func(): paint_object(color)),RpgUi.color_name(color))
+	paint_palette = palette
+	# Objects with UVs are painted in the workspace; the swatches stay for the others.
+	paint_button = button(right,tr("색칠하기"),open_painter,"primary")
+	paint_button.tooltip_text = tr("붓·채우기·그라데이션으로 표면을 직접 칠해요")
+	paint_hint = text(right,"",12)
+	paint_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	paint_hint.custom_minimum_size.x = 250
+	paint_hint.visible = false
 	button(right,tr("선택한 물건 놓기"),begin_place)
 	button(right,tr("선택한 물건 회수"),retrieve_object)
 	button(right,tr("선택한 가구 사용"),func():await village_furniture_event(selected.get("id",""),"click"))
@@ -968,6 +982,7 @@ func inspect_object(obj: Dictionary) -> void:
 		inspect_model=model
 		if not model.get_meta("studio",false):Loader.paint(model,Color(selected.color))
 		inspect_stage.add_child(model)
+		update_paint_entry(model)
 
 ## Village HUD: character frame (enter_village), round minimap, objective tracker,
 ## slot hotbar and a top toast. The survival HUD keeps its own layout below.
@@ -1245,14 +1260,78 @@ func select_object(index: int) -> void:
 
 func load_object(obj: Dictionary, prefix: String="/v1/objects/") -> Node3D:
 	var assembly: Node3D=await preload("res://scripts/asset_assembly.gd").fetch(api,obj.id,prefix)
-	if assembly: return assembly
+	if assembly:
+		await PaintApply.attach(api,assembly,obj,prefix)
+		return assembly
 	if obj.get("studio",false):message(tr("가구의 모든 부품을 불러오지 못했습니다."));return null
 	var response: Dictionary = await api.request(prefix+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
 	if not check(response): return null
 	var model := Loader.load_bytes(response.bytes)
-	if model: Loader.paint(model,Color(obj.color))
+	if model:
+		Loader.paint(model,Color(obj.color))
+		# The painted surface (painter/paint_apply.gd), cached by object and paint version.
+		await PaintApply.attach(api,model,obj,prefix)
 	else: message(tr("물건을 꺼내지 못했어요."))
 	return model
+
+## The bag's paint entry follows the selected object: objects with UVs open the painting
+## workspace; others keep the colour swatches (whole-object colour) with a short reason.
+func update_paint_entry(model: Node3D) -> void:
+	if not is_instance_valid(paint_button): return
+	var paintable := PaintApply.has_uvs(model)
+	paint_palette.visible = not paintable
+	paint_button.visible = true
+	paint_button.text = tr("색칠하기") if paintable else tr("전체 색 고르기")
+	paint_hint.visible = not paintable
+	paint_hint.text = tr("이 물건은 표면 좌표(UV) 없이 만들어져 전체 색만 바꿀 수 있어요.")
+
+func open_painter() -> void:
+	if selected.is_empty() or busy or is_instance_valid(painter): return
+	if selected.state=="listed":
+		message(tr("장터에 올린 물건은 칠할 수 없어요."))
+		return
+	if not is_instance_valid(inspect_model):
+		message(tr("물건을 불러오는 중이에요. 잠시 뒤에 다시 눌러 주세요."))
+		return
+	var parts: Array=[]
+	if inspect_model.get_meta("studio",false):
+		for p in inspect_model.manifest.plan.parts: parts.append([str(p.id),str(p.id)])
+	var id: String=selected.id
+	painter=load("res://scripts/painter/painter.gd").new()
+	painter.setup(api,selected.duplicate(),inspect_model,{"views":[get_viewport()],"parts":parts,
+		"saved":func(image,version): painter_saved(id,image,version),
+		"flat":func(hex: String,part: String,reset: bool): painter_flat(id,hex,part,reset)})
+	ui.add_child(painter)
+	player.controls_enabled=false
+
+## The painter saved (image) or cleared (null) an object's paint: every copy shows it now.
+func painter_saved(id: String, image, version) -> void:
+	for i in me.objects.size():
+		if me.objects[i].id==id: me.objects[i].paint_version=version
+	if selected.get("id","")==id: selected.paint_version=version
+	var key := "" if version==null else id+":"+str(int(version))
+	for item in [inspect_model,loaded.get(id),preview]:
+		if not is_instance_valid(item): continue
+		if image==null: PaintApply.clear(item)
+		elif item!=preview or selected.get("id","")==id: PaintApply.apply(item,image,key)
+	message(tr("칠한 모습을 저장했어요.") if image!=null else tr("처음 모습으로 되돌렸어요."))
+
+## Whole-object colour from the painter's fallback panel (objects without UVs).
+func painter_flat(id: String, hex: String, part: String, reset: bool) -> void:
+	if selected.get("id","")!=id: return
+	if not selected.get("studio",false):
+		await paint_object("#f6eee0" if reset else hex)
+		return
+	if busy or not is_instance_valid(inspect_model): return
+	busy=true
+	var reply: Dictionary=await api.post("/v1/objects/"+id+"/colors",api.mutation({"version":inspect_model.runtime_version,"part":part,"color":hex,"reset":reset}))
+	busy=false
+	if not check(reply): return
+	for item in [inspect_model,loaded.get(id),preview]:
+		if is_instance_valid(item) and item.get_meta("studio",false): item.paint(reply.data.colors);item.runtime_version=reply.data.version
+	for obj in me.objects:
+		if obj.id==id: obj.runtime_version=reply.data.version
+	message(tr("가구 색을 바꿨어요."))
 
 func edit_object(extra: Dictionary) -> bool:
 	if selected.is_empty() or busy: return false
@@ -2109,6 +2188,7 @@ func text_input_active() -> bool:
 
 func world_movement_allowed() -> bool:
 	if PauseMenu.is_open(): return false
+	if is_instance_valid(painter): return false
 	if busy or text_input_active() or is_instance_valid(village_modal) or is_instance_valid(preview):return false
 	if is_instance_valid(right) and right.get_parent().visible:return false
 	if screen=="village":return true
