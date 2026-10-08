@@ -132,6 +132,19 @@ def billing(parts):
 
 # A quote awaiting the owner's confirmation has not reached Tripo, so it must
 # not block other players. The single-provider limit is enforced again at confirm.
+def tripo_credits_committed(conn,exclude=''):
+    """Tripo credits this server has spent or committed: the reported bill of finished jobs, and for
+    builds still running (or with an incomplete bill) at least their confirmed quote.
+    The server-wide budget (TRIPOTHON_TRIPO_CREDIT_BUDGET) is checked against this."""
+    total=0.0
+    for row in conn.execute("SELECT state,parts,provenance FROM studio_jobs WHERE id!=? AND state IN ('building','submitting','unknown','ready','failed','cancelled')",(exclude,)):
+        try:parts,quote=json.loads(row['parts'] or '{}'),float(json.loads(row['provenance'] or '{}').get('estimated_tripo_credits') or 0)
+        except (TypeError,ValueError):parts,quote={},0.0
+        bill=billing(parts)
+        if row['state'] in ('building','submitting','unknown') or not bill['billing_complete']:total+=max(bill['known_tripo_credits'],quote)
+        else:total+=bill['known_tripo_credits']
+    return total
+
 def tripo_requests(conn,user_id,exclude=''):
     """Tripo submissions an account has made: every part sent to Tripo (mesh or image task),
     failed and cancelled jobs included, and at least one for a job confirmed into the build.
@@ -194,6 +207,8 @@ class Studio:
                     'max_tripo_credits':settings.max_credits_per_craft if settings.mode=='live' else 0,
                     'tripo_requests_used':tripo_requests(conn,user['id']),
                     'tripo_requests_limit':settings.user_total_generation_limit if settings.mode=='live' else 0,
+                    'tripo_budget':settings.tripo_credit_budget,
+                    'tripo_budget_used':round(tripo_credits_committed(conn)) if settings.tripo_credit_budget else 0,
                     'prices':{'static_mesh':20,'static_textured':40,'dynamic_mesh':30,'dynamic_textured':50},
                     'tripo_estimate':{'models':{'v3.1-20260211':{'text_mesh':10,'text_textured':20,'image_mesh':20,'image_textured':30},'P2-20260801':{'text_mesh':100,'text_textured':110,'image_mesh':100,'image_textured':110}},'image_refinement_per_part':5,'source':'official_rates_and_measured_2026_10_02','max_parts':8,'confirmation_required':True},
                     'jobs':[dict(r) for r in conn.execute('SELECT id,state,cost,object_id,error,created FROM studio_jobs WHERE owner_id=? ORDER BY created DESC LIMIT 30',(user['id'],))],
@@ -222,6 +237,10 @@ class Studio:
                             least=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',2 if body.motion=='dynamic' else 1,bool(body.image),body.image_mode=='refine')
                         except ProviderError:least=cap+1
                         if least>cap:fail('craft_over_trial_limit',403)
+                    if settings.tripo_credit_budget:
+                        try:need=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',2 if body.motion=='dynamic' else 1,bool(body.image),body.image_mode=='refine')
+                        except ProviderError:need=0
+                        if tripo_credits_committed(conn)+need>settings.tripo_credit_budget:fail('tripo_budget_exhausted',429)
                 count=conn.execute('SELECT count(*) FROM studio_jobs WHERE created>=?',(int(clock()//86400)*86400,)).fetchone()[0]
                 if count>=settings.daily_generation_limit:fail('daily_generation_limit',429)
                 if settings.mode=='live':
@@ -295,6 +314,8 @@ class Studio:
                 if settings.mode=='live' and settings.user_total_generation_limit and tripo_requests(conn,user['id'],job_id)>=settings.user_total_generation_limit:
                     fail('user_total_generation_limit',429)
                 quote=json.loads(row['provenance'])
+                if settings.tripo_credit_budget and tripo_credits_committed(conn,job_id)+float(quote.get('estimated_tripo_credits') or 0)>settings.tripo_credit_budget:
+                    fail('tripo_budget_exhausted',429)
                 total=max(row['cost'],int(quote.get('quoted_game_cost',row['cost'])))
                 if total>row['cost']:money(conn,user['id'],row['cost']-total,'studio_quote_charge',job_id)
                 conn.execute("UPDATE studio_jobs SET state='building',cost=?,updated=? WHERE id=?",(total,clock(),job_id))

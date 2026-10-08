@@ -12,6 +12,10 @@
 
 [제작 현황·자료·실행 계획 통합 문서](docs/TRIPOTHON_MASTER_HANDOFF_20261003.md)에서 상단 요약, 현재 완료 상태, 기존 8단계 계획, 추천 처리 순서, 영상·강의·공식 문서, 모델·비용과 실행 방법을 확인할 수 있습니다. [목차가 있는 HTML 뷰어](http://127.0.0.1:8842/master-handoff/index.html)는 로컬 보고서 서버에서 열립니다. 문서의 오프라인 묶음에는 선별 참고 문서·사진·검토 영상이 포함됩니다.
 
+## 학교 개발 라인 (dev 브랜치)
+
+제출판(0.10.2, main, 심사 서버)은 그대로 두고 `dev` 브랜치에서 개발을 이어 갑니다. 학교 서버는 서울 VM에 따로 둡니다([학교 서버 만들기](docs/SCHOOL_SERVER_KO.txt)). 학교 빌드는 1회 최대 30크레딧(Tripo가 색까지 입힌 가구, 참고 사진)으로 만들고, 서버 전체 예산은 2,000크레딧입니다. 배포는 GitHub 사전 공개판의 `Villagen_School_Windows.zip`으로 하며, 심사위원이 받는 최신판 링크는 바뀌지 않습니다.
+
 ## 바로 플레이 (심사·친구용) · 0.10.1
 
 **설치 없이 플레이:** **[⬇ Villagen_Windows.zip 바로 받기](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip)** (항상 최신판, [모든 릴리스](https://github.com/NormalMan0228/tripo_s1/releases))를 받아 압축을 풀고 `Villagen.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정은 아이디·비밀번호만으로 만듭니다(초대 코드 없음, 공개 가입). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 체험판 규칙으로 계정당 3회, 1회 Tripo 10크레딧(직접 색칠하는 정적인 가구 한 덩어리) 안에서 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다. **처음이라면 15분 워크스루를 따라 해 보세요: [한국어](docs/WALKTHROUGH_KO.md) · [English](docs/WALKTHROUGH_EN.md) · [中文](docs/WALKTHROUGH_ZH.md)**

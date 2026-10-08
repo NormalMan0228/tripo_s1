@@ -327,3 +327,53 @@ def test_used_up_trial_reads_well_in_released_room_and_village_clients(tmp_path)
         # Its message() only rewrites snake_case codes; the sentence has none, so it is shown as is.
         import re
         assert not re.search(r'[a-z][a-z0-9]*_[a-z0-9_]+', room.json()['detail'])
+
+
+def test_server_tripo_budget_stops_crafting_when_used_up(tmp_path):
+    settings = Settings(data_dir=tmp_path, mode='live', paid_enabled=True, tripo_key='test-only-key',
+                        studio_llm='gemini', gemini_key='test-only-key',
+                        registration_code='test-only-invitation-123456',
+                        daily_generation_limit=100, user_daily_generation_limit=50,
+                        max_credits_per_craft=30, tripo_credit_budget=50, welcome_stars=500)
+    app = create_app(settings, worker_enabled=False)
+    with TestClient(app, base_url='https://testserver') as client:
+        token = client.post('/v1/auth/register', json={
+            'username': 'school_one', 'password': 'Test-password-123',
+            'invitation': settings.registration_code}).json()['token']
+        headers = {'Authorization': 'Bearer ' + token}
+
+        def request(material='textured'):
+            return client.post('/v1/studio/jobs', headers=headers, json={
+                'request_id': str(uuid.uuid4()), 'prompt': 'wooden chair', 'designer': 'llm', 'geometry': 'tripo',
+                'material': material, 'motion': 'static', 'mesh_model': 'v3.1-20260211'})
+
+        # A coloured craft (20 credits) fits the 30-credit cap; Tripo reported 20 for it.
+        first = request()
+        assert first.status_code == 200, first.json()
+        with app.state.db.transaction() as db:
+            db.execute("UPDATE studio_jobs SET state='ready', parts=?, provenance=? WHERE id=?",
+                       ('{"whole": {"state": "ready", "task": "t1", "credits_consumed": 20}}', '{"estimated_tripo_credits": 20}', first.json()['id']))
+        # A second one is quoted (20) and confirmed: 40 committed of 50.
+        second = request().json()['id']
+        with app.state.db.transaction() as db:
+            db.execute("UPDATE studio_jobs SET state='awaiting_confirmation', provenance=? WHERE id=?",
+                       ('{"estimated_tripo_credits": 20, "quoted_game_cost": 40}', second))
+        confirmed = client.post(f'/v1/studio/jobs/{second}/confirm', headers=headers, json={'request_id': str(uuid.uuid4())})
+        assert confirmed.status_code == 200, confirmed.json()
+        studio = client.get('/v1/studio', headers=headers).json()
+        assert studio['tripo_budget'] == 50 and studio['tripo_budget_used'] == 40
+        # 40 + 20 > 50: the next coloured craft is refused; a 10-credit one still fits.
+        with app.state.db.transaction() as db:
+            db.execute("UPDATE studio_jobs SET state='ready', parts=? WHERE id=?",
+                       ('{"whole": {"state": "ready", "task": "t2", "credits_consumed": 20}}', second))
+        refused = request()
+        assert refused.status_code == 429 and refused.json()['detail'] == 'tripo_budget_exhausted'
+        assert request('mesh').status_code == 200
+
+
+def test_health_reports_the_tripo_budget_only_when_set(tmp_path):
+    base = dict(mode='live', registration_code='test-only-invitation-123456')
+    with TestClient(create_app(Settings(data_dir=tmp_path / 'a', tripo_credit_budget=2000, **base), worker_enabled=False), base_url='https://testserver') as client:
+        assert client.get('/health').json()['tripo_budget'] == {'used': 0, 'total': 2000}
+    with TestClient(create_app(Settings(data_dir=tmp_path / 'b', **base), worker_enabled=False), base_url='https://testserver') as client:
+        assert 'tripo_budget' not in client.get('/health').json()

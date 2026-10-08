@@ -4,6 +4,7 @@
 #   sudo bash ops/update_online_server.sh [branch] [--per-account N] [--per-day N]
 #        [--craft-day-limit N] [--welcome-stars N] [--open-signup | --invite-only] [--signups-per-ip N]
 #        [--max-credits N]   (Tripo credits one craft may spend; 10 = cheapest craft only)
+#        [--budget N]        (Tripo credits this server may spend in total; 0 = no budget)
 # 1. Optionally writes the craft limits, welcome stars and sign-up mode into ops/production.env
 #    (--per-day sets the server-wide and per-account daily limits; --craft-day-limit only the
 #    server-wide one, which caps Tripo spending per day when sign-up is open).
@@ -26,6 +27,7 @@ while [ $# -gt 0 ]; do
     --invite-only) limits[TRIPOTHON_OPEN_REGISTRATION]="false"; shift ;;
     --signups-per-ip) limits[TRIPOTHON_SIGNUPS_PER_IP_DAY]="$2"; shift 2 ;;
     --max-credits) limits[TRIPOTHON_MAX_CREDITS_PER_CRAFT]="$2"; shift 2 ;;
+    --budget) limits[TRIPOTHON_TRIPO_CREDIT_BUDGET]="$2"; shift 2 ;;
     -*) echo "Unknown option $1" >&2; exit 2 ;;
     *) branch="$1"; shift ;;
   esac

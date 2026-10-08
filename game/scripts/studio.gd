@@ -133,6 +133,8 @@ var travelling := false
 ## Tests drive the walker directly and switch this off to keep it on one floor.
 var travel_enabled := true
 var sfx_player: AudioStreamPlayer
+## Server per-craft Tripo credit cap (0 = none), from /v1/studio.
+var craft_cap := 0
 var place_label: Label
 var current_room := -1
 var cam_distance := 9.0
@@ -551,6 +553,8 @@ func update_price() -> void:
 		if not image_data.is_empty() and refine_reference.button_pressed:unit+=5
 		provider_price.text=tr("공식 요금·실측 기반 예상: ")+(tr("정적 1부품 · %d 크레딧")%unit if motion.selected==1 else tr("부품당 %d 크레딧 · 최대 8부품")%unit)+tr("\n설계 후 부품 수와 예상 비용을 확인합니다.")
 		generation_button.text=tr("설계 먼저 · %d 별씨 예약")%cost
+		var least := unit*(1 if motion.selected==1 else 2)
+		if craft_cap>0 and least>craft_cap:provider_price.text+=tr(" · 한도 %d 크레딧을 넘어요")%craft_cap
 	else:provider_price.text=tr("검증용 도형: Tripo 비용 0")
 
 func message(value: String, toast := true) -> void:
@@ -871,16 +875,20 @@ func refresh() -> void:
 		models.select(0);efforts.select(2)
 	# Trial servers cap Tripo credits per craft: only the cheapest craft is offered
 	# (paint it yourself · static · H3 · text only).
-	var trial: bool=int(data.get("max_tripo_credits",0))>0
-	surface_mode.set_item_disabled(1,trial);motion.set_item_disabled(0,trial);mesh_models.set_item_disabled(1,trial)
-	if trial:
-		surface_mode.select(0);motion.select(1);mesh_models.select(0)
+	# Each option opens when its cheapest craft fits the cap (official rates: coloured 20, two moving
+	# parts 20, photo 20, photo refinement +5, P2 100); 0 = no cap. The server checks again.
+	craft_cap=int(data.get("max_tripo_credits",0))
+	var fits := func(credits: int) -> bool: return craft_cap==0 or credits<=craft_cap
+	surface_mode.set_item_disabled(1,not fits.call(20));motion.set_item_disabled(0,not fits.call(20));mesh_models.set_item_disabled(1,not fits.call(100))
+	if not fits.call(20):surface_mode.select(0);motion.select(1)
+	if not fits.call(100):mesh_models.select(0)
+	if not fits.call(20):
 		image_data="";image_label.text=tr("체험판에서는 글로 설명한 정적인 가구 한 덩어리를 만들어요.")
-		refine_reference.button_pressed=false
-		update_price()
-	refine_reference.disabled=trial
+	if not fits.call(25):refine_reference.button_pressed=false
+	refine_reference.disabled=not fits.call(25)
 	for child in image_buttons.get_children():
-		if child is Button:child.disabled=trial
+		if child is Button:child.disabled=not fits.call(20)
+	update_price()
 	if is_instance_valid(hero):hero.apply_avatar(data.get("profile",{}).get("avatar",{}))
 	update_capacity()
 	history_list.clear()
@@ -1115,7 +1123,7 @@ func generate() -> void:
 	var response: Dictionary=await api.post("/v1/studio/jobs",api.mutation(body))
 	pending=false;generation_button.disabled=false
 	if not response.ok:
-		message(tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요.") if response.error=="craft_over_trial_limit" else tr("생성을 시작하지 못했어요 · ")+response.error)
+		message(studio_error(response.error))
 		return
 	job_id=response.data.id;message(tr("설계를 준비하고 있어요. 다른 가구를 꾸미며 기다릴 수 있어요."));await refresh()
 
@@ -1142,13 +1150,29 @@ func poll_job() -> void:
 	if job.state in ["ready","failed","cancelled"]:
 		job_id="";await refresh()
 
+## The same player-facing wording the village craft window uses (main.gd error_message).
+func studio_error(code: String) -> String:
+	var messages := {"craft_over_trial_limit":tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요."),
+		"tripo_budget_exhausted":tr("이번 학기 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요."),
+		"user_total_generation_limit":tr("이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!"),
+		"user_daily_generation_limit":tr("오늘 맡길 수 있는 제작을 모두 썼어요. 내일 다시 찾아와 주세요."),
+		"daily_generation_limit":tr("오늘 생성 한도에 도달했습니다."),
+		"provider_busy":tr("공방 장인이 다른 의뢰를 만들고 있어요. 조금 뒤에 다시 맡겨 주세요."),
+		"generation_pending":tr("진행 중인 생성이 있습니다."),
+		"insufficient_shards":tr("별씨가 부족합니다. 생존 도전을 완료해 보세요."),
+		"live_generation_disabled":tr("공방 장인이 아직 자리를 비웠어요."),
+		"insufficient_provider_credit":tr("지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요.")}
+	# The server words this refusal for released room clients; it is already a sentence.
+	if code.contains(" "): return code
+	return str(messages.get(code,tr("생성을 시작하지 못했어요 · ")+code))
+
 func confirm_job() -> void:
 	if pending or job_id.is_empty():return
 	pending=true
 	var response: Dictionary=await api.post("/v1/studio/jobs/"+job_id+"/confirm",api.mutation())
 	pending=false
 	if response.ok:quote_panel.visible=false;message(tr("확인한 설계로 3D 메시를 만들고 있어요"))
-	else:message(response.error)
+	else:message(studio_error(response.error))
 
 func cancel_job() -> void:
 	if pending or job_id.is_empty():return

@@ -232,7 +232,15 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                             headers={'Cache-Control':'no-store'})
 
     @app.get('/health')
-    def health(): return {'ok':True,'service':'tripothon','mode':settings.mode,'version':'0.10.0','protocol':6,
+    def health():
+        data=health_fields()
+        # School servers spend from a fixed Tripo budget; the update script prints this line.
+        if settings.tripo_credit_budget:
+            from .asset_studio import tripo_credits_committed
+            with db.transaction() as conn:data['tripo_budget']={'used':round(tripo_credits_committed(conn)),'total':settings.tripo_credit_budget}
+        return data
+
+    def health_fields(): return {'ok':True,'service':'tripothon','mode':settings.mode,'version':'0.10.0','protocol':6,
                           'studio_tripo_enabled':bool(settings.tripo_key and settings.paid_enabled),
                           'studio_llm':settings.studio_llm, 'multiplayer_protocol':1, 'max_party_members':3,
                           'tripo_keys':len(settings.tripo_keys) or (1 if settings.tripo_key else 0),

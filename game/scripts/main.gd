@@ -25,6 +25,14 @@ const PauseMenu = preload("res://scripts/pause_menu.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
+## School builds (export feature "villagen_school") play on the school server (Seoul VM) instead of
+## the judging server. Empty until that server has an address; tools/package_release.py --school checks.
+const SCHOOL_SERVER := ""
+
+static func worlds() -> Array:
+	if OS.has_feature("villagen_school") and not SCHOOL_SERVER.is_empty():
+		return [SERVERS[0],["online",SCHOOL_SERVER,"학교 월드"]]
+	return SERVERS
 # Trading is deferred while the village / survival / generation loop is developed.
 const TRADING_UI_ENABLED := false
 const ITEM_NAMES := {"wood":"목재","stone":"돌","berry":"열매","fiber":"섬유","axe":"도끼","spear":"창","soup":"수프","bandage":"붕대"}
@@ -391,7 +399,8 @@ func error_message(code: String) -> String:
 		"provider_busy":tr("공방 장인이 다른 의뢰를 만들고 있어요. 조금 뒤에 다시 맡겨 주세요."),
 		"too_many_registrations":tr("이 곳에서는 오늘 계정을 더 만들 수 없어요. 만든 계정으로 로그인해 주세요."),
 		"registration_closed_today":tr("오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요."),
-		"craft_over_trial_limit":tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요.")}
+		"craft_over_trial_limit":tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요."),
+		"tripo_budget_exhausted":tr("이번 학기 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요.")}
 	if not preload("res://scripts/build_mode.gd").developer():
 		messages.live_generation_disabled=tr("새 가구 제작을 준비하고 있어요. 지금은 보관함의 물건으로 꾸며 보세요.")
 		messages.insufficient_provider_credit=tr("지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요.")
@@ -512,17 +521,20 @@ func login_ui(page := "menu") -> void:
 			column.add_child(servers)
 			var custom := RpgUi.field(column,tr("월드 주소 · 예: http://100.101.1.2:8765"))
 			# Player builds (the judging ZIP) start on the online world; source runs on this PC.
-			var saved := str(I18n.setting("server",SERVERS[1][1] if OS.has_feature("tripothon_player") else SERVERS[0][1]))
-			var chosen := SERVERS.size()
-			for i in SERVERS.size():
-				servers.add_item(tr(SERVERS[i][2])+"  ·  "+SERVERS[i][1].trim_prefix("https://").trim_prefix("http://"))
-				if SERVERS[i][1]==saved: chosen=i
+			var list := worlds()
+			var saved := str(I18n.setting("server",list[1][1] if OS.has_feature("tripothon_player") else list[0][1]))
+			# A school build first opens on the school world even if an older build saved the judging one.
+			if OS.has_feature("villagen_school") and saved==SERVERS[1][1]: saved=list[1][1]
+			var chosen := list.size()
+			for i in list.size():
+				servers.add_item(tr(list[i][2])+"  ·  "+list[i][1].trim_prefix("https://").trim_prefix("http://"))
+				if list[i][1]==saved: chosen=i
 			servers.add_item(tr("직접 입력"))
-			if chosen==SERVERS.size(): custom.text=saved
+			if chosen==list.size(): custom.text=saved
 			servers.select(chosen)
-			custom.visible = chosen==SERVERS.size()
-			servers.item_selected.connect(func(index): custom.visible = index==SERVERS.size())
-			var host := func() -> String: return custom.text if servers.selected==SERVERS.size() else SERVERS[servers.selected][1]
+			custom.visible = chosen==list.size()
+			servers.item_selected.connect(func(index): custom.visible = index==list.size())
+			var host := func() -> String: return custom.text if servers.selected==list.size() else list[servers.selected][1]
 			var actions := HBoxContainer.new()
 			actions.add_theme_constant_override("separation",8)
 			column.add_child(actions)
@@ -2720,6 +2732,8 @@ var craft_polling := false
 ## The server's design step ("fixture" = none): with an LLM the craft is designed first
 ## (server -> LLM -> Tripo), otherwise the words go straight to Tripo as one mesh.
 var craft_llm := "fixture"
+## Tripo colours the village craft when the server's per-craft cap allows it (20 credits).
+var craft_textured := false
 var craft_done: Dictionary = {}
 
 func open_craft() -> void:
@@ -2734,6 +2748,8 @@ func open_craft() -> void:
 	var studio: Dictionary = await api.request("/v1/studio")
 	if studio.ok:
 		craft_llm = str(studio.data.get("llm","fixture"))
+		var cap := int(studio.data.get("max_tripo_credits",0))
+		craft_textured = cap==0 or cap>=20
 		if craft_job.is_empty():
 			for job in studio.data.get("jobs",[]):
 				if job.state not in ["ready","failed","cancelled"]: craft_job=job.id;break
@@ -2758,7 +2774,7 @@ func render_craft(job: Dictionary) -> void:
 		price_row.add_theme_constant_override("separation",6)
 		craft_box.add_child(price_row)
 		price_row.add_child(RpgUi.icon("res://assets/starseed.svg",22))
-		RpgUi.caption(price_row,tr("제작비 별씨 20 · 완성까지 1~3분 정도 걸려요."),14)
+		RpgUi.caption(price_row,tr("제작비 별씨 %d · 완성까지 1~3분 정도 걸려요.") % (40 if craft_textured else 20),14)
 		var ask := button(craft_box,tr("의뢰하기"),func(): request_craft(idea.text),"gold")
 		idea.text_submitted.connect(func(_v): request_craft(idea.text))
 		if not me.get("studio_tripo_enabled",false):
@@ -2798,6 +2814,7 @@ func request_craft(idea: String) -> void:
 	var body := CRAFT_REQUEST.duplicate()
 	body.prompt = idea
 	if craft_designs(): body.designer = "llm"
+	if craft_textured: body.material = "textured"
 	var response: Dictionary = await api.post("/v1/studio/jobs",api.mutation(body))
 	busy = false
 	if not check(response): return

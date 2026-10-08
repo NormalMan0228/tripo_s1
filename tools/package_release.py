@@ -24,6 +24,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "builds" / "windows"
+SCHOOL_BUILD = ROOT / "builds" / "school"
 OUT = ROOT / "builds" / "release"
 MAP_ASSETS = ["game/maps/archipelago/assets"]
 ART_ASSETS = ["game/assets/interior", "game/assets/monsters", "game/maps/survival/assets",
@@ -96,11 +97,16 @@ def check(path: Path) -> Path:
 
 
 def game_zip(tag: str) -> Path:
-    exe, pck = BUILD / "Villagen.exe", BUILD / "Villagen.pck"
+    school = "--school" in sys.argv
+    build = SCHOOL_BUILD if school else BUILD
+    exe, pck = build / "Villagen.exe", build / "Villagen.pck"
     for item in (exe, pck):
-        if not item.is_file(): raise SystemExit(f"missing {item}; run tools/build_game.ps1 first")
+        if not item.is_file(): raise SystemExit(f"missing {item}; export the 'Windows {'School' if school else 'Desktop'}' preset first")
+    if school and 'SCHOOL_SERVER := ""' in (ROOT / "game" / "scripts" / "main.gd").read_text(encoding="utf-8"):
+        raise SystemExit("set SCHOOL_SERVER in game/scripts/main.gd to the school server address first")
     # A fixed name, so .../releases/latest/download/Villagen_Windows.zip always points at the newest game.
-    target = OUT / "Villagen_Windows.zip"
+    # School builds (--school) ship as pre-releases under their own name and never replace it.
+    target = OUT / ("Villagen_School_Windows.zip" if school else "Villagen_Windows.zip")
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         archive.write(exe, "Villagen/Villagen.exe")
         archive.write(pck, "Villagen/Villagen.pck")
@@ -135,7 +141,7 @@ def main() -> None:
     tag = "v" + version()
     # --game-only: just the player ZIP (the DevAssets archives change rarely; reuse the last ones).
     files = [game_zip(tag)] if "--game-only" in sys.argv else [game_zip(tag), assets_zip(tag, "Map", MAP_ASSETS), assets_zip(tag, "Art", ART_ASSETS)]
-    sums = OUT / "SHA256SUMS.txt"
+    sums = OUT / ("SHA256SUMS_School.txt" if "--school" in sys.argv else "SHA256SUMS.txt")
     sums.write_text("".join(f"{sha256(f)}  {f.name}\n" for f in files), encoding="utf-8")
     for item in files + [sums]:
         print(f"{item.name}  {item.stat().st_size / 1024 ** 2:.0f} MB")
