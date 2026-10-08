@@ -16,15 +16,18 @@ var hidden: Control
 var composing_field: Control
 var composing_text := ""
 var pending := {}
+## Headless runs (tests, servers) have no IME; asking there logs an error every frame.
+var ime_supported := false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	ime_supported = DisplayServer.has_feature(DisplayServer.FEATURE_IME)
 	get_viewport().gui_focus_changed.connect(_on_focus_changed)
 
 func _process(_delta: float) -> void:
 	var focus := get_viewport().gui_get_focus_owner()
 	var field: Control = focus if _is_text(focus) else null
-	var ime := DisplayServer.ime_get_text()
+	var ime := DisplayServer.ime_get_text() if ime_supported else ""
 	if field != null and not ime.is_empty():
 		composing_field = field
 		composing_text = ime
