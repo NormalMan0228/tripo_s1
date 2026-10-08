@@ -93,7 +93,6 @@ const CANVAS := Vector2(1280, 800)
 
 static var _textures := {}
 static var _theme: Theme
-static var _sounds := {}
 static var _voice := 0
 static var _last_hover := 0
 static var _last_played := {}
@@ -378,10 +377,6 @@ static func sfx(kind: String, volume_db := -4.0) -> void:
 	# One press can reach both a button hook and an older sound.effect("click").
 	if Time.get_ticks_msec() - int(_last_played.get(kind, -1000)) < 60: return
 	_last_played[kind] = Time.get_ticks_msec()
-	if not _sounds.has(kind):
-		var path := "res://assets/sfx/ui/%s.wav" % kind
-		_sounds[kind] = load(path) if ResourceLoader.exists(path) else null
-	if _sounds[kind] == null: return
 	var host := tree.root.get_node_or_null("RpgUiSounds")
 	var fresh := host == null
 	if fresh:
@@ -390,10 +385,18 @@ static func sfx(kind: String, volume_db := -4.0) -> void:
 		host.process_mode = Node.PROCESS_MODE_ALWAYS
 		for i in 4: host.add_child(AudioStreamPlayer.new())
 		tree.root.add_child.call_deferred(host)
+	# Loaded sounds live on the host node, freed with the tree; a static cache kept them
+	# alive past exit ("resources still in use").
+	var sounds: Dictionary = host.get_meta("sounds", {})
+	if not sounds.has(kind):
+		var path := "res://assets/sfx/ui/%s.wav" % kind
+		sounds[kind] = load(path) if ResourceLoader.exists(path) else null
+		host.set_meta("sounds", sounds)
+	if sounds[kind] == null: return
 	var voice: AudioStreamPlayer = host.get_child(_voice % host.get_child_count())
 	_voice += 1
 	voice.bus = "UI" if AudioServer.get_bus_index("UI") != -1 else "Master"
-	voice.stream = _sounds[kind]
+	voice.stream = sounds[kind]
 	voice.volume_db = volume_db
 	voice.pitch_scale = randf_range(0.97, 1.03)
 	if fresh or not voice.is_inside_tree(): voice.play.call_deferred()

@@ -3,12 +3,12 @@ extends SceneTree
 ## saved (PNG upload), the paint shows on the inspected copy, after a fresh load, on the
 ## placed village copy, for a visiting friend (guest route) and in the room studio; an object
 ## without UVs gets the whole-object colour; resetting clears it everywhere.
-##   godot --path game --script res://tests/painter_e2e.gd -- --server=http://127.0.0.1:8796
+##   godot --path game --script res://tests/painter_e2e.gd (tools/test.ps1 -ClientScript painter_e2e uses the QA server on 8766)
 const PaintApply = preload("res://scripts/painter/paint_apply.gd")
 const Assembly = preload("res://scripts/asset_assembly.gd")
 const Api = preload("res://scripts/api.gd")
 
-var server := "http://127.0.0.1:8796"
+var server := "http://127.0.0.1:8766"
 var failures: Array[String] = []
 var passes := 0
 
