@@ -57,23 +57,23 @@ Gemini 키를 같은 방법으로 저장합니다.
 ------------------------------------------------------------
 4단계. 학교 규칙으로 켜기
 ------------------------------------------------------------
-【명령】 sudo bash ops/update_online_server.sh dev --open-signup --per-account 0 --per-day 10 --craft-day-limit 100 --max-credits 35 --budget 4000 --welcome-stars 300
+【명령】 sudo bash ops/update_online_server.sh dev --open-signup --per-account 0 --per-day 10 --craft-day-limit 105 --max-credits 35 --budget 4000 --welcome-stars 70
 
 뜻 (순서대로):
   · dev: 학교 개발 브랜치를 받아 서버를 다시 만듭니다
   · --open-signup: 초대 코드 없이 가입할 수 있습니다
   · --per-account 0: 계정별 평생 제작 횟수 제한이 없습니다. 대신 하루 제한과 전체 예산으로 막습니다
   · --per-day 10: 한 계정이 하루에 맡길 수 있는 제작 수입니다
-  · --craft-day-limit 100: 서버 전체에서 하루에 맡길 수 있는 제작 수입니다
+  · --craft-day-limit 105: 서버 전체에서 하루에 맡길 수 있는 제작 수입니다
   · --max-credits 35: 한 번 제작에 쓸 수 있는 Tripo 크레딧입니다(색 입힌 가구 20, 사진+색 30, 사진 다듬기+색 35)
   · --budget 4000: 이 서버가 쓸 수 있는 Tripo 크레딧 총량입니다. 다 쓰면 게임에 "이번 학기 제작 예산을 모두 썼어요"가 뜨고 제작이 멈춥니다
-  · --welcome-stars 300: 새 계정에 처음 주는 별씨입니다(색 입힌 제작은 1회 별씨 40)
+  · --welcome-stars 70: 새 계정에 처음 주는 별씨입니다(직접 색칠 20, 움직이는 가구 30, 색 입힘 40)
 마지막에 health 결과가 "ok": true로 나오면 끝입니다.
 
 ------------------------------------------------------------
 이후 업데이트 (코드가 바뀌었을 때)
 ------------------------------------------------------------
 【명령】 cd ~/tripo_s1
-【명령】 sudo bash ops/update_online_server.sh dev --open-signup --per-account 0 --per-day 10 --craft-day-limit 100 --max-credits 35 --budget 4000 --welcome-stars 300
+【명령】 sudo bash ops/update_online_server.sh dev --open-signup --per-account 0 --per-day 10 --craft-day-limit 105 --max-credits 35 --budget 4000 --welcome-stars 70
 
 예산 확인: 브라우저에서 https://<학교 서버 주소>/health 를 열면 "tripo_budget": {"used": 사용량, "total": 4000} 이 보입니다. 업데이트 명령 끝에도 같은 줄이 나옵니다. 예산을 늘리려면 --budget 숫자를 바꿔 위 명령을 다시 실행합니다. 늘리기 전에 사용할 크레딧 양을 먼저 정해 주세요.
