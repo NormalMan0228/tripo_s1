@@ -146,6 +146,18 @@ def assets_zip(tag: str, name: str, folders: list[str]) -> Path:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     tag = "v" + version()
+    if "--installer" in sys.argv:
+        # Windows installer (Inno Setup, tools/installer/villagen.iss): pick a folder, desktop and Start
+        # menu shortcuts, uninstaller. Writes Villagen_School_Setup.exe or Villagen_Setup.exe.
+        import subprocess
+        edition = "school" if "--school" in sys.argv else "public"
+        compiler = ROOT / ".tools" / "innosetup" / "ISCC.exe"
+        if not compiler.is_file(): raise SystemExit("Inno Setup missing: .tools/innosetup/ISCC.exe")
+        subprocess.run([str(compiler), "/Q", f"/DEdition={edition}", f"/DAppVer={version()}",
+                        str(ROOT / "tools" / "installer" / "villagen.iss")], check=True)
+        setup = OUT / ("Villagen_School_Setup.exe" if edition == "school" else "Villagen_Setup.exe")
+        print(f"{setup.name}  {setup.stat().st_size / 1024 ** 2:.0f} MB")
+        if "--game-only" not in sys.argv: return
     # --game-only: just the player ZIP (the DevAssets archives change rarely; reuse the last ones).
     files = [game_zip(tag)] if "--game-only" in sys.argv else [game_zip(tag), assets_zip(tag, "Map", MAP_ASSETS), assets_zip(tag, "Art", ART_ASSETS)]
     sums = OUT / ("SHA256SUMS_School.txt" if "--school" in sys.argv else "SHA256SUMS.txt")
