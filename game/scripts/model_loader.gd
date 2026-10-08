@@ -20,6 +20,8 @@ static func load_bytes(bytes: PackedByteArray) -> Node3D:
 	if meshes.is_empty():
 		imported.free()
 		return null
+	# The model's own surfaces (painter slots); markers added later are not painted.
+	for instance in meshes: instance.set_meta("craft_surface", true)
 	shrink_textures(imported)
 	var bounds := AABB()
 	var first := true
@@ -122,10 +124,26 @@ static func _collect_meshes(node: Node, result: Array[MeshInstance3D]) -> void:
 	for child in node.get_children():
 		_collect_meshes(child, result)
 
+## Whole-object colour. Surfaces carrying a painted texture (painter/paint_apply.gd sets
+## "paint_textures") keep it; a placement marker added under the model is left alone.
 static func paint(root: Node3D, color: Color) -> void:
 	var meshes: Array[MeshInstance3D] = []
 	_collect_meshes(root, meshes)
+	var tagged: Array[MeshInstance3D] = []
 	for instance in meshes:
+		if instance.has_meta("craft_surface"): tagged.append(instance)
+	if not tagged.is_empty(): meshes = tagged
+	for instance in meshes:
+		var painted: Array = instance.get_meta("paint_textures", [])
+		if not painted.is_empty():
+			instance.material_override = null
+			for surface in instance.mesh.get_surface_count():
+				var textured := StandardMaterial3D.new()
+				textured.roughness = 0.9
+				if surface < painted.size() and painted[surface] != null: textured.albedo_texture = painted[surface]
+				else: textured.albedo_color = color
+				instance.set_surface_override_material(surface, textured)
+			continue
 		var material := StandardMaterial3D.new()
 		material.albedo_color = color
 		material.roughness = 0.9

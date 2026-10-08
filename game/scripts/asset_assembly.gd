@@ -171,8 +171,14 @@ func paint(values: Dictionary) -> void:
 		var id: String=part.id
 		if not surfaces.has(id): continue
 		for mesh in surfaces[id]:
+			# A painted surface (painter/paint_apply.gd) shows its texture untinted.
+			var painted: Array=mesh.get_meta("paint_textures",[])
+			var base: Array=mesh.get_meta("paint_base",[])
 			for i in mesh.mesh.get_surface_count():
 				var mat: StandardMaterial3D=mesh.get_surface_override_material(i)
+				if i<painted.size() and painted[i]!=null:
+					mat.albedo_texture=painted[i];mat.albedo_color=Color.WHITE;continue
+				if i<base.size():mat.albedo_texture=base[i]
 				mat.albedo_color=Color(values[id]) if values.has(id) else mesh.get_meta("original_colors")[i]
 
 func accept_event(data: Dictionary) -> void:

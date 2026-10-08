@@ -6,9 +6,10 @@ var mode := "demo"
 
 ## The login screen chooses the server; there is no offline or bundled sample play.
 
-func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD_GET, binary := false) -> Dictionary:
+func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD_GET, binary := false, timeout := 12.0) -> Dictionary:
 	var http := HTTPRequest.new()
-	http.timeout = 12.0
+	# Large uploads (a painted texture) pass a longer timeout.
+	http.timeout = timeout
 	http.body_size_limit = 20 * 1024 * 1024
 	# Redirects must never forward a session credential to another host.
 	http.max_redirects = 0
