@@ -449,7 +449,7 @@ func build_ui() -> void:
 	image_label=label(create,tr("참고 그림을 추가할 수 있어요"),12)
 	image_buttons = row(create)
 	button(image_buttons,tr("이미지 선택"),func(): file_dialog.popup_centered_ratio(0.7))
-	button(image_buttons,tr("제거"),func(): image_data="";image_label.text=tr("참고 이미지 없음");update_price())
+	button(image_buttons,tr("제거"),func(): image_data="";image_label.text=tr("참고 이미지 없음");update_refine_option();update_price())
 	refine_reference=CheckButton.new();refine_reference.text=tr("그림을 먼저 정리해서 만들기");refine_reference.tooltip_text=tr("Tripo 이미지 편집: 부품당 예상 5크레딧 추가. 이후 이미지→3D 요금 적용.");create.add_child(refine_reference);refine_reference.toggled.connect(func(_value):update_price())
 	file_dialog=FileDialog.new();file_dialog.access=FileDialog.ACCESS_FILESYSTEM;file_dialog.file_mode=FileDialog.FILE_MODE_OPEN_FILE;file_dialog.filters=PackedStringArray(["*.png,*.jpg,*.jpeg ; Reference image"]);add_child(file_dialog);file_dialog.file_selected.connect(pick_image)
 	label(create,tr("표면과 움직임"),15)
@@ -545,6 +545,11 @@ func build_ui() -> void:
 		prompt.text=""
 		prompt.placeholder_text=tr("예: 다가가면 꽃잎이 열리는 꽃 조명")
 		generation_button.text=tr("가구 만들기")
+
+## Photo clean-up needs a photo and room under the cap (+5 per part); otherwise it is off.
+func update_refine_option() -> void:
+	refine_reference.disabled=image_data.is_empty() or (craft_cap>0 and craft_cap<25)
+	if refine_reference.disabled:refine_reference.button_pressed=false
 
 func update_price() -> void:
 	var cost := (20 if surface_mode.selected==0 else 40)+(10 if motion.selected==0 else 0)
@@ -891,8 +896,7 @@ func refresh() -> void:
 	if not fits.call(100):mesh_models.select(0)
 	if not fits.call(20):
 		image_data="";image_label.text=tr("체험판에서는 글로 설명한 정적인 가구 한 덩어리를 만들어요.")
-	if not fits.call(25):refine_reference.button_pressed=false
-	refine_reference.disabled=not fits.call(25)
+	update_refine_option()
 	for child in image_buttons.get_children():
 		if child is Button:child.disabled=not fits.call(20)
 	update_price()
@@ -916,7 +920,8 @@ func refresh() -> void:
 		if "상자" in title or "chest" in title or "box" in title:kind="chest"
 		elif "시계" in title or "clock" in title:kind="clock"
 		elif "조명" in title or "lamp" in title:kind="lamp"
-		inventory.add_item(("● " if obj.state=="placed" else "○ ")+obj.name,load("res://assets/items/"+kind+".svg"))
+		var elsewhere := "" if obj.state!="placed" or obj.room==room else "  · "+tr({"village":"마을","home":"나의 집","workshop":"별씨 공방"}.get(obj.room,str(obj.room)))
+		inventory.add_item(("● " if obj.state=="placed" else "○ ")+obj.name+elsewhere,load("res://assets/items/"+kind+".svg"))
 	if not selected.is_empty():
 		var exists := false
 		for obj in data.objects:
@@ -1149,6 +1154,10 @@ func poll_job() -> void:
 			quote_label.text=tr("설계 완료 · %d부품\n총 %d 별씨 · 이미 예약 %d 별씨\nTripo 예상 %s 크레딧\n예상 비용 확인 후에만 유료 생성을 시작합니다.")%[job.parts.size(),int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost),str(job.provenance.estimated_tripo_credits)]
 		else:
 			quote_label.text=tr("가구를 만들 준비가 됐어요.\n필요한 별씨 %d개 · 이미 맡긴 별씨 %d개\n완성하기를 누르면 제작을 시작해요.")%[int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost)]
+		var design: Dictionary=job.get("design",{})
+		if not design.get("parts",[]).is_empty():
+			quote_label.text+="\n\n"+tr("AI가 이렇게 정리했어요 (Tripo에 보내는 문장)")
+			for part in design.parts:quote_label.text+="\n• %s: %s"%[part.id,part.prompt]
 	var progress := ""
 	if job.state=="building":
 		var ready := 0
@@ -1336,6 +1345,7 @@ func pick_image(path: String) -> void:
 	if file==null or file.get_length()>1024*1024:message(tr("이미지는 1MB 이하로 준비해 주세요"));return
 	var bytes := file.get_buffer(file.get_length())
 	image_data="data:image/"+("png" if path.get_extension().to_lower()=="png" else "jpeg")+";base64,"+Marshalls.raw_to_base64(bytes)
+	update_refine_option()
 	image_label.text=path.get_file()
 	if data.get("llm","fixture")!="fixture":designer.select(1)
 	update_price()

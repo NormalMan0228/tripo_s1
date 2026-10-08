@@ -377,3 +377,43 @@ def test_health_reports_the_tripo_budget_only_when_set(tmp_path):
         assert client.get('/health').json()['tripo_budget'] == {'used': 0, 'total': 2000}
     with TestClient(create_app(Settings(data_dir=tmp_path / 'b', **base), worker_enabled=False), base_url='https://testserver') as client:
         assert 'tripo_budget' not in client.get('/health').json()
+
+
+def test_an_object_standing_in_the_village_is_retrieved_before_a_room_placement(tmp_path):
+    app = create_app(Settings(data_dir=tmp_path), worker_enabled=False)
+    with TestClient(app) as client:
+        token = client.post('/v1/auth/register', json={'username': 'placer_one', 'password': 'Test-password-123', 'invitation': ''}).json()['token']
+        headers = {'Authorization': 'Bearer ' + token}
+        obj = client.get('/v1/me', headers=headers).json()['objects'][0]
+        with app.state.db.transaction() as db:
+            db.execute("UPDATE objects SET state='placed', x=10, z=10 WHERE id=?", (obj['id'],))
+            db.execute("INSERT INTO furniture_locations VALUES (?, 'village') ON CONFLICT(object_id) DO UPDATE SET room='village'", (obj['id'],))
+            version = db.execute('SELECT version FROM objects WHERE id=?', (obj['id'],)).fetchone()[0]
+
+        def place(room, version, action=None, x=0.0):
+            body = {'request_id': str(uuid.uuid4()), 'version': version, 'room': room, 'x': x, 'z': 0.0, 'rotation': 0}
+            if action: body['action'] = action
+            return client.post(f"/v1/objects/{obj['id']}/placement", headers=headers, json=body)
+
+        refused = place('home', version)
+        assert refused.status_code == 409 and '회수' in refused.json()['detail']
+        retrieved = place('home', version, 'retrieve')
+        assert retrieved.status_code == 200, retrieved.json()
+        placed = place('home', retrieved.json()['version'])
+        assert placed.status_code == 200 and placed.json()['room'] == 'home'
+        moved = place('home', placed.json()['version'], x=2.5)  # moving inside the same room is fine
+        assert moved.status_code == 200, moved.json()
+        assert place('workshop', moved.json()['version']).status_code == 200  # rooms are rebuilt on entry
+
+
+def test_job_status_shows_what_the_designer_sends_to_tripo(tmp_path):
+    app = create_app(Settings(data_dir=tmp_path, daily_generation_limit=100), worker_enabled=False)
+    with TestClient(app) as client:
+        token = client.post('/v1/auth/register', json={'username': 'designer_one', 'password': 'Test-password-123', 'invitation': ''}).json()['token']
+        headers = {'Authorization': 'Bearer ' + token}
+        job = client.post('/v1/studio/jobs', headers=headers, json={'request_id': str(uuid.uuid4()), 'prompt': 'mushroom chair', 'motion': 'static'}).json()['id']
+        assert 'design' not in client.get(f'/v1/studio/jobs/{job}', headers=headers).json()
+        with app.state.db.transaction() as db:
+            db.execute('UPDATE studio_jobs SET plan=? WHERE id=?', ('{"title": "Mushroom chair", "parts": [{"id": "whole", "prompt": "a small red mushroom-shaped stool"}]}', job))
+        design = client.get(f'/v1/studio/jobs/{job}', headers=headers).json()['design']
+        assert design == {'title': 'Mushroom chair', 'parts': [{'id': 'whole', 'prompt': 'a small red mushroom-shaped stool'}]}

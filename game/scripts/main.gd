@@ -2789,6 +2789,11 @@ func render_craft(job: Dictionary) -> void:
 		var quote: Dictionary = job.get("provenance",{})
 		var price_value := int(quote.get("quoted_game_cost",job.get("cost",20)))
 		text(craft_box,tr("확정하면 바로 만들기 시작해요. 제작비 별씨 %d") % price_value,16)
+		var design: Dictionary = job.get("design",{})
+		if not design.get("parts",[]).is_empty():
+			RpgUi.caption(craft_box,tr("AI가 이렇게 정리했어요 (Tripo에 보내는 문장)"),13,RpgUi.GOLD)
+			for part in design.parts:
+				RpgUi.caption(craft_box,"• %s: %s" % [part.id,part.prompt],13).autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation",8)
 		craft_box.add_child(row)

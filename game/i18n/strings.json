@@ -336,6 +336,10 @@
    "en": "Chapter 3 · The Returning Light",
    "zh": "第3章 · 归来的光"
   },
+  "AI가 이렇게 정리했어요 (Tripo에 보내는 문장)": {
+   "en": "How the AI wrote it up (the text sent to Tripo)",
+   "zh": "AI 整理后的设计（发送给 Tripo 的文字）"
+  },
   "API 사용·비용 없음\n지금 놓은 물건은 종료하면 초기화됩니다.\n생존 도전·생성·거래는 다음 제작 단계입니다.": {
    "en": "No API use or cost\nItems placed now reset when you quit.\nSurvival, generation, and trading come in the next build.",
    "zh": "不使用 API·无费用\n现在放置的物品在退出后会重置。\n生存挑战·生成·交易将在下一制作阶段推出。"

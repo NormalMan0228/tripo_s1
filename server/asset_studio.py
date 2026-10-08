@@ -119,6 +119,8 @@ def fail(code,status=409):raise HTTPException(status,code)
 
 # Player-facing wording of user_total_generation_limit for the room studio (see queue()).
 TRIAL_USED_UP='체험판 제작 %d회를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!'
+# Room placement refusal; released room clients print the detail after their own prefix.
+PLACED_ELSEWHERE='다른 곳에 놓여 있는 가구예요. 그곳에서 먼저 회수한 뒤 놓아 주세요.'
 
 def billing(parts):
     reported=[];missing=False
@@ -266,9 +268,14 @@ class Studio:
         def status(job_id:str,request:Request):
             with db.transaction() as conn:
                 user=auth(conn,request)
-                row=conn.execute('SELECT id,state,cost,object_id,error,provenance,parts FROM studio_jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
+                row=conn.execute('SELECT id,state,cost,object_id,error,provenance,parts,plan FROM studio_jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
                 if not row:fail('job_not_found',404)
                 value=dict(row);value['provenance']=json.loads(value['provenance'] or '{}')
+                # What the designer made of the request: the title and the sentence each part sends to Tripo.
+                plan=json.loads(value.pop('plan') or '{}')
+                if plan.get('parts'):
+                    value['design']={'title':str(plan.get('title',''))[:120],
+                        'parts':[{'id':str(p.get('id',''))[:40],'prompt':str(p.get('prompt',''))[:600]} for p in plan['parts'][:8]]}
                 parts=json.loads(value['parts'])
                 if value['provenance'].get('geometry')=='tripo':
                     value['provenance'].update(billing(parts))
@@ -414,6 +421,12 @@ class Studio:
                 if body.action=='retrieve':
                     conn.execute("UPDATE objects SET state='inventory',x=NULL,z=NULL,version=version+1 WHERE id=?",(object_id,))
                 else:
+                    # An object standing in the village is retrieved there first (the village placement
+                    # already requires that): the village scene is kept while visiting a room, so moving
+                    # it straight into a room left it showing in both. Rooms are rebuilt on entry, so
+                    # moving between rooms stays a single step.
+                    here=conn.execute('SELECT room FROM furniture_locations WHERE object_id=?',(object_id,)).fetchone()
+                    if obj['state']=='placed' and (here['room'] if here else 'village')=='village' and body.room!='village':fail(PLACED_ELSEWHERE)
                     if body.room=='village':
                         if not village_inside(body.x,body.z):fail('outside_room')
                     elif abs(body.x)>4 or abs(body.z)>4:fail('outside_room')
