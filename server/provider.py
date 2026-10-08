@@ -188,6 +188,23 @@ def key_fingerprint(key):
     """A short one-way label for a key, safe to store with tasks and show in logs."""
     return hashlib.sha256(key.encode()).hexdigest()[:12] if key else ''
 
+def jpeg_preview(blob):
+    """PNG/JPEG/WEBP bytes -> JPEG of at most 1024 px; anything else is refused."""
+    import io
+    from PIL import Image
+    try:
+        image = Image.open(io.BytesIO(blob))
+        if image.format not in ('PNG','JPEG','WEBP') or image.width*image.height > 4096*4096: raise ProviderError('invalid_image')
+        image.load()
+    except ProviderError: raise
+    except Exception: raise ProviderError('invalid_image') from None
+    image = image.convert('RGB')
+    image.thumbnail((1024,1024))
+    out = io.BytesIO()
+    image.save(out, 'JPEG', quality=88)
+    return out.getvalue()
+
+
 class TripoProvider:
     BASE = 'https://openapi.tripo3d.ai/v3'
     def __init__(self, settings, transport=None, key=None):
@@ -274,6 +291,29 @@ class TripoProvider:
 
     async def task(self, task_id):
         return await self.request('GET','/tasks/'+task_id)
+
+    async def fetch_image(self, url):
+        """A picture made by a Tripo image task, from Tripo's asset hosts only, re-encoded as a JPEG of
+        at most 1024 px (strips metadata, bounds the size the game downloads)."""
+        import io
+        from PIL import Image
+        parsed = urlparse(url)
+        host = parsed.hostname or ''
+        if parsed.scheme != 'https' or parsed.port not in (None,443) or parsed.username or parsed.password:
+            raise ProviderError('unsafe_asset_url')
+        if host != 'tripo3d.ai' and not host.endswith('.tripo3d.ai') and not host.endswith('.tripo3d.com'):
+            raise ProviderError('unapproved_asset_host')
+        chunks, size = [], 0
+        try:
+            async with httpx.AsyncClient(transport=self.transport,timeout=60,follow_redirects=False) as client:
+                async with client.stream('GET',url) as response:
+                    if response.status_code != 200: raise ProviderError('asset_download_failed')
+                    async for chunk in response.aiter_bytes():
+                        size += len(chunk)
+                        if size > 16*1024*1024: raise ProviderError('asset_too_large')
+                        chunks.append(chunk)
+        except httpx.HTTPError: raise ProviderError('asset_download_failed') from None
+        return jpeg_preview(b''.join(chunks))
 
     async def download(self, url, allow_textures=False):
         parsed = urlparse(url)
