@@ -110,7 +110,14 @@ def game_zip(tag: str) -> Path:
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         archive.write(exe, "Villagen/Villagen.exe")
         archive.write(pck, "Villagen/Villagen.pck")
-        archive.writestr("Villagen/README_KO.txt", README_KO.replace("\n", "\r\n").encode("utf-8-sig"))
+        readme = README_KO
+        if school:
+            # School builds play on the school server with its own rules (docs/SCHOOL_SERVER_KO.txt).
+            for trial, rule in (('"온라인 월드"', '"학교 월드"'), ("(체험판: 계정당 제작 3회)", "(학교 서버: 계정당 하루 10회)"),
+                                ("- 체험판에서는 직접 색칠하는 정적인 가구 한 덩어리를 만듭니다.",
+                                 "- 학교 서버에서는 Tripo가 색까지 입혀 만들고, 참고 사진과 움직이는 2~3부품 가구도 됩니다(1회 최대 30크레딧).")):
+                readme = readme.replace(trial, rule)
+        archive.writestr("Villagen/README_KO.txt", readme.replace("\n", "\r\n").encode("utf-8-sig"))
         archive.writestr("Villagen/README_EN.txt", README_EN.replace("\n", "\r\n"))
         for licence in sorted((ROOT / "docs" / "licenses").glob("*")):
             archive.write(licence, f"Villagen/licenses/{licence.name}")
