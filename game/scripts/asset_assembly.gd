@@ -53,6 +53,7 @@ func build(value: Dictionary, blobs: Dictionary) -> bool:
 		var meshes: Array[MeshInstance3D]=[]
 		Loader._collect_meshes(meshroot,meshes)
 		if meshes.is_empty(): meshroot.free(); return false
+		Loader.shrink_textures(meshroot)
 		var bounds := AABB()
 		var first := true
 		for m in meshes:

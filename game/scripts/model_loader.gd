@@ -20,6 +20,7 @@ static func load_bytes(bytes: PackedByteArray) -> Node3D:
 	if meshes.is_empty():
 		imported.free()
 		return null
+	shrink_textures(imported)
 	var bounds := AABB()
 	var first := true
 	for instance in meshes:
@@ -53,6 +54,67 @@ static func _local_transform(node: Node3D, imported: Node3D) -> Transform3D:
 			break
 		result = current.transform * result
 	return result
+
+## Tripo-coloured crafts arrive with three 2048 px maps (colour, normal, ORM): kept as they are that
+## is roughly 67 MB of video memory per object and a decode hitch. Downloaded models are scaled to fit
+## `limit` px and, where the renderer supports it, block-compressed (S3TC on PC, ETC2 elsewhere), about
+## an eighth of the memory. Normal maps are only scaled (their compressed form needs a different shader
+## path). Authored game assets are imported by the editor and never pass through here.
+const TEXTURE_LIMIT := 1024
+static var compressor_warm := false
+
+## The first block compression in a session spends about a second setting up (later ones take ~5 ms).
+## Main and the room scene call this while their loading veil is up, so the first crafted model does not
+## stall. It must run on the main thread: compressing on a worker thread crashed the engine (4.7.2).
+static func warm_up_compression() -> void:
+	if compressor_warm: return
+	compressor_warm = true
+	var image := Image.create(64, 64, false, Image.FORMAT_RGB8)
+	if RenderingServer.has_os_feature("s3tc"): image.compress(Image.COMPRESS_S3TC)
+	elif RenderingServer.has_os_feature("etc2"): image.compress(Image.COMPRESS_ETC2)
+
+static func shrink_textures(root: Node, limit := TEXTURE_LIMIT) -> Dictionary:
+	var stats := {"textures": 0, "resized": 0, "compressed": 0, "bytes_before": 0, "bytes_after": 0}
+	var replaced := {}
+	var meshes: Array[MeshInstance3D] = []
+	_collect_meshes(root, meshes)
+	for instance in meshes:
+		if instance.mesh == null: continue
+		for surface in instance.mesh.get_surface_count():
+			for material in [instance.mesh.surface_get_material(surface), instance.get_surface_override_material(surface)]:
+				if not material is BaseMaterial3D: continue
+				for param in BaseMaterial3D.TEXTURE_MAX:
+					var texture: Texture2D = material.get_texture(param)
+					if texture == null: continue
+					if not replaced.has(texture):
+						replaced[texture] = _shrink_texture(texture, limit, param == BaseMaterial3D.TEXTURE_NORMAL, stats)
+					if replaced[texture] != null: material.set_texture(param, replaced[texture])
+	return stats
+
+static func _shrink_texture(texture: Texture2D, limit: int, normal: bool, stats: Dictionary) -> Texture2D:
+	var image := texture.get_image()
+	if image == null or image.is_empty(): return null
+	stats.textures += 1
+	stats.bytes_before += image.get_data().size()
+	if image.is_compressed() and image.decompress() != OK: return null
+	var longest := maxi(image.get_width(), image.get_height())
+	var scale := minf(1.0, float(limit) / longest)
+	# Block compression wants both sides divisible by 4.
+	var width := maxi(4, int(round(image.get_width() * scale / 4.0)) * 4)
+	var height := maxi(4, int(round(image.get_height() * scale / 4.0)) * 4)
+	if width != image.get_width() or height != image.get_height():
+		# Bilinear: an exact halving looks the same as Lanczos at a tenth of the time (15 vs 116 ms).
+		image.resize(width, height, Image.INTERPOLATE_BILINEAR)
+		stats.resized += 1
+	image.generate_mipmaps()
+	if not normal:
+		var format := -1
+		if RenderingServer.has_os_feature("s3tc"): format = Image.COMPRESS_S3TC
+		elif RenderingServer.has_os_feature("etc2"): format = Image.COMPRESS_ETC2
+		# Runtime compression can be missing from a build; the scaled image is used then.
+		if format >= 0 and image.compress(format, Image.COMPRESS_SOURCE_GENERIC) == OK: stats.compressed += 1
+	stats.bytes_after += image.get_data().size()
+	return ImageTexture.create_from_image(image)
 
 static func _collect_meshes(node: Node, result: Array[MeshInstance3D]) -> void:
 	if node is MeshInstance3D and node.mesh != null:

@@ -177,6 +177,7 @@ var pick_time := -100.0
 
 func _ready() -> void:
 	I18n.setup()
+	Loader.warm_up_compression()
 	var veil := Transition.of(get_tree())
 	veil.cover()
 	veil.fade_in(0.55)

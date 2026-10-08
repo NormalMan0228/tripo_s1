@@ -27,7 +27,7 @@ const PauseMenu = preload("res://scripts/pause_menu.gd")
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
 ## School builds (export feature "villagen_school") play on the school server (Seoul VM) instead of
 ## the judging server. Empty until that server has an address; tools/package_release.py --school checks.
-const SCHOOL_SERVER := ""
+const SCHOOL_SERVER := "https://54-117-10-64.sslip.io"
 
 static func worlds() -> Array:
 	if OS.has_feature("villagen_school") and not SCHOOL_SERVER.is_empty():
@@ -182,6 +182,7 @@ func _ready() -> void:
 	life.app=self
 	add_child(life)
 	ControllerProfile.ensure_input()
+	Loader.warm_up_compression()
 	var e := WorldEnvironment.new()
 	environment = Environment.new()
 	environment.background_mode = Environment.BG_COLOR
