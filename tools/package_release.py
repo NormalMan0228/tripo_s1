@@ -113,7 +113,7 @@ def game_zip(tag: str) -> Path:
         readme = README_KO
         if school:
             # School builds play on the school server with its own rules (docs/SCHOOL_SERVER_KO.txt).
-            for trial, rule in (('"온라인 월드"', '"학교 월드"'), ("(체험판: 계정당 제작 3회)", "(학교 서버: 계정당 하루 10회)"),
+            for trial, rule in (('"온라인 월드"', '"학교 월드"'), ("(체험판: 계정당 제작 3회)", "(학교 서버: 계정당 하루 3회)"),
                                 ("- 체험판에서는 직접 색칠하는 정적인 가구 한 덩어리를 만듭니다.",
                                  "- 학교 서버에서는 Tripo가 색까지 입혀 만들고, 참고 사진과 움직이는 2~3부품 가구도 됩니다(1회 최대 35크레딧).")):
                 readme = readme.replace(trial, rule)
