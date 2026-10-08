@@ -16,7 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from .config import Settings, ROOT
 from .database import Database
-from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction
+from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction, PrefsUpdate
 from .provider import TripoProvider, ProviderError, validate_glb
 from . import simulation, catalog, homestead, campaign
 from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
@@ -249,6 +249,23 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def life_state(conn,user_id):
         row=conn.execute('SELECT state FROM homesteads WHERE user_id=?',(user_id,)).fetchone()
         return json.loads(row['state']) if row else homestead.initial()
+
+    # Settings follow the account, so a fresh install on any PC picks them up (cloud_prefs.gd).
+    @app.get('/v1/prefs')
+    def get_prefs(request:Request):
+        with db.read() as conn:
+            user=auth(conn,request)
+            row=conn.execute('SELECT data,updated FROM user_prefs WHERE user_id=?',(user['id'],)).fetchone()
+            return {'prefs':json.loads(row['data']) if row else {},'updated':row['updated'] if row else None}
+
+    @app.post('/v1/prefs')
+    def put_prefs(body:PrefsUpdate,request:Request):
+        def save(conn,user):
+            data=json.dumps(body.prefs,ensure_ascii=False,separators=(',',':'))
+            if len(data)>32768:fail('prefs_too_large',413)
+            conn.execute('INSERT INTO user_prefs VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET data=excluded.data,updated=excluded.updated',(user['id'],data,clock()))
+            return {'ok':True}
+        return mutate(request,body,'prefs',save)
 
     @app.get('/v1/homestead')
     def get_life(request:Request):

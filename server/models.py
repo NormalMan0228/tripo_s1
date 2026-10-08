@@ -14,6 +14,22 @@ class Mutation(Strict):
     request_id: UUID
 
 
+class PrefsUpdate(Mutation):
+    # Account-wide game settings (sound, keys, gameplay, HUD...), sections of simple values.
+    prefs: dict[str, dict[str, bool | int | float | str | list[int | str]]]
+
+    @field_validator('prefs')
+    @classmethod
+    def small(cls, value):
+        if len(value) > 16 or any(len(k) > 40 or len(section) > 120 for k, section in value.items()):
+            raise ValueError('prefs_too_large')
+        for section in value.values():
+            for key, item in section.items():
+                if len(key) > 60 or (isinstance(item, str) and len(item) > 200) or (isinstance(item, list) and len(item) > 8):
+                    raise ValueError('prefs_too_large')
+        return value
+
+
 def strong_password(value: str) -> bool:
     """New passwords need an uppercase letter and a special character (length is
     checked by Credentials)."""

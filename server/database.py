@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS profiles (
  version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1));
 CREATE TABLE IF NOT EXISTS homesteads (
  user_id TEXT PRIMARY KEY REFERENCES users(id), state TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS user_prefs (
+ user_id TEXT PRIMARY KEY REFERENCES users(id), data TEXT NOT NULL, updated REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS campaign_progress (
  user_id TEXT NOT NULL REFERENCES users(id), chapter_id TEXT NOT NULL,
  completed_run TEXT NOT NULL REFERENCES runs(id), completed REAL NOT NULL,

@@ -13,6 +13,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 [autoload]
 
 ImeCaret="*res://scripts/ime_caret.gd"
+CloudPrefs="*res://scripts/cloud_prefs.gd"
 
 [display]
 window/size/viewport_width=1280

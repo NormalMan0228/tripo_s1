@@ -10,6 +10,7 @@ extends Node3D
 const Paths = preload("res://scripts/shadow_paths.gd")
 const Figure = preload("res://scripts/shadow_figure.gd")
 const Daylight = preload("res://scripts/daylight.gd")
+const I18n = preload("res://scripts/i18n.gd")
 const Roads = preload("res://scripts/roads.gd")
 const Town = preload("res://scripts/town.gd")
 const Minimap = preload("res://scripts/minimap.gd")
@@ -993,20 +994,26 @@ func update_errands(delta: float) -> void:
 func today() -> String:
 	return Time.get_date_string_from_system()
 
+## Progress lives in the settings file's [shadow_folk] section, which follows the account (cloud_prefs.gd).
 func mark_done(id: String) -> void:
 	done_today[id] = today()
 	if not persist: return
 	var file := ConfigFile.new()
-	for key in done_today: file.set_value("done", key, done_today[key])
-	file.save(SAVE_PATH)
+	file.load(I18n.settings_path())
+	for key in done_today: file.set_value("shadow_folk", key, done_today[key])
+	file.save(I18n.settings_path())
 
 func load_progress() -> void:
 	done_today.clear()
 	if not persist: return
 	var file := ConfigFile.new()
-	if file.load(SAVE_PATH) != OK: return
-	for key in (file.get_section_keys("done") if file.has_section("done") else PackedStringArray()):
-		done_today[key] = str(file.get_value("done", key, ""))
+	if file.load(I18n.settings_path()) == OK and file.has_section("shadow_folk"):
+		for key in file.get_section_keys("shadow_folk"): done_today[key] = str(file.get_value("shadow_folk", key, ""))
+	# Older builds kept it in its own file on this PC.
+	var legacy := ConfigFile.new()
+	if legacy.load(SAVE_PATH) == OK and legacy.has_section("done"):
+		for key in legacy.get_section_keys("done"):
+			if not done_today.has(key): done_today[key] = str(legacy.get_value("done", key, ""))
 
 ## Soft footsteps for the one shadow closest to the walker.
 func footstep(walker: Node, speed: float) -> void:

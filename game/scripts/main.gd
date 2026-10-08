@@ -617,6 +617,9 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	social.enabled = social.feature_enabled() and int(health.data.get("multiplayer_protocol", 0)) == 1
 	api.token = result.data.token
 	api.mode = result.data.mode
+	# Settings follow the account: read them now (a fresh install picks up the player's own).
+	var cloud := get_node_or_null("/root/CloudPrefs")
+	if cloud: cloud.start(api.base_url, api.token)
 	preload("res://scripts/build_mode.gd").admin = str(result.data.get("role","player"))=="admin"
 	# Only the real game remembers the login; test harnesses add Main to the root directly.
 	if get_tree().current_scene==self:
