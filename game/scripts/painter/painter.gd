@@ -83,6 +83,7 @@ var dialog_layer: Control
 var workspace: Control
 var refreshing_layers := false
 var pending_task := -1
+var backdrop: ColorRect
 
 func setup(api_node: Node, object: Dictionary, model_node: Node3D, extra := {}) -> void:
 	api = api_node
@@ -100,7 +101,7 @@ func _ready() -> void:
 	var look := RpgUi.theme().duplicate() as Theme
 	look.merge_with(RpgUi.night_theme())
 	theme = look
-	var backdrop := ColorRect.new()
+	backdrop = ColorRect.new()
 	backdrop.color = Color("15191b")
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
@@ -181,7 +182,11 @@ func _build_workspace() -> void:
 	move_child(workspace, 1)
 	# Top bar: title, tool options (two rows), reset / cancel / save.
 	var bar := PanelContainer.new()
-	bar.add_theme_stylebox_override("panel", RpgUi.panel_style("pill", 8))
+	var bar_style := RpgUi.panel_style("pill", 8)
+	# Clear of the pill's rounded, studded ends.
+	bar_style.content_margin_left = 28
+	bar_style.content_margin_right = 24
+	bar.add_theme_stylebox_override("panel", bar_style)
 	workspace.add_child(bar)
 	var bar_row := HBoxContainer.new()
 	bar_row.add_theme_constant_override("separation", 14)
@@ -468,14 +473,24 @@ func _card(parent: Node, title: String) -> VBoxContainer:
 	RpgUi.label(column, title, 15, RpgUi.GOLD)
 	return column
 
-func _build_side() -> Control:
+## Two docked columns like Photoshop's panels: colour and history | layers. Each scrolls on
+## its own if the window is very short.
+func _column(parent: Node) -> VBoxContainer:
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size.x = 292
+	scroll.custom_minimum_size.x = 268
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	var side := VBoxContainer.new()
-	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	side.add_theme_constant_override("separation", 6)
-	scroll.add_child(side)
+	parent.add_child(scroll)
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 6)
+	scroll.add_child(column)
+	return column
+
+func _build_side() -> Control:
+	var docks := HBoxContainer.new()
+	docks.add_theme_constant_override("separation", 6)
+	var side := _column(docks)
+	var layers_side := _column(docks)
 	var color_card := _card(side, tr("색"))
 	picker = ColorPanel.new()
 	picker.swatches = PackedStringArray(_setting("swatches", "").split(",", false))
@@ -486,7 +501,7 @@ func _build_side() -> Control:
 		primary = value
 		_paint_chip(primary_chip, primary)
 		_redraw_tool_icons())
-	var layers_card := _card(side, tr("레이어"))
+	var layers_card := _card(layers_side, tr("레이어"))
 	layer_list = VBoxContainer.new()
 	layer_list.add_theme_constant_override("separation", 3)
 	layers_card.add_child(layer_list)
@@ -543,7 +558,7 @@ func _build_side() -> Control:
 	undo_button = _button(history_actions, tr("되돌리기"), undo, "", "Ctrl+Z")
 	redo_button = _button(history_actions, tr("다시 하기"), redo, "", "Ctrl+Shift+Z")
 	history_list = ItemList.new()
-	history_list.custom_minimum_size.y = 118
+	history_list.custom_minimum_size.y = 150
 	history_list.focus_mode = Control.FOCUS_NONE
 	history_list.add_theme_font_size_override("font_size", 12)
 	history_list.item_clicked.connect(func(index: int, _at: Vector2, button: int):
@@ -551,7 +566,7 @@ func _build_side() -> Control:
 			core.jump(index)
 			_after_change(true))
 	history_card.add_child(history_list)
-	return scroll
+	return docks
 
 func _redraw_tool_icons() -> void:
 	for b in tool_buttons.values():
@@ -890,7 +905,9 @@ func _refresh_layers() -> void:
 			_after_change(false))
 		row.add_child(eye)
 		var name_button := Button.new()
-		name_button.text = "%s%s" % [layer.name, "" if layer.opacity >= 0.999 else "  %d%%" % int(round(layer.opacity * 100))]
+		var mode_text: String = "" if layer.mode == 0 else "  ·  " + tr(MODE_NAMES[layer.mode])
+		name_button.text = "%s%s%s" % [layer.name, mode_text, "" if layer.opacity >= 0.999 else "  %d%%" % int(round(layer.opacity * 100))]
+		name_button.tooltip_text = name_button.text
 		name_button.toggle_mode = true
 		name_button.button_pressed = index == core.current
 		name_button.theme_type_variation = "ChoiceButton"
@@ -909,11 +926,6 @@ func _refresh_layers() -> void:
 				core.current = at
 				_start_rename())
 		row.add_child(name_button)
-		var mode_tag := Label.new()
-		mode_tag.text = tr(MODE_NAMES[layer.mode]) if layer.mode != 0 else ""
-		mode_tag.add_theme_font_size_override("font_size", 11)
-		mode_tag.modulate = Color(1, 1, 1, 0.65)
-		row.add_child(mode_tag)
 	var current = core.layers[core.current]
 	layer_opacity.value = round(current.opacity * 100.0)
 	layer_opacity_label.text = tr("레이어 불투명도  %d%%") % int(layer_opacity.value)
@@ -1134,6 +1146,11 @@ func _close(saved: bool) -> void:
 # ------------------------------------------------------------------ whole-object colour (no UVs)
 
 func _build_fallback(reason: String) -> void:
+	# Only a colour window: the world stays visible (and rendered) behind it.
+	for viewport in paused_views:
+		if is_instance_valid(viewport): viewport.disable_3d = false
+	paused_views.clear()
+	backdrop.color = Color(0.02, 0.03, 0.04, 0.62)
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)

@@ -6,7 +6,7 @@ signal color_changed(color: Color)
 signal swatches_changed
 
 const RpgUi = preload("res://scripts/rpg_ui.gd")
-const SQUARE := Vector2(196, 150)
+const SQUARE := Vector2(206, 150)
 const MAX_SWATCHES := 24
 const MAX_RECENT := 10
 

@@ -90,7 +90,9 @@ func run() -> void:
 	root.add_child(stage)
 	var subject := model()
 	stage.add_child(subject)
-	expect(PaintApply.has_uvs(subject) and not PaintApply.has_uvs(model(false)), "UV detection on the loaded model")
+	var bare := model(false)
+	expect(PaintApply.has_uvs(subject) and not PaintApply.has_uvs(bare), "UV detection on the loaded model")
+	bare.free()
 	var saved := {}
 	var painter := Painter.new()
 	painter.setup(api, {"id": "object-1", "name": "작은 상자", "paint_version": null}, subject,
