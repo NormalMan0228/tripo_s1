@@ -16,7 +16,7 @@ func run() -> void:
 	Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":"home"})
 	app=load("res://scenes/studio.tscn").instantiate();root.add_child(app)
 	await create_timer(2).timeout
-	app.designer.select(1);app.geometry.select(0);app.motion.select(0)
+	app.designer.select(1);app.geometry.select(0);app.motion.select(1)
 	app.prompt.text="Make a cozy two-part music box: body and hinged lid. Clicking smoothly opens the lid to -95 degrees around X and clicks again to close. Include a named numeric API set_open(x) that clamps x to 0..1, stores the desired open amount and returns it. Lid rear pivot is z=-0.5. Keep a rounded honey-wood and sage appearance."
 	await app.generate()
 	check(not app.job_id.is_empty(),"game queued actual local LLM design")

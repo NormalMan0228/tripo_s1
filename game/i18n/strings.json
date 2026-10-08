@@ -336,6 +336,10 @@
    "en": "Chapter 3 · The Returning Light",
    "zh": "第3章 · 归来的光"
   },
+  "AI가 그린 그림이에요. 이 그림으로 3D를 만들까요?": {
+   "en": "The AI drew this picture. Build the 3D object from it?",
+   "zh": "这是 AI 画的图。要用这张图制作 3D 吗？"
+  },
   "AI가 이렇게 정리했어요 (Tripo에 보내는 문장)": {
    "en": "How the AI wrote it up (the text sent to Tripo)",
    "zh": "AI 整理后的设计（发送给 Tripo 的文字）"
@@ -515,6 +519,10 @@
   "Tripo 크레딧이 부족합니다. 별씨는 환불됩니다.": {
    "en": "Not enough Tripo credits. Your Starseeds will be refunded.",
    "zh": "Tripo 额度不足。星种将退还。"
+  },
+  "Tripo가 색까지 입히기": {
+   "en": "Tripo paints it too",
+   "zh": "由 Tripo 一并上色"
   },
   "W · 서쪽 숲": {
    "en": "W · West Woods",
@@ -1168,6 +1176,14 @@
    "en": "But I haven't seen my hoe for a while… where did I drop it?",
    "zh": "不过刚才起就找不到锄头了……掉哪儿了呢？"
   },
+  "그림 없이 글로 만들기 · 별씨 %d": {
+   "en": "Build from the text only · %d starseeds",
+   "zh": "不用图片，按文字制作 · 星种 %d"
+  },
+  "그림은 최대 %d장까지, 1회 한도 안에서 그릴 수 있어요.": {
+   "en": "Up to %d pictures, within the per-craft limit.",
+   "zh": "最多可画 %d 张，且不超过单次上限。"
+  },
   "그림을 먼저 정리해서 만들기": {
    "en": "Clean up the picture before creating",
    "zh": "先整理图片再制作"
@@ -1795,6 +1811,10 @@
   "다섯 섬이 잠들 무렵, 나는 비로소 눈을 뜬다.": {
    "en": "As the five islands fall asleep, at last I open my eyes.",
    "zh": "当五座岛入睡时，我才终于睁开眼睛。"
+  },
+  "다시 그리기 (+5크레딧)": {
+   "en": "Draw again (+5 credits)",
+   "zh": "重新画 (+5 积分)"
   },
   "다시 누르면 길 안내를 꺼요": {
    "en": "Click again to stop guiding",
@@ -3284,6 +3304,10 @@
    "en": "Starseeds %d",
    "zh": "星种 %d"
   },
+  "별씨 %d · Tripo 약 %d크레딧": {
+   "en": "%d starseeds · about %d Tripo credits",
+   "zh": "星种 %d · Tripo 约 %d 积分"
+  },
   "별씨 +1000": {
    "en": "Starseeds +1000",
    "zh": "星种 +1000"
@@ -3664,6 +3688,14 @@
    "en": "Sound",
    "zh": "声音"
   },
+  "사진·그림 추가": {
+   "en": "Add photo or drawing",
+   "zh": "添加照片或图画"
+  },
+  "사진이 없으면 AI가 먼저 그림을 그려 보여 드려요. 마음에 들면 그 그림으로 3D를 만들어요. (그림 1장 5크레딧)": {
+   "en": "Without a photo, the AI first draws a picture for you. If you like it, the 3D object is built from it. (5 credits per picture)",
+   "zh": "没有照片时，AI 会先画一张图给你看。满意的话就用这张图制作 3D。（每张图 5 积分）"
+  },
   "산책": {
    "en": "Stroll",
    "zh": "漫步"
@@ -3771,6 +3803,10 @@
   "새들이 포르르 날아올랐어요! 모이를 채워 두었으니 곧 돌아올 거예요.": {
    "en": "The birds fluttered away! You topped up the feeder, so they'll be back soon.",
    "zh": "鸟儿们扑棱棱飞走了！已经添好鸟食，它们很快会回来。"
+  },
+  "새로 만들기": {
+   "en": "Make another",
+   "zh": "再做一个"
   },
   "새로고침": {
    "en": "Refresh",
@@ -5116,6 +5152,10 @@
    "en": "No more accounts can be created from here today. Please log in with the one you made.",
    "zh": "今天无法再从这里创建账号。请用已创建的账号登录。"
   },
+  "이 그림으로 만들기 · 별씨 %d": {
+   "en": "Build from this picture · %d starseeds",
+   "zh": "用这张图制作 · 星种 %d"
+  },
   "이 근처 길가 어딘가에 떨어뜨린 것 같아요.": {
    "en": "I think I dropped it somewhere along a road near here.",
    "zh": "好像掉在这附近的路边了。"
@@ -5143,6 +5183,10 @@
   "이 밤에 웬일이에요?": {
    "en": "What brings you here so late?",
    "zh": "这么晚了怎么来了？"
+  },
+  "이 방에 놓기": {
+   "en": "Place in this room",
+   "zh": "放在这个房间"
   },
   "이 서버는 초대 코드가 있어야 가입할 수 있어요. 초대 코드를 넣거나 '이 PC 서버'를 고르세요.": {
    "en": "This server needs an invite code to sign up. Enter the code or choose \"This PC's Server\".",
@@ -5311,6 +5355,10 @@
   "이번 학기 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요.": {
    "en": "This term's crafting budget is used up. Please ask the operator.",
    "zh": "本学期的制作预算已用完，请联系管理员。"
+  },
+  "이번에는 그림 단계 없이 글로 만들어요. (1회 한도)": {
+   "en": "This one is built from the text, without a picture step. (per-craft limit)",
+   "zh": "这次不经过图片步骤，直接按文字制作。（单次上限）"
   },
   "이불에서 햇볕 냄새가 나요.": {
    "en": "The quilt smells of sunshine.",

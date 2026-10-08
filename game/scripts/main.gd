@@ -10,6 +10,7 @@ const Landscape = preload("res://scripts/world_detail.gd")
 const TownLayout = preload("res://scripts/town.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
+const CraftPanel = preload("res://scripts/craft_panel.gd")
 const Transition = preload("res://scripts/transition.gd")
 const Minimap = preload("res://scripts/minimap.gd")
 const NpcBody = preload("res://scripts/npc.gd")
@@ -108,7 +109,6 @@ var daylight: Node
 var step_distance := 0.0
 var last_step_at := Vector3.ZERO
 var ambience_elapsed := 10.0
-var craft_status: Label
 var day_track: Label
 var toast_panel: PanelContainer
 var toast_time := 0.0
@@ -2726,18 +2726,11 @@ func open_studio(destination: String="workshop") -> void:
 	if is_instance_valid(town): town.release_map()
 	get_tree().change_scene_to_file("res://scenes/studio.tscn")
 
-## Simple craft request: the cheapest real generation the server offers (one static
-## untextured mesh). The player writes an idea, sees the starseed price, confirms,
-## and the finished object arrives in the bag ready to place anywhere free.
-const CRAFT_REQUEST := {"material":"mesh","motion":"static","designer":"simple","geometry":"tripo",
-	"mesh_model":"v3.1-20260211","model":"gpt-6-luna","effort":"high"}
-var craft_box: VBoxContainer
+## The village craft window (C) is the same craft window every room's [만들기] tab shows
+## (craft_panel.gd). The village keeps polling the craft after the window closes so it can say
+## when the object is ready, so the window hands polling to follow_craft.
+var craft_box: CraftPanel
 var craft_polling := false
-## The server's design step ("fixture" = none): with an LLM the craft is designed first
-## (server -> LLM -> Tripo), otherwise the words go straight to Tripo as one mesh.
-var craft_llm := "fixture"
-## Tripo colours the village craft when the server's per-craft cap allows it (20 credits).
-var craft_textured := false
 var craft_done: Dictionary = {}
 
 func open_craft() -> void:
@@ -2746,113 +2739,41 @@ func open_craft() -> void:
 		message(tr("방문 중에는 내 마을에서만 제작을 맡길 수 있어요."))
 		return
 	var v := modal_card(tr("공방 제작 의뢰"))
-	craft_box = VBoxContainer.new()
-	craft_box.add_theme_constant_override("separation",10)
+	craft_box = CraftPanel.new()
+	craft_box.setup(api,{"say":func(value: String): message(value),"explain":error_message,"place_label":tr("지금 마을에 놓기"),
+		"place":place_crafted,"dark":false,"self_poll":false})
+	craft_box.custom_minimum_size.x = 560
 	v.add_child(craft_box)
-	var studio: Dictionary = await api.request("/v1/studio")
-	if studio.ok:
-		craft_llm = str(studio.data.get("llm","fixture"))
-		var cap := int(studio.data.get("max_tripo_credits",0))
-		craft_textured = cap==0 or cap>=20
-		if craft_job.is_empty():
-			for job in studio.data.get("jobs",[]):
-				if job.state not in ["ready","failed","cancelled"]: craft_job=job.id;break
-	if not craft_job.is_empty(): follow_craft()
-	elif not craft_done.is_empty(): render_craft(craft_done)
-	else: render_craft({})
+	craft_box.job_id = craft_job
+	craft_box.follow_requested.connect(func():
+		craft_job = craft_box.job_id
+		follow_craft())
+	craft_box.job_started.connect(func(_id: String): refresh_inventory())
+	craft_box.job_finished.connect(func(job: Dictionary):
+		if job.get("state","")=="cancelled":
+			craft_job = ""
+			refresh_inventory())
+	craft_box.new_craft.connect(func(): craft_done = {})
+	await craft_box.open()
+	if craft_job.is_empty() and not craft_box.job_id.is_empty(): craft_job = craft_box.job_id
+	if craft_job.is_empty() and not craft_done.is_empty(): render_craft(craft_done)
 
 func render_craft(job: Dictionary) -> void:
 	if not is_instance_valid(craft_box): return
-	for child in craft_box.get_children(): child.queue_free()
-	var state: String = job.get("state","")
-	if state.is_empty() or state in ["failed","cancelled"]:
-		if state=="failed": RpgUi.caption(craft_box,tr("제작에 실패했어요. 맡긴 별씨는 돌려드렸어요."),15,RpgUi.ACCENT)
-		var intro := tr("만들고 싶은 물건을 적어 주세요. 장인이 AI로 설계도를 그린 뒤 3D로 만들어 드려요.") if craft_designs() else tr("만들고 싶은 물건을 짧게 적어 주세요. 가장 간단한 한 덩어리 모양으로 만들어 드려요.")
-		text(craft_box,intro,16).autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-		var idea := LineEdit.new()
-		idea.placeholder_text = tr("예: 작은 버섯 모양 의자")
-		idea.max_length = 120
-		craft_box.add_child(idea)
-		idea.grab_focus.call_deferred()
-		var price_row := HBoxContainer.new()
-		price_row.add_theme_constant_override("separation",6)
-		craft_box.add_child(price_row)
-		price_row.add_child(RpgUi.icon("res://assets/starseed.svg",22))
-		RpgUi.caption(price_row,tr("제작비 별씨 %d · 완성까지 1~3분 정도 걸려요.") % (40 if craft_textured else 20),14)
-		var ask := button(craft_box,tr("의뢰하기"),func(): request_craft(idea.text),"gold")
-		idea.text_submitted.connect(func(_v): request_craft(idea.text))
-		if not me.get("studio_tripo_enabled",false):
-			ask.disabled = true
-			RpgUi.caption(craft_box,tr("공방 장인이 자리를 비워 지금은 제작할 수 없어요."),14,RpgUi.ACCENT)
-		return
-	var titles := {"queued":tr("주문을 접수했어요"),"planning":tr("장인이 설계도를 그리고 있어요…"),"awaiting_confirmation":tr("설계가 끝났어요!"),
-		"building":tr("공방에서 만들고 있어요…"),"submitting":tr("공방에서 만들고 있어요…"),"unknown":tr("제작 결과를 확인하고 있어요…"),"ready":tr("완성했어요!")}
-	text(craft_box,tr(titles.get(state,tr("제작 중이에요…"))),20)
-	if state=="awaiting_confirmation":
-		var quote: Dictionary = job.get("provenance",{})
-		var price_value := int(quote.get("quoted_game_cost",job.get("cost",20)))
-		text(craft_box,tr("확정하면 바로 만들기 시작해요. 제작비 별씨 %d") % price_value,16)
-		var design: Dictionary = job.get("design",{})
-		if not design.get("parts",[]).is_empty():
-			RpgUi.caption(craft_box,tr("AI가 이렇게 정리했어요 (Tripo에 보내는 문장)"),13,RpgUi.GOLD)
-			for part in design.parts:
-				RpgUi.caption(craft_box,"• %s: %s" % [part.id,part.prompt],13).autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation",8)
-		craft_box.add_child(row)
-		button(row,tr("제작 확정"),confirm_craft,"gold")
-		button(row,tr("취소하고 별씨 돌려받기"),cancel_craft)
-	elif state=="ready":
-		text(craft_box,tr("가방에 들어왔어요. 마을이든 집이든 비어 있는 곳에 놓을 수 있어요."),16).autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-		var object_id: String = job.get("object_id","")
-		button(craft_box,tr("지금 마을에 놓기"),func(): place_crafted(object_id),"gold")
-	else:
-		var spinner := ProgressBar.new()
-		spinner.indeterminate = true
-		spinner.custom_minimum_size = Vector2(500,14)
-		craft_box.add_child(spinner)
-		RpgUi.caption(craft_box,tr("창을 닫아도 계속 만들어져요. 완성되면 알려 드릴게요."),14)
+	craft_box.show_job(job)
 
+## Writes the idea into the open craft window and asks for it (tests and tools).
 func request_craft(idea: String) -> void:
-	idea = idea.strip_edges()
-	if idea.length() < 2:
-		message(tr("만들 물건을 두 글자 이상 적어 주세요."))
-		return
-	if busy: return
-	busy = true
-	var body := CRAFT_REQUEST.duplicate()
-	body.prompt = idea
-	if craft_designs(): body.designer = "llm"
-	if craft_textured: body.material = "textured"
-	var response: Dictionary = await api.post("/v1/studio/jobs",api.mutation(body))
-	busy = false
-	if not check(response): return
-	craft_job = response.data.id
-	await refresh_inventory()
-	follow_craft()
-
-## True when the server designs crafts with an LLM before Tripo builds them.
-func craft_designs() -> bool:
-	return craft_llm not in ["fixture",""]
+	if not is_instance_valid(craft_box): return
+	craft_box.prompt.text = idea
+	await craft_box.request()
+	craft_job = craft_box.job_id
 
 func confirm_craft() -> void:
-	if craft_job.is_empty() or busy: return
-	busy = true
-	var response: Dictionary = await api.post("/v1/studio/jobs/"+craft_job+"/confirm",api.mutation())
-	busy = false
-	if check(response):
-		sound.effect("craft")
-		follow_craft()
+	if is_instance_valid(craft_box): await craft_box.confirm(true)
 
 func cancel_craft() -> void:
-	if craft_job.is_empty() or busy: return
-	busy = true
-	var response: Dictionary = await api.post("/v1/studio/jobs/"+craft_job+"/cancel",api.mutation())
-	busy = false
-	if check(response):
-		craft_job = ""
-		await refresh_inventory()
-		render_craft({})
+	if is_instance_valid(craft_box): await craft_box.cancel()
 
 ## Polls the job until it needs the player or finishes, updating the open window.
 func follow_craft() -> void:
@@ -2867,6 +2788,7 @@ func follow_craft() -> void:
 		if job.state=="awaiting_confirmation": break
 		if job.state in ["ready","failed","cancelled"]:
 			craft_job = ""
+			if is_instance_valid(craft_box): craft_box.job_id = ""
 			await refresh_inventory()
 			if job.state=="ready":
 				craft_done = job

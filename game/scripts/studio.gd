@@ -13,6 +13,7 @@ const RpgUi=preload("res://scripts/rpg_ui.gd")
 const Residents=preload("res://scripts/residents.gd")
 const GameSettings=preload("res://scripts/game_settings.gd")
 const PauseMenu=preload("res://scripts/pause_menu.gd")
+const CraftPanel=preload("res://scripts/craft_panel.gd")
 var api: Node
 var viewport: SubViewport
 var view_container: SubViewportContainer
@@ -27,6 +28,9 @@ var status_label: Label
 var wallet: Label
 var detail: Label
 var room_capacity: Label
+## The shared craft window (craft_panel.gd), the same one the village opens with C.
+var craft: CraftPanel
+## The craft window's controls, kept under their old names for tests and tools.
 var prompt: TextEdit
 var surface_mode: OptionButton
 var motion: OptionButton
@@ -34,10 +38,8 @@ var designer: OptionButton
 var geometry: OptionButton
 var models: OptionButton
 var efforts: OptionButton
+var mesh_models: OptionButton
 var part_choice: OptionButton
-var generation_button: Button
-var file_dialog: FileDialog
-var image_label: Label
 var code_view: CodeEdit
 var data: Dictionary={}
 var selected: Dictionary={}
@@ -62,19 +64,15 @@ var pending := false
 var epoch := 0
 var selection_epoch := 0
 var placement_epoch := 0
-var job_id := ""
-var poll_time := 0.0
-var polling := false
+## The craft under way (the craft window keeps it).
+var job_id: String:
+	get: return craft.job_id if craft else ""
 var refreshing := false
 var auth_time := 0.0
-var image_data := ""
 var orbit := 0.0
 var proximity_time := 0.0
 var proximity_pending := false
 var placement_marker: MeshInstance3D
-var quote_panel: VBoxContainer
-var quote_label: Label
-var provider_price: Label
 var preview_stage: Node3D
 var preview_camera: Camera3D
 var generated_functions: OptionButton
@@ -85,10 +83,6 @@ var function_fields_scroll: ScrollContainer
 var function_signature: Label
 var raw_args_toggle: CheckButton
 var function_result: Label
-var mesh_models: OptionButton
-var refine_reference: CheckButton
-## Reference-image buttons, locked on trial servers (one cheap craft only).
-var image_buttons: HBoxContainer
 var binding_part: OptionButton
 var binding_fields: Dictionary={}
 var binding_hint: Label
@@ -96,7 +90,6 @@ var binding_dirty := false
 var history_list: ItemList
 var history_detail: Label
 var history_selected := ""
-var live_defaults_applied := false
 var placement_tools: PanelContainer
 var placement_title: Label
 var placement_feedback: Label
@@ -135,8 +128,7 @@ var travel_enabled := true
 var sfx_player: AudioStreamPlayer
 ## Server per-craft Tripo credit cap (0 = none), from /v1/studio.
 var craft_cap := 0
-## The create button is locked while the server cannot build (live without Tripo).
-var generation_locked := false
+var craft_opened := false
 var place_label: Label
 var current_room := -1
 var cam_distance := 9.0
@@ -414,12 +406,6 @@ func build_ui() -> void:
 	dock_toggle.pressed.connect(func(): set_dock_open(not dock_panel.visible))
 	var box := VBoxContainer.new();dock.add_child(box)
 	wallet=RpgUi.label(box,tr("나의 공방"),18,RpgUi.GOLD)
-	quote_panel=VBoxContainer.new();box.add_child(quote_panel);quote_panel.visible=false
-	quote_label=label(quote_panel,"",14)
-	var quote_actions := row(quote_panel)
-	button(quote_actions,tr("도형으로 동작 미리보기") if BuildMode.developer() else tr("모습 미리보기"),preview_design)
-	button(quote_actions,tr("이 설계로 생성") if BuildMode.developer() else tr("가구 완성하기"),confirm_job)
-	button(quote_actions,tr("취소 · 별씨 환불") if BuildMode.developer() else tr("취소"),cancel_job)
 	var tabs := TabContainer.new();tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL;box.add_child(tabs)
 	var tab_panel := StyleBoxFlat.new();tab_panel.bg_color=Color(0.05,0.07,0.08,.55);tab_panel.set_corner_radius_all(12)
 	tab_panel.content_margin_left=8;tab_panel.content_margin_right=8;tab_panel.content_margin_top=8;tab_panel.content_margin_bottom=8
@@ -438,39 +424,14 @@ func build_ui() -> void:
 	tab_bar.add_theme_color_override("font_hovered_color",Color("ffe08a"))
 	tabs.add_theme_color_override("font_selected_color",Color("ffe08a"))
 	tabs.add_theme_color_override("font_unselected_color",RpgUi.INK)
-	var create_scroll := ScrollContainer.new();create_scroll.name=tr("만들기");tabs.add_child(create_scroll)
+	var create_scroll := ScrollContainer.new();create_scroll.name=tr("만들기");tabs.add_child(create_scroll);create_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
 	var create := VBoxContainer.new();create.size_flags_horizontal=Control.SIZE_EXPAND_FILL;create.add_theme_constant_override("separation",10);create_scroll.add_child(create)
-	label(create,tr("어떤 물건을 만들까요?"),20)
-	prompt=TextEdit.new();prompt.custom_minimum_size.y=112;prompt.wrap_mode=TextEdit.LINE_WRAPPING_BOUNDARY;prompt.text=tr("다가가면 꽃잎이 열리는 꽃 조명");create.add_child(prompt)
-	var presets := row(create)
-	button(presets,tr("꽃 조명"),func(): prompt.text=tr("다가가면 여섯 꽃잎이 열리고 떠나면 닫히는 꽃 조명"))
-	button(presets,tr("상자"),func(): prompt.text=tr("클릭하면 뚜껑이 부드럽게 열리고 다시 클릭하면 닫히는 나무 상자"))
-	button(presets,tr("시계"),func(): prompt.text=tr("시침과 분침이 움직이고 클릭하면 멈추는 탁상 시계"))
-	image_label=label(create,tr("참고 그림을 추가할 수 있어요"),12)
-	image_buttons = row(create)
-	button(image_buttons,tr("이미지 선택"),func(): file_dialog.popup_centered_ratio(0.7))
-	button(image_buttons,tr("제거"),func(): image_data="";image_label.text=tr("참고 이미지 없음");update_refine_option();update_price())
-	refine_reference=CheckButton.new();refine_reference.text=tr("그림을 먼저 정리해서 만들기");refine_reference.tooltip_text=tr("Tripo 이미지 편집: 부품당 예상 5크레딧 추가. 이후 이미지→3D 요금 적용.");create.add_child(refine_reference);refine_reference.toggled.connect(func(_value):update_price())
-	file_dialog=FileDialog.new();file_dialog.access=FileDialog.ACCESS_FILESYSTEM;file_dialog.file_mode=FileDialog.FILE_MODE_OPEN_FILE;file_dialog.filters=PackedStringArray(["*.png,*.jpg,*.jpeg ; Reference image"]);add_child(file_dialog);file_dialog.file_selected.connect(pick_image)
-	label(create,tr("표면과 움직임"),15)
-	surface_mode=option(create,[tr("내가 직접 색칠하기"),tr("완성된 질감 포함하기")])
-	motion=option(create,[tr("움직이는 가구"),tr("정적인 가구")])
-	var dev_title := label(create,tr("개발용 생성 설정"),15)
-	designer=option(create,[tr("샘플 설계 · API 비용 없음"),tr("LLM 설계 · 서버 설정 사용")])
-	geometry=option(create,[tr("검증용 도형 · Tripo 비용 없음"),tr("Tripo 실제 생성 · 크레딧 사용")])
-	mesh_models=option(create,[tr("H3 · 일반 가구 / 낮은 비용"),tr("P2 · 정밀 메시 / 높은 비용")])
-	mesh_models.item_selected.connect(func(_value):update_price())
-	var advanced := VBoxContainer.new()
-	var advanced_button := button(create,tr("모델 비교 설정 펼치기"),func(): advanced.visible=not advanced.visible)
-	create.add_child(advanced);advanced.visible=false
-	models=option(advanced,["gpt-6-luna","gpt-5.6-terra","gpt-6-sol","gpt-6-astra"])
-	efforts=option(advanced,["low","medium","high","xhigh"]);efforts.select(2)
-	provider_price=label(create,tr("검증용 도형: Tripo 비용 0"),12)
-	generation_button=button(create,tr("만들기 · 30 별씨"),generate)
-	surface_mode.item_selected.connect(func(_i): update_price());motion.item_selected.connect(func(_i): update_price())
-	geometry.item_selected.connect(func(_i): update_price())
-	var dev_note := label(create,tr("별씨는 게임 재화입니다. API 크레딧과 같은 단위가 아닙니다. 검증용 도형은 생성 메시의 완성도를 보여주지 않습니다."),12)
-	dev_note.modulate=Color("817960")
+	craft=CraftPanel.new();craft.name="CraftPanel";create.add_child(craft)
+	craft.setup(api,{"say":func(value: String): message(value),"explain":studio_error,"place_label":tr("이 방에 놓기"),"place":place_crafted,"preview":show_design,"dark":true})
+	craft.job_finished.connect(func(_job: Dictionary): refresh())
+	craft.job_started.connect(func(_id: String): refresh())
+	prompt=craft.prompt;surface_mode=craft.surface;motion=craft.motion;designer=craft.designer;geometry=craft.geometry
+	models=craft.models;efforts=craft.efforts;mesh_models=craft.mesh_model
 	var own := VBoxContainer.new();own.name=tr("보관함");tabs.add_child(own)
 	label(own,tr("내가 만든 작은 세계"),19)
 	room_capacity=label(own,tr("배치한 가구를 확인하고 있어요"),12)
@@ -540,34 +501,7 @@ func build_ui() -> void:
 		preview_view.reparent(target)
 		target.move_child(preview_view,1 if index==1 else 2))
 	if not BuildMode.developer():
-		for control in [dev_title,designer,geometry,mesh_models,advanced_button,advanced,provider_price,dev_note,refine_reference]: control.visible=false
 		for index in [2,3,4]: tabs.set_tab_hidden(index,true)
-		prompt.text=""
-		prompt.placeholder_text=tr("예: 다가가면 꽃잎이 열리는 꽃 조명")
-		generation_button.text=tr("가구 만들기")
-
-## Photo clean-up needs a photo and room under the cap (+5 per part); otherwise it is off.
-func update_refine_option() -> void:
-	refine_reference.disabled=image_data.is_empty() or (craft_cap>0 and craft_cap<25)
-	if refine_reference.disabled:refine_reference.button_pressed=false
-
-func update_price() -> void:
-	var cost := (20 if surface_mode.selected==0 else 40)+(10 if motion.selected==0 else 0)
-	generation_button.text=tr("만들기 · %d 별씨")%cost
-	if geometry.selected==1:
-		var use_image := not image_data.is_empty() and (motion.selected==1 or refine_reference.button_pressed)
-		var unit := (10+(10 if use_image else 0)) if mesh_models.selected==0 else 100
-		if surface_mode.selected==1:unit+=10
-		if not image_data.is_empty() and refine_reference.button_pressed:unit+=5
-		provider_price.text=tr("공식 요금·실측 기반 예상: ")+(tr("정적 1부품 · %d 크레딧")%unit if motion.selected==1 else tr("부품당 %d 크레딧 · 최대 8부품")%unit)+tr("\n설계 후 부품 수와 예상 비용을 확인합니다.")
-		generation_button.text=tr("설계 먼저 · %d 별씨 예약")%cost
-		var least := unit*(1 if motion.selected==1 else 2)
-		# A combination over the server's per-craft cap would be refused: say so and lock the button.
-		var over := craft_cap>0 and least>craft_cap
-		if over:provider_price.text+=tr(" · 한도 %d 크레딧을 넘어요")%craft_cap
-		generation_button.disabled=generation_locked or over
-	else:generation_button.disabled=generation_locked
-	if geometry.selected!=1:provider_price.text=tr("검증용 도형: Tripo 비용 0")
 
 func message(value: String, toast := true) -> void:
 	value=value.replace("room_render_budget_exceeded",tr("꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요."))
@@ -880,39 +814,16 @@ func refresh() -> void:
 	data=response.data
 	wallet.text=tr("별씨 %d")%data.shards
 	if BuildMode.developer(): wallet.text+="  ·  "+(tr("Tripo 실제 생성 가능") if data.geometry_enabled else (tr("개발 공방") if data.llm!="openai" else tr("온라인 공방")))
-	var live: bool=data.get("mode","demo")=="live"
-	for i in range(models.get_item_count()):models.set_item_disabled(i,live and i!=0)
-	for i in range(efforts.get_item_count()):efforts.set_item_disabled(i,live and i!=2)
-	if live:
-		models.select(0);efforts.select(2)
-	# Trial servers cap Tripo credits per craft: only the cheapest craft is offered
-	# (paint it yourself · static · H3 · text only).
-	# Each option opens when its cheapest craft fits the cap (official rates: coloured 20, two moving
-	# parts 20, photo 20, photo refinement +5, P2 100); 0 = no cap. The server checks again.
+	# The craft window opens its options by the server's per-craft cap and setup.
 	craft_cap=int(data.get("max_tripo_credits",0))
-	var fits := func(credits: int) -> bool: return craft_cap==0 or credits<=craft_cap
-	surface_mode.set_item_disabled(1,not fits.call(20));motion.set_item_disabled(0,not fits.call(20));mesh_models.set_item_disabled(1,not fits.call(100))
-	if not fits.call(20):surface_mode.select(0);motion.select(1)
-	if not fits.call(100):mesh_models.select(0)
-	if not fits.call(20):
-		image_data="";image_label.text=tr("체험판에서는 글로 설명한 정적인 가구 한 덩어리를 만들어요.")
-	update_refine_option()
-	for child in image_buttons.get_children():
-		if child is Button:child.disabled=not fits.call(20)
-	update_price()
+	if not craft_opened:
+		craft_opened=true
+		craft.open(data)
+	else:craft.apply_info(data)
 	if is_instance_valid(hero):hero.apply_avatar(data.get("profile",{}).get("avatar",{}))
 	update_capacity()
 	history_list.clear()
 	for entry in data.jobs:history_list.add_item(job_status(entry.state)+tr(" · %d 별씨 · %s")%[entry.cost,Time.get_datetime_string_from_unix_time(int(entry.created)).replace("T"," ")])
-	designer.set_item_disabled(0,live);designer.set_item_disabled(1,data.llm=="fixture")
-	geometry.set_item_disabled(0,live);geometry.set_item_disabled(1,not data.geometry_enabled)
-	generation_locked=live and not data.geometry_enabled
-	generation_button.disabled=generation_locked
-	update_price()
-	if not live_defaults_applied:
-		live_defaults_applied=true
-		if data.geometry_enabled and data.llm!="fixture":
-			designer.select(1);geometry.select(1);update_price()
 	inventory.clear()
 	for obj in data.objects:
 		var kind := "furniture"
@@ -927,8 +838,6 @@ func refresh() -> void:
 		for obj in data.objects:
 			if obj.id==selected.id:selected=obj;exists=true
 		if not exists: clear_selection()
-	for job in data.jobs:
-		if job.state not in ["ready","failed","cancelled"]:job_id=job.id;break
 	await reload_placed()
 	if not selected.is_empty() and is_instance_valid(inspected) and inspected.get_meta("studio",false) and not pending and not placement_mode:
 		if selected.get("runtime_version",inspected.runtime_version)!=inspected.runtime_version:
@@ -1131,42 +1040,10 @@ func invoke_generated() -> void:
 	else:function_result.text=reply.error
 
 func generate() -> void:
-	if pending or not job_id.is_empty():return
-	pending=true;generation_button.disabled=true
-	var body := {"prompt":prompt.text.strip_edges(),"material":"mesh" if surface_mode.selected==0 else "textured","motion":"dynamic" if motion.selected==0 else "static","designer":"fixture" if designer.selected==0 else "llm","geometry":"proxy" if geometry.selected==0 else "tripo","model":models.get_item_text(models.selected),"effort":efforts.get_item_text(efforts.selected),"image":image_data,"mesh_model":"v3.1-20260211" if mesh_models.selected==0 else "P2-20260801","image_mode":"refine" if geometry.selected==1 and not image_data.is_empty() and refine_reference.button_pressed else "original"}
-	var response: Dictionary=await api.post("/v1/studio/jobs",api.mutation(body))
-	pending=false;update_price()
-	if not response.ok:
-		message(studio_error(response.error))
-		return
-	job_id=response.data.id;message(tr("설계를 준비하고 있어요. 다른 가구를 꾸미며 기다릴 수 있어요."));await refresh()
+	await craft.request()
 
 func poll_job() -> void:
-	if polling or job_id.is_empty():return
-	polling=true
-	var response: Dictionary=await api.request("/v1/studio/jobs/"+job_id)
-	polling=false
-	if not response.ok:return
-	var job: Dictionary=response.data
-	quote_panel.visible=job.state=="awaiting_confirmation"
-	if quote_panel.visible:
-		if BuildMode.developer():
-			quote_label.text=tr("설계 완료 · %d부품\n총 %d 별씨 · 이미 예약 %d 별씨\nTripo 예상 %s 크레딧\n예상 비용 확인 후에만 유료 생성을 시작합니다.")%[job.parts.size(),int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost),str(job.provenance.estimated_tripo_credits)]
-		else:
-			quote_label.text=tr("가구를 만들 준비가 됐어요.\n필요한 별씨 %d개 · 이미 맡긴 별씨 %d개\n완성하기를 누르면 제작을 시작해요.")%[int(job.provenance.get("quoted_game_cost",job.cost)),int(job.cost)]
-		var design: Dictionary=job.get("design",{})
-		if not design.get("parts",[]).is_empty():
-			quote_label.text+="\n\n"+tr("AI가 이렇게 정리했어요 (Tripo에 보내는 문장)")
-			for part in design.parts:quote_label.text+="\n• %s: %s"%[part.id,part.prompt]
-	var progress := ""
-	if job.state=="building":
-		var ready := 0
-		for state in job.parts.values():
-			if state=="ready":ready+=1
-		progress=tr(" · %d / %d부품 완료")%[ready,job.parts.size()]
-	message(job_status(job.state)+progress)
-	if job.state in ["ready","failed","cancelled"]:
-		job_id="";await refresh()
+	await craft.follow()
 
 ## The same player-facing wording the village craft window uses (main.gd error_message).
 func studio_error(code: String) -> String:
@@ -1186,20 +1063,21 @@ func studio_error(code: String) -> String:
 	return str(messages.get(code,tr("생성을 시작하지 못했어요 · ")+code))
 
 func confirm_job() -> void:
-	if pending or job_id.is_empty():return
-	pending=true
-	var response: Dictionary=await api.post("/v1/studio/jobs/"+job_id+"/confirm",api.mutation())
-	pending=false
-	if response.ok:quote_panel.visible=false;message(tr("확인한 설계로 3D 메시를 만들고 있어요"))
-	else:message(studio_error(response.error))
+	await craft.confirm(true)
 
 func cancel_job() -> void:
-	if pending or job_id.is_empty():return
-	pending=true
-	var response: Dictionary=await api.post("/v1/studio/jobs/"+job_id+"/cancel",api.mutation())
-	pending=false
-	if response.ok:quote_panel.visible=false;job_id="";await refresh()
-	else:message(response.error)
+	await craft.cancel()
+
+## The craft window's "이 방에 놓기": pick the new object and start placing it here.
+func place_crafted(object_id: String) -> void:
+	for attempt in 2:
+		for i in data.get("objects",[]).size():
+			if data.objects[i].id==object_id:
+				inventory.select(i)
+				await select_item(i)
+				await begin_place()
+				return
+		await refresh()
 
 func begin_place() -> void:
 	if selected.is_empty() or pending:return
@@ -1339,16 +1217,6 @@ func paint(color: String, reset := false) -> void:
 		if response.ok:selected.version=response.data.version;Loader.paint(inspected,Color(color))
 		else:message(response.error)
 	pending=false
-
-func pick_image(path: String) -> void:
-	var file := FileAccess.open(path,FileAccess.READ)
-	if file==null or file.get_length()>1024*1024:message(tr("이미지는 1MB 이하로 준비해 주세요"));return
-	var bytes := file.get_buffer(file.get_length())
-	image_data="data:image/"+("png" if path.get_extension().to_lower()=="png" else "jpeg")+";base64,"+Marshalls.raw_to_base64(bytes)
-	update_refine_option()
-	image_label.text=path.get_file()
-	if data.get("llm","fixture")!="fixture":designer.select(1)
-	update_price()
 
 func change_room(value: String) -> void:
 	clear_selection();room=value;build_room()
@@ -1697,9 +1565,8 @@ func _process(delta: float) -> void:
 		placement_marker.visible=placement_mode
 		placement_marker.position=Vector3(place_at.x,0.065,place_at.z)
 		placement_marker.material_override.albedo_color=Color("87c7a7",.32) if placement_problem(place_at).is_empty() else Color("d27566",.32)
-	poll_time+=delta;auth_time+=delta
+	auth_time+=delta
 	if visit_host.is_empty() and not public_room and not api.token.is_empty():
-		if poll_time>2.5:poll_time=0;poll_job()
 		if auth_time>20:auth_time=0;refresh()
 	presence_time+=delta
 	if (shared_presence or not visit_host.is_empty()) and presence_time>0.35:

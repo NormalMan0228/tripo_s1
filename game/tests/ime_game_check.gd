@@ -27,8 +27,8 @@ func run() -> void:
 	root.gui_focus_changed.connect(func(c: Control) -> void: focus_log.append("%d %s" % [Time.get_ticks_msec(), c.get_path() if c else "null"]))
 	app.me["studio_tripo_enabled"] = true
 	await app.open_craft()
-	var fields: Array = app.craft_box.find_children("*", "LineEdit", true, false)
-	var field: LineEdit = fields[0] if not fields.is_empty() else null
+	var fields: Array = app.craft_box.find_children("*", "TextEdit", true, false)
+	var field: TextEdit = fields[0] if not fields.is_empty() else null
 	if field == null: print("IME_GAME no field"); quit(1); return
 	field.grab_focus()
 	focus_log.clear()
