@@ -135,6 +135,8 @@ var travel_enabled := true
 var sfx_player: AudioStreamPlayer
 ## Server per-craft Tripo credit cap (0 = none), from /v1/studio.
 var craft_cap := 0
+## The create button is locked while the server cannot build (live without Tripo).
+var generation_locked := false
 var place_label: Label
 var current_room := -1
 var cam_distance := 9.0
@@ -555,8 +557,12 @@ func update_price() -> void:
 		provider_price.text=tr("공식 요금·실측 기반 예상: ")+(tr("정적 1부품 · %d 크레딧")%unit if motion.selected==1 else tr("부품당 %d 크레딧 · 최대 8부품")%unit)+tr("\n설계 후 부품 수와 예상 비용을 확인합니다.")
 		generation_button.text=tr("설계 먼저 · %d 별씨 예약")%cost
 		var least := unit*(1 if motion.selected==1 else 2)
-		if craft_cap>0 and least>craft_cap:provider_price.text+=tr(" · 한도 %d 크레딧을 넘어요")%craft_cap
-	else:provider_price.text=tr("검증용 도형: Tripo 비용 0")
+		# A combination over the server's per-craft cap would be refused: say so and lock the button.
+		var over := craft_cap>0 and least>craft_cap
+		if over:provider_price.text+=tr(" · 한도 %d 크레딧을 넘어요")%craft_cap
+		generation_button.disabled=generation_locked or over
+	else:generation_button.disabled=generation_locked
+	if geometry.selected!=1:provider_price.text=tr("검증용 도형: Tripo 비용 0")
 
 func message(value: String, toast := true) -> void:
 	value=value.replace("room_render_budget_exceeded",tr("꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요."))
@@ -896,7 +902,9 @@ func refresh() -> void:
 	for entry in data.jobs:history_list.add_item(job_status(entry.state)+tr(" · %d 별씨 · %s")%[entry.cost,Time.get_datetime_string_from_unix_time(int(entry.created)).replace("T"," ")])
 	designer.set_item_disabled(0,live);designer.set_item_disabled(1,data.llm=="fixture")
 	geometry.set_item_disabled(0,live);geometry.set_item_disabled(1,not data.geometry_enabled)
-	generation_button.disabled=live and not data.geometry_enabled
+	generation_locked=live and not data.geometry_enabled
+	generation_button.disabled=generation_locked
+	update_price()
 	if not live_defaults_applied:
 		live_defaults_applied=true
 		if data.geometry_enabled and data.llm!="fixture":
@@ -1122,7 +1130,7 @@ func generate() -> void:
 	pending=true;generation_button.disabled=true
 	var body := {"prompt":prompt.text.strip_edges(),"material":"mesh" if surface_mode.selected==0 else "textured","motion":"dynamic" if motion.selected==0 else "static","designer":"fixture" if designer.selected==0 else "llm","geometry":"proxy" if geometry.selected==0 else "tripo","model":models.get_item_text(models.selected),"effort":efforts.get_item_text(efforts.selected),"image":image_data,"mesh_model":"v3.1-20260211" if mesh_models.selected==0 else "P2-20260801","image_mode":"refine" if geometry.selected==1 and not image_data.is_empty() and refine_reference.button_pressed else "original"}
 	var response: Dictionary=await api.post("/v1/studio/jobs",api.mutation(body))
-	pending=false;generation_button.disabled=false
+	pending=false;update_price()
 	if not response.ok:
 		message(studio_error(response.error))
 		return
@@ -1153,7 +1161,8 @@ func poll_job() -> void:
 
 ## The same player-facing wording the village craft window uses (main.gd error_message).
 func studio_error(code: String) -> String:
-	var messages := {"craft_over_trial_limit":tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요."),
+	var over_cap := tr("이 조합은 1회 제작 한도(%d크레딧)를 넘어요. 옵션을 줄이거나 운영자에게 한도를 물어보세요.") % craft_cap
+	var messages := {"craft_over_trial_limit":over_cap if craft_cap>=20 else tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요."),
 		"tripo_budget_exhausted":tr("이번 학기 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요."),
 		"user_total_generation_limit":tr("이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!"),
 		"user_daily_generation_limit":tr("오늘 맡길 수 있는 제작을 모두 썼어요. 내일 다시 찾아와 주세요."),

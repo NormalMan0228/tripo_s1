@@ -5192,6 +5192,10 @@
    "en": "That name is reserved. Please pick another adventurer name.",
    "zh": "这个名字不能使用，请换一个冒险者名字。"
   },
+  "이 조합은 1회 제작 한도(%d크레딧)를 넘어요. 옵션을 줄이거나 운영자에게 한도를 물어보세요.": {
+   "en": "This combination is over the per-craft limit (%d credits). Choose fewer options or ask the operator about the limit.",
+   "zh": "该组合超出单次制作上限（%d 积分）。请减少选项，或向管理员询问上限。"
+  },
   "이 창을 보는 동안에도 생존 시간은 흐릅니다.": {
    "en": "Survival time keeps running while this window is open.",
    "zh": "查看此窗口时，生存时间仍在流逝。"
