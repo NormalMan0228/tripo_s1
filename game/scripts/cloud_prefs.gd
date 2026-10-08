@@ -7,7 +7,7 @@ extends Node
 ## Scripts are loaded when needed, not held by this autoload: keeping RpgUi (themes, fonts) alive in an
 ## autoload made the engine crash while shutting down (4.7.2, access violation at exit).
 const I18N_PATH := "res://scripts/i18n.gd"
-const SYNCED := ["audio", "controls", "gameplay", "accessibility", "input", "hud", "shadow_folk"]
+const SYNCED := ["audio", "controls", "gameplay", "accessibility", "input", "hud", "shadow_folk", "painter"]
 ## [game] keys that follow the account; server, username and the legacy graphics level do not.
 const SYNCED_GAME_KEYS := ["language"]
 const CHECK_SECONDS := 2.0

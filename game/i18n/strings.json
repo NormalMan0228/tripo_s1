@@ -128,6 +128,10 @@
    "en": " — End Visit",
    "zh": " 结束拜访"
   },
+  " 복사": {
+   "en": " copy",
+   "zh": " 副本"
+  },
   " 씨앗": {
    "en": " Seeds",
    "zh": "种子"
@@ -300,6 +304,10 @@
    "en": "Talk to %s",
    "zh": "与%s交谈"
   },
+  "+로 색을 모아 두세요": {
+   "en": "Collect colours with +",
+   "zh": "用 + 收集颜色"
+  },
   "12시간": {
    "en": "12-hour",
    "zh": "12小时制"
@@ -359,6 +367,10 @@
   "B · 여행자": {
    "en": "B · Traveler",
    "zh": "B · 旅行者"
+  },
+  "B 붓 · E 지우개 · G 채우기/그라데이션 · I 스포이드 · [ ] 크기 · X 색 바꾸기 · Ctrl+Z 되돌리기 · 우클릭 회전 · 휠 확대 · 가운데 버튼 이동": {
+   "en": "B Brush · E Eraser · G Fill/Gradient · I Eyedropper · [ ] Size · X Swap colours · Ctrl+Z Undo · Right-drag orbit · Wheel zoom · Middle-drag pan",
+   "zh": "B 画笔 · E 橡皮擦 · G 填充/渐变 · I 吸管 · [ ] 大小 · X 交换颜色 · Ctrl+Z 撤销 · 右键拖动旋转 · 滚轮缩放 · 中键拖动平移"
   },
   "B로 창고를, I로 보관함을 열 수 있어요.": {
    "en": "Press B for storage and I for your bag.",
@@ -431,6 +443,10 @@
   "H3 · 일반 가구 / 낮은 비용": {
    "en": "H3 · Regular furniture / Lower cost",
    "zh": "H3 · 普通家具 / 低费用"
+  },
+  "HEX 색 코드 (예: e9a23b)": {
+   "en": "HEX colour code (e.g. e9a23b)",
+   "zh": "HEX 颜色代码（例：e9a23b）"
   },
   "HUD 접기/펼치기": {
    "en": "Collapse/expand HUD",
@@ -696,6 +712,10 @@
    "en": "Use Furniture",
    "zh": "使用家具"
   },
+  "가구 색을 바꿨어요.": {
+   "en": "Furniture colour changed.",
+   "zh": "家具颜色已更改。"
+  },
   "가구 완성!": {
    "en": "Furniture complete!",
    "zh": "家具完成！"
@@ -828,6 +848,14 @@
    "en": "Sell your items · up to 20 per click",
    "zh": "出售物品 · 每次最多 20 个"
   },
+  "각도": {
+   "en": "Angle",
+   "zh": "角度"
+  },
+  "간격": {
+   "en": "Spacing",
+   "zh": "间距"
+  },
   "간판 글씨가 정성스럽게 칠해져 있어요.": {
    "en": "The sign lettering is carefully painted.",
    "zh": "招牌上的字画得很用心。"
@@ -900,6 +928,10 @@
    "en": "Living Room",
    "zh": "客厅"
   },
+  "거울 대칭으로 양쪽을 함께 칠하기": {
+   "en": "Paint both sides with mirror symmetry",
+   "zh": "镜像对称，两侧一起涂"
+  },
   "거울 속 내 얼굴이 웃고 있어요.": {
    "en": "Your face in the mirror is smiling.",
    "zh": "镜子里的自己在微笑。"
@@ -907,6 +939,10 @@
   "거절": {
    "en": "Decline",
    "zh": "拒绝"
+  },
+  "거친 붓": {
+   "en": "Grainy brush",
+   "zh": "粗糙画笔"
   },
   "건물이나 다른 물건과 겹쳐요.": {
    "en": "It overlaps a building or another item.",
@@ -972,6 +1008,10 @@
    "en": "Waiting for estimate confirmation",
    "zh": "等待确认报价"
   },
+  "경도": {
+   "en": "Hardness",
+   "zh": "硬度"
+  },
   "계단을 내려가요.": {
    "en": "Going downstairs.",
    "zh": "下楼。"
@@ -1019,6 +1059,10 @@
   "곧 해가 져. 숲은 밤이 길다는 거 잊지 마.": {
    "en": "The sun will set soon. Don't forget the forest nights are long.",
    "zh": "太阳快下山了。别忘了森林的夜很长。"
+  },
+  "곱하기": {
+   "en": "Multiply",
+   "zh": "正片叠底"
   },
   "공격": {
    "en": "Attack",
@@ -1164,6 +1208,22 @@
    "en": "Swinging away. Press a movement key to hop off.",
    "zh": "荡起秋千。按移动键下来。"
   },
+  "그라데이션": {
+   "en": "Gradient",
+   "zh": "渐变"
+  },
+  "그라데이션 모양": {
+   "en": "Gradient shape",
+   "zh": "渐变形状"
+  },
+  "그라데이션 색": {
+   "en": "Gradient colours",
+   "zh": "渐变颜色"
+  },
+  "그라데이션을 그리는 중…": {
+   "en": "Drawing the gradient…",
+   "zh": "正在绘制渐变…"
+  },
   "그래픽": {
    "en": "Graphics",
    "zh": "画面"
@@ -1187,6 +1247,10 @@
   "그림을 먼저 정리해서 만들기": {
    "en": "Clean up the picture before creating",
    "zh": "先整理图片再制作"
+  },
+  "그림이 너무 커요.": {
+   "en": "The picture is too large.",
+   "zh": "图片太大了。"
   },
   "그림자": {
    "en": "Shadow",
@@ -1540,6 +1604,10 @@
    "en": "SW",
    "zh": "西南"
   },
+  "납작 붓": {
+   "en": "Flat brush",
+   "zh": "扁平画笔"
+  },
   "낮": {
    "en": "Day",
    "zh": "白天"
@@ -1832,6 +1900,10 @@
    "en": "A Small Ember to Rekindle",
    "zh": "可再次点燃的小火种"
   },
+  "다시 하기": {
+   "en": "Redo",
+   "zh": "重做"
+  },
   "다음 공격을 준비 중입니다.": {
    "en": "Getting ready for the next attack.",
    "zh": "正在准备下一次攻击。"
@@ -1896,9 +1968,25 @@
    "en": "Text speed",
    "zh": "文字速度"
   },
+  "대칭 X": {
+   "en": "Mirror X",
+   "zh": "对称 X"
+  },
+  "대칭 Z": {
+   "en": "Mirror Z",
+   "zh": "对称 Z"
+  },
+  "대칭 끔": {
+   "en": "No mirror",
+   "zh": "关闭对称"
+  },
   "더 빠르고 강한 적, 빠른 허기. 보상 1.6배.": {
    "en": "Faster, stronger enemies and quicker hunger. Rewards ×1.6.",
    "zh": "敌人更快更强，饥饿更快。奖励 1.6 倍。"
+  },
+  "더하기": {
+   "en": "Add",
+   "zh": "相加"
   },
   "덤불 뒤져 보기": {
    "en": "Search the bush",
@@ -2044,6 +2132,14 @@
    "en": "Plop! Good news will find you today.",
    "zh": "扑通！今天会有好消息哦。"
   },
+  "되돌리기": {
+   "en": "Undo",
+   "zh": "撤销"
+  },
+  "되돌리지 못했어요: %s": {
+   "en": "Could not reset: %s",
+   "zh": "无法还原：%s"
+  },
   "두드려 보기": {
    "en": "Knock",
    "zh": "敲一敲"
@@ -2060,6 +2156,14 @@
    "en": "A spiral stair follows the round wall up to the lantern room.",
    "zh": "螺旋楼梯沿着圆墙通往灯室。"
   },
+  "둥근 붓": {
+   "en": "Round brush",
+   "zh": "圆形画笔"
+  },
+  "둥글기": {
+   "en": "Roundness",
+   "zh": "圆度"
+  },
   "뒤로": {
    "en": "Back",
    "zh": "返回"
@@ -2068,9 +2172,17 @@
    "en": "Move back",
    "zh": "向后移动"
   },
+  "뒷색 · 클릭하면 바꾸기": {
+   "en": "Background colour · click to swap",
+   "zh": "背景色 · 点击交换"
+  },
   "드래그로 회전 · 휠로 확대\n": {
    "en": "Drag to rotate · Scroll to zoom\n",
    "zh": "拖动旋转 · 滚轮缩放\n"
+  },
+  "드래그를 시작한 부품에만 그립니다": {
+   "en": "Draws only on the part where the drag starts",
+   "zh": "只在开始拖动的部件上绘制"
   },
   "들꽃": {
    "en": "Wildflower",
@@ -2208,6 +2320,58 @@
    "en": "Adjust the position and pivot of lids and hands. Saving applies only to your furniture, and you can revert to the original design.",
    "zh": "调整盖子、指针的位置与旋转轴。保存后仅对你的家具生效，并可恢复原设计。"
   },
+  "레이어": {
+   "en": "Layers",
+   "zh": "图层"
+  },
+  "레이어 %d": {
+   "en": "Layer %d",
+   "zh": "图层 %d"
+  },
+  "레이어 보이기": {
+   "en": "Layer visibility",
+   "zh": "图层显示"
+  },
+  "레이어 복제": {
+   "en": "Duplicate layer",
+   "zh": "复制图层"
+  },
+  "레이어 불투명도": {
+   "en": "Layer opacity",
+   "zh": "图层不透明度"
+  },
+  "레이어 불투명도  %d%%": {
+   "en": "Layer opacity  %d%%",
+   "zh": "图层不透明度  %d%%"
+  },
+  "레이어 삭제": {
+   "en": "Delete layer",
+   "zh": "删除图层"
+  },
+  "레이어 설정": {
+   "en": "Layer settings",
+   "zh": "图层设置"
+  },
+  "레이어 순서": {
+   "en": "Layer order",
+   "zh": "图层顺序"
+  },
+  "레이어 추가": {
+   "en": "Add layer",
+   "zh": "添加图层"
+  },
+  "레이어 혼합 모드": {
+   "en": "Layer blend mode",
+   "zh": "图层混合模式"
+  },
+  "레이어는 8개까지 만들 수 있어요.": {
+   "en": "You can have up to 8 layers.",
+   "zh": "最多可以有 8 个图层。"
+  },
+  "레이어를 하나로 합치는 중…": {
+   "en": "Flattening the layers…",
+   "zh": "正在合并图层…"
+  },
   "렌즈 너머로 반짝이는 별똥별이 지나갔어요.": {
    "en": "A shooting star flashed past the lens.",
    "zh": "一颗流星划过镜头。"
@@ -2328,6 +2492,10 @@
    "en": "Village & Rooms",
    "zh": "村庄与房间"
   },
+  "마을과 방에 칠한 모습으로 저장  ·  Ctrl+S": {
+   "en": "Save the painted look for the village and rooms  ·  Ctrl+S",
+   "zh": "保存涂色效果到村庄和房间  ·  Ctrl+S"
+  },
   "마을과의 연결이 끊어졌어요. 잠시 뒤 다시 들어와 주세요.": {
    "en": "Lost the connection to the village. Please come back in a moment.",
    "zh": "与村庄的连接中断了。请稍后再进来。"
@@ -2356,6 +2524,10 @@
    "en": "Any news in the village?",
    "zh": "村里有什么新消息吗？"
   },
+  "마을에 저장하는 중…": {
+   "en": "Saving to the village…",
+   "zh": "正在保存到村庄…"
+  },
   "마을에서 로그인한 뒤 공방으로 들어오세요.": {
    "en": "Log in from the village, then come into the Workshop.",
    "zh": "请先在村庄登录，再进入工坊。"
@@ -2379,6 +2551,10 @@
   "마음에 드는 바닥을 클릭하세요. R로 돌리고 Esc로 취소할 수 있어요.": {
    "en": "Click a spot you like. Press R to rotate, Esc to cancel.",
    "zh": "点击喜欢的地面。按 R 旋转，按 Esc 取消。"
+  },
+  "마지막 레이어는 지울 수 없어요.": {
+   "en": "The last layer cannot be deleted.",
+   "zh": "最后一个图层不能删除。"
   },
   "만들 물건을 두 글자 이상 적어 주세요.": {
    "en": "Describe the item in at least two characters.",
@@ -2588,6 +2764,10 @@
    "en": "Set out once everyone is in the village.",
    "zh": "请等所有人都进入村庄后再出发。"
   },
+  "모든 레이어 기준": {
+   "en": "Sample all layers",
+   "zh": "参考所有图层"
+  },
   "모든 소리 끄기": {
    "en": "Mute all sound",
    "zh": "关闭所有声音"
@@ -2724,6 +2904,10 @@
    "en": "This item has changed. Please refresh the list.",
    "zh": "物品状态已变化。请刷新列表。"
   },
+  "물건 위에서 드래그해 방향과 길이를 정해요.": {
+   "en": "Drag across the object to set the direction and length.",
+   "zh": "在物品上拖动以确定方向和长度。"
+  },
   "물건과 별씨는 서버에서 동시에 이전됩니다.": {
    "en": "Items and Starseeds are exchanged on the server at the same time.",
    "zh": "物品与星种将在服务器上同时转移。"
@@ -2732,6 +2916,10 @@
    "en": "Couldn't take that item out.",
    "zh": "无法取出该物品。"
   },
+  "물건을 불러오는 중이에요. 잠시 뒤에 다시 눌러 주세요.": {
+   "en": "The object is still loading. Try again in a moment.",
+   "zh": "物品正在加载，请稍后再点。"
+  },
   "물건을 선택하세요.": {
    "en": "Select an item.",
    "zh": "请选择物品。"
@@ -2739,6 +2927,10 @@
   "물건을 찾을 수 없어요. 보관함을 새로고침해 주세요.": {
    "en": "Item not found. Please refresh your Bag.",
    "zh": "找不到物品，请刷新背包。"
+  },
+  "물건을 클릭하면 보이는 색을 앞색으로 가져와요. 다른 도구에서는 Alt+클릭.": {
+   "en": "Click the object to pick the visible colour as the foreground colour. Alt+click with other tools.",
+   "zh": "点击物品，将看到的颜色设为前景色。其他工具下按 Alt+点击。"
   },
   "물건이 그새 바뀌었어요. 가방을 다시 열어 주세요.": {
    "en": "That item just changed. Please reopen your bag.",
@@ -2975,6 +3167,10 @@
   "바위 사이를 돌아 탐험하세요. 뜨거운 균열을 조심하세요.": {
    "en": "Explore among the rocks. Watch out for hot cracks.",
    "zh": "在岩石间迂回探险。小心炽热的裂缝。"
+  },
+  "바탕": {
+   "en": "Base",
+   "zh": "底色"
   },
   "반짝이는 게 보이면 그거예요!": {
    "en": "If you see something sparkling, that's it!",
@@ -3424,9 +3620,21 @@
    "en": "Claim Reward and Return",
    "zh": "领取奖励并回村"
   },
+  "보이기 / 숨기기": {
+   "en": "Show / hide",
+   "zh": "显示 / 隐藏"
+  },
+  "보이는 색 전체를 기준으로 영역을 고릅니다": {
+   "en": "Chooses the area by the colours you see on all layers",
+   "zh": "按所有可见颜色选择区域"
+  },
   "보이지 않지만 풍차를 돌리고 나뭇잎을 흔드는 것은?": {
    "en": "You can't see it, but it turns the windmill and rustles the leaves. What is it?",
    "zh": "看不见它，它却能转动风车、吹动树叶。是什么？"
+  },
+  "보정": {
+   "en": "Smoothing",
+   "zh": "平滑"
   },
   "보통": {
    "en": "Medium",
@@ -3548,6 +3756,10 @@
    "en": "The fire is burning well. Save your wood.",
    "zh": "火烧得正旺，留着木材吧。"
   },
+  "불투명도": {
+   "en": "Opacity",
+   "zh": "不透明度"
+  },
   "붉은 공격 예고는 Shift로 피하세요.\n목재 두 개는 모닥불을 위해 남겨 두세요.": {
    "en": "Dodge red attack warnings with Shift.\nSave two wood for the Campfire.",
    "zh": "红色攻击预警请用 Shift 闪避。\n留两个木材给篝火。"
@@ -3555,6 +3767,22 @@
   "붉은 원이 보이면 바로 피해요. 일곱 밤을 버티면 새 물건을 만들 별씨를 받아요.": {
    "en": "Dodge right away when you see a red circle. Survive seven nights and you'll get starseeds for new crafts.",
    "zh": "看到红圈就马上躲开。熬过七个夜晚，就能拿到制作新物品的星种。"
+  },
+  "붓": {
+   "en": "Brush",
+   "zh": "画笔"
+  },
+  "붓 끝 모양": {
+   "en": "Brush tip",
+   "zh": "笔尖形状"
+  },
+  "붓 혼합 모드": {
+   "en": "Brush blend mode",
+   "zh": "画笔混合模式"
+  },
+  "붓·채우기·그라데이션으로 표면을 직접 칠해요": {
+   "en": "Paint the surface yourself with brushes, fill and gradients",
+   "zh": "用画笔、填充和渐变亲手涂表面"
   },
   "붕대": {
    "en": "Bandage",
@@ -3776,6 +4004,10 @@
    "en": "New furniture crafting is getting ready. For now, decorate with items from your Bag.",
    "zh": "新家具制作正在准备中。现在先用背包里的物品来装饰吧。"
   },
+  "새 레이어  ·  Ctrl+Shift+N": {
+   "en": "New layer  ·  Ctrl+Shift+N",
+   "zh": "新建图层  ·  Ctrl+Shift+N"
+  },
   "새 모이통 채우기": {
    "en": "Fill the bird feeder",
    "zh": "添满喂鸟器"
@@ -3844,9 +4076,21 @@
    "en": "Watching seedlings grow makes my heart feel soft and warm.",
    "zh": "看着嫩芽长大，心里就暖洋洋的。"
   },
+  "색": {
+   "en": "Colour",
+   "zh": "颜色"
+  },
   "색상이 서버에 저장됐습니다.": {
    "en": "Colors saved to the server.",
    "zh": "颜色已保存到服务器。"
+  },
+  "색칠 작업대": {
+   "en": "Paint Workbench",
+   "zh": "涂色工作台"
+  },
+  "색칠하기": {
+   "en": "Paint",
+   "zh": "涂色"
   },
   "샘플 GLB를 읽지 못했습니다. 파일을 확인해 주세요.": {
    "en": "Couldn't load the sample GLB. Please check the file.",
@@ -3936,6 +4180,10 @@
    "en": "Connecting to the server",
    "zh": "正在连接服务器"
   },
+  "서버에 연결하지 못했어요.": {
+   "en": "Could not reach the server.",
+   "zh": "无法连接服务器。"
+  },
   "서버에 접속 중…": {
    "en": "Connecting to server…",
    "zh": "正在连接服务器…"
@@ -3975,6 +4223,10 @@
   "선택한 생성 함수 호출": {
    "en": "Call Selected Function",
    "zh": "调用所选生成函数"
+  },
+  "선형": {
+   "en": "Linear",
+   "zh": "线性"
   },
   "설거지 중이에요. 뽀득뽀득!": {
    "en": "Doing the dishes. Squeaky clean!",
@@ -4312,6 +4564,10 @@
    "en": "Shh, they're asleep",
    "zh": "嘘，在睡觉"
   },
+  "스크린": {
+   "en": "Screen",
+   "zh": "滤色"
+  },
   "스탠드를 껐어요.": {
    "en": "You switched off the lamp.",
    "zh": "你关掉了台灯。"
@@ -4319,6 +4575,10 @@
   "스탠드를 켰어요. 방이 아늑해졌어요.": {
    "en": "You switched on the lamp. The room feels cozy.",
    "zh": "你打开了台灯，房间变得温馨起来。"
+  },
+  "스포이드": {
+   "en": "Eyedropper",
+   "zh": "吸管"
   },
   "시 듣기": {
    "en": "Hear a poem",
@@ -4339,6 +4599,18 @@
   "시원한 물 한 모금! 기운이 솟아요.": {
    "en": "A sip of cool water! You feel refreshed.",
    "zh": "喝一口凉水！精神焕发。"
+  },
+  "시작 부품만": {
+   "en": "Start part only",
+   "zh": "仅起始部件"
+  },
+  "시점": {
+   "en": "View",
+   "zh": "视角"
+  },
+  "시점 초기화  ·  F": {
+   "en": "Reset view  ·  F",
+   "zh": "重置视角  ·  F"
   },
   "시점 확대 속도": {
    "en": "Zoom speed",
@@ -4435,6 +4707,10 @@
   "아늑한 침실": {
    "en": "Cozy Bedroom",
    "zh": "温馨卧室"
+  },
+  "아래로": {
+   "en": "Move down",
+   "zh": "下移"
   },
   "아무도 없는 것 같아요. 문이 잠겨 있어요.": {
    "en": "No one seems to be home. The door is locked.",
@@ -4543,6 +4819,22 @@
   "앞면": {
    "en": "Front",
    "zh": "正面"
+  },
+  "앞색": {
+   "en": "Foreground colour",
+   "zh": "前景色"
+  },
+  "앞색 → 뒷색": {
+   "en": "Foreground → background",
+   "zh": "前景色 → 背景色"
+  },
+  "앞색 → 투명": {
+   "en": "Foreground → transparent",
+   "zh": "前景色 → 透明"
+  },
+  "앞색과 뒷색 바꾸기  ·  X": {
+   "en": "Swap foreground and background  ·  X",
+   "zh": "交换前景色和背景色  ·  X"
   },
   "앞으로 이동": {
    "en": "Move forward",
@@ -4864,6 +5156,10 @@
    "en": "Duck",
    "zh": "鸭子"
   },
+  "오버레이": {
+   "en": "Overlay",
+   "zh": "叠加"
+  },
   "오븐에서 갓 구운 빵 냄새가 솔솔 나요.": {
    "en": "The smell of fresh bread drifts from the oven.",
    "zh": "烤箱里飘出刚出炉的面包香。"
@@ -5000,6 +5296,10 @@
    "en": "A clear note rings from deep in the well. Your steps will be light today.",
    "zh": "井底传来清脆的声音，今天脚步会很轻快。"
   },
+  "우클릭 삭제": {
+   "en": "Right-click to remove",
+   "zh": "右键删除"
+  },
   "우편함 닫기": {
    "en": "Close the mailbox",
    "zh": "关上信箱"
@@ -5036,6 +5336,10 @@
    "en": "Back to the original part design",
    "zh": "已恢复原部件设计"
   },
+  "원래 색": {
+   "en": "Original colour",
+   "zh": "原色"
+  },
   "원래 색 복원": {
    "en": "Restore Original Colors",
    "zh": "恢复原色"
@@ -5047,6 +5351,14 @@
   "원래 얼굴과 손을 보존한 노란 재킷 여행자.": {
    "en": "A yellow-jacketed traveler with their original face and hands preserved.",
    "zh": "保留原本面容和双手的黄夹克旅行者。"
+  },
+  "원래대로": {
+   "en": "Reset",
+   "zh": "还原"
+  },
+  "원형": {
+   "en": "Radial",
+   "zh": "径向"
   },
   "월": {
    "en": "Mon",
@@ -5067,6 +5379,10 @@
   "월드가 새 단장을 하고 있어요. 잠시 뒤 다시 들어와 주세요.": {
    "en": "The world is getting an update. Please come back shortly.",
    "zh": "世界正在更新，请稍后再来。"
+  },
+  "위로": {
+   "en": "Move up",
+   "zh": "上移"
   },
   "위치 · m": {
    "en": "Position · m",
@@ -5176,9 +5492,29 @@
    "en": "This item has no generated control functions.",
    "zh": "此物品没有生成的操作函数。"
   },
+  "이 물건은 무늬 좌표가 일부 겹쳐 있어서, 한 곳을 칠하면 다른 곳에도 같이 묻을 수 있어요.": {
+   "en": "Some of this object's texture coordinates overlap, so paint in one place may also show up in another.",
+   "zh": "此物品的部分纹理坐标重叠，在一处涂色可能也会出现在另一处。"
+  },
+  "이 물건은 표면 좌표(UV) 없이 만들어져 전체 색만 바꿀 수 있어요.": {
+   "en": "This object was made without surface coordinates (UVs), so only its whole colour can change.",
+   "zh": "此物品制作时没有表面坐标（UV），只能更改整体颜色。"
+  },
+  "이 물건은 표면에 그림을 입힐 좌표(UV) 없이 만들어져서 붓으로 칠할 수 없어요. 대신 전체 색을 바꿀 수 있어요. 새로 만드는 물건은 붓으로 칠할 수 있어요.": {
+   "en": "This object was made without the coordinates (UVs) a painted surface needs, so it cannot be painted with a brush. You can change its whole colour instead. Newly crafted objects can be painted.",
+   "zh": "此物品制作时没有绘制表面所需的坐标（UV），无法用画笔涂色。可以改为更改整体颜色。新制作的物品可以用画笔涂色。"
+  },
   "이 물건을 사용할 권한이 없습니다.": {
    "en": "You don't have permission to use this item.",
    "zh": "你没有使用此物品的权限。"
+  },
+  "이 물건을 찾을 수 없어요.": {
+   "en": "This object could not be found.",
+   "zh": "找不到这个物品。"
+  },
+  "이 물건의 표면 좌표(UV)가 비어 있어 붓으로 칠할 수 없어요. 대신 전체 색을 바꿀 수 있어요.": {
+   "en": "This object's surface coordinates (UVs) are empty, so it cannot be painted with a brush. You can change its whole colour instead.",
+   "zh": "此物品的表面坐标（UV）为空，无法用画笔涂色。可以改为更改整体颜色。"
   },
   "이 밤에 웬일이에요?": {
    "en": "What brings you here so late?",
@@ -5291,6 +5627,10 @@
   "이렇게 늦게까지? 나도 이제 들어가 쉬려고.": {
    "en": "Up this late? I'm about to head in and rest too.",
    "zh": "这么晚还在外面？我也准备回去休息了。"
+  },
+  "이름 바꾸기": {
+   "en": "Rename",
+   "zh": "重命名"
   },
   "이름표 표시": {
    "en": "Show nameplates",
@@ -5556,9 +5896,17 @@
    "en": "Gather Resources",
    "zh": "采集资源"
   },
+  "작업 기록": {
+   "en": "History",
+   "zh": "历史记录"
+  },
   "작업 대기": {
    "en": "Queued",
    "zh": "等待任务"
+  },
+  "작업대를 준비하고 있어요…": {
+   "en": "Preparing the workbench…",
+   "zh": "正在准备工作台…"
   },
   "작은 놋쇠 열쇠 · 풍차 방앗간 앞 풀숲": {
    "en": "Small brass key · grass by the windmill",
@@ -5656,6 +6004,10 @@
    "en": "Listed at the Market. While for sale, placing and coloring are locked.",
    "zh": "已上架市集。出售期间无法摆放和上色。"
   },
+  "장터에 올린 물건은 칠할 수 없어요.": {
+   "en": "Objects listed on the market cannot be painted.",
+   "zh": "上架到集市的物品不能涂色。"
+  },
   "장터에서 판매 중": {
    "en": "For sale at the Market",
    "zh": "正在市集出售"
@@ -5692,9 +6044,25 @@
    "en": "Evening already. How did today's expedition go?",
    "zh": "已经傍晚了。今天的探险怎么样？"
   },
+  "저장": {
+   "en": "Save",
+   "zh": "保存"
+  },
+  "저장 안 함": {
+   "en": "Don't save",
+   "zh": "不保存"
+  },
   "저장하지 못했습니다. 옷장을 닫고 새로고침한 뒤 다시 시도하세요.": {
    "en": "Couldn't save. Close the Wardrobe, refresh, and try again.",
    "zh": "保存失败。请关闭衣橱并刷新后再试。"
+  },
+  "저장하지 못했어요: %s": {
+   "en": "Could not save: %s",
+   "zh": "无法保存：%s"
+  },
+  "저장하지 않고 닫기  ·  Esc": {
+   "en": "Close without saving  ·  Esc",
+   "zh": "不保存并关闭  ·  Esc"
   },
   "적용": {
    "en": "Apply",
@@ -5711,6 +6079,18 @@
   "전구": {
    "en": "Bulb",
    "zh": "灯泡"
+  },
+  "전체": {
+   "en": "Whole object",
+   "zh": "全部"
+  },
+  "전체 색 고르기": {
+   "en": "Choose a whole colour",
+   "zh": "选择整体颜色"
+  },
+  "전체 색 바꾸기": {
+   "en": "Change the whole colour",
+   "zh": "更改整体颜色"
   },
   "전체 색칠": {
    "en": "Paint All",
@@ -6040,6 +6420,10 @@
    "en": "Place in Village Now",
    "zh": "现在摆放到村庄"
   },
+  "지금 색을 팔레트에 저장": {
+   "en": "Save the current colour to the palette",
+   "zh": "将当前颜色保存到调色板"
+  },
   "지금은 %s이에요. 밤에만 나오는 물고기도 있어요.": {
    "en": "It's %s now. Some fish only come out at night.",
    "zh": "现在是%s。有些鱼只在夜里出现。"
@@ -6095,6 +6479,10 @@
   "지역과 난이도는 탐험을 시작하면 고정됩니다.": {
    "en": "Region and difficulty are locked once the expedition starts.",
    "zh": "开始探险后，区域和难度将固定。"
+  },
+  "지우개": {
+   "en": "Eraser",
+   "zh": "橡皮擦"
   },
   "직접 색 고르기": {
    "en": "Pick a Color",
@@ -6260,6 +6648,10 @@
    "en": "Since the quarry's stone wheel stopped, the island bell has gone silent. Gather materials around the dangerous cracks and prepare a spear. With a record of Seven Nights, you'll find the northern path.",
    "zh": "采石场的石轮停转后，岛上的钟就再也没响过。绕开危险的裂缝收集材料，准备好长矛吧。有了七夜的记录，就能找到通往北方的路。"
   },
+  "채우기": {
+   "en": "Fill",
+   "zh": "填充"
+  },
   "채집할 나무·바위·풀·열매 가까이 가세요.": {
    "en": "Get close to a tree, rock, grass, or berries to gather.",
    "zh": "请靠近可采集的树木·岩石·草·浆果。"
@@ -6287,6 +6679,14 @@
   "챔질!": {
    "en": "Hooked!",
    "zh": "提竿！"
+  },
+  "처음 모습으로 되돌렸어요.": {
+   "en": "Back to the original look.",
+   "zh": "已恢复原样。"
+  },
+  "처음 모습으로 되돌리는 중…": {
+   "en": "Restoring the original look…",
+   "zh": "正在恢复原样…"
   },
   "처음 받은 여섯 칸은 그대로 둘게요.": {
    "en": "The first six plots stay as they are.",
@@ -6420,6 +6820,10 @@
    "en": "New personal best!",
    "zh": "刷新最高纪录！"
   },
+  "최근 색": {
+   "en": "Recent colours",
+   "zh": "最近颜色"
+  },
   "최근 제작 30건 · 시간 UTC": {
    "en": "Last 30 crafts · Times in UTC",
    "zh": "最近 30 次制作 · 时间 UTC"
@@ -6467,6 +6871,22 @@
   "친구의 공방은 들어갈 수 없어요. 친구 집에는 놀러 갈 수 있어요.": {
    "en": "You can't enter a friend's workshop, but you can visit their home.",
    "zh": "不能进入朋友的工坊，但可以去朋友家做客。"
+  },
+  "칠한 것을 모두 지우고 처음 모습으로": {
+   "en": "Remove all paint and return to the original look",
+   "zh": "清除所有涂色并恢复原样"
+  },
+  "칠한 것을 모두 지우고 처음 모습으로 되돌릴까요? 저장된 칠도 지워져요.": {
+   "en": "Remove all paint and go back to the original look? Saved paint is removed too.",
+   "zh": "要清除所有涂色并恢复原样吗？已保存的涂色也会被删除。"
+  },
+  "칠한 것을 저장하지 않고 닫을까요?": {
+   "en": "Close without saving your painting?",
+   "zh": "不保存涂色就关闭吗？"
+  },
+  "칠한 모습을 저장했어요.": {
+   "en": "Painted look saved.",
+   "zh": "已保存涂色效果。"
   },
   "침낭과 등불이 가지런히 놓여 있어요": {
    "en": "A sleeping bag and lantern are laid out neatly",
@@ -6592,6 +7012,10 @@
    "en": "Expand quick slots",
    "zh": "展开快捷栏"
   },
+  "크기": {
+   "en": "Size",
+   "zh": "大小"
+  },
   "크기 · m": {
    "en": "Size · m",
    "zh": "尺寸 · m"
@@ -6615,6 +7039,10 @@
   "클릭하면 배치합니다. R로 회전할 수 있어요.": {
    "en": "Click to place. Press R to rotate.",
    "zh": "点击即可放置，按 R 旋转。"
+  },
+  "클릭한 곳과 이어진 비슷한 색을 표면을 따라 채워요.": {
+   "en": "Fills similar colours connected to where you click, across the surface.",
+   "zh": "沿表面填充与点击处相连的相似颜色。"
   },
   "키 설정": {
    "en": "Key bindings",
@@ -6848,6 +7276,10 @@
    "en": "Nothing to sell.",
    "zh": "没有可以卖的东西。"
   },
+  "팔레트": {
+   "en": "Palette",
+   "zh": "调色板"
+  },
   "팔레트로 전체 색을 바꿔 보세요.\nR · 배치 방향 회전": {
    "en": "Use the palette to change all the colors.\nR · Rotate placement",
    "zh": "用调色板改变整体颜色吧。\nR · 旋转摆放方向"
@@ -6855,6 +7287,14 @@
   "팽이": {
    "en": "Spinning top",
    "zh": "陀螺"
+  },
+  "펜 압력으로 불투명도 조절": {
+   "en": "Pen pressure controls opacity",
+   "zh": "笔压控制不透明度"
+  },
+  "펜 압력으로 크기 조절": {
+   "en": "Pen pressure controls size",
+   "zh": "笔压控制大小"
   },
   "편지 고마워요!": {
    "en": "Thanks for the letter!",
@@ -6915,6 +7355,10 @@
   "표면과 움직임": {
    "en": "Surface & Motion",
    "zh": "表面与动作"
+  },
+  "표면을 따라 채우는 중…": {
+   "en": "Filling across the surface…",
+   "zh": "正在沿表面填充…"
   },
   "푹신한 소파예요. 잠깐 앉아 볼까요?": {
    "en": "A squishy sofa. Sit for a moment?",
@@ -6983,6 +7427,14 @@
   "피크닉 테이블에 앉기": {
    "en": "Sit at the picnic table",
    "zh": "坐在野餐桌旁"
+  },
+  "필압→불투명": {
+   "en": "Pressure→opacity",
+   "zh": "笔压→不透明"
+  },
+  "필압→크기": {
+   "en": "Pressure→size",
+   "zh": "笔压→大小"
   },
   "필요한 게 있으면 뭐든 말해요.": {
    "en": "If you need anything, just ask.",
@@ -7180,6 +7632,10 @@
    "en": "That action isn't allowed.",
    "zh": "不允许的操作。"
   },
+  "허용치": {
+   "en": "Tolerance",
+   "zh": "容差"
+  },
   "헤헤": {
    "en": "hehe",
    "zh": "嘿嘿"
@@ -7239,6 +7695,10 @@
   "호박 씨앗": {
    "en": "Pumpkin Seeds",
    "zh": "南瓜种子"
+  },
+  "혼합 모드": {
+   "en": "Blend mode",
+   "zh": "混合模式"
   },
   "홀": {
    "en": "Hall",
@@ -7347,6 +7807,10 @@
   "휙—!": {
    "en": "Whoosh—!",
    "zh": "嗖——！"
+  },
+  "흐름": {
+   "en": "Flow",
+   "zh": "流量"
   },
   "흔들의자에 앉기": {
    "en": "Sit in the rocking chair",
