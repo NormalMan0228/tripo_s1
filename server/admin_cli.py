@@ -75,14 +75,21 @@ def plan(conn, usernames, pattern):
     files = []
     if assets and 'assets' in schema and 'relative_path' in schema['assets']:
         files = [r[0] for r in conn.execute(f'SELECT relative_path FROM assets WHERE id IN ({",".join("?" * len(assets))})', sorted(assets))]
-    return chosen, removals, files
+    return chosen, removals, files, sorted(objects)
+
+
+def remove_paint(data, object_ids):
+    """Painted textures (assets/paint/<object>.<sha>.png) of removed objects; their
+    object_paint rows go with the other object_id rows."""
+    from .object_paint import remove_object_files
+    return sum(remove_object_files(data / 'assets', object_id) for object_id in object_ids)
 
 
 def delete_accounts(args):
     data = Path(args.data_dir)
     database = data / 'world.sqlite3'
     with sqlite3.connect(database, timeout=30) as conn:
-        chosen, removals, files = plan(conn, set(args.usernames), args.pattern)
+        chosen, removals, files, objects = plan(conn, set(args.usernames), args.pattern)
     print(json.dumps({'accounts': [{'username': r[1], 'stars': r[2],
                                     'created': time.strftime('%Y-%m-%d %H:%M', time.gmtime(r[3]))} for r in chosen],
                       'rows': {name: item[2] for name, item in removals.items()}, 'model_files': len(files)},
@@ -99,7 +106,7 @@ def delete_accounts(args):
     print(json.dumps({'backup': str(snapshot)}))
     with sqlite3.connect(database, timeout=30) as conn:
         conn.execute('PRAGMA foreign_keys=OFF')
-        _, removals, files = plan(conn, set(args.usernames), args.pattern)
+        _, removals, files, objects = plan(conn, set(args.usernames), args.pattern)
         for name, (where, values, _) in removals.items():
             conn.execute(f'DELETE FROM "{name}" WHERE {where}', values)
         conn.commit()
@@ -109,7 +116,9 @@ def delete_accounts(args):
         if data.resolve() in target.parents and target.is_file():
             target.unlink()
             removed_files += 1
-    print(json.dumps({'ok': True, 'removed_accounts': len(chosen), 'removed_model_files': removed_files}))
+    removed_paint = remove_paint(data, objects)
+    print(json.dumps({'ok': True, 'removed_accounts': len(chosen), 'removed_model_files': removed_files,
+                      'removed_paint_files': removed_paint}))
     return 0
 
 

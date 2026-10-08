@@ -283,7 +283,8 @@ class TripoProvider:
     async def submit(self, prompt):
         data = await self.request('POST','/generation/text-to-model', {
             'model':self.settings.tripo_model, 'prompt':prompt, 'face_limit':3000,
-            'quad':False, 'texture':False, 'pbr':False, 'export_uv':False})
+            # UVs cost nothing extra and let the in-game painter paint the surface.
+            'quad':False, 'texture':False, 'pbr':False, 'export_uv':True})
         task = data.get('task_id')
         if not isinstance(task,str) or not task or len(task)>200 or '/' in task:
             raise ProviderError('upstream_schema', uncertain=True)

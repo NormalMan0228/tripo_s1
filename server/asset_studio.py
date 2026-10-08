@@ -25,6 +25,7 @@ from .provider import ProviderError, validate_glb
 from .studio_pricing import mesh_credits,estimate
 from . import room_budget
 from .stored_assets import read_glb
+from .object_paint import version_column as paint_version
 
 SCHEMA='''
 CREATE TABLE IF NOT EXISTS studio_jobs (
@@ -248,7 +249,7 @@ class Studio:
                     'prices':{'static_mesh':20,'static_textured':40,'dynamic_mesh':30,'dynamic_textured':50},
                     'tripo_estimate':{'models':{'v3.1-20260211':{'text_mesh':10,'text_textured':20,'image_mesh':20,'image_textured':30},'P2-20260801':{'text_mesh':100,'text_textured':110,'image_mesh':100,'image_textured':110}},'image_refinement_per_part':5,'source':'official_rates_and_measured_2026_10_02','max_parts':8,'confirmation_required':True},
                     'jobs':[dict(r) for r in conn.execute('SELECT id,state,cost,object_id,error,created FROM studio_jobs WHERE owner_id=? ORDER BY created DESC LIMIT 30',(user['id'],))],
-                    'objects':[dict(r) for r in conn.execute("SELECT objects.id,name,color,objects.version,objects.state,x,z,rotation,COALESCE(room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE studio_assets.asset_id=objects.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? ORDER BY created DESC",(user['id'],))],
+                    'objects':[dict(r) for r in conn.execute("SELECT objects.id,name,color,objects.version,objects.state,x,z,rotation,COALESCE(room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE studio_assets.asset_id=objects.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+paint_version('objects.id')+" AS paint_version FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id WHERE owner_id=? ORDER BY created DESC",(user['id'],))],
                     'categories':[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')],
                     'shards':user['shards']}
 
@@ -751,7 +752,9 @@ class Studio:
                         else:tripo=await self.pick_provider(predicted)
                         payload={'model':mesh_model,
                             'prompt':p['prompt']+' Standalone isolated component. Cozy rounded matte game furniture. No other parts, no ground.',
-                            'face_limit':3000,'texture':textured,'pbr':textured,'quad':False,'export_uv':textured}
+                            # UVs are always requested (no surcharge): uncoloured crafts are painted
+                            # in the game's painter, which maps its texture through them.
+                            'face_limit':3000,'texture':textured,'pbr':textured,'quad':False,'export_uv':True}
                         route='/generation/text-to-model'
                         if concept:
                             payload.pop('prompt');payload['input']=concept;route='/generation/image-to-model'

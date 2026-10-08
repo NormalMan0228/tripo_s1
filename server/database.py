@@ -68,6 +68,11 @@ CREATE TABLE IF NOT EXISTS security_events (
 CREATE INDEX IF NOT EXISTS security_events_kind ON security_events(kind,created);
 CREATE INDEX IF NOT EXISTS security_events_created ON security_events(created);
 CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id,expires);
+-- The painter's saved surface texture per object (server/object_paint.py). sha256 is NULL once
+-- cleared; version only grows so clients can cache by object and version.
+CREATE TABLE IF NOT EXISTS object_paint (
+ object_id TEXT PRIMARY KEY REFERENCES objects(id), sha256 TEXT, version INTEGER NOT NULL DEFAULT 1,
+ updated REAL NOT NULL);
 '''
 
 class Database:

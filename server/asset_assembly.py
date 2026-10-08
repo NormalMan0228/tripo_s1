@@ -101,13 +101,15 @@ def fixture_glb(shape, textured=False):
     """Small, UV-mapped procedural test part, not a claimed AI generation."""
     vertices, normals, uv, indices = [], [], [], []
     if shape == 'box':
-        for n,u,v in [((1,0,0),(0,0,-1),(0,1,0)),((-1,0,0),(0,0,1),(0,1,0)),
+        # Each face gets its own cell of a 3x2 UV atlas (a little apart), so the
+        # game's painter can paint one face without the others.
+        for face,(n,u,v) in enumerate([((1,0,0),(0,0,-1),(0,1,0)),((-1,0,0),(0,0,1),(0,1,0)),
                       ((0,1,0),(1,0,0),(0,0,-1)),((0,-1,0),(1,0,0),(0,0,1)),
-                      ((0,0,1),(1,0,0),(0,1,0)),((0,0,-1),(-1,0,0),(0,1,0))]:
+                      ((0,0,1),(1,0,0),(0,1,0)),((0,0,-1),(-1,0,0),(0,1,0))]):
             start=len(vertices)
             for a,b in [(-1,-1),(1,-1),(1,1),(-1,1)]:
                 vertices.append(tuple((n[k]+a*u[k]+b*v[k])*.5 for k in range(3)))
-                normals.append(n);uv.append(((a+1)/2,(b+1)/2))
+                normals.append(n);uv.append(((face%3+.04+.92*(a+1)/2)/3,(face//3+.04+.92*(b+1)/2)/2))
             indices.extend(start+i for i in [0,1,2,0,2,3])
     else:
         for y in range(13):

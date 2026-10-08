@@ -9,7 +9,7 @@ from pydantic import Field
 from .models import Strict, Mutation, Input, RunStart
 from .stored_assets import read_glb
 from .security import clean_text
-from . import coop, homestead
+from . import coop, homestead, object_paint
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS mp_parties (
@@ -116,7 +116,7 @@ class Multiplayer:
 
         def village(conn, user, scene='village'):
             host = host_for(conn, user['id'])
-            objects = [dict(r) for r in conn.execute("SELECT o.id,o.name,o.color,o.version,o.state,o.x,o.z,o.rotation,COALESCE(l.room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE asset_id=o.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=o.id) AS runtime_version FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village')=? ORDER BY o.id", (host, scene))]
+            objects = [dict(r) for r in conn.execute("SELECT o.id,o.name,o.color,o.version,o.state,o.x,o.z,o.rotation,COALESCE(l.room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE asset_id=o.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=o.id) AS runtime_version," + object_paint.version_column('o.id') + " AS paint_version FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village')=? ORDER BY o.id", (host, scene))]
             players = []
             for row in conn.execute("SELECT p.*,u.username FROM mp_presence p JOIN users u ON u.id=p.user_id WHERE p.host_id=? AND p.scene=? AND p.seen>? AND (p.user_id=? OR EXISTS(SELECT 1 FROM mp_visits v WHERE v.user_id=p.user_id AND v.host_id=? AND v.expires>?))", (host, scene, clock()-coop.PRESENCE_SECONDS, host, host, clock())):
                 players.append(dict(id=row['user_id'], username=row['username'], x=row['x'], z=row['z'], y=row['y'], yaw=row['yaw'], avatar=profile(conn, row['user_id'])['avatar']))
@@ -387,6 +387,15 @@ class Multiplayer:
                 if not entry:
                     fail('part_not_found', 404)
                 return Response(read_glb(assets, entry['file'], entry['sha256']), media_type='model/gltf-binary', headers={'Cache-Control': 'no-store'})
+
+        # The painted surface follows the same rule as the model: only furniture the host has
+        # placed where guests can see it (village or home) is readable during a visit.
+        @app.get('/v1/social/village/objects/{object_id}/paint')
+        def paint(object_id: str, request: Request):
+            with db.read() as conn:
+                user = auth(conn, request)
+                visible_object(conn, user['id'], object_id)
+                return object_paint.response(conn, assets, object_id)
 
         self.active_coop = active_coop
 

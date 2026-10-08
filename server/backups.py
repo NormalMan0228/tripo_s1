@@ -32,6 +32,27 @@ def asset_path(root, name):
     return path
 
 
+def paint_path(root, name):
+    # Painted textures live in assets/paint as '<object_id>.<sha256>.png' (server/object_paint.py).
+    stem, _, rest = name.partition('.') if isinstance(name, str) else ('', '', '')
+    checksum = rest[:-4] if rest.endswith('.png') else ''
+    if (not stem or len(stem) > 64 or any(c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-' for c in stem)
+            or len(checksum) != 64 or any(c not in '0123456789abcdef' for c in checksum)):
+        raise BackupError('invalid_paint_path')
+    path = root / 'assets' / 'paint' / name
+    if path.is_symlink() or path.resolve().parent != (root / 'assets' / 'paint').resolve():
+        raise BackupError('invalid_paint_path')
+    return path
+
+
+def paint_files(db):
+    """[(file name, sha256)] of every current painted texture; older databases have none."""
+    if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='object_paint'").fetchone():
+        return []
+    return [(f'{object_id}.{checksum}.png', checksum) for object_id, checksum in
+            db.execute('SELECT object_id,sha256 FROM object_paint WHERE sha256 IS NOT NULL ORDER BY object_id')]
+
+
 def inspect_database(path):
     with closing(readonly(path)) as db:
         if db.execute('PRAGMA integrity_check').fetchall() != [('ok',)]:
@@ -101,9 +122,21 @@ def create_backup(data_dir, destination):
             shutil.copyfile(source, target)
             if digest(target) != expected:
                 raise BackupError('asset_digest_mismatch')
+        with closing(readonly(stage / 'world.sqlite3')) as db:
+            painted = paint_files(db)
+        if painted:
+            (stage / 'assets' / 'paint').mkdir()
+        for name, expected in painted:
+            source, target = paint_path(data_dir, name), paint_path(stage, name)
+            shutil.copyfile(source, target)
+            if digest(target) != expected:
+                raise BackupError('paint_digest_mismatch')
         manifest = {'format':1, 'created_utc':datetime.now(timezone.utc).isoformat(),
                     'mode':mode, 'counts':counts, 'database_sha256':digest(stage / 'world.sqlite3'),
                     'assets':[{'name':name,'sha256':value} for name,value in files]}
+        # Only written when there is paint, so earlier snapshots keep their exact manifest.
+        if painted:
+            manifest['paint'] = [{'name':name,'sha256':value} for name,value in painted]
         (stage / 'manifest.json').write_text(json.dumps(manifest,indent=2), encoding='utf-8')
         stage.rename(destination)
         return manifest
@@ -125,6 +158,13 @@ def verify_backup(snapshot):
     for name, expected in files:
         if digest(asset_path(snapshot,name)) != expected:
             raise BackupError('asset_digest_mismatch')
+    with closing(readonly(snapshot / 'world.sqlite3')) as db:
+        painted = paint_files(db)
+    if manifest.get('paint', []) != [{'name':n,'sha256':h} for n,h in painted]:
+        raise BackupError('manifest_mismatch')
+    for name, expected in painted:
+        if digest(paint_path(snapshot,name)) != expected:
+            raise BackupError('paint_digest_mismatch')
     return manifest
 
 
@@ -144,6 +184,12 @@ def restore_backup(snapshot, destination, expected_mode):
             shutil.copyfile(asset_path(snapshot,item['name']),asset_path(stage,item['name']))
             if digest(asset_path(stage,item['name'])) != item['sha256']:
                 raise BackupError('asset_digest_mismatch')
+        if manifest.get('paint'):
+            (stage / 'assets' / 'paint').mkdir()
+        for item in manifest.get('paint', []):
+            shutil.copyfile(paint_path(snapshot,item['name']),paint_path(stage,item['name']))
+            if digest(paint_path(stage,item['name'])) != item['sha256']:
+                raise BackupError('paint_digest_mismatch')
         if digest(stage / 'world.sqlite3') != manifest['database_sha256']:
             raise BackupError('database_digest_mismatch')
         with closing(sqlite3.connect(stage / 'world.sqlite3')) as db:

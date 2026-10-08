@@ -78,18 +78,27 @@ class SecurityHeadersMiddleware:
 
 class BodyLimitMiddleware:
     """Bound bytes while receiving, including chunked bodies without Content-Length."""
-    def __init__(self, app, limit=8192, path_limits=None):
+    def __init__(self, app, limit=8192, path_limits=None, pattern_limits=None):
         self.app, self.limit, self.path_limits = app, limit, path_limits or {}
+        # (compiled regex, limit) pairs for routes with an id in the path.
+        self.pattern_limits = list(pattern_limits or [])
+
+    def limit_for(self, path):
+        if path in self.path_limits: return self.path_limits[path]
+        for pattern, limit in self.pattern_limits:
+            if pattern.fullmatch(path or ''): return limit
+        return self.limit
 
     async def __call__(self, scope, receive, send):
         if scope['type'] != 'http' or scope['method'] not in ('POST','PUT','PATCH'):
             return await self.app(scope,receive,send)
         chunks, size = [], 0
+        limit = self.limit_for(scope.get('path'))
         while True:
             message = await receive()
             if message['type']=='http.disconnect': return
             size += len(message.get('body',b''))
-            if size>self.path_limits.get(scope.get('path'),self.limit):
+            if size>limit:
                 return await JSONResponse({'detail':'body_too_large'},413)(scope,receive,send)
             chunks.append(message.get('body',b''))
             if not message.get('more_body',False): break
