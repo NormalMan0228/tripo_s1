@@ -96,7 +96,10 @@ static func factors(value) -> Vector3:
 	return Vector3(float(s.width) / 100.0 * (-1.0 if s.mirror else 1.0), float(s.height) / 100.0, float(s.depth) / 100.0) * overall
 
 static func frame_of(root: Node3D) -> Node3D:
-	return root.get_node_or_null("ShapeFrame") as Node3D if is_instance_valid(root) else null
+	if not is_instance_valid(root): return null
+	# Crafted objects keep it under their whole-object motion node (asset_assembly.gd whole_root).
+	var frame := root.get_node_or_null("ShapeFrame") as Node3D
+	return frame if frame != null else root.get_node_or_null("Whole/ShapeFrame") as Node3D
 
 ## The size the model was built with, before any shape.
 static func base_size(root: Node3D) -> Vector3:

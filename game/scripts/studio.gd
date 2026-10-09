@@ -5,6 +5,7 @@ const Loader=preload("res://scripts/model_loader.gd")
 const PaintApply=preload("res://scripts/painter/paint_apply.gd")
 const ObjectTransform=preload("res://scripts/object_transform.gd")
 const ShapePanel=preload("res://scripts/shape_panel.gd")
+const InteractionPanel=preload("res://scripts/interaction_panel.gd")
 const Art=preload("res://scripts/art.gd")
 const BuildMode=preload("res://scripts/build_mode.gd")
 const ControllerProfile=preload("res://scripts/controller_profile.gd")
@@ -21,6 +22,8 @@ var api: Node
 var viewport: SubViewport
 ## The painting workspace (scripts/painter/painter.gd) while open, and the 보관함 entry to it.
 var painter: Control
+## The interaction editor (scripts/interaction_panel.gd) while open.
+var interaction_panel: Control
 var paint_button: Button
 var paint_rows: Array=[]
 var view_container: SubViewportContainer
@@ -462,6 +465,7 @@ func build_ui() -> void:
 	detail=label(own,tr("가구를 고르면 모습을 살펴볼 수 있어요"),13)
 	var actions := row(own)
 	button(actions,tr("바닥에 배치"),begin_place);button(actions,tr("회수"),retrieve);button(actions,tr("사용"),interact_selected)
+	RpgUi.name_tip(button(own,tr("상호작용"),open_interactions),tr("누르거나 다가가면 움직이고 빛나게"))
 	# Furniture with UVs is painted in the painting workspace; the colour rows below stay
 	# for furniture made without UVs (whole colour per part).
 	paint_button=button(own,tr("색칠하기"),open_painter)
@@ -873,7 +877,7 @@ func refresh() -> void:
 				for index in data.objects.size():
 					if data.objects[index].id==selected_id:await select_item(index);break
 			else:
-				inspected.accept_event({"state":latest.data.runtime.state,"commands":[],"version":latest.data.runtime.version})
+				if not sync_interaction(inspected,latest.data):inspected.accept_event({"state":latest.data.runtime.state,"commands":[],"version":latest.data.runtime.version})
 				inspected.paint(latest.data.runtime.colors)
 	if not placement_mode:message(tr("꾸민 모습이 저장됐어요 · ")+(tr("내 집") if room=="home" else tr("공방")))
 
@@ -940,7 +944,8 @@ func reload_placed() -> void:
 						existing.queue_free()
 						if not replacement:placed.erase(obj.id)
 						continue
-					existing.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version});existing.paint(fresh.data.runtime.colors)
+					if not sync_interaction(existing,fresh.data):existing.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version})
+					existing.paint(fresh.data.runtime.colors)
 				elif is_instance_valid(existing):existing.queue_free();placed.erase(obj.id)
 			elif not existing.get_meta("studio",false) and existing.get_meta("paint",Color.WHITE)!=Color(obj.color):Loader.paint(existing,Color(obj.color))
 			# A shape saved elsewhere (another device, the host while visiting); an open shape window
@@ -1025,6 +1030,30 @@ func painter_saved(id: String, image, version) -> void:
 		if image==null:PaintApply.clear(item)
 		else:PaintApply.apply(item,image,key)
 	message(tr("칠한 모습을 저장했어요.") if image!=null else tr("처음 모습으로 되돌렸어요."))
+
+## The interaction editor (interaction_panel.gd) for the selected piece; it borrows the preview copy.
+func open_interactions() -> void:
+	if pending or selected.is_empty() or is_instance_valid(interaction_panel) or is_instance_valid(painter) or not visit_host.is_empty():return
+	if not is_instance_valid(inspected) or not inspected.get_meta("studio",false) or not inspected.has_method("use_interaction"):
+		message(tr("직접 만든 물건만 상호작용을 넣을 수 있어요."));return
+	if selected.get("state","")=="listed":message(tr("장터에 올린 물건은 바꿀 수 없어요."));return
+	var id: String=selected.id
+	interaction_panel=InteractionPanel.new()
+	interaction_panel.setup(api,selected.duplicate(),inspected,{"saved":func(reply: Dictionary):interactions_saved(id,reply)})
+	add_child(interaction_panel)
+
+## A saved interaction: the placed copy runs it now and the list knows the new runtime version.
+func interactions_saved(id: String, reply: Dictionary) -> void:
+	for obj in data.get("objects",[]):
+		if obj.id==id:obj.runtime_version=reply.runtime.version
+	if selected.get("id","")==id:selected.runtime_version=reply.runtime.version
+	var value = reply.get("interaction")
+	var item: Node3D=placed.get(id)
+	if is_instance_valid(item) and item.has_method("use_interaction"):item.use_interaction(value if value is Dictionary else {},reply.program,reply.runtime)
+
+## A copy whose interaction changed elsewhere (another device, a host) runs the new one; true when it did.
+func sync_interaction(item: Node3D, fresh: Dictionary) -> bool:
+	return item.has_method("sync_interaction") and item.sync_interaction(fresh)
 
 ## Whole colour from the painter's fallback panel (furniture without UVs).
 func painter_flat(id: String, hex: String, part: String, reset: bool) -> void:
@@ -1233,6 +1262,16 @@ func view_input(event: InputEvent) -> void:
 	if placement_mode and event is InputEventMouseButton and event.pressed and ObjectTransform.wheel_turn(event)!=0:
 		rotate_placement(ObjectTransform.wheel_turn(event));view_container.accept_event();return
 	if placement_mode and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:await commit_place()
+	# A click on a player-made piece within reach uses it, like E.
+	elif not placement_mode and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT and resting.is_empty() and not pending:
+		var crafted := nearest_crafted()
+		if crafted.is_empty() or not is_instance_valid(camera):return
+		var item: Node3D=crafted.item
+		var tall: Vector3=item.get_meta("size",Vector3.ONE)
+		# Viewport pixels to this container's pixels (the 3D view may render scaled).
+		var ratio: Vector2=Vector2(viewport.size)/view_container.size.max(Vector2.ONE)
+		var spot: Vector2=camera.unproject_position(item.global_position+Vector3(0,tall.y*0.5,0))/ratio
+		if spot.distance_to(event.position)<maxf(70.0,tall.y*60.0):await use_crafted(crafted.id)
 
 func job_status(state: String) -> String:
 	if not BuildMode.developer():
@@ -1411,7 +1450,7 @@ func leave() -> void:
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func _unhandled_key_input(event: InputEvent) -> void:
-	if is_instance_valid(painter):return
+	if is_instance_valid(painter) or is_instance_valid(interaction_panel):return
 	# Placing: R turns 15° (Shift back, Alt/Ctrl a single degree); a held key keeps turning.
 	if placement_mode and event is InputEventKey and event.is_pressed() and GameSettings.canonical_key(event)==KEY_R and not is_instance_valid(talk_box):
 		rotate_placement(ObjectTransform.key_turn(event));get_viewport().set_input_as_handled();return
@@ -1446,19 +1485,52 @@ func interact_nearest() -> void:
 	var list := decor_candidates()
 	var pick := next_pick(list.size())
 	var fixed: Dictionary=list[pick] if not list.is_empty() else {}
-	var nearest := "";var distance := 2.3
-	if visit_host.is_empty() and not public_room and floor_index==0:
-		for id in placed:
-			var d: float=hero.position.distance_to(placed[id].position)
-			if d<distance:nearest=id;distance=d
+	var crafted := nearest_crafted()
+	var nearest: String=crafted.get("id","");var distance: float=crafted.get("distance",2.3)
 	# Player-made furniture keeps its server interaction; room furniture talks locally.
 	if not fixed.is_empty() and (nearest.is_empty() or float(fixed.distance)+1.0<distance):
 		pick_cycle=pick;pick_spot=hero.position;pick_time=Time.get_ticks_msec()*0.001
 		use_decor(fixed.record)
 		return
 	if nearest.is_empty():return
-	for i in data.objects.size():
-		if data.objects[i].id==nearest:await select_item(i);await interact_selected();return
+	await use_crafted(nearest)
+
+## The player-made piece within reach on this floor (the host's, on a visit): {id, item, distance}.
+func nearest_crafted() -> Dictionary:
+	var best := {};var distance := 2.3
+	if not is_instance_valid(hero) or public_room or floor_index!=0:return best
+	for id in placed:
+		var item: Node3D=placed[id]
+		if not is_instance_valid(item):continue
+		var d: float=hero.position.distance_to(item.position)
+		if d<distance:distance=d;best={"id":id,"item":item,"distance":d}
+	return best
+
+## E on a player-made piece: a seat or a bed (상호작용 · 쉬기) takes the walker, and its click
+## behaviour runs - on the server for the owner, on this screen only for a visitor.
+func use_crafted(id: String) -> void:
+	var item: Node3D=placed.get(id)
+	if not is_instance_valid(item):return
+	var kind: String=str(item.get("rest")) if item.has_method("use_interaction") else ""
+	if kind=="sit" or kind=="lie":rest_on_crafted(item,kind)
+	if not visit_host.is_empty():
+		if item.has_method("local_event"):item.local_event("click")
+		return
+	if selected.get("id","")==id and is_instance_valid(inspected):
+		await interact_selected();return
+	for i in data.get("objects",[]).size():
+		if data.objects[i].id==id:await select_item(i);await interact_selected();return
+
+## Sits on or lies down on a crafted piece the owner marked as a seat or a bed.
+func rest_on_crafted(item: Node3D, kind: String) -> void:
+	var size: Vector3=item.get_meta("size",Vector3.ONE)
+	var yaw: float=item.rotation.y
+	# A bed lies along its longer side.
+	if kind=="lie" and size.x>size.z:
+		yaw+=PI*0.5;size=Vector3(size.z,size.y,size.x)
+	var record := {"kind":"chair" if kind=="sit" else "bed","size":size,"yaw":yaw,"center":Vector3(item.position.x,0,item.position.z),"node":item}
+	if kind=="sit":sit_on(record)
+	else:lie_on(record)
 
 ## Everything within reach, best first: the piece the walker faces and is closest
 ## to leads; pieces hanging above others (a clock over a wardrobe, a window over
@@ -1558,6 +1630,16 @@ func update_hint() -> void:
 		return
 	var fixed := nearest_decor()
 	if fixed.is_empty():
+		# A player-made piece that does something (or seats/beds) shows its E too.
+		var crafted := nearest_crafted()
+		var piece: Node3D=crafted.get("item")
+		if is_instance_valid(piece) and piece.has_method("use_interaction") and (not piece.vm.program.get("events",{}).is_empty() or str(piece.rest)!=""):
+			var tall: Vector3=piece.get_meta("size",Vector3.ONE)
+			hint_label.text="E"
+			hint_anchor=Vector3(piece.position.x,minf(piece.position.y+tall.y+0.15,float(room_spec.height)),piece.position.z)
+			hint_label.visible=not bubble.visible
+			set_chip("E",{"sit":tr("앉기"),"lie":tr("눕기")}.get(str(piece.rest),tr("사용")))
+			return
 		hint_label.visible=false
 		set_chip("",default_hint())
 		return
@@ -1632,7 +1714,15 @@ func update_camera(delta: float, snap := false) -> void:
 	camera.h_offset=shift if snap else lerpf(camera.h_offset,shift,weight)
 
 func proximity() -> void:
-	if proximity_pending or pending or not is_instance_valid(hero) or not visit_host.is_empty():return
+	if proximity_pending or pending or not is_instance_valid(hero):return
+	# Visitors play the host's interactions on this screen only.
+	if not visit_host.is_empty():
+		for id in placed:
+			var guest_item: Node3D=placed[id]
+			if not is_instance_valid(guest_item) or not guest_item.get_meta("studio",false) or not guest_item.has_method("local_event"):continue
+			var near_guest: bool=hero.position.distance_to(guest_item.position)<(2.5 if guest_item.nearby else 1.8)
+			if near_guest!=guest_item.nearby:guest_item.local_event("near" if near_guest else "leave")
+		return
 	proximity_pending=true
 	var snapshot := placed.keys()
 	for id in snapshot:
@@ -1696,7 +1786,7 @@ func _process(delta: float) -> void:
 		walk_out_step(delta)
 	elif not placement_mode and not travelling and not is_instance_valid(talk_box) and not PauseMenu.is_open():
 		var focus := get_viewport().gui_get_focus_owner()
-		if not (focus is TextEdit or focus is LineEdit) and not is_instance_valid(painter):walk(delta)
+		if not (focus is TextEdit or focus is LineEdit) and not is_instance_valid(painter) and not is_instance_valid(interaction_panel):walk(delta)
 	update_camera(delta)
 	if is_instance_valid(bubble) and bubble.visible: pin_overlay(bubble,bubble_anchor,14)
 	if is_instance_valid(hint_label) and hint_label.visible: pin_overlay(hint_label,hint_anchor,6)

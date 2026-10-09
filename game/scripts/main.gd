@@ -5,6 +5,7 @@ const Loader = preload("res://scripts/model_loader.gd")
 const PaintApply = preload("res://scripts/painter/paint_apply.gd")
 const ObjectTransform = preload("res://scripts/object_transform.gd")
 const ShapePanel = preload("res://scripts/shape_panel.gd")
+const InteractionPanel = preload("res://scripts/interaction_panel.gd")
 const Player = preload("res://scripts/player.gd")
 const ControllerProfile=preload("res://scripts/controller_profile.gd")
 const Api = preload("res://scripts/api.gd")
@@ -155,6 +156,8 @@ var expedition_button: Button
 var village_modal: Control
 ## The painting workspace (scripts/painter/painter.gd) while it is open, and the bag's way in.
 var painter: Control
+## The interaction editor (scripts/interaction_panel.gd) while it is open.
+var interaction_panel: Control
 var paint_palette: HBoxContainer
 var paint_button: Button
 var paint_hint: Label
@@ -872,6 +875,7 @@ func enter_village() -> void:
 	button(right,tr("선택한 물건 놓기"),begin_place)
 	button(right,tr("선택한 물건 회수"),retrieve_object)
 	button(right,tr("선택한 가구 사용"),func():await village_furniture_event(selected.get("id",""),"click"))
+	RpgUi.name_tip(button(right,tr("상호작용"),open_interactions),tr("누르거나 다가가면 움직이고 빛나게"))
 	if TRADING_UI_ENABLED:
 		var sell_row := HBoxContainer.new()
 		right.add_child(sell_row)
@@ -1280,7 +1284,9 @@ func sync_runtime(item: Node3D, obj: Dictionary) -> void:
 	if int(item.runtime_version)==int(obj.runtime_version): return
 	var fresh: Dictionary=await api.request("/v1/objects/"+str(obj.id)+"/assembly")
 	if not fresh.ok or not is_instance_valid(item): return
-	item.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version})
+	# A changed interaction (상호작용 saved on another device) runs its new program; otherwise only the state moves.
+	if not (item.has_method("sync_interaction") and item.sync_interaction(fresh.data)):
+		item.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version})
 	item.paint(fresh.data.runtime.colors)
 
 ## A shape saved elsewhere (another PC) reshapes a kept model in place; the object the shape
@@ -1385,6 +1391,33 @@ func open_painter() -> void:
 		"flat":func(hex: String,part: String,reset: bool): painter_flat(id,hex,part,reset)})
 	ui.add_child(painter)
 	player.controls_enabled=false
+
+## The interaction editor (scripts/interaction_panel.gd) for the selected crafted object. The bag's
+## preview model is borrowed while it is open.
+func open_interactions() -> void:
+	if selected.is_empty() or busy or is_instance_valid(interaction_panel) or is_instance_valid(painter) or social.visiting(): return
+	if not selected.get("studio",false) or not is_instance_valid(inspect_model) or not inspect_model.has_method("use_interaction"):
+		message(tr("직접 만든 물건만 상호작용을 넣을 수 있어요."))
+		return
+	if selected.state=="listed":
+		message(tr("장터에 올린 물건은 바꿀 수 없어요."))
+		return
+	var id: String=selected.id
+	interaction_panel=InteractionPanel.new()
+	interaction_panel.setup(api,selected.duplicate(),inspect_model,{"saved":func(reply: Dictionary): interactions_saved(id,reply)})
+	ui.add_child(interaction_panel)
+	player.controls_enabled=false
+
+## A saved interaction: the placed copy runs it now, and the bag knows the new runtime version
+## (so the next poll does not reload every object).
+func interactions_saved(id: String, reply: Dictionary) -> void:
+	for obj in me.objects:
+		if obj.id==id: obj.runtime_version=reply.runtime.version
+	if selected.get("id","")==id: selected.runtime_version=reply.runtime.version
+	var value = reply.get("interaction")
+	var item: Node3D=loaded.get(id)
+	if is_instance_valid(item) and item.has_method("use_interaction"):
+		item.use_interaction(value if value is Dictionary else {},reply.program,reply.runtime)
 
 ## The painter saved (image) or cleared (null) an object's paint: every copy shows it now.
 func painter_saved(id: String, image, version) -> void:
@@ -2370,7 +2403,7 @@ func text_input_active() -> bool:
 
 func world_movement_allowed() -> bool:
 	if PauseMenu.is_open(): return false
-	if is_instance_valid(painter): return false
+	if is_instance_valid(painter) or is_instance_valid(interaction_panel): return false
 	if busy or text_input_active() or is_instance_valid(village_modal) or is_instance_valid(preview):return false
 	if is_instance_valid(right) and right.get_parent().visible:return false
 	if screen=="village":return true
@@ -2599,7 +2632,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif key==KEY_E and near(TownLayout.WORKSHOP_DOOR,2.5): open_studio()
 			elif key==KEY_E: village_furniture_event(nearest_furniture(),"click")
 	if screen=="village" and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
-		place_preview()
+		if is_instance_valid(preview): place_preview()
+		else: click_furniture(event.position)
 
 func region_name(id: String) -> String:
 	return {"forest":tr("솔바람 숲"),"quarry":tr("노을 채석장"),"frost":tr("서리빛 분지")}.get(id,id)
@@ -3135,9 +3169,12 @@ func nearest_furniture() -> String:
 	return result
 
 func village_furniture_event(id: String,event: String) -> void:
-	if social.visiting(): return
-	if id.is_empty() or busy or refreshing or furniture_event_pending:return
 	var item: Node3D=loaded.get(id)
+	# A visitor plays the host's interactions on this screen only; the host's object is not changed.
+	if social.visiting():
+		if not id.is_empty() and is_instance_valid(item) and item.has_method("local_event"): item.local_event(event)
+		return
+	if id.is_empty() or busy or refreshing or furniture_event_pending:return
 	if not is_instance_valid(item) and selected.get("id")==id:item=inspect_model
 	if not is_instance_valid(item) or not item.get_meta("studio",false):return
 	furniture_event_pending=true
@@ -3156,9 +3193,25 @@ func village_furniture_event(id: String,event: String) -> void:
 	for obj in me.objects:
 		if obj.id==id:obj.runtime_version=reply.data.version
 
+## A click on crafted furniture within reach uses it, like E.
+func click_furniture(at: Vector2) -> void:
+	var id := nearest_furniture()
+	if id.is_empty() or not is_instance_valid(camera) or not world_movement_allowed(): return
+	var item: Node3D=loaded.get(id)
+	if not is_instance_valid(item): return
+	var tall: Vector3=item.get_meta("size",Vector3.ONE)
+	var spot: Vector2=camera.unproject_position(item.global_position+Vector3(0,tall.y*0.5,0))
+	if spot.distance_to(at)<maxf(70.0,tall.y*60.0): await village_furniture_event(id,"click")
+
 func village_furniture_proximity() -> void:
-	if social.visiting(): return
 	if furniture_event_pending or busy or refreshing or not is_instance_valid(player):return
+	if social.visiting():
+		for id in loaded.keys():
+			var guest_item = loaded.get(id)
+			if not is_instance_valid(guest_item) or not guest_item.get_meta("studio",false) or not guest_item.has_method("local_event"):continue
+			var near_guest: bool=player.position.distance_to(guest_item.position)<(2.5 if guest_item.nearby else 1.8)
+			if near_guest!=guest_item.nearby: guest_item.local_event("near" if near_guest else "leave")
+		return
 	for id in loaded.keys():
 		if not loaded.has(id) or not is_instance_valid(loaded[id]):continue
 		var item: Node3D=loaded[id]

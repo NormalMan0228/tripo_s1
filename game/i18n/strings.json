@@ -76,6 +76,10 @@
    "en": " · %d commands",
    "zh": " · 命令 %d 条"
   },
+  " · 별씨는 돌려드렸어요": {
+   "en": " · starseeds refunded",
+   "zh": " · 星种已退还"
+  },
   " · 보상 ×%.3f": {
    "en": " · Reward ×%.3f",
    "zh": " · 奖励 ×%.3f"
@@ -155,6 +159,10 @@
   "%d · 빈 밭": {
    "en": "%d · Empty plot",
    "zh": "%d · 空田"
+  },
+  "%d 별씨 · 오늘 %d번 남음": {
+   "en": "%d starseeds · %d left today",
+   "zh": "%d 星种 · 今天还剩 %d 次"
   },
   "%d개 부품 · ": {
    "en": "%d parts · ",
@@ -604,6 +612,10 @@
    "en": "…This is a secret. A story only shadows know.",
    "zh": "……这是秘密，只有影子们知道的故事。"
   },
+  "↶ 왼쪽으로": {
+   "en": "↶ Left",
+   "zh": "↶ 向左"
+  },
   "↶ 회전": {
    "en": "↶ Rotate",
    "zh": "↶ 旋转"
@@ -643,6 +655,10 @@
   "♪ 새로 배운 곡이에요. 들어 볼래요?": {
    "en": "♪ A tune I just learned. Want to hear it?",
    "zh": "♪ 新学的曲子，要听听吗？"
+  },
+  "✓ 준비됨": {
+   "en": "✓ Ready",
+   "zh": "✓ 已就绪"
   },
   "✦  오늘의 마을 이야기": {
    "en": "✦  Today in the Village",
@@ -864,6 +880,10 @@
    "en": "Thorn Boar",
    "zh": "荆棘野猪"
   },
+  "가운데": {
+   "en": "Centre",
+   "zh": "中间"
+  },
   "가입한 사용자 이름을 확인해 주세요.": {
    "en": "Check the player's username.",
    "zh": "请确认已注册的用户名。"
@@ -907,6 +927,10 @@
   "강아지": {
    "en": "Puppy",
    "zh": "小狗"
+  },
+  "같은 부위에 같은 움직임이 두 번 있어요.": {
+   "en": "The same motion is on the same part twice.",
+   "zh": "同一部位有两个相同的动作。"
   },
   "개발 공방": {
    "en": "Dev Workshop",
@@ -1067,6 +1091,10 @@
   "고등어": {
    "en": "Mackerel",
    "zh": "鲭鱼"
+  },
+  "고른 움직임이 없어요. 위 카드를 눌러 더해 보세요.": {
+   "en": "No motion picked. Tap a card above to add one.",
+   "zh": "还没有选择动作。点击上方卡片添加吧。"
   },
   "고마워요": {
    "en": "Thank you",
@@ -1332,6 +1360,10 @@
    "en": "Things changed just now. Please choose again.",
    "zh": "情况刚刚有变化，请重新选择。"
   },
+  "글로 설명하기": {
+   "en": "Describe in words",
+   "zh": "用文字描述"
+  },
   "금": {
    "en": "Fri",
    "zh": "五"
@@ -1364,6 +1396,10 @@
    "en": "For basic furniture, pick a color from the palette",
    "zh": "基础家具请从调色板选择颜色"
   },
+  "기본 동작": {
+   "en": "Ready-made",
+   "zh": "基本动作"
+  },
   "기본 생존 규칙. 준비와 전투를 균형 있게.": {
    "en": "Standard Survival rules. Balance preparation and combat.",
    "zh": "基础生存规则。兼顾准备与战斗。"
@@ -1371,6 +1407,10 @@
   "기본값으로": {
    "en": "Reset to defaults",
    "zh": "恢复默认"
+  },
+  "기울기": {
+   "en": "Tilt",
+   "zh": "倾斜"
   },
   "기타": {
    "en": "Other",
@@ -1788,6 +1828,10 @@
    "en": "Choose a spot · ",
    "zh": "选择摆放位置 · "
   },
+  "누르거나 다가가면 움직이고 빛나게": {
+   "en": "Make it move and glow when pressed or approached",
+   "zh": "按下或靠近时让它动起来、发光"
+  },
   "누르고 있기": {
    "en": "Hold",
    "zh": "按住"
@@ -1795,6 +1839,10 @@
   "누르면 길 안내": {
    "en": "Click to guide the way",
    "zh": "点击开始导航"
+  },
+  "누울 수 있음": {
+   "en": "Can lie down",
+   "zh": "可以躺"
   },
   "눌러서 전환": {
    "en": "Toggle",
@@ -1832,6 +1880,14 @@
    "en": "Harvest Ripe Crop",
    "zh": "收获成熟的作物"
   },
+  "다가가기": {
+   "en": "Come near",
+   "zh": "靠近"
+  },
+  "다가가면": {
+   "en": "When near",
+   "zh": "靠近时"
+  },
   "다가가면 꽃잎이 열리는 꽃 조명": {
    "en": "A flower lamp that opens its petals as you approach",
    "zh": "靠近时花瓣会绽放的花灯"
@@ -1864,6 +1920,10 @@
    "en": "The shape changed elsewhere. Please open it again.",
    "zh": "形状已在别处更改，请重新打开。"
   },
+  "다른 곳에서 바뀌었어요. 다시 저장해 주세요.": {
+   "en": "It changed elsewhere. Please save again.",
+   "zh": "在别处被修改了。请重新保存。"
+  },
   "다른 곳에서 부품 맞춤이 바뀌었어요. 편집값은 보존했습니다. 가구를 다시 선택하면 최신 설계를 불러옵니다.": {
    "en": "Part fitting was changed elsewhere. Your edits are kept. Select the furniture again to load the latest design.",
    "zh": "部件调整已在其他地方更改。你的编辑已保留，重新选择家具即可加载最新设计。"
@@ -1879,6 +1939,14 @@
   "다른 밭과 너무 가까워요.": {
    "en": "Too close to another plot.",
    "zh": "离其他田地太近了。"
+  },
+  "다른 부위에도": {
+   "en": "Also on another part",
+   "zh": "也加到其他部位"
+  },
+  "다른 설명을 설계하고 있어요. 잠시 뒤에 다시 해 주세요.": {
+   "en": "Another description is being designed. Try again shortly.",
+   "zh": "正在设计另一个描述。请稍后再试。"
   },
   "다른 요청으로 바뀐 상태를 새로 읽었어요. 다시 선택하세요.": {
    "en": "Things changed from another request and were reloaded. Please choose again.",
@@ -2088,6 +2156,10 @@
    "en": "Mine the rock",
    "zh": "采石头"
   },
+  "돌기": {
+   "en": "Turn",
+   "zh": "旋转"
+  },
   "돌도끼": {
    "en": "Stone Axe",
    "zh": "石斧"
@@ -2099,6 +2171,10 @@
   "돌려 보기": {
    "en": "Spin",
    "zh": "转一转"
+  },
+  "돌려 열기": {
+   "en": "Swing around",
+   "zh": "旋转打开"
   },
   "돌리기": {
    "en": "Turn",
@@ -2364,6 +2440,10 @@
    "en": "Adjust the position and pivot of lids and hands. Saving applies only to your furniture, and you can revert to the original design.",
    "zh": "调整盖子、指针的位置与旋转轴。保存后仅对你的家具生效，并可恢复原设计。"
   },
+  "뜨기": {
+   "en": "Lift",
+   "zh": "浮起"
+  },
   "레이어": {
    "en": "Layers",
    "zh": "图层"
@@ -2600,6 +2680,18 @@
    "en": "The last layer cannot be deleted.",
    "zh": "最后一个图层不能删除。"
   },
+  "만들 때의 움직임도 함께": {
+   "en": "Keep the crafted motion too",
+   "zh": "同时保留制作时的动作"
+  },
+  "만들 때의 움직임으로 (저장하면 적용)": {
+   "en": "Back to the crafted motion (applies on save)",
+   "zh": "恢复制作时的动作（保存后生效）"
+  },
+  "만들 때의 움직임이에요. 저장하면 되돌아가요.": {
+   "en": "This is the crafted motion. Save to go back to it.",
+   "zh": "这是制作时的动作。保存后即可恢复。"
+  },
   "만들 물건을 두 글자 이상 적어 주세요.": {
    "en": "Describe the item in at least two characters.",
    "zh": "请写下要制作的物品（至少两个字）。"
@@ -2635,6 +2727,10 @@
   "만들기를 기다리고 있어요": {
    "en": "Waiting to create",
    "zh": "等待制作中"
+  },
+  "만들어 보기": {
+   "en": "Make it",
+   "zh": "试着做"
   },
   "만료되었거나 이미 처리된 초대입니다.": {
    "en": "This invite has expired or was already handled.",
@@ -2732,6 +2828,10 @@
    "en": "How much detail distant trees and props are drawn with.",
    "zh": "决定远处的树木和道具绘制得多精细。"
   },
+  "먼저 '만들어 보기'를 눌러 주세요.": {
+   "en": "Press 'Make it' first.",
+   "zh": "请先点击“试着做”。"
+  },
   "먼저 미끼를 달고 찌를 던져 주세요.": {
    "en": "Put on Bait and cast your bobber first.",
    "zh": "请先挂上鱼饵再抛竿。"
@@ -2751,6 +2851,14 @@
   "멀리서 새소리가 들려요.": {
    "en": "Birdsong drifts in from far away.",
    "zh": "远处传来鸟鸣声。"
+  },
+  "멀어지기": {
+   "en": "Walk away",
+   "zh": "走远"
+  },
+  "멀어지면": {
+   "en": "When leaving",
+   "zh": "离开时"
   },
   "메기": {
    "en": "Catfish",
@@ -2811,6 +2919,10 @@
   "모든 레이어 기준": {
    "en": "Sample all layers",
    "zh": "参考所有图层"
+  },
+  "모든 부품에 이미 있어요.": {
+   "en": "Every part already has it.",
+   "zh": "所有部件都已经有了。"
   },
   "모든 소리 끄기": {
    "en": "Mute all sound",
@@ -2920,6 +3032,10 @@
    "en": "Growing nicely. It keeps growing even while you're away.",
    "zh": "长得很好。离开村庄也会继续生长。"
   },
+  "무료": {
+   "en": "Free",
+   "zh": "免费"
+  },
   "무제한": {
    "en": "Unlimited",
    "zh": "无限制"
@@ -2927,6 +3043,10 @@
   "무지개송어": {
    "en": "Rainbow Trout",
    "zh": "虹鳟"
+  },
+  "문": {
+   "en": "Door",
+   "zh": "门"
   },
   "문 쪽으로 걸어 나가면 마을로": {
    "en": "Walk out the door to return to the village",
@@ -2971,6 +3091,10 @@
   "물건을 꺼내지 못했어요.": {
    "en": "Couldn't take that item out.",
    "zh": "无法取出该物品。"
+  },
+  "물건을 불러오는 중이에요.": {
+   "en": "Loading the object.",
+   "zh": "正在加载物品。"
   },
   "물건을 불러오는 중이에요. 잠시 뒤에 다시 눌러 주세요.": {
    "en": "The object is still loading. Try again in a moment.",
@@ -3120,6 +3244,10 @@
    "en": "Mira · Forest Keeper",
    "zh": "米拉 · 森林守护人"
   },
+  "미리보기": {
+   "en": "Preview",
+   "zh": "预览"
+  },
   "미리보기 · 드래그 회전 / 휠 확대": {
    "en": "Preview · Drag to rotate / Wheel to zoom",
    "zh": "预览 · 拖动旋转 / 滚轮缩放"
@@ -3131,6 +3259,10 @@
   "미리보기만 변경됨 · ‘맞춤 저장’을 누르면 서버에 저장합니다.": {
    "en": "Preview only · Press 'Save Fit' to save to the server.",
    "zh": "仅预览已更改 · 点击“保存调整”即可保存到服务器。"
+  },
+  "미리보는 중 · 저장하면 어디서나 이렇게 움직여요": {
+   "en": "Previewing · save and it moves like this everywhere",
+   "zh": "预览中 · 保存后在任何地方都会这样动"
   },
   "밀가루 포대가 묵직해요.": {
    "en": "The flour sack is heavy.",
@@ -3428,6 +3560,10 @@
    "en": "It overlaps furniture that's already in the room.",
    "zh": "会和房间里原有的家具重叠。"
   },
+  "방향": {
+   "en": "Direction",
+   "zh": "方向"
+  },
   "방향 · 도": {
    "en": "Rotation · °",
    "zh": "方向 · 度"
@@ -3604,6 +3740,10 @@
    "en": "Not enough Starseeds. Try completing a Survival challenge.",
    "zh": "星种不足。试着完成生存挑战吧。"
   },
+  "별씨가 부족해요.": {
+   "en": "Not enough starseeds.",
+   "zh": "星种不足。"
+  },
   "별씨가 부족해요. 탐험 보상을 모아 보세요.": {
    "en": "Not enough Starseeds. Earn more from Expedition rewards.",
    "zh": "星种不足。去探险收集奖励吧。"
@@ -3724,6 +3864,10 @@
    "en": "Kitchen",
    "zh": "厨房"
   },
+  "부위": {
+   "en": "Part",
+   "zh": "部位"
+  },
   "부품 맞춤": {
    "en": "Part Fitting",
    "zh": "部件调整"
@@ -3731,6 +3875,10 @@
   "부품 맞춤을 저장했어요": {
    "en": "Part fit saved",
    "zh": "已保存部件调整"
+  },
+  "부품 열기·닫기": {
+   "en": "Open/close a part",
+   "zh": "部件开·合"
   },
   "부품당 %d 크레딧 · 최대 8부품": {
    "en": "%d credits per part · Up to 8 parts",
@@ -3787,6 +3935,10 @@
   "불 켜고 끄기": {
    "en": "Switch light",
    "zh": "开关灯"
+  },
+  "불 켜기·끄기": {
+   "en": "Light on/off",
+   "zh": "开灯·关灯"
   },
   "불가에 서니 몸이 사르르 따뜻해져요.": {
    "en": "Standing by the fire warms you right up.",
@@ -3920,6 +4072,14 @@
    "en": "Hear the broom? A shadow's broom is very quiet.",
    "zh": "听到扫帚声了吗？影子的扫帚很安静的。"
   },
+  "빙글 돌기": {
+   "en": "Spin",
+   "zh": "转一圈"
+  },
+  "빛": {
+   "en": "Light",
+   "zh": "光"
+  },
   "빠르게": {
    "en": "Fast",
    "zh": "快"
@@ -3943,6 +4103,10 @@
   "빵 굽는 부엌": {
    "en": "Bakery Kitchen",
    "zh": "烤面包厨房"
+  },
+  "빼기": {
+   "en": "Remove",
+   "zh": "移除"
   },
   "삐걱, 정겨운 소리가 나는 나무 의자예요.": {
    "en": "A wooden chair with a friendly creak.",
@@ -4064,6 +4228,10 @@
    "en": "Status code: ",
    "zh": "状态码："
   },
+  "상호작용": {
+   "en": "Interactions",
+   "zh": "互动"
+  },
   "상호작용 · 채집": {
    "en": "Interact · Gather",
    "zh": "互动 · 采集"
@@ -4151,6 +4319,10 @@
   "색": {
    "en": "Colour",
    "zh": "颜色"
+  },
+  "색 바꾸기": {
+   "en": "Change colour",
+   "zh": "变换颜色"
   },
   "색상이 서버에 저장됐습니다.": {
    "en": "Colors saved to the server.",
@@ -4344,6 +4516,14 @@
    "en": "Generating design and motion code",
    "zh": "生成设计与动作代码"
   },
+  "설계하는 중… 잠시만요": {
+   "en": "Designing… one moment",
+   "zh": "正在设计… 请稍候"
+  },
+  "설명을 움직임으로 바꾸지 못했어요. 더 짧고 분명하게 써 보세요.": {
+   "en": "Couldn't turn that into motion. Try something shorter and clearer.",
+   "zh": "无法把描述变成动作。请写得更简短明确。"
+  },
   "설정": {
    "en": "Settings",
    "zh": "设置"
@@ -4371,6 +4551,14 @@
   "성장 중 · %d초": {
    "en": "Growing · %ds",
    "zh": "生长中 · %d秒"
+  },
+  "세게": {
+   "en": "Strong",
+   "zh": "强"
+  },
+  "세기": {
+   "en": "Strength",
+   "zh": "强度"
   },
   "세션이 만료되었습니다. 다시 로그인해 주세요.": {
    "en": "Your session has expired. Please log in again.",
@@ -4628,6 +4816,10 @@
    "en": "Past the forest is the scorching quarry, and farther still, Frostlight Basin.\nIf it's your first time, learn the way on Stroll difficulty.\nThe harder the challenge, the more Starseeds you earn for finishing.",
    "zh": "穿过森林是炎热的采石场，更远处还有霜光盆地。\n第一次的话，用漫步难度熟悉一下路线吧。\n挑战越难，通关时获得的星种也越多。"
   },
+  "쉬기": {
+   "en": "Rest",
+   "zh": "休息"
+  },
   "쉿, 방금 찌가 까딱했어요!": {
    "en": "Shh, the float just twitched!",
    "zh": "嘘，浮漂刚刚动了一下！"
@@ -4703,6 +4895,10 @@
   "시침과 분침이 움직이고 클릭하면 멈추는 탁상 시계": {
    "en": "A desk clock with moving hour and minute hands that stops when clicked",
    "zh": "时针分针转动、点击即停的台钟"
+  },
+  "시험": {
+   "en": "Try",
+   "zh": "试试"
   },
   "식수대에서 물 마시기": {
    "en": "Drink from the fountain",
@@ -4888,6 +5084,10 @@
    "en": "Sit",
    "zh": "坐下"
   },
+  "앉을 수 있음": {
+   "en": "Can sit",
+   "zh": "可以坐"
+  },
   "알 수 없는 제작법입니다.": {
    "en": "Unknown recipe.",
    "zh": "未知的制作配方。"
@@ -4895,6 +5095,10 @@
   "알록달록한 물건이 가지런히 진열돼 있어요.": {
    "en": "Colourful goods are neatly on display.",
    "zh": "五颜六色的商品整齐陈列着。"
+  },
+  "앞뒤로 열기": {
+   "en": "Open front-back",
+   "zh": "前后打开"
   },
   "앞면": {
    "en": "Front",
@@ -4936,6 +5140,10 @@
    "en": "Shake the palm tree",
    "zh": "摇椰子树"
   },
+  "약하게": {
+   "en": "Gentle",
+   "zh": "轻"
+  },
   "어느 곳에서 일곱 밤을 보낼까요?": {
    "en": "Where will you spend Seven Nights?",
    "zh": "要在哪里度过七夜呢？"
@@ -4959,6 +5167,10 @@
   "어떤 씨앗을 심을까요?": {
    "en": "Which seeds shall we plant?",
    "zh": "要种什么种子？"
+  },
+  "어떻게 움직였으면 좋겠나요?": {
+   "en": "How should it move?",
+   "zh": "希望它怎么动？"
   },
   "어머, 반가워! 재단사 소라예요.": {
    "en": "Oh, hello! I'm Sora, the tailor.",
@@ -4992,6 +5204,10 @@
    "en": "Language & dialogue",
    "zh": "语言与对话"
   },
+  "언제": {
+   "en": "When",
+   "zh": "何时"
+  },
   "언제나": {
    "en": "Any time",
    "zh": "随时"
@@ -5003,6 +5219,10 @@
   "없는 게 없는 마을 잡화점이에요. 구경은 언제나 무료!": {
    "en": "The village store that has everything. Browsing is always free!",
    "zh": "应有尽有的村庄杂货店。随便逛，不要钱！"
+  },
+  "없음": {
+   "en": "None",
+   "zh": "无"
   },
   "에 길잡이를 표시했어요.": {
    "en": " · waypoint marked.",
@@ -5035,6 +5255,10 @@
   "여기에는 놓을 수 없어요 · ": {
    "en": "Can't place it here · ",
    "zh": "这里无法放置 · "
+  },
+  "여러 부품으로 만든 물건만 열고 닫을 수 있어요.": {
+   "en": "Only items made of several parts can open and close.",
+   "zh": "只有由多个部件组成的物品才能开合。"
   },
   "여행 모자": {
    "en": "Travel Hat",
@@ -5080,6 +5304,10 @@
    "en": "Play",
    "zh": "演奏"
   },
+  "열고 닫을 부품을 골라 주세요.": {
+   "en": "Pick the part to open and close.",
+   "zh": "请选择要开合的部件。"
+  },
   "열기 · 접근 주의": {
    "en": "Heat · Watch your step",
    "zh": "高温 · 小心靠近"
@@ -5107,6 +5335,14 @@
   "열어 보기": {
    "en": "Open",
    "zh": "打开看看"
+  },
+  "옆으로 열기": {
+   "en": "Open sideways",
+   "zh": "侧向打开"
+  },
+  "예) 다가가면 뚜껑이 천천히 열리고 은은하게 빛나요": {
+   "en": "e.g. When I come near, the lid opens slowly and it glows softly",
+   "zh": "例）靠近时盖子慢慢打开，并柔和发光"
   },
   "예: 다가가면 꽃잎이 열리는 꽃 조명": {
    "en": "e.g. A flower lamp that opens its petals as you approach",
@@ -5163,6 +5399,10 @@
   "오늘은 낚싯대 내려놓고 쉬는 중이에요.": {
    "en": "I've put my rod down and I'm resting today.",
    "zh": "今天放下鱼竿休息一下。"
+  },
+  "오늘은 더 설명할 수 없어요. 내일 다시 해 보세요.": {
+   "en": "No more descriptions today. Try again tomorrow.",
+   "zh": "今天不能再描述了。明天再试吧。"
   },
   "오늘은 바람이 좋아서 맷돌이 신나게 돌아요.": {
    "en": "The wind is good today, so the millstone is turning happily.",
@@ -5227,6 +5467,10 @@
   "오래된 배의 키예요. 바다 냄새가 나요.": {
    "en": "An old ship's wheel. It smells of the sea.",
    "zh": "一个旧船舵，带着大海的气味。"
+  },
+  "오른쪽으로 ↷": {
+   "en": "Right ↷",
+   "zh": "向右 ↷"
   },
   "오른쪽으로 이동": {
    "en": "Move right",
@@ -5328,6 +5572,10 @@
    "en": "Complete",
    "zh": "完成"
   },
+  "완성! 시험해 보고 마음에 들면 저장하세요.": {
+   "en": "Done! Try it, and save if you like it.",
+   "zh": "完成！试试看，满意就保存吧。"
+  },
   "완성된 질감 포함하기": {
    "en": "Include finished textures",
    "zh": "包含成品材质"
@@ -5404,9 +5652,17 @@
    "en": "Reduce motion",
    "zh": "减少动态效果"
   },
+  "움직임은 %d개까지 함께 쓸 수 있어요.": {
+   "en": "Up to %d motions can be combined.",
+   "zh": "最多可以组合 %d 个动作。"
+  },
   "움직임을 살펴보세요.": {
    "en": "Take a look at how it moves.",
    "zh": "看看动作吧。"
+  },
+  "움직임이 너무 많아요. 몇 개를 빼 주세요.": {
+   "en": "Too many motions. Please remove a few.",
+   "zh": "动作太多了。请移除几个。"
   },
   "원격 서버는 HTTPS 주소를 사용하세요.": {
    "en": "Use an HTTPS address for remote servers.",
@@ -5483,6 +5739,10 @@
   "은어": {
    "en": "Sweetfish",
    "zh": "香鱼"
+  },
+  "은은하게 빛나기": {
+   "en": "Soft glow",
+   "zh": "柔和发光"
   },
   "은은한 꽃향기가 나요": {
    "en": "A gentle floral scent",
@@ -5659,6 +5919,10 @@
   "이 조합은 1회 제작 한도(%d크레딧)를 넘어요. 옵션을 줄이거나 운영자에게 한도를 물어보세요.": {
    "en": "This combination is over the per-craft limit (%d credits). Choose fewer options or ask the operator about the limit.",
    "zh": "该组合超出单次制作上限（%d 积分）。请减少选项，或向管理员询问上限。"
+  },
+  "이 조합은 안전 검사를 통과하지 못했어요.": {
+   "en": "This combination didn't pass the safety check.",
+   "zh": "这个组合没有通过安全检查。"
   },
   "이 창을 보는 동안에도 생존 시간은 흐릅니다.": {
    "en": "Survival time keeps running while this window is open.",
@@ -6048,6 +6312,10 @@
    "en": "Take a Break",
    "zh": "稍作休息"
   },
+  "잠시 뒤에 다시 해 주세요 · ": {
+   "en": "Please try again shortly · ",
+   "zh": "请稍后再试 · "
+  },
   "잠시 앉아 숨을 돌렸어요": {
    "en": "You sat down to catch your breath",
    "zh": "你坐下来歇了口气"
@@ -6095,6 +6363,10 @@
   "장터에 올린 물건은 모양을 바꿀 수 없어요.": {
    "en": "Items listed at the market can't be reshaped.",
    "zh": "已在集市上架的物品无法改变形状。"
+  },
+  "장터에 올린 물건은 바꿀 수 없어요.": {
+   "en": "Items listed at the market can't be changed.",
+   "zh": "已在市集上架的物品无法修改。"
   },
   "장터에 올린 물건은 칠할 수 없어요.": {
    "en": "Objects listed on the market cannot be painted.",
@@ -6144,6 +6416,10 @@
    "en": "Don't save",
    "zh": "不保存"
   },
+  "저장하는 중…": {
+   "en": "Saving…",
+   "zh": "正在保存…"
+  },
   "저장하지 못했습니다. 옷장을 닫고 새로고침한 뒤 다시 시도하세요.": {
    "en": "Couldn't save. Close the Wardrobe, refresh, and try again.",
    "zh": "保存失败。请关闭衣橱并刷新后再试。"
@@ -6155,6 +6431,10 @@
   "저장하지 않고 닫기  ·  Esc": {
    "en": "Close without saving  ·  Esc",
    "zh": "不保存并关闭  ·  Esc"
+  },
+  "저장했어요! 이제 어디서나 이렇게 움직여요.": {
+   "en": "Saved! It now moves like this everywhere.",
+   "zh": "已保存！现在在任何地方都会这样动。"
   },
   "적용": {
    "en": "Apply",
@@ -6516,6 +6796,10 @@
    "en": "Place in Village Now",
    "zh": "现在摆放到村庄"
   },
+  "지금 모양의 부품만 움직여요. 모양은 바뀌지 않아요.": {
+   "en": "Only the current parts move. The shape stays the same.",
+   "zh": "只会让现有部件动起来，形状不会改变。"
+  },
   "지금 색을 팔레트에 저장": {
    "en": "Save the current colour to the palette",
    "zh": "将当前颜色保存到调色板"
@@ -6531,6 +6815,10 @@
   "지금은 그 섬으로 가는 길이 막혀 있어요.": {
    "en": "The way to that island is blocked right now.",
    "zh": "现在去那座岛的路不通。"
+  },
+  "지금은 글로 설명하기를 쓸 수 없어요.": {
+   "en": "Describing in words isn't available right now.",
+   "zh": "现在无法使用文字描述。"
   },
   "지금은 문을 닫았어요. 주인이 자리를 비웠나 봐요.": {
    "en": "It's closed for now. The owner must be out.",
@@ -6579,6 +6867,10 @@
   "지우개": {
    "en": "Eraser",
    "zh": "橡皮擦"
+  },
+  "직접 만든 물건만 상호작용을 넣을 수 있어요.": {
+   "en": "Only items you crafted can get interactions.",
+   "zh": "只有亲手制作的物品才能添加互动。"
   },
   "직접 색 고르기": {
    "en": "Pick a Color",
@@ -6808,6 +7100,10 @@
    "en": "From the observatory lookout you can see all five islands and the bridges at a glance.",
    "zh": "登上天文台瞭望台，五座岛和桥梁一览无余。"
   },
+  "천천히 계속 돌기": {
+   "en": "Slow turn",
+   "zh": "慢慢一直转"
+  },
   "첫 번째 마을 꾸미기\nI로 보관함을 열어 색을 고르고,\n환영의 의자를 놓아 보세요.": {
    "en": "Decorate Your Village\nPress I to open your Bag, pick colors,\nand place the Welcome Chair.",
    "zh": "第一次装饰村庄\n按 I 打开背包挑选颜色，\n试着摆放欢迎椅吧。"
@@ -6944,6 +7240,10 @@
    "en": "Recommendation: starcandy seeds grow well in a sunny field.",
    "zh": "推荐：星星糖种子在向阳的田里长得好。"
   },
+  "축": {
+   "en": "Axis",
+   "zh": "轴"
+  },
   "출입문 앞은 비워 주세요.": {
    "en": "Keep the doorway clear.",
    "zh": "门口前请保持空出。"
@@ -6995,6 +7295,10 @@
   "침실": {
    "en": "Bedroom",
    "zh": "卧室"
+  },
+  "카드를 골라 움직임을 더해 보세요.": {
+   "en": "Pick cards to add motion.",
+   "zh": "选择卡片来添加动作吧。"
   },
   "카메라와 이동": {
    "en": "Camera & movement",
@@ -7131,6 +7435,14 @@
   "큰 글씨": {
    "en": "Large text",
    "zh": "大号字体"
+  },
+  "클릭": {
+   "en": "Click",
+   "zh": "点击"
+  },
+  "클릭·E": {
+   "en": "Click·E",
+   "zh": "点击·E"
   },
   "클릭하면 뚜껑이 부드럽게 열리고 다시 클릭하면 닫히는 나무 상자": {
    "en": "A wooden chest whose lid opens gently on click and closes on a second click",
@@ -7299,6 +7611,10 @@
   "통나무 거실": {
    "en": "Log Living Room",
    "zh": "原木客厅"
+  },
+  "통통 튀기": {
+   "en": "Bounce",
+   "zh": "蹦蹦跳"
   },
   "툭툭 치기": {
    "en": "Tap",
@@ -7612,6 +7928,10 @@
    "en": "Play Together will be available after a server update.",
    "zh": "服务器更新后即可使用一起玩功能。"
   },
+  "항상": {
+   "en": "Always",
+   "zh": "一直"
+  },
   "해 질 녘엔 은빛 도미가 올라와요.": {
    "en": "Silver bream come up at dusk.",
    "zh": "黄昏时银鲷会浮上来。"
@@ -7916,6 +8236,10 @@
    "en": "Flow",
    "zh": "流量"
   },
+  "흔들기": {
+   "en": "Sway",
+   "zh": "摇晃"
+  },
   "흔들의자에 앉기": {
    "en": "Sit in the rocking chair",
    "zh": "坐上摇椅"
@@ -7923,6 +8247,10 @@
   "흔들의자에 앉아 쉬어요. 이동 키를 누르면 일어나요.": {
    "en": "Resting in the rocking chair. Press a movement key to get up.",
    "zh": "坐在摇椅上休息。按移动键起身。"
+  },
+  "흔들흔들": {
+   "en": "Sway",
+   "zh": "摇摇晃晃"
   },
   "흙냄새가 좋아요. 비가 오면 더 좋고요.": {
    "en": "I love the smell of soil. Even better after rain.",

@@ -595,6 +595,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.multiplayer=multiplayer
     app.state.object_paint=object_paint.ObjectPaint(app,db,clock,auth,mutate,own,assets)
     app.state.object_shape=object_shape.ObjectShape(app,db,clock,mutate,own)
+    from .interactions import Interactions
+    app.state.interactions=Interactions(app,db,settings,clock,auth,mutate,own,money,studio)
     app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':1500000},
                        pattern_limits=[(object_paint.UPLOAD_PATH,object_paint.BODY_LIMIT)])
     # Outermost, so 413/429 replies from the layers above also carry the headers.

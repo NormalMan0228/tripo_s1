@@ -28,6 +28,7 @@ from .stored_assets import read_glb
 from .object_paint import version_column as paint_version
 from . import object_shape
 from . import craft_styles
+from . import interactions
 
 SCHEMA='''
 CREATE TABLE IF NOT EXISTS studio_jobs (
@@ -235,7 +236,8 @@ class Studio:
             row=conn.execute('SELECT manifest FROM studio_assets WHERE asset_id=?',(obj['asset_id'],)).fetchone()
             if not row:fail('not_studio_object',404)
             state=conn.execute('SELECT * FROM studio_runtime WHERE object_id=?',(object_id,)).fetchone()
-            return obj,json.loads(row[0]),state
+            # The player's interaction (server/interactions.py) replaces the crafted program everywhere.
+            return obj,interactions.apply(conn,object_id,json.loads(row[0])),state
 
         @app.get('/v1/studio')
         def info(request:Request):
@@ -425,7 +427,7 @@ class Studio:
                 bindings=json.loads(state['bindings'])
                 original=json.loads(json.dumps(value['plan']))
                 for p in value['plan']['parts']:p.update(bindings.get(p['id'],{}))
-                return {**value,'original_plan':original,'runtime':{'state':json.loads(state['state']),'colors':json.loads(state['colors']),'bindings':bindings,'version':state['version']},'object_version':obj['version']}
+                return {**value,'program':interactions.compat(value),'original_plan':original,'runtime':{'state':json.loads(state['state']),'colors':json.loads(state['colors']),'bindings':bindings,'version':state['version']},'object_version':obj['version']}
 
         @app.post('/v1/objects/{object_id}/bindings')
         def bindings(object_id:str,body:BindingEdit,request:Request):
@@ -464,10 +466,10 @@ class Studio:
                 obj,value,state=manifest(conn,user['id'],object_id)
                 if obj['state']=='listed':fail('object_is_listed')
                 if body.version!=state['version']:fail('stale_runtime_version')
-                vm=AssetVM(value['program'],[p['id'] for p in value['plan']['parts']],json.loads(state['state']))
+                vm=AssetVM(value['program'],interactions.targets(value),json.loads(state['state']))
                 try:commands=vm.run(body.event,{'near':int(body.event=='near')})
                 except ProgramError:fail('behavior_rejected')
-                conn.execute('UPDATE studio_runtime SET state=?,version=version+1 WHERE object_id=?',(json.dumps(vm.state),object_id))
+                conn.execute('UPDATE studio_runtime SET state=?,version=version+1 WHERE object_id=?',(json.dumps(interactions.settle(value,dict(vm.state))),object_id))
                 before=json.loads(state['state'])
                 return {'state':vm.state,'patch':{k:v for k,v in vm.state.items() if before[k]!=v},'commands':commands,'version':state['version']+1}
             return mutate(request,body,'studio_event:'+object_id,edit)
@@ -495,7 +497,7 @@ class Studio:
                 if obj['state']=='listed':fail('object_is_listed')
                 if body.version!=state['version']:fail('stale_runtime_version')
                 before=json.loads(state['state'])
-                vm=AssetVM(value['program'],[p['id'] for p in value['plan']['parts']],before)
+                vm=AssetVM(value['program'],interactions.targets(value),before)
                 try:result=vm.invoke(body.function,body.args)
                 except ProgramError:fail('api_call_rejected')
                 conn.execute('UPDATE studio_runtime SET state=?,version=version+1 WHERE object_id=?',(json.dumps(vm.state),object_id))
