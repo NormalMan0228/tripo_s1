@@ -111,7 +111,10 @@ func _ready() -> void:
 	palette_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	palette_head.add_child(palette_title)
 	var add := Button.new()
-	add.text = "+"
+	add.icon = load("res://assets/ui/painter/plus.svg")
+	add.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add.add_theme_constant_override("icon_max_width", 14)
+	add.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	add.focus_mode = Control.FOCUS_NONE
 	add.custom_minimum_size = Vector2(30, 26)
 	RpgUi.name_tip(add, tr("지금 색을 팔레트에 저장"))

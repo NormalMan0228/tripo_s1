@@ -12,12 +12,19 @@ extends Control
 ## layers into one 1024 px PNG, uploads it and hands it to the host, which shows it in the
 ## world. An object without UVs gets the whole-object colour panel instead, with a reason.
 ## Typing in its text fields never triggers a shortcut.
+##
+## Laid out like current drawing apps (paint_widgets.gd, icons in assets/ui/painter): a slim
+## tool rail with the colour well on the left, a context bar on top with only the active
+## tool's options (brush presets drawn as strokes, size, opacity, flow, hardness, smoothing;
+## the rest behind the tune button) beside undo/redo, Procreate-style size and opacity
+## sliders on the canvas edge, and a right dock with folding Colour / Layers / History.
 signal finished(saved: bool)
 
 const Core = preload("res://scripts/painter/paint_core.gd")
 const PaintApply = preload("res://scripts/painter/paint_apply.gd")
 const PaintView = preload("res://scripts/painter/paint_view.gd")
 const ColorPanel = preload("res://scripts/painter/color_picker.gd")
+const Widgets = preload("res://scripts/painter/paint_widgets.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const SIZE := 1024
 const GROUP := &"painter_open"
@@ -26,10 +33,25 @@ const ERASER := "eraser"
 const FILL := "fill"
 const GRADIENT := "gradient"
 const PICKER := "picker"
-const MODE_NAMES := ["보통", "곱하기", "스크린", "오버레이", "더하기"]
+## Photoshop's Korean names ("표준" is Normal; "보통" already reads Medium in the settings).
+const MODE_NAMES := ["표준", "곱하기", "스크린", "오버레이", "더하기"]
 const TIP_NAMES := ["둥근 붓", "납작 붓", "거친 붓"]
+## Rail order: tool, name, key, icon.
+const TOOL_SPECS := [[BRUSH, "붓", "B", "brush"], [ERASER, "지우개", "E", "eraser"], [FILL, "채우기", "G", "fill"],
+	[GRADIENT, "그라데이션", "G", "gradient"], [PICKER, "스포이드", "I", "picker"]]
+## Brush presets (brush and eraser): choosing one sets these keys and the size.
+const PRESETS := [
+	{"name": "연필", "tip": 0, "size": 6.0, "hardness": 1.0, "flow": 1.0, "spacing": 0.08, "roundness": 1.0, "angle": 0.0},
+	{"name": "둥근 붓", "tip": 0, "size": 28.0, "hardness": 0.75, "flow": 1.0, "spacing": 0.12, "roundness": 1.0, "angle": 0.0},
+	{"name": "에어브러시", "tip": 0, "size": 72.0, "hardness": 0.0, "flow": 0.18, "spacing": 0.1, "roundness": 1.0, "angle": 0.0},
+	{"name": "납작 붓", "tip": 1, "size": 34.0, "hardness": 0.85, "flow": 1.0, "spacing": 0.06, "roundness": 0.3, "angle": 35.0},
+	{"name": "거친 붓", "tip": 2, "size": 40.0, "hardness": 0.6, "flow": 0.85, "spacing": 0.1, "roundness": 1.0, "angle": 0.0},
+	{"name": "마커", "tip": 1, "size": 22.0, "hardness": 0.95, "flow": 0.55, "spacing": 0.05, "roundness": 0.55, "angle": 90.0},
+]
+const PRESET_KEYS := ["tip", "hardness", "flow", "spacing", "roundness", "angle"]
 const SETTINGS_SECTION := "painter"
 const STAMP_BUDGET_MS := 9
+const DOCK_WIDTH := 276.0
 
 var api: Node
 var obj: Dictionary = {}
@@ -61,10 +83,13 @@ var title_label: Label
 var status_label: Label
 var tool_buttons := {}
 var option_rows := {}
+## "tool:key" -> [{control, refresh}]: every control showing a setting (context bar, edge
+## sliders, the tune popover); _set_option() keeps them in step.
 var option_controls := {}
 var primary_chip: Button
 var secondary_chip: Button
-var symmetry_choice: OptionButton
+var symmetry_button: Button
+var symmetry_badge: Label
 var layer_list: VBoxContainer
 var layer_opacity: HSlider
 var layer_opacity_label: Label
@@ -81,6 +106,19 @@ var busy_label: Label
 var busy_bar: ProgressBar
 var dialog_layer: Control
 var workspace: Control
+var stage: Control
+var size_edge
+var opacity_edge
+var preset_views := {}
+var preset_tiles: Array = []
+var sections := {}
+var dock_scroll: ScrollContainer
+var popover: Control
+var gradient_swatches: Array = []
+var thumbs := {}
+var thumb_views := {}
+var thumb_queue: Array = []
+var warm_previews := 0
 var refreshing_layers := false
 var pending_task := -1
 var backdrop: ColorRect
@@ -100,9 +138,10 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var look := RpgUi.theme().duplicate() as Theme
 	look.merge_with(RpgUi.night_theme())
+	look.merge_with(Widgets.theme())
 	theme = look
 	backdrop = ColorRect.new()
-	backdrop.color = Color("15191b")
+	backdrop.color = Color("101416")
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
 	_load_settings()
@@ -182,72 +221,93 @@ func _prepare() -> void:
 func _build_workspace() -> void:
 	workspace = VBoxContainer.new()
 	workspace.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	workspace.offset_left = 10; workspace.offset_top = 8; workspace.offset_right = -10; workspace.offset_bottom = -6
-	workspace.add_theme_constant_override("separation", 6)
+	workspace.offset_left = 8; workspace.offset_top = 8; workspace.offset_right = -8; workspace.offset_bottom = -8
+	workspace.add_theme_constant_override("separation", 8)
 	add_child(workspace)
 	move_child(workspace, 1)
-	# Top bar: title, tool options (two rows), reset / cancel / save.
+	# Top bar: title, undo/redo, the active tool's options, reset / cancel / save. One height for
+	# every tool, so switching tools never resizes (and reframes) the view.
 	var bar := PanelContainer.new()
-	var bar_style := RpgUi.panel_style("pill", 8)
-	# Clear of the pill's rounded, studded ends.
-	bar_style.content_margin_left = 28
-	bar_style.content_margin_right = 24
-	bar.add_theme_stylebox_override("panel", bar_style)
+	bar.add_theme_stylebox_override("panel", _panel_box(10, Vector4(12, 6, 8, 6)))
+	bar.custom_minimum_size.y = 54
 	workspace.add_child(bar)
 	var bar_row := HBoxContainer.new()
-	bar_row.add_theme_constant_override("separation", 14)
+	bar_row.add_theme_constant_override("separation", 8)
 	bar.add_child(bar_row)
 	var heading := VBoxContainer.new()
-	heading.custom_minimum_size.x = 150
+	heading.custom_minimum_size.x = 112
+	heading.alignment = BoxContainer.ALIGNMENT_CENTER
+	heading.add_theme_constant_override("separation", 0)
 	bar_row.add_child(heading)
-	var ribbon := RpgUi.label(heading, tr("색칠 작업대"), 20, RpgUi.GOLD)
+	var ribbon := Widgets.caption(heading, tr("색칠 작업대"), 15, Widgets.GOLD)
 	ribbon.add_theme_font_override("font", RpgUi.FONT_DISPLAY)
-	title_label = RpgUi.label(heading, str(obj.get("name", "")), 13, RpgUi.INK)
+	title_label = Widgets.caption(heading, str(obj.get("name", "")), 12)
 	title_label.clip_text = true
-	title_label.custom_minimum_size.x = 150
-	var options_box := VBoxContainer.new()
-	options_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	options_box.add_theme_constant_override("separation", 2)
-	# Same height for every tool, so switching tools never resizes (and reframes) the view.
-	options_box.custom_minimum_size.y = 72
-	bar_row.add_child(options_box)
-	_build_options(options_box)
+	title_label.custom_minimum_size.x = 112
+	var heading_rule := _rule(true)
+	bar_row.add_child(heading_rule)
+	# A large interface scale narrows the canvas: the title gives way before options clip.
+	var fit := func():
+		heading.visible = size.x >= 1150.0
+		heading_rule.visible = heading.visible
+	resized.connect(fit)
+	fit.call()
+	undo_button = Widgets.icon_button(bar_row, "undo", tr("되돌리기") + "  ·  Ctrl+Z", undo, 36, "PaintSegment")
+	redo_button = Widgets.icon_button(bar_row, "redo", tr("다시 하기") + "  ·  Ctrl+Shift+Z", redo, 36, "PaintSegment")
+	for b in [undo_button, redo_button]: b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar_row.add_child(_rule(true))
+	var context_bar := HBoxContainer.new()
+	context_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	context_bar.add_theme_constant_override("separation", 10)
+	bar_row.add_child(context_bar)
+	_build_options(context_bar)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 6)
 	bar_row.add_child(actions)
 	reset_button = _button(actions, tr("원래대로"), _ask_reset, "", tr("칠한 것을 모두 지우고 처음 모습으로"))
 	_button(actions, tr("취소"), _ask_cancel, "", tr("저장하지 않고 닫기  ·  Esc"))
-	save_button = _button(actions, tr("저장"), save, "GoldButton", tr("마을과 방에 칠한 모습으로 저장  ·  Ctrl+S"))
-	save_button.custom_minimum_size.x = 84
-	# Middle: tools | view | panels.
+	save_button = _button(actions, tr("저장"), save, "PaintGold", tr("마을과 방에 칠한 모습으로 저장  ·  Ctrl+S"))
+	save_button.custom_minimum_size.x = 76
+	for b in actions.get_children(): (b as Control).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	# Middle: tool rail | canvas | dock.
 	var middle := HBoxContainer.new()
 	middle.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	middle.add_theme_constant_override("separation", 6)
+	middle.add_theme_constant_override("separation", 8)
 	workspace.add_child(middle)
-	middle.add_child(_build_tools())
+	middle.add_child(_build_rail())
 	var frame := PanelContainer.new()
-	var frame_style := StyleBoxFlat.new()
-	frame_style.bg_color = Color("0d1012")
-	frame_style.set_border_width_all(2)
-	frame_style.border_color = Color("6b5a3a")
-	frame_style.set_corner_radius_all(6)
-	frame_style.set_content_margin_all(2)
-	frame.add_theme_stylebox_override("panel", frame_style)
+	frame.add_theme_stylebox_override("panel", Widgets.flat(Color("0d1012"), 10, Widgets.LINE, 1, 1))
 	frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	middle.add_child(frame)
+	stage = Control.new()
+	stage.clip_contents = true
+	frame.add_child(stage)
 	view = PaintView.new()
-	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	view.paint_event.connect(_on_view_event)
 	view.camera_moving.connect(_flush_stroke)
-	frame.add_child(view)
-	middle.add_child(_build_side())
-	status_label = Label.new()
-	status_label.add_theme_font_size_override("font_size", 12)
-	status_label.add_theme_color_override("font_color", Color(1, 1, 1, 0.72))
-	status_label.clip_text = true
-	workspace.add_child(status_label)
+	stage.add_child(view)
+	_build_canvas_overlay()
+	middle.add_child(_build_dock())
 	_status("")
+
+func _panel_box(radius: int, padding: Vector4) -> StyleBoxFlat:
+	var box := Widgets.flat(Widgets.PANEL, radius, Widgets.LINE, 1)
+	box.content_margin_left = padding.x; box.content_margin_top = padding.y
+	box.content_margin_right = padding.z; box.content_margin_bottom = padding.w
+	return box
+
+## A thin divider line (vertical in rows, horizontal in columns).
+func _rule(vertical: bool) -> Control:
+	var line := ColorRect.new()
+	line.color = Widgets.LINE
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if vertical:
+		line.custom_minimum_size = Vector2(1, 30)
+		line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	else:
+		line.custom_minimum_size = Vector2(0, 1)
+	return line
 
 func _button(parent: Node, text: String, callback: Callable, variation := "", tip := "") -> Button:
 	var b := Button.new()
@@ -255,26 +315,33 @@ func _button(parent: Node, text: String, callback: Callable, variation := "", ti
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size.y = 34
 	if not variation.is_empty(): b.theme_type_variation = variation
-	b.add_theme_font_size_override("font_size", 14)
+	b.add_theme_font_size_override("font_size", 13)
 	b.pressed.connect(func(): callback.call())
 	if not tip.is_empty(): b.tooltip_text = tip
-	RpgUi.hover_motion(b, 1.03)
 	parent.add_child(b)
 	return b
 
-## A labelled slider: its name and value (e.g. size 28px) above the bar.
-func _slider(parent: Node, key: String, tool_name: String, title: String, low: float, high: float, step: float, unit: String, scale := 1.0, width := 104.0) -> HSlider:
+## Registers a control that shows settings[tool_name][key]; refresh(value) updates it silently.
+func _bind(tool_name: String, key: String, control: Control, refresh: Callable) -> void:
+	var id := tool_name + ":" + key
+	if not option_controls.has(id): option_controls[id] = []
+	option_controls[id].append({"control": control, "refresh": refresh})
+
+## A compact labelled slider: its name and value (e.g. 크기 28px) over a thin bar.
+func _slider(parent: Node, key: String, tool_name: String, title: String, low: float, high: float, step: float, unit: String, scale := 1.0, width := 92.0, tip := "") -> HSlider:
 	var box := VBoxContainer.new()
 	box.custom_minimum_size.x = width
-	box.add_theme_constant_override("separation", 0)
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_theme_constant_override("separation", 1)
 	parent.add_child(box)
-	var caption := Label.new()
-	caption.add_theme_font_size_override("font_size", 12)
-	box.add_child(caption)
+	var caption := Widgets.caption(box, "", 11)
 	var slider := HSlider.new()
 	slider.min_value = low; slider.max_value = high; slider.step = step
+	# Size moves on a curve: fine steps for small brushes, still reaching 400 px.
+	slider.exp_edit = key == "size"
 	slider.focus_mode = Control.FOCUS_NONE
-	slider.custom_minimum_size.y = 18
+	slider.custom_minimum_size.y = 16
+	if not tip.is_empty(): slider.tooltip_text = tip
 	box.add_child(slider)
 	# Values are stored as they are used (0..1 for percentages); `scale` only formats them.
 	var show := func(value: float):
@@ -282,148 +349,408 @@ func _slider(parent: Node, key: String, tool_name: String, title: String, low: f
 	slider.value = float(settings[tool_name][key])
 	show.call(slider.value)
 	slider.value_changed.connect(func(value: float):
-		settings[tool_name][key] = value
 		show.call(value)
-		_update_cursor())
-	option_controls[tool_name + ":" + key] = slider
+		_set_option(tool_name, key, value, slider))
+	_bind(tool_name, key, slider, func(value):
+		slider.set_value_no_signal(float(value))
+		show.call(float(value)))
 	return slider
 
-func _toggle(parent: Node, key: String, tool_name: String, text: String, tip: String) -> Button:
+func _toggle(parent: Node, key: String, tool_name: String, text: String, tip: String, icon_name := "") -> Button:
 	var b := Button.new()
 	b.toggle_mode = true
 	b.text = text
+	b.theme_type_variation = "PaintSegment"
+	if not icon_name.is_empty():
+		b.icon = Widgets.icon(icon_name)
+		b.add_theme_constant_override("icon_max_width", 16)
+		b.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	b.focus_mode = Control.FOCUS_NONE
-	b.theme_type_variation = "ChoiceButton"
-	b.custom_minimum_size.y = 30
+	b.custom_minimum_size.y = 32
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	b.add_theme_font_size_override("font_size", 12)
 	b.button_pressed = bool(settings[tool_name][key])
 	b.tooltip_text = tip
-	b.toggled.connect(func(on: bool): settings[tool_name][key] = on)
+	b.toggled.connect(func(on: bool): _set_option(tool_name, key, on, b))
+	_bind(tool_name, key, b, func(value): b.set_pressed_no_signal(bool(value)))
 	parent.add_child(b)
-	option_controls[tool_name + ":" + key] = b
 	return b
 
-func _choice(parent: Node, key: String, tool_name: String, names: Array, tip: String, width := 110.0) -> OptionButton:
+func _choice(parent: Node, key: String, tool_name: String, names: Array, tip: String, width := 92.0) -> OptionButton:
 	var choice := OptionButton.new()
 	for name in names: choice.add_item(tr(name))
 	choice.focus_mode = Control.FOCUS_NONE
-	choice.custom_minimum_size = Vector2(width, 30)
-	choice.add_theme_font_size_override("font_size", 12)
+	choice.custom_minimum_size = Vector2(width, 32)
+	choice.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	choice.tooltip_text = tip
-	var value = settings[tool_name][key]
-	choice.select(int(value) if not value is bool else int(value))
-	choice.item_selected.connect(func(index: int):
-		settings[tool_name][key] = index if not settings[tool_name][key] is bool else index == 1
-		_on_choice_changed())
+	choice.select(int(settings[tool_name][key]))
+	choice.item_selected.connect(func(index: int): _set_option(tool_name, key, index, choice))
+	_bind(tool_name, key, choice, func(value): choice.select(int(value)))
 	parent.add_child(choice)
-	option_controls[tool_name + ":" + key] = choice
 	return choice
 
-func _row(parent: Node) -> HBoxContainer:
+## Side-by-side choices (gradient shape and colours): segment i stores values[i]. `draw`
+## paints a segment that has no icon (draw.call(canvas, i)).
+func _segments(parent: Node, key: String, tool_name: String, values: Array, icons: Array, tips: Array, draw := Callable()) -> Array:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 3)
+	row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	parent.add_child(row)
-	return row
+	var buttons: Array[Button] = []
+	for i in values.size():
+		var b := Widgets.icon_button(row, icons[i], tips[i], func(): _set_option(tool_name, key, values[i]), 34, "PaintSegment")
+		b.toggle_mode = true
+		if icons[i] == "" and draw.is_valid():
+			b.custom_minimum_size.x = 46
+			var canvas := Control.new()
+			canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			canvas.offset_left = 8; canvas.offset_top = 10; canvas.offset_right = -8; canvas.offset_bottom = -10
+			var index: int = i
+			canvas.draw.connect(func(): draw.call(canvas, index))
+			b.add_child(canvas)
+			gradient_swatches.append(canvas)
+		buttons.append(b)
+	var refresh := func(value):
+		for i in buttons.size(): buttons[i].set_pressed_no_signal(values[i] == value)
+	refresh.call(settings[tool_name][key])
+	_bind(tool_name, key, row, refresh)
+	return buttons
 
-func _build_options(parent: VBoxContainer) -> void:
+## The context bar: one row per tool, only the active tool's row shows.
+func _build_options(parent: HBoxContainer) -> void:
 	for tool_name in [BRUSH, ERASER]:
-		var holder := VBoxContainer.new()
-		holder.add_theme_constant_override("separation", 2)
+		var holder := HBoxContainer.new()
+		holder.add_theme_constant_override("separation", 10)
+		holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		parent.add_child(holder)
 		option_rows[tool_name] = holder
-		var first := _row(holder)
-		_slider(first, "size", tool_name, tr("크기"), 1, 400, 1, "px")
-		_slider(first, "hardness", tool_name, tr("경도"), 0, 1, 0.01, "%", 100.0, 92)
-		_slider(first, "opacity", tool_name, tr("불투명도"), 0.01, 1, 0.01, "%", 100.0, 100)
-		_slider(first, "flow", tool_name, tr("흐름"), 0.01, 1, 0.01, "%", 100.0, 92)
-		if tool_name == BRUSH: _choice(first, "mode", tool_name, MODE_NAMES, tr("붓 혼합 모드"), 100)
-		var second := _row(holder)
-		_choice(second, "tip", tool_name, TIP_NAMES, tr("붓 끝 모양"), 96)
-		_slider(second, "angle", tool_name, tr("각도"), 0, 180, 1, "°", 1.0, 84)
-		_slider(second, "roundness", tool_name, tr("둥글기"), 0.05, 1, 0.01, "%", 100.0, 84)
-		_slider(second, "spacing", tool_name, tr("간격"), 0.01, 2, 0.01, "%", 100.0, 84)
-		_slider(second, "smoothing", tool_name, tr("보정"), 0, 1, 0.01, "%", 100.0, 84)
-		_toggle(second, "pressure_size", tool_name, tr("필압→크기"), tr("펜 압력으로 크기 조절"))
-		_toggle(second, "pressure_opacity", tool_name, tr("필압→불투명"), tr("펜 압력으로 불투명도 조절"))
-	var fill_row := VBoxContainer.new()
+		_preset_button(holder, tool_name)
+		_slider(holder, "size", tool_name, tr("크기"), 1, 400, 1, "px", 1.0, 96, tr("크기") + "  ·  [ ]")
+		_slider(holder, "opacity", tool_name, tr("불투명도"), 0.01, 1, 0.01, "%", 100.0, 92, tr("불투명도") + "  ·  1…0")
+		_slider(holder, "flow", tool_name, tr("흐름"), 0.01, 1, 0.01, "%", 100.0, 84)
+		_slider(holder, "hardness", tool_name, tr("경도"), 0, 1, 0.01, "%", 100.0, 84, tr("경도") + "  ·  Shift+[ ]")
+		_slider(holder, "smoothing", tool_name, tr("보정"), 0, 1, 0.01, "%", 100.0, 84)
+		var tune: Button = Widgets.icon_button(holder, "tune", tr("붓 설정 더 보기 · 모양, 각도, 간격, 필압, 혼합"), func(): pass, 34, "PaintSegment")
+		tune.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var name: String = tool_name
+		tune.pressed.connect(func(): _open_tune(name, tune))
+	var fill_row := HBoxContainer.new()
+	fill_row.add_theme_constant_override("separation", 10)
+	fill_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(fill_row)
 	option_rows[FILL] = fill_row
-	var fill_first := _row(fill_row)
-	_slider(fill_first, "tolerance", FILL, tr("허용치"), 0, 255, 1, "", 1.0, 120)
-	_slider(fill_first, "opacity", FILL, tr("불투명도"), 0.01, 1, 0.01, "%", 100.0, 110)
-	_choice(fill_first, "mode", FILL, MODE_NAMES, tr("혼합 모드"), 100)
-	_toggle(fill_first, "sample_all", FILL, tr("모든 레이어 기준"), tr("보이는 색 전체를 기준으로 영역을 고릅니다"))
-	RpgUi.caption(_row(fill_row), tr("클릭한 곳과 이어진 비슷한 색을 표면을 따라 채워요."), 12, Color(1, 1, 1, 0.6))
-	var gradient_row := VBoxContainer.new()
+	_slider(fill_row, "tolerance", FILL, tr("허용치"), 0, 255, 1, "", 1.0, 110)
+	_slider(fill_row, "opacity", FILL, tr("불투명도"), 0.01, 1, 0.01, "%", 100.0, 100)
+	_choice(fill_row, "mode", FILL, MODE_NAMES, tr("혼합 모드"))
+	_toggle(fill_row, "sample_all", FILL, tr("모든 레이어"), tr("보이는 색 전체를 기준으로 영역을 고릅니다"), "layers")
+	_hint(fill_row, tr("클릭한 곳과 이어진 비슷한 색을 표면을 따라 채워요."))
+	var gradient_row := HBoxContainer.new()
+	gradient_row.add_theme_constant_override("separation", 10)
+	gradient_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(gradient_row)
 	option_rows[GRADIENT] = gradient_row
-	var gradient_first := _row(gradient_row)
-	_choice(gradient_first, "radial", GRADIENT, ["선형", "원형"], tr("그라데이션 모양"), 90)
-	_choice(gradient_first, "to_clear", GRADIENT, ["앞색 → 뒷색", "앞색 → 투명"], tr("그라데이션 색"), 120)
-	_slider(gradient_first, "opacity", GRADIENT, tr("불투명도"), 0.01, 1, 0.01, "%", 100.0, 110)
-	_choice(gradient_first, "mode", GRADIENT, MODE_NAMES, tr("혼합 모드"), 100)
-	_toggle(gradient_first, "part_only", GRADIENT, tr("시작 부품만"), tr("드래그를 시작한 부품에만 그립니다"))
-	RpgUi.caption(_row(gradient_row), tr("물건 위에서 드래그해 방향과 길이를 정해요."), 12, Color(1, 1, 1, 0.6))
-	var picker_row := VBoxContainer.new()
+	_segments(gradient_row, "radial", GRADIENT, [false, true], ["gradient_linear", "gradient_radial"], [tr("선형"), tr("원형")])
+	_segments(gradient_row, "to_clear", GRADIENT, [false, true], ["", ""], [tr("앞색 → 뒷색"), tr("앞색 → 투명")], _draw_gradient_swatch)
+	_slider(gradient_row, "opacity", GRADIENT, tr("불투명도"), 0.01, 1, 0.01, "%", 100.0, 100)
+	_choice(gradient_row, "mode", GRADIENT, MODE_NAMES, tr("혼합 모드"))
+	_toggle(gradient_row, "part_only", GRADIENT, tr("시작 부품만"), tr("드래그를 시작한 부품에만 그립니다"), "part")
+	_hint(gradient_row, tr("물건 위에서 드래그해 방향과 길이를 정해요."))
+	var picker_row := HBoxContainer.new()
+	picker_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	parent.add_child(picker_row)
 	option_rows[PICKER] = picker_row
-	RpgUi.caption(picker_row, tr("물건을 클릭하면 보이는 색을 앞색으로 가져와요. 다른 도구에서는 Alt+클릭."), 12, Color(1, 1, 1, 0.7))
+	_hint(picker_row, tr("물건을 클릭하면 보이는 색을 앞색으로 가져와요. 다른 도구에서는 Alt+클릭."))
 
-func _build_tools() -> Control:
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", RpgUi.panel_style("night_plain", 8))
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 6)
-	panel.add_child(column)
-	for spec in [[BRUSH, tr("붓"), "B"], [ERASER, tr("지우개"), "E"], [FILL, tr("채우기"), "G"], [GRADIENT, tr("그라데이션"), "G"], [PICKER, tr("스포이드"), "I"]]:
+func _hint(parent: Node, text: String) -> Label:
+	var label := Widgets.caption(parent, text, 12)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	label.clip_text = true
+	label.tooltip_text = text
+	label.mouse_filter = Control.MOUSE_FILTER_PASS
+	return label
+
+## Front colour to back colour (or to clear) as a small bar inside a gradient segment.
+func _draw_gradient_swatch(canvas: Control, index: int) -> void:
+	var rect := Rect2(Vector2.ZERO, canvas.size)
+	if index == 1:
+		var cell := rect.size.y * 0.5
+		var x := 0.0
+		var flip := 0
+		while x < rect.size.x:
+			for row in 2:
+				var tint := Color(0.75, 0.75, 0.75) if (flip + row) % 2 == 0 else Color(0.45, 0.45, 0.45)
+				canvas.draw_rect(Rect2(Vector2(x, row * cell), Vector2(minf(cell, rect.size.x - x), cell)), tint)
+			x += cell
+			flip += 1
+	var steps := 12
+	for i in steps:
+		var t := (i + 0.5) / steps
+		var c := primary.lerp(secondary, t) if index == 0 else Color(primary, 1.0 - t)
+		canvas.draw_rect(Rect2(Vector2(rect.size.x * i / steps, 0), Vector2(rect.size.x / steps + 0.5, rect.size.y)), c)
+	canvas.draw_rect(rect, Color(0, 0, 0, 0.5), false, 1.0)
+
+# ------------------------------------------------------------------ presets and the tune popover
+
+## The preset key in the context bar: the current preset's stroke and name.
+func _preset_button(parent: Node, tool_name: String) -> Button:
+	var b := Button.new()
+	b.theme_type_variation = "PaintSegment"
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(124, 40)
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.tooltip_text = tr("붓 프리셋")
+	parent.add_child(b)
+	var preview := TextureRect.new()
+	preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	preview.modulate = Widgets.INK
+	preview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	preview.offset_left = 6; preview.offset_top = 3; preview.offset_right = -6; preview.offset_bottom = -15
+	b.add_child(preview)
+	var name := Label.new()
+	name.add_theme_font_size_override("font_size", 11)
+	name.add_theme_color_override("font_color", Widgets.MUTED)
+	name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	name.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	name.offset_top = -16; name.offset_bottom = -1
+	b.add_child(name)
+	preset_views[tool_name] = {"preview": preview, "name": name}
+	b.pressed.connect(func(): _open_presets(tool_name, b))
+	_refresh_preset(tool_name)
+	return b
+
+## Index of the preset the tool's settings match (size aside), or -1.
+func _current_preset(tool_name: String) -> int:
+	var s: Dictionary = settings[tool_name]
+	for i in PRESETS.size():
+		var p: Dictionary = PRESETS[i]
+		var same := int(s.tip) == int(p.tip)
+		for key in ["hardness", "flow", "spacing"]: same = same and absf(float(s[key]) - float(p[key])) < 0.005
+		if int(p.tip) != 0:
+			same = same and absf(float(s.roundness) - float(p.roundness)) < 0.005 and absf(float(s.angle) - float(p.angle)) < 0.5
+		if same: return i
+	return -1
+
+func _preview_spec(spec: Dictionary) -> Dictionary:
+	var out := {}
+	for key in PRESET_KEYS + ["size"]: out[key] = spec.get(key, 0)
+	return out
+
+func _refresh_preset(tool_name: String) -> void:
+	var views: Dictionary = preset_views.get(tool_name, {})
+	if views.is_empty(): return
+	var index := _current_preset(tool_name)
+	var s: Dictionary = settings[tool_name]
+	# Custom settings show their tip's stroke (drawing one per slider step would stutter).
+	var spec: Dictionary = PRESETS[index] if index >= 0 else PRESETS[[1, 3, 4][clampi(int(s.tip), 0, 2)]]
+	(views.preview as TextureRect).texture = Widgets.stroke_preview(_preview_spec(spec), 112, 22)
+	(views.name as Label).text = tr(PRESETS[index].name) if index >= 0 else tr("직접 설정")
+
+func _apply_preset(tool_name: String, index: int) -> void:
+	var p: Dictionary = PRESETS[index]
+	for key in PRESET_KEYS + ["size"]: _set_option(tool_name, key, p[key])
+	view.flash_ring()
+
+func _open_presets(tool_name: String, anchor: Control) -> void:
+	var column := _popover(anchor)
+	Widgets.caption(column, tr("붓 프리셋"), 12, Widgets.GOLD)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	column.add_child(grid)
+	var current := _current_preset(tool_name)
+	preset_tiles.clear()
+	for i in PRESETS.size():
+		var tile := Button.new()
+		tile.theme_type_variation = "PaintSegment"
+		tile.toggle_mode = true
+		tile.button_pressed = i == current
+		tile.focus_mode = Control.FOCUS_NONE
+		tile.custom_minimum_size = Vector2(156, 62)
+		tile.tooltip_text = tr(PRESETS[i].name)
+		var preview := TextureRect.new()
+		preview.texture = Widgets.stroke_preview(_preview_spec(PRESETS[i]), 144, 34)
+		preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		preview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		preview.offset_left = 6; preview.offset_top = 4; preview.offset_right = -6; preview.offset_bottom = -20
+		tile.add_child(preview)
+		var name := Label.new()
+		name.text = tr(PRESETS[i].name)
+		name.add_theme_font_size_override("font_size", 12)
+		name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		name.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		name.offset_top = -20; name.offset_bottom = -3
+		tile.add_child(name)
+		var index: int = i
+		tile.pressed.connect(func():
+			_apply_preset(tool_name, index)
+			_close_popover())
+		grid.add_child(tile)
+		preset_tiles.append(tile)
+
+## Tip shape, angle, roundness, spacing, pen pressure and (brush) blend mode.
+func _open_tune(tool_name: String, anchor: Control) -> void:
+	var column := _popover(anchor)
+	Widgets.caption(column, tr("붓 끝 모양"), 12, Widgets.GOLD)
+	var tips := HBoxContainer.new()
+	tips.add_theme_constant_override("separation", 6)
+	column.add_child(tips)
+	var tip_buttons: Array[Button] = []
+	for i in TIP_NAMES.size():
 		var b := Button.new()
+		b.theme_type_variation = "PaintSegment"
 		b.toggle_mode = true
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(52, 50)
-		b.theme_type_variation = "HudSlot"
-		RpgUi.name_tip(b, spec[1], spec[2])
-		var glyph := Control.new()
-		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		glyph.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		b.custom_minimum_size = Vector2(92, 54)
+		b.tooltip_text = tr(TIP_NAMES[i])
+		var preview := TextureRect.new()
+		preview.texture = Widgets.stroke_preview(_preview_spec(PRESETS[[1, 3, 4][i]]), 112, 22)
+		preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		preview.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		preview.offset_left = 4; preview.offset_top = 4; preview.offset_right = -4; preview.offset_bottom = -20
+		b.add_child(preview)
+		var name := Label.new()
+		name.text = tr(TIP_NAMES[i])
+		name.add_theme_font_size_override("font_size", 11)
+		name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		name.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+		name.offset_top = -19; name.offset_bottom = -3
+		b.add_child(name)
+		var index: int = i
+		b.pressed.connect(func(): _set_option(tool_name, "tip", index))
+		tips.add_child(b)
+		tip_buttons.append(b)
+	var show_tip := func(value):
+		for i in tip_buttons.size(): tip_buttons[i].set_pressed_no_signal(i == int(value))
+	show_tip.call(settings[tool_name].tip)
+	_bind(tool_name, "tip", tips, show_tip)
+	var shape := HBoxContainer.new()
+	shape.add_theme_constant_override("separation", 12)
+	column.add_child(shape)
+	_slider(shape, "angle", tool_name, tr("각도"), 0, 180, 1, "°", 1.0, 88)
+	_slider(shape, "roundness", tool_name, tr("둥글기"), 0.05, 1, 0.01, "%", 100.0, 88)
+	_slider(shape, "spacing", tool_name, tr("간격"), 0.01, 2, 0.01, "%", 100.0, 88)
+	var pens := HBoxContainer.new()
+	pens.add_theme_constant_override("separation", 6)
+	column.add_child(pens)
+	_toggle(pens, "pressure_size", tool_name, tr("필압→크기"), tr("펜 압력으로 크기 조절"), "pressure")
+	_toggle(pens, "pressure_opacity", tool_name, tr("필압→불투명"), tr("펜 압력으로 불투명도 조절"), "pressure")
+	if tool_name == BRUSH:
+		var blend := HBoxContainer.new()
+		blend.add_theme_constant_override("separation", 8)
+		column.add_child(blend)
+		var label := Widgets.caption(blend, tr("붓 혼합 모드"), 12)
+		label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_choice(blend, "mode", tool_name, MODE_NAMES, tr("붓 혼합 모드"), 120)
+
+## A small panel under (or beside) a control; a click outside or Esc closes it. Returns its column.
+func _popover(anchor: Control) -> VBoxContainer:
+	_close_popover()
+	popover = Control.new()
+	popover.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	popover.mouse_filter = Control.MOUSE_FILTER_STOP
+	popover.gui_input.connect(func(event: InputEvent):
+		if event is InputEventMouseButton and event.pressed: _close_popover())
+	add_child(popover)
+	var panel := PanelContainer.new()
+	var box := Widgets.flat(Color(0.075, 0.09, 0.1, 0.99), 10, Color(Widgets.GOLD, 0.35), 1, 12)
+	box.shadow_color = Color(0, 0, 0, 0.45)
+	box.shadow_size = 12
+	panel.add_theme_stylebox_override("panel", box)
+	panel.modulate.a = 0.0
+	popover.add_child(panel)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
+	panel.add_child(column)
+	_place_popover.call_deferred(panel, anchor)
+	return column
+
+func _place_popover(panel: Control, anchor: Control) -> void:
+	if not is_instance_valid(panel) or not is_instance_valid(anchor) or not is_instance_valid(popover): return
+	panel.reset_size()
+	var area := popover.get_global_rect()
+	var at := anchor.get_global_rect()
+	var pos := Vector2(at.position.x, at.end.y + 6)
+	# Rail keys open to the right of the rail.
+	if at.end.x < area.position.x + 90: pos = Vector2(at.end.x + 10, at.position.y)
+	if pos.y + panel.size.y > area.end.y - 8: pos.y = area.end.y - 8 - panel.size.y
+	pos.x = clampf(pos.x, area.position.x + 8, area.end.x - 8 - panel.size.x)
+	panel.position = pos - area.position
+	var tween := panel.create_tween().set_parallel()
+	tween.tween_property(panel, "modulate:a", 1.0, 0.1)
+	tween.tween_property(panel, "position:y", panel.position.y, 0.12).from(panel.position.y - 6).set_ease(Tween.EASE_OUT)
+
+func _close_popover() -> void:
+	if is_instance_valid(popover): popover.queue_free()
+	popover = null
+	preset_tiles.clear()
+
+# ------------------------------------------------------------------ rail, canvas edge and dock
+
+func _build_rail() -> Control:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _panel_box(10, Vector4(5, 8, 5, 8)))
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 4)
+	panel.add_child(column)
+	for spec in TOOL_SPECS:
 		var kind: String = spec[0]
-		glyph.draw.connect(func(): _draw_tool_icon(glyph, kind, b.button_pressed))
-		b.add_child(glyph)
-		b.toggled.connect(func(_on: bool): glyph.queue_redraw())
-		b.pressed.connect(func(): _select_tool(kind))
-		column.add_child(b)
+		var b := Widgets.icon_button(column, spec[3], "", func(): _select_tool(kind), 42)
+		b.toggle_mode = true
+		b.add_theme_constant_override("icon_max_width", 22)
+		RpgUi.name_tip(b, tr(spec[1]), spec[2])
 		tool_buttons[kind] = b
-	column.add_child(HSeparator.new())
-	# Foreground / background colour chips (X swaps, D resets).
-	var chips := Control.new()
-	chips.custom_minimum_size = Vector2(52, 52)
-	column.add_child(chips)
-	secondary_chip = _color_chip(chips, Vector2(18, 18), secondary)
-	primary_chip = _color_chip(chips, Vector2(2, 2), primary)
-	primary_chip.pressed.connect(func(): picker.set_color(primary, false))
+	column.add_child(_rule(false))
+	_build_well(column)
+	column.add_child(_rule(false))
+	symmetry_button = Widgets.icon_button(column, "symmetry", "", _open_symmetry, 42)
+	RpgUi.name_tip(symmetry_button, tr("거울 대칭으로 양쪽을 함께 칠하기"))
+	symmetry_badge = Label.new()
+	symmetry_badge.add_theme_font_size_override("font_size", 10)
+	symmetry_badge.add_theme_color_override("font_color", Widgets.GOLD)
+	symmetry_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	symmetry_badge.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	symmetry_badge.offset_left = -12; symmetry_badge.offset_top = -15; symmetry_badge.offset_right = -3; symmetry_badge.offset_bottom = -1
+	symmetry_button.add_child(symmetry_badge)
+	var home := Widgets.icon_button(column, "view_reset", "", func(): view.reset_view(), 42)
+	RpgUi.name_tip(home, tr("시점 초기화"), "F")
+	return panel
+
+## Front / back colour chips: the front one opens the colour section, the back one swaps;
+## small keys swap (X) and reset to black and white (D).
+func _build_well(parent: Node) -> void:
+	var well := Control.new()
+	well.custom_minimum_size = Vector2(42, 48)
+	parent.add_child(well)
+	secondary_chip = _color_chip(well, Vector2(15, 17), secondary)
+	primary_chip = _color_chip(well, Vector2(3, 5), primary)
+	primary_chip.pressed.connect(_open_colors)
 	secondary_chip.pressed.connect(_swap_colors)
 	RpgUi.name_tip(primary_chip, tr("앞색"))
 	RpgUi.name_tip(secondary_chip, tr("뒷색 · 클릭하면 바꾸기"), "X")
-	var swap := _button(column, "⇄", _swap_colors, "", tr("앞색과 뒷색 바꾸기  ·  X"))
-	swap.custom_minimum_size = Vector2(52, 28)
-	column.add_child(HSeparator.new())
-	symmetry_choice = OptionButton.new()
-	for name in [tr("대칭 끔"), tr("대칭 X"), tr("대칭 Z")]: symmetry_choice.add_item(name)
-	symmetry_choice.focus_mode = Control.FOCUS_NONE
-	symmetry_choice.custom_minimum_size = Vector2(52, 30)
-	symmetry_choice.add_theme_font_size_override("font_size", 11)
-	symmetry_choice.tooltip_text = tr("거울 대칭으로 양쪽을 함께 칠하기")
-	symmetry_choice.item_selected.connect(func(index: int): core.symmetry = index)
-	column.add_child(symmetry_choice)
-	var home := _button(column, tr("시점"), func(): view.reset_view(), "", tr("시점 초기화  ·  F"))
-	home.custom_minimum_size = Vector2(52, 30)
-	home.add_theme_font_size_override("font_size", 12)
-	return panel
+	var swap := Widgets.icon_button(well, "swap", tr("앞색과 뒷색 바꾸기  ·  X"), _swap_colors, 15)
+	swap.add_theme_constant_override("icon_max_width", 12)
+	swap.position = Vector2(28, 0)
+	var reset := Widgets.icon_button(well, "reset_colors", tr("기본 색 (검정 · 흰색)") + "  ·  D", _reset_colors, 15)
+	reset.add_theme_constant_override("icon_max_width", 11)
+	reset.position = Vector2(0, 33)
 
 func _color_chip(parent: Control, at: Vector2, value: Color) -> Button:
 	var chip := Button.new()
 	chip.focus_mode = Control.FOCUS_NONE
 	chip.position = at
-	chip.size = Vector2(32, 32)
+	chip.size = Vector2(24, 24)
 	parent.add_child(chip)
 	_paint_chip(chip, value)
 	return chip
@@ -434,96 +761,95 @@ func _paint_chip(chip: Button, value: Color) -> void:
 		box.bg_color = value
 		box.set_border_width_all(2)
 		box.border_color = Color("ffe08a") if state != "normal" else Color(0.95, 0.9, 0.78)
-		box.set_corner_radius_all(4)
-		box.shadow_color = Color(0, 0, 0, 0.45)
+		box.set_corner_radius_all(5)
+		box.shadow_color = Color(0, 0, 0, 0.5)
 		box.shadow_size = 3
 		chip.add_theme_stylebox_override(state, box)
 
-func _draw_tool_icon(canvas: Control, kind: String, active: bool) -> void:
-	var c := canvas.size * 0.5
-	var ink := Color("ffe08a") if active else Color("f4ead2")
-	var dark := Color(0, 0, 0, 0.55)
-	match kind:
-		BRUSH:
-			canvas.draw_line(c + Vector2(9, -11), c + Vector2(-2, 2), dark, 6.0, true)
-			canvas.draw_line(c + Vector2(9, -11), c + Vector2(-2, 2), ink, 3.5, true)
-			canvas.draw_colored_polygon(PackedVector2Array([c + Vector2(-1, 1), c + Vector2(-6, 6), c + Vector2(-11, 11), c + Vector2(-4, 4)]), ink)
-			canvas.draw_circle(c + Vector2(-6, 7), 3.6, Color(primary, 1.0))
-		ERASER:
-			var box := PackedVector2Array([c + Vector2(-11, 3), c + Vector2(1, -9), c + Vector2(10, 0), c + Vector2(-2, 12)])
-			canvas.draw_colored_polygon(box, Color("e7a3a0") if not active else Color("f3b9b5"))
-			canvas.draw_polyline(box + PackedVector2Array([box[0]]), ink, 1.6, true)
-			canvas.draw_line(c + Vector2(-5, -3), c + Vector2(4, 6), ink, 1.6, true)
-		FILL:
-			var bucket := PackedVector2Array([c + Vector2(-9, -3), c + Vector2(1, -11), c + Vector2(10, -2), c + Vector2(0, 7)])
-			canvas.draw_colored_polygon(bucket, Color(ink, 0.25))
-			canvas.draw_polyline(bucket + PackedVector2Array([bucket[0]]), ink, 2.0, true)
-			canvas.draw_circle(c + Vector2(9, 8), 3.4, Color(primary, 1.0))
-		GRADIENT:
-			for i in 10:
-				var t := i / 9.0
-				canvas.draw_rect(Rect2(c + Vector2(-11 + i * 2.2, -9), Vector2(2.4, 18)), primary.lerp(secondary, t))
-			canvas.draw_rect(Rect2(c + Vector2(-11, -9), Vector2(22, 18)), ink, false, 1.6)
-		PICKER:
-			canvas.draw_line(c + Vector2(8, -8), c + Vector2(-7, 7), dark, 6.0, true)
-			canvas.draw_line(c + Vector2(8, -8), c + Vector2(-7, 7), ink, 3.0, true)
-			canvas.draw_circle(c + Vector2(8, -8), 4.2, ink)
-			canvas.draw_circle(c + Vector2(-8, 8), 2.4, Color(primary, 1.0))
+## Procreate-style size and opacity on the canvas edge, and the hint line at its foot.
+func _build_canvas_overlay() -> void:
+	var edge := VBoxContainer.new()
+	edge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	edge.add_theme_constant_override("separation", 16)
+	edge.set_anchors_and_offsets_preset(Control.PRESET_CENTER_LEFT)
+	edge.offset_left = 10; edge.offset_right = 38; edge.offset_top = -158; edge.offset_bottom = 158
+	stage.add_child(edge)
+	size_edge = Widgets.EdgeSlider.new()
+	size_edge.min_value = 1.0; size_edge.max_value = 400.0; size_edge.step = 1.0; size_edge.shape = 2.4
+	size_edge.title = tr("크기")
+	size_edge.format = func(v: float) -> String: return "%d px" % int(round(v))
+	size_edge.tooltip_text = tr("크기") + "  ·  [ ]"
+	size_edge.value_changed.connect(func(v: float):
+		_set_option(tool, "size", v, size_edge)
+		view.flash_ring())
+	size_edge.dragging_changed.connect(func(active: bool): view.hold_ring(active))
+	edge.add_child(size_edge)
+	opacity_edge = Widgets.EdgeSlider.new()
+	opacity_edge.min_value = 0.01; opacity_edge.max_value = 1.0; opacity_edge.step = 0.01
+	opacity_edge.title = tr("불투명도")
+	opacity_edge.format = func(v: float) -> String: return "%d%%" % int(round(v * 100.0))
+	opacity_edge.tooltip_text = tr("불투명도") + "  ·  1…0"
+	opacity_edge.value_changed.connect(func(v: float): _set_option(tool, "opacity", v, opacity_edge))
+	edge.add_child(opacity_edge)
+	var foot := PanelContainer.new()
+	foot.add_theme_stylebox_override("panel", Widgets.flat(Color(0.03, 0.04, 0.045, 0.62), 7, Color(0, 0, 0, 0), 0, 5))
+	foot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	foot.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	foot.offset_left = 10; foot.offset_right = -10; foot.offset_top = -32; foot.offset_bottom = -8
+	stage.add_child(foot)
+	status_label = Widgets.caption(foot, "", 12, Color(1, 1, 1, 0.72))
+	status_label.clip_text = true
 
-func _card(parent: Node, title: String) -> VBoxContainer:
+func _sync_edges() -> void:
+	if size_edge == null: return
+	var s: Dictionary = settings.get(tool, {})
+	size_edge.visible = s.has("size")
+	opacity_edge.visible = s.has("opacity")
+	if s.has("size"): size_edge.set_value_no_signal(float(s.size))
+	if s.has("opacity"): opacity_edge.set_value_no_signal(float(s.opacity))
+
+## The right dock: Colour, Layers and History, each folding on its header (remembered).
+func _build_dock() -> Control:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", RpgUi.panel_style("night_plain", 10))
-	parent.add_child(panel)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 5)
-	panel.add_child(column)
-	RpgUi.label(column, title, 15, RpgUi.GOLD)
-	return column
-
-## Two docked columns like Photoshop's panels: colour and history | layers. Each scrolls on
-## its own if the window is very short.
-func _column(parent: Node) -> VBoxContainer:
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size.x = 268
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	parent.add_child(scroll)
+	panel.add_theme_stylebox_override("panel", _panel_box(10, Vector4(8, 6, 4, 6)))
+	panel.custom_minimum_size.x = DOCK_WIDTH
+	dock_scroll = ScrollContainer.new()
+	dock_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(dock_scroll)
 	var column := VBoxContainer.new()
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", 6)
-	scroll.add_child(column)
-	return column
-
-func _build_side() -> Control:
-	var docks := HBoxContainer.new()
-	docks.add_theme_constant_override("separation", 6)
-	var side := _column(docks)
-	var layers_side := _column(docks)
-	var color_card := _card(side, tr("색"))
+	dock_scroll.add_child(column)
+	var colors := Widgets.Section.new(tr("색"), "palette", bool(_setting("dock_color", true)))
+	column.add_child(colors)
+	sections.color = colors
 	picker = ColorPanel.new()
 	picker.swatches = PackedStringArray(_setting("swatches", "").split(",", false))
 	picker.recent = PackedStringArray(_setting("recent", "").split(",", false))
-	color_card.add_child(picker)
+	colors.body.add_child(picker)
 	picker.set_color(primary, false)
 	picker.color_changed.connect(func(value: Color):
 		primary = value
-		_paint_chip(primary_chip, primary)
-		_redraw_tool_icons())
-	var layers_card := _card(layers_side, tr("레이어"))
+		_refresh_colors())
+	column.add_child(_rule(false))
+	var layers := Widgets.Section.new(tr("레이어"), "layers", bool(_setting("dock_layers", true)))
+	column.add_child(layers)
+	sections.layers = layers
 	layer_list = VBoxContainer.new()
 	layer_list.add_theme_constant_override("separation", 3)
-	layers_card.add_child(layer_list)
+	layers.body.add_child(layer_list)
 	var props := HBoxContainer.new()
-	props.add_theme_constant_override("separation", 6)
-	layers_card.add_child(props)
+	props.add_theme_constant_override("separation", 8)
+	layers.body.add_child(props)
 	var opacity_box := VBoxContainer.new()
 	opacity_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	opacity_box.add_theme_constant_override("separation", 1)
 	props.add_child(opacity_box)
-	layer_opacity_label = Label.new()
-	layer_opacity_label.add_theme_font_size_override("font_size", 12)
-	opacity_box.add_child(layer_opacity_label)
+	layer_opacity_label = Widgets.caption(opacity_box, "", 11)
 	layer_opacity = HSlider.new()
 	layer_opacity.min_value = 0; layer_opacity.max_value = 100; layer_opacity.step = 1
 	layer_opacity.focus_mode = Control.FOCUS_NONE
+	layer_opacity.custom_minimum_size.y = 16
 	layer_opacity.value_changed.connect(func(value: float):
 		layer_opacity_label.text = tr("레이어 불투명도  %d%%") % int(value)
 		if refreshing_layers or core == null: return
@@ -533,8 +859,7 @@ func _build_side() -> Control:
 	layer_mode = OptionButton.new()
 	for name in MODE_NAMES: layer_mode.add_item(tr(name))
 	layer_mode.focus_mode = Control.FOCUS_NONE
-	layer_mode.custom_minimum_size = Vector2(96, 30)
-	layer_mode.add_theme_font_size_override("font_size", 12)
+	layer_mode.custom_minimum_size = Vector2(92, 30)
 	layer_mode.tooltip_text = tr("레이어 혼합 모드")
 	layer_mode.item_selected.connect(func(index: int):
 		if refreshing_layers or core == null: return
@@ -542,14 +867,17 @@ func _build_side() -> Control:
 		_after_change(false))
 	props.add_child(layer_mode)
 	var layer_actions := HBoxContainer.new()
-	layer_actions.add_theme_constant_override("separation", 3)
-	layers_card.add_child(layer_actions)
-	for spec in [["+", _add_layer, tr("새 레이어  ·  Ctrl+Shift+N")], ["⧉", _duplicate_layer, tr("레이어 복제")], ["▲", func(): _move_layer(1), tr("위로")], ["▼", func(): _move_layer(-1), tr("아래로")], ["✎", _start_rename, tr("이름 바꾸기")], ["✕", _delete_layer, tr("레이어 삭제")]]:
-		var b := _button(layer_actions, spec[0], spec[1], "", spec[2])
-		b.custom_minimum_size = Vector2(40, 30)
+	layer_actions.add_theme_constant_override("separation", 2)
+	layers.body.add_child(layer_actions)
+	for spec in [["plus", _add_layer, tr("새 레이어  ·  Ctrl+Shift+N")], ["duplicate", _duplicate_layer, tr("레이어 복제")],
+			["arrow_up", func(): _move_layer(1), tr("위로")], ["arrow_down", func(): _move_layer(-1), tr("아래로")],
+			["rename", _start_rename, tr("이름 바꾸기")], ["delete", _delete_layer, tr("레이어 삭제")]]:
+		var b := Widgets.icon_button(layer_actions, spec[0], spec[2], spec[1], 34)
+		b.add_theme_constant_override("icon_max_width", 18)
 	rename_row = HBoxContainer.new()
 	rename_row.visible = false
-	layers_card.add_child(rename_row)
+	rename_row.add_theme_constant_override("separation", 4)
+	layers.body.add_child(rename_row)
 	rename_field = LineEdit.new()
 	rename_field.max_length = 24
 	rename_field.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -558,26 +886,65 @@ func _build_side() -> Control:
 	# Esc cancels the rename (and never reaches the workspace's Esc = close).
 	rename_field.gui_input.connect(_rename_key)
 	rename_row.add_child(rename_field)
-	_button(rename_row, tr("확인"), _finish_rename).custom_minimum_size = Vector2(56, 30)
-	var history_card := _card(side, tr("작업 기록"))
-	var history_actions := HBoxContainer.new()
-	history_card.add_child(history_actions)
-	undo_button = _button(history_actions, tr("되돌리기"), undo, "", "Ctrl+Z")
-	redo_button = _button(history_actions, tr("다시 하기"), redo, "", "Ctrl+Shift+Z")
+	_button(rename_row, tr("확인"), _finish_rename).custom_minimum_size = Vector2(52, 30)
+	column.add_child(_rule(false))
+	var history := Widgets.Section.new(tr("작업 기록"), "history", bool(_setting("dock_history", true)))
+	column.add_child(history)
+	sections.history = history
 	history_list = ItemList.new()
-	history_list.custom_minimum_size.y = 150
+	history_list.custom_minimum_size.y = 128
 	history_list.focus_mode = Control.FOCUS_NONE
-	history_list.add_theme_font_size_override("font_size", 12)
 	history_list.item_clicked.connect(func(index: int, _at: Vector2, button: int):
 		if button == MOUSE_BUTTON_LEFT and not busy and core != null and not core.stroke_active():
 			core.jump(index)
 			_after_change(true))
-	history_card.add_child(history_list)
-	return docks
+	history.body.add_child(history_list)
+	return panel
 
-func _redraw_tool_icons() -> void:
-	for b in tool_buttons.values():
-		for child in b.get_children(): (child as Control).queue_redraw()
+## The colour well's front chip: open (and point at) the colour section.
+func _open_colors() -> void:
+	var section = sections.get("color")
+	if section == null: return
+	section.set_open(true)
+	dock_scroll.scroll_vertical = 0
+	picker.set_color(primary, false)
+	var header: Control = section.header
+	header.modulate = Color(1.7, 1.5, 0.9)
+	header.create_tween().tween_property(header, "modulate", Color.WHITE, 0.4)
+
+func _open_symmetry() -> void:
+	if core == null: return
+	var column := _popover(symmetry_button)
+	Widgets.caption(column, tr("거울 대칭으로 양쪽을 함께 칠하기"), 12, Widgets.GOLD)
+	var names := [tr("대칭 끔"), tr("대칭 X"), tr("대칭 Z")]
+	for i in 3:
+		var b := Button.new()
+		b.theme_type_variation = "PaintSegment"
+		b.toggle_mode = true
+		b.button_pressed = core.symmetry == i
+		b.text = names[i]
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(160, 32)
+		var index: int = i
+		b.pressed.connect(func():
+			_set_symmetry(index)
+			_close_popover())
+		column.add_child(b)
+
+func _set_symmetry(index: int) -> void:
+	if core == null: return
+	core.symmetry = index
+	symmetry_badge.text = ["", "X", "Z"][index]
+	var lit := Widgets.GOLD if index != 0 else Color(Widgets.INK, 0.92)
+	symmetry_button.add_theme_color_override("icon_normal_color", lit)
+	symmetry_button.tooltip_text = tr("거울 대칭으로 양쪽을 함께 칠하기") + "  ·  " + [tr("대칭 끔"), tr("대칭 X"), tr("대칭 Z")][index]
+
+func _refresh_colors() -> void:
+	if is_instance_valid(primary_chip): _paint_chip(primary_chip, primary)
+	if is_instance_valid(secondary_chip): _paint_chip(secondary_chip, secondary)
+	for swatch in gradient_swatches:
+		if is_instance_valid(swatch): (swatch as Control).queue_redraw()
 
 # ------------------------------------------------------------------ busy / dialogs / status
 
@@ -595,17 +962,19 @@ func _build_busy() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	busy_layer.add_child(center)
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", RpgUi.panel_style("night"))
+	panel.add_theme_stylebox_override("panel", Widgets.flat(Widgets.PANEL, 12, Color(Widgets.GOLD, 0.35), 1, 20))
 	panel.custom_minimum_size.x = 340
 	center.add_child(panel)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
+	column.add_theme_constant_override("separation", 12)
 	panel.add_child(column)
 	busy_label = RpgUi.label(column, "", 16, RpgUi.INK)
 	busy_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	busy_bar = ProgressBar.new()
-	busy_bar.custom_minimum_size = Vector2(280, 14)
+	busy_bar.custom_minimum_size = Vector2(280, 8)
 	busy_bar.show_percentage = false
+	busy_bar.add_theme_stylebox_override("background", Widgets.flat(Color(1, 1, 1, 0.1), 4))
+	busy_bar.add_theme_stylebox_override("fill", Widgets.flat(Widgets.GOLD, 4))
 	column.add_child(busy_bar)
 
 func _show_busy(text: String, measured := false) -> void:
@@ -639,6 +1008,7 @@ func _status(text: String) -> void:
 	status_label.text = text if not text.is_empty() else keys
 
 func _confirm(text: String, accept: String, callback: Callable) -> void:
+	_close_popover()
 	if is_instance_valid(dialog_layer): dialog_layer.queue_free()
 	dialog_layer = Control.new()
 	dialog_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -652,11 +1022,11 @@ func _confirm(text: String, accept: String, callback: Callable) -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dialog_layer.add_child(center)
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", RpgUi.panel_style("night"))
+	panel.add_theme_stylebox_override("panel", Widgets.flat(Widgets.PANEL, 12, Color(Widgets.GOLD, 0.35), 1, 20))
 	panel.custom_minimum_size.x = 380
 	center.add_child(panel)
 	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
+	column.add_theme_constant_override("separation", 14)
 	panel.add_child(column)
 	var message := RpgUi.label(column, text, 15, RpgUi.INK)
 	message.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -668,7 +1038,7 @@ func _confirm(text: String, accept: String, callback: Callable) -> void:
 	_button(row, tr("돌아가기"), func(): dialog_layer.queue_free())
 	_button(row, accept, func():
 		dialog_layer.queue_free()
-		callback.call(), "GoldButton")
+		callback.call(), "PaintGold")
 	RpgUi.pop_in(panel)
 
 # ------------------------------------------------------------------ tools
@@ -676,22 +1046,24 @@ func _confirm(text: String, accept: String, callback: Callable) -> void:
 func _select_tool(kind: String) -> void:
 	if stroke_active(): return
 	tool = kind
+	_close_popover()
 	for name in tool_buttons: tool_buttons[name].set_pressed_no_signal(name == kind)
-	_redraw_tool_icons()
 	for name in option_rows: option_rows[name].visible = name == kind
 	if is_instance_valid(view):
 		view.line_visible = false
 		view.overlay.queue_redraw()
-	_update_cursor()
-
-func _on_choice_changed() -> void:
+	_sync_edges()
 	_update_cursor()
 
 func _update_cursor() -> void:
 	if not is_instance_valid(view): return
 	if tool in [BRUSH, ERASER]:
+		var s: Dictionary = settings[tool]
 		view.cursor_kind = "brush"
-		view.cursor_radius = float(settings[tool].size) * 0.5
+		view.cursor_radius = float(s.size) * 0.5
+		view.cursor_hardness = float(s.hardness)
+		view.cursor_roundness = float(s.roundness) if int(s.tip) != 0 else 1.0
+		view.cursor_angle = deg_to_rad(float(s.angle)) if int(s.tip) != 0 else 0.0
 	else:
 		view.cursor_kind = "cross"
 	view.overlay.queue_redraw()
@@ -731,6 +1103,15 @@ func _process(_delta: float) -> void:
 	if core == null or not ready_to_paint: return
 	if stroke_active() and not stroke.is_empty(): _drain_stroke(STAMP_BUDGET_MS)
 	if not busy: view.sync(core)
+	if busy or stroke_active(): return
+	# Idle frames: one layer thumbnail or one preset stroke at a time, never mid-stroke.
+	if not thumb_queue.is_empty(): _update_thumb()
+	elif warm_previews < PRESETS.size() * 2:
+		# Up to ~12 ms each: the popover then opens without a hitch.
+		var spec := _preview_spec(PRESETS[warm_previews / 2])
+		if warm_previews % 2 == 0: Widgets.stroke_preview(spec, 144, 34)
+		else: Widgets.stroke_preview(spec, 112, 22)
+		warm_previews += 1
 
 func _stroke_begin(at: Vector2) -> void:
 	core.begin_stroke(tool == ERASER)
@@ -846,6 +1227,10 @@ func _gradient_begin(at: Vector2) -> void:
 	var hit := _hit_at(at)
 	if not hit.hit: return
 	gradient_start = {"screen": at, "point": hit.position, "slot": int(hit.slot)}
+	var s: Dictionary = settings[GRADIENT]
+	# The line previews the colours and the shape it will paint.
+	view.line_colors = [primary, Color(primary, 0.0) if bool(s.to_clear) else secondary]
+	view.line_radial = bool(s.radial)
 	view.line_from = at
 	view.line_to = at
 	view.line_visible = true
@@ -876,17 +1261,13 @@ func _swap_colors() -> void:
 	primary = secondary
 	secondary = keep
 	picker.set_color(primary, false)
-	_paint_chip(primary_chip, primary)
-	_paint_chip(secondary_chip, secondary)
-	_redraw_tool_icons()
+	_refresh_colors()
 
 func _reset_colors() -> void:
 	primary = Color.BLACK
 	secondary = Color.WHITE
 	picker.set_color(primary, false)
-	_paint_chip(primary_chip, primary)
-	_paint_chip(secondary_chip, secondary)
-	_redraw_tool_icons()
+	_refresh_colors()
 
 # ------------------------------------------------------------------ layers and history
 
@@ -897,51 +1278,85 @@ func _after_change(structure: bool) -> void:
 	_refresh_history()
 	if structure: dirty = true
 
+## Layer rows, top layer first: visibility, thumbnail, name with mode and opacity.
 func _refresh_layers() -> void:
 	if core == null or not is_instance_valid(layer_list): return
 	refreshing_layers = true
 	for child in layer_list.get_children(): child.queue_free()
+	thumb_views.clear()
+	for layer in thumbs.keys():
+		if not core.layers.has(layer): thumbs.erase(layer)
 	for index in range(core.layers.size() - 1, -1, -1):
 		var layer = core.layers[index]
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 4)
-		layer_list.add_child(row)
-		var eye := CheckBox.new()
-		eye.button_pressed = layer.visible
-		eye.focus_mode = Control.FOCUS_NONE
-		eye.tooltip_text = tr("보이기 / 숨기기")
 		var at: int = index
-		eye.toggled.connect(func(on: bool):
-			core.set_layer_props(at, {"visible": on}, tr("레이어 보이기"))
-			_after_change(false))
-		row.add_child(eye)
-		var name_button := Button.new()
-		var mode_text: String = "" if layer.mode == 0 else "  ·  " + tr(MODE_NAMES[layer.mode])
-		name_button.text = "%s%s%s" % [layer.name, mode_text, "" if layer.opacity >= 0.999 else "  %d%%" % int(round(layer.opacity * 100))]
-		name_button.tooltip_text = name_button.text
-		name_button.toggle_mode = true
-		name_button.button_pressed = index == core.current
-		name_button.theme_type_variation = "ChoiceButton"
-		name_button.focus_mode = Control.FOCUS_NONE
-		name_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		name_button.clip_text = true
-		name_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		name_button.custom_minimum_size.y = 30
-		name_button.add_theme_font_size_override("font_size", 13)
-		name_button.pressed.connect(func():
+		var row := Button.new()
+		row.theme_type_variation = "PaintRow"
+		row.toggle_mode = true
+		row.button_pressed = index == core.current
+		row.focus_mode = Control.FOCUS_NONE
+		row.custom_minimum_size.y = 44
+		row.pressed.connect(func():
 			if stroke_active(): return
 			core.current = at
 			_refresh_layers())
-		name_button.gui_input.connect(func(event: InputEvent):
+		row.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.double_click and event.button_index == MOUSE_BUTTON_LEFT:
 				core.current = at
 				_start_rename())
-		row.add_child(name_button)
+		layer_list.add_child(row)
+		var line := HBoxContainer.new()
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		line.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		line.offset_left = 2; line.offset_right = -6; line.offset_top = 4; line.offset_bottom = -4
+		line.add_theme_constant_override("separation", 6)
+		row.add_child(line)
+		var eye := Widgets.icon_button(line, "eye" if layer.visible else "eye_off", tr("보이기 / 숨기기"), func():
+			core.set_layer_props(at, {"visible": not core.layers[at].visible}, tr("레이어 보이기"))
+			_after_change(false), 30)
+		eye.add_theme_constant_override("icon_max_width", 16)
+		if not layer.visible: eye.modulate.a = 0.6
+		var thumb := Widgets.Thumb.new()
+		thumb.texture = _thumb_texture(layer)
+		line.add_child(thumb)
+		thumb_views[layer] = thumb
+		var names := VBoxContainer.new()
+		names.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		names.alignment = BoxContainer.ALIGNMENT_CENTER
+		names.add_theme_constant_override("separation", -1)
+		line.add_child(names)
+		var title := Widgets.caption(names, str(layer.name), 13, Widgets.INK)
+		title.clip_text = true
+		var mode_text: String = tr(MODE_NAMES[layer.mode])
+		Widgets.caption(names, "%s  ·  %d%%" % [mode_text, int(round(layer.opacity * 100))], 11)
+		row.tooltip_text = str(layer.name)
 	var current = core.layers[core.current]
 	layer_opacity.value = round(current.opacity * 100.0)
 	layer_opacity_label.text = tr("레이어 불투명도  %d%%") % int(layer_opacity.value)
 	layer_mode.select(current.mode)
 	refreshing_layers = false
+
+## The layer's thumbnail; a stale one is redrawn on an idle frame.
+func _thumb_texture(layer) -> Texture2D:
+	var entry: Dictionary = thumbs.get(layer, {})
+	if (entry.is_empty() or int(entry.revision) != layer.revision) and not thumb_queue.has(layer): thumb_queue.append(layer)
+	return entry.get("texture")
+
+func _update_thumb() -> void:
+	while not thumb_queue.is_empty() and not core.layers.has(thumb_queue[0]): thumb_queue.pop_front()
+	if thumb_queue.is_empty(): return
+	var layer = thumb_queue.pop_front()
+	var image := Image.create_from_data(core.size, core.size, false, Image.FORMAT_RGBA8, layer.data)
+	image.resize(48, 48, Image.INTERPOLATE_TRILINEAR)
+	var entry: Dictionary = thumbs.get(layer, {})
+	if entry.has("texture"): (entry.texture as ImageTexture).update(image)
+	else: entry.texture = ImageTexture.create_from_image(image)
+	entry.revision = layer.revision
+	thumbs[layer] = entry
+	var thumb = thumb_views.get(layer)
+	if is_instance_valid(thumb):
+		thumb.texture = entry.texture
+		thumb.queue_redraw()
 
 func _refresh_history() -> void:
 	if core == null or not is_instance_valid(history_list): return
@@ -949,7 +1364,7 @@ func _refresh_history() -> void:
 	history_list.add_item(tr("처음 상태"))
 	for name in core.history_names(): history_list.add_item(tr(name))
 	for i in history_list.item_count:
-		if i > core.history_index: history_list.set_item_custom_fg_color(i, Color(0.35, 0.3, 0.25, 0.55))
+		if i > core.history_index: history_list.set_item_custom_fg_color(i, Color(1, 1, 1, 0.3))
 	history_list.select(core.history_index)
 	history_list.ensure_current_is_visible()
 	undo_button.disabled = not core.can_undo()
@@ -982,6 +1397,7 @@ func _move_layer(direction: int) -> void:
 
 func _start_rename() -> void:
 	if core == null: return
+	sections.layers.set_open(true)
 	rename_row.visible = true
 	rename_field.text = core.layers[core.current].name
 	rename_field.grab_focus()
@@ -1030,6 +1446,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if busy or is_instance_valid(dialog_layer):
 		if key.keycode == KEY_ESCAPE and is_instance_valid(dialog_layer): dialog_layer.queue_free()
 		return
+	if key.keycode == KEY_ESCAPE and is_instance_valid(popover):
+		_close_popover()
+		return
 	var command := key.is_command_or_control_pressed()
 	match key.keycode:
 		KEY_ESCAPE: _ask_cancel()
@@ -1060,6 +1479,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 					var value := float(settings[tool].size)
 					var step := maxf(1.0, value * 0.15)
 					_set_option(tool, "size", clampf(value + (step if grow else -step), 1.0, 400.0))
+				view.flash_ring()
 		KEY_0, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9:
 			# Photoshop: number keys set the tool opacity (1 = 10% ... 0 = 100%).
 			if tool in [BRUSH, ERASER, FILL, GRADIENT]:
@@ -1070,10 +1490,23 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton:
 		get_viewport().set_input_as_handled()
 
-func _set_option(tool_name: String, key: String, value: float) -> void:
-	var control = option_controls.get(tool_name + ":" + key)
-	if control is Range: (control as Range).value = value
-	else: settings[tool_name][key] = value
+## Sets one tool setting and brings every control showing it (and the cursor) in step.
+func _set_option(tool_name: String, key: String, value, source: Object = null) -> void:
+	if not settings.has(tool_name) or not settings[tool_name].has(key): return
+	var old = settings[tool_name][key]
+	if old is bool: value = bool(value)
+	elif old is int: value = int(value)
+	else: value = float(value)
+	settings[tool_name][key] = value
+	var id := tool_name + ":" + key
+	var live: Array = []
+	for entry in option_controls.get(id, []):
+		if not is_instance_valid(entry.control): continue
+		live.append(entry)
+		if entry.control != source: entry.refresh.call(value)
+	option_controls[id] = live
+	if tool_name == tool and key in ["size", "opacity"] and source != size_edge and source != opacity_edge: _sync_edges()
+	if tool_name in [BRUSH, ERASER] and key in PRESET_KEYS: _refresh_preset(tool_name)
 	_update_cursor()
 
 # ------------------------------------------------------------------ save / cancel / reset
@@ -1167,13 +1600,13 @@ func _build_fallback(reason: String) -> void:
 	add_child(center)
 	move_child(center, 1)
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", RpgUi.panel_style("night"))
+	panel.add_theme_stylebox_override("panel", Widgets.flat(Widgets.PANEL, 12, Color(Widgets.GOLD, 0.35), 1, 20))
 	panel.custom_minimum_size.x = 460
 	center.add_child(panel)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
 	panel.add_child(column)
-	RpgUi.label(column, tr("전체 색 바꾸기"), 24, RpgUi.GOLD)
+	RpgUi.label(column, tr("전체 색 바꾸기"), 22, RpgUi.GOLD)
 	var why := RpgUi.label(column, reason, 14, RpgUi.INK)
 	why.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	why.custom_minimum_size.x = 420
@@ -1187,6 +1620,7 @@ func _build_fallback(reason: String) -> void:
 			part_choice.add_item(str(part[1]))
 			part_choice.set_item_metadata(part_choice.item_count - 1, str(part[0]))
 		part_choice.focus_mode = Control.FOCUS_NONE
+		part_choice.custom_minimum_size.y = 32
 		column.add_child(part_choice)
 	picker = ColorPanel.new()
 	picker.swatches = PackedStringArray(_setting("swatches", "").split(",", false))
@@ -1207,7 +1641,7 @@ func _build_fallback(reason: String) -> void:
 	_button(row, tr("적용"), func():
 		picker.use(primary)
 		if flat is Callable: flat.call("#" + primary.to_html(false), target.call(), false)
-		_close(true), "GoldButton")
+		_close(true), "PaintGold")
 	RpgUi.pop_in(panel)
 
 # ------------------------------------------------------------------ settings (follow the account)
@@ -1248,4 +1682,6 @@ func _save_settings() -> void:
 	if is_instance_valid(picker):
 		config.set_value(SETTINGS_SECTION, "swatches", ",".join(picker.swatches))
 		config.set_value(SETTINGS_SECTION, "recent", ",".join(picker.recent))
+	for name in sections:
+		if is_instance_valid(sections[name]): config.set_value(SETTINGS_SECTION, "dock_" + name, bool(sections[name].open))
 	config.save(_settings_path())
