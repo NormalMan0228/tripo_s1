@@ -64,16 +64,25 @@ static func _local_transform(node: Node3D, imported: Node3D) -> Transform3D:
 ## path). Authored game assets are imported by the editor and never pass through here.
 const TEXTURE_LIMIT := 1024
 static var compressor_warm := false
+## Godot's release templates ship without the block compressor (compressing there only logs
+## "_image_compress_bc_func is null"), so exported games keep the scaled image (about a quarter of the
+## memory); editor and source runs also compress.
+static var compressor_ok := not OS.has_feature("template")
 
 ## The first block compression in a session spends about a second setting up (later ones take ~5 ms).
 ## Main and the room scene call this while their loading veil is up, so the first crafted model does not
 ## stall. It must run on the main thread: compressing on a worker thread crashed the engine (4.7.2).
 static func warm_up_compression() -> void:
-	if compressor_warm: return
+	if compressor_warm or not compressor_ok: return
 	compressor_warm = true
 	var image := Image.create(64, 64, false, Image.FORMAT_RGB8)
-	if RenderingServer.has_os_feature("s3tc"): image.compress(Image.COMPRESS_S3TC)
-	elif RenderingServer.has_os_feature("etc2"): image.compress(Image.COMPRESS_ETC2)
+	var format := _block_format()
+	if format >= 0 and image.compress(format) != OK: compressor_ok = false
+
+static func _block_format() -> int:
+	if RenderingServer.has_os_feature("s3tc"): return Image.COMPRESS_S3TC
+	if RenderingServer.has_os_feature("etc2"): return Image.COMPRESS_ETC2
+	return -1
 
 static func shrink_textures(root: Node, limit := TEXTURE_LIMIT) -> Dictionary:
 	var stats := {"textures": 0, "resized": 0, "compressed": 0, "bytes_before": 0, "bytes_after": 0}
@@ -109,12 +118,11 @@ static func _shrink_texture(texture: Texture2D, limit: int, normal: bool, stats:
 		image.resize(width, height, Image.INTERPOLATE_BILINEAR)
 		stats.resized += 1
 	image.generate_mipmaps()
-	if not normal:
-		var format := -1
-		if RenderingServer.has_os_feature("s3tc"): format = Image.COMPRESS_S3TC
-		elif RenderingServer.has_os_feature("etc2"): format = Image.COMPRESS_ETC2
+	var format := _block_format()
+	if not normal and compressor_ok and format >= 0:
 		# Runtime compression can be missing from a build; the scaled image is used then.
-		if format >= 0 and image.compress(format, Image.COMPRESS_SOURCE_GENERIC) == OK: stats.compressed += 1
+		if image.compress(format, Image.COMPRESS_SOURCE_GENERIC) == OK: stats.compressed += 1
+		else: compressor_ok = false
 	stats.bytes_after += image.get_data().size()
 	return ImageTexture.create_from_image(image)
 
