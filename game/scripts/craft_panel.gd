@@ -11,6 +11,9 @@ extends VBoxContainer
 ##   await panel.open()
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const BuildMode = preload("res://scripts/build_mode.gd")
+const I18n = preload("res://scripts/i18n.gd")
+## The chosen look and size follow the account (cloud_prefs.gd syncs this section).
+const SETTINGS_SECTION := "craft"
 
 signal job_started(job_id: String)
 signal job_finished(job: Dictionary)
@@ -59,6 +62,15 @@ var efforts: OptionButton
 var file_dialog: FileDialog
 var photo_buttons: Array[Button] = []
 var dev_box: Control
+## Named styles and sizes come from the server (/v1/studio styles, sizes; server/craft_styles.py).
+var style_id := "rpg"
+var size_id := "auto"
+var style_title: Label
+var style_grid: GridContainer
+var size_title: Label
+var size_row: HFlowContainer
+var style_buttons := {}
+var size_buttons := {}
 
 func setup(network: Node, options: Dictionary) -> void:
 	api = network
@@ -71,6 +83,10 @@ func setup(network: Node, options: Dictionary) -> void:
 	self_poll = bool(options.get("self_poll", true))
 	add_theme_constant_override("separation", 10)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var config := ConfigFile.new()
+	config.load(I18n.settings_path())
+	style_id = str(config.get_value(SETTINGS_SECTION, "style", style_id))
+	size_id = str(config.get_value(SETTINGS_SECTION, "size", size_id))
 	_build_form()
 
 ## Reads the server's crafting settings (or uses `studio` already read) and shows the form, or follows
@@ -110,6 +126,7 @@ func apply_info(studio: Dictionary) -> void:
 			defaults_applied = true
 			designer.select(1 if llm else 0)
 			geometry.select(1 if tripo else 0)
+	_fill_styles()
 	_update_options()
 
 func _live() -> bool:
@@ -140,6 +157,16 @@ func _build_form() -> void:
 		image_label.text = tr("참고 이미지 없음")
 		_update_options()))
 	image_label = _label(form, tr("참고 그림을 추가할 수 있어요"), 13, true)
+	style_title = _label(form, tr("스타일"), 15)
+	style_grid = GridContainer.new()
+	style_grid.columns = 3
+	style_grid.add_theme_constant_override("h_separation", 6)
+	style_grid.add_theme_constant_override("v_separation", 6)
+	form.add_child(style_grid)
+	resized.connect(func() -> void: style_grid.columns = 3 if size.x > 480 else 2)
+	size_title = _label(form, tr("크기"), 15)
+	size_row = _row(form)
+	for control in [style_title, style_grid, size_title, size_row]: control.visible = false
 	var choices := GridContainer.new()
 	choices.columns = 2
 	# One column in a room's narrow drawer.
@@ -252,6 +279,13 @@ func _update_options() -> void:
 	if not ready_to_build: price_label.text = tr("공방 장인이 자리를 비워 지금은 제작할 수 없어요.")
 
 func _body() -> Dictionary:
+	var body := _base_body()
+	# Older servers do not know these fields (and refuse unknown ones).
+	if not style_buttons.is_empty(): body["style"] = style_id
+	if not size_buttons.is_empty(): body["size"] = size_id
+	return body
+
+func _base_body() -> Dictionary:
 	var tripo := _tripo()
 	return {"prompt": prompt.text.strip_edges(), "material": "textured" if surface.selected == 0 else "mesh",
 		"motion": "dynamic" if motion.selected == 1 else "static", "designer": _design(), "geometry": "tripo" if tripo else "proxy",
@@ -344,6 +378,10 @@ func _show_quote(value: Dictionary) -> void:
 	var quote: Dictionary = value.get("provenance", {})
 	var concept: Dictionary = value.get("concept", {})
 	var design: Dictionary = value.get("design", {})
+	var look := _entry("styles", str(quote.get("style", "")))
+	if not look.is_empty():
+		var chosen := _entry("sizes", str(quote.get("size", "auto")))
+		_label(status, tr("스타일 %s · 크기 %s") % [_name(look), _size_text(chosen) if not chosen.is_empty() else tr("자동")], 13, true)
 	if not concept.is_empty():
 		_label(status, tr("AI가 그린 그림이에요. 이 그림으로 3D를 만들까요?"), 15)
 		var picture := TextureRect.new()
@@ -426,6 +464,83 @@ func cancel() -> void:
 	job_id = ""
 	job_finished.emit(cancelled)
 	_show_form()
+
+# ------------------------------------------------------------------ styles and sizes
+
+## Builds the style and size buttons from the server's lists (once; they rarely change).
+func _fill_styles() -> void:
+	var styles: Array = info.get("styles", [])
+	var sizes: Array = info.get("sizes", [])
+	if styles.is_empty() or not style_buttons.is_empty(): return
+	if _entry("styles", style_id).is_empty(): style_id = str(info.get("default_style", styles[0].get("id", "rpg")))
+	var group := ButtonGroup.new()
+	for entry in styles:
+		var id := str(entry.get("id", ""))
+		var b := _choice(style_grid, _name(entry), group, func() -> void: _pick_style(id))
+		b.tooltip_text = str(entry.get("hints", {}).get(I18n.language(), entry.get("hints", {}).get("ko", "")))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.clip_text = true
+		style_buttons[id] = b
+	if _entry("sizes", size_id).is_empty(): size_id = "auto"
+	var sizes_group := ButtonGroup.new()
+	for entry in sizes:
+		var id := str(entry.get("id", ""))
+		var b := _choice(size_row, _size_text(entry), sizes_group, func() -> void: _pick_size(id))
+		if float(entry.get("meters", 0)) <= 0.0: b.tooltip_text = tr("AI가 물건에 맞는 실제 크기로 정해요")
+		size_buttons[id] = b
+	for control in [style_title, style_grid]: control.visible = true
+	for control in [size_title, size_row]: control.visible = not sizes.is_empty()
+	_show_choice(style_buttons, style_id)
+	_show_choice(size_buttons, size_id)
+
+func _choice(parent: Node, value: String, group: ButtonGroup, callback: Callable) -> Button:
+	var b := Button.new()
+	b.text = value
+	b.toggle_mode = true
+	b.button_group = group
+	b.custom_minimum_size.y = 38
+	b.focus_mode = Control.FOCUS_NONE
+	b.pressed.connect(func() -> void: callback.call())
+	parent.add_child(b)
+	return b
+
+func _pick_style(id: String) -> void:
+	style_id = id
+	_show_choice(style_buttons, id)
+	_save_choice()
+
+func _pick_size(id: String) -> void:
+	size_id = id
+	_show_choice(size_buttons, id)
+	_save_choice()
+
+## The chosen button stays pressed and turns gold.
+func _show_choice(buttons: Dictionary, id: String) -> void:
+	for key in buttons:
+		var b: Button = buttons[key]
+		b.set_pressed_no_signal(key == id)
+		b.theme_type_variation = "GoldButton" if key == id else ""
+
+func _save_choice() -> void:
+	RpgUi.sfx("click")
+	var config := ConfigFile.new()
+	config.load(I18n.settings_path())
+	config.set_value(SETTINGS_SECTION, "style", style_id)
+	config.set_value(SETTINGS_SECTION, "size", size_id)
+	config.save(I18n.settings_path())
+
+func _entry(list: String, id: String) -> Dictionary:
+	for entry in info.get(list, []):
+		if str(entry.get("id", "")) == id: return entry
+	return {}
+
+func _name(entry: Dictionary) -> String:
+	var names: Dictionary = entry.get("names", {})
+	return str(names.get(I18n.language(), names.get("ko", entry.get("id", ""))))
+
+func _size_text(entry: Dictionary) -> String:
+	var meters := float(entry.get("meters", 0))
+	return _name(entry) + (tr(" · 약 %sm") % String.num(meters, 1) if meters > 0.0 else "")
 
 # ------------------------------------------------------------------ helpers
 

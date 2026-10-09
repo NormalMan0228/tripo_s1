@@ -47,14 +47,14 @@ class DesignProvider:
         self.gemini_model=models[0] if models else ''
         self.retry_pause=4.0
 
-    async def generate(self,prompt,model,effort,image=None):
+    async def generate(self,prompt,model,effort,image=None,style=None):
         feedback='';attempts=[]
         for attempt in range(2):
             if self.settings.studio_llm=='codex':
-                raw,usage=await self._codex(prompt,model,effort,image,feedback)
+                raw,usage=await self._codex(prompt,model,effort,image,feedback,style)
             elif self.settings.studio_llm=='gemini':
-                raw,usage=await self._gemini(prompt,image,feedback)
-            else:raw,usage=await self._openai(prompt,model,effort,image,feedback)
+                raw,usage=await self._gemini(prompt,image,feedback,style)
+            else:raw,usage=await self._openai(prompt,model,effort,image,feedback,style)
             entry={'usage':usage};attempts.append(entry)
             try:
                 plan,program,report=(parse_structured(raw) if self.settings.studio_design_format=='structured' else parse_design(raw))
@@ -78,11 +78,11 @@ class DesignProvider:
             return plan,program,dict(provider=provider_name(self.settings),
                 model=self.gemini_model if self.settings.studio_llm=='gemini' else model,effort=effort,format=self.settings.studio_design_format,usage=combined,attempts=attempts,validation=report)
 
-    async def _openai(self,prompt,model,effort,image,feedback):
+    async def _openai(self,prompt,model,effort,image,feedback,style=None):
         if self.settings.studio_llm!='openai' or not self.settings.llm_key:
             raise ProviderError('llm_not_configured')
         structured=self.settings.studio_design_format=='structured'
-        content=[{'type':'input_text','text':(prompt_for_structured if structured else prompt_for)(prompt,feedback)}]
+        content=[{'type':'input_text','text':(prompt_for_structured if structured else prompt_for)(prompt,feedback,style)}]
         if image:content.append({'type':'input_image','image_url':image})
         try:
             async with httpx.AsyncClient(transport=self.transport,timeout=180,follow_redirects=False) as client:
@@ -99,13 +99,13 @@ class DesignProvider:
         except ProviderError:raise
         except Exception:raise ProviderError('llm_invalid_design') from None
 
-    async def _gemini(self,prompt,image,feedback):
+    async def _gemini(self,prompt,image,feedback,style=None):
         """Google Gemini generateContent in JSON mode. The design is validated by the same
         parser as the other providers; a model the key cannot use falls through to the next."""
         if self.settings.studio_llm!='gemini' or not self.settings.gemini_key:
             raise ProviderError('llm_not_configured')
         structured=self.settings.studio_design_format=='structured'
-        parts=[{'text':(prompt_for_structured if structured else prompt_for)(prompt,feedback)}]
+        parts=[{'text':(prompt_for_structured if structured else prompt_for)(prompt,feedback,style)}]
         if image:
             header,_,payload=image.partition(',')
             mime='image/png' if header.startswith('data:image/png') else 'image/jpeg'
@@ -146,7 +146,7 @@ class DesignProvider:
         except ProviderError:raise
         except Exception:raise ProviderError('llm_invalid_design') from None
 
-    async def _codex(self,prompt,model,effort,image,feedback):
+    async def _codex(self,prompt,model,effort,image,feedback,style=None):
         if self.settings.mode!='demo':raise ProviderError('developer_provider_forbidden')
         cli=pathlib.Path(os.environ.get('APPDATA',''))/'npm/node_modules/@openai/codex/bin/codex.js'
         node=shutil.which('node')
@@ -168,7 +168,7 @@ class DesignProvider:
             args+=['-']
             proc=await asyncio.create_subprocess_exec(*args,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
                   stderr=asyncio.subprocess.DEVNULL,cwd=folder,creationflags=0x08000000 if os.name=='nt' else 0)
-            try:stdout,_=await asyncio.wait_for(proc.communicate((prompt_for_structured if structured else prompt_for)(prompt,feedback).encode()),timeout=480)
+            try:stdout,_=await asyncio.wait_for(proc.communicate((prompt_for_structured if structured else prompt_for)(prompt,feedback,style).encode()),timeout=480)
             except asyncio.CancelledError:
                 await terminate_owned_process(proc);raise
             except asyncio.TimeoutError:

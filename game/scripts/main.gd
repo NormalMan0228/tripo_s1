@@ -2822,8 +2822,17 @@ func open_craft() -> void:
 	craft_box = CraftPanel.new()
 	craft_box.setup(api,{"say":func(value: String): message(value),"explain":error_message,"place_label":tr("지금 마을에 놓기"),
 		"place":place_crafted,"dark":false,"self_poll":false})
-	craft_box.custom_minimum_size.x = 560
-	v.add_child(craft_box)
+	# Scrolls only when the window would be taller than the screen (style buttons, picture, quote).
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	v.add_child(scroll)
+	scroll.add_child(craft_box)
+	var fit := func() -> void:
+		if not is_instance_valid(craft_box): return
+		var room := maxf(260.0, get_viewport().get_visible_rect().size.y - 230.0)
+		scroll.custom_minimum_size.y = minf(craft_box.get_combined_minimum_size().y, room)
+	craft_box.minimum_size_changed.connect(fit)
+	fit.call()
 	craft_box.job_id = craft_job
 	craft_box.follow_requested.connect(func():
 		craft_job = craft_box.job_id

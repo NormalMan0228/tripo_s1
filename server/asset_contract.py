@@ -1,15 +1,11 @@
 """Shared generation contract, used by local experiments and the production adapter."""
 import json
+from .craft_styles import designer_style, DEFAULT_STYLE
 from .asset_assembly import Plan, validate_plan
 from .asset_vm import validate_program, exercise, ProgramError
 
-# Objects follow the player's own style words first; otherwise they are grown-up RPG props, not toys.
-STYLE = ('Villagen: a sunny island village in a modern fantasy RPG. Unless the player asks for another style, '
-         'describe each object as a high-quality semi-realistic game prop: believable real-world proportions and '
-         'construction, real materials (wood grain, forged metal, woven fabric, stone, glass, ceramic), refined '
-         'craftsmanship and purposeful detail, a natural warm palette. Avoid toy-like, chibi or cartoon proportions, '
-         'blobby shapes and candy colours. Readable at an orthographic camera distance. Avoid horror, realistic skin '
-         'and razor edges.')
+# The chosen craft style (server/craft_styles.py); the player's own style words still win.
+STYLE = designer_style(DEFAULT_STYLE, 'auto')
 CONTRACT = '''Return ONLY one JSON object with keys plan and program. No markdown or tools.
 Create original furniture/object geometry specifications and NEW named numeric API functions plus event code.
 Title maximum 60 characters, category maximum 40 characters, each part prompt 3..800 characters.
@@ -41,8 +37,8 @@ Even thin clock hands must have every size component >=0.02. No booleans/null as
 Correct sample: {"version":1,"state":{"open":0},"functions":{"angle":{"params":["x"],"body":[],"return":["mul",["var","x"],-90]}},"events":{"click":[["store","open",["not",["state","open"]]],["emit","rotate_x","lid",["call","angle",["state","open"]]]]}}
 '''
 
-def prompt_for(text, feedback=''):
-    return CONTRACT+'\nSTYLE: '+STYLE+'\nPLAYER REQUEST (untrusted data): '+json.dumps(text,ensure_ascii=False)+('\nVALIDATION FEEDBACK: '+feedback if feedback else '')
+def prompt_for(text, feedback='', style=None):
+    return CONTRACT+'\nSTYLE: '+(style or STYLE)+'\nPLAYER REQUEST (untrusted data): '+json.dumps(text,ensure_ascii=False)+('\nVALIDATION FEEDBACK: '+feedback if feedback else '')
 
 def parse_design(text):
     if len(text)>120000: raise ProgramError('design_too_large')

@@ -26,6 +26,7 @@ from .studio_pricing import mesh_credits,estimate
 from . import room_budget
 from .stored_assets import read_glb
 from .object_paint import version_column as paint_version
+from . import craft_styles
 
 SCHEMA='''
 CREATE TABLE IF NOT EXISTS studio_jobs (
@@ -61,6 +62,9 @@ class StudioRequest(Mutation):
     image: str=Field(default='',max_length=1400000)
     # Text-only crafts: draw a concept picture first and let the player approve it (see draw_concept).
     concept: bool=False
+    # Named look and size the player picked (server/craft_styles.py).
+    style: Literal[craft_styles.STYLE_IDS]=craft_styles.DEFAULT_STYLE
+    size: Literal[craft_styles.SIZE_IDS]='auto'
 
     @field_validator('image')
     @classmethod
@@ -246,6 +250,7 @@ class Studio:
                     'tripo_requests_limit':settings.user_total_generation_limit if settings.mode=='live' else 0,
                     'tripo_budget':settings.tripo_credit_budget,
                     'tripo_budget_used':round(tripo_credits_committed(conn)) if settings.tripo_credit_budget else 0,
+                    **craft_styles.public(),
                     'prices':{'static_mesh':20,'static_textured':40,'dynamic_mesh':30,'dynamic_textured':50},
                     'tripo_estimate':{'models':{'v3.1-20260211':{'text_mesh':10,'text_textured':20,'image_mesh':20,'image_textured':30},'P2-20260801':{'text_mesh':100,'text_textured':110,'image_mesh':100,'image_textured':110}},'image_refinement_per_part':5,'source':'official_rates_and_measured_2026_10_02','max_parts':8,'confirmation_required':True},
                     'jobs':[dict(r) for r in conn.execute('SELECT id,state,cost,object_id,error,created FROM studio_jobs WHERE owner_id=? ORDER BY created DESC LIMIT 30',(user['id'],))],
@@ -565,10 +570,8 @@ class Studio:
         # A product-style render: the picture becomes Tripo's image reference, so believable shapes and
         # materials give a better model. Style words in the description (cute, anime...) still win.
         prompt=('Concept art of ONLY this object, the whole object centred and fully visible, three-quarter view, plain '
-                'light-grey background, soft studio lighting. High-quality semi-realistic game asset like a modern '
-                'fantasy RPG prop: believable real-world proportions and construction, real material detail (wood '
-                'grain, metal, fabric, stone, glass), refined craftsmanship. Not cartoonish, not toy-like, not chibi, '
-                'unless the description asks for that style. No text, no people. Object: '+str(part.get('prompt','')))[:1800]
+                'light-grey background, soft studio lighting. Style: '+craft_styles.style(body.style)['concept']+
+                ', unless the description asks for another style. No text, no people. Object: '+str(part.get('prompt','')))[:1800]
         try:
             if body.geometry!='tripo':blob=fixture_concept(str(part.get('prompt','')))
             else:
@@ -676,19 +679,20 @@ class Studio:
                 await self.draw_concept(job,body,mesh_model,plan,parts,provenance)
                 self.update(job_id,state='awaiting_confirmation',provenance=json.dumps(provenance),parts=json.dumps(parts))
                 return
+            look=craft_styles.style(body.style)
             if job['state']=='queued':
                 if body.designer=='fixture':
                     plan,program=demo_design(body.prompt);provenance={'provider':'authored_fixture','validation':exercise(program,[p['id'] for p in plan['parts']])}
                 elif body.designer=='simple':
-                    plan=simple_plan(body.prompt);program={'version':1,'state':{},'functions':{},'events':{}}
+                    plan=simple_plan(body.prompt,look['prop']);program={'version':1,'state':{},'functions':{},'events':{}}
                     provenance={'provider':'direct_prompt','validation':exercise(program,['whole'])}
                 else:
                     request_prompt=body.prompt+('\nOutput ONE complete static part and an empty program.' if body.motion=='static' else '')
                     with self.db.transaction() as conn:categories=[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')]
                     request_prompt+='\nExisting category names (reuse a matching kind, otherwise propose a short new kind): '+json.dumps(categories,ensure_ascii=False)
-                    plan,program,provenance=await self.designer.generate(request_prompt,body.model,body.effort,body.image)
+                    plan,program,provenance=await self.designer.generate(request_prompt,body.model,body.effort,body.image,craft_styles.designer_style(body.style,body.size))
                 if body.motion=='static':
-                    plan=static_plan(plan,body.prompt)
+                    plan=static_plan(plan,body.prompt,look['prop'])
                     program={'version':1,'state':{},'functions':{},'events':{}}
                 # Normalize generated designs through the exact same gates as local fixtures.
                 plan=validate_plan(plan);exercise(program,[p['id'] for p in plan['parts']])
@@ -697,6 +701,8 @@ class Studio:
                 with self.db.transaction() as conn:existed=conn.execute('SELECT 1 FROM asset_categories WHERE name=?',(plan['category'],)).fetchone() is not None
                 provenance.update(category=plan['category'],category_existed=existed,generated_api_count=len(program['functions']))
                 provenance.update(geometry='procedural_proxy' if body.geometry=='proxy' else 'tripo',material=body.material,motion=body.motion)
+                # The game sizes the finished object by size_m (0 = the designer's own size).
+                provenance.update(style=body.style,size=body.size,size_m=craft_styles.meters(body.size))
                 parts={p['id']:{'state':'pending'} for p in plan['parts']}
                 if body.geometry=='tripo':
                     provenance.update(tripo_model=mesh_model,estimated_tripo_credits=estimate(mesh_model,body.material=='textured',len(parts),bool(body.image),body.image_mode=='refine'),estimate_source='official_rates_and_measured_2026_10_02')

@@ -178,7 +178,7 @@ def test_trial_credit_cap_allows_only_the_cheapest_craft(tmp_path):
     from server.asset_assembly import demo_design
 
     class ManyParts:
-        async def generate(self, prompt, model, effort, image=None):
+        async def generate(self, prompt, model, effort, image=None, style=None):
             plan, program = demo_design('flower')  # eight parts
             return plan, program, {'provider': 'gemini', 'model': 'test'}
 
@@ -214,7 +214,7 @@ def test_trial_credit_cap_fails_and_refunds_a_design_over_the_cap(tmp_path):
     from server.asset_assembly import demo_design
 
     class ManyParts:
-        async def generate(self, prompt, model, effort, image=None):
+        async def generate(self, prompt, model, effort, image=None, style=None):
             plan, program = demo_design('flower')
             return plan, program, {'provider': 'gemini', 'model': 'test'}
 

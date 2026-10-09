@@ -1,4 +1,4 @@
-﻿extends SceneTree
+extends SceneTree
 ## The one craft window (craft_panel.gd) in the village (C) and in a room: a text-only craft shows the
 ## AI's concept picture with the text sent to Tripo, can be redrawn, then is built from the picture
 ## and lands in the bag. Runs against the QA server (demo mode: placeholder picture, sample shapes).
@@ -107,11 +107,18 @@ func run() -> void:
 	studio.set_dock_open(true)
 	await create_timer(0.3).timeout
 	await capture("room-form")
+	# Named styles and sizes from the server, remembered for the next craft.
+	expect(panel.style_buttons.size() == 9 and panel.size_buttons.size() == 5 and panel.style_grid.visible, "style and size choices offered")
+	panel.style_buttons["anime"].pressed.emit()
+	panel.size_buttons["large"].pressed.emit()
+	expect(panel.style_id == "anime" and panel.size_id == "large" and panel.style_buttons["anime"].button_pressed and not panel.style_buttons["rpg"].button_pressed, "picking a style and a size")
 	studio.prompt.text = "tiny round stool"
 	await studio.generate()
 	expect(not studio.job_id.is_empty(), "room craft request accepted")
 	job = await wait_state(panel, ["awaiting_confirmation"])
 	expect(not job.get("concept", {}).is_empty(), "room craft shows the concept picture too")
+	expect(str(job.get("provenance", {}).get("style")) == "anime" and float(job.get("provenance", {}).get("size_m", 0)) == 1.8, "the craft carries the chosen style and size")
+	expect(labels(panel.status).contains("애니메이션"), "the quote names the style")
 	await capture("room-concept")
 	await studio.confirm_job()
 	job = await wait_state(panel, ["ready", "failed"], 40.0)
@@ -119,6 +126,8 @@ func run() -> void:
 	await create_timer(0.8).timeout
 	await studio.place_crafted(str(job.get("object_id", "")))
 	expect(studio.placement_mode and str(studio.selected.get("id", "")) == str(job.get("object_id", "")), "place-here starts placing the new object")
+	var built: Vector3 = studio.inspected.get_meta("size", Vector3.ZERO) if is_instance_valid(studio.inspected) else Vector3.ZERO
+	expect(absf(maxf(built.x, maxf(built.y, built.z)) - 1.8) < 0.03, "the object is 1.8 m on its longest side (%s)" % built)
 	await capture("room-place")
 	print("CRAFT_PANEL " + ("FAILED" if failed else "OK"))
 	studio.queue_free()

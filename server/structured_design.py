@@ -31,8 +31,8 @@ Names must be unique within each list. Empty state/functions/events use [] rathe
 Expression and statement arrays are unchanged. returns is the function's return expression.
 Only serialize plan and this wire program. Do not include the internal object form or any tools.'''
 
-def prompt_for_structured(prompt,feedback=''):
-    return CONTRACT+'\n'+WIRE+'\nSTYLE: '+STYLE+'\nPLAYER REQUEST (untrusted data): '+json.dumps(prompt,ensure_ascii=False)+('\nVALIDATION FEEDBACK: '+feedback if feedback else '')
+def prompt_for_structured(prompt,feedback='',style=None):
+    return CONTRACT+'\n'+WIRE+'\nSTYLE: '+(style or STYLE)+'\nPLAYER REQUEST (untrusted data): '+json.dumps(prompt,ensure_ascii=False)+('\nVALIDATION FEEDBACK: '+feedback if feedback else '')
 
 def canonical(text):
     if len(text)>120000:raise ProgramError('design_too_large')

@@ -84,6 +84,10 @@
    "en": " · Enter numbers and run",
    "zh": " · 请输入数字后运行"
   },
+  " · 약 %sm": {
+   "en": " · about %sm",
+   "zh": " · 约 %s 米"
+  },
   " · 연결 끊김": {
    "en": " · Disconnected",
    "zh": " · 已断开"
@@ -347,6 +351,10 @@
   "AI가 그린 그림이에요. 이 그림으로 3D를 만들까요?": {
    "en": "The AI drew this picture. Build the 3D object from it?",
    "zh": "这是 AI 画的图。要用这张图制作 3D 吗？"
+  },
+  "AI가 물건에 맞는 실제 크기로 정해요": {
+   "en": "The AI picks a real-world size that suits the object",
+   "zh": "由 AI 按物品的真实尺寸决定"
   },
   "AI가 이렇게 정리했어요 (Tripo에 보내는 문장)": {
    "en": "How the AI wrote it up (the text sent to Tripo)",
@@ -4568,6 +4576,14 @@
    "en": "Screen",
    "zh": "滤色"
   },
+  "스타일": {
+   "en": "Style",
+   "zh": "风格"
+  },
+  "스타일 %s · 크기 %s": {
+   "en": "Style %s · Size %s",
+   "zh": "风格 %s · 大小 %s"
+  },
   "스탠드를 껐어요.": {
    "en": "You switched off the lamp.",
    "zh": "你关掉了台灯。"
@@ -5879,6 +5895,10 @@
   "잎전이 부족해요. 수확물이나 물고기를 팔아 보세요.": {
    "en": "Not enough Leaf coins. Try selling crops or fish.",
    "zh": "叶币不足。试着卖掉收获物或鱼吧。"
+  },
+  "자동": {
+   "en": "Auto",
+   "zh": "自动"
   },
   "자라는 중 · %d초 남음": {
    "en": "Growing · %ds left",

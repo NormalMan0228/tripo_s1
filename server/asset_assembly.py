@@ -70,24 +70,40 @@ def validate_plan(data):
     return plan
 
 
-def simple_plan(request):
+def simple_plan(request, prop='high-quality semi-realistic game prop with believable proportions and real materials, not toy-like'):
     """The cheapest craft: the player's words go straight to Tripo as one static
     mesh. No LLM design step, no moving parts."""
     words=' '.join(request.split())[:300]
     return validate_plan({'title':words[:60] or 'object','category':'decoration','parts':[{
-        'id':'whole','parent':'','prompt':('A single high-quality semi-realistic game prop with believable proportions and real materials, clean silhouette, no base plate, not toy-like: '+words)[:800],
+        'id':'whole','parent':'','prompt':('A single '+prop+', clean silhouette, no base plate: '+words)[:800],
         'shape':'box','size':[1.2,1.2,1.2],'position':[0,.6,0],'color':'#c9a46e'}]})
 
 
-def static_plan(plan,request):
-    """Static furniture is one complete mesh, never separately billed hidden parts."""
+def static_plan(plan,request,prop='high-quality semi-realistic game prop with believable proportions and real materials'):
+    """Static furniture is one complete mesh, never separately billed hidden parts. Its box is the
+    designed parts' overall extent, so the game keeps the designer's real-world size."""
     if len(plan['parts'])==1:return plan
     first=plan['parts'][0]
-    prompt=('Complete assembled static furniture, a high-quality semi-realistic game prop with believable proportions and real materials. '+request+' Visual components: '+
+    prompt=('Complete assembled static furniture, '+prop+'. '+request+' Visual components: '+
             '; '.join(p['prompt'] for p in plan['parts']))[:800]
     return validate_plan({'title':plan['title'],'category':plan['category'],'parts':[{
         'id':'whole','parent':'','prompt':prompt,'shape':first['shape'],
-        'size':[1.5,1.5,1.5],'position':[0,.75,0],'color':first['color']}]})
+        'size':extent(plan['parts']),'position':[0,.75,0],'color':first['color']}]})
+
+
+def extent(parts):
+    """Overall size of a designed assembly (parent offsets added, rotations ignored), 0.1..3 m a side."""
+    by_id={p['id']:p for p in parts}
+    def offset(p,depth=0):
+        parent=by_id.get(p['parent'])
+        base=offset(parent,depth+1) if parent and depth<8 else [0,0,0]
+        return [base[i]+p['position'][i] for i in range(3)]
+    low=[1e9]*3;high=[-1e9]*3
+    for p in parts:
+        centre=offset(p)
+        for i in range(3):
+            low[i]=min(low[i],centre[i]-p['size'][i]/2);high[i]=max(high[i],centre[i]+p['size'][i]/2)
+    return [round(min(3.0,max(.1,high[i]-low[i])),3) for i in range(3)]
 
 
 def _png():

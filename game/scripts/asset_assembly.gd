@@ -83,6 +83,10 @@ func build(value: Dictionary, blobs: Dictionary) -> bool:
 		pivot.add_child(normalization); normalization.add_child(meshroot)
 		var size := vector(p.size)
 		normalization.scale=size/bounds.size
+		# A one-piece craft keeps the generated model's proportions (stretching it into its design box
+		# made tall or long objects chunky); designed multi-part boxes still fit each part exactly.
+		if parts.size()==1:
+			normalization.scale=Vector3.ONE*(size[size.max_axis_index()]/bounds.size[bounds.size.max_axis_index()])
 		normalization.position=-bounds.get_center()*normalization.scale-vector(p.pivot)*size
 		pivots[p.id]=pivot; surfaces[p.id]=meshes; holders[p.id]=holder
 		pose_nodes[p.id]=holder;normalizers[p.id]=normalization;mesh_bounds[p.id]=bounds
@@ -109,7 +113,11 @@ func build(value: Dictionary, blobs: Dictionary) -> bool:
 	for mesh in all_meshes:
 		var b: AABB=Loader._local_transform(mesh,self)*mesh.get_aabb()
 		total=b if initial_bounds else total.merge(b);initial_bounds=false
-	var factor := minf(1.0,1.8/maxf(total.size.x,maxf(total.size.y,total.size.z)))
+	# The player's chosen size sets the longest side (provenance.size_m); otherwise the designer's own
+	# size, at most 1.8 m.
+	var longest := maxf(total.size.x,maxf(total.size.y,total.size.z))
+	var chosen := float(value.get("provenance",{}).get("size_m",0))
+	var factor := clampf(chosen,0.2,3.0)/longest if chosen>0.0 else minf(1.0,1.8/longest)
 	var content := Node3D.new()
 	var roots := get_children()
 	add_child(content)
