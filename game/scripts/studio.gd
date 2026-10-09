@@ -56,6 +56,8 @@ var room := "workshop"
 ## shares presence so visitors and the host see each other.
 var visit_host := ""
 var visit_name := ""
+## The look the village handed over, so the walker wears it before /v1/studio answers.
+var session_avatar: Dictionary={}
 var dock_panel: Control
 var room_buttons: Array[Button] = []
 var peers: Dictionary = {}
@@ -187,6 +189,7 @@ func _ready() -> void:
 		room=str(session.get("room","workshop"))
 		visit_host=str(session.get("visit_host",""))
 		visit_name=str(session.get("visit_name",""))
+		if session.get("avatar") is Dictionary: session_avatar=session.avatar
 		shared_presence=bool(session.get("multiplayer",false)) and room=="home"
 		Engine.remove_meta("studio_session")
 	if not Interiors.has_interior(room): room="workshop"
@@ -575,7 +578,8 @@ func build_stage() -> void:
 	build_room()
 	# Authored character is separate from all player-created furniture.
 	if ResourceLoader.exists("res://assets/explorer_b_reference.glb"):
-		hero=preload("res://scripts/player.gd").new();hero.controls_enabled=false;hero.visual_only=true;stage.add_child(hero)
+		hero=preload("res://scripts/player.gd").new();hero.controls_enabled=false;hero.visual_only=true
+		hero.avatar=session_avatar.duplicate(true);stage.add_child(hero)
 		place_hero_at_door()
 
 ## Speech bubble and "E" badge drawn over the room view, pinned to 3D points.

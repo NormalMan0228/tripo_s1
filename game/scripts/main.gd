@@ -683,6 +683,9 @@ func build_world(survival: bool) -> void:
 	world.add_child(object_root)
 	player = Player.new()
 	player.visual_only=survival
+	# Built in the saved look from the first frame (applying it after _ready showed the default
+	# explorer first and loaded the character twice).
+	player.avatar=me.get("profile",{}).get("avatar",{}).duplicate(true)
 	world.add_child(player)
 	player.apply_avatar(me.get("profile",{}).get("avatar",{}))
 	if not survival: spawn_villagers()
@@ -2834,7 +2837,8 @@ func open_wardrobe() -> void:
 
 
 func open_studio(destination: String="workshop") -> void:
-	var session := {"token":api.token,"url":api.base_url,"room":destination,"multiplayer":social.enabled}
+	var session := {"token":api.token,"url":api.base_url,"room":destination,"multiplayer":social.enabled,
+		"avatar":me.get("profile",{}).get("avatar",{}).duplicate(true)}
 	if social.visiting():
 		# Friends may step into the host's home and public buildings; the workshop stays private.
 		if destination=="workshop":

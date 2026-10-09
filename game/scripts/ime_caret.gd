@@ -27,7 +27,10 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	var focus := get_viewport().gui_get_focus_owner()
 	var field: Control = focus if _is_text(focus) else null
-	var ime := DisplayServer.ime_get_text() if ime_supported else ""
+	# Asked only while a text field is focused in a focused window: before the window has ever had
+	# focus (the player clicked elsewhere while the game started) Godot 4.7.2 looks the IME up on a
+	# window that does not exist yet and the engine aborts.
+	var ime := DisplayServer.ime_get_text() if ime_supported and field != null and get_window().has_focus() else ""
 	if field != null and not ime.is_empty():
 		composing_field = field
 		composing_text = ime
