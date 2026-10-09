@@ -241,7 +241,9 @@ func check_audio() -> void:
 	rpg_ui._last_played.erase("click")
 	var clicks_before: int = rpg_ui._voice
 	sound.effect("click")
-	check(rpg_ui._voice == clicks_before+1 and AudioServer.get_bus_index("UI") >= 0, "click plays on UI")
+	# Headless runs skip UI sounds (the dummy audio driver never finishes them).
+	var played := 0 if DisplayServer.get_name() == "headless" else 1
+	check(rpg_ui._voice == clicks_before+played and AudioServer.get_bus_index("UI") >= 0, "click plays on UI")
 	sound.effect("gather")
 	check(sound.voices[(sound.voice_index+sound.voices.size()-1)%sound.voices.size()].bus == &"SFX", "gather plays on SFX")
 	sound.free()
