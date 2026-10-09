@@ -107,6 +107,15 @@ func run() -> void:
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://../artifacts/interaction-editor.png")
 		panel.choice.presets.clear()
+	# 글로 설명하기 (the demo server's fixture designer): a program for the existing parts, paid once.
+	var shards_before := int(app.me.shards)
+	panel._set_mode("custom")
+	panel.describe_text.text = "다가가면 은은하게 빛나요"
+	await panel._describe()
+	check(not panel.draft.is_empty() and bag_model.vm.program.get("events", {}).has("near"), "a description becomes a program on the copy")
+	var me_now: Dictionary = await app.api.request("/v1/me")
+	check(me_now.ok and int(me_now.data.shards) == shards_before - 5, "a description costs 5 starseeds")
+	panel._set_mode("presets")
 	panel._pick_card("spin")
 	panel._pick_card("glow")
 	panel._set_option("trigger", "near")
