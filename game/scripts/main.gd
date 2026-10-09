@@ -435,7 +435,7 @@ func check(result: Dictionary) -> bool:
 		return false
 	return true
 
-## Title screen: the village art drifting slowly under a vignette with floating
+## Title screen: the village art under a vignette with floating
 ## light motes, the game's wordmark and a keyboard-navigable menu (start, settings,
 ## quit). Starting opens the server login card; every session plays on a server account.
 func login_ui(page := "menu") -> void:
@@ -449,12 +449,8 @@ func login_ui(page := "menu") -> void:
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(art)
-	# A slow drift keeps the title alive without distracting.
-	art.pivot_offset = Vector2(760,420)
-	art.scale = Vector2.ONE*1.035
-	var breathe := art.create_tween().set_loops()
-	breathe.tween_property(art,"scale",Vector2.ONE*1.075,14.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	breathe.tween_property(art,"scale",Vector2.ONE*1.035,14.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	# The art stays still: a slow zoom resampled the picture every frame and it shimmered.
+	# The light motes keep the title alive.
 	for spec in [[Vector2(0,0),Vector2(0,1),Color("bfe6ee"),0.0,0.30],[Vector2(0,0),Vector2(1,0),Color(0.03,0.05,0.06,.82),0.0,0.58],[Vector2(0,1),Vector2(0,0),Color(0.03,0.05,0.06,.55),0.0,0.32]]:
 		var gradient := Gradient.new()
 		gradient.colors = PackedColorArray([spec[2],Color(spec[2],0)])
