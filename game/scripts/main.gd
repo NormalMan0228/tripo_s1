@@ -991,6 +991,7 @@ func inspect_object(obj: Dictionary) -> void:
 	var request := inspect_request
 	# The same object, unchanged: keep the model already in the preview.
 	if is_instance_valid(inspect_model) and str(inspect_model.get_meta("inspect_id",""))==str(obj.id) and str(inspect_model.get_meta("object_key",""))==object_key(obj):
+		sync_shape(inspect_model,obj)
 		await sync_runtime(inspect_model,obj)
 		return
 	if is_instance_valid(inspect_model):
@@ -1241,6 +1242,7 @@ func refresh_inventory() -> void:
 			var existing: Node3D=loaded[obj.id]
 			existing.position = TownLayout.furniture_point(obj.x,obj.z)
 			existing.rotation_degrees.y = obj.rotation
+			sync_shape(existing,obj)
 			await sync_runtime(existing,obj)
 			if epoch!=world_epoch:
 				refreshing=false
@@ -1280,6 +1282,13 @@ func sync_runtime(item: Node3D, obj: Dictionary) -> void:
 	if not fresh.ok or not is_instance_valid(item): return
 	item.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version})
 	item.paint(fresh.data.runtime.colors)
+
+## A shape saved elsewhere (another PC) reshapes a kept model in place; the object the shape
+## window is editing keeps showing its unsaved draft.
+func sync_shape(item: Node3D, obj: Dictionary) -> void:
+	if ObjectTransform.same(item.get_meta("shape",{}),obj.get("shape")): return
+	if is_instance_valid(shape_panel) and str(shape_panel.object.get("id",""))==str(obj.id): return
+	ObjectTransform.apply(item,obj.get("shape"))
 
 ## /v1/me without the runtime versions near/leave/click events keep raising.
 static func objects_signature(objects: Array) -> String:

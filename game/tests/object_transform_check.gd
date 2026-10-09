@@ -140,6 +140,17 @@ func run() -> void:
 	for body in app.loaded[village_id].get_children():
 		if body is StaticBody3D: collision_size = (body.get_child(0).shape as BoxShape3D).size
 	check(near(collision_size, app.loaded[village_id].get_meta("size")), "collision box follows the shape")
+	# Another PC reshapes it: the kept model follows in place (no reload).
+	var kept: Node3D = app.loaded[village_id]
+	var elsewhere: Dictionary = await app.api.post("/v1/objects/" + village_id + "/shape", app.api.mutation({"width": 120, "depth": 130, "height": 110, "scale": 100, "mirror": false}))
+	await app.refresh_inventory()
+	check(elsewhere.ok and app.loaded.get(village_id) == kept, "a shape saved elsewhere keeps the loaded model")
+	village_shape = {"width": 120, "depth": 130, "height": 110, "scale": 100, "mirror": false}
+	shaped(kept, village_shape, "village reshaped elsewhere")
+	if app.selected.get("id", "") == village_id: shaped(app.inspect_model, village_shape, "bag preview reshaped elsewhere")
+	for body in kept.get_children():
+		if body is StaticBody3D: collision_size = (body.get_child(0).shape as BoxShape3D).size
+	check(near(collision_size, kept.get_meta("size")), "collision box follows a shape from elsewhere")
 
 	# ---------------------------------------------------------------- village: turn again in place
 	for i in app.me.objects.size():
