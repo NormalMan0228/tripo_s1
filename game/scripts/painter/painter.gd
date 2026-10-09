@@ -132,7 +132,10 @@ func _prepare() -> void:
 		_hide_busy()
 		_build_fallback(tr("이 물건은 표면에 그림을 입힐 좌표(UV) 없이 만들어져서 붓으로 칠할 수 없어요. 대신 전체 색을 바꿀 수 있어요. 새로 만드는 물건은 붓으로 칠할 수 있어요."))
 		return
-	var slots := PaintApply.mesh_slots(model)
+	# One pose for the bake and the view, even if the object's program moves it meanwhile.
+	var slot_list := PaintApply.slots_of(model)
+	var poses := PaintApply.poses_of(model, slot_list)
+	var slots := PaintApply.mesh_slots(model, poses)
 	var looks := PaintApply.slot_looks(model)
 	var paint_image: Image = null
 	if obj.get("paint_version") != null:
@@ -156,6 +159,9 @@ func _prepare() -> void:
 	WorkerThreadPool.wait_for_task_completion(pending_task)
 	pending_task = -1
 	if not is_inside_tree(): return
+	if not is_instance_valid(model):
+		_close(false)
+		return
 	core = engine
 	_hide_busy()
 	if not job.get("done", false) or core.covered < SIZE * SIZE / 400:
@@ -163,7 +169,7 @@ func _prepare() -> void:
 		_build_fallback(tr("이 물건의 표면 좌표(UV)가 비어 있어 붓으로 칠할 수 없어요. 대신 전체 색을 바꿀 수 있어요."))
 		return
 	_build_workspace()
-	view.show_model(model, PaintApply.slots_of(model), core)
+	view.show_model(model, slot_list, core, poses)
 	ready_to_paint = true
 	_refresh_layers()
 	_refresh_history()
@@ -233,6 +239,7 @@ func _build_workspace() -> void:
 	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	view.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.paint_event.connect(_on_view_event)
+	view.camera_moving.connect(_flush_stroke)
 	frame.add_child(view)
 	middle.add_child(_build_side())
 	status_label = Label.new()
@@ -741,6 +748,10 @@ func _stroke_end() -> void:
 		if not erase: picker.use(primary)
 	stroke = {}
 	_after_change(false)
+
+## Places every queued dab before the view's camera moves (queued points are screen points).
+func _flush_stroke() -> void:
+	if stroke_active() and not stroke.is_empty(): _drain_stroke(-1)
 
 func _drain_stroke(budget_ms: int) -> void:
 	var started := Time.get_ticks_msec()

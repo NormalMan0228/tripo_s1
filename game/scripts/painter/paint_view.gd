@@ -5,6 +5,9 @@ extends SubViewportContainer
 ## Left-button presses and moves go out through paint_event for the tools; the overlay draws
 ## the brush outline and the gradient line.
 signal paint_event(event: InputEvent)
+## Just before the camera moves (orbit, pan, zoom, reset): dabs still queued as screen points
+## must be placed with the camera they were made under.
+signal camera_moving
 
 const Loader = preload("res://scripts/model_loader.gd")
 const DISPLAY = preload("res://scripts/painter/paint_display.gdshader")
@@ -80,9 +83,10 @@ func _ready() -> void:
 	mouse_entered.connect(func(): cursor_inside = true; overlay.queue_redraw())
 	mouse_exited.connect(func(): cursor_inside = false; overlay.queue_redraw())
 
-## Shows a copy of the model's surfaces (shared meshes, current pose) with one display
-## material per slot; atlas tiles come from the core.
-func show_model(model: Node3D, slots: Array, core) -> void:
+## Shows a copy of the model's surfaces (shared meshes) with one display material per slot;
+## atlas tiles come from the core. `poses` is the pose the core baked (PaintApply.poses_of):
+## the live model may have moved since.
+func show_model(model: Node3D, slots: Array, core, poses := {}) -> void:
 	size_px = core.size
 	for child in world_root.get_children(): child.queue_free()
 	materials.clear()
@@ -93,7 +97,7 @@ func show_model(model: Node3D, slots: Array, core) -> void:
 		if not copies.has(source):
 			var copy := MeshInstance3D.new()
 			copy.mesh = source.mesh
-			copy.transform = Loader._local_transform(source, model)
+			copy.transform = poses[source] if poses.has(source) else Loader._local_transform(source, model)
 			world_root.add_child(copy)
 			copies[source] = copy
 		var material := ShaderMaterial.new()
@@ -161,19 +165,22 @@ func reset_view() -> void:
 	_place_camera()
 
 func _place_camera() -> void:
+	camera_moving.emit()
 	var basis := Basis.from_euler(Vector3(pitch, yaw, 0.0))
 	camera.position = target + basis * Vector3(0, 0, distance)
 	camera.look_at(target, Vector3.UP)
 	camera.near = maxf(distance * 0.01, 0.005)
 
-## Object-space ray through a point of the view.
+## Object-space ray through a point of the view (the view's own pixels, as mouse events give
+## them; the port renders at its own pixel size).
 func ray(at: Vector2) -> Array:
-	return [camera.project_ray_origin(at), camera.project_ray_normal(at)]
+	var port_at := at * Vector2(port.size) / size if size.x > 0.0 and size.y > 0.0 else at
+	return [camera.project_ray_origin(port_at), camera.project_ray_normal(port_at)]
 
-## World units per screen pixel at a point (brush sizes are in screen pixels).
+## World units per view pixel at a point (brush sizes are in view pixels, like the cursor ring).
 func world_per_pixel(point: Vector3) -> float:
 	var depth := maxf((point - camera.global_position).dot(-camera.global_transform.basis.z), 0.001)
-	return 2.0 * depth * tan(deg_to_rad(FOV * 0.5)) / maxf(1.0, float(port.size.y))
+	return 2.0 * depth * tan(deg_to_rad(FOV * 0.5)) / maxf(1.0, size.y)
 
 func camera_right() -> Vector3:
 	return camera.global_transform.basis.x.normalized()

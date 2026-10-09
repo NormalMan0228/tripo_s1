@@ -757,6 +757,9 @@ func _pad_tiles(layer: Layer, dirty: PackedInt32Array) -> void:
 			var d := pad_dst[i] * 4; var s := pad_src[i] * 4
 			data[d] = data[s]; data[d + 1] = data[s + 1]; data[d + 2] = data[s + 2]; data[d + 3] = data[s + 3]
 	layer.data = data
+	# The view uploads by revision: without this a stroke's padding never reached it and every
+	# UV seam the stroke crossed showed a thin unpainted crack.
+	layer.revision += 1
 
 func _pad_all(layer: Layer) -> void:
 	var all := PackedInt32Array()

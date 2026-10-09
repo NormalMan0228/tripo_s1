@@ -82,11 +82,7 @@ func build(value: Dictionary, blobs: Dictionary) -> bool:
 		var normalization := Node3D.new()
 		pivot.add_child(normalization); normalization.add_child(meshroot)
 		var size := vector(p.size)
-		normalization.scale=size/bounds.size
-		# A one-piece craft keeps the generated model's proportions (stretching it into its design box
-		# made tall or long objects chunky); designed multi-part boxes still fit each part exactly.
-		if parts.size()==1:
-			normalization.scale=Vector3.ONE*(size[size.max_axis_index()]/bounds.size[bounds.size.max_axis_index()])
+		normalization.scale=fit_scale(size,bounds)
 		normalization.position=-bounds.get_center()*normalization.scale-vector(p.pivot)*size
 		pivots[p.id]=pivot; surfaces[p.id]=meshes; holders[p.id]=holder
 		pose_nodes[p.id]=holder;normalizers[p.id]=normalization;mesh_bounds[p.id]=bounds
@@ -143,8 +139,17 @@ func preview_binding(id: String, edit: Dictionary) -> void:
 	var size := vector(edit.size)
 	pose_nodes[id].position=vector(edit.position)
 	pose_nodes[id].rotation_degrees=vector(edit.rotation)
-	normalizers[id].scale=size/bounds.size
+	normalizers[id].scale=fit_scale(size,bounds)
 	normalizers[id].position=-bounds.get_center()*normalizers[id].scale-vector(edit.pivot)*size
+
+## A part's scale into its design box. A one-piece craft keeps the generated model's proportions
+## (stretching it into its design box made tall or long objects chunky); designed multi-part boxes
+## still fit each part exactly. The studio's binding preview uses this too, so selecting a piece
+## there no longer stretches it (and its painter no longer saw another shape than the world).
+func fit_scale(size: Vector3, bounds: AABB) -> Vector3:
+	if manifest.get("plan",{}).get("parts",[]).size()==1:
+		return Vector3.ONE*(size[size.max_axis_index()]/bounds.size[bounds.size.max_axis_index()])
+	return size/bounds.size
 
 static func vector(a: Array) -> Vector3:
 	return Vector3(a[0],a[1],a[2])
