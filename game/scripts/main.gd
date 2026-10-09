@@ -971,6 +971,10 @@ func inspect_object(obj: Dictionary) -> void:
 	if not is_instance_valid(inspect_stage): return
 	inspect_request+=1
 	var request := inspect_request
+	# The same object, unchanged: keep the model already in the preview.
+	if is_instance_valid(inspect_model) and str(inspect_model.get_meta("inspect_id",""))==str(obj.id) and str(inspect_model.get_meta("object_key",""))==object_key(obj):
+		await sync_runtime(inspect_model,obj)
+		return
 	if is_instance_valid(inspect_model):
 		inspect_model.queue_free()
 		inspect_model=null
@@ -980,6 +984,8 @@ func inspect_object(obj: Dictionary) -> void:
 		return
 	if model:
 		inspect_model=model
+		model.set_meta("inspect_id",obj.id)
+		model.set_meta("object_key",object_key(obj))
 		if not model.get_meta("studio",false):Loader.paint(model,Color(selected.color))
 		inspect_stage.add_child(model)
 		update_paint_entry(model)
@@ -1197,23 +1203,41 @@ func refresh_inventory() -> void:
 	for obj in me.objects:
 		var state_name: String = {"inventory":tr("보관"),"placed":tr("배치"),"listed":tr("판매")}[obj.state]
 		objects_list.add_item("[%s] %s" % [state_name,obj.name])
-	for node in object_root.get_children():
-		object_root.remove_child(node)
-		node.queue_free()
-	loaded.clear()
+	# Only new or changed objects are loaded: rebuilding every placed model (Tripo textures included)
+	# on each refresh froze the village whenever starseeds or a runtime version changed.
+	var wanted := {}
 	for obj in me.objects:
-		if obj.state=="placed" and obj.get("room","village")=="village":
-			var asset = await load_object(obj)
+		if obj.state=="placed" and obj.get("room","village")=="village": wanted[obj.id]=obj
+	for id in loaded.keys():
+		var node: Node3D=loaded[id]
+		if not wanted.has(id) or not is_instance_valid(node) or str(node.get_meta("object_key",""))!=object_key(wanted[id]):
+			if is_instance_valid(node):
+				object_root.remove_child(node)
+				node.queue_free()
+			loaded.erase(id)
+	for obj in me.objects:
+		if not wanted.has(obj.id): continue
+		if loaded.has(obj.id):
+			var existing: Node3D=loaded[obj.id]
+			existing.position = TownLayout.furniture_point(obj.x,obj.z)
+			existing.rotation_degrees.y = obj.rotation
+			await sync_runtime(existing,obj)
 			if epoch!=world_epoch:
-				if is_instance_valid(asset): asset.queue_free()
 				refreshing=false
 				return
-			if asset:
-				object_root.add_child(asset)
-				asset.position = TownLayout.furniture_point(obj.x,obj.z)
-				asset.rotation_degrees.y = obj.rotation
-				Loader.add_collision(asset)
-				loaded[obj.id] = asset
+			continue
+		var asset = await load_object(obj)
+		if epoch!=world_epoch:
+			if is_instance_valid(asset): asset.queue_free()
+			refreshing=false
+			return
+		if asset:
+			asset.set_meta("object_key",object_key(obj))
+			object_root.add_child(asset)
+			asset.position = TownLayout.furniture_point(obj.x,obj.z)
+			asset.rotation_degrees.y = obj.rotation
+			Loader.add_collision(asset)
+			loaded[obj.id] = asset
 	if objects_list.item_count>0:
 		var index := 0
 		for i in me.objects.size():
@@ -1221,6 +1245,29 @@ func refresh_inventory() -> void:
 		objects_list.select(index)
 		select_object(index)
 	refreshing=false
+
+## What a loaded model depends on: a change here reloads it; anything else updates in place.
+func object_key(obj: Dictionary) -> String:
+	return JSON.stringify([obj.get("color",""),obj.get("paint_version"),obj.get("studio",false)])
+
+## A crafted object whose state moved on elsewhere (a room, another PC) takes the server's state
+## without reloading its model.
+func sync_runtime(item: Node3D, obj: Dictionary) -> void:
+	if not item.get_meta("studio",false) or obj.get("runtime_version")==null: return
+	if int(item.runtime_version)==int(obj.runtime_version): return
+	var fresh: Dictionary=await api.request("/v1/objects/"+str(obj.id)+"/assembly")
+	if not fresh.ok or not is_instance_valid(item): return
+	item.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version})
+	item.paint(fresh.data.runtime.colors)
+
+## /v1/me without the runtime versions near/leave/click events keep raising.
+static func objects_signature(objects: Array) -> String:
+	var copies := []
+	for obj in objects:
+		var copy: Dictionary=obj.duplicate()
+		copy.erase("runtime_version")
+		copies.append(copy)
+	return JSON.stringify(copies)
 
 func claim_pending_reward() -> void:
 	if busy or me.get("pending_reward")==null: return
@@ -1247,7 +1294,7 @@ func poll_entitlements() -> void:
 		login_ui()
 		message(error_message(result.error))
 		return
-	if JSON.stringify(result.data.objects)!=JSON.stringify(me.objects) or result.data.shards!=me.shards:
+	if objects_signature(result.data.objects)!=objects_signature(me.objects) or result.data.shards!=me.shards:
 		cancel_preview()
 		await refresh_inventory()
 

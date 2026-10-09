@@ -68,6 +68,9 @@ try {
     }
     if ($Capture) {
         $taskArguments = $taskGameArguments + @('--','--capture','--mute','--qa',('--region=' + $Region),('--difficulty=' + $Difficulty),('--artifacts=' + (Join-Path $taskRoot 'artifacts')))
+        # Windowed runs open on the BenQ monitor when it is connected (tools/test_window_position.ps1).
+        $taskWindow = & (Join-Path $PSScriptRoot 'test_window_position.ps1')
+        if ($taskWindow) { $taskArguments = @('--position',$taskWindow) + $taskArguments }
         if ($Night) { $taskArguments += '--night' }
         if ($Loss) { $taskArguments += '--loss' }
         if ($Chapter) { $taskArguments += ('--chapter=' + $Chapter) }
