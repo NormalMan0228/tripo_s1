@@ -1584,6 +1584,10 @@ func place_preview() -> void:
 		return
 	if not preview_moving.is_empty():
 		if await move_object(p):
+			# The standing copy takes the new spot and turn at once; the refresh confirms it.
+			var standing: Node3D=loaded.get(preview_moving)
+			if is_instance_valid(standing) and is_instance_valid(preview):
+				standing.position=TownLayout.furniture_point(p.x,p.y);standing.rotation_degrees.y=preview_rotation
 			cancel_preview()
 			await refresh_inventory()
 			message(tr("자리와 방향을 바꿨어요."))
