@@ -87,7 +87,8 @@ class ObjectEdit(Mutation):
     color: str = Field(default='#f6eee0',pattern=r'^#[0-9a-fA-F]{6}$')
     x: float = Field(default=0,ge=-130,le=130)
     z: float = Field(default=0,ge=-130,le=130)
-    rotation: Literal[0,90,180,270] = 0
+    # Facing in whole degrees; released clients send quarter turns only.
+    rotation: int = Field(default=0,ge=0,le=359)
 
 class Input(Strict):
     sequence: int = Field(ge=1,le=2147483647)
