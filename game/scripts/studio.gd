@@ -3,6 +3,8 @@ const Api=preload("res://scripts/api.gd")
 const Assembly=preload("res://scripts/asset_assembly.gd")
 const Loader=preload("res://scripts/model_loader.gd")
 const PaintApply=preload("res://scripts/painter/paint_apply.gd")
+const ObjectTransform=preload("res://scripts/object_transform.gd")
+const ShapePanel=preload("res://scripts/shape_panel.gd")
 const Art=preload("res://scripts/art.gd")
 const BuildMode=preload("res://scripts/build_mode.gd")
 const ControllerProfile=preload("res://scripts/controller_profile.gd")
@@ -66,6 +68,10 @@ var presence_pending := false
 var shared_presence := false
 var placement_mode := false
 var placement_rotation := 0
+## The placing tools' angle readout (between the ↶ ↷ arrows).
+var turn_readout: Label
+## The 보관함's 모양 바꾸기 window (shape_panel.gd) while it is open.
+var shape_panel: Control
 var place_at := Vector3.ZERO
 var pending := false
 var epoch := 0
@@ -386,8 +392,8 @@ func build_ui() -> void:
 	placement_title.max_lines_visible=1;placement_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
 	placement_feedback=label(tools,tr("빈자리를 골라 주세요"),13)
 	var rotate_row := row(tools)
-	button(rotate_row,tr("↶ 회전"),func():rotate_placement(-90))
-	button(rotate_row,tr("회전 ↷"),func():rotate_placement(90))
+	# Any angle: the arrows turn 15°, R 15° (Shift back, Alt/Ctrl 1°) and the wheel 5°.
+	turn_readout=ObjectTransform.turn_bar(rotate_row,rotate_placement)
 	grid_toggle=CheckButton.new();grid_toggle.text=tr("격자");grid_toggle.button_pressed=true;rotate_row.add_child(grid_toggle)
 	var confirm_row := row(tools)
 	place_button=button(confirm_row,tr("여기에 놓기"),commit_place);place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -460,6 +466,7 @@ func build_ui() -> void:
 	# for furniture made without UVs (whole colour per part).
 	paint_button=button(own,tr("색칠하기"),open_painter)
 	paint_button.theme_type_variation="GoldButton";paint_button.tooltip_text=tr("붓·채우기·그라데이션으로 표면을 직접 칠해요")
+	button(own,tr("모양 바꾸기"),open_shape_panel).tooltip_text=tr("가로 · 깊이 · 높이 · 크기 · 좌우 반전")
 	part_choice=option(own,[tr("전체 색칠")])
 	var palette := row(own)
 	paint_rows=[part_choice,palette]
@@ -872,6 +879,7 @@ func refresh() -> void:
 
 func clear_selection() -> void:
 	cancel_placement()
+	if is_instance_valid(shape_panel): shape_panel.close()
 	selection_epoch+=1;placement_epoch+=1
 	binding_dirty=false
 	selected={};placement_mode=false
@@ -902,6 +910,8 @@ func load_item(obj: Dictionary) -> Node3D:
 		if value:Loader.paint(value,Color(obj.color))
 	# The painted surface (painter/paint_apply.gd), cached by object and paint version.
 	if value:await PaintApply.attach(api,value,obj,prefix)
+	# The owner's shape edit (object_transform.gd); the size meta and footprint follow it.
+	if value:ObjectTransform.apply(value,obj.get("shape"))
 	return value
 
 func reload_placed() -> void:
@@ -933,6 +943,10 @@ func reload_placed() -> void:
 					existing.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version});existing.paint(fresh.data.runtime.colors)
 				elif is_instance_valid(existing):existing.queue_free();placed.erase(obj.id)
 			elif not existing.get_meta("studio",false) and existing.get_meta("paint",Color.WHITE)!=Color(obj.color):Loader.paint(existing,Color(obj.color))
+			# A shape saved elsewhere (another device, the host while visiting); an open shape window
+			# keeps its live draft on screen.
+			if is_instance_valid(existing) and not ObjectTransform.same(existing.get_meta("shape",{}),obj.get("shape")) and not (is_instance_valid(shape_panel) and str(shape_panel.object.get("id",""))==str(obj.id)):
+				ObjectTransform.apply(existing,obj.get("shape"))
 			if is_instance_valid(existing) and str(existing.get_meta("paint_key",""))!=PaintApply.key_for(obj):
 				await PaintApply.attach(api,existing,obj,"/v1/objects/" if visit_host.is_empty() else "/v1/social/village/objects/")
 				if current!=epoch:return
@@ -990,6 +1004,7 @@ func update_paint_entry(item: Node3D) -> void:
 func open_painter() -> void:
 	if pending or selected.is_empty() or is_instance_valid(painter) or not visit_host.is_empty():return
 	if not is_instance_valid(inspected):message(tr("가구를 고르면 모습을 살펴볼 수 있어요"));return
+	if is_instance_valid(shape_panel):shape_panel.close()
 	var parts: Array=[]
 	for i in range(1,part_choice.item_count):parts.append([str(part_choice.get_item_metadata(i)),part_choice.get_item_text(i)])
 	var id: String=selected.id
@@ -1018,6 +1033,27 @@ func painter_flat(id: String, hex: String, part: String, reset: bool) -> void:
 	for i in part_choice.item_count:
 		if str(part_choice.get_item_metadata(i))==part:part_choice.select(i)
 	await paint(hex,reset)
+
+## 모양 바꾸기: sliders for the selected piece, previewed on the 보관함 view and the placed copy.
+func open_shape_panel() -> void:
+	if pending or selected.is_empty() or is_instance_valid(painter) or not visit_host.is_empty() or public_room:return
+	if is_instance_valid(shape_panel):shape_panel.close();return
+	if selected.get("state")=="listed":message(tr("장터에 올린 물건은 모양을 바꿀 수 없어요."));return
+	if not is_instance_valid(inspected):message(tr("가구를 고르면 모습을 살펴볼 수 있어요"));return
+	cancel_placement()
+	var id: String=selected.id
+	shape_panel=ShapePanel.new()
+	shape_panel.setup(api,selected,func(): return [inspected if selected.get("id","")==id else null,placed.get(id)],func(text: String): message(text))
+	shape_panel.saved.connect(func(shape: Dictionary): shape_saved(id,shape))
+	add_child(shape_panel)
+	shape_panel.position=Vector2(18,128)
+
+## A saved shape: the room's list matches the server again.
+func shape_saved(id: String, shape: Dictionary) -> void:
+	for obj in data.get("objects",[]):
+		if obj.id==id:obj.shape=shape
+	if selected.get("id","")==id:selected.shape=shape
+	message(tr("모양을 바꿨어요.") if not ObjectTransform.is_default(shape) else tr("처음 모양으로 돌아왔어요."))
 
 func load_function_fields(index: int) -> void:
 	function_fields.clear()
@@ -1146,8 +1182,10 @@ func begin_place() -> void:
 	if floor_index!=0:
 		# Decorating happens on the ground floor, where the server keeps the furniture.
 		stand_up(false);set_floor(0);place_hero_at_door()
+	if is_instance_valid(shape_panel):shape_panel.close()
 	placement_epoch+=1;var placement_request := placement_epoch;var object_id: String=selected.id
-	placement_mode=true;placement_rotation=selected.rotation
+	placement_mode=true;placement_rotation=ObjectTransform.wrap_degrees(float(selected.get("rotation",0)))
+	ObjectTransform.show_angle(turn_readout,placement_rotation)
 	if is_instance_valid(ghost):ghost.queue_free()
 	ghost=null
 	var loaded := await load_item(selected.duplicate(true))
@@ -1170,12 +1208,13 @@ func begin_place() -> void:
 		place_at=ghost.position
 	else:
 		placement_mode=false;message(tr("가구를 불러오지 못했어요. 다시 선택해 주세요."));return
-	message(tr("빈 바닥을 가리켜 보세요 · 클릭해서 놓기 · R 회전"))
+	message(tr("빈 바닥을 가리켜 보세요 · 클릭해서 놓기 · R·휠 돌리기"))
 
+## Turns the ghost by any whole number of degrees; it eases there (_process).
 func rotate_placement(degrees: int) -> void:
 	if not placement_mode or pending:return
-	placement_rotation=posmod(placement_rotation+degrees,360)
-	if is_instance_valid(ghost):ghost.rotation_degrees.y=placement_rotation
+	placement_rotation=ObjectTransform.wrap_degrees(placement_rotation+degrees)
+	ObjectTransform.show_angle(turn_readout,placement_rotation)
 
 func cancel_placement() -> void:
 	placement_mode=false;placement_epoch+=1
@@ -1191,6 +1230,8 @@ func view_input(event: InputEvent) -> void:
 			var point := origin+direction*(-origin.y/direction.y)
 			place_at=Vector3(roundf(point.x*2)/2,0.08,roundf(point.z*2)/2)
 			if is_instance_valid(ghost):ghost.position=place_at
+	if placement_mode and event is InputEventMouseButton and event.pressed and ObjectTransform.wheel_turn(event)!=0:
+		rotate_placement(ObjectTransform.wheel_turn(event));view_container.accept_event();return
 	if placement_mode and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:await commit_place()
 
 func job_status(state: String) -> String:
@@ -1371,6 +1412,9 @@ func leave() -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
 	if is_instance_valid(painter):return
+	# Placing: R turns 15° (Shift back, Alt/Ctrl a single degree); a held key keeps turning.
+	if placement_mode and event is InputEventKey and event.is_pressed() and GameSettings.canonical_key(event)==KEY_R and not is_instance_valid(talk_box):
+		rotate_placement(ObjectTransform.key_turn(event));get_viewport().set_input_as_handled();return
 	if not event.is_pressed() or event.is_echo():return
 	# Rebinding-aware: a key bound to Interact reports KEY_E (game_settings.gd).
 	var key := GameSettings.canonical_key(event)
@@ -1392,8 +1436,6 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		else: PauseMenu.open(self)
 	if key==KEY_C and is_instance_valid(dock_toggle) and dock_toggle.visible:
 		set_dock_open(not dock_panel.visible)
-	if key==KEY_R and placement_mode:
-		rotate_placement(90)
 	if key==KEY_E:
 		if not resting.is_empty():stand_up()
 		elif is_instance_valid(hero) and floor_index==0 and Interiors.near_door(room_spec,hero.position):leave()
@@ -1623,6 +1665,7 @@ func _process(delta: float) -> void:
 			placement_feedback.text=tr("이곳에 놓을 수 있어요 · %d°")%placement_rotation if problem.is_empty() else problem
 			placement_feedback.modulate=Color("4a6d50") if problem.is_empty() else Color("a25445")
 			place_button.disabled=pending or not problem.is_empty() or not is_instance_valid(ghost)
+			if is_instance_valid(ghost):ghost.rotation.y=ObjectTransform.ease_yaw(ghost.rotation.y,placement_rotation,delta)
 	if is_instance_valid(floor_grid):floor_grid.visible=placement_mode and grid_toggle.button_pressed
 	if is_instance_valid(placement_marker):
 		placement_marker.visible=placement_mode
@@ -1759,6 +1802,17 @@ func placement_problem(at: Vector3) -> String:
 	for obj in data.get("objects",[]):
 		if obj.id==selected.get("id") or obj.state!="placed" or obj.room!=room:continue
 		if absf(obj.x-at.x)<2 and absf(obj.z-at.z)<2:return tr("다른 가구에서 두 칸 이상 떨어뜨려 주세요.")
+	# The ghost's real footprint at its angle and shape: inside the walls, clear of the furniture.
+	if placement_mode and is_instance_valid(ghost):
+		var size: Vector3=ghost.get_meta("size",Vector3.ONE)
+		var half := ObjectTransform.footprint_half(size,placement_rotation)
+		var walls: Vector2=Vector2(room_spec.get("size",Vector2(10,10)))*0.5
+		if absf(at.x)+half.x>walls.x+0.05 or absf(at.z)+half.y>walls.y+0.05:return tr("벽에 닿아요. 조금 안쪽으로 옮기거나 돌려 보세요.")
+		for id in placed:
+			var item: Node3D=placed[id]
+			if id==selected.get("id") or not is_instance_valid(item):continue
+			if ObjectTransform.footprints_overlap(Vector2(at.x,at.z),Vector2(size.x,size.z),placement_rotation,Vector2(item.position.x,item.position.z),Vector2(item.get_meta("size",Vector3.ONE).x,item.get_meta("size",Vector3.ONE).z),item.rotation_degrees.y):
+				return tr("다른 가구와 겹쳐요.")
 	return ""
 
 # ---------------------------------------------------------------- furniture feedback

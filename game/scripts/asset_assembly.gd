@@ -119,6 +119,8 @@ func build(value: Dictionary, blobs: Dictionary) -> bool:
 	var chosen := float(value.get("provenance",{}).get("size_m",0))
 	var factor := clampf(chosen,0.2,3.0)/longest if chosen>0.0 else minf(1.0,1.8/longest)
 	var content := Node3D.new()
+	# The player's shape edit (object_transform.gd) scales this frame.
+	content.name="ShapeFrame"
 	var roots := get_children()
 	add_child(content)
 	for node in roots:remove_child(node);content.add_child(node)

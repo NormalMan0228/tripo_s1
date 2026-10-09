@@ -37,6 +37,8 @@ static func load_bytes(bytes: PackedByteArray) -> Node3D:
 	var root := Node3D.new()
 	root.name = "SampleDecoration"
 	var pivot := Node3D.new()
+	# The player's shape edit (object_transform.gd) scales this frame.
+	pivot.name = "ShapeFrame"
 	root.add_child(pivot)
 	pivot.add_child(imported)
 	var factor := 1.6 / longest

@@ -3,6 +3,8 @@ extends Node3D
 const Art = preload("res://scripts/art.gd")
 const Loader = preload("res://scripts/model_loader.gd")
 const PaintApply = preload("res://scripts/painter/paint_apply.gd")
+const ObjectTransform = preload("res://scripts/object_transform.gd")
+const ShapePanel = preload("res://scripts/shape_panel.gd")
 const Player = preload("res://scripts/player.gd")
 const ControllerProfile=preload("res://scripts/controller_profile.gd")
 const Api = preload("res://scripts/api.gd")
@@ -74,6 +76,16 @@ var enemy_nodes: Dictionary = {}
 var object_root: Node3D
 var preview: Node3D
 var preview_rotation := 0
+## Placing: the turn bar (↶ angle ↷), the placed object being moved or turned (its old
+## copy hides meanwhile) and whether the ghost follows the pointer yet.
+var turn_hud: Control
+var turn_readout: Label
+var preview_moving := ""
+var preview_follow := true
+var preview_mouse := Vector2.ZERO
+## The bag's 모양 바꾸기 window (shape_panel.gd) while it is open.
+var shape_panel: Control
+var shape_button: Button
 var flame: Node3D
 var busy := false
 var ticking := false
@@ -855,6 +867,8 @@ func enter_village() -> void:
 	paint_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	paint_hint.custom_minimum_size.x = 250
 	paint_hint.visible = false
+	shape_button = button(right,tr("모양 바꾸기"),open_shape_panel)
+	shape_button.tooltip_text = tr("가로 · 깊이 · 높이 · 크기 · 좌우 반전")
 	button(right,tr("선택한 물건 놓기"),begin_place)
 	button(right,tr("선택한 물건 회수"),retrieve_object)
 	button(right,tr("선택한 가구 사용"),func():await village_furniture_event(selected.get("id",""),"click"))
@@ -920,6 +934,7 @@ func toggle_drawer() -> void:
 		return
 	if not is_instance_valid(right): return
 	var opening: bool=not right.get_parent().visible
+	if not opening and is_instance_valid(shape_panel): shape_panel.close()
 	right.get_parent().visible=opening
 	if opening:
 		RpgUi.slide_in(right.get_parent(),Vector2(28,0),0.26)
@@ -968,7 +983,7 @@ func build_inspector() -> void:
 	view.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	view.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	card.add_child(view)
-	RpgUi.caption(card,tr("팔레트로 전체 색을 바꿔 보세요.\nR · 배치 방향 회전"),12)
+	RpgUi.caption(card,tr("팔레트로 전체 색을 바꿔 보세요.\nR · 휠 · 놓을 방향 돌리기"),12)
 
 func inspect_object(obj: Dictionary) -> void:
 	if not is_instance_valid(inspect_stage): return
@@ -992,6 +1007,8 @@ func inspect_object(obj: Dictionary) -> void:
 		if not model.get_meta("studio",false):Loader.paint(model,Color(selected.color))
 		inspect_stage.add_child(model)
 		update_paint_entry(model)
+		# A reload while the shape window is open keeps showing its unsaved draft.
+		if is_instance_valid(shape_panel): shape_panel.refresh()
 
 ## Village HUD: character frame (enter_village), round minimap, objective tracker,
 ## slot hotbar and a top toast. The survival HUD keeps its own layout below.
@@ -1247,6 +1264,7 @@ func refresh_inventory() -> void:
 			if me.objects[i].id==old_selection: index=i
 		objects_list.select(index)
 		select_object(index)
+	if is_instance_valid(shape_panel): shape_panel.refresh()
 	refreshing=false
 
 ## What a loaded model depends on: a change here reloads it; anything else updates in place.
@@ -1303,6 +1321,7 @@ func poll_entitlements() -> void:
 
 func select_object(index: int) -> void:
 	if is_instance_valid(preview): cancel_preview()
+	if is_instance_valid(shape_panel) and str(shape_panel.object.get("id",""))!=str(me.objects[index].id): shape_panel.close()
 	selected = me.objects[index]
 	var state_name: String={"inventory":tr("보관 중"),"placed":tr("배치됨 · ")+{"home":tr("내 집"),"workshop":tr("공방"),"village":tr("마을")}.get(selected.get("room","village"),tr("다른 공간")),"listed":tr("장터에서 판매 중")}[selected.state]
 	object_info.text = "%s\n%s" % [selected.name,state_name]
@@ -1312,6 +1331,8 @@ func load_object(obj: Dictionary, prefix: String="/v1/objects/") -> Node3D:
 	var assembly: Node3D=await preload("res://scripts/asset_assembly.gd").fetch(api,obj.id,prefix)
 	if assembly:
 		await PaintApply.attach(api,assembly,obj,prefix)
+		# The owner's shape edit (width, depth, height, size, mirror) shows wherever it stands.
+		ObjectTransform.apply(assembly,obj.get("shape"))
 		return assembly
 	if obj.get("studio",false):message(tr("가구의 모든 부품을 불러오지 못했습니다."));return null
 	var response: Dictionary = await api.request(prefix+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
@@ -1321,6 +1342,7 @@ func load_object(obj: Dictionary, prefix: String="/v1/objects/") -> Node3D:
 		Loader.paint(model,Color(obj.color))
 		# The painted surface (painter/paint_apply.gd), cached by object and paint version.
 		await PaintApply.attach(api,model,obj,prefix)
+		ObjectTransform.apply(model,obj.get("shape"))
 	else: message(tr("물건을 꺼내지 못했어요."))
 	return model
 
@@ -1343,6 +1365,7 @@ func open_painter() -> void:
 	if not is_instance_valid(inspect_model):
 		message(tr("물건을 불러오는 중이에요. 잠시 뒤에 다시 눌러 주세요."))
 		return
+	if is_instance_valid(shape_panel): shape_panel.close()
 	var parts: Array=[]
 	if inspect_model.get_meta("studio",false):
 		for p in inspect_model.manifest.plan.parts: parts.append([str(p.id),str(p.id)])
@@ -1365,6 +1388,33 @@ func painter_saved(id: String, image, version) -> void:
 		if image==null: PaintApply.clear(item)
 		elif item!=preview or selected.get("id","")==id: PaintApply.apply(item,image,key)
 	message(tr("칠한 모습을 저장했어요.") if image!=null else tr("처음 모습으로 되돌렸어요."))
+
+## 모양 바꾸기: sliders for the selected object, previewed on the bag's view and the placed copy.
+func open_shape_panel() -> void:
+	if selected.is_empty() or busy or is_instance_valid(painter): return
+	if is_instance_valid(shape_panel):
+		shape_panel.close()
+		return
+	if selected.state=="listed":
+		message(tr("장터에 올린 물건은 모양을 바꿀 수 없어요."))
+		return
+	if not is_instance_valid(inspect_model):
+		message(tr("물건을 불러오는 중이에요. 잠시 뒤에 다시 눌러 주세요."))
+		return
+	cancel_preview()
+	var id: String=selected.id
+	shape_panel=ShapePanel.new()
+	shape_panel.setup(api,selected,func(): return [inspect_model if selected.get("id","")==id else null,loaded.get(id)],message)
+	shape_panel.saved.connect(func(shape: Dictionary): shape_saved(id,shape))
+	ui.add_child(shape_panel)
+	shape_panel.position=Vector2(288,120)
+
+## A saved shape: the lists match the server again, so the next poll reloads nothing.
+func shape_saved(id: String, shape: Dictionary) -> void:
+	for obj in me.get("objects",[]):
+		if obj.id==id: obj.shape=shape
+	if selected.get("id","")==id: selected.shape=shape
+	message(tr("모양을 바꿨어요.") if not ObjectTransform.is_default(shape) else tr("처음 모양으로 돌아왔어요."))
 
 ## Whole-object colour from the painter's fallback panel (objects without UVs).
 func painter_flat(id: String, hex: String, part: String, reset: bool) -> void:
@@ -1423,21 +1473,32 @@ func retrieve_object() -> void:
 
 func begin_place() -> void:
 	if selected.is_empty() or busy or refreshing: return
-	if selected.state!="inventory":
+	# Something standing in the village can be picked up again: moved or turned in one step.
+	var moving: bool=selected.state=="placed" and selected.get("room","village")=="village" and loaded.has(selected.id)
+	if selected.state!="inventory" and not moving:
 		message(tr("보관 중인 물건을 선택하세요."))
 		return
 	cancel_preview()
+	if is_instance_valid(shape_panel): shape_panel.close()
 	busy = true
 	preview = await load_object(selected)
 	busy = false
 	if preview:
 		world.add_child(preview)
-		preview_rotation=0
+		preview_rotation=ObjectTransform.wrap_degrees(float(selected.get("rotation",0))) if moving else 0
+		preview_moving=str(selected.id) if moving else ""
+		preview_follow=not moving
+		preview_mouse=get_viewport().get_mouse_position()
+		if moving:
+			preview.position=TownLayout.furniture_point(selected.x,selected.z)
+			if is_instance_valid(loaded.get(preview_moving)): loaded[preview_moving].visible=false
+		preview.rotation_degrees.y=preview_rotation
 		# A ground disc shows whether the spot is free: green to place, red when blocked.
 		var disc := MeshInstance3D.new()
 		var plate := CylinderMesh.new()
 		var span: Vector3=preview.get_meta("size",Vector3.ONE)
-		plate.top_radius=maxf(span.x,span.z)*.62;plate.bottom_radius=plate.top_radius;plate.height=.04
+		# Wide enough for the footprint at any turn.
+		plate.top_radius=Vector2(span.x,span.z).length()*.5+.04;plate.bottom_radius=plate.top_radius;plate.height=.04
 		disc.mesh=plate;disc.position.y=.03;disc.name="PlacementDisc"
 		var tint := StandardMaterial3D.new();tint.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
 		tint.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA;tint.albedo_color=Color(.4,.9,.5,.45)
@@ -1445,12 +1506,49 @@ func begin_place() -> void:
 		preview.add_child(disc)
 		player.controls_enabled=false
 		if right.get_parent().visible: toggle_drawer()
-		message(tr("마음에 드는 바닥을 클릭하세요. R로 돌리고 Esc로 취소할 수 있어요."))
+		show_turn_hud(true)
+		message(tr("바닥을 클릭해 놓기 · R·휠 돌리기 · Esc 취소"))
 
 func cancel_preview() -> void:
 	if is_instance_valid(preview): preview.queue_free()
 	preview=null
+	if not preview_moving.is_empty():
+		if is_instance_valid(loaded.get(preview_moving)): loaded[preview_moving].visible=true
+		preview_moving=""
+	show_turn_hud(false)
 	if is_instance_valid(player): player.controls_enabled=screen=="village"
+
+## Turns the placement ghost (R, the wheel or the turn bar's arrows).
+func turn_preview(degrees: int) -> void:
+	if not is_instance_valid(preview): return
+	preview_rotation=ObjectTransform.wrap_degrees(preview_rotation+degrees)
+	ObjectTransform.show_angle(turn_readout,preview_rotation)
+
+## ↶ angle ↷ above the prompt chip while placing.
+func show_turn_hud(on: bool) -> void:
+	if not on:
+		if is_instance_valid(turn_hud): turn_hud.queue_free()
+		turn_hud=null
+		return
+	if not is_instance_valid(turn_hud):
+		var pill := PanelContainer.new()
+		pill.name="TurnHud"
+		pill.theme=night_theme()
+		var chip := RpgUi.panel_style("pill")
+		chip.content_margin_left=14;chip.content_margin_right=22
+		pill.add_theme_stylebox_override("panel",chip)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation",12)
+		pill.add_child(row)
+		turn_readout=ObjectTransform.turn_bar(row,turn_preview)
+		RpgUi.label(row,tr("R · 휠"),13,RpgUi.SOFT,false).size_flags_vertical=Control.SIZE_SHRINK_CENTER
+		ui.add_child(pill)
+		var size := pill.get_combined_minimum_size()
+		pill.position=Vector2(640-size.x*.5,496)
+		RpgUi.pin(pill,0.5,1.0)
+		RpgUi.pop_in(pill)
+		turn_hud=pill
+	ObjectTransform.show_angle(turn_readout,preview_rotation)
 
 ## Why the preview spot cannot take the furniture, or "" when it is free.
 ## Mirrors homestead.village_inside/village_reserved and adds the map's own geometry.
@@ -1466,7 +1564,14 @@ func placement_problem() -> String:
 	var box := BoxShape3D.new();box.size=Vector3(maxf(span.x,.4),maxf(span.y-.1,.2),maxf(span.z,.4))
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape=box;query.collision_mask=2|8|16
+	# The box turns with the ghost, so any angle checks its real footprint.
 	query.transform=Transform3D(Basis(Vector3.UP,deg_to_rad(preview_rotation)),preview.position+Vector3(0,box.size.y*.5+.08,0))
+	# The object being moved does not block its own new spot.
+	if is_instance_valid(loaded.get(preview_moving)):
+		var own: Array[RID]=[]
+		for body in loaded[preview_moving].get_children():
+			if body is CollisionObject3D: own.append(body.get_rid())
+		query.exclude=own
 	if not get_world_3d().direct_space_state.intersect_shape(query,1).is_empty(): return tr("건물이나 다른 물건과 겹쳐요.")
 	return ""
 
@@ -1477,10 +1582,24 @@ func place_preview() -> void:
 	if not problem.is_empty():
 		message(problem)
 		return
+	if not preview_moving.is_empty():
+		if await move_object(p):
+			cancel_preview()
+			await refresh_inventory()
+			message(tr("자리와 방향을 바꿨어요."))
+		return
 	if await edit_object({"action":"place","x":p.x,"z":p.y,"rotation":preview_rotation}):
 		cancel_preview()
 		await refresh_inventory()
 		message(tr("마을에 놓았습니다. 다시 접속해도 유지됩니다."))
+
+## Moves or turns an object already standing in the village (one server step, no retrieve).
+func move_object(at: Vector2) -> bool:
+	if selected.is_empty() or busy: return false
+	busy=true
+	var response: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation({"version":selected.version,"room":"village","x":at.x,"z":at.y,"rotation":preview_rotation}))
+	busy=false
+	return check(response)
 
 func generate() -> void:
 	if busy or not job_id.is_empty(): return
@@ -2344,13 +2463,15 @@ func _process(delta: float) -> void:
 				poll_job()
 		if is_instance_valid(preview):
 			var mouse := get_viewport().get_mouse_position()
+			# A picked-up object stays put (to turn it in place) until the pointer moves.
+			if not preview_follow and mouse.distance_to(preview_mouse)>8: preview_follow=true
 			var origin := camera.project_ray_origin(mouse)
-			var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+camera.project_ray_normal(mouse)*400,1|2|8))
+			var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+camera.project_ray_normal(mouse)*400,1|2|8)) if preview_follow else {}
 			# Only open ground takes furniture; buildings, bridges and props keep the last spot.
 			if not hit.is_empty() and hit.collider is CollisionObject3D and hit.collider.collision_layer&1:
 				var local := TownLayout.furniture_local(hit.position).snapped(Vector2(0.5,0.5))
 				preview.position=TownLayout.furniture_point(local.x,local.y)
-				preview.rotation_degrees.y=preview_rotation
+			preview.rotation.y=ObjectTransform.ease_yaw(preview.rotation.y,preview_rotation,delta)
 			var disc := preview.get_node_or_null("PlacementDisc") as MeshInstance3D
 			if disc: disc.material_override.albedo_color=Color(.4,.9,.5,.45) if placement_problem().is_empty() else Color(.95,.35,.3,.5)
 
@@ -2409,6 +2530,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if paused: return
 	if text_input_active():return
+	# Placing: R turns 15° (Shift back, Alt/Ctrl a single degree; held keys repeat), the wheel 5°.
+	if screen=="village" and is_instance_valid(preview):
+		if event is InputEventKey and event.pressed and key==KEY_R:
+			turn_preview(ObjectTransform.key_turn(event))
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventMouseButton and event.pressed and ObjectTransform.wheel_turn(event)!=0:
+			turn_preview(ObjectTransform.wheel_turn(event))
+			get_viewport().set_input_as_handled()
+			return
 	if screen in ["village","survival"] and event is InputEventMouseButton and event.pressed:
 		if event.button_index in [MOUSE_BUTTON_WHEEL_UP,MOUSE_BUTTON_WHEEL_DOWN]:
 			if not camera_zoom_active:camera_zoom_target=camera.size
@@ -2446,7 +2577,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			if key==KEY_C and not is_instance_valid(village_modal): open_craft()
 			if key==KEY_F9 and preload("res://scripts/build_mode.gd").admin: open_admin()
 			if key==KEY_O and not is_instance_valid(village_modal): open_wardrobe()
-			if key==KEY_R: preview_rotation=(preview_rotation+90)%360
 			if key==KEY_E and not life.closest().is_empty(): life.interact()
 			elif key==KEY_E and nearest_npc(): talk_to(nearest_npc())
 			elif key==KEY_E and not module_closest().is_empty(): use_module(module_closest())

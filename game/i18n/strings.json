@@ -504,6 +504,10 @@
    "en": "Q · Eat something first",
    "zh": "Q · 先吃点东西吧"
   },
+  "R · 휠": {
+   "en": "R · Wheel",
+   "zh": "R · 滚轮"
+  },
   "S · 물가": {
    "en": "S · Waterside",
    "zh": "S · 水边"
@@ -603,6 +607,10 @@
   "↶ 회전": {
    "en": "↶ Rotate",
    "zh": "↶ 旋转"
+  },
+  "⇆ 좌우 반전": {
+   "en": "⇆ Mirror",
+   "zh": "⇆ 左右翻转"
   },
   "▲ 계단 오르기": {
    "en": "▲ Go upstairs",
@@ -807,6 +815,14 @@
   "가끔은 텐트 말고 하늘 아래서 쉬어야 해.": {
    "en": "Sometimes you need to rest under the sky instead of a tent.",
    "zh": "有时候该在天空下休息，而不是帐篷里。"
+  },
+  "가로": {
+   "en": "Width",
+   "zh": "宽度"
+  },
+  "가로 · 깊이 · 높이 · 크기 · 좌우 반전": {
+   "en": "Width · Depth · Height · Size · Mirror",
+   "zh": "宽度 · 深度 · 高度 · 大小 · 左右翻转"
   },
   "가로등": {
    "en": "Street lamp",
@@ -1392,6 +1408,10 @@
    "en": "It's late at night. The village is fast asleep.",
    "zh": "夜深了，村庄静静地睡着了。"
   },
+  "깊이": {
+   "en": "Depth",
+   "zh": "深度"
+  },
   "꼬마 그림자는 밤이 되면 자러 가요. 낮에 광장에서 만나 봐요.": {
    "en": "The kid shadow goes to bed at night. Look for them in the square during the day.",
    "zh": "小家伙影子晚上去睡觉。白天到广场找它吧。"
@@ -1752,6 +1772,10 @@
    "en": "High has the smoothest shadows and edges; Low runs smoothly on slower PCs.",
    "zh": "“高”的阴影和边缘最平滑，“低”在较慢的电脑上也能流畅运行。"
   },
+  "높이": {
+   "en": "Height",
+   "zh": "高度"
+  },
   "놓은 물건 %d / 30": {
    "en": "Items placed %d / 30",
    "zh": "已放置 %d / 30"
@@ -1835,6 +1859,10 @@
   "다른 가구와 겹쳐요.": {
    "en": "It overlaps other furniture.",
    "zh": "与其他家具重叠了。"
+  },
+  "다른 곳에서 모양이 바뀌었어요. 다시 열어 주세요.": {
+   "en": "The shape changed elsewhere. Please open it again.",
+   "zh": "形状已在别处更改，请重新打开。"
   },
   "다른 곳에서 부품 맞춤이 바뀌었어요. 편집값은 보존했습니다. 가구를 다시 선택하면 최신 설계를 불러옵니다.": {
    "en": "Part fitting was changed elsewhere. Your edits are kept. Select the furniture again to load the latest design.",
@@ -2072,6 +2100,10 @@
    "en": "Spin",
    "zh": "转一转"
   },
+  "돌리기": {
+   "en": "Turn",
+   "zh": "旋转"
+  },
   "돌멩이": {
    "en": "Stone",
    "zh": "石头"
@@ -2147,6 +2179,10 @@
   "되돌리지 못했어요: %s": {
    "en": "Could not reset: %s",
    "zh": "无法还原：%s"
+  },
+  "두 번 누르면 100%": {
+   "en": "Double-click for 100%",
+   "zh": "双击恢复 100%"
   },
   "두드려 보기": {
    "en": "Knock",
@@ -2808,6 +2844,18 @@
    "en": "With the records you gathered, Teo fixed the bell tower's stone wheel. The path to Frostlight Basin is revealed.",
    "zh": "特奥用带回的记录修好了钟楼的石轮。通往霜光盆地的路显现了。"
   },
+  "모양 바꾸기": {
+   "en": "Reshape",
+   "zh": "改变形状"
+  },
+  "모양을 바꿨어요.": {
+   "en": "Shape changed.",
+   "zh": "形状已更改。"
+  },
+  "모양을 저장하지 못했어요.": {
+   "en": "Couldn't save the shape.",
+   "zh": "无法保存形状。"
+  },
   "모이를 가득 채웠어요. 새들이 곧 돌아올 거예요.": {
    "en": "You filled the feeder. The birds will be back soon.",
    "zh": "喂鸟器装满了，鸟儿们很快就会回来。"
@@ -2931,6 +2979,10 @@
   "물건을 선택하세요.": {
    "en": "Select an item.",
    "zh": "请选择物品。"
+  },
+  "물건을 찾을 수 없어요.": {
+   "en": "Couldn't find the item.",
+   "zh": "找不到该物品。"
   },
   "물건을 찾을 수 없어요. 보관함을 새로고침해 주세요.": {
    "en": "Item not found. Please refresh your Bag.",
@@ -3131,6 +3183,10 @@
   "바닥에 배치": {
    "en": "Place on Floor",
    "zh": "放到地面"
+  },
+  "바닥을 클릭해 놓기 · R·휠 돌리기 · Esc 취소": {
+   "en": "Click the ground to place · R/Wheel to turn · Esc to cancel",
+   "zh": "点击地面放置 · R/滚轮旋转 · Esc 取消"
   },
   "바닷가 마을을 그린 그림이에요.": {
    "en": "A painting of a seaside village.",
@@ -3467,6 +3523,10 @@
   "벽난로가 타닥타닥, 나무 향이 가득한 집이에요.": {
    "en": "The fireplace crackles and the whole house smells of wood.",
    "zh": "壁炉噼啪作响，满屋都是木头的香气。"
+  },
+  "벽에 닿아요. 조금 안쪽으로 옮기거나 돌려 보세요.": {
+   "en": "It touches the wall. Move it inward a little or turn it.",
+   "zh": "碰到墙了。请往里挪一点或旋转一下。"
   },
   "벽에서 한 칸 안쪽에 놓아 주세요.": {
    "en": "Place it one tile in from the wall.",
@@ -3843,6 +3903,10 @@
   "빈 바닥을 가리켜 보세요 · 클릭해서 놓기 · R 회전": {
    "en": "Point at an empty floor · Click to place · R Rotate",
    "zh": "指向空地面 · 点击放置 · R 旋转"
+  },
+  "빈 바닥을 가리켜 보세요 · 클릭해서 놓기 · R·휠 돌리기": {
+   "en": "Point at an empty floor · Click to place · R/Wheel to turn",
+   "zh": "指向空地 · 点击放置 · R/滚轮旋转"
   },
   "빈 밭이에요. 어떤 작물을 심을까요?": {
    "en": "An empty plot. What would you like to plant?",
@@ -5908,6 +5972,10 @@
    "en": "Archive",
    "zh": "资料室"
   },
+  "자리와 방향을 바꿨어요.": {
+   "en": "Moved and turned.",
+   "zh": "已更改位置和方向。"
+  },
   "자원 가까이 이동하세요  |  I · 가방  |  휠 · 확대/축소  |  M · 소리": {
    "en": "Move closer to resources  |  I · Bag  |  Wheel · Zoom  |  M · Sound",
    "zh": "靠近资源吧  |  I · 背包  |  滚轮 · 缩放  |  M · 声音"
@@ -6024,6 +6092,10 @@
    "en": "Listed at the Market. While for sale, placing and coloring are locked.",
    "zh": "已上架市集。出售期间无法摆放和上色。"
   },
+  "장터에 올린 물건은 모양을 바꿀 수 없어요.": {
+   "en": "Items listed at the market can't be reshaped.",
+   "zh": "已在集市上架的物品无法改变形状。"
+  },
   "장터에 올린 물건은 칠할 수 없어요.": {
    "en": "Objects listed on the market cannot be painted.",
    "zh": "上架到集市的物品不能涂色。"
@@ -6119,6 +6191,10 @@
   "전체 음량": {
    "en": "Master volume",
    "zh": "总音量"
+  },
+  "전체 크기": {
+   "en": "Overall size",
+   "zh": "整体大小"
   },
   "전체 화면": {
    "en": "Fullscreen",
@@ -6707,6 +6783,10 @@
   "처음 모습으로 되돌리는 중…": {
    "en": "Restoring the original look…",
    "zh": "正在恢复原样…"
+  },
+  "처음 모양으로 돌아왔어요.": {
+   "en": "Back to the original shape.",
+   "zh": "已恢复原来的形状。"
   },
   "처음 받은 여섯 칸은 그대로 둘게요.": {
    "en": "The first six plots stay as they are.",
@@ -7303,6 +7383,10 @@
   "팔레트로 전체 색을 바꿔 보세요.\nR · 배치 방향 회전": {
    "en": "Use the palette to change all the colors.\nR · Rotate placement",
    "zh": "用调色板改变整体颜色吧。\nR · 旋转摆放方向"
+  },
+  "팔레트로 전체 색을 바꿔 보세요.\nR · 휠 · 놓을 방향 돌리기": {
+   "en": "Change the whole colour with the palette.\nR · Wheel · Turn before placing",
+   "zh": "用调色板更换整体颜色。\nR · 滚轮 · 旋转摆放方向"
   },
   "팽이": {
    "en": "Spinning top",
