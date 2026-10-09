@@ -9,7 +9,7 @@ from pydantic import Field
 from .models import Strict, Mutation, Input, RunStart
 from .stored_assets import read_glb
 from .security import clean_text
-from . import coop, homestead, object_paint
+from . import coop, homestead, object_paint, interactions
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS mp_parties (
@@ -367,14 +367,16 @@ class Multiplayer:
                 row = conn.execute('SELECT manifest FROM studio_assets WHERE asset_id=?', (obj['asset_id'],)).fetchone()
                 if not row:
                     fail('not_studio_object', 404)
-                value = json.loads(row[0])
+                value = interactions.apply(conn, object_id, json.loads(row[0]))
                 runtime = conn.execute('SELECT * FROM studio_runtime WHERE object_id=?', (object_id,)).fetchone()
                 bindings = json.loads(runtime['bindings'])
                 for part in value['plan']['parts']:
                     part.update(bindings.get(part['id'], {}))
-                return {'schema': value['schema'], 'plan': value['plan'], 'program': value['program'],
+                # Visitors see the host's interaction too (only when one is set: older replies are unchanged).
+                extra = {'interaction': value['interaction']} if 'interaction' in value else {}
+                return {'schema': value['schema'], 'plan': value['plan'], 'program': interactions.compat(value),
                         'provenance': {'geometry': value.get('provenance', {}).get('geometry')},
-                        'runtime': dict(state=json.loads(runtime['state']), colors=json.loads(runtime['colors']), bindings=bindings, version=runtime['version']), 'object_version': obj['version']}
+                        'runtime': dict(state=json.loads(runtime['state']), colors=json.loads(runtime['colors']), bindings=bindings, version=runtime['version']), 'object_version': obj['version'], **extra}
 
         @app.get('/v1/social/village/objects/{object_id}/parts/{part_id}')
         def part(object_id: str, part_id: str, request: Request):

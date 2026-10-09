@@ -14,6 +14,10 @@ var colors: Dictionary={}
 var pose_nodes: Dictionary={}
 var normalizers: Dictionary={}
 var mesh_bounds: Dictionary={}
+## The whole object's motion node (interaction target "whole": spin about the base centre, lift, tilt).
+var whole_root: Node3D
+## "sit" or "lie" when the owner made it a seat or a bed (the room's rest system reads it).
+var rest := ""
 
 static func fetch(api: Node, object_id: String, prefix: String="/v1/objects/") -> Node3D:
 	var reply: Dictionary=await api.request(prefix+object_id+"/assembly")
@@ -120,18 +124,15 @@ func build(value: Dictionary, blobs: Dictionary) -> bool:
 	var factor := clampf(chosen,0.2,3.0)/longest if chosen>0.0 else minf(1.0,1.8/longest)
 	var content := Node3D.new()
 	var roots := get_children()
-	add_child(content)
+	whole_root=Node3D.new();whole_root.name="Whole"
+	add_child(whole_root);whole_root.add_child(content)
 	for node in roots:remove_child(node);content.add_child(node)
 	content.scale=Vector3.ONE*factor
 	content.position=-Vector3(total.get_center().x,total.position.y,total.get_center().z)*factor
 	var runtime: Dictionary=value.get("runtime",{})
 	runtime_version=int(runtime.get("version",1)); colors=runtime.get("colors",{})
-	vm.setup(value.program,pivots.keys())
-	paint(colors)
-	apply_commands(vm.run("spawn").commands)
-	for key in runtime.get("state",{}):
-		if vm.state.has(key):vm.state[key]=runtime.state[key]
-	apply_commands(vm.run("tick",{"dt":0,"time":0}).commands)
+	rest=str(value.get("interaction",{}).get("rest",""))
+	start_program(program_of(value),runtime.get("state",{}))
 	set_meta("size",total.size*factor)
 	set_meta("studio",true)
 	return true
@@ -158,15 +159,15 @@ func _process(delta: float) -> void:
 
 func apply_commands(commands: Array) -> void:
 	for c in commands:
-		if not pivots.has(c.target): continue
-		var pivot: Node3D=pivots[c.target]
+		var pivot: Node3D=target_node(str(c.target))
+		if pivot==null: continue
 		match c.op:
 			"rotate_x": pivot.rotation_degrees.x=c.value
 			"rotate_y": pivot.rotation_degrees.y=c.value
 			"rotate_z": pivot.rotation_degrees.z=c.value
 			"offset_y": pivot.position.y=c.value
 			"emission","hue":
-				for mesh in surfaces[c.target]:
+				for mesh in target_meshes(str(c.target)):
 					for i in mesh.mesh.get_surface_count():
 						var mat: StandardMaterial3D=mesh.get_surface_override_material(i)
 						if c.op=="hue": mat.albedo_color=Color.from_hsv(c.value,0.45,0.9)
@@ -194,3 +195,65 @@ func accept_event(data: Dictionary) -> void:
 		if vm.state.has(key): vm.state[key]=data.get("patch",data.state)[key]
 	runtime_version=data.version
 	apply_commands(data.commands)
+
+## The program this client runs: the owner's interaction (server/interactions.py) when there is one.
+## The reply's own "program" is the copy released clients read, without the whole-object target.
+static func program_of(value: Dictionary) -> Dictionary:
+	var interaction = value.get("interaction")
+	if interaction is Dictionary and interaction.get("program") is Dictionary: return interaction.program
+	return value.get("program",{})
+
+## Starts (or restarts) a program on this object: poses back to the design, then spawn, the
+## saved state and one still tick. On load, for the interaction editor's preview and after a save.
+func start_program(program: Dictionary, saved: Dictionary = {}) -> void:
+	for id in pivots: pivots[id].transform=Transform3D.IDENTITY
+	if is_instance_valid(whole_root): whole_root.transform=Transform3D.IDENTITY
+	for id in surfaces:
+		for mesh in surfaces[id]:
+			for i in mesh.mesh.get_surface_count():
+				var mat := mesh.get_surface_override_material(i) as StandardMaterial3D
+				if mat: mat.emission_enabled=false
+	if manifest.has("plan"): paint(colors)
+	var ids: Array=pivots.keys()
+	if not ids.has("whole"): ids.append("whole")
+	vm.setup(program,ids)
+	healthy=true
+	apply_commands(vm.run("spawn").commands)
+	for key in saved:
+		if vm.state.has(key): vm.state[key]=saved[key]
+	apply_commands(vm.run("tick",{"dt":0,"time":0}).commands)
+
+## A saved interaction (or 원래대로) from the editor or another device: this copy runs it now.
+func use_interaction(value: Dictionary, program: Dictionary, runtime: Dictionary) -> void:
+	if value.is_empty(): manifest.erase("interaction")
+	else: manifest["interaction"]=value.duplicate(true)
+	rest=str(value.get("rest",""))
+	runtime_version=int(runtime.get("version",runtime_version))
+	start_program(program,runtime.get("state",{}))
+
+## A fresh assembly reply (the interaction changed on another device or by the host): this copy runs
+## the new one. True when it changed, so the caller skips its plain state update.
+func sync_interaction(fresh: Dictionary) -> bool:
+	var value = fresh.get("interaction",{})
+	if JSON.stringify(value)==JSON.stringify(manifest.get("interaction",{})): return false
+	use_interaction(value if value is Dictionary else {},program_of(fresh),fresh.get("runtime",{}))
+	return true
+
+## An event on this copy only (visitors, the editor's preview): nothing is saved.
+func local_event(event: String) -> void:
+	var result: Dictionary=vm.run(event,{"near":1 if event=="near" else 0})
+	if result.ok: apply_commands(result.commands)
+	if event=="near" or event=="leave": nearby=event=="near"
+
+## The node a command moves. "whole" is the object itself unless a multi-part design has a part
+## of that name.
+func target_node(target: String) -> Node3D:
+	if target=="whole" and (not pivots.has("whole") or pivots.size()==1): return whole_root
+	return pivots.get(target)
+
+func target_meshes(target: String) -> Array:
+	if target=="whole" and (not surfaces.has("whole") or surfaces.size()==1):
+		var all: Array=[]
+		for id in surfaces: all.append_array(surfaces[id])
+		return all
+	return surfaces.get(target,[])
