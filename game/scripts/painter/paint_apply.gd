@@ -47,8 +47,17 @@ static func craft_meshes(root: Node) -> Array[MeshInstance3D]:
 		if mesh.has_meta("craft_surface"): tagged.append(mesh)
 	return tagged if not tagged.is_empty() else meshes
 
-## Core.setup() input: each slot's triangles in the root's space.
-static func mesh_slots(root: Node3D) -> Array:
+## Each slot mesh's pose in the root's space, read once. An object's program keeps moving its
+## parts (a clock hand, a spinning toy), so the painter bakes and shows this one pose; reading
+## the live model twice put the paint where the part had been, not under the pointer.
+static func poses_of(root: Node3D, slots: Array) -> Dictionary:
+	var out := {}
+	for slot in slots:
+		if not out.has(slot.mesh): out[slot.mesh] = Loader._local_transform(slot.mesh, root)
+	return out
+
+## Core.setup() input: each slot's triangles in the root's space (in `poses` when given).
+static func mesh_slots(root: Node3D, poses := {}) -> Array:
 	var out := []
 	for slot in slots_of(root):
 		var mesh: MeshInstance3D = slot.mesh
@@ -56,7 +65,7 @@ static func mesh_slots(root: Node3D) -> Array:
 		var entry := {"vertices": PackedVector3Array(), "normals": PackedVector3Array(), "uvs": PackedVector2Array(), "indices": PackedInt32Array()}
 		if mesh.mesh.surface_get_primitive_type(s) == Mesh.PRIMITIVE_TRIANGLES:
 			var arrays := mesh.mesh.surface_get_arrays(s)
-			var xf := Loader._local_transform(mesh, root)
+			var xf: Transform3D = poses[mesh] if poses.has(mesh) else Loader._local_transform(mesh, root)
 			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 			entry.vertices = xf * vertices
 			if arrays[Mesh.ARRAY_NORMAL] is PackedVector3Array:

@@ -145,6 +145,10 @@ func run() -> void:
 	expect(painter.tool == Painter.BRUSH and painter.picker.hex_field.has_focus(), "the HEX field keeps its keys")
 	painter.picker.hex_field.release_focus()
 
+	# The drawing-app layout and its controls.
+	await check_layout(painter, "1280x800")
+	await check_controls(painter)
+
 	# A brush stroke across the middle of the view.
 	var view_size: Vector2 = painter.view.size
 	var centre := view_size * 0.5
@@ -169,6 +173,11 @@ func run() -> void:
 	for i in 8: await real_mouse("motion", screen_centre + Vector2(i * 6, 30))
 	await real_mouse("up", screen_centre + Vector2(48, 30))
 	expect(painter.core.history_index == before_real + 1, "a real mouse drag in the view paints one stroke")
+	expect(not painter.undo_button.disabled and painter.redo_button.disabled, "the undo key is ready, redo is not")
+	painter.undo_button.pressed.emit()
+	expect(painter.core.history_index == before_real and not painter.redo_button.disabled, "the undo key undoes")
+	painter.redo_button.pressed.emit()
+	expect(painter.core.history_index == before_real + 1, "the redo key redoes")
 	await key(KEY_Z, true)
 	expect(painter.core.history_index == before_real, "Ctrl+Z undoes")
 	await key(KEY_Z, true, true)
@@ -177,6 +186,8 @@ func run() -> void:
 	# Layers, fill and gradient.
 	painter._add_layer()
 	expect(painter.core.layers.size() == 2 and painter.core.current == 1, "a layer is added")
+	expect(await wait_until(func(): return painter.thumb_views.size() == painter.core.layers.size() and painter.thumb_views.values().all(func(t): return is_instance_valid(t) and t.texture != null), 5.0),
+		"layer rows show thumbnails")
 	painter._select_tool(Painter.FILL)
 	painter.primary = Color(0.9, 0.8, 0.1)
 	await painter._fill_at(centre + Vector2(0, 80))
@@ -185,6 +196,9 @@ func run() -> void:
 	mouse(painter, "down", centre - Vector2(80, 40))
 	mouse(painter, "motion", centre + Vector2(80, 40))
 	expect(painter.view.line_visible, "the gradient line follows the drag")
+	expect(painter.view.line_colors[0] == painter.primary and painter.view.line_colors[1] == painter.secondary and not painter.view.line_radial,
+		"the gradient line previews its colours and shape")
+	await capture("painter-gradient")
 	painter._on_view_event(_release(centre + Vector2(80, 40)))
 	await wait_until(func(): return not painter.busy)
 	expect(painter.core.history_index == steps + 5, "gradient is one step")
@@ -201,6 +215,11 @@ func run() -> void:
 	expect(painter.primary.is_equal_approx(seen), "the eyedropper takes the visible colour (%s / %s)" % [painter.primary, seen])
 
 	await capture("painter-workspace")
+	if DisplayServer.get_name() != "headless":
+		DisplayServer.window_set_size(Vector2i(1920, 1080))
+		for i in 6: await process_frame
+		await check_layout(painter, "1920x1080")
+		await capture("painter-1080")
 	# Save: one PNG through the API, handed to the host.
 	var gone: WeakRef = weakref(painter)
 	await painter.save()
@@ -250,7 +269,8 @@ func run() -> void:
 	await wait_until(func(): return closed.get_ref() == null, 2.0)
 	stage.queue_free()
 	api.queue_free()
-	await process_frame
+	# A click sound's player node joins the tree one frame later (RpgUi.sfx); let it, so it is freed with the tree.
+	for _i in 4: await process_frame
 	print("PAINTER_UI ", JSON.stringify({"passed": passes, "failed": failures}))
 	quit(1 if failures else 0)
 
@@ -272,6 +292,120 @@ func real_mouse(kind: String, canvas_at: Vector2) -> void:
 		event = button
 	root.push_input(event)
 	await process_frame
+
+## The workspace fits the screen: bar over rail | canvas | dock, nothing overlapping, every
+## tool's context row inside the bar, a roomy canvas.
+func check_layout(painter, tag: String) -> void:
+	var screen := Rect2(Vector2.ZERO, root.get_visible_rect().size)
+	var bar: Rect2 = (painter.workspace.get_child(0) as Control).get_global_rect()
+	var middle: Control = painter.workspace.get_child(1)
+	var rail: Rect2 = (middle.get_child(0) as Control).get_global_rect()
+	var canvas: Rect2 = (middle.get_child(1) as Control).get_global_rect()
+	var dock: Rect2 = (middle.get_child(2) as Control).get_global_rect()
+	var inside := screen.grow(0.5).encloses(bar) and screen.grow(0.5).encloses(rail) and screen.grow(0.5).encloses(canvas) and screen.grow(0.5).encloses(dock)
+	var apart := bar.end.y <= canvas.position.y and rail.end.x <= canvas.position.x and canvas.end.x <= dock.position.x
+	expect(inside and apart, "%s: bar, rail, canvas and dock fit the screen side by side" % tag)
+	expect(painter.view.size.x >= 760 and painter.view.size.y >= 620, "%s: the canvas is roomy (%s)" % [tag, painter.view.size])
+	var limit: float = painter.reset_button.get_global_rect().position.x
+	var fits := true
+	var keep: String = painter.tool
+	for kind in [Painter.BRUSH, Painter.ERASER, Painter.FILL, Painter.GRADIENT, Painter.PICKER]:
+		painter._select_tool(kind)
+		await process_frame
+		var row: Control = painter.option_rows[kind]
+		var others_hidden := true
+		for name in painter.option_rows: others_hidden = others_hidden and (name == kind or not painter.option_rows[name].visible)
+		fits = fits and row.visible and others_hidden and row.get_global_rect().end.x <= limit + 0.5 and row.get_combined_minimum_size().x <= row.size.x + 0.5
+		fits = fits and (painter.workspace.get_child(0) as Control).get_global_rect().size.y == bar.size.y
+	painter._select_tool(keep)
+	expect(fits, "%s: each tool shows only its own options, inside the bar, at one bar height" % tag)
+
+## Rail, edge sliders, presets, the tune popover, colour well, dock sections, symmetry, undo/redo.
+func check_controls(painter) -> void:
+	var rail_ok := true
+	for kind in painter.tool_buttons:
+		var b: Button = painter.tool_buttons[kind]
+		rail_ok = rail_ok and b.icon != null and b.text.is_empty() and b.tooltip_text.contains("·")
+	expect(rail_ok and painter.tool_buttons.size() == 5, "the tool rail is icons, each tooltip with its shortcut")
+	painter._select_tool(Painter.BRUSH)
+	await process_frame
+	var size_slider: HSlider = null
+	for entry in painter.option_controls["brush:size"]:
+		if entry.control is HSlider: size_slider = entry.control
+	expect(painter.size_edge.visible and painter.opacity_edge.visible, "the brush shows size and opacity sliders on the canvas edge")
+	painter.size_edge._set_from(painter.size_edge.size.y * 0.5)
+	expect(absf(painter.settings.brush.size - painter.size_edge.value) < 0.01 and absf(size_slider.value - painter.size_edge.value) < 0.5,
+		"the edge size slider sets the brush size and the bar follows (%.0f)" % painter.settings.brush.size)
+	expect(painter.view.ring_preview, "changing the size shows the brush ring on the canvas")
+	var before_size: float = painter.settings.brush.size
+	await key(KEY_BRACKETRIGHT)
+	expect(painter.size_edge.value > before_size and absf(painter.size_edge.value - painter.settings.brush.size) < 0.01, "] moves the edge slider too")
+	painter.opacity_edge._set_from(painter.opacity_edge.size.y * 0.75)
+	expect(absf(painter.settings.brush.opacity - painter.opacity_edge.value) < 0.01 and painter.settings.brush.opacity < 0.5, "the edge opacity slider sets the brush opacity")
+	painter._select_tool(Painter.PICKER)
+	expect(not painter.size_edge.visible and not painter.opacity_edge.visible, "the eyedropper hides the edge sliders")
+	painter._select_tool(Painter.BRUSH)
+	# As if hovered: the slider shows its value bubble.
+	painter.size_edge.hovered = true
+	painter.size_edge.queue_redraw()
+	await capture("painter-brush")
+	painter.size_edge.hovered = false
+	painter.size_edge.queue_redraw()
+	# Presets with stroke previews.
+	var preset_key: Button = painter.preset_views.brush.preview.get_parent()
+	preset_key.pressed.emit()
+	await process_frame
+	await process_frame
+	var tiles: Array = painter.preset_tiles
+	var drawn := tiles.all(func(tile): return tile.get_child(0) is TextureRect and (tile.get_child(0) as TextureRect).texture != null)
+	expect(tiles.size() == Painter.PRESETS.size() and drawn, "the preset popover shows every preset as a drawn stroke (%d)" % tiles.size())
+	await capture("painter-presets")
+	(tiles[3] as Button).pressed.emit()
+	await process_frame
+	var flat: Dictionary = Painter.PRESETS[3]
+	expect(painter.settings.brush.tip == flat.tip and absf(painter.settings.brush.roundness - flat.roundness) < 0.001 and painter.settings.brush.size == flat.size,
+		"choosing a preset sets the brush")
+	expect(not is_instance_valid(painter.popover) and painter.preset_views.brush.name.text == tr(flat.name), "the popover closes and the bar names the preset")
+	painter._set_option(Painter.BRUSH, "hardness", 0.33)
+	expect(painter.preset_views.brush.name.text == tr("직접 설정"), "an edited preset reads as custom")
+	# The tune popover: tips and the rest; Esc closes only the popover.
+	var tune: Button = null
+	for child in painter.option_rows[Painter.BRUSH].get_children():
+		if child is Button and child.icon != null and child != preset_key: tune = child
+	tune.pressed.emit()
+	await process_frame
+	await process_frame
+	expect(is_instance_valid(painter.popover), "the tune key opens more brush settings")
+	await capture("painter-tune")
+	painter._set_option(Painter.BRUSH, "tip", 2)
+	await key(KEY_ESCAPE)
+	expect(not is_instance_valid(painter.popover) and is_instance_valid(painter) and not painter.closing, "Esc closes the popover, not the workspace")
+	painter._apply_preset(Painter.BRUSH, 1)
+	painter._set_option(Painter.BRUSH, "opacity", 1.0)
+	expect(painter.preset_views.brush.name.text == tr(Painter.PRESETS[1].name), "the round brush preset is back")
+	# Colour well and dock sections.
+	painter.sections.color.set_open(false)
+	expect(not painter.sections.color.body.visible, "the colour section folds")
+	painter.primary_chip.pressed.emit()
+	expect(painter.sections.color.open and painter.sections.color.body.visible, "the front colour chip opens the colour section")
+	painter.sections.history.header.pressed.emit()
+	expect(not painter.sections.history.body.visible, "a section header folds its section")
+	painter.sections.history.header.pressed.emit()
+	expect(painter.sections.history.body.visible, "and opens it again")
+	var front: Color = painter.primary
+	painter.secondary_chip.pressed.emit()
+	expect(painter.primary != front and painter.secondary == front, "the back colour chip swaps the colours")
+	painter.secondary_chip.pressed.emit()
+	# Symmetry from the rail.
+	painter.symmetry_button.pressed.emit()
+	await process_frame
+	var choices: Array = painter.popover.find_children("*", "Button", true, false)
+	expect(choices.size() == 3, "the symmetry key offers off / X / Z")
+	(choices[1] as Button).pressed.emit()
+	expect(painter.core.symmetry == 1 and painter.symmetry_badge.text == "X", "mirror X is on and shown on the rail")
+	painter._set_symmetry(0)
+	# Undo / redo keys follow the history.
+	expect(painter.undo_button.disabled == not painter.core.can_undo() and painter.redo_button.disabled == not painter.core.can_redo(), "undo and redo keys follow the history")
 
 ## Windowed runs with --capture=<folder> save screenshots for a visual check.
 func capture(label: String) -> void:

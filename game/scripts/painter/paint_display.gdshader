@@ -43,7 +43,10 @@ vec3 to_linear(vec3 c) {
 
 void fragment() {
 	vec2 own = UV;
-	if (own.x < 0.0 || own.x > 1.0 || own.y < 0.0 || own.y > 1.0) own = fract(own);
+	// Repeating UVs wrap like the bake; an island edge at exactly 0 or 1 (Tripo UVs touch both)
+	// only clamps, or interpolation noise would sample the far side of the tile.
+	if (own.x < -0.001 || own.x > 1.001 || own.y < -0.001 || own.y > 1.001) own = fract(own);
+	own = clamp(own, 0.0, 1.0);
 	vec2 uv = own * tile.xy + tile.zw;
 	vec3 c = texture(backdrop, uv).rgb;
 	if (layer_count > 0) c = over(c, texture(layer0, uv), 0);

@@ -1400,6 +1400,10 @@
    "en": "Ready-made",
    "zh": "基本动作"
   },
+  "기본 색 (검정 · 흰색)": {
+   "en": "Default colours (black · white)",
+   "zh": "默认颜色（黑 · 白）"
+  },
   "기본 생존 규칙. 준비와 전투를 균형 있게.": {
    "en": "Standard Survival rules. Balance preparation and combat.",
    "zh": "基础生存规则。兼顾准备与战斗。"
@@ -2680,6 +2684,10 @@
    "en": "The last layer cannot be deleted.",
    "zh": "最后一个图层不能删除。"
   },
+  "마커": {
+   "en": "Marker",
+   "zh": "马克笔"
+  },
   "만들 때의 움직임도 함께": {
    "en": "Keep the crafted motion too",
    "zh": "同时保留制作时的动作"
@@ -2915,6 +2923,10 @@
   "모두 마을에 접속한 뒤 출발해 주세요.": {
    "en": "Set out once everyone is in the village.",
    "zh": "请等所有人都进入村庄后再出发。"
+  },
+  "모든 레이어": {
+   "en": "All layers",
+   "zh": "所有图层"
   },
   "모든 레이어 기준": {
    "en": "Sample all layers",
@@ -3996,6 +4008,14 @@
    "en": "Brush tip",
    "zh": "笔尖形状"
   },
+  "붓 설정 더 보기 · 모양, 각도, 간격, 필압, 혼합": {
+   "en": "More brush settings · shape, angle, spacing, pressure, blend",
+   "zh": "更多画笔设置 · 形状、角度、间距、压感、混合"
+  },
+  "붓 프리셋": {
+   "en": "Brush presets",
+   "zh": "画笔预设"
+  },
   "붓 혼합 모드": {
    "en": "Brush blend mode",
    "zh": "画笔混合模式"
@@ -4880,6 +4900,10 @@
    "en": "View",
    "zh": "视角"
   },
+  "시점 초기화": {
+   "en": "Reset view",
+   "zh": "重置视角"
+  },
   "시점 초기화  ·  F": {
    "en": "Reset view  ·  F",
    "zh": "重置视角  ·  F"
@@ -5232,6 +5256,10 @@
    "en": "Can't read the asset",
    "zh": "无法读取资源"
   },
+  "에어브러시": {
+   "en": "Airbrush",
+   "zh": "喷枪"
+  },
   "여기 바람이 좋아서 자주 와.": {
    "en": "I come here a lot because the breeze is nice.",
    "zh": "这里风很舒服，我常来。"
@@ -5303,6 +5331,10 @@
   "연주하기": {
    "en": "Play",
    "zh": "演奏"
+  },
+  "연필": {
+   "en": "Pencil",
+   "zh": "铅笔"
   },
   "열고 닫을 부품을 골라 주세요.": {
    "en": "Pick the part to open and close.",
@@ -6876,6 +6908,10 @@
    "en": "Pick a Color",
    "zh": "自选颜色"
   },
+  "직접 설정": {
+   "en": "Custom",
+   "zh": "自定义"
+  },
   "직접 입력": {
    "en": "Custom",
    "zh": "直接输入"
@@ -7779,6 +7815,10 @@
   "표면을 따라 채우는 중…": {
    "en": "Filling across the surface…",
    "zh": "正在沿表面填充…"
+  },
+  "표준": {
+   "en": "Normal",
+   "zh": "正常"
   },
   "푹신한 소파예요. 잠깐 앉아 볼까요?": {
    "en": "A squishy sofa. Sit for a moment?",

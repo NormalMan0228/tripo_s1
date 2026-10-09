@@ -5,6 +5,9 @@ extends SubViewportContainer
 ## Left-button presses and moves go out through paint_event for the tools; the overlay draws
 ## the brush outline and the gradient line.
 signal paint_event(event: InputEvent)
+## Just before the camera moves (orbit, pan, zoom, reset): dabs still queued as screen points
+## must be placed with the camera they were made under.
+signal camera_moving
 
 const Loader = preload("res://scripts/model_loader.gd")
 const DISPLAY = preload("res://scripts/painter/paint_display.gdshader")
@@ -29,10 +32,19 @@ var panning := false
 var cursor := Vector2(-100, -100)
 var cursor_inside := false
 var cursor_radius := 10.0
+var cursor_hardness := 1.0
+var cursor_roundness := 1.0
+var cursor_angle := 0.0
 var cursor_kind := "brush"   # brush, cross, none
 var line_from := Vector2.ZERO
 var line_to := Vector2.ZERO
 var line_visible := false
+var line_colors: Array = [Color("ffe08a"), Color("ffe08a")]
+var line_radial := false
+## The brush ring shown at the view's centre while its size changes (edge slider, [ ]).
+var ring_preview := false
+var ring_held := false
+var ring_serial := 0
 
 func _ready() -> void:
 	stretch = true
@@ -80,9 +92,10 @@ func _ready() -> void:
 	mouse_entered.connect(func(): cursor_inside = true; overlay.queue_redraw())
 	mouse_exited.connect(func(): cursor_inside = false; overlay.queue_redraw())
 
-## Shows a copy of the model's surfaces (shared meshes, current pose) with one display
-## material per slot; atlas tiles come from the core.
-func show_model(model: Node3D, slots: Array, core) -> void:
+## Shows a copy of the model's surfaces (shared meshes) with one display material per slot;
+## atlas tiles come from the core. `poses` is the pose the core baked (PaintApply.poses_of):
+## the live model may have moved since.
+func show_model(model: Node3D, slots: Array, core, poses := {}) -> void:
 	size_px = core.size
 	for child in world_root.get_children(): child.queue_free()
 	materials.clear()
@@ -93,7 +106,7 @@ func show_model(model: Node3D, slots: Array, core) -> void:
 		if not copies.has(source):
 			var copy := MeshInstance3D.new()
 			copy.mesh = source.mesh
-			copy.transform = Loader._local_transform(source, model)
+			copy.transform = poses[source] if poses.has(source) else Loader._local_transform(source, model)
 			world_root.add_child(copy)
 			copies[source] = copy
 		var material := ShaderMaterial.new()
@@ -161,19 +174,22 @@ func reset_view() -> void:
 	_place_camera()
 
 func _place_camera() -> void:
+	camera_moving.emit()
 	var basis := Basis.from_euler(Vector3(pitch, yaw, 0.0))
 	camera.position = target + basis * Vector3(0, 0, distance)
 	camera.look_at(target, Vector3.UP)
 	camera.near = maxf(distance * 0.01, 0.005)
 
-## Object-space ray through a point of the view.
+## Object-space ray through a point of the view (the view's own pixels, as mouse events give
+## them; the port renders at its own pixel size).
 func ray(at: Vector2) -> Array:
-	return [camera.project_ray_origin(at), camera.project_ray_normal(at)]
+	var port_at := at * Vector2(port.size) / size if size.x > 0.0 and size.y > 0.0 else at
+	return [camera.project_ray_origin(port_at), camera.project_ray_normal(port_at)]
 
-## World units per screen pixel at a point (brush sizes are in screen pixels).
+## World units per view pixel at a point (brush sizes are in view pixels, like the cursor ring).
 func world_per_pixel(point: Vector3) -> float:
 	var depth := maxf((point - camera.global_position).dot(-camera.global_transform.basis.z), 0.001)
-	return 2.0 * depth * tan(deg_to_rad(FOV * 0.5)) / maxf(1.0, float(port.size.y))
+	return 2.0 * depth * tan(deg_to_rad(FOV * 0.5)) / maxf(1.0, size.y)
 
 func camera_right() -> Vector3:
 	return camera.global_transform.basis.x.normalized()
@@ -232,17 +248,70 @@ func _gui_input(event: InputEvent) -> void:
 		paint_event.emit(event)
 		accept_event()
 
+## Shows the brush ring at the centre for a moment (a size change from a key or a slider).
+func flash_ring(seconds := 0.7) -> void:
+	ring_serial += 1
+	var serial := ring_serial
+	ring_preview = true
+	overlay.queue_redraw()
+	get_tree().create_timer(seconds).timeout.connect(func():
+		if serial == ring_serial and not ring_held:
+			ring_preview = false
+			overlay.queue_redraw())
+
+## Keeps the centre ring up while a size slider is held.
+func hold_ring(active: bool) -> void:
+	ring_held = active
+	if active:
+		ring_preview = true
+		overlay.queue_redraw()
+	else:
+		flash_ring(0.35)
+
+## The brush outline: its tip shape (flat tips are ellipses on the screen axes, as they
+## paint) with a faint inner ring where the soft edge starts.
+func _draw_ring(at: Vector2, radius: float) -> void:
+	var r := maxf(radius, 1.5)
+	var count := clampi(int(r * 0.9), 28, 120)
+	var ca := cos(cursor_angle); var sa := sin(cursor_angle)
+	var outline := PackedVector2Array()
+	var inner := PackedVector2Array()
+	var soft_at := clampf(cursor_hardness, 0.05, 1.0)
+	for i in count + 1:
+		var a := TAU * i / count
+		var ur := cos(a); var vr := cursor_roundness * sin(a)
+		var offset := Vector2(ur * ca - vr * sa, -(ur * sa + vr * ca))
+		outline.append(at + offset * r)
+		inner.append(at + offset * r * soft_at)
+	overlay.draw_polyline(outline, Color(0, 0, 0, 0.55), 2.6, true)
+	overlay.draw_polyline(outline, Color(1, 1, 1, 0.9), 1.2, true)
+	if soft_at < 0.95 and r > 6.0: overlay.draw_polyline(inner, Color(1, 1, 1, 0.3), 1.0, true)
+
 func _draw_overlay() -> void:
 	if line_visible:
-		overlay.draw_line(line_from, line_to, Color(0, 0, 0, 0.6), 4.0, true)
-		overlay.draw_line(line_from, line_to, Color("ffe08a"), 2.0, true)
-		overlay.draw_circle(line_from, 4.0, Color("ffe08a"))
-		overlay.draw_arc(line_to, 5.0, 0, TAU, 16, Color("ffe08a"), 2.0, true)
+		# The gradient's line in its own colours (fading out toward clear), its shape for radial.
+		var c1: Color = line_colors[0]
+		var c2: Color = line_colors[1]
+		var length := line_from.distance_to(line_to)
+		if line_radial and length > 2.0:
+			overlay.draw_arc(line_from, length, 0, TAU, clampi(int(length * 0.5), 32, 128), Color(0, 0, 0, 0.45), 3.0, true)
+			overlay.draw_arc(line_from, length, 0, TAU, clampi(int(length * 0.5), 32, 128), Color(c2, maxf(c2.a, 0.35)), 1.4, true)
+		overlay.draw_line(line_from, line_to, Color(0, 0, 0, 0.6), 6.0, true)
+		var steps := 18
+		for i in steps:
+			var t0 := float(i) / steps; var t1 := float(i + 1) / steps
+			var c := c1.lerp(c2, (t0 + t1) * 0.5)
+			c.a = maxf(c.a, 0.2)
+			overlay.draw_line(line_from.lerp(line_to, t0), line_from.lerp(line_to, t1), c, 3.4, true)
+		overlay.draw_circle(line_from, 6.0, Color(0, 0, 0, 0.6))
+		overlay.draw_circle(line_from, 4.5, Color(c1, 1.0))
+		overlay.draw_circle(line_to, 7.0, Color(0, 0, 0, 0.6))
+		overlay.draw_circle(line_to, 5.5, Color(c2, 1.0) if c2.a > 0.0 else Color(1, 1, 1, 0.25))
+		overlay.draw_arc(line_to, 5.5, 0, TAU, 20, Color(1, 1, 1, 0.9), 1.4, true)
+	if ring_preview and cursor_kind == "brush": _draw_ring(overlay.size * 0.5, cursor_radius)
 	if not cursor_inside or orbiting or panning: return
 	if cursor_kind == "brush":
-		var r := maxf(cursor_radius, 1.5)
-		overlay.draw_arc(cursor, r, 0, TAU, maxi(24, int(r)), Color(0, 0, 0, 0.55), 2.6, true)
-		overlay.draw_arc(cursor, r, 0, TAU, maxi(24, int(r)), Color(1, 1, 1, 0.9), 1.2, true)
+		_draw_ring(cursor, cursor_radius)
 	elif cursor_kind == "cross":
 		for d in [Vector2(1, 0), Vector2(0, 1)]:
 			overlay.draw_line(cursor - d * 9, cursor + d * 9, Color(0, 0, 0, 0.6), 3.0)

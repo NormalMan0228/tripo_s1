@@ -371,6 +371,9 @@ static func fold_tip(id: String, shut: bool) -> String:
 static func sfx(kind: String, volume_db := -4.0) -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null or tree.root == null: return
+	# Headless runs (tests, tools) have a dummy audio driver that never finishes a playback, so a
+	# sound played just before quitting stayed referenced at exit ("resources still in use").
+	if DisplayServer.get_name() == "headless": return
 	if kind == "hover":
 		if Time.get_ticks_msec() - _last_hover < 45: return
 		_last_hover = Time.get_ticks_msec()
