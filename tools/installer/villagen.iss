@@ -1,5 +1,5 @@
 ; Villagen installer (Inno Setup 6). Built by tools/package_release.py --installer; by hand:
-;   .tools\innosetup\ISCC.exe /DEdition=school /DAppVer=0.11.1 tools\installer\villagen.iss
+;   .tools\innosetup\ISCC.exe /DEdition=school /DAppVer=0.11.2 tools\installer\villagen.iss
 ; Edition "school" packs builds\school (plays on the school server) as Villagen_School_Setup.exe;
 ; edition "public" packs builds\windows as Villagen_Setup.exe. The two install side by side.
 ; Installs per user by default (no admin prompt); "모든 사용자용" in the first dialog installs to
