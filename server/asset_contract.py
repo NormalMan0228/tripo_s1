@@ -3,9 +3,13 @@ import json
 from .asset_assembly import Plan, validate_plan
 from .asset_vm import validate_program, exercise, ProgramError
 
-STYLE = ('Tripothon: cozy illustrated island village, medium-proportion yellow-jacket explorer B; '
-         'soft rounded silhouettes, warm ivory, honey wood, sage green, muted coral, brushed matte surfaces. '
-         'Readable at an orthographic camera distance. Avoid horror, realistic skin, razor edges and noisy details.')
+# Objects follow the player's own style words first; otherwise they are grown-up RPG props, not toys.
+STYLE = ('Villagen: a sunny island village in a modern fantasy RPG. Unless the player asks for another style, '
+         'describe each object as a high-quality semi-realistic game prop: believable real-world proportions and '
+         'construction, real materials (wood grain, forged metal, woven fabric, stone, glass, ceramic), refined '
+         'craftsmanship and purposeful detail, a natural warm palette. Avoid toy-like, chibi or cartoon proportions, '
+         'blobby shapes and candy colours. Readable at an orthographic camera distance. Avoid horror, realistic skin '
+         'and razor edges.')
 CONTRACT = '''Return ONLY one JSON object with keys plan and program. No markdown or tools.
 Create original furniture/object geometry specifications and NEW named numeric API functions plus event code.
 Title maximum 60 characters, category maximum 40 characters, each part prompt 3..800 characters.

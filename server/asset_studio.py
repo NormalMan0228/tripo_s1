@@ -562,8 +562,13 @@ class Studio:
                 with self.db.transaction() as conn:committed=tripo_credits_committed(conn,job['id'])
                 if committed+spent+CONCEPT_CREDITS>self.settings.tripo_credit_budget:
                     provenance['concept_skipped']='budget';return
-        prompt=('Concept art of ONLY this object, the whole object centred and fully visible, three-quarter view, plain light '
-                'background, soft illustrated cozy island game style, no text, no people: '+str(part.get('prompt','')))[:1800]
+        # A product-style render: the picture becomes Tripo's image reference, so believable shapes and
+        # materials give a better model. Style words in the description (cute, anime...) still win.
+        prompt=('Concept art of ONLY this object, the whole object centred and fully visible, three-quarter view, plain '
+                'light-grey background, soft studio lighting. High-quality semi-realistic game asset like a modern '
+                'fantasy RPG prop: believable real-world proportions and construction, real material detail (wood '
+                'grain, metal, fabric, stone, glass), refined craftsmanship. Not cartoonish, not toy-like, not chibi, '
+                'unless the description asks for that style. No text, no people. Object: '+str(part.get('prompt','')))[:1800]
         try:
             if body.geometry!='tripo':blob=fixture_concept(str(part.get('prompt','')))
             else:

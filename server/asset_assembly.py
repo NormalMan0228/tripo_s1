@@ -75,7 +75,7 @@ def simple_plan(request):
     mesh. No LLM design step, no moving parts."""
     words=' '.join(request.split())[:300]
     return validate_plan({'title':words[:60] or 'object','category':'decoration','parts':[{
-        'id':'whole','parent':'','prompt':('A single simple stylized game prop, clean silhouette, no base plate: '+words)[:800],
+        'id':'whole','parent':'','prompt':('A single high-quality semi-realistic game prop with believable proportions and real materials, clean silhouette, no base plate, not toy-like: '+words)[:800],
         'shape':'box','size':[1.2,1.2,1.2],'position':[0,.6,0],'color':'#c9a46e'}]})
 
 
@@ -83,7 +83,7 @@ def static_plan(plan,request):
     """Static furniture is one complete mesh, never separately billed hidden parts."""
     if len(plan['parts'])==1:return plan
     first=plan['parts'][0]
-    prompt=('Complete assembled static furniture. '+request+' Visual components: '+
+    prompt=('Complete assembled static furniture, a high-quality semi-realistic game prop with believable proportions and real materials. '+request+' Visual components: '+
             '; '.join(p['prompt'] for p in plan['parts']))[:800]
     return validate_plan({'title':plan['title'],'category':plan['category'],'parts':[{
         'id':'whole','parent':'','prompt':prompt,'shape':first['shape'],
