@@ -1264,7 +1264,9 @@ func sync_runtime(item: Node3D, obj: Dictionary) -> void:
 	if int(item.runtime_version)==int(obj.runtime_version): return
 	var fresh: Dictionary=await api.request("/v1/objects/"+str(obj.id)+"/assembly")
 	if not fresh.ok or not is_instance_valid(item): return
-	item.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version})
+	# A changed interaction (상호작용 saved on another device) runs its new program; otherwise only the state moves.
+	if not (item.has_method("sync_interaction") and item.sync_interaction(fresh.data)):
+		item.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version})
 	item.paint(fresh.data.runtime.colors)
 
 ## /v1/me without the runtime versions near/leave/click events keep raising.

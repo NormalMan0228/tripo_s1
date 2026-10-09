@@ -156,12 +156,23 @@ func run() -> void:
 	check(await wait_until(func(): return glow(village_copy) < 0.2, 5.0), "walking away dims it")
 
 	# A fresh load (another session) runs the same.
+	var old_copy: Node3D = app.loaded[id]
+	app.loaded.erase(id)
+	old_copy.queue_free()
 	await app.refresh_inventory()
 	check(await wait_until(func(): return app.loaded.has(id) and is_instance_valid(app.loaded[id])), "reloaded")
 	var reloaded: Node3D = app.loaded[id]
 	check(reloaded.rest == "sit" and spin(reloaded) < 1.0, "after a reload the interaction is there and the last spin is not replayed")
 	peak = await spin_peak(reloaded, func(): await app.village_furniture_event(id, "click"))
 	check(peak > 60.0, "after a reload E still spins it (peak %.0f°)" % peak)
+	# Another device adds a bounce: the kept village copy picks it up on the next refresh, in place.
+	var current: Dictionary = await app.api.request("/v1/objects/" + id + "/interaction")
+	var presets: Array = current.data.spec.presets if current.ok else []
+	presets.append({"kind": "bounce", "trigger": "always", "target": "whole", "level": 1, "direction": 1, "axis": "x", "angle": 90})
+	var other: Dictionary = await app.api.post("/v1/objects/" + id + "/interaction", app.api.mutation({"version": int(current.data.get("runtime_version", 0)) if current.ok else 0, "mode": "presets", "presets": presets, "keep": true, "rest": "sit"}))
+	check(other.ok, "another device saves a change")
+	await app.refresh_inventory()
+	check(app.loaded.get(id) == reloaded and JSON.stringify(reloaded.vm.program).contains("offset_y"), "the kept village copy runs the other device's change")
 
 	# A visiting friend's copy plays it on their screen.
 	var guest := Api.new(); root.add_child(guest); guest.base_url = server
@@ -214,7 +225,7 @@ func run() -> void:
 	var room_panel: Control = studio.interaction_panel
 	check(await wait_until(func(): return is_instance_valid(room_panel) and not room_panel.info.is_empty()), "the 보관함 tab opens the editor")
 	if is_instance_valid(room_panel):
-		check(room_panel.choice.presets.size() == 3 and room_panel.choice.rest == "sit", "the editor shows the saved choice")
+		check(room_panel.choice.presets.size() == 4 and room_panel.choice.rest == "sit", "the editor shows the saved choice")
 		room_panel._reset_choice()
 		await room_panel._save()
 		room_panel.close_panel()
