@@ -435,6 +435,13 @@ func check(result: Dictionary) -> bool:
 		return false
 	return true
 
+## The key art for the hour the game opens at (the player's own clock): morning to afternoon, golden hour
+## around sunset, and the lantern-lit village at night.
+static func title_art_for(hour: float) -> String:
+	if hour >= Daylight.SUNSET - 2.5 and hour < Daylight.SUNSET + 0.75: return "res://assets/title_golden.jpg"
+	if hour >= Daylight.SUNSET + 0.75 or hour < Daylight.SUNRISE - 0.5: return "res://assets/title_evening.jpg"
+	return "res://assets/title_morning.jpg"
+
 ## Title screen: the village art under a vignette with floating
 ## light motes, the game's wordmark and a keyboard-navigable menu (start, settings,
 ## quit). Starting opens the server login card; every session plays on a server account.
@@ -443,7 +450,8 @@ func login_ui(page := "menu") -> void:
 	clear_ui()
 	if is_instance_valid(player): player.controls_enabled = false
 	var art := TextureRect.new()
-	art.texture = load("res://assets/title_background.jpg")
+	var hour: float = daylight.current_hour() if is_instance_valid(daylight) else Daylight.clock_hour()
+	art.texture = load(title_art_for(hour))
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED

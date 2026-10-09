@@ -6,6 +6,7 @@ are authoritative, but these endpoints do not claim to attest client proximity.
 The client checks roads, water and slopes before tilling; the server keeps tilled
 plots inside the farm meadow, on its grid, apart from each other and under a cap.
 """
+import contextvars
 import copy
 import secrets
 
@@ -63,6 +64,22 @@ FIGHT_MIN = {1:2.0,2:2.2,3:2.6,4:3.0,5:3.4}
 FIGHT_MAX = 45
 BITE_WINDOW = 2.0
 KST = 9
+# The player's time zone in minutes from UTC (their PC's), set per request by app.py from the
+# X-Villagen-UTC-Offset header; released clients that do not send it keep Korea's +9 h.
+UTC_OFFSET = contextvars.ContextVar('utc_offset', default=KST * 60)
+
+
+def offset_from(value):
+    try:
+        minutes = int(str(value).strip())
+    except (TypeError, ValueError):
+        return KST * 60
+    return minutes if -720 <= minutes <= 840 else KST * 60
+
+
+def local_day(now):
+    """The player's calendar day (daily orders reset at their midnight)."""
+    return int((now + UTC_OFFSET.get() * 60) // 86400)
 
 # Gather node kinds: [item, chance in %, min, max] rolls, then respawn seconds.
 FORAGE = {
@@ -155,12 +172,12 @@ def public(state, now):
     result['catalog']={'crops':CROPS,'prices':PRICES,'names':NAMES,'fish':FISH,'shop':SHOP,'max_plots':MAX_PLOTS,
                        'starter_plots':len(STARTER_PLOTS),
                        'trees':{kind:{'fruit':rule['fruit'],'hang':list(rule['hang']),'respawn':rule['respawn']} for kind,rule in TREES.items()}}
-    result['order_available']=state['order_day']!=int(now//86400)
+    result['order_available']=state['order_day']!=local_day(now)
     result['night']=night(now)
     return result
 
 def night(now):
-    hour=(now/3600+KST)%24
+    hour=(now/3600+UTC_OFFSET.get()/60)%24
     return hour<6 or hour>=19
 
 def spend(state, item, count=1):
@@ -360,7 +377,7 @@ def act(state, body, now):
         income=PRICES[body.item]*body.quantity; state['coins']+=income
         result=f'{NAMES[body.item]}을 팔고 잎전 {income}개를 받았어요.'
     elif action=='order':
-        day=int(now//86400)
+        day=local_day(now)
         if state['order_day']==day: raise Rejected('life_order_completed')
         spend(state,'turnip',2); spend(state,'perch')
         state['coins']+=20; state['order_day']=day

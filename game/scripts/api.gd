@@ -16,6 +16,7 @@ func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD
 	add_child(http)
 	var headers := PackedStringArray(["Content-Type: application/json"])
 	if not token.is_empty(): headers.append("Authorization: Bearer " + token)
+	headers.append(time_zone_header())
 	var error := http.request(base_url + path, headers, method, "" if method == HTTPClient.METHOD_GET else JSON.stringify(payload))
 	if error != OK:
 		http.queue_free()
@@ -81,6 +82,7 @@ func _kept_request(path: String, body: String) -> Dictionary:
 			return {}
 	var headers := PackedStringArray(["Content-Type: application/json"])
 	if not token.is_empty(): headers.append("Authorization: Bearer " + token)
+	headers.append(time_zone_header())
 	if kept.request(HTTPClient.METHOD_POST, prefix + path, headers, body) != OK:
 		kept.close()
 		return {}
@@ -120,3 +122,14 @@ func mutation(extra: Dictionary = {}) -> Dictionary:
 	var s := bytes.hex_encode()
 	var id := "%s-%s-%s-%s-%s" % [s.substr(0,8),s.substr(8,4),s.substr(12,4),s.substr(16,4),s.substr(20,12)]
 	return extra.merged({"request_id":id})
+
+## The player's own time zone, so the server's day and night (night fish, the daily order) follow
+## where they play (server/homestead.py UTC_OFFSET). Minutes from UTC, daylight saving included
+## (Godot's time zone bias leaves it out on Windows).
+static func utc_offset_minutes() -> int:
+	var local := Time.get_unix_time_from_datetime_dict(Time.get_datetime_dict_from_system(false))
+	var utc := Time.get_unix_time_from_datetime_dict(Time.get_datetime_dict_from_system(true))
+	return int(round((local - utc) / 900.0)) * 15
+
+static func time_zone_header() -> String:
+	return "X-Villagen-UTC-Offset: %d" % utc_offset_minutes()

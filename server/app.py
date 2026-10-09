@@ -597,6 +597,17 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.object_shape=object_shape.ObjectShape(app,db,clock,mutate,own)
     from .interactions import Interactions
     app.state.interactions=Interactions(app,db,settings,clock,auth,mutate,own,money,studio)
+    class PlayerTimeZone:
+        """The player's time zone header (minutes from UTC) -> homestead.UTC_OFFSET for this request,
+        so night fish and the daily order follow the player's own clock."""
+        def __init__(self,inner):self.inner=inner
+        async def __call__(self,scope,receive,send):
+            if scope['type']!='http':return await self.inner(scope,receive,send)
+            value=dict(scope.get('headers') or []).get(b'x-villagen-utc-offset',b'').decode('latin-1')
+            token=homestead.UTC_OFFSET.set(homestead.offset_from(value))
+            try:await self.inner(scope,receive,send)
+            finally:homestead.UTC_OFFSET.reset(token)
+    app.add_middleware(PlayerTimeZone)
     app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':1500000},
                        pattern_limits=[(object_paint.UPLOAD_PATH,object_paint.BODY_LIMIT)])
     # Outermost, so 413/429 replies from the layers above also carry the headers.

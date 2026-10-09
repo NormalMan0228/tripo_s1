@@ -516,7 +516,7 @@ func captures() -> void:
 		ui.theme = theme
 	layer.add_child(ui)
 	var art := TextureRect.new()
-	art.texture = load("res://assets/title_background.jpg")
+	art.texture = load("res://assets/title_morning.jpg")
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
