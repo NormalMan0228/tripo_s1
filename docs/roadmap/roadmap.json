@@ -1,0 +1,296 @@
+{
+ "title": "Villagen 로드맵",
+ "subtitle": "섬 마을을 직접 만들고 꾸미는 RPG · 학과 개발 라인(dev)",
+ "links": [
+  [
+   "학교판 내려받기 (사전 공개)",
+   "https://github.com/NormalMan0228/tripo_s1/releases"
+  ],
+  [
+   "심사용 최신판 0.10.2",
+   "https://github.com/NormalMan0228/tripo_s1/releases/latest"
+  ],
+  [
+   "학교 서버 운영 안내",
+   "../SCHOOL_SERVER_KO.txt"
+  ],
+  [
+   "제작 품질표",
+   "../CRAFT_QUALITY_KO.md"
+  ]
+ ],
+ "phases": [
+  {
+   "name": "게임 기반과 심사 제출",
+   "status": "done",
+   "period": "2026-10-02 ~ 10-06",
+   "items": [
+    {
+     "title": "Godot 게임 + FastAPI 서버 기반",
+     "status": "done",
+     "date": "10-02"
+    },
+    {
+     "title": "섬 마을, 실내, 주민들의 하루 일과",
+     "status": "done",
+     "date": "10-06"
+    },
+    {
+     "title": "생존 탐험 · 몬스터 · 생존 지도",
+     "status": "done",
+     "date": "10-06"
+    },
+    {
+     "title": "Tripo로 가구 만들기 (게임 안 제작)",
+     "status": "done",
+     "date": "10-05"
+    },
+    {
+     "title": "타이틀 화면 · RPG HUD · 한/영/중 3개 언어",
+     "status": "done",
+     "date": "10-05"
+    },
+    {
+     "title": "설정 · 팀 음악 · 효과음",
+     "status": "done",
+     "date": "10-06"
+    },
+    {
+     "title": "친구 집 방문 · 3인 협동 (일부 보류)",
+     "status": "done",
+     "date": "10-05"
+    },
+    {
+     "title": "심사 서버(GCP) · 체험 한도 · 가입 열기",
+     "status": "done",
+     "date": "10-06"
+    },
+    {
+     "title": "심사용 0.10.2 배포 · 워크스루 3개 언어",
+     "status": "done",
+     "date": "10-06"
+    }
+   ]
+  },
+  {
+   "name": "학교 서버와 제작 고도화",
+   "status": "done",
+   "period": "2026-10-08 ~ 10-09",
+   "items": [
+    {
+     "title": "AWS 서울 학교 서버 (예산 4,000 · 회당 35크레딧)",
+     "status": "done",
+     "date": "10-08"
+    },
+    {
+     "title": "학교판 0.11.0 ~ 0.11.2 사전 공개",
+     "status": "done",
+     "date": "10-09"
+    },
+    {
+     "title": "설치 프로그램 (경로 선택 · 바로가기)",
+     "status": "done",
+     "date": "10-08"
+    },
+    {
+     "title": "설정이 계정을 따라감 (재설치해도 유지)",
+     "status": "done",
+     "date": "10-08"
+    },
+    {
+     "title": "한글·중국어 입력 오류 수정",
+     "status": "done",
+     "date": "10-08"
+    },
+    {
+     "title": "AI가 먼저 그림을 그려 보여 주는 제작",
+     "status": "done",
+     "date": "10-08"
+    },
+    {
+     "title": "마을·집 공용 제작 창",
+     "status": "done",
+     "date": "10-09"
+    },
+    {
+     "title": "색칠 작업대 (붓 · 레이어 · 되돌리기)",
+     "status": "done",
+     "date": "10-09"
+    },
+    {
+     "title": "가구 중복 배치 수정 · 1K 텍스처",
+     "status": "done",
+     "date": "10-08"
+    }
+   ]
+  },
+  {
+   "name": "제작 자유도와 체감 품질",
+   "status": "done",
+   "period": "2026-10-09 ~ 10-11",
+   "items": [
+    {
+     "title": "스타일 9종 · 크기 고르기 · 원래 비율 유지",
+     "status": "done",
+     "date": "10-09"
+    },
+    {
+     "title": "자유 회전 · 모양 바꾸기",
+     "status": "done",
+     "date": "10-09"
+    },
+    {
+     "title": "상호작용 (동작 8종 · 글로 설명 · 앉기/눕기)",
+     "status": "done",
+     "date": "10-09"
+    },
+    {
+     "title": "색칠 위치 어긋남 수정 · 새 색칠 UI",
+     "status": "done",
+     "date": "10-09"
+    },
+    {
+     "title": "가구 근처 멈칫 · 집 안 외형 · 입력 크래시 수정",
+     "status": "done",
+     "date": "10-09"
+    },
+    {
+     "title": "시작 화면 키아트 (켠 시각에 따라 3종)",
+     "status": "done",
+     "date": "10-09"
+    },
+    {
+     "title": "게임 시간을 플레이어 지역 시간대로",
+     "status": "done",
+     "date": "10-09"
+    },
+    {
+     "title": "학교 서버에 새 기능 반영",
+     "status": "done",
+     "date": "10-11"
+    }
+   ]
+  },
+  {
+   "name": "1 · 운영 기반",
+   "status": "in_progress",
+   "period": "지금",
+   "items": [
+    {
+     "title": "최신 버전만 접속 · 게임 중 업데이트 알림",
+     "status": "in_progress"
+    },
+    {
+     "title": "예약 점검 공지 (카운트다운 · 점검 화면)",
+     "status": "in_progress"
+    },
+    {
+     "title": "학교판 0.11.3 배포",
+     "status": "next"
+    },
+    {
+     "title": "게임을 끌 때 나는 엔진 오류 수정",
+     "status": "next"
+    }
+   ]
+  },
+  {
+   "name": "2 · 개발 비용 모니터",
+   "status": "next",
+   "period": "다음",
+   "items": [
+    {
+     "title": "Tripo API · Tripo 스튜디오 크레딧",
+     "status": "next"
+    },
+    {
+     "title": "Gemini 사용량 · Scenario CU",
+     "status": "next"
+    },
+    {
+     "title": "학교 예산 · 하루 제작 수를 한 화면에서 실시간 확인",
+     "status": "next"
+    }
+   ]
+  },
+  {
+   "name": "3 · 제작물 품질",
+   "status": "next",
+   "period": "다음",
+   "items": [
+    {
+     "title": "모양에 맞는 콜리전 (상자 대신)",
+     "status": "next"
+    },
+    {
+     "title": "흔한 가구 동작 스크립트 미리 준비 (문·상자·조명·시계…)",
+     "status": "next"
+    },
+    {
+     "title": "AI 실시간 스크립트 생성 + 재사용 라이브러리",
+     "status": "next"
+    }
+   ]
+  },
+  {
+   "name": "4 · 아트 파이프라인",
+   "status": "later",
+   "period": "이후",
+   "items": [
+    {
+     "title": "맵 지형 · 건축물 (Tripo 스튜디오, 1차 1,000크레딧)",
+     "status": "later"
+    },
+    {
+     "title": "캐릭터 · 몬스터 · NPC 신규 제작과 다듬기",
+     "status": "later"
+    },
+    {
+     "title": "얼굴 리깅",
+     "status": "later"
+    },
+    {
+     "title": "손가락까지 포함한 바디 리깅",
+     "status": "later"
+    }
+   ]
+  },
+  {
+   "name": "5 · UI · 음원",
+   "status": "later",
+   "period": "이후",
+   "items": [
+    {
+     "title": "UI 이미지 세트 확장",
+     "status": "later"
+    },
+    {
+     "title": "환경음 · 음원 작업",
+     "status": "hold"
+    }
+   ]
+  },
+  {
+   "name": "6 · 계정",
+   "status": "later",
+   "period": "이후",
+   "items": [
+    {
+     "title": "가입 시 이메일 등록 · 인증",
+     "status": "later"
+    },
+    {
+     "title": "아이디 · 비밀번호 찾기",
+     "status": "later"
+    }
+   ]
+  }
+ ],
+ "history": [
+  {
+   "version": "2026.10.11-0245",
+   "note": "로드맵 첫 공개: 완료 3단계 + 앞으로 6단계"
+  }
+ ],
+ "version": "2026.10.11-0245"
+}
