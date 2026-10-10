@@ -37,7 +37,10 @@ func run() -> void:
 	app = Main.new()
 	root.add_child(app)
 	await create_timer(0.4).timeout
-	await app.authenticate(true, "http://127.0.0.1:8766", "panel_"+str(Time.get_ticks_msec()), "Panel-check-password-1", "")
+	var server := "http://127.0.0.1:8766"
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
+	await app.authenticate(true, server, "panel_"+str(Time.get_ticks_msec()), "Panel-check-password-1", "")
 	expect(app.screen == "village", "logged in")
 	var shards: int = int(app.me.shards)
 	# The village window is the shared panel.

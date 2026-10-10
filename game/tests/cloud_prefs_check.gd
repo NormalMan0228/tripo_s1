@@ -22,7 +22,10 @@ func run() -> void:
 	var app := Main.new()
 	root.add_child(app)
 	await create_timer(0.4).timeout
-	await app.authenticate(true, "http://127.0.0.1:8766", "prefs_"+str(Time.get_ticks_msec()), "Prefs-check-password-1", "")
+	var server := "http://127.0.0.1:8766"
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
+	await app.authenticate(true, server, "prefs_"+str(Time.get_ticks_msec()), "Prefs-check-password-1", "")
 	var deadline := Time.get_ticks_msec() + 8000
 	var stored := {}
 	while Time.get_ticks_msec() < deadline:

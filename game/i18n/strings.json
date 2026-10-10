@@ -1108,6 +1108,10 @@
    "en": "It overlaps the fixed workbench.",
    "zh": "与固定工作台重叠了。"
   },
+  "곧 끝나요": {
+   "en": "Almost done",
+   "zh": "马上结束"
+  },
   "곧 해가 져. 숲은 밤이 길다는 거 잊지 마.": {
    "en": "The sun will set soon. Don't forget the forest nights are long.",
    "zh": "太阳快下山了。别忘了森林的夜很长。"
@@ -1999,6 +2003,10 @@
   "다시 로그인해 주세요.": {
    "en": "Please log in again.",
    "zh": "请重新登录。"
+  },
+  "다시 시도": {
+   "en": "Try again",
+   "zh": "重试"
   },
   "다시 자라는 중이에요. 잠시 뒤에 찾아오세요.": {
    "en": "Still regrowing. Come back in a bit.",
@@ -3392,6 +3400,14 @@
    "en": "Returned: ",
    "zh": "返回值："
   },
+  "받기": {
+   "en": "Get",
+   "zh": "下载"
+  },
+  "받는 곳은 운영자 공지를 확인해 주세요.": {
+   "en": "Check the operator's notice for the download.",
+   "zh": "下载地址请查看运营公告。"
+  },
   "받지 않은 보상 꾸러미가 %d개 있어요. 함께하기 메뉴에서 받을 수 있어요.": {
    "en": "You have %d unclaimed reward bundle(s). Claim them in the Play Together menu.",
    "zh": "还有 %d 个未领取的奖励包，可以在一起玩菜单中领取。"
@@ -4284,6 +4300,18 @@
    "en": "New plot · %d/%d",
    "zh": "新田地 · %d/%d"
   },
+  "새 버전 받기": {
+   "en": "Get the new version",
+   "zh": "下载新版本"
+  },
+  "새 버전을 받아야 계속할 수 있어요.": {
+   "en": "Get the new version to keep playing.",
+   "zh": "需要下载新版本才能继续游戏。"
+  },
+  "새 버전이 있어요": {
+   "en": "New version out",
+   "zh": "有新版本"
+  },
   "새 색으로 칠했어요.": {
    "en": "Painted in the new color.",
    "zh": "已涂上新颜色。"
@@ -4423,6 +4451,18 @@
   "서버 응답을 기다리고 있습니다. 연결을 복구하면 이어집니다.": {
    "en": "Waiting for the server. You'll continue once the connection is back.",
    "zh": "正在等待服务器响应。连接恢复后将继续。"
+  },
+  "서버 점검 중": {
+   "en": "Maintenance",
+   "zh": "服务器维护中"
+  },
+  "서버 점검 중이에요. 잠시 뒤 다시 들어와 주세요.": {
+   "en": "The server is under maintenance. Please come back in a moment.",
+   "zh": "服务器正在维护，请稍后再来。"
+  },
+  "서버 점검까지": {
+   "en": "Maintenance in",
+   "zh": "距维护还有"
   },
   "서버 주소 · 예: http://100.101.1.2:8765 (Tailscale)": {
    "en": "Server address · e.g. http://100.101.1.2:8765 (Tailscale)",
@@ -5164,6 +5204,10 @@
    "en": "Shake the palm tree",
    "zh": "摇椰子树"
   },
+  "약 %d분 뒤 끝나요": {
+   "en": "About %d min left",
+   "zh": "约 %d 分钟后结束"
+  },
   "약하게": {
    "en": "Gentle",
    "zh": "轻"
@@ -5239,6 +5283,10 @@
   "얼음 · 이동 둔화": {
    "en": "Ice · Slows movement",
    "zh": "冰面 · 移动减速"
+  },
+  "업데이트 필요": {
+   "en": "Update needed",
+   "zh": "需要更新"
   },
   "없는 게 없는 마을 잡화점이에요. 구경은 언제나 무료!": {
    "en": "The village store that has everything. Browsing is always free!",
@@ -6920,6 +6968,10 @@
    "en": "Pearl",
    "zh": "珍珠"
   },
+  "진행 상황은 서버에 안전하게 남아 있어요.": {
+   "en": "Your progress is safe on the server.",
+   "zh": "你的进度已安全保存在服务器上。"
+  },
   "진행 중인 생성이 있습니다.": {
    "en": "A craft is already in progress.",
    "zh": "已有正在进行的生成。"
@@ -8219,6 +8271,10 @@
   "확인": {
    "en": "OK",
    "zh": "确定"
+  },
+  "확인하는 중…": {
+   "en": "Checking…",
+   "zh": "正在确认…"
   },
   "확인한 설계로 3D 메시를 만들고 있어요": {
    "en": "Building the 3D mesh from the confirmed design",

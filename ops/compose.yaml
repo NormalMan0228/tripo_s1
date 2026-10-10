@@ -32,6 +32,8 @@ services:
       TRIPOTHON_TRIPO_CREDIT_BUDGET: ${TRIPOTHON_TRIPO_CREDIT_BUDGET:-0}
       TRIPOTHON_SIGNUPS_PER_IP_DAY: ${TRIPOTHON_SIGNUPS_PER_IP_DAY:-3}
       TRIPOTHON_SIGNUPS_PER_DAY: ${TRIPOTHON_SIGNUPS_PER_DAY:-200}
+      # The commit /health reports next to the version (ops/update_online_server.sh sets it).
+      VILLAGEN_SERVER_COMMIT: ${VILLAGEN_SERVER_COMMIT:-}
     secrets: [registration_code]
     volumes:
       - game_data:/data
