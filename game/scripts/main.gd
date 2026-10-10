@@ -27,6 +27,8 @@ const VoiceBabble = preload("res://scripts/voice_babble.gd")
 const GameSettings = preload("res://scripts/game_settings.gd")
 const SettingsMenu = preload("res://scripts/settings_menu.gd")
 const PauseMenu = preload("res://scripts/pause_menu.gd")
+## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
+const VersionGate = preload("res://scripts/version_gate.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
@@ -44,6 +46,7 @@ const ITEM_NAMES := {"wood":"목재","stone":"돌","berry":"열매","fiber":"섬
 const COLORS := ["#f6eee0","#edbc63","#d98477","#70afa3","#7c9ec6"]
 const RECIPES := {"axe":{"wood":3,"stone":2},"spear":{"wood":4,"stone":2},"soup":{"berry":3,"wood":1},"bandage":{"fiber":3}}
 var api: Node
+var gate: CanvasLayer
 var social: Node
 var coop_run := false
 var furniture_proximity_time := 0.0
@@ -191,6 +194,10 @@ func _ready() -> void:
 	veil.cover()
 	api = Api.new()
 	add_child(api)
+	gate = VersionGate.new()
+	add_child(gate)
+	gate.watch(api)
+	gate.resumed.connect(gate_resumed)
 	social = preload("res://scripts/social.gd").new()
 	social.app = self
 	add_child(social)
@@ -324,6 +331,8 @@ func button(parent: Node, value: String, callback: Callable, variant := "default
 	return b
 
 func message(value: String) -> void:
+	# Maintenance or a too-old game: the gate's one screen speaks instead of scattered errors.
+	if VersionGate.is_blocked(): return
 	# Server messages arrive in Korean; already translated client text passes through.
 	value = I18n.server(value)
 	if is_instance_valid(notice): notice.text = value
@@ -422,7 +431,9 @@ func error_message(code: String) -> String:
 		"too_many_registrations":tr("이 곳에서는 오늘 계정을 더 만들 수 없어요. 만든 계정으로 로그인해 주세요."),
 		"registration_closed_today":tr("오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요."),
 		"craft_over_trial_limit":tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요."),
-		"tripo_budget_exhausted":tr("이번 학기 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요.")}
+		"tripo_budget_exhausted":tr("이번 학기 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요."),
+		"client_update_required":tr("새 버전을 받아야 계속할 수 있어요."),
+		"server_maintenance":tr("서버 점검 중이에요. 잠시 뒤 다시 들어와 주세요.")}
 	if not preload("res://scripts/build_mode.gd").developer():
 		messages.live_generation_disabled=tr("새 가구 제작을 준비하고 있어요. 지금은 보관함의 물건으로 꾸며 보세요.")
 		messages.insufficient_provider_credit=tr("지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요.")
@@ -434,6 +445,29 @@ func check(result: Dictionary) -> bool:
 		message(error_message(result.error))
 		return false
 	return true
+
+## The world the login card opens on: the one remembered, or the build's default (player builds
+## start online). A school build first opens on the school world even if an older build saved the
+## judging one.
+func default_world() -> String:
+	var list := worlds()
+	var saved := str(I18n.setting("server",list[1][1] if OS.has_feature("tripothon_player") else list[0][1]))
+	if OS.has_feature("villagen_school") and saved==SERVERS[1][1]: saved=list[1][1]
+	return saved
+
+## Maintenance is over (or the minimum version was lowered): show the server's state again.
+## Everything lives on the server, so the village or the expedition just reloads.
+func gate_resumed() -> void:
+	match screen:
+		"village": await refresh_inventory()
+		"survival":
+			if run_id.is_empty(): return
+			var epoch := world_epoch
+			var snapshot: Dictionary = await api.request(run_route())
+			if epoch==world_epoch and snapshot.ok:
+				run=snapshot.data
+				network_failures=0
+				update_run()
 
 ## The key art for the hour the game opens at (the player's own clock): morning to afternoon, golden hour
 ## around sunset, and the lantern-lit village at night.
@@ -448,6 +482,8 @@ static func title_art_for(hour: float) -> String:
 func login_ui(page := "menu") -> void:
 	screen = "login"
 	clear_ui()
+	# The world this game would log in to: is this game still allowed there, is a newer one out?
+	if page != "settings": gate.check(default_world())
 	if is_instance_valid(player): player.controls_enabled = false
 	var art := TextureRect.new()
 	var hour: float = daylight.current_hour() if is_instance_valid(daylight) else Daylight.clock_hour()
@@ -548,9 +584,7 @@ func login_ui(page := "menu") -> void:
 			var custom := RpgUi.field(column,tr("월드 주소 · 예: http://100.101.1.2:8765"))
 			# Player builds (the judging ZIP) start on the online world; source runs on this PC.
 			var list := worlds()
-			var saved := str(I18n.setting("server",list[1][1] if OS.has_feature("tripothon_player") else list[0][1]))
-			# A school build first opens on the school world even if an older build saved the judging one.
-			if OS.has_feature("villagen_school") and saved==SERVERS[1][1]: saved=list[1][1]
+			var saved := default_world()
 			var chosen := list.size()
 			for i in list.size():
 				servers.add_item(tr(list[i][2])+"  ·  "+list[i][1].trim_prefix("https://").trim_prefix("http://"))
@@ -559,8 +593,10 @@ func login_ui(page := "menu") -> void:
 			if chosen==list.size(): custom.text=saved
 			servers.select(chosen)
 			custom.visible = chosen==list.size()
-			servers.item_selected.connect(func(index): custom.visible = index==list.size())
 			var host := func() -> String: return custom.text if servers.selected==list.size() else list[servers.selected][1]
+			servers.item_selected.connect(func(index):
+				custom.visible = index==list.size()
+				if index<list.size(): gate.check(host.call()))
 			var actions := HBoxContainer.new()
 			actions.add_theme_constant_override("separation",8)
 			column.add_child(actions)
@@ -630,6 +666,12 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	var health: Dictionary=await api.request("/health")
 	if not check(health):
 		busy=false
+		return
+	# Too old for this world, or the world is under maintenance: the gate's window explains.
+	gate.adopt(host)
+	if health.data.get("service","")=="tripothon" and not gate.apply(health.data).is_empty():
+		busy=false
+		if is_instance_valid(notice): notice.text = ""
 		return
 	if health.data.get("service","")!="tripothon" or int(health.data.get("protocol",0))!=6:
 		busy=false
@@ -1320,12 +1362,14 @@ func claim_pending_reward() -> void:
 
 func poll_entitlements() -> void:
 	if social.visiting(): return
-	if polling_entitlements or busy or refreshing: return
+	if polling_entitlements or busy or refreshing or VersionGate.is_blocked(): return
 	polling_entitlements=true
 	var epoch := world_epoch
 	var result: Dictionary = await api.request("/v1/me")
 	polling_entitlements=false
 	if epoch!=world_epoch: return
+	# Maintenance or a too-old game is not a lost session: the gate's screen waits it out.
+	if not result.ok and result.error in Api.GATE_CODES: return
 	if not result.ok:
 		# Fail closed on auth loss or disconnection; don't retain protected models.
 		cancel_preview()
@@ -1853,7 +1897,7 @@ func run_route() -> String:
 	return ("/v1/coop/runs/" if coop_run else "/v1/runs/")+run_id
 
 func tick_run() -> void:
-	if ticking or busy or (paused and not coop_run) or run.get("status","")!="active": return
+	if ticking or busy or (paused and not coop_run) or run.get("status","")!="active" or VersionGate.is_blocked(): return
 	ticking=true
 	var movement := movement_input()
 	var ready: bool=run.get("action_cooldown",0)<=0.01 and (pending_action!="attack" or run.get("attack_cooldown",0)<=0.01)
@@ -2406,7 +2450,7 @@ func text_input_active() -> bool:
 	return focus is LineEdit or focus is TextEdit
 
 func world_movement_allowed() -> bool:
-	if PauseMenu.is_open(): return false
+	if PauseMenu.is_open() or VersionGate.is_blocked(): return false
 	if is_instance_valid(painter) or is_instance_valid(interaction_panel): return false
 	if busy or text_input_active() or is_instance_valid(village_modal) or is_instance_valid(preview):return false
 	if is_instance_valid(right) and right.get_parent().visible:return false

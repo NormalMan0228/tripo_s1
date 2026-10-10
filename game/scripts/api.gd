@@ -4,6 +4,15 @@ var base_url := "http://127.0.0.1:8765"
 var token := ""
 var mode := "demo"
 
+## Every reply carries the server's notice version (X-Villagen-Notice-Version): it changes when a
+## maintenance is scheduled or starts, or a newer game is published (version_gate.gd then asks
+## /v1/client what changed).
+signal notice_seen(version: String)
+## 426 client_update_required (this game is too old) or 503 server_maintenance: version_gate.gd
+## shows one clean screen instead of each caller's error.
+signal refused(code: String, data: Dictionary)
+const GATE_CODES := ["client_update_required", "server_maintenance"]
+
 ## The login screen chooses the server; there is no offline or bundled sample play.
 
 func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD_GET, binary := false, timeout := 12.0) -> Dictionary:
@@ -17,6 +26,7 @@ func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD
 	var headers := PackedStringArray(["Content-Type: application/json"])
 	if not token.is_empty(): headers.append("Authorization: Bearer " + token)
 	headers.append(time_zone_header())
+	headers.append(version_header())
 	var error := http.request(base_url + path, headers, method, "" if method == HTTPClient.METHOD_GET else JSON.stringify(payload))
 	if error != OK:
 		http.queue_free()
@@ -26,11 +36,12 @@ func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD
 	if response[0] != HTTPRequest.RESULT_SUCCESS:
 		return {"ok": false, "error": "connection_failed"}
 	var code: int = response[1]
+	_seen(response[2])
 	var bytes: PackedByteArray = response[3]
 	if binary and code == 200: return {"ok": true, "bytes": bytes}
 	var data = JSON.parse_string(bytes.get_string_from_utf8())
 	if not data is Dictionary: return {"ok":false,"error":"invalid_server_response"}
-	if code >= 400: return {"ok":false,"error":str(data.get("detail","request_failed")),"status":code}
+	if code >= 400: return _failure(code, data)
 	return {"ok":true,"data":data}
 
 func post(path: String, payload: Dictionary) -> Dictionary:
@@ -83,6 +94,7 @@ func _kept_request(path: String, body: String) -> Dictionary:
 	var headers := PackedStringArray(["Content-Type: application/json"])
 	if not token.is_empty(): headers.append("Authorization: Bearer " + token)
 	headers.append(time_zone_header())
+	headers.append(version_header())
 	if kept.request(HTTPClient.METHOD_POST, prefix + path, headers, body) != OK:
 		kept.close()
 		return {}
@@ -96,6 +108,7 @@ func _kept_request(path: String, body: String) -> Dictionary:
 		kept.close()
 		return {"ok": false, "error": "connection_failed"}
 	var code := kept.get_response_code()
+	_seen(kept.get_response_headers())
 	var bytes := PackedByteArray()
 	while kept.get_status() == HTTPClient.STATUS_BODY:
 		kept.poll()
@@ -112,8 +125,23 @@ func _kept_request(path: String, body: String) -> Dictionary:
 	kept_used = Time.get_ticks_msec()
 	var data = JSON.parse_string(bytes.get_string_from_utf8())
 	if not data is Dictionary: return {"ok":false,"error":"invalid_server_response"}
-	if code >= 400: return {"ok":false,"error":str(data.get("detail","request_failed")),"status":code}
+	if code >= 400: return _failure(code, data)
 	return {"ok":true,"data":data}
+
+## An error reply. Maintenance and too-old-game replies carry their code in "code" (their detail is
+## a Korean sentence for released games, which only print it).
+func _failure(code: int, data: Dictionary) -> Dictionary:
+	var reason := str(data.get("code", ""))
+	if reason in GATE_CODES and code in [426, 503]:
+		refused.emit(reason, data)
+		return {"ok":false,"error":reason,"status":code,"data":data}
+	return {"ok":false,"error":str(data.get("detail","request_failed")),"status":code}
+
+func _seen(headers: PackedStringArray) -> void:
+	for line in headers:
+		if line.to_lower().begins_with("x-villagen-notice-version:"):
+			notice_seen.emit(line.substr(line.find(":") + 1).strip_edges())
+			return
 
 func mutation(extra: Dictionary = {}) -> Dictionary:
 	var bytes := Crypto.new().generate_random_bytes(16)
@@ -133,3 +161,11 @@ static func utc_offset_minutes() -> int:
 
 static func time_zone_header() -> String:
 	return "X-Villagen-UTC-Offset: %d" % utc_offset_minutes()
+
+## This game's release (config/version). Servers with a minimum version refuse older games
+## (server/client_policy.py); released games up to 0.11.2 send nothing.
+static func client_version() -> String:
+	return str(ProjectSettings.get_setting("application/config/version", "0"))
+
+static func version_header() -> String:
+	return "X-Villagen-Version: " + client_version()

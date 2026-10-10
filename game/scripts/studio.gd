@@ -18,7 +18,10 @@ const Residents=preload("res://scripts/residents.gd")
 const GameSettings=preload("res://scripts/game_settings.gd")
 const PauseMenu=preload("res://scripts/pause_menu.gd")
 const CraftPanel=preload("res://scripts/craft_panel.gd")
+## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
+const VersionGate=preload("res://scripts/version_gate.gd")
 var api: Node
+var gate: CanvasLayer
 var viewport: SubViewport
 ## The painting workspace (scripts/painter/painter.gd) while open, and the 보관함 entry to it.
 var painter: Control
@@ -192,6 +195,12 @@ func _ready() -> void:
 	veil.cover()
 	veil.fade_in(0.55)
 	api=Api.new();add_child(api)
+	gate=VersionGate.new();add_child(gate);gate.watch(api)
+	# Maintenance over: the room shows the server's state again (nothing was lost).
+	gate.resumed.connect(func():
+		if public_room:
+			if not api.token.is_empty(): load_avatar()
+		else: refresh())
 	if Engine.has_meta("studio_session"):
 		var session: Dictionary=Engine.get_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
@@ -529,6 +538,8 @@ func build_ui() -> void:
 		for index in [2,3,4]: tabs.set_tab_hidden(index,true)
 
 func message(value: String, toast := true) -> void:
+	# Maintenance or a too-old game: the gate's one screen speaks instead of scattered errors.
+	if VersionGate.is_blocked(): return
 	value=value.replace("room_render_budget_exceeded",tr("꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요."))
 	if not BuildMode.developer():
 		var words := {"insufficient_shards":tr("별씨가 부족해요. 탐험 보상을 모아 보세요."),"stale_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"stale_runtime_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"not_found":tr("물건을 찾을 수 없어요. 보관함을 새로고침해 주세요."),"unauthorized":tr("다시 로그인해 주세요."),"geometry_disabled":tr("지금은 새 가구 제작을 준비하고 있어요."),"placement_overlap":tr("다른 가구와 겹쳐요."),"placement_out_of_bounds":tr("벽과 출입문에서 떨어진 곳에 놓아 주세요."),"model_download_failed":tr("가구를 읽지 못했어요. 잠시 뒤 다시 골라 주세요.")}
@@ -825,7 +836,7 @@ func apply_daylight(force := false) -> void:
 		if lantern is OmniLight3D: lantern.visible=false
 
 func refresh() -> void:
-	if public_room: return
+	if public_room or VersionGate.is_blocked(): return
 	if not visit_host.is_empty():
 		await share_presence()
 		return
@@ -1378,7 +1389,7 @@ func _exit_tree() -> void:
 ## furniture. Everyone in the same home sees the others (server: mp_presence).
 ## The floor travels in y (3 m a floor) so walkers only meet on the same floor.
 func share_presence() -> void:
-	if presence_pending or not is_instance_valid(hero) or api.token.is_empty(): return
+	if presence_pending or not is_instance_valid(hero) or api.token.is_empty() or VersionGate.is_blocked(): return
 	presence_pending=true
 	var heading: float=hero.visual.rotation.y if is_instance_valid(hero.visual) else 0.0
 	var response: Dictionary=await api.post("/v1/social/presence",{"scene":"home","x":hero.position.x,"z":hero.position.z,"y":floor_index*3.0,"yaw":wrapf(heading,-PI,PI)})
@@ -1784,7 +1795,7 @@ func _process(delta: float) -> void:
 	if cue_time>3.5:cue_time=0;resident_cues()
 	if leaving:
 		walk_out_step(delta)
-	elif not placement_mode and not travelling and not is_instance_valid(talk_box) and not PauseMenu.is_open():
+	elif not placement_mode and not travelling and not is_instance_valid(talk_box) and not PauseMenu.is_open() and not VersionGate.is_blocked():
 		var focus := get_viewport().gui_get_focus_owner()
 		if not (focus is TextEdit or focus is LineEdit) and not is_instance_valid(painter) and not is_instance_valid(interaction_panel):walk(delta)
 	update_camera(delta)

@@ -14,7 +14,8 @@ from argon2.exceptions import VerificationError
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
-from .config import Settings, ROOT
+from .config import Settings, ROOT, server_version
+from .client_policy import ClientPolicy, ClientGate, FILE_NAME as CLIENT_POLICY_FILE
 from .database import Database
 from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction, PrefsUpdate
 from .provider import TripoProvider, ProviderError, validate_glb
@@ -187,6 +188,10 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app = FastAPI(title='Tripothon authoritative server',version='0.6.0',lifespan=lifespan,
                   docs_url=None,redoc_url=None,openapi_url=None)
     app.state.db,app.state.settings,app.state.process_job = db,settings,process_job
+    # Minimum/latest game version and maintenance notices, changed by operators without a restart.
+    client_policy = ClientPolicy(settings.data_dir/CLIENT_POLICY_FILE,clock)
+    app.state.client_policy = client_policy
+    build_version,build_commit = server_version()
     rates = defaultdict(deque)
     last_rate_cleanup = 0
 
@@ -240,11 +245,21 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             with db.transaction() as conn:data['tripo_budget']={'used':round(tripo_credits_committed(conn)),'total':settings.tripo_credit_budget}
         return data
 
-    def health_fields(): return {'ok':True,'service':'tripothon','mode':settings.mode,'version':'0.10.0','protocol':6,
-                          'studio_tripo_enabled':bool(settings.tripo_key and settings.paid_enabled),
-                          'studio_llm':settings.studio_llm, 'multiplayer_protocol':1, 'max_party_members':3,
-                          'tripo_keys':len(settings.tripo_keys) or (1 if settings.tripo_key else 0),
-                          'open_registration':bool(settings.mode=='live' and settings.open_registration)}
+    # The game's light check (about once a minute) and the download information: no database work.
+    @app.get('/v1/client')
+    def client_info():
+        return client_policy.public()
+
+    def health_fields():
+        data={'ok':True,'service':'tripothon','mode':settings.mode,'version':build_version,'protocol':6,
+              'studio_tripo_enabled':bool(settings.tripo_key and settings.paid_enabled),
+              'studio_llm':settings.studio_llm, 'multiplayer_protocol':1, 'max_party_members':3,
+              'tripo_keys':len(settings.tripo_keys) or (1 if settings.tripo_key else 0),
+              'open_registration':bool(settings.mode=='live' and settings.open_registration)}
+        if build_commit: data['build']=build_commit
+        public=client_policy.public()
+        data['client'],data['notice']=public['client'],public['notice']
+        return data
 
     def life_state(conn,user_id):
         row=conn.execute('SELECT state FROM homesteads WHERE user_id=?',(user_id,)).fetchone()
@@ -611,6 +626,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.add_middleware(PlayerTimeZone)
     app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':1500000},
                        pattern_limits=[(object_paint.UPLOAD_PATH,object_paint.BODY_LIMIT)])
+    # Before everything else: maintenance (503) and too-old games (426) stop here; every reply,
+    # 413/429 included, carries the notice version.
+    app.add_middleware(ClientGate,policy=client_policy)
     # Outermost, so 413/429 replies from the layers above also carry the headers.
     app.add_middleware(SecurityHeadersMiddleware)
     return app

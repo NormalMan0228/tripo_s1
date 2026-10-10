@@ -23,12 +23,17 @@ domain = next(
 base = f"https://{domain}"
 invitation = (ROOT / "ops/secrets/registration-code").read_text().strip()
 username = "probe_" + secrets.token_hex(4)
+# The checkout's game version: a server with a minimum game version (ops/notice.sh min) refuses
+# requests without it.
+version = next(line.split('"')[1] for line in (ROOT / "game/project.godot").read_text(encoding="utf-8").splitlines()
+               if line.startswith("config/version="))
 password = secrets.token_urlsafe(24) + 'Aa!'
 
 
 def request(method, path, payload=None, token=None):
     body = json.dumps(payload).encode() if payload is not None else None
     headers = {"Content-Type": "application/json"} if body is not None else {}
+    headers["X-Villagen-Version"] = version
     if token:
         headers["Authorization"] = "Bearer " + token
     with urlopen(Request(base + path, body, headers, method=method), timeout=20) as response:

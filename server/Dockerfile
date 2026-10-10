@@ -5,6 +5,8 @@ RUN pip install --no-cache-dir -r server/requirements.txt && useradd -m -u 10001
 COPY server /app/server
 COPY tools/backup_server.py /app/tools/backup_server.py
 COPY game/assets/sample_stool.glb /app/game/assets/sample_stool.glb
+# /health reports the release this image was built from (config/version).
+COPY game/project.godot /app/game/project.godot
 RUN mkdir -p /data /backups && chown tripothon:tripothon /data /backups
 USER tripothon
 ENV TRIPOTHON_DATA_DIR=/data TRIPOTHON_MODE=live

@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import os
 import math
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -50,6 +51,20 @@ def configured_tripo_keys():
 def configured_tripo_key():
     keys = configured_tripo_keys()
     return keys[0] if keys else ''
+
+def server_version():
+    """The release this server runs: config/version of game/project.godot, the number every
+    release bumps (the client built from the same commit shows it too; the image copies the
+    file). The update script adds the git commit (VILLAGEN_SERVER_COMMIT) for builds between
+    releases."""
+    try:
+        text = (ROOT / 'game' / 'project.godot').read_text(encoding='utf-8')
+        found = re.search(r'^config/version="([0-9A-Za-z.+-]{1,40})"', text, re.M)
+        version = found.group(1) if found else 'unknown'
+    except OSError:
+        version = 'unknown'
+    commit = os.getenv('VILLAGEN_SERVER_COMMIT', '').strip()
+    return version, commit if re.fullmatch(r'[0-9a-f]{7,40}', commit) else ''
 
 def configured_secret(name):
     direct = os.getenv(name, '')

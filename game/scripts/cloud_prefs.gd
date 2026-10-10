@@ -94,7 +94,8 @@ func _call(method: int, body: Dictionary) -> Dictionary:
 	http.timeout = 10.0
 	http.max_redirects = 0
 	add_child(http)
-	var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + token])
+	var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer " + token,
+		"X-Villagen-Version: " + str(ProjectSettings.get_setting("application/config/version", "0"))])
 	if method == HTTPClient.METHOD_POST: body["request_id"] = _uuid()
 	var error := http.request(url + "/v1/prefs", headers, method, JSON.stringify(body) if method == HTTPClient.METHOD_POST else "")
 	if error != OK:
@@ -102,6 +103,8 @@ func _call(method: int, body: Dictionary) -> Dictionary:
 		return {}
 	var response: Array = await http.request_completed
 	http.queue_free()
+	# Maintenance (503) or a game too old for the server (426): try again much later.
+	if response[0] == HTTPRequest.RESULT_SUCCESS and response[1] in [426, 503]: wait = 60.0
 	if response[0] != HTTPRequest.RESULT_SUCCESS or response[1] != 200: return {}
 	var data = JSON.parse_string((response[3] as PackedByteArray).get_string_from_utf8())
 	return data if data is Dictionary else {}
