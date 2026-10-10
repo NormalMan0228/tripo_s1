@@ -11,7 +11,8 @@
 # 2. Backs up /data (SQLite + private GLBs) and verifies the snapshot.
 # 3. Checks out the branch and rebuilds only the API container.
 # 4. Turns on crafting if ops/secrets/tripo-key exists (simple one-mesh craft), and the
-#    LLM design step (server -> Gemini -> Tripo) if ops/secrets/gemini-key exists too.
+#    LLM design step (server -> Gemini -> Tripo) if ops/secrets/gemini-key exists too, and the
+#    cost monitor's read-only usage route if ops/secrets/usage-key exists (ops/usage_key.sh).
 #    Then prints /health.
 # Secrets and Docker volumes are never printed or touched beyond their permissions.
 set -euo pipefail
@@ -52,6 +53,12 @@ if [ -f ops/secrets/tripo-key ]; then
   fi
 else
   echo "No ops/secrets/tripo-key: the server stays without paid crafting."
+fi
+# Read-only usage totals for the PC cost monitor (made by: sudo bash ops/usage_key.sh).
+if [ -f ops/secrets/usage-key ]; then
+  chown root:10001 ops/secrets/usage-key && chmod 0640 ops/secrets/usage-key
+  compose+=(-f ops/compose.usage.yaml)
+  echo "Usage key found: the cost monitor can read usage totals."
 fi
 stamp="$(date +%Y%m%d-%H%M%S)"
 if [ -n "$("${compose[@]}" ps -q api 2>/dev/null)" ]; then

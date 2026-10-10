@@ -1,0 +1,13 @@
+# Read-only usage totals for the PC cost monitor (tools/cost_monitor, GET /v1/ops/usage).
+# ops/update_online_server.sh and ops/usage_key.sh add this file when ops/secrets/usage-key
+# exists; create the key with: sudo bash ops/usage_key.sh
+# The key reads aggregate counts only. It is not a player or admin login.
+services:
+  api:
+    environment:
+      TRIPOTHON_USAGE_KEY_FILE: /run/secrets/usage_key
+    secrets: [usage_key]
+
+secrets:
+  usage_key:
+    file: ./secrets/usage-key

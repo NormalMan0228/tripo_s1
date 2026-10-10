@@ -32,6 +32,8 @@ services:
       TRIPOTHON_TRIPO_CREDIT_BUDGET: ${TRIPOTHON_TRIPO_CREDIT_BUDGET:-0}
       TRIPOTHON_SIGNUPS_PER_IP_DAY: ${TRIPOTHON_SIGNUPS_PER_IP_DAY:-3}
       TRIPOTHON_SIGNUPS_PER_DAY: ${TRIPOTHON_SIGNUPS_PER_DAY:-200}
+      # The cost monitor's read-only usage key (TRIPOTHON_USAGE_KEY_FILE) comes from
+      # ops/compose.usage.yaml once ops/usage_key.sh has made ops/secrets/usage-key.
     secrets: [registration_code]
     volumes:
       - game_data:/data

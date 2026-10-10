@@ -25,6 +25,8 @@ Debian 12 VM에서 `sudo apt-get update && sudo apt-get install -y git`으로 Gi
 3. **확인:** `/health`에 `multiplayer_protocol: 1`이 보이고, 제작을 켰다면 `studio_tripo_enabled: true`가 보여야 한다.
 4. **가입 초대 코드:** 온라인 서버는 초대 코드가 있어야 가입할 수 있다. VM에서 `sudo cat ops/secrets/registration-code`로 확인해 함께할 사람에게만 따로 전달한다.
 
+5. **(선택) 비용 모니터 연결:** `sudo bash ops/usage_key.sh`가 읽기 전용 사용량 키를 `ops/secrets/usage-key`에 만들고(처음 한 번만 출력), `ops/compose.usage.yaml`을 붙여 API 컨테이너만 다시 만든다. 이 키로 `GET /v1/ops/usage`가 합계(제작 수, Tripo 크레딧, LLM 토큰)만 돌려준다. 계정 이름·프롬프트는 나가지 않으며 로그인 권한도 아니다. PC의 `tools/cost_monitor`가 이 값을 읽는다. 다시 보기 `--show`, 교체 `--rotate`, 끄기 `--remove`.
+
 온라인 서버의 새 계정은 별씨 0개로 시작한다. 제작비(별씨 20)는 일곱 밤 생존 보상으로 모은다. Tripo 크레딧은 키 주인의 계정에서 빠지므로 처음에는 한도를 낮게 두고 공급자 콘솔에서 실제 사용량을 확인한다.
 
 ## 구조

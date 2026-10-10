@@ -108,6 +108,9 @@ class Settings:
     # Tried in order; a model the key cannot use (404) falls through to the next.
     gemini_models: tuple = field(default_factory=lambda: tuple(m.strip() for m in os.getenv(
         'TRIPOTHON_GEMINI_MODELS', 'gemini-3.5-flash,gemini-3.8-flash,gemini-3.1-flash-lite').split(',') if m.strip()))
+    # Read-only usage totals for the PC cost monitor (server/usage_report.py, ops/usage_key.sh).
+    # Not a login; empty turns the route off.
+    usage_key: str = field(default_factory=lambda: configured_secret('TRIPOTHON_USAGE_KEY'), repr=False)
 
     def validate(self):
         if self.mode not in ('demo', 'live'):
@@ -142,4 +145,6 @@ class Settings:
             raise ValueError('Gemini design needs at least one model name')
         if not math.isfinite(self.studio_credit_rate) or not .1<=self.studio_credit_rate<=100:
             raise ValueError('Invalid reward currency conversion')
+        if self.usage_key and len(self.usage_key) < 32:
+            raise ValueError('The usage key must be at least 32 characters (ops/usage_key.sh makes one)')
         self.data_dir.mkdir(parents=True, exist_ok=True)

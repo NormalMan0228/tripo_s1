@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "settings": {
+    "port": 8850,
+    "refresh_seconds": 30,
+    "idle_exit_minutes": 30,
+    "krw_per_usd": 1400
+  },
+  "sources": [
+    {
+      "id": "tripo_api",
+      "type": "tripo_api",
+      "label": "Tripo API 잔액",
+      "key_file": "%USERPROFILE%\\Desktop\\tripo_key.txt",
+      "warn_below": 1000,
+      "alert_below": 300
+    },
+    {
+      "id": "school",
+      "type": "villagen_server",
+      "label": "학교 서버",
+      "url": "https://54-117-10-64.sslip.io",
+      "warn_ratio": 0.8,
+      "alert_ratio": 0.95
+    },
+    {
+      "id": "judging",
+      "type": "villagen_server",
+      "label": "심사 서버",
+      "url": "https://34-28-65-113.sslip.io",
+      "warn_ratio": 0.8,
+      "alert_ratio": 0.95
+    },
+    {
+      "id": "gemini",
+      "type": "gemini_estimate",
+      "label": "Gemini 비용",
+      "servers": ["school", "judging"],
+      "free_tier": false,
+      "warn_7d_usd": 5,
+      "prices": {
+        "gemini-*flash-lite*": {"input": 0.25, "cached_input": 0.025, "output": 1.5},
+        "gemini-*flash*": {"input": 0.5, "cached_input": 0.05, "output": 3.0},
+        "*": {"input": 0.5, "cached_input": 0.05, "output": 3.0}
+      }
+    },
+    {
+      "id": "tripo_studio",
+      "type": "manual",
+      "label": "Tripo Studio 크레딧",
+      "unit": "크레딧",
+      "warn_below": 300,
+      "alert_below": 100,
+      "stale_days": 7,
+      "link": "https://studio.tripo3d.ai/"
+    },
+    {
+      "id": "scenario",
+      "type": "manual",
+      "label": "Scenario CU",
+      "unit": "CU",
+      "warn_below": 200,
+      "alert_below": 50,
+      "stale_days": 7,
+      "link": "https://app.scenario.com/"
+    }
+  ]
+}

@@ -597,6 +597,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.object_shape=object_shape.ObjectShape(app,db,clock,mutate,own)
     from .interactions import Interactions
     app.state.interactions=Interactions(app,db,settings,clock,auth,mutate,own,money,studio)
+    from .usage_report import UsageReport; app.state.usage_report=UsageReport(app,db,settings,clock)
     class PlayerTimeZone:
         """The player's time zone header (minutes from UTC) -> homestead.UTC_OFFSET for this request,
         so night fish and the daily order follow the player's own clock."""

@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Villagen 비용 모니터</title>
+<link rel="icon" href="/favicon.ico">
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #0f1417;
+  --bg-glow: #1a2226;
+  --surface: #172025;
+  --surface-2: #1d282e;
+  --surface-3: #243238;
+  --border: #2a383f;
+  --ink: #f4ead2;
+  --ink-2: #c8bfab;
+  --muted: #8e8a7f;
+  --gold: #e9c46a;
+  --gold-2: #f3d78f;
+  --gold-soft: rgba(233, 196, 106, .14);
+  --gold-line: rgba(233, 196, 106, .38);
+  --spark: #5f6d73;
+  --ok: #7cc47f;
+  --warn: #f2a53c;
+  --alert: #ef6a5b;
+  --off: #6c777c;
+  --radius: 16px;
+  --font: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", "Segoe UI", system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh;
+  background: radial-gradient(1200px 600px at 15% -10%, var(--bg-glow), transparent 60%), var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select { font: inherit; color: inherit; }
+a { color: var(--gold); }
+.wrap { max-width: 1320px; margin: 0 auto; padding: 24px 24px 48px; }
+
+/* header */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.crest {
+  width: 44px; height: 44px; border-radius: 12px; flex: none;
+  display: grid; place-items: center;
+  background: linear-gradient(145deg, #3a2f17, #1e1a10);
+  border: 1px solid var(--gold-line);
+  box-shadow: 0 0 24px rgba(233, 196, 106, .12), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+.crest svg { width: 24px; height: 24px; }
+h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; font-weight: 700; }
+.sub { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.actions { display: flex; align-items: center; gap: 10px; }
+.tick { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.tick svg { width: 18px; height: 18px; transform: rotate(-90deg); }
+.tick .ring-bg { stroke: var(--surface-3); }
+.tick .ring { stroke: var(--gold); transition: stroke-dashoffset 1s linear; }
+.btn {
+  border: 1px solid var(--border); background: var(--surface-2); border-radius: 10px;
+  padding: 8px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.btn:hover { border-color: var(--gold-line); background: var(--surface-3); }
+.btn:active { transform: translateY(1px); }
+.btn.gold { background: linear-gradient(180deg, #f0cf7c, #d9b052); color: #2a1f0b; border-color: #f3d78f; font-weight: 700; }
+.btn.gold:hover { background: linear-gradient(180deg, #f5d98d, #e2bb60); }
+.btn.small { padding: 5px 10px; font-size: 13px; border-radius: 8px; }
+.btn.ghost { background: transparent; }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn svg { width: 16px; height: 16px; }
+.spin svg { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* alerts */
+.alerts { display: grid; gap: 8px; margin-bottom: 18px; }
+.alert {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border); cursor: pointer; text-align: left; width: 100%;
+}
+.alert.warn { border-color: rgba(242, 165, 60, .45); background: linear-gradient(90deg, rgba(242, 165, 60, .12), var(--surface) 60%); }
+.alert.alert { border-color: rgba(239, 106, 91, .5); background: linear-gradient(90deg, rgba(239, 106, 91, .14), var(--surface) 60%); }
+.alert b { font-weight: 700; }
+.alert .text { color: var(--ink-2); }
+.offline { padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(239, 106, 91, .5); background: rgba(239, 106, 91, .1); margin-bottom: 18px; }
+
+/* cards */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; align-items: start; }
+.card {
+  position: relative; background: linear-gradient(180deg, var(--surface-2), var(--surface) 140px);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .25); overflow: hidden;
+  transition: border-color .2s, transform .2s, box-shadow .2s;
+  animation: rise .35s ease both;
+}
+.card::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: var(--status, var(--gold)); opacity: .9; }
+.card:hover { border-color: #35464e; transform: translateY(-1px); box-shadow: 0 14px 36px rgba(0, 0, 0, .32); }
+.card.st-ok { --status: var(--gold); }
+.card.st-warn { --status: var(--warn); }
+.card.st-alert, .card.st-error { --status: var(--alert); }
+.card.st-off { --status: var(--off); }
+.card.flash { box-shadow: 0 0 0 2px var(--gold-line), 0 14px 36px rgba(0, 0, 0, .32); }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.card-head h2 { font-size: 15px; font-weight: 700; margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700;
+  padding: 3px 9px 3px 7px; border-radius: 999px; background: var(--surface-3); color: var(--ink-2); flex: none;
+}
+.badge i { width: 8px; height: 8px; border-radius: 50%; background: var(--status-dot, var(--ok)); box-shadow: 0 0 8px var(--status-dot, var(--ok)); }
+.badge.ok { --status-dot: var(--ok); }
+.badge.warn { --status-dot: var(--warn); color: #ffd9a3; }
+.badge.alert, .badge.error { --status-dot: var(--alert); color: #ffc2ba; }
+.badge.off { --status-dot: var(--off); }
+.est { font-size: 11px; font-weight: 700; color: var(--gold); border: 1px solid var(--gold-line); border-radius: 6px; padding: 1px 6px; background: var(--gold-soft); flex: none; }
+.hero { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.num { font-size: 44px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; color: var(--ink); }
+.card.st-off .num { color: var(--muted); }
+.unit { font-size: 15px; color: var(--ink-2); font-weight: 600; }
+.krw { font-size: 13px; color: var(--muted); }
+.caption { color: var(--ink-2); font-size: 13px; margin-top: 2px; min-height: 19px; }
+.meter { position: relative; height: 8px; border-radius: 999px; background: var(--meter-track, rgba(233, 196, 106, .16)); margin: 12px 0 4px; overflow: hidden; }
+.meter > span { position: absolute; inset: 0 auto 0 0; border-radius: 999px; background: var(--meter, var(--gold)); transition: width .6s ease; }
+.meter.warn { --meter: var(--warn); --meter-track: rgba(242, 165, 60, .18); }
+.meter.alert { --meter: var(--alert); --meter-track: rgba(239, 106, 91, .2); }
+.meter-scale { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.chip { background: var(--surface-3); border-radius: 8px; padding: 4px 10px; font-size: 13px; color: var(--ink-2); }
+.chip b { color: var(--ink); font-weight: 700; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.spark { position: relative; margin: 14px 0 4px; }
+.spark svg { display: block; width: 100%; height: 56px; overflow: visible; }
+.spark .label { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 4px; }
+.spark .empty { height: 56px; display: grid; place-items: center; color: var(--muted); font-size: 12px; border: 1px dashed var(--border); border-radius: 10px; }
+.tip {
+  position: absolute; pointer-events: none; transform: translate(-50%, -100%); white-space: nowrap;
+  background: #0b0f11; border: 1px solid var(--gold-line); color: var(--ink); font-size: 12px;
+  padding: 4px 8px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, .4); opacity: 0; transition: opacity .1s;
+  font-variant-numeric: tabular-nums; z-index: 2;
+}
+.tip.on { opacity: 1; }
+.rows { margin: 12px 0 0; display: grid; gap: 1px; border-radius: 10px; overflow: hidden; background: var(--border); }
+.rows > div { display: flex; justify-content: space-between; gap: 12px; padding: 7px 10px; background: var(--surface); font-size: 13px; }
+.rows dt { color: var(--ink-2); min-width: 0; }
+.rows dt small { display: block; color: var(--muted); font-size: 11px; }
+.rows dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+.rows .warn dd { color: #ffd9a3; }
+.rows .warn dd::before { content: "! "; color: var(--warn); }
+.note { margin: 12px 0 0; font-size: 13px; color: var(--ink-2); display: flex; gap: 8px; align-items: flex-start; }
+.note svg { width: 15px; height: 15px; flex: none; margin-top: 2px; color: var(--muted); }
+.card.st-warn .note svg { color: var(--warn); }
+.card.st-alert .note svg, .card.st-error .note svg { color: var(--alert); }
+.meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+.meta .links { display: flex; gap: 8px; align-items: center; }
+.manual-form { margin-top: 12px; padding: 12px; border-radius: 12px; background: var(--surface-3); display: grid; gap: 8px; }
+.manual-form label { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); }
+.manual-form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.manual-form .bar { display: flex; gap: 8px; justify-content: flex-end; }
+input[type=text], input[type=number], input[type=password], input[type=datetime-local], input[type=url] {
+  width: 100%; background: #0f1518; border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; outline: none;
+}
+input:focus { border-color: var(--gold-line); box-shadow: 0 0 0 3px var(--gold-soft); }
+.hist { margin-top: 10px; }
+.hist summary { cursor: pointer; color: var(--ink-2); font-size: 13px; }
+.hist table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.hist td { padding: 5px 4px; border-top: 1px solid var(--border); }
+.hist td.num-col { text-align: right; }
+.hist .down { color: #ffc2ba; }
+.hist .up { color: #b9e6ba; }
+.hist .x { background: none; border: 0; color: var(--muted); cursor: pointer; padding: 0 4px; }
+.hist .x:hover { color: var(--alert); }
+.err { color: #ffc2ba; font-size: 12px; min-height: 16px; }
+
+footer.page { margin-top: 28px; color: var(--muted); font-size: 12px; display: grid; gap: 4px; }
+footer.page code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; color: var(--ink-2); }
+
+/* settings */
+dialog {
+  width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0; border-radius: 18px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--ink); box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+}
+dialog::backdrop { background: rgba(5, 8, 10, .65); backdrop-filter: blur(2px); }
+.dlg-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 20px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.dlg-head h2 { margin: 0; font-size: 17px; }
+.dlg-body { padding: 16px 20px 20px; display: grid; gap: 14px; }
+.dlg-foot { position: sticky; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 20px; background: var(--surface); border-top: 1px solid var(--border); flex-wrap: wrap; }
+fieldset { border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px 14px; margin: 0; display: grid; gap: 10px; background: var(--surface-2); }
+legend { padding: 0 6px; font-weight: 700; display: flex; gap: 8px; align-items: center; }
+legend small { color: var(--muted); font-weight: 500; }
+.field { display: grid; gap: 4px; }
+.field > span { font-size: 13px; color: var(--ink-2); }
+.field small { color: var(--muted); font-size: 11px; }
+.field.check { grid-template-columns: auto 1fr; align-items: center; gap: 8px; }
+.row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.prices { width: 100%; border-collapse: collapse; font-size: 13px; }
+.prices th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12px; padding: 0 4px 4px; }
+.prices td { padding: 3px 4px; }
+.prices td:last-child { width: 32px; }
+.msg { font-size: 13px; color: var(--ink-2); }
+.msg.bad { color: #ffc2ba; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+
+@media (max-width: 640px) {
+  .wrap { padding: 16px 16px 40px; }
+  .grid { grid-template-columns: 1fr; }
+  .num { font-size: 38px; }
+  .row-grid, .manual-form .two { grid-template-columns: 1fr; }
+  .tick .when { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="crest" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#e9c46a" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.5 20 7v10l-8 4.5L4 17V7z"/><path d="M12 7.5v9M8.5 10.5c1-1.4 2.2-2 3.5-2s2.5.6 3.5 2M8.5 14c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2"/></svg></div>
+      <div>
+        <h1>Villagen 비용 모니터</h1>
+        <p class="sub">이 PC에서만 실행 · 키는 밖으로 나가지 않아요</p>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="tick" title="자동 새로고침">
+        <svg viewBox="0 0 20 20"><circle class="ring-bg" cx="10" cy="10" r="8" fill="none" stroke-width="2.5"/><circle id="ring" class="ring" cx="10" cy="10" r="8" fill="none" stroke-width="2.5" stroke-dasharray="50.27" stroke-dashoffset="0" stroke-linecap="round"/></svg>
+        <span class="when" id="when">불러오는 중</span>
+      </div>
+      <button class="btn" id="refresh" type="button" title="지금 다시 읽기 (Tripo는 1분에 한 번)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>새로고침</button>
+      <button class="btn" id="open-settings" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>설정</button>
+    </div>
+  </header>
+
+  <div id="offline" class="offline" hidden>모니터 프로그램이 꺼져 있어요. 바탕화면의 <b>Villagen 비용 모니터</b> 아이콘으로 다시 열어 주세요. (자동으로 다시 연결을 시도해요)</div>
+  <section id="alerts" class="alerts" aria-live="polite"></section>
+  <main id="cards" class="grid"></main>
+
+  <footer class="page">
+    <div><span class="est">추정</span> 표시는 서버가 기록한 토큰 수 × 설정의 요금표로 계산한 값이에요. 실제 청구서와 다를 수 있어요.</div>
+    <div>Tripo API는 1분에 한 번, 서버는 30초마다 읽어요 (모두 무료 조회). 서버의 "오늘"은 한국 시간 오전 9시에 바뀌어요.</div>
+    <div>터미널에서 잔액 기록: <code>python tools/cost_monitor/monitor.py record --source scenario --balance 500</code></div>
+    <div id="datadir"></div>
+  </footer>
+</div>
+
+<dialog id="settings" aria-labelledby="settings-title">
+  <form id="settings-form" novalidate>
+    <div class="dlg-head"><h2 id="settings-title">설정</h2><button class="btn small ghost close-settings" type="button">닫기</button></div>
+    <div class="dlg-body" id="settings-body"></div>
+    <div class="dlg-foot"><span class="msg" id="settings-msg"></span><div style="display:flex;gap:8px"><button class="btn close-settings" type="button">취소</button><button class="btn gold" id="settings-save" type="button">저장</button></div></div>
+  </form>
+</dialog>
+
+<script nonce="__NONCE__">
+'use strict';
+const TOKEN = '__MONITOR_TOKEN__';
+const SVGNS = 'http://www.w3.org/2000/svg';
+const STATUS = { ok: '정상', warn: '주의', alert: '위험', error: '오류', off: '대기' };
+const ERRORS = {
+  invalid_url: '서버 주소는 https://로 시작하고 뒤에 경로가 없어야 해요.',
+  invalid_key: '사용량 키는 공백 없이 32자 이상이에요. 서버에서 받은 한 줄을 그대로 붙여넣어 주세요.',
+  invalid_number: '숫자를 확인해 주세요.',
+  invalid_prices: '요금표의 패턴과 숫자를 확인해 주세요.',
+  invalid_link: '웹 주소는 https://로 시작해야 해요.',
+  invalid_text: '이름이나 단위를 확인해 주세요 (60자 이내).',
+  invalid_list: '서버 id를 쉼표로 구분해 주세요 (예: school, judging).',
+  invalid_time: '확인 시각을 확인해 주세요.',
+  token_required: '페이지가 오래되었어요. 새로고침(F5) 해 주세요.',
+};
+const nf = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 });
+const nf1 = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 1 });
+let state = null, timer = null, nextAt = 0, period = 30, busy = false;
+const openForms = new Map();      // card id -> live manual form node (kept across redraws)
+const openHistory = new Set();
+
+function el(tag, attrs, ...kids) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') node.className = v;
+    else if (k === 'text') node.textContent = v;
+    else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v === true ? '' : v);
+  }
+  for (const kid of kids.flat()) if (kid !== null && kid !== undefined && kid !== false) node.append(kid instanceof Node ? kid : String(kid));
+  return node;
+}
+function svg(tag, attrs) {
+  const node = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, v);
+  return node;
+}
+const ICONS = {
+  info: 'M12 8h.01M11 12h1v5h1M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z',
+  warn: 'M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
+};
+function icon(name) {
+  const s = svg('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' });
+  s.append(svg('path', { d: ICONS[name] }));
+  return s;
+}
+
+async function api(path, body) {
+  const options = { headers: { 'X-Monitor-Token': TOKEN } };
+  if (body !== undefined) {
+    options.method = 'POST';
+    options.headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(path, options);
+  let data = null;
+  try { data = await response.json(); } catch (e) { /* empty */ }
+  if (!response.ok) {
+    const error = new Error((data && data.detail) || ('HTTP ' + response.status));
+    error.status = response.status;
+    throw error;
+  }
+  return data;
+}
+function errorText(error) { return ERRORS[error.message] || error.message || '알 수 없는 오류예요.'; }
+
+// --- formatting ---
+function money(v) {
+  const a = Math.abs(v);
+  return (v < 0 ? '-$' : '$') + (a >= 100 ? nf.format(a) : a >= 1 ? a.toFixed(2) : a.toFixed(3));
+}
+function amount(v, card) {
+  if (v === null || v === undefined) return '–';
+  if (card && card.money) return money(v);
+  if (Math.abs(v) >= 100 || Number.isInteger(v)) return nf.format(v);
+  return nf1.format(v);
+}
+function won(v) { return state && state.krw_per_usd ? '약 ' + nf.format(v * state.krw_per_usd) + '원' : ''; }
+function ago(ts) {
+  if (!ts) return '';
+  const s = Math.max(0, Date.now() / 1000 - ts);
+  if (s < 10) return '방금';
+  if (s < 60) return Math.floor(s) + '초 전';
+  if (s < 3600) return Math.floor(s / 60) + '분 전';
+  if (s < 86400) return Math.floor(s / 3600) + '시간 전';
+  return Math.floor(s / 86400) + '일 전';
+}
+function stamp(ts) {
+  const d = new Date(ts * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function shortStamp(ts) {
+  const d = new Date(ts * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function localInput(date) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}`;
+}
+
+// --- sparkline: one series, history muted, the latest value in gold, hover tooltip ---
+function spark(series, card) {
+  const points = (series && series.points) || [];
+  const box = el('figure', { class: 'spark', style: 'margin-left:0;margin-right:0' });
+  const unit = card.money ? '' : (card.unit ? ' ' + card.unit : '');
+  const label = (v) => (card.money ? money(v) : amount(v, card) + unit);
+  if (series.kind === 'line' && points.length < 2 || !points.length) {
+    box.append(el('div', { class: 'empty', text: '기록이 쌓이면 그래프가 보여요' }));
+    return box;
+  }
+  const W = 300, H = 56, pad = 4;
+  const s = svg('svg', { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: 'none', role: 'img', 'aria-label': series.label || '' });
+  const tip = el('div', { class: 'tip' });
+  const values = points.map((p) => +p[1] || 0);
+  let lo = Math.min(...values), hi = Math.max(...values);
+  const marks = [];
+  if (series.kind === 'bars') {
+    lo = 0; if (hi <= 0) hi = 1;
+    const n = points.length, gap = 2, bw = Math.max(2, (W - gap * (n - 1)) / n);
+    points.forEach((p, i) => {
+      const h = Math.max(values[i] > 0 ? 2 : 0, (values[i] / hi) * (H - pad));
+      const x = i * (bw + gap);
+      const last = i === n - 1;
+      s.append(svg('rect', { x: x.toFixed(1), y: (H - h).toFixed(1), width: bw.toFixed(1), height: h.toFixed(1), rx: Math.min(2, bw / 2), fill: last ? 'var(--gold)' : 'var(--spark)' }));
+      s.append(svg('rect', { x: x.toFixed(1), y: 0, width: (bw + gap).toFixed(1), height: H, fill: 'transparent' }));
+      marks.push({ x: x + bw / 2, y: H - h, text: `${String(p[0]).slice(5)} · ${label(values[i])}` });
+    });
+    s.append(svg('line', { x1: 0, x2: W, y1: H - .5, y2: H - .5, stroke: 'var(--border)', 'stroke-width': 1 }));
+  } else {
+    if (hi === lo) { hi += 1; lo -= 1; }
+    const t0 = points[0][0], t1 = points[points.length - 1][0] || t0 + 1;
+    const xs = points.map((p) => ((p[0] - t0) / Math.max(1, t1 - t0)) * (W - 8) + 4);
+    const ys = values.map((v) => H - pad - ((v - lo) / (hi - lo)) * (H - pad * 2));
+    const line = xs.map((x, i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join('');
+    s.append(svg('path', { d: `${line}L${xs[xs.length - 1].toFixed(1)},${H}L${xs[0].toFixed(1)},${H}Z`, fill: 'rgba(233,196,106,.08)' }));
+    s.append(svg('path', { d: line, fill: 'none', stroke: 'var(--spark)', 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke', 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    const lastX = xs[xs.length - 1], lastY = ys[ys.length - 1];
+    s.append(svg('circle', { cx: lastX, cy: lastY, r: 3.5, fill: 'var(--gold)', stroke: 'var(--surface)', 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke' }));
+    points.forEach((p, i) => marks.push({ x: xs[i], y: ys[i], text: `${shortStamp(p[0])} · ${label(values[i])}` }));
+  }
+  const cross = svg('line', { x1: 0, x2: 0, y1: 0, y2: H, stroke: 'var(--gold-line)', 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke', opacity: 0 });
+  s.append(cross);
+  s.addEventListener('mousemove', (event) => {
+    const r = s.getBoundingClientRect();
+    const x = ((event.clientX - r.left) / r.width) * W;
+    let best = marks[0];
+    for (const m of marks) if (Math.abs(m.x - x) < Math.abs(best.x - x)) best = m;
+    cross.setAttribute('x1', best.x); cross.setAttribute('x2', best.x); cross.setAttribute('opacity', 1);
+    tip.textContent = best.text;
+    tip.style.left = (best.x / W) * r.width + 'px';
+    tip.style.top = (best.y / H) * r.height - 6 + 'px';
+    tip.classList.add('on');
+  });
+  s.addEventListener('mouseleave', () => { tip.classList.remove('on'); cross.setAttribute('opacity', 0); });
+  box.append(s, tip);
+  const first = series.kind === 'bars' ? String(points[0][0]).slice(5) : shortStamp(points[0][0]);
+  box.append(el('figcaption', { class: 'label' }, el('span', { text: series.label || '' }), el('span', { text: first + ' ~' })));
+  return box;
+}
+
+// --- cards ---
+function manualForm(card) {
+  const error = el('div', { class: 'err' });
+  const balance = el('input', { type: 'number', step: 'any', min: '0', required: true, placeholder: card.value !== null && card.value !== undefined ? String(card.value) : '예: 1200' });
+  const when = el('input', { type: 'datetime-local', value: localInput(new Date()) });
+  const note = el('input', { type: 'text', maxlength: '200', placeholder: '예: 캐릭터 시안 3장 생성 후' });
+  const save = el('button', { class: 'btn gold small', type: 'submit', text: '저장' });
+  const form = el('form', { class: 'manual-form' },
+    el('div', { class: 'two' },
+      el('label', {}, `지금 잔액${card.unit ? ' (' + card.unit + ')' : ''}`, balance),
+      el('label', {}, '확인한 시각', when)),
+    el('label', {}, '메모 (선택)', note),
+    error,
+    el('div', { class: 'bar' },
+      el('button', { class: 'btn small ghost', type: 'button', text: '취소', onclick: () => { openForms.delete(card.id); render(); } }),
+      save));
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (balance.value === '') { error.textContent = '잔액을 넣어 주세요.'; balance.focus(); return; }
+    save.disabled = true;
+    try {
+      state = await api('/api/manual', { source: card.id, balance: Number(balance.value), checked_at: when.value || null, note: note.value });
+      openForms.delete(card.id);
+      render(card.id);
+    } catch (e) { error.textContent = errorText(e); save.disabled = false; }
+  });
+  setTimeout(() => balance.focus(), 0);
+  return form;
+}
+
+function historyBlock(card) {
+  const details = el('details', { class: 'hist' }, el('summary', { text: `최근 기록 ${card.history.length}개` }));
+  if (openHistory.has(card.id)) details.open = true;
+  details.addEventListener('toggle', () => details.open ? openHistory.add(card.id) : openHistory.delete(card.id));
+  const table = el('table');
+  for (const h of card.history) {
+    const delta = h.delta === null || h.delta === undefined ? '' : (h.delta > 0 ? '+' : '') + nf.format(h.delta);
+    const remove = el('button', { class: 'x', type: 'button', title: '이 기록 지우기', text: '×', onclick: async () => {
+      if (!confirm(`${stamp(h.ts)} 기록 (${nf.format(h.value)})을 지울까요?`)) return;
+      try { state = await api('/api/manual/delete', { source: card.id, id: h.id }); render(); } catch (e) { alert(errorText(e)); }
+    } });
+    table.append(el('tr', {},
+      el('td', { text: stamp(h.ts) }),
+      el('td', { class: 'num-col', text: nf.format(h.value) }),
+      el('td', { class: 'num-col ' + (h.delta < 0 ? 'down' : h.delta > 0 ? 'up' : ''), text: delta }),
+      el('td', { text: (h.origin === 'cli' ? '터미널 ' : '') + (h.note || ''), title: h.note || '' }),
+      el('td', {}, remove)));
+  }
+  details.append(table);
+  return details;
+}
+
+function cardNode(card) {
+  const status = card.status || 'ok';
+  const node = el('article', { class: `card st-${status}`, id: 'card-' + card.id });
+  const badge = el('span', { class: 'badge ' + status }, el('i'), STATUS[status] || status);
+  node.append(el('div', { class: 'card-head' }, el('h2', { text: card.name, title: card.name }), card.estimated ? el('span', { class: 'est', text: '추정' }) : null, badge));
+  const hero = el('div', { class: 'hero' }, el('span', { class: 'num', text: amount(card.value, card) }));
+  if (card.money && card.value !== null && card.value !== undefined) hero.append(el('span', { class: 'krw', text: won(card.value) }));
+  else if (card.unit && card.value !== null && card.value !== undefined) hero.append(el('span', { class: 'unit', text: card.unit }));
+  node.append(hero, el('div', { class: 'caption', text: card.caption || '' }));
+  if (card.meter && card.meter.total) {
+    const pct = Math.max(0, Math.min(100, (card.meter.used / card.meter.total) * 100));
+    const level = status === 'alert' || status === 'error' ? 'alert' : status === 'warn' ? 'warn' : '';
+    node.append(el('div', { class: 'meter ' + level, role: 'meter', 'aria-valuemin': '0', 'aria-valuemax': String(card.meter.total), 'aria-valuenow': String(card.meter.used), 'aria-label': '예산 사용' },
+      el('span', { style: `width:${pct.toFixed(1)}%` })));
+    node.append(el('div', { class: 'meter-scale' }, el('span', { text: `사용 ${nf.format(card.meter.used)}` }), el('span', { text: `${pct.toFixed(0)}% · 총 ${nf.format(card.meter.total)}` })));
+  }
+  const chips = [];
+  for (const [key, text] of [['spent_today', '오늘 사용'], ['spent_7d', '7일 사용']]) {
+    if (card[key] === null || card[key] === undefined) continue;
+    chips.push(el('span', { class: 'chip' }, text, el('b', { text: amount(card[key], card) })));
+  }
+  if (chips.length) node.append(el('div', { class: 'chips' }, chips));
+  if (card.series) node.append(spark(card.series, card));
+  if (card.rows && card.rows.length) {
+    const rows = el('dl', { class: 'rows' });
+    for (const row of card.rows) {
+      rows.append(el('div', { class: row.level || '' },
+        el('dt', {}, row.label, row.hint ? el('small', { text: row.hint }) : null),
+        el('dd', { text: row.value })));
+    }
+    node.append(rows);
+  }
+  if (card.note) node.append(el('p', { class: 'note' }, icon(status === 'warn' || status === 'alert' || status === 'error' ? 'warn' : 'info'), el('span', { text: card.note })));
+  if (card.manual) {
+    if (openForms.has(card.id)) node.append(openForms.get(card.id));
+    if (card.history && card.history.length) node.append(historyBlock(card));
+  }
+  const links = el('span', { class: 'links' });
+  if (card.link && /^https:\/\//.test(card.link)) links.append(el('a', { href: card.link, target: '_blank', rel: 'noopener noreferrer', text: '사이트 열기' }));
+  if (card.manual && !openForms.has(card.id)) {
+    links.append(el('button', { class: 'btn small', type: 'button', text: '잔액 입력', onclick: () => { openForms.set(card.id, manualForm(card)); render(); } }));
+  }
+  const when = card.updated ? (card.manual ? '확인 ' : '읽음 ') + ago(card.updated) : '아직 읽지 않았어요';
+  node.append(el('div', { class: 'meta' }, el('span', { text: when, title: card.updated ? stamp(card.updated) : '' }), links));
+  return node;
+}
+
+function render(flash) {
+  if (!state) return;
+  const cards = document.getElementById('cards');
+  const scroll = window.scrollY;
+  const fresh = state.cards.map(cardNode);
+  cards.replaceChildren(...fresh);
+  if (!render.done) render.done = true; else for (const c of fresh) c.style.animation = 'none';
+  if (flash) {
+    const node = document.getElementById('card-' + flash);
+    if (node) { node.classList.add('flash'); setTimeout(() => node.classList.remove('flash'), 900); }
+  }
+  const alerts = document.getElementById('alerts');
+  alerts.replaceChildren(...state.alerts.map((a) => el('button', { class: 'alert ' + a.level, type: 'button', onclick: () => {
+    const node = document.getElementById('card-' + a.id);
+    if (node) { node.scrollIntoView({ behavior: 'smooth', block: 'center' }); node.classList.add('flash'); setTimeout(() => node.classList.remove('flash'), 1200); }
+  } }, el('span', { class: 'badge ' + (a.level === 'alert' ? 'alert' : 'warn') }, el('i'), a.level === 'alert' ? '위험' : '주의'), el('b', { text: a.name }), el('span', { class: 'text', text: a.text }))));
+  document.getElementById('datadir').textContent = '설정과 기록 위치 (이 PC): ' + state.data_dir;
+  window.scrollTo(0, scroll);
+}
+
+// --- refresh loop ---
+async function load(force) {
+  if (busy) return;
+  busy = true;
+  const button = document.getElementById('refresh');
+  if (force) { button.classList.add('spin'); button.disabled = true; }
+  try {
+    state = await api(force ? '/api/refresh' : '/api/state', force ? {} : undefined);
+    document.getElementById('offline').hidden = true;
+    period = Math.max(15, state.refresh_seconds || 30);
+    render();
+  } catch (e) {
+    if (e.status === 403) document.getElementById('offline').textContent = ERRORS.token_required;
+    document.getElementById('offline').hidden = false;
+  } finally {
+    busy = false;
+    button.classList.remove('spin'); button.disabled = false;
+    nextAt = Date.now() + period * 1000;
+  }
+}
+function tick() {
+  const left = Math.max(0, nextAt - Date.now());
+  const ring = document.getElementById('ring');
+  ring.setAttribute('stroke-dashoffset', String(50.27 * (1 - left / (period * 1000))));
+  const when = document.getElementById('when');
+  if (state) {
+    const d = new Date(state.generated * 1000);
+    when.textContent = `${d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} 갱신 · ${Math.ceil(left / 1000)}초 뒤`;
+  }
+  if (left <= 0 && !document.hidden) load(false);
+}
+document.getElementById('refresh').addEventListener('click', () => load(true));
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() > nextAt - period * 500) load(false); });
+
+// --- settings ---
+const dialog = document.getElementById('settings');
+let config = null;
+const inputs = [];   // {source, name, kind, read()}
+
+function field(label, hint, control, check) {
+  return el('label', { class: 'field' + (check ? ' check' : '') }, check ? control : el('span', { text: label }), check ? el('span', { text: label }) : control, hint ? el('small', { text: hint }) : null);
+}
+function pricesEditor(value) {
+  const table = el('table', { class: 'prices' }, el('tr', {}, el('th', { text: '모델 패턴' }), el('th', { text: '입력' }), el('th', { text: '캐시 입력' }), el('th', { text: '출력' }), el('th')));
+  const rows = [];
+  const addRow = (pattern, price) => {
+    const cells = [el('input', { type: 'text', value: pattern || '' }), ...['input', 'cached_input', 'output'].map((k) => el('input', { type: 'number', step: 'any', min: '0', value: price && price[k] !== undefined ? String(price[k]) : '' }))];
+    const tr = el('tr', {}, cells.map((c) => el('td', {}, c)), el('td', {}, el('button', { class: 'btn small ghost', type: 'button', text: '×', title: '이 줄 지우기', onclick: () => { tr.remove(); rows.splice(rows.indexOf(cells), 1); } })));
+    rows.push(cells);
+    table.append(tr);
+  };
+  for (const [pattern, price] of Object.entries(value || {})) addRow(pattern, price);
+  const wrap = el('div', {}, table, el('button', { class: 'btn small', type: 'button', text: '+ 줄 추가', onclick: () => addRow('', null) }));
+  wrap.read = () => {
+    const out = {};
+    for (const [pattern, ...nums] of rows) {
+      if (!pattern.value.trim()) continue;
+      const entry = {};
+      ['input', 'cached_input', 'output'].forEach((k, i) => { if (nums[i].value !== '') entry[k] = Number(nums[i].value); });
+      out[pattern.value.trim()] = entry;
+    }
+    return out;
+  };
+  return wrap;
+}
+function control(source, f) {
+  const value = source ? source[f.name] : config.settings[f.name];
+  let node, read;
+  if (f.kind === 'bool') { node = el('input', { type: 'checkbox' }); node.checked = !!value; read = () => node.checked; }
+  else if (f.kind === 'number' || f.kind === 'ratio') { node = el('input', { type: 'number', step: 'any', value: value === null || value === undefined ? '' : String(value) }); read = () => node.value === '' ? null : Number(node.value); }
+  else if (f.kind === 'secret') {
+    const isSet = value && value.set;
+    node = el('div', { class: 'field' });
+    const input = el('input', { type: 'password', autocomplete: 'off', spellcheck: 'false', placeholder: isSet ? '저장되어 있어요 · 바꿀 때만 붙여넣기' : '비어 있어요 · 여기에 붙여넣기' });
+    const clear = el('input', { type: 'checkbox' });
+    node.append(input);
+    if (isSet) node.append(el('label', { class: 'toggle' }, clear, '저장된 키 지우기'));
+    read = () => input.value.trim();
+    inputs.push({ source: source.id, name: f.name, kind: 'secret', read, clear: () => clear.checked });
+    return field(f.label, f.hint, node);
+  }
+  else if (f.kind === 'prices') { node = pricesEditor(value); read = node.read; }
+  else if (f.kind === 'list') { node = el('input', { type: 'text', value: (value || []).join(', ') }); read = () => node.value; }
+  else { node = el('input', { type: f.kind === 'url' || f.kind === 'link' ? 'url' : 'text', value: value || '', spellcheck: 'false' }); read = () => node.value; }
+  inputs.push({ source: source ? source.id : null, name: f.name, kind: f.kind, read });
+  return field(f.label, f.hint, node, f.kind === 'bool');
+}
+async function openSettings() {
+  const body = document.getElementById('settings-body');
+  const msg = document.getElementById('settings-msg');
+  msg.textContent = ''; msg.className = 'msg';
+  inputs.length = 0;
+  try { config = await api('/api/config'); } catch (e) { alert(errorText(e)); return; }
+  const parts = [];
+  parts.push(el('fieldset', {}, el('legend', { text: '화면' }), el('div', { class: 'row-grid' }, config.settings_fields.map((f) => control(null, f)))));
+  for (const source of config.sources) {
+    const type = config.types[source.type];
+    const enabled = el('input', { type: 'checkbox' }); enabled.checked = source.enabled !== false;
+    inputs.push({ source: source.id, name: 'enabled', kind: 'bool', read: () => enabled.checked });
+    const legend = el('legend', {}, source.label, el('small', { text: type ? type.title : source.type }), el('label', { class: 'toggle' }, enabled, '표시'));
+    const set = el('fieldset', {}, legend);
+    if (type) for (const f of type.fields) set.append(control(source, f));
+    if (!source.builtin) set.append(el('div', {}, el('button', { class: 'btn small', type: 'button', text: '이 항목 삭제', onclick: () => removeSource(source) })));
+    parts.push(set);
+  }
+  const label = el('input', { type: 'text', placeholder: '예: AWS 크레딧' });
+  const unit = el('input', { type: 'text', placeholder: '예: USD' });
+  const warn = el('input', { type: 'number', step: 'any', placeholder: '선택' });
+  const link = el('input', { type: 'url', placeholder: 'https://... (선택)' });
+  parts.push(el('fieldset', {}, el('legend', {}, '직접 입력 항목 추가', el('small', { text: 'API가 없는 웹 계정' })),
+    el('div', { class: 'row-grid' }, field('이름', '', label), field('단위', '', unit), field('경고: 이보다 적으면', '', warn), field('확인하는 웹 주소', '', link)),
+    el('div', {}, el('button', { class: 'btn small', type: 'button', text: '+ 추가', onclick: async () => {
+      if (!label.value.trim()) { msg.textContent = '이름을 넣어 주세요.'; msg.className = 'msg bad'; return; }
+      try {
+        const reply = await api('/api/config', { add: { type: 'manual', label: label.value, unit: unit.value, warn_below: warn.value === '' ? null : Number(warn.value), link: link.value } });
+        state = reply.state; render(); dialog.close();
+      } catch (e) { msg.textContent = errorText(e); msg.className = 'msg bad'; }
+    } }))));
+  body.replaceChildren(...parts);
+  dialog.showModal();
+}
+async function removeSource(source) {
+  if (!confirm(`'${source.label}' 항목을 지울까요? (기록은 남아 있어요)`)) return;
+  try { const reply = await api('/api/config', { remove: [source.id] }); state = reply.state; render(); dialog.close(); }
+  catch (e) { alert(errorText(e)); }
+}
+async function saveSettings() {
+  const msg = document.getElementById('settings-msg');
+  const settings = {}, bySource = new Map();
+  for (const input of inputs) {
+    if (input.source === null) { const v = input.read(); if (v !== null) settings[input.name] = v; continue; }
+    if (!bySource.has(input.source)) bySource.set(input.source, { id: input.source });
+    const change = bySource.get(input.source);
+    if (input.kind === 'secret') {
+      const v = input.read();
+      if (v) change[input.name] = v;
+      else if (input.clear()) (change.clear = change.clear || []).push(input.name);
+    } else change[input.name] = input.read();
+  }
+  const save = document.getElementById('settings-save');
+  save.disabled = true;
+  msg.textContent = '저장하고 다시 읽는 중...'; msg.className = 'msg';
+  try {
+    const reply = await api('/api/config', { settings, sources: [...bySource.values()] });
+    state = reply.state; render();
+    if (reply.messages && reply.messages.length) { alert(reply.messages.join('\n')); }
+    dialog.close();
+  } catch (e) { msg.textContent = errorText(e); msg.className = 'msg bad'; }
+  finally { save.disabled = false; }
+}
+document.getElementById('open-settings').addEventListener('click', openSettings);
+document.getElementById('settings-save').addEventListener('click', saveSettings);
+document.getElementById('settings-form').addEventListener('submit', (event) => event.preventDefault());
+for (const button of document.querySelectorAll('.close-settings')) button.addEventListener('click', () => dialog.close());
+
+load(false);
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
