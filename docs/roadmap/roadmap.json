@@ -196,24 +196,32 @@
   },
   {
    "name": "2 · 개발 비용 모니터",
-   "status": "in_progress",
-   "period": "지금",
+   "status": "done",
+   "period": "2026-10-11",
    "items": [
     {
      "title": "Tripo API 잔액 · Tripo 스튜디오 크레딧",
-     "status": "in_progress"
+     "status": "done",
+     "date": "10-11"
     },
     {
      "title": "Gemini 사용량 · Scenario CU",
-     "status": "in_progress"
+     "status": "done",
+     "date": "10-11"
     },
     {
      "title": "학교 예산 · 하루 제작 수를 한 화면에서 실시간 확인",
-     "status": "in_progress"
+     "status": "done",
+     "date": "10-11"
     },
     {
      "title": "새 서비스를 쉽게 추가하는 구조",
-     "status": "in_progress"
+     "status": "done",
+     "date": "10-11"
+    },
+    {
+     "title": "서버 사용량 키 연결 (VM 명령 1회)",
+     "status": "next"
     }
    ]
   },
@@ -298,7 +306,11 @@
   {
    "version": "2026.10.11-0253",
    "note": "2단계 개발 비용 모니터 시작 (이 PC 대시보드, 서비스 추가 쉬운 구조)"
+  },
+  {
+   "version": "2026.10.11-0323",
+   "note": "2단계 비용 모니터 완성 (이 PC 대시보드 · 서버 사용량 경로)"
   }
  ],
- "version": "2026.10.11-0253"
+ "version": "2026.10.11-0323"
 }
