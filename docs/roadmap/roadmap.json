@@ -196,20 +196,24 @@
   },
   {
    "name": "2 · 개발 비용 모니터",
-   "status": "next",
-   "period": "다음",
+   "status": "in_progress",
+   "period": "지금",
    "items": [
     {
-     "title": "Tripo API · Tripo 스튜디오 크레딧",
-     "status": "next"
+     "title": "Tripo API 잔액 · Tripo 스튜디오 크레딧",
+     "status": "in_progress"
     },
     {
      "title": "Gemini 사용량 · Scenario CU",
-     "status": "next"
+     "status": "in_progress"
     },
     {
      "title": "학교 예산 · 하루 제작 수를 한 화면에서 실시간 확인",
-     "status": "next"
+     "status": "in_progress"
+    },
+    {
+     "title": "새 서비스를 쉽게 추가하는 구조",
+     "status": "in_progress"
     }
    ]
   },
@@ -290,7 +294,11 @@
   {
    "version": "2026.10.11-0245",
    "note": "로드맵 첫 공개: 완료 3단계 + 앞으로 6단계"
+  },
+  {
+   "version": "2026.10.11-0253",
+   "note": "2단계 개발 비용 모니터 시작 (이 PC 대시보드, 서비스 추가 쉬운 구조)"
   }
  ],
- "version": "2026.10.11-0245"
+ "version": "2026.10.11-0253"
 }
