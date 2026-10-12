@@ -1,9 +1,23 @@
 # Villagen — village + generate
 
+<!-- school-download:start -->
+## ⬇ 학교판 바로 설치 · 0.11.3 (2026-10-12)
+
+### [▶ 설치 파일 받기 — Villagen_School_Setup.exe (1.19GB)](https://github.com/NormalMan0228/tripo_s1/releases/download/v0.11.3-school/Villagen_School_Setup.exe)
+
+받은 파일을 실행 → 설치 위치 선택 → 바탕화면·시작 메뉴에 **Villagen** 아이콘이 생깁니다. 이전 버전 위에 그대로 설치하면 됩니다.
+처음 실행할 때 Windows "PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누르세요. 로그인 화면의 **학교 월드**에서 계정을 만듭니다.
+
+- 설치 없이 쓰기: [Villagen_School_Windows.zip (1.29GB)](https://github.com/NormalMan0228/tripo_s1/releases/download/v0.11.3-school/Villagen_School_Windows.zip) → 압축 풀고 `Villagen\Villagen.exe`
+- [이번 버전에서 바뀐 점](https://github.com/NormalMan0228/tripo_s1/releases/tag/v0.11.3-school) · [체크섬](https://github.com/NormalMan0228/tripo_s1/releases/download/v0.11.3-school/SHA256SUMS_School.txt) · [모든 버전](https://github.com/NormalMan0228/tripo_s1/releases) · [로드맵](docs/roadmap/README.md)
+
+<sub>Install (Windows): download Villagen_School_Setup.exe above and run it. 安装：下载上面的 Villagen_School_Setup.exe 并运行。</sub>
+<!-- school-download:end -->
+
 | 🌐 한국어 | 🌐 English | 🌐 中文 |
 |:---:|:---:|:---:|
 | [**워크스루 보기**](docs/WALKTHROUGH_KO.md) | [**Walkthrough**](docs/WALKTHROUGH_EN.md) | [**游戏攻略**](docs/WALKTHROUGH_ZH.md) |
-| [⬇ 게임 받기 (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ Download (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ 下载游戏 (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) |
+| [⬇ 심사판 0.10.2 받기](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ Judging build 0.10.2](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ 评审版 0.10.2](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) |
 | 설정 → 게임플레이 → 언어 → **한국어** | Settings → Gameplay → Language → **English** | 设置 → 游戏 → 语言 → **中文** |
 
 **Villagen**(빌리지 + 제너레이트)은 섬 마을을 가꾸고, 원하는 물건을 글로 적으면 AI가 3D로 만들어 주는 마을 생활 RPG입니다. (이전 작업명: Tripothon)
