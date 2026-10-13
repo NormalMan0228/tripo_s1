@@ -64,6 +64,11 @@ static func door_for(room: String) -> Dictionary:
 		if door.room==room: return door
 	return {}
 
+## The building's name for a room id ("home" -> "나의 집"), translated; "" if none.
+static func room_title(room: String) -> String:
+	var door := door_for(room)
+	return TranslationServer.translate(str(door.title)) if not door.is_empty() else ""
+
 ## A step outside the door, where the walker reappears after leaving the room.
 static func door_return(room: String) -> Vector3:
 	var door := door_for(room)

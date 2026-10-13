@@ -191,6 +191,8 @@ func _ready() -> void:
 	# Window, renderer, buses, key bindings, UI scale (game_settings.gd).
 	GameSettings.apply_all(get_tree())
 	var veil := Transition.of(get_tree())
+	# The first load shows the island cover art; a walk out of a room keeps its card.
+	if not Engine.has_meta("studio_session"): veil.loading("", "start")
 	veil.cover()
 	api = Api.new()
 	add_child(api)
@@ -248,6 +250,9 @@ func _ready() -> void:
 	ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.theme = make_theme()
 	layer.add_child(ui)
+	if not Engine.has_meta("studio_session") and DisplayServer.get_name()!="headless":
+		# Let the loading card reach the screen before the village is built.
+		for i in 2: await get_tree().process_frame
 	build_world(false)
 	if Engine.has_meta("studio_session"):
 		var session: Dictionary=Engine.get_meta("studio_session")
@@ -259,10 +264,10 @@ func _ready() -> void:
 		player.position=TownLayout.door_return(str(session.get("room","workshop")))
 		follow_camera(1)
 		veil.play_door("close",str(session.get("room","workshop")))
-		veil.fade_in(0.55)
+		veil.fade_in()
 	else:
 		login_ui()
-		veil.fade_in(1.2)
+		veil.fade_in()
 
 ## The shared cozy theme (fonts, parchment/night frames, buttons, fields, lists,
 ## sliders, tooltips). Built once in RpgUi so the studio and menus match.
@@ -693,14 +698,15 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		I18n.remember("server",host)
 		I18n.remember("username",username.strip_edges())
 	var veil := Transition.of(get_tree())
-	await veil.fade_out(0.5)
+	veil.loading(TownLayout.room_title("home") if get_tree().current_scene==self else tr("다섯 섬 마을"))
+	await veil.fade_out()
 	if get_tree().current_scene==self:
 		# A new session starts at home; walking out of the front door opens the village.
 		Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":"home","multiplayer":social.enabled})
 		get_tree().change_scene_to_file("res://scenes/studio.tscn")
 		return
 	await enter_village()
-	veil.fade_in(0.8)
+	veil.fade_in()
 
 func build_world(survival: bool) -> void:
 	social.reset_world()
@@ -1789,6 +1795,10 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		busy=false
 		return
 	run=snapshot.data
+	# Into the expedition under the same loading card as every other change of place.
+	var veil := Transition.of(get_tree())
+	veil.loading(region_name(str(run.get("map_id",map_id))),"run")
+	await veil.fade_out()
 	build_world(true)
 	clear_ui()
 	screen="survival"
@@ -1875,6 +1885,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	update_run()
 	world_hint(tr("나무·열매·돌·풀에 가까이 가서 E로 채집하세요."))
 	busy=false
+	veil.fade_in()
 
 func intent(action: String, target := "") -> void:
 	if screen!="survival" or paused or run.get("status","")!="active": return
@@ -2210,8 +2221,13 @@ func toggle_pause() -> void:
 func retry_run() -> void:
 	var region: String=run.get("map_id","forest")
 	var difficulty: String=run.get("difficulty","standard")
-	await leave_run()
+	# One fade for the whole retry: the village is rebuilt under the card, not shown.
+	var veil := Transition.of(get_tree())
+	veil.loading(region_name(region),"run")
+	await veil.fade_out()
+	await leave_run(false)
 	if screen=="village": await start_run(region,difficulty)
+	if veil.veil.modulate.a>0.5: veil.fade_in()
 
 func suspend_run() -> void:
 	if coop_run: return
@@ -2223,7 +2239,7 @@ func suspend_run() -> void:
 	# Each accepted input is already persisted by the server. Preserve this active run.
 	run_id=""
 	busy=false
-	await enter_village()
+	await back_to_village()
 	message(tr("탐험을 저장했습니다. 하단의 이어하기로 같은 날부터 돌아갈 수 있어요."))
 
 func floating_feedback(value: String, at: Vector3, color: Color) -> void:
@@ -2313,7 +2329,16 @@ func show_results() -> void:
 	button(card,tr("보상 받고 마을로") if won else tr("마을로 돌아가기"),leave_run,"gold" if won else "primary")
 	if not won and not coop_run: button(card,tr("새 탐험으로 다시 도전"),retry_run)
 
-func leave_run() -> void:
+## Back from an expedition: the village is rebuilt under the loading card.
+func back_to_village(fade := true) -> void:
+	var veil := Transition.of(get_tree())
+	if fade:
+		veil.loading(tr("다섯 섬 마을"))
+		await veil.fade_out()
+	await enter_village()
+	if fade: veil.fade_in()
+
+func leave_run(fade := true) -> void:
 	if busy: return
 	CombatAudio.heartbeat(self,0.0)
 	VoiceBabble.stop()
@@ -2334,7 +2359,7 @@ func leave_run() -> void:
 			return
 	busy=false
 	run_id=""
-	await enter_village()
+	await back_to_village(fade)
 
 func logout() -> void:
 	if busy: return
@@ -2343,7 +2368,8 @@ func logout() -> void:
 	screen="logging_out"
 	world_epoch+=1
 	var veil := Transition.of(get_tree())
-	await veil.fade_out(0.45)
+	veil.loading("", "start")
+	await veil.fade_out()
 	await api.post("/v1/auth/logout",{})
 	api.token=""
 	social.reset_session()
@@ -2351,7 +2377,7 @@ func logout() -> void:
 	build_world(false)
 	login_ui()
 	busy=false
-	veil.fade_in(0.7)
+	veil.fade_in()
 
 func _exit_tree() -> void:
 	# A pending studio session means the map is only travelling to a room and back.
@@ -3077,7 +3103,8 @@ func open_studio(destination: String="workshop") -> void:
 	var veil := Transition.of(get_tree())
 	veil.play_door("open",destination)
 	player.controls_enabled=false
-	await veil.fade_out(0.45)
+	veil.loading(tr("%s님의 집") % str(session.visit_name) if session.has("visit_name") else TownLayout.room_title(destination))
+	await veil.fade_out()
 	leave_modules()
 	if is_instance_valid(town): town.release_map()
 	get_tree().change_scene_to_file("res://scenes/studio.tscn")

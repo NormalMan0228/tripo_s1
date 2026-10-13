@@ -193,7 +193,8 @@ func _ready() -> void:
 	Loader.warm_up_compression()
 	var veil := Transition.of(get_tree())
 	veil.cover()
-	veil.fade_in(0.55)
+	# Starts once the room is built (transition.gd waits out the build frame).
+	veil.fade_in()
 	api=Api.new();add_child(api)
 	gate=VersionGate.new();add_child(gate);gate.watch(api)
 	# Maintenance over: the room shows the server's state again (nothing was lost).
@@ -732,11 +733,11 @@ func travel(record: Dictionary, instant := false) -> void:
 		var off: Array[Vector3]=Interiors.arrival_path(counterpart,link.arrive)
 		hero.position=off[0]
 		update_camera(0.0,true)
-		Transition.of(get_tree()).fade_in(0.3)
+		Transition.of(get_tree()).fade_in()
 		await follow_path(off,1.15,-1.0,null,counterpart.kind=="ladder",counterpart)
 	else:
 		update_camera(0.0,true)
-		if not instant: await Transition.of(get_tree()).fade_in(0.3)
+		if not instant: await Transition.of(get_tree()).fade_in()
 	if is_instance_valid(hero):
 		hero.position=link.arrive
 		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
@@ -792,7 +793,7 @@ func follow_path(points: Array[Vector3], speed: float, fade_at: float, veil: Can
 			hero.external_motion=step.normalized()
 		if fade_at>=0.0 and not faded and veil and travelled/total>=fade_at:
 			faded=true
-			veil.fade_out(0.3)
+			veil.fade_out()
 		await get_tree().process_frame
 		if not is_instance_valid(hero): return
 	hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
@@ -1458,7 +1459,8 @@ func leave() -> void:
 	if floor_index==0 and is_instance_valid(hero):
 		walk_out=Vector3(float(room_spec.get("door_x",0.0)),0,float(room_spec.size.y)*0.5+1.6)
 	veil.play_door("open",room)
-	await veil.fade_out(0.45)
+	veil.loading(tr("다섯 섬 마을"))
+	await veil.fade_out()
 	if is_instance_valid(hero):
 		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
 	Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":room})

@@ -5,7 +5,10 @@ extends SceneTree
 ##    lower body with the upper body (hips square to the chest, knees bending forward,
 ##    feet on their own side, planted feet on the ground up and down a slope) in
 ##    the final drawn pose.
-##   Godot --headless --path game --script res://tests/world_polish_check.gd [-- --only=stairs]
+##  - fade: every change of place fades out and in over the same short times, a
+##    fade-in after a long build frame still fades (no pop), and the loading card
+##    shows while covered and is cleared once the veil is gone.
+##   Godot --headless --path game --script res://tests/world_polish_check.gd [-- --only=stairs|gait|fade]
 var failures: Array[String] = []
 var only := ""
 
@@ -27,6 +30,7 @@ func wants(name: String) -> bool:
 func run() -> void:
 	if wants("stairs"): await stairs()
 	if wants("gait"): await gait()
+	if wants("fade"): await fade()
 	print("WORLD_POLISH ", JSON.stringify({"ok":failures.is_empty(), "failures":failures}))
 	quit(0 if failures.is_empty() else 1)
 
@@ -183,3 +187,35 @@ func sample() -> void:
 	var thighs := (point("L_Thigh")-point("R_Thigh")).dot(right)
 	# The feet cross when they sit on the opposite sides of the thighs' order.
 	note("feet_cross", maxf(0.0, -left_side*signf(thighs)))
+
+## ------------------------------------------------------------------ fade
+
+func fade() -> void:
+	var Transition = load("res://scripts/transition.gd")
+	var veil = Transition.of(self)
+	await process_frame
+	# The stair check may have left a room mid-climb under the veil.
+	if veil.veil.modulate.a > 0.0: await veil.fade_in()
+	veil.loading(TranslationServer.translate("나의 집"))
+	var started := Time.get_ticks_msec()
+	await veil.fade_out()
+	var out_ms := Time.get_ticks_msec()-started
+	check(absf(out_ms-Transition.OUT*1000.0) < 120.0, "fade: out takes %d ms (%.0f)" % [out_ms, Transition.OUT*1000.0])
+	check(is_equal_approx(veil.veil.modulate.a, 1.0) and veil.card.visible and veil.heading.text != "", "fade: covered by the loading card with the place name")
+	check(not veil.tip.text.is_empty(), "fade: the card carries a tip")
+	# The new place builds in one long frame, then fades in.
+	veil.fade_in()
+	OS.delay_msec(700)
+	started = Time.get_ticks_msec()
+	var first_frames: Array[float] = []
+	while veil.veil.modulate.a > 0.0 and Time.get_ticks_msec()-started < 3000:
+		await process_frame
+		if first_frames.size() < 4: first_frames.append(veil.veil.modulate.a)
+	var in_ms := Time.get_ticks_msec()-started
+	check(first_frames[0] > 0.9, "fade: still covered right after the long build frame (%.2f)" % first_frames[0])
+	check(in_ms > Transition.IN*1000.0*0.8 and in_ms < Transition.IN*1000.0+300.0, "fade: in takes %d ms (%.0f)" % [in_ms, Transition.IN*1000.0])
+	check(not veil.card.visible, "fade: the card is cleared once the veil is gone")
+	# A plain fade (a stair) stays a dark veil.
+	await veil.fade_out()
+	check(not veil.card.visible, "fade: a plain fade shows no card")
+	await veil.fade_in()

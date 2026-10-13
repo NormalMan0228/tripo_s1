@@ -8,6 +8,8 @@ extends SceneTree
 ##                                          illustrated speaker at UI scale 80/100/140 %
 ##   artifacts/world-gait-turn.png            strip of frames while the walker reverses
 ##                                          at a run (lower body during the turn)
+##   artifacts/world-loading-<kind>.png      the loading card: game start over the cover
+##                                          art, a room, an expedition
 ##   Godot --path game --script res://tests/world_polish_capture.gd [-- --shot=nameplate|dialogue]
 const Stub = preload("res://tests/shadow_folk_stub.gd")
 const Folk = preload("res://scripts/shadow_folk.gd")
@@ -42,6 +44,20 @@ func run() -> void:
 		return
 	if shot == "gait":
 		await gait()
+		quit()
+		return
+	if shot == "loading":
+		await loading_cards()
+		quit()
+		return
+	if shot == "boot":
+		# The real start: main.tscn shows the cover card while the village builds.
+		change_scene_to_file("res://scenes/main.tscn")
+		await process_frame
+		await process_frame
+		await capture("world-boot-loading.png", 0)
+		await create_timer(6.0).timeout
+		await capture("world-boot-title.png", 0)
 		quit()
 		return
 	camera = Camera3D.new()
@@ -188,6 +204,18 @@ func frame_on(walker: Node3D) -> void:
 	var at: Vector3 = walker.global_position+Vector3(0, 0.9, 0)
 	camera.position = at+Vector3(0, 1.6, 5.0)
 	camera.look_at(at)
+
+func loading_cards() -> void:
+	var Transition = load("res://scripts/transition.gd")
+	var veil = Transition.of(self)
+	await process_frame
+	for card in [["start", "", "start"], ["room", "나의 집", ""], ["run", "솔바람 숲", "run"]]:
+		veil.loading(tr(card[1]), card[2])
+		veil.cover()
+		await create_timer(1.2).timeout
+		await capture("world-loading-%s.png" % card[0], 2)
+	await veil.fade_in()
+	print("LOADING card_cleared=", not veil.card.visible)
 
 func named(id: String) -> Node3D:
 	for walker in folk.walkers:

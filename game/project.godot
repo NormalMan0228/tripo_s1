@@ -2,6 +2,8 @@
 config_version=5
 
 [application]
+boot_splash/bg_color=Color(0.02, 0.03, 0.04, 1)
+boot_splash/show_image=false
 config/name="Villagen"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="Godot/app_userdata/Tripothon — Seven Nights"
