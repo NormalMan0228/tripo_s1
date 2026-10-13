@@ -56,6 +56,20 @@ func shaped(node: Node3D, shape: Dictionary, label: String) -> void:
 	check((frame.scale.x < 0.0) == bool(shape.get("mirror", false)), label + ": mirror sign")
 	check(near(frame.position, base.position * k, 0.001), label + ": stays on the floor (offset %s)" % str(frame.position))
 
+## Size of everything the object's fitted collision boxes cover (craft_collision.gd).
+func collision_extent(node: Node3D) -> Vector3:
+	var total := AABB()
+	var first := true
+	for body in node.get_children():
+		if not body is StaticBody3D: continue
+		for shape in body.get_children():
+			if not (shape is CollisionShape3D and shape.shape is BoxShape3D): continue
+			var size: Vector3 = (shape.shape as BoxShape3D).size
+			var box := AABB(shape.position - size * 0.5, size)
+			total = box if first else total.merge(box)
+			first = false
+	return total.size
+
 func listed(objects: Array, id: String) -> Dictionary:
 	for obj in objects:
 		if str(obj.id) == id: return obj
@@ -136,10 +150,8 @@ func run() -> void:
 	await app.refresh_inventory()
 	check(app.loaded.has(village_id) and same_angle(app.loaded[village_id], 37), "37° survives a reload")
 	shaped(app.loaded.get(village_id), village_shape, "village reloaded")
-	var collision_size := Vector3.ZERO
-	for body in app.loaded[village_id].get_children():
-		if body is StaticBody3D: collision_size = (body.get_child(0).shape as BoxShape3D).size
-	check(near(collision_size, app.loaded[village_id].get_meta("size")), "collision box follows the shape")
+	var collision_size := collision_extent(app.loaded[village_id])
+	check(near(collision_size, app.loaded[village_id].get_meta("size"), 0.03), "collision boxes follow the shape (%s)" % str(collision_size))
 	# Another PC reshapes it: the kept model follows in place (no reload).
 	var kept: Node3D = app.loaded[village_id]
 	var elsewhere: Dictionary = await app.api.post("/v1/objects/" + village_id + "/shape", app.api.mutation({"width": 120, "depth": 130, "height": 110, "scale": 100, "mirror": false}))
@@ -148,9 +160,8 @@ func run() -> void:
 	village_shape = {"width": 120, "depth": 130, "height": 110, "scale": 100, "mirror": false}
 	shaped(kept, village_shape, "village reshaped elsewhere")
 	if app.selected.get("id", "") == village_id: shaped(app.inspect_model, village_shape, "bag preview reshaped elsewhere")
-	for body in kept.get_children():
-		if body is StaticBody3D: collision_size = (body.get_child(0).shape as BoxShape3D).size
-	check(near(collision_size, kept.get_meta("size")), "collision box follows a shape from elsewhere")
+	collision_size = collision_extent(kept)
+	check(near(collision_size, kept.get_meta("size"), 0.03), "collision boxes follow a shape from elsewhere (%s)" % str(collision_size))
 
 	# ---------------------------------------------------------------- village: turn again in place
 	for i in app.me.objects.size():

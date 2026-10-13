@@ -1,4 +1,6 @@
 extends RefCounted
+const CraftCollision = preload("res://scripts/craft_collision.gd")
+const ObjectTransform = preload("res://scripts/object_transform.gd")
 
 static func load_sample(path: String) -> Node3D:
 	var bytes := FileAccess.get_file_as_bytes(path)
@@ -160,11 +162,28 @@ static func paint(root: Node3D, color: Color) -> void:
 		instance.material_override = material
 	root.set_meta("paint", color)
 
+## Collision that follows the model's shape (craft_collision.gd): legs, seat and top as
+## separate boxes, so walkers pass under tables and between legs. Each box remembers its
+## made-shape centre and size so a later shape edit (object_transform.gd) only rescales it.
 static func add_collision(root: Node3D) -> void:
-	var size: Vector3 = root.get_meta("size")
 	var body := StaticBody3D.new()
 	# Furniture blocks walkers but is not ground for height probes or placement.
 	body.collision_layer = 16
+	var k := ObjectTransform.factors(root.get_meta("shape") if root.has_meta("shape") else null)
+	for box in CraftCollision.boxes_for(root):
+		var fitted := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = box.size
+		fitted.shape = shape
+		fitted.position = box.get_center()
+		fitted.set_meta("base_center", box.get_center() / k)
+		fitted.set_meta("base_size", box.size / k.abs())
+		body.add_child(fitted)
+	if body.get_child_count() > 0:
+		root.add_child(body)
+		return
+	# No readable triangles: one box around the model.
+	var size: Vector3 = root.get_meta("size")
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
 	box.size = size

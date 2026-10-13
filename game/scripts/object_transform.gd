@@ -123,7 +123,13 @@ static func apply(root: Node3D, value) -> void:
 	for body in root.get_children():
 		if not body is StaticBody3D: continue
 		for child in body.get_children():
-			if child is CollisionShape3D and child.shape is BoxShape3D:
+			if not (child is CollisionShape3D and child.shape is BoxShape3D): continue
+			# Fitted boxes (model_loader.add_collision) scale from their made shape; the
+			# mirror's sign moves them to the other side.
+			if child.has_meta("base_size"):
+				(child.shape as BoxShape3D).size = child.get_meta("base_size") * k.abs()
+				child.position = child.get_meta("base_center") * k
+			else:
 				(child.shape as BoxShape3D).size = size
 				child.position.y = size.y * 0.5
 
