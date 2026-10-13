@@ -7,9 +7,13 @@ which always shows the newest version; files sit under <prefix>/<version>/.
   .tools\\art-venv\\Scripts\\python.exe tools/publish_school_build.py setup           # once: bucket + public read on <prefix>/
   .tools\\art-venv\\Scripts\\python.exe tools/publish_school_build.py upload [0.11.4] # builds/release -> S3, page, latest.json
   .tools\\art-venv\\Scripts\\python.exe tools/publish_school_build.py check [--full]  # download as a stranger would
+  .tools\\art-venv\\Scripts\\python.exe tools/publish_school_build.py docs            # refresh records + page only
   .tools\\art-venv\\Scripts\\python.exe tools/publish_school_build.py prune 2         # keep the newest 2 versions
 
-upload options: --notes FILE (one change per line, shown on the page).
+Next to the installers go Notepad-friendly records (while GitHub is unavailable they are the public history):
+  <prefix>/CHANGES_KO.txt  from docs/releases/school_changes_KO.txt (add the new "== x.y.z (date)" section on top first)
+  <prefix>/ROADMAP_KO.txt  plan and progress from docs/roadmap/roadmap.json, plus <prefix>/roadmap.png
+The page lists the newest version's lines from CHANGES; upload --notes FILE overrides them.
 The upload key comes from tools/aws_upload_login.ps1 (profile in %USERPROFILE%\\.aws\\credentials); nothing secret is
 read from or written to the repository.
 """
@@ -33,6 +37,9 @@ SETUP, ZIP, SUMS = "Villagen_School_Setup.exe", "Villagen_School_Windows.zip", "
 TYPES = {SETUP: "application/vnd.microsoft.portable-executable", ZIP: "application/zip", SUMS: "text/plain; charset=utf-8"}
 KST = datetime.timezone(datetime.timedelta(hours=9))
 NO_CACHE = "no-cache, max-age=0"
+CHANGES = ROOT / "docs" / "releases" / "school_changes_KO.txt"
+ROADMAP = ROOT / "docs" / "roadmap"
+MARK = {"done": "[완료]", "in_progress": "[진행]", "next": "[다음]", "later": "[이후]", "hold": "[보류]"}
 
 
 def s3():
@@ -130,6 +137,8 @@ a{{color:var(--accent)}} code{{font-size:13px;word-break:break-all}} small{{colo
 <div class="card">설치 없이 쓰기: <a href="{url(ZIP)}">{ZIP} ({gb(ZIP)})</a> → 압축 풀고 <code>Villagen\\Villagen.exe</code><br>
 <a href="{url(SUMS)}">체크섬(SHA-256)</a><br><small>설치 파일 <code>{files[SETUP]['sha256']}</code></small></div>
 {notes_block}
+<div class="card"><b>기록</b> <small>(메모장으로 열림)</small><br>
+<a href="CHANGES_KO.txt">버전별 바뀐 점·고친 점</a> · <a href="ROADMAP_KO.txt">계획과 진행 상황</a> · <a href="roadmap.png">로드맵 그림</a></div>
 <p><small>Install (Windows): download {SETUP} above and run it. 安装：下载上面的 {SETUP} 并运行。</small></p>
 </main></body></html>
 """
@@ -155,13 +164,62 @@ def upload(ver: str, notes: list) -> None:
         c.upload_file(str(path), BUCKET, key, ExtraArgs=extra, Config=cfg, Callback=progress)
         meta["url"] = f"{BASE}/{ver}/{name}"
     info = {"version": ver, "date": datetime.datetime.now(KST).strftime("%Y-%m-%d"), "page": PAGE,
-            "files": files, "notes": notes}
+            "files": files, "notes": notes or notes_for(ver)}
+    publish_docs(c, info)
+    check(full=False)
+
+
+def notes_for(ver: str) -> list:
+    """The "- " lines under "== <ver>" in CHANGES."""
+    lines, inside = [], False
+    for line in CHANGES.read_text(encoding="utf-8").splitlines():
+        if line.startswith("== "):
+            inside = line[3:].split()[0] == ver
+        elif inside and line.startswith("- "):
+            lines.append(line[2:].strip())
+    return lines
+
+
+def roadmap_text() -> str:
+    d = json.loads((ROADMAP / "roadmap.json").read_text(encoding="utf-8"))
+    out = [f"{d['title']} (버전 {d['version']})", d.get("subtitle", ""), "=" * 40, ""]
+    for ph in d["phases"]:
+        out.append(f"{MARK.get(ph['status'], '')} {ph['name']}  ({ph.get('period', '')})")
+        for it in ph["items"]:
+            date = f"  ({it['date']})" if it.get("date") else ""
+            out.append(f"   {MARK.get(it['status'], '')} {it['title']}{date}")
+        out.append("")
+    out += ["로드맵 갱신 기록", "-" * 40]
+    out += [f"{h['version']}  {h['note']}" for h in reversed(d.get("history", []))]
+    return "\n".join(out) + "\n"
+
+
+def text_body(text: str) -> bytes:
+    """UTF-8 with BOM and CRLF, so Notepad and browsers both open it cleanly."""
+    return ("﻿" + text.replace("\r\n", "\n").replace("\n", "\r\n")).encode("utf-8")
+
+
+def publish_docs(c, info: dict) -> None:
+    """Records next to the installers, then latest.json and the page that links them."""
+    plain = "text/plain; charset=utf-8"
+    c.put_object(Bucket=BUCKET, Key=f"{PREFIX}/CHANGES_KO.txt", Body=text_body(CHANGES.read_text(encoding="utf-8")),
+                 ContentType=plain, CacheControl=NO_CACHE)
+    c.put_object(Bucket=BUCKET, Key=f"{PREFIX}/ROADMAP_KO.txt", Body=text_body(roadmap_text()),
+                 ContentType=plain, CacheControl=NO_CACHE)
+    c.put_object(Bucket=BUCKET, Key=f"{PREFIX}/roadmap.png", Body=(ROADMAP / "roadmap.png").read_bytes(),
+                 ContentType="image/png", CacheControl=NO_CACHE)
     c.put_object(Bucket=BUCKET, Key=f"{PREFIX}/latest.json", Body=json.dumps(info, ensure_ascii=False, indent=2).encode(),
                  ContentType="application/json; charset=utf-8", CacheControl=NO_CACHE)
     c.put_object(Bucket=BUCKET, Key=f"{PREFIX}/index.html", Body=page(info).encode(),
                  ContentType="text/html; charset=utf-8", CacheControl=NO_CACHE)
-    print("page:", PAGE)
-    check(full=False)
+    print("records: CHANGES_KO.txt, ROADMAP_KO.txt, roadmap.png; page:", PAGE)
+
+
+def docs() -> None:
+    """Refreshes the records, notes and page without re-uploading the build."""
+    info = json.loads(fetch(f"{BASE}/latest.json")[2])
+    info["notes"] = notes_for(info["version"]) or info.get("notes", [])
+    publish_docs(s3(), info)
 
 
 def fetch(url: str, rng: str = "", sink=None) -> tuple:
@@ -236,6 +294,8 @@ def main() -> None:
             notes = [l.strip().lstrip("-• ").strip() for l in Path(args[i + 1]).read_text(encoding="utf-8").splitlines() if l.strip()]
             del args[i:i + 2]
         upload(args[0] if args else game_version(), notes)
+    elif cmd == "docs":
+        docs()
     elif cmd == "check":
         check(full="--full" in args)
     elif cmd == "prune":

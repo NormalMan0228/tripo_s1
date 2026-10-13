@@ -60,8 +60,10 @@ powershell -ExecutionPolicy Bypass -File tools\aws_upload_login.ps1
 
 ## 배포할 때마다
 
+0. `docs/releases/school_changes_KO.txt` 맨 위에 `== 버전 (날짜)`와 `- 바뀐 점` 줄들을 적는다. 로드맵(`roadmap.json` → `build_roadmap.py`)도 갱신.
 1. 깨끗한 사본에서 빌드 → `package_release.py --school --game-only` → `--installer`
-2. `publish_school_build.py upload` (선택: `--notes 바뀐점.txt`, 한 줄에 하나)
+2. `publish_school_build.py upload` → 설치 파일과 함께 `CHANGES_KO.txt`(바뀐 점·고친 점), `ROADMAP_KO.txt`(계획·진행), `roadmap.png`도 올라가고 페이지에 링크된다.
+   기록만 고칠 때는 `publish_school_build.py docs`.
 3. `publish_school_build.py check --full` → `download check: PASS`
 4. `python tools/update_download_links.py` → README 첫 화면 링크 갱신
 5. VM: `sudo bash ops/notice.sh release <버전> https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/index.html`
