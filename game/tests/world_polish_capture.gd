@@ -6,6 +6,8 @@ extends SceneTree
 ##   artifacts/world-nameplate-after.png   the same with the road drawn first
 ##   artifacts/world-dialogue-<who>-<scale>.png  the dialogue window with an
 ##                                          illustrated speaker at UI scale 80/100/140 %
+##   artifacts/world-gait-turn.png            strip of frames while the walker reverses
+##                                          at a run (lower body during the turn)
 ##   Godot --path game --script res://tests/world_polish_capture.gd [-- --shot=nameplate|dialogue]
 const Stub = preload("res://tests/shadow_folk_stub.gd")
 const Folk = preload("res://scripts/shadow_folk.gd")
@@ -36,6 +38,10 @@ func run() -> void:
 		return
 	if shot == "stairs":
 		await stairs()
+		quit()
+		return
+	if shot == "gait":
+		await gait()
 		quit()
 		return
 	camera = Camera3D.new()
@@ -122,6 +128,66 @@ func stairs() -> void:
 		await process_frame
 		await process_frame
 	Engine.remove_meta("interior_hour")
+
+## A walker on a plain floor reverses at a run; eight frames through the turn.
+func gait() -> void:
+	var stage := Node3D.new()
+	root.add_child(stage)
+	var floor_body := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(200, 1, 200)
+	shape.shape = box
+	shape.position.y = -0.5
+	floor_body.add_child(shape)
+	stage.add_child(floor_body)
+	var ground := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(200, 200)
+	ground.mesh = plane
+	var paint := StandardMaterial3D.new()
+	paint.albedo_color = Color("8fae84")
+	ground.material_override = paint
+	stage.add_child(ground)
+	var light := DirectionalLight3D.new()
+	light.rotation_degrees = Vector3(-50, -30, 0)
+	stage.add_child(light)
+	var walker: CharacterBody3D = load("res://scripts/player.gd").new()
+	stage.add_child(walker)
+	camera = Camera3D.new()
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = 3.2
+	stage.add_child(camera)
+	camera.current = true
+	var frames: Array[Image] = []
+	Input.action_press("move_right")
+	Input.action_press("run")
+	for i in 70:
+		await physics_frame
+		frame_on(walker)
+	Input.action_release("move_right")
+	Input.action_press("move_left")
+	for i in 24:
+		await physics_frame
+		frame_on(walker)
+		if i % 3 == 0:
+			await RenderingServer.frame_post_draw
+			var image := root.get_texture().get_image()
+			image.convert(Image.FORMAT_RGB8)
+			image = image.get_region(Rect2i(440, 180, 400, 440))
+			image.resize(200, 220)
+			frames.append(image)
+	Input.action_release("move_left")
+	Input.action_release("run")
+	var strip := Image.create(200*frames.size(), 220, false, Image.FORMAT_RGB8)
+	for i in frames.size(): strip.blit_rect(frames[i], Rect2i(0, 0, 200, 220), Vector2i(i*200, 0))
+	print("CAPTURE ", strip.save_png(artifact("world-gait-turn.png")))
+	stage.queue_free()
+
+func frame_on(walker: Node3D) -> void:
+	var at: Vector3 = walker.global_position+Vector3(0, 0.9, 0)
+	camera.position = at+Vector3(0, 1.6, 5.0)
+	camera.look_at(at)
 
 func named(id: String) -> Node3D:
 	for walker in folk.walkers:

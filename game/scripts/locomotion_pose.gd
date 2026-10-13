@@ -83,6 +83,12 @@ func solve(skeleton: Skeleton3D,leg: Dictionary,target_world: Vector3,weight: fl
 		var result: Vector3=skeleton.global_transform*skeleton.get_bone_global_pose(leg.foot).origin
 		contact_error=maxf(contact_error,Vector2(result.x-target_world.x,result.z-target_world.z).length())
 
+## True when a foot point sits on (or near) the other leg's side of the body.
+func crossed(leg: Dictionary,point: Vector3) -> bool:
+	var side: float=float(leg.offset.x)
+	var local: Vector3=actor.visual.global_basis.orthonormalized().inverse()*(point-actor.global_position)
+	return local.x*signf(side)<absf(side)*.25
+
 func cycle_for_speed(actual_speed: float) -> float:
 	if legs.is_empty():return .65
 	var fast := actual_speed>3.4
@@ -119,13 +125,17 @@ func _process_modification_with_delta(delta: float) -> void:
 			if not leg.contact:
 				leg.target=home+forward*(footprint*(.5-p/stance))
 				leg.contact=true
-			# A sharp turn, step or teleport releases an unreachable old contact.
-			if home.distance_to(leg.target)>float(leg.reach)*.78 or absf(home.y-leg.target.y)>.25:
+			# A sharp turn, step or teleport releases an unreachable old contact. So does a
+			# quick turn on the spot: the planted foot would end up across the other leg
+			# and fold the hips and knees sideways.
+			if home.distance_to(leg.target)>float(leg.reach)*.78 or absf(home.y-leg.target.y)>.25 or crossed(leg,leg.target):
 				leg.target=home
 			leg.start=leg.target
 		else:
 			if leg.contact:leg.start=leg.target
 			leg.contact=false
+			# The body turned during the swing: lift from under the hip, not across the body.
+			if crossed(leg,leg.start):leg.start=home
 			var u := (p-stance)/(1.0-stance)
 			var landing: Vector3=home+forward*footprint*.5
 			leg.target=leg.start.lerp(landing,smoothstep(0.0,1.0,u))+Vector3.UP*sin(u*PI)*(.15 if running else .085)
