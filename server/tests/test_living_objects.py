@@ -276,6 +276,9 @@ def test_clock_hands_cost_no_tripo_credits(tmp_path):
         quote = c.get('/v1/studio/jobs/' + job, headers=a).json()
         # Four parts, one Tripo mesh: the hands are the game's own bars.
         assert len(quote['design']['parts']) == 4 and quote['provenance']['estimated_tripo_credits'] == 10
+        # The preview before confirming already turns the hands.
+        preview = c.get('/v1/studio/jobs/' + job + '/preview', headers={**a, **VM2}).json()
+        assert '["input", "clock"]' in json.dumps(preview['program'])
         c.post('/v1/studio/jobs/' + job + '/confirm', headers=a, json=mutation())
         for _ in range(4):
             asyncio.run(app.state.studio.process(job))

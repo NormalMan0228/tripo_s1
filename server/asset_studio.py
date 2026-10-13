@@ -396,12 +396,17 @@ class Studio:
             # asset publication, currency change, or persisted runtime mutation.
             with db.transaction() as conn:
                 user=auth(conn,request)
-                row=conn.execute('SELECT plan,program FROM studio_jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
+                row=conn.execute('SELECT plan,program,provenance FROM studio_jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
                 if not row:fail('job_not_found',404)
                 if not row['plan'] or not row['program']:fail('design_not_ready')
                 plan=validate_plan(json.loads(row['plan']))
                 program=json.loads(row['program'])
                 exercise(program,[p['id'] for p in plan['parts']])
+                # What the finished object will do: its library type's behaviour when it starts with one.
+                kind=json.loads(row['provenance'] or '{}').get('archetype')
+                try:assigned=archetypes.assign(kind,plan,program) if kind else None
+                except interactions.InteractionError:assigned=None
+                if assigned and assigned['compiled']:program=assigned['compiled']['program']
                 blobs={p['id']:base64.b64encode(fixture_glb(p['shape'],False)).decode() for p in plan['parts']}
                 return interactions.for_client(request,{'schema':1,'preview_only':True,'plan':plan,'program':program,
                     'provenance':{'geometry':'procedural_proxy'},'runtime':{},'blobs':blobs})
