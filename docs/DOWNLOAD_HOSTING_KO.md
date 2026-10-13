@@ -71,7 +71,7 @@ powershell -ExecutionPolicy Bypass -File tools\aws_upload_login.ps1
 
 VM은 평소 GitHub에서 코드를 받는다(`update_online_server.sh`의 `git pull`). GitHub이 막히면:
 
-1. PC(사용자가 직접): `.toolsrt-venv\Scripts\python.exe tools\send_code_to_vm.py`
+1. PC(사용자가 직접): `.tools\art-venv\Scripts\python.exe tools\send_code_to_vm.py`
    → 빠진 커밋만 묶어 `private/villagen-dev.bundle`에 올리고 VM 명령을 출력한다.
 2. VM(EC2 Instance Connect 브라우저 창, PC PowerShell 아님): 출력된 줄을 차례로 붙여 넣는다.
    받는 곳을 묶음으로 잠시 바꿔 업데이트한 뒤 GitHub 주소로 되돌린다.
