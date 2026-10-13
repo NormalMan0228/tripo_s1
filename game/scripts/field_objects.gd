@@ -924,7 +924,8 @@ func travel(destination: Dictionary) -> void:
 		return
 	var veil := Transition.of(get_tree())
 	play("whoosh", Vector3.INF, -10.0)
-	await veil.fade_out(0.35)
+	veil.loading(tr(ISLANDS[destination.spec.island]))
+	await veil.fade_out()
 	if not is_instance_valid(app) or not is_instance_valid(app.player): return
 	stand_up(true)
 	end_view(true)
@@ -935,7 +936,7 @@ func travel(destination: Dictionary) -> void:
 		app.player.has_safe_position = true
 	app.player.face_point(destination.root.global_position)
 	if app.has_method("follow_camera"): app.follow_camera(1.0)
-	await veil.fade_in(0.45)
+	await veil.fade_in()
 	if is_instance_valid(app) and is_instance_valid(app.player):
 		Fx.title(app, app.player.global_position, tr(ISLANDS[destination.spec.island]))
 		Fx.burst(self, app.player.global_position+Vector3(0,0.2,0), "dust", 6, Color(0,0,0,0), 0.3)

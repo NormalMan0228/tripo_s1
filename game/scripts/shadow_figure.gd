@@ -32,7 +32,31 @@ extends CharacterBody3D
 ##   who.title / who.nameplate (Label3D, hide it if the room has its own labels)
 ## Cast villagers (naru/sora/moru/haeru) are not silhouettes: create_still() returns
 ## null for them; use npc.gd (idle clip only).
+##
+## ---------------------------------------------------------------- day and night
+## A shadow only after dark: by day the same resident is a full-colour villager
+## (day_folk.gd: name, outfit, hair and skin, coloured props) on the same rig and gait.
+##   who.set_day(true)              # dissolves to the villager over DAY_SECONDS
+##   who.set_day(false, true)       # the shadow at once (out of sight, indoors)
+## Fully day or night each mesh draws one material (villager_look / shadow_silhouette);
+## only while dissolving does the silhouette draw over it as an overlay, the two
+## shaders keeping complementary pixels.
 const SILHOUETTE := preload("res://shaders/shadow_silhouette.gdshader")
+const VILLAGER := preload("res://shaders/villager_look.gdshader")
+const DayFolk = preload("res://scripts/day_folk.gd")
+const DAY_SECONDS := 2.5
+const EYE_SHADER := """
+shader_type spatial;
+render_mode unshaded, cull_back, shadows_disabled;
+uniform float day = 0.0;
+float hash(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453);
+}
+void fragment() {
+	if (day > 0.001 && hash(floor(FRAGCOORD.xy)+vec2(37.0, 11.0)) < day) discard;
+	ALBEDO = vec3(1.0);
+}
+"""
 const MODEL := "res://assets/explorer_b_wardrobe.glb"
 const MOTION := "res://assets/explorer_b_motion.glb"
 const WALK := "shadow/walk"
@@ -61,7 +85,12 @@ const GRIN_SHADER := """
 shader_type spatial;
 render_mode unshaded, cull_disabled, shadows_disabled;
 uniform float open = 1.0;
+uniform float day = 0.0;
+float hash(vec2 q) {
+	return fract(sin(dot(q, vec2(127.1, 311.7)))*43758.5453);
+}
 void fragment() {
+	if (day > 0.001 && hash(floor(FRAGCOORD.xy)+vec2(37.0, 11.0)) < day) discard;
 	vec2 p = UV*2.0-1.0;
 	float outer = length(vec2(p.x, (p.y+0.55)*1.25));
 	float inner = length(vec2(p.x*0.98, (p.y+1.05-0.35*open)*1.35));
@@ -70,6 +99,7 @@ void fragment() {
 }
 """
 static var _library: AnimationLibrary
+static var _eye_shader: Shader
 
 var spec: Dictionary = {}
 var folk: Node
@@ -85,6 +115,23 @@ var skeleton: Skeleton3D
 var walk_length := 1.0
 var current_clip := ""
 var materials: Array[ShaderMaterial] = []
+## Daytime look: wanted, and how far the dissolve has gone (0 shadow .. 1 villager).
+var day_target := false
+var day_blend := 0.0
+## 0 shadow, 1 dissolving, 2 villager: which materials the meshes draw now.
+var look_phase := -1
+## [{mesh, prop}] every mesh that changes look (prop: its villager material, or null
+## for the rig's body, whose surfaces carry their own villager materials).
+var looks: Array = []
+var villager_materials: Array[ShaderMaterial] = []
+## Colour role (day_folk.gd colour()) for props made next by silhouette_mesh.
+var prop_role := "wood"
+## "" for a prop both looks wear, "day" or "night" for one worn by that look only.
+var gear_only := ""
+var prop_materials := {}
+var face_materials: Array[ShaderMaterial] = []
+var night_title := ""
+var title_tween: Tween
 var eyes: Array[MeshInstance3D] = []
 var glints: Array[MeshInstance3D] = []
 var grin: MeshInstance3D
@@ -206,6 +253,7 @@ func configure(entry: Dictionary, owner_folk: Node, graph: RefCounted) -> void:
 	folk = owner_folk
 	paths = graph
 	title = TranslationServer.translate(str(entry.title))
+	night_title = title
 	var build: Array = entry.get("build", [1.0, 1.0])
 	height_scale = float(build[0])
 	width_scale = float(build[1])
@@ -278,6 +326,8 @@ func _ready() -> void:
 	if still:
 		dress()
 		apply_layout()
+	retitle(true)
+	push_day()
 
 ## Shared gait clips, retargeted once onto the wardrobe rig (as style_character.gd does).
 static func library_for(target_animator: AnimationPlayer, target_skeleton: Skeleton3D) -> AnimationLibrary:
@@ -314,6 +364,7 @@ func build_body() -> void:
 		var mesh := node as MeshInstance3D
 		mesh.material_override = silhouette
 		mesh.visibility_range_end = 90.0
+		if has_day_look(): dress_body_by_day(mesh)
 	var skeletons := actor.find_children("*", "Skeleton3D", true, false)
 	var players := actor.find_children("*", "AnimationPlayer", true, false)
 	if skeletons.is_empty() or players.is_empty(): return
@@ -369,6 +420,9 @@ func silhouette_mesh(parent: Node3D, mesh: Mesh, at: Vector3, rotation_degrees_v
 	instance.material_override = materials[0]
 	instance.visibility_range_end = 90.0
 	parent.add_child(instance)
+	if has_day_look():
+		looks.append({"mesh":instance, "prop":prop_material(prop_role), "only":gear_only})
+		if look_phase >= 0: show_look(looks[-1], look_phase)
 	return instance
 
 func cylinder(top: float, bottom: float, height: float) -> CylinderMesh:
@@ -392,9 +446,12 @@ func sphere(radius: float, height: float) -> SphereMesh:
 ## the figure is in the tree (bone rests are read in world space).
 func dress() -> void:
 	var head := attach("Head", Vector3(0, 0.855, 0.0))
-	var white := StandardMaterial3D.new()
-	white.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	white.albedo_color = Color(1, 1, 1)
+	if _eye_shader == null:
+		_eye_shader = Shader.new()
+		_eye_shader.code = EYE_SHADER
+	var white := ShaderMaterial.new()
+	white.shader = _eye_shader
+	face_materials.append(white)
 	var glint_material := ShaderMaterial.new()
 	glint_material.shader = Shader.new()
 	glint_material.shader.code = GLINT_SHADER
@@ -430,20 +487,29 @@ func dress() -> void:
 	grin_material.shader = Shader.new()
 	grin_material.shader.code = GRIN_SHADER
 	grin.material_override = grin_material
+	face_materials.append(grin_material)
 	grin.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	grin.visible = bool(spec.get("always_grin", false))
 	head.add_child(grin)
-	for gear in spec.get("gear", []):
-		add_gear(str(gear))
+	# Worn by both looks, or by one only (a shadow's apron, a villager's other hat).
+	var night_gear: Array = spec.get("gear", [])
+	var day_gear: Array = DayFolk.LOOKS[spec.id].gear if has_day_look() else night_gear
+	for gear in night_gear: add_gear(str(gear), "" if gear in day_gear else "night")
+	for gear in day_gear:
+		if not gear in night_gear: add_gear(str(gear), "day")
 	if is_instance_valid(skeleton):
 		var thigh := skeleton.find_bone("L_Thigh")
 		if thigh >= 0:
 			var hip_world: Vector3 = skeleton.global_transform*skeleton.get_bone_global_rest(thigh).origin
 			hip_local = (visual.global_transform.affine_inverse()*hip_world).y
 
-func add_gear(gear: String) -> void:
+func add_gear(gear: String, only := "") -> void:
 	last_attach = null
+	prop_role = str(DayFolk.GEAR_COLOUR.get(gear, "wood"))
+	gear_only = only
 	_add_gear(gear)
+	prop_role = "wood"
+	gear_only = ""
 	# Remember the holder so a work prop can stand in for the carried tool.
 	if is_instance_valid(last_attach): gear_nodes[gear] = last_attach
 
@@ -562,6 +628,7 @@ func _add_gear(gear: String) -> void:
 				rim.rotation = Vector3(PI*0.5, 0, 0)
 				rim.material_override = materials[0]
 				frame_holder.add_child(rim)
+				if has_day_look(): looks.append({"mesh":rim, "prop":prop_material(prop_role), "only":gear_only})
 				silhouette_mesh(frame_holder, cylinder(0.004, 0.004, 0.11), Vector3(side*0.083, 0.004, 0.035), Vector3(90, 0, 0))
 			silhouette_mesh(frame_holder, cylinder(0.004, 0.004, 0.026), Vector3(0, 0.006, 0.086), Vector3(0, 0, 90))
 
@@ -572,13 +639,125 @@ func set_night(value: float) -> void:
 	for material in materials:
 		material.set_shader_parameter("rim_strength", lerpf(0.28, 0.8, night))
 	for glint in glints:
-		glint.visible = night > 0.3
-		(glint.material_override as ShaderMaterial).set_shader_parameter("strength", night*0.9)
+		glint.visible = night > 0.3 and day_blend < 1.0
+		(glint.material_override as ShaderMaterial).set_shader_parameter("strength", night*0.9*(1.0-day_blend))
 	if is_instance_valid(lantern):
 		var lit: bool = night > 0.35 or bool(spec.get("lantern_always", false))
 		lantern_glow.visible = lit
 		lantern_pool.visible = lit and not still
 		(lantern_pool.material_override as ShaderMaterial).set_shader_parameter("strength", 0.42*maxf(night, 0.35)*fade if lit else 0.0)
+
+## ------------------------------------------------------------------ day look
+
+func has_day_look() -> bool:
+	return DayFolk.has_look(str(spec.get("id", "")))
+
+## Villager or shadow; `instant` skips the dissolve (out of sight, indoors, loading).
+func set_day(value: bool, instant := false) -> void:
+	if not has_day_look(): value = false
+	if value != day_target:
+		day_target = value
+		retitle(instant)
+	elif instant and title_tween and title_tween.is_valid():
+		retitle(true)
+	if instant:
+		day_blend = 1.0 if value else 0.0
+		push_day()
+
+func update_day(delta: float) -> void:
+	var goal := 1.0 if day_target else 0.0
+	if day_blend == goal and look_phase == (2 if day_target else 0): return
+	day_blend = move_toward(day_blend, goal, delta/DAY_SECONDS)
+	push_day()
+
+## Sends the dissolve to every material and picks what each mesh draws.
+func push_day() -> void:
+	if materials.is_empty(): return
+	for material in materials: material.set_shader_parameter("day", day_blend)
+	for material in villager_materials: material.set_shader_parameter("day", day_blend)
+	for material in face_materials: material.set_shader_parameter("day", day_blend)
+	for eye in eyes: eye.visible = fade > 0.35 and day_blend < 1.0
+	set_night(night)
+	var phase := 0 if day_blend <= 0.0 else (2 if day_blend >= 1.0 else 1)
+	if phase == look_phase: return
+	look_phase = phase
+	var kept: Array = []
+	for entry in looks:
+		if not is_instance_valid(entry.mesh): continue
+		kept.append(entry)
+		show_look(entry, phase)
+	looks = kept
+
+func show_look(entry: Dictionary, phase: int) -> void:
+	var mesh: MeshInstance3D = entry.mesh
+	var only: String = entry.get("only", "")
+	mesh.visible = not ((only == "night" and phase == 2) or (only == "day" and phase == 0))
+	if phase == 0 or only == "night":
+		mesh.material_override = materials[0]
+		mesh.material_overlay = null
+		return
+	# The body's surfaces already hold their villager materials under the override.
+	mesh.material_override = entry.prop
+	mesh.material_overlay = materials[0] if phase == 1 and only.is_empty() else null
+
+## Villager materials for each surface of the rig: cloth recoloured, the face kept
+## with hair and skin tinted (villager_look.gdshader).
+func dress_body_by_day(mesh: MeshInstance3D) -> void:
+	var id := str(spec.id)
+	for index in mesh.mesh.get_surface_count():
+		var source := mesh.mesh.surface_get_material(index) as StandardMaterial3D
+		var material := ShaderMaterial.new()
+		material.shader = VILLAGER
+		var fields: PackedStringArray = (source.resource_name.to_lower() if source else "detail").split("__")
+		var part := fields[0]
+		if source and source.albedo_texture: material.set_shader_parameter("albedo_texture", source.albedo_texture)
+		if part in ["coat", "pants", "boots"]:
+			material.set_shader_parameter("part", 0)
+			material.set_shader_parameter("tint", DayFolk.colour(id, part))
+			material.set_shader_parameter("reference_color", Color("#"+fields[1]) if fields.size() > 1 else Color.WHITE)
+			material.set_shader_parameter("gold_cloth_only", part == "coat")
+		else:
+			material.set_shader_parameter("part", 1)
+		material.set_shader_parameter("hair", DayFolk.colour(id, "hair"))
+		material.set_shader_parameter("skin", DayFolk.colour(id, "skin"))
+		mesh.set_surface_override_material(index, material)
+		villager_materials.append(material)
+	looks.append({"mesh":mesh, "prop":null})
+
+## One flat villager material per colour role (hat, bag, apron, wood, metal, paper).
+func prop_material(role: String) -> ShaderMaterial:
+	if prop_materials.has(role): return prop_materials[role]
+	var material := ShaderMaterial.new()
+	material.shader = VILLAGER
+	material.set_shader_parameter("part", 2)
+	material.set_shader_parameter("tint", DayFolk.colour(str(spec.id), role))
+	material.set_shader_parameter("day", day_blend)
+	material.set_shader_parameter("fade", fade)
+	prop_materials[role] = material
+	villager_materials.append(material)
+	return material
+
+## The name over the head follows the look: the villager's own name by day.
+func retitle(instant := false) -> void:
+	title = DayFolk.title(str(spec.get("id", ""))) if day_target and has_day_look() else night_title
+	set_meta("title", title)
+	if not is_instance_valid(nameplate): return
+	var tone := Color("f0dfba") if day_target else Color("d4cdf2")
+	var running := title_tween != null and title_tween.is_valid()
+	if running: title_tween.kill()
+	if instant or not nameplate.is_visible_in_tree():
+		nameplate.text = title
+		nameplate.modulate = Color(tone, fade)
+		return
+	if nameplate.text == title and not running: return
+	var shown := nameplate.modulate.a
+	var next := title
+	title_tween = nameplate.create_tween()
+	title_tween.tween_property(nameplate, "modulate:a", 0.0, 0.35)
+	title_tween.tween_callback(func():
+		nameplate.text = next
+		nameplate.modulate = Color(tone, 0.0))
+	title_tween.tween_property(nameplate, "modulate:a", shown, 0.6)
 
 const POOL_SHADER := """
 shader_type spatial;
@@ -613,11 +792,13 @@ func set_present(value: bool) -> void:
 		settle_frames = 4
 
 func update_fade(delta: float) -> void:
+	update_day(delta)
 	var goal := 1.0 if present else 0.0
 	if is_equal_approx(fade, goal) and (present or not visible): return
 	fade = move_toward(fade, goal, delta/1.2)
 	for material in materials: material.set_shader_parameter("fade", fade)
-	for eye in eyes: eye.visible = fade > 0.35
+	for material in villager_materials: material.set_shader_parameter("fade", fade)
+	for eye in eyes: eye.visible = fade > 0.35 and day_blend < 1.0
 	if is_instance_valid(nameplate): nameplate.modulate.a = fade
 	if fade <= 0.0 and not present:
 		visible = false
@@ -721,6 +902,7 @@ func show_task(kind: String) -> void:
 	task_node = Node3D.new()
 	task_node.name = "Task"
 	visual.add_child(task_node)
+	prop_role = "paper" if kind in ["write", "deliver"] else "wood"
 	var h := height_scale
 	match kind:
 		"fish":
@@ -758,6 +940,7 @@ func show_task(kind: String) -> void:
 		"deliver":
 			task_node.position = Vector3(0.12, 1.05*h, 0.3)
 			silhouette_mesh(task_node, BoxMesh.new(), Vector3.ZERO, Vector3(10, 0, 0), Vector3(0.16, 0.11, 0.012))
+	prop_role = "wood"
 	task_clock = randf()*3.0
 
 func hide_gear(gear: String) -> void:
@@ -791,6 +974,7 @@ func _process(delta: float) -> void:
 	if not still:
 		set_process(false)
 		return
+	update_day(delta)
 	if grin_left > 0.0:
 		grin_left -= delta
 		if grin_left <= 0.0 and is_instance_valid(grin): grin.visible = bool(spec.get("always_grin", false))

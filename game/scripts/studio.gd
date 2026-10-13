@@ -15,6 +15,7 @@ const Interiors=preload("res://scripts/interiors.gd")
 const Daylight=preload("res://scripts/daylight.gd")
 const RpgUi=preload("res://scripts/rpg_ui.gd")
 const Residents=preload("res://scripts/residents.gd")
+const DayFolk=preload("res://scripts/day_folk.gd")
 const GameSettings=preload("res://scripts/game_settings.gd")
 const PauseMenu=preload("res://scripts/pause_menu.gd")
 const CraftPanel=preload("res://scripts/craft_panel.gd")
@@ -194,7 +195,8 @@ func _ready() -> void:
 	Loader.warm_up_compression()
 	var veil := Transition.of(get_tree())
 	veil.cover()
-	veil.fade_in(0.55)
+	# Starts once the room is built (transition.gd waits out the build frame).
+	veil.fade_in()
 	api=Api.new();add_child(api)
 	gate=VersionGate.new();add_child(gate);gate.watch(api)
 	# Maintenance over: the room shows the server's state again (nothing was lost).
@@ -733,11 +735,11 @@ func travel(record: Dictionary, instant := false) -> void:
 		var off: Array[Vector3]=Interiors.arrival_path(counterpart,link.arrive)
 		hero.position=off[0]
 		update_camera(0.0,true)
-		Transition.of(get_tree()).fade_in(0.3)
+		Transition.of(get_tree()).fade_in()
 		await follow_path(off,1.15,-1.0,null,counterpart.kind=="ladder",counterpart)
 	else:
 		update_camera(0.0,true)
-		if not instant: await Transition.of(get_tree()).fade_in(0.3)
+		if not instant: await Transition.of(get_tree()).fade_in()
 	if is_instance_valid(hero):
 		hero.position=link.arrive
 		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
@@ -779,8 +781,12 @@ func follow_path(points: Array[Vector3], speed: float, fade_at: float, veil: Can
 		var before: Vector3=hero.position
 		hero.position=points[segment].lerp(points[segment+1],clampf(along/maxf(lengths[segment],0.0001),0.0,1.0))
 		var step := Vector2(hero.position.x-before.x,hero.position.z-before.z)
-		if climbing_rungs or step.length()<0.0005:
-			if climbing_rungs: hero.facing=face_ladder
+		if climbing_rungs:
+			# Hand over hand up the rungs: the stepping clip in place, facing the ladder.
+			hero.facing=face_ladder
+			hero.external_motion=Vector2(face_ladder.x,face_ladder.z)
+			hero.external_velocity=hero.external_motion*0.8
+		elif step.length()<0.0005:
 			hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
 		else:
 			hero.facing=Vector3(step.x,0,step.y).normalized()
@@ -789,7 +795,7 @@ func follow_path(points: Array[Vector3], speed: float, fade_at: float, veil: Can
 			hero.external_motion=step.normalized()
 		if fade_at>=0.0 and not faded and veil and travelled/total>=fade_at:
 			faded=true
-			veil.fade_out(0.3)
+			veil.fade_out()
 		await get_tree().process_frame
 		if not is_instance_valid(hero): return
 	hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
@@ -830,8 +836,11 @@ func apply_daylight(force := false) -> void:
 			var where := "%d/%d" % [index,int(lamp.get_meta("room",0))]
 			var dim := 0.3 if sleeping_rooms.has(where) and not awake_rooms.has(where) else 1.0
 			lamp.light_energy=float(lamp.get_meta("base_energy",0.5))*lerpf(0.8,1.45,night)*dim
+	var clock := resident_clock()
 	for entry in npcs.values():
 		if entry.body.has_method("set_night"): entry.body.set_night(clampf(night,0.0,0.6))
+		# Shadow folk are villagers by day; a room in view dissolves them at dusk and dawn.
+		if entry.body.has_method("set_day"): entry.body.set_day(DayFolk.is_day(str(entry.id),float(clock.hour)),force)
 		# Rooms keep their own lamps only: a carried lantern stays unlit indoors.
 		var lantern = entry.body.get("lantern_light")
 		if lantern is OmniLight3D: lantern.visible=false
@@ -1481,7 +1490,8 @@ func leave() -> void:
 	if floor_index==0 and is_instance_valid(hero):
 		walk_out=Vector3(float(room_spec.get("door_x",0.0)),0,float(room_spec.size.y)*0.5+1.6)
 	veil.play_door("open",room)
-	await veil.fade_out(0.45)
+	veil.loading(tr("다섯 섬 마을"))
+	await veil.fade_out()
 	if is_instance_valid(hero):
 		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
 	Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":room})
@@ -1810,8 +1820,11 @@ func _process(delta: float) -> void:
 	proximity_time+=delta
 	if proximity_time>0.35:proximity_time=0;proximity()
 	if not is_instance_valid(hero):return
-	hero.external_motion=Vector2.ZERO
-	hero.external_velocity=Vector2.ZERO
+	# A stair climb (follow_path) sets the walker's motion just before this runs each
+	# frame; clearing it here left the idle pose gliding up the steps.
+	if not travelling:
+		hero.external_motion=Vector2.ZERO
+		hero.external_velocity=Vector2.ZERO
 	hint_time+=delta
 	if hint_time>0.15:hint_time=0;update_hint();update_place_label();update_name_plates()
 	daylight_time+=delta
@@ -2285,6 +2298,7 @@ func make_body(id: String, holder: Node3D) -> Node3D:
 			var figure = shadow_script.call("create_still",id)
 			if figure is Node3D:
 				holder.add_child(figure)
+				figure.set_day(DayFolk.is_day(id,float(resident_clock().hour)),true)
 				return figure
 	var stand_in := Interiors.stand_in_figure(id)
 	holder.add_child(stand_in)
@@ -2464,7 +2478,8 @@ func open_talk(id: String) -> void:
 	talk_box.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	add_child(talk_box)
 	# The same illustrated card + night box as the village (RpgUi.dialogue).
-	talk_window=RpgUi.dialogue(talk_box,tr(Interiors.resident_title(id)),Interiors.portrait(id))
+	var hour: float=float(resident_clock().hour)
+	talk_window=RpgUi.dialogue(talk_box,tr(Interiors.resident_title(id,hour)),Interiors.portrait(id,hour))
 	talk_window.shade.gui_input.connect(func(event):
 		if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT: advance_talk())
 	talk_body=talk_window.body

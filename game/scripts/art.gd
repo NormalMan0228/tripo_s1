@@ -113,6 +113,11 @@ static func label3d(parent: Node3D, text: String, at: Vector3, color := Color("f
 	parent.add_child(l)
 	return l
 
+## Draw order of name tags among see-through things: after the road ribbon (drawn
+## first, roads.gd), contact shadows, lantern pools and window halos, so none of
+## them paints over a name; still depth-tested, so walls and roofs hide it.
+const NAMEPLATE_PRIORITY := 5
+
 ## Name tags over people: the same on-screen size at every zoom, drawn close to 1:1
 ## so the letters stay crisp instead of a downscaled 44 px glyph.
 static func style_nameplate(l: Label3D, size := 21) -> void:
@@ -122,6 +127,12 @@ static func style_nameplate(l: Label3D, size := 21) -> void:
 	l.fixed_size = true
 	l.outline_size = 7
 	l.outline_modulate = Color(0.1, 0.07, 0.05, 0.9)
+	plate_priority(l)
+
+## Puts a name tag (and its outline just under it) above the ground overlays.
+static func plate_priority(l: Label3D) -> void:
+	l.render_priority = NAMEPLATE_PRIORITY
+	l.outline_render_priority = NAMEPLATE_PRIORITY-1
 
 static func authored_prop(parent: Node3D, path: String, at: Vector3, span: float, height: float) -> bool:
 	if not ResourceLoader.exists(path): return false

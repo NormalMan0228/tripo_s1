@@ -1,10 +1,59 @@
 extends CanvasLayer
 ## Screen fades and door sounds that survive scene changes (village <-> rooms).
 ## One instance lives under the tree root; scenes call Transition.of(tree).
+## Every change of place uses the same short fade: fade_out() (OUT seconds), build
+## the new place, fade_in() (IN seconds). Call loading(title) before fade_out() and
+## the covered screen is a loading card instead of a black frame: the place's name,
+## a slowly turning star seed among drifting motes and one tip. loading("", "start")
+## is the game's first load, over the island cover art (assets/ui/loading_cover.jpg)
+## with the wordmark. A plain fade_out() (stairs) stays a dark veil.
+const RpgUi = preload("res://scripts/rpg_ui.gd")
+const OUT := 0.35
+const IN := 0.45
+const COVER_ART := "res://assets/ui/loading_cover.jpg"
+const SEED_ICON := "res://assets/starseed.svg"
+## One of these under the card (all in the i18n catalog); expeditions use RUN_TIPS.
+const TIPS := [
+	"Tab을 누르면 섬 지도가 열려요. 금빛 표식을 따라가 보세요.",
+	"C를 누르면 새 물건 제작을 맡길 수 있어요.",
+	"이정표에서 다른 섬으로 바로 이동할 수 있어요.",
+	"다섯 섬은 모두 다리로 이어져 있어요. 어디든 걸어서 갈 수 있답니다.",
+	"밤이 되면 가로등과 이정표 등불이 켜져요. 산책하기 좋은 시간이에요.",
+	"천문대 전망대에 오르면 다섯 섬과 다리가 한눈에 보여요.",
+	"장소나 지도 위를 누르면 빛나는 길이 이어져요.",
+	"마을 연못 낚시터는 물결빛 광장 남쪽, 나무 부두 끝이에요.",
+	"햇살 텃밭 · E로 땅을 일구고 씨앗을 심어요",
+	"별씨 공방에서는 숲에서 받은 별씨로 새 물건을 만들 수 있대요.",
+]
+const RUN_TIPS := [
+	"낮에는 채집하고 밤에는 모닥불 곁을 지키세요.",
+	"첫날엔 목재와 돌을 모아 도끼부터 만드세요. 밤에는 모닥불 곁을 지키고요.",
+	"붉은 원이 보이면 바로 피해요. 일곱 밤을 버티면 새 물건을 만들 별씨를 받아요.",
+	"제작 전에 밤에 쓸 목재 2개를 남겨 두세요.",
+]
 var veil: ColorRect
 var door: AudioStreamPlayer
 var tween: Tween
 static var instance: CanvasLayer
+static var tip_turn := -1
+## The loading card under the veil and its parts.
+var card: Control
+var art: TextureRect
+var glow: TextureRect
+var floor_shade: TextureRect
+var wordmark: VBoxContainer
+var place: VBoxContainer
+var heading: Label
+var tip: Label
+var spinner: Control
+var seed: TextureRect
+var halo: TextureRect
+var motes: CPUParticles2D
+var spin: Tween
+## "" (plain veil), "place" or "start".
+var style := ""
+## Counts fades, so a fade-in still waiting for its first frame yields to a newer fade.
+var turn := 0
 
 static func of(tree: SceneTree) -> CanvasLayer:
 	if is_instance_valid(instance): return instance
@@ -22,6 +71,7 @@ func _init() -> void:
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	veil.modulate.a = 0.0
 	add_child(veil)
+	build_card()
 	door = AudioStreamPlayer.new()
 	door.volume_db = -9
 	door.bus = &"SFX"
@@ -31,26 +81,213 @@ func _exit_tree() -> void:
 	if instance == self: instance = null
 
 ## Fades to black. Await it before changing scenes or rebuilding the world.
-func fade_out(seconds := 0.45) -> void:
+func fade_out(seconds := OUT) -> void:
 	await _fade(1.0, seconds)
 
-func fade_in(seconds := 0.6) -> void:
+func fade_in(seconds := IN) -> void:
 	await _fade(0.0, seconds)
 
 ## Starts fully black, for scenes that open with a fade-in.
 func cover() -> void:
 	if tween and tween.is_valid(): tween.kill()
+	turn += 1
 	veil.modulate.a = 1.0
 	veil.mouse_filter = Control.MOUSE_FILTER_STOP
 
+## Dresses the next covered screen as a loading card: `title` is the place being
+## loaded ("" for none), kind "start" (cover art and wordmark), "run" (expedition
+## tips) or "" (village and rooms). Cleared again when the veil has faded in.
+func loading(title := "", kind := "") -> void:
+	style = "start" if kind == "start" else "place"
+	var start := style == "start"
+	if start and art.texture == null and ResourceLoader.exists(COVER_ART): art.texture = load(COVER_ART)
+	art.visible = start
+	floor_shade.visible = start
+	glow.visible = not start
+	wordmark.visible = start
+	heading.text = title
+	place.visible = not start and not title.is_empty()
+	var pool: Array = RUN_TIPS if kind == "run" else TIPS
+	tip_turn = (randi() % pool.size()) if tip_turn < 0 else tip_turn+1
+	tip.text = "✦  "+TranslationServer.translate(pool[tip_turn % pool.size()])
+	card.visible = true
+	motes.emitting = true
+	if spin and spin.is_valid(): spin.kill()
+	seed.rotation = 0.0
+	halo.modulate.a = 0.6
+	if not RpgUi.calm():
+		# Owned by the card, so it ends whenever the card is cleared or freed.
+		spin = card.create_tween().set_loops()
+		spin.tween_property(seed, "rotation", TAU, 6.0).from(0.0)
+		spin.parallel().tween_property(halo, "modulate:a", 1.0, 3.0).from(0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func clear_card() -> void:
+	style = ""
+	card.visible = false
+	motes.emitting = false
+	if spin and spin.is_valid(): spin.kill()
+
 func _fade(alpha: float, seconds: float) -> void:
 	if tween and tween.is_valid(): tween.kill()
+	turn += 1
+	var mine := turn
 	veil.mouse_filter = Control.MOUSE_FILTER_STOP
 	var tree := Engine.get_main_loop() as SceneTree
+	if alpha > 0.0 and is_equal_approx(veil.modulate.a, alpha): return
+	# A fade often follows a long frame (a room or the village just built, a reply
+	# just handled); started now, its first step would be that whole frame and the
+	# veil would jump. Two frames later the steps are even.
+	for i in 2: await tree.process_frame
+	if mine != turn: return
 	tween = tree.create_tween()
 	tween.tween_property(veil, "modulate:a", alpha, seconds).set_trans(Tween.TRANS_SINE)
 	await tween.finished
-	if alpha <= 0.0: veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if alpha <= 0.0:
+		veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if is_zero_approx(veil.modulate.a): clear_card()
+
+## The card's layout on the logical canvas; anchors keep it right at any size.
+func build_card() -> void:
+	card = Control.new()
+	card.name = "LoadingCard"
+	card.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.visible = false
+	veil.add_child(card)
+	art = TextureRect.new()
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(art)
+	# Rooms and areas: a warm glow in the middle of the dark, like a lantern behind a door.
+	glow = gradient_rect(GradientTexture2D.FILL_RADIAL, Vector2(0.5, 0.46), Vector2(1.05, 0.46),
+		[Color(0.42, 0.3, 0.16, 0.42), Color(0.12, 0.1, 0.08, 0.12), Color(0, 0, 0, 0)], [0.0, 0.45, 1.0])
+	card.add_child(glow)
+	# The cover art darkens toward the bottom so the words read over it.
+	floor_shade = gradient_rect(GradientTexture2D.FILL_LINEAR, Vector2(0, 0), Vector2(0, 1),
+		[Color(0.02, 0.03, 0.04, 0.0), Color(0.02, 0.03, 0.04, 0.12), Color(0.02, 0.03, 0.04, 0.86)], [0.0, 0.5, 1.0])
+	card.add_child(floor_shade)
+	var vignette := gradient_rect(GradientTexture2D.FILL_RADIAL, Vector2(0.5, 0.5), Vector2(1.1, 1.1),
+		[Color(0, 0, 0, 0), Color(0.01, 0.02, 0.03, 0.5)], [0.6, 1.0])
+	card.add_child(vignette)
+	motes = CPUParticles2D.new()
+	var dot := GradientTexture2D.new()
+	dot.width = 32
+	dot.height = 32
+	dot.fill = GradientTexture2D.FILL_RADIAL
+	dot.fill_from = Vector2(0.5, 0.5)
+	dot.fill_to = Vector2(1.0, 0.5)
+	dot.gradient = Gradient.new()
+	dot.gradient.colors = PackedColorArray([Color(1, 0.94, 0.75, 0.9), Color(1, 0.85, 0.5, 0)])
+	motes.texture = dot
+	motes.amount = 26
+	motes.lifetime = 8.0
+	motes.preprocess = 8.0
+	motes.emitting = false
+	motes.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	motes.direction = Vector2(0.12, -1)
+	motes.spread = 16
+	motes.gravity = Vector2.ZERO
+	motes.initial_velocity_min = 18
+	motes.initial_velocity_max = 40
+	motes.scale_amount_min = 0.16
+	motes.scale_amount_max = 0.5
+	var fade := Gradient.new()
+	fade.colors = PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 0.8), Color(1, 1, 1, 0)])
+	fade.offsets = PackedFloat32Array([0, 0.3, 1])
+	motes.color_ramp = fade
+	card.add_child(motes)
+	card.resized.connect(func():
+		motes.position = Vector2(card.size.x*0.5, card.size.y+30)
+		motes.emission_rect_extents = Vector2(card.size.x*0.55, 30))
+	# The game's wordmark, bottom left, as on the title screen.
+	wordmark = VBoxContainer.new()
+	wordmark.add_theme_constant_override("separation", 0)
+	wordmark.anchor_top = 1.0
+	wordmark.anchor_bottom = 1.0
+	wordmark.offset_left = 64
+	wordmark.offset_top = -196
+	wordmark.offset_right = 640
+	wordmark.offset_bottom = -76
+	wordmark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(wordmark)
+	var name_row := HBoxContainer.new()
+	name_row.add_theme_constant_override("separation", 12)
+	wordmark.add_child(name_row)
+	var mark := RpgUi.icon(SEED_ICON, 46)
+	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	name_row.add_child(mark)
+	var title := RpgUi.label(name_row, "Villagen", 60)
+	title.add_theme_constant_override("outline_size", 9)
+	title.add_theme_color_override("font_outline_color", Color("2a1a0c"))
+	title.add_theme_constant_override("shadow_offset_y", 4)
+	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.35))
+	var tagline := RpgUi.label(wordmark, TranslationServer.translate("돌아올 마을이 있어, 숲으로 떠납니다."), 18, Color("f1e8d2"))
+	tagline.add_theme_font_override("font", RpgUi.FONT_STRONG)
+	# A place being entered: its name in the middle with a gold rule under it.
+	place = VBoxContainer.new()
+	place.alignment = BoxContainer.ALIGNMENT_CENTER
+	place.add_theme_constant_override("separation", 6)
+	place.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	place.offset_left = -320
+	place.offset_right = 320
+	place.offset_top = -70
+	place.offset_bottom = 30
+	place.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(place)
+	heading = RpgUi.label(place, "", 40, RpgUi.GOLD)
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.add_theme_constant_override("outline_size", 7)
+	RpgUi.divider(place, RpgUi.GOLD, 300).size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	# One tip along the bottom.
+	tip = RpgUi.label(card, "", 17, Color(1.0, 0.96, 0.86, 0.9))
+	tip.anchor_top = 1.0
+	tip.anchor_bottom = 1.0
+	tip.anchor_right = 1.0
+	tip.offset_left = 66
+	tip.offset_right = -150
+	tip.offset_top = -62
+	tip.offset_bottom = -34
+	tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# The star seed turning slowly in a breathing halo, bottom right.
+	spinner = Control.new()
+	spinner.anchor_left = 1.0
+	spinner.anchor_right = 1.0
+	spinner.anchor_top = 1.0
+	spinner.anchor_bottom = 1.0
+	spinner.offset_left = -118
+	spinner.offset_right = -54
+	spinner.offset_top = -100
+	spinner.offset_bottom = -36
+	spinner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(spinner)
+	halo = gradient_rect(GradientTexture2D.FILL_RADIAL, Vector2(0.5, 0.5), Vector2(1.0, 0.5),
+		[Color(1.0, 0.86, 0.52, 0.55), Color(1.0, 0.78, 0.4, 0.0)], [0.0, 1.0])
+	halo.offset_left = -22
+	halo.offset_top = -22
+	halo.offset_right = 22
+	halo.offset_bottom = 22
+	spinner.add_child(halo)
+	seed = RpgUi.icon(SEED_ICON, 64)
+	seed.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	seed.pivot_offset = Vector2(32, 32)
+	spinner.add_child(seed)
+
+static func gradient_rect(fill: int, from: Vector2, to: Vector2, colors: Array, offsets: Array) -> TextureRect:
+	var texture := GradientTexture2D.new()
+	texture.fill = fill
+	texture.fill_from = from
+	texture.fill_to = to
+	texture.gradient = Gradient.new()
+	texture.gradient.colors = PackedColorArray(colors)
+	texture.gradient.offsets = PackedFloat32Array(offsets)
+	var rect := TextureRect.new()
+	rect.texture = texture
+	rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
 
 ## Each building's door has its own pair of sounds (tools/make_village_sfx.py):
 ## bells over the cafe, bakery and shop doors, the seed shop's bamboo chimes, the

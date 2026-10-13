@@ -7,7 +7,11 @@ extends Node3D
 ## a riddle, a "follow me" walk to a quiet spot, or a little daily favour (deliver a
 ## letter, find a dropped hoe, show a fish). Everything here is client-side
 ## flavour: rewards are toasts and smiles, never items or coins.
+## They are shadows only after dark: by day the same rounds are walked by full-colour
+## villagers (day_folk.gd) with their own names and words; each resident changes at
+## its own point of dusk and dawn, dissolving in view and at once out of sight.
 const Paths = preload("res://scripts/shadow_paths.gd")
+const DayFolk = preload("res://scripts/day_folk.gd")
 const Figure = preload("res://scripts/shadow_figure.gd")
 const Daylight = preload("res://scripts/daylight.gd")
 const I18n = preload("res://scripts/i18n.gd")
@@ -118,6 +122,7 @@ func setup(main: Node) -> void:
 		walker.configure(entry, self, paths)
 		add_child(walker)
 		walker.dress()
+		walker.set_day(DayFolk.is_day(str(entry.id), hour), true)
 		walker.min_ground_y = Town.SHORE_MIN_Y
 		walker.set_night(night)
 		walkers.append(walker)
@@ -229,6 +234,20 @@ func player_xz() -> Vector2:
 func near_player(at: Vector2) -> bool:
 	return player_xz().distance_to(at) < NEAR
 
+## Out of doors, drawn and close enough to the walker to be noticed.
+func in_view(walker: Node) -> bool:
+	return walker.visible and walker.state != "hidden" and near_player(walker.xz())
+
+## Whether the resident `id` is wearing its daytime look right now.
+func persona_day(id: String) -> bool:
+	for walker in walkers:
+		if str(walker.spec.id) == id: return walker.day_target
+	return DayFolk.is_day(id, hour)
+
+## A shadow folk line in the speaker's own words (the villager's by day).
+func t(walker: Node, text: String) -> String:
+	return DayFolk.line(text, is_instance_valid(walker) and walker.day_target)
+
 func _process(delta: float) -> void:
 	if not is_instance_valid(app): return
 	var started := Time.get_ticks_usec() if profile else 0
@@ -266,6 +285,9 @@ func refresh_schedule() -> void:
 	update_villager_points()
 	for walker in walkers:
 		if walker.visible: walker.set_night(night)
+		var daytime := DayFolk.is_day(str(walker.spec.id), hour)
+		# Dissolve where the walker could see it happen; anywhere else, change at once.
+		if daytime != walker.day_target: walker.set_day(daytime, not in_view(walker))
 		if walker == leader or walker.state == "talk": continue
 		var block := Residents.now(str(walker.spec.id), hour, day)
 		var key := block_key(block)
@@ -565,8 +587,10 @@ func leave() -> void:
 
 ## ------------------------------------------------------------------ dialogue
 
+## The shadow's illustration; by day a path with no picture (the box shows the name
+## only) whose file name still picks the resident's voice (voice_babble.gd).
 func portrait(walker: Node) -> String:
-	return "res://assets/ui/shadow_%s.png" % str(walker.spec.id)
+	return ("res://assets/ui/day_%s.png" if walker.day_target else "res://assets/ui/shadow_%s.png") % str(walker.spec.id)
 
 func say(walker: Node, lines: Array, choices: Array = []) -> void:
 	if not is_instance_valid(app): return
@@ -596,8 +620,8 @@ func talk(walker: Node) -> void:
 		walker.pop("♪", 1.2)
 		app.open_dialogue(str(walker.title), portrait(walker), [tr("이쪽이에요, 조금만 더 가면 돼요!")] as Array[String], [[tr("따라간다"), Callable()]])
 		return
-	var opening := greeting(id)
-	if night >= 0.5 and NIGHT_OPENERS.has(id): opening[0] = tr(NIGHT_OPENERS[id])
+	var opening := DayFolk.greeting(id) if walker.day_target else greeting(id)
+	if night >= 0.5 and NIGHT_OPENERS.has(id) and not walker.day_target: opening[0] = tr(NIGHT_OPENERS[id])
 	# What it is doing right now comes first; the introduction follows.
 	var now_line := situation(walker)
 	if not now_line.is_empty():
@@ -646,7 +670,7 @@ func situation(walker: Node) -> String:
 		if not title.is_empty(): return tr(HEADING_TO[randi() % HEADING_TO.size()]) % tr(title)
 	var pool: Array = DOING.get(str(walker.activity), [])
 	if pool.is_empty() and walker.activity == "stroll": pool = STROLL[time_band(hour)]
-	return tr(pool[randi() % pool.size()]) if not pool.is_empty() else ""
+	return t(walker, pool[randi() % pool.size()]) if not pool.is_empty() else ""
 
 ## Night variants of each shadow's first line.
 const NIGHT_OPENERS := {
@@ -709,20 +733,20 @@ func action_choice(walker: Node, action: String) -> Array:
 		"hoe": return [tr("호미 찾아 주기"), func(): ask_hoe(walker)]
 		"riddle": return [tr("수수께끼 풀기"), func(): riddle(walker)]
 		"follow": return [tr("따라가기"), func(): follow(walker)]
-		"poem": return [tr("시 듣기"), func(): say(walker, [tr("햇살이 길을 그리면, 나는 그 옆에 가만히 눕는다."), tr("다섯 섬이 잠들 무렵, 나는 비로소 눈을 뜬다."), tr("…어때요? 그림자의 시라서 조금 어둡죠?")])]
+		"poem": return [tr("시 듣기"), func(): say(walker, [t(walker, "햇살이 길을 그리면, 나는 그 옆에 가만히 눕는다."), t(walker, "다섯 섬이 잠들 무렵, 나는 비로소 눈을 뜬다."), t(walker, "…어때요? 그림자의 시라서 조금 어둡죠?")])]
 		"tips":
 			var label: String = {"fisher":tr("낚시 비결 듣기"),"farmer":tr("농사 비결 듣기"),"gardener":tr("정원 비결 듣기"),"scout":tr("탐험 요령 듣기"),"regular":tr("카페 이야기 듣기"),"miller":tr("방앗간 이야기 듣기"),"shopkeeper":tr("가게 이야기 듣기")}.get(id, tr("이야기 듣기"))
-			return [label, func(): say(walker, tips(id))]
+			return [label, func(): say(walker, tips(id, walker))]
 	return [tr("소문 듣기"), func(): rumour(walker)]
 
-func tips(id: String) -> Array:
+func tips(id: String, walker: Node = null) -> Array:
 	match id:
 		"fisher": return [tr("미끼를 달고 찌를 던진 뒤, 금빛 입질이 오면 망설이지 말고 당겨요."), tr("바다 쪽 등대 부두에서는 은빛 도미가 더 잘 잡혀요."), tr("마을 연못 낚시터는 물결빛 광장 남쪽, 나무 부두 끝이에요.")]
 		"farmer": return [tr("햇살 텃밭은 바로 이 풍차 들판에 있어요. 씨앗을 심고 물을 한 번만 주면 돼요."), tr("마을을 떠나도, 게임을 꺼도 작물은 계속 자라요. 순무는 금방, 호박은 조금 더 걸려요."), tr("씨앗 노점 배달 게시판에 순무 두 개와 강농어 한 마리를 가져가면 식탁 배달을 할 수 있어요.")]
 		"gardener": return [tr("정원 향초밭에서 향초를 거둘 수 있어요. 다시 자랄 때까지는 조금 기다려야 해요."), tr("길가 덤불을 뒤져 보면 향초가 숨어 있을 때도 있어요."), tr("둥근 나무를 흔들면 사과가 떨어져요. 뾰족한 나무는… 잎만 우수수.")]
 		"scout": return [tr("캠프 초원의 돌문을 지나면 일곱 밤의 숲이 시작돼요."), tr("첫날엔 목재와 돌을 모아 도끼부터 만드세요. 밤에는 모닥불 곁을 지키고요."), tr("붉은 원이 보이면 바로 피해요. 일곱 밤을 버티면 새 물건을 만들 별씨를 받아요.")]
-		"miller": return [tr("방앗간은 아침 일곱 시쯤 맷돌을 돌리기 시작해요. 저녁엔 문을 닫고요."), tr("바람이 센 날엔 풍차가 신나서 가루가 문밖까지 날려요."), tr("햇살 텃밭 바로 위가 방앗간이에요. 농부 그림자가 자주 놀러 와요.")]
-		"shopkeeper": return [tr("잡화점은 아침 아홉 시쯤 열고 저녁 일곱 시쯤 닫아요."), tr("불이 꺼져 있으면 문을 두드려도 소용없어요. 다들 자거나 나갔거든요."), tr("카페 주인 그림자가 저녁마다 커피 한 잔 하러 와요. 제가 가는 날도 있고요.")]
+		"miller": return [tr("방앗간은 아침 일곱 시쯤 맷돌을 돌리기 시작해요. 저녁엔 문을 닫고요."), tr("바람이 센 날엔 풍차가 신나서 가루가 문밖까지 날려요."), t(walker, "햇살 텃밭 바로 위가 방앗간이에요. 농부 그림자가 자주 놀러 와요.")]
+		"shopkeeper": return [tr("잡화점은 아침 아홉 시쯤 열고 저녁 일곱 시쯤 닫아요."), tr("불이 꺼져 있으면 문을 두드려도 소용없어요. 다들 자거나 나갔거든요."), t(walker, "카페 주인 그림자가 저녁마다 커피 한 잔 하러 와요. 제가 가는 날도 있고요.")]
 		"regular": return [tr("카페는 아침 여덟 시쯤 열어요. 창문에 불이 켜져 있으면 들어와요."), tr("풍차 들판 서쪽 사과 과수원 상자에서 사과를 얻을 수 있어요."), tr("둥근 나무를 살살 흔들어도 사과가 떨어지죠. 저는 그 소리가 좋아요."), tr("과수원 오솔길 끝은 조용해서, 커피 생각날 때 가끔 가요. 같이 가 볼래요?")]
 	return [tr("…")]
 
@@ -731,15 +755,15 @@ func rumour(walker: Node) -> void:
 	var pool: Array = []
 	match id:
 		"postman": pool = [tr("다리는 모두 네 개예요. 등대섬으로 가는 긴 다리에서 보는 노을이 제일이죠."), tr("카페 '빨간 지붕' 앞으로 편지가 제일 많이 와요. 단골이 많거든요."), tr("가로등은 가까이 가서 켜고 끌 수 있어요. 저는 밤마다 하나씩 살펴요.")]
-		"sweeper": pool = [tr("별씨 공방에서는 숲에서 받은 별씨로 새 물건을 만들 수 있대요."), tr("재단사 소라에게 가면 옷 색과 모자를 바꿀 수 있어요."), tr("연못 부두 끝에 서 있으면 꼬마 그림자가 놀러 와요. 장난꾸러기예요.")]
-		"gentleman": pool = [tr("돌문 너머 숲은 밤이 길어요. 모닥불 곁을 떠나지 마세요."), tr("정원 언덕 정자에는 시를 쓰는 그림자가 자주 앉아 있죠."), tr("다섯 섬은 모두 다리로 이어져 있어요. 어디든 걸어서 갈 수 있답니다.")]
+		"sweeper": pool = [tr("별씨 공방에서는 숲에서 받은 별씨로 새 물건을 만들 수 있대요."), tr("재단사 소라에게 가면 옷 색과 모자를 바꿀 수 있어요."), t(walker, "연못 부두 끝에 서 있으면 꼬마 그림자가 놀러 와요. 장난꾸러기예요.")]
+		"gentleman": pool = [tr("돌문 너머 숲은 밤이 길어요. 모닥불 곁을 떠나지 마세요."), t(walker, "정원 언덕 정자에는 시를 쓰는 그림자가 자주 앉아 있죠."), tr("다섯 섬은 모두 다리로 이어져 있어요. 어디든 걸어서 갈 수 있답니다.")]
 		"lamplighter": pool = [tr("밤이 되면 가로등이 길을 따라 켜져요. 그림자들은 그 불빛 사이로 다니죠."), tr("등대 종을 울리면 마을 전체에 소리가 퍼져요."), tr("등대섬으로 가는 긴 다리는 밤에 별이 물에 비쳐서 예뻐요.")]
 		"scout": pool = [tr("캠프 초원의 텐트를 들여다보면 침낭과 등불이 가지런히 놓여 있어요."), tr("모루 씨는 숲에서 밤을 버티는 법을 제일 잘 알아요."), tr("탐험 지도는 길잡이 나루가 펼쳐 준대요.")]
-		"stroller": pool = [tr("별지기 그림자는 밤에만 천문대 근처에 나타나요."), tr("꼬마 그림자는 밤이 되면 자러 가요. 낮에 광장에서 만나 봐요."), tr("그림자들이 왜 여기 사냐고요? …섬이 너무 밝아서, 쉴 그늘이 필요했대요.")]
+		"stroller": pool = [tr("별지기 그림자는 밤에만 천문대 근처에 나타나요."), t(walker, "꼬마 그림자는 밤이 되면 자러 가요. 낮에 광장에서 만나 봐요."), tr("그림자들이 왜 여기 사냐고요? …섬이 너무 밝아서, 쉴 그늘이 필요했대요.")]
 		_: pool = [tr("천문대 전망대에 오르면 다섯 섬과 다리가 한눈에 보여요."), tr("목조 주택 주인은 아직 한 번도 못 봤어요. 혹시 그림자일까요?")]
 	var turn := int(walker.get_meta("rumour_turn", 0))
 	walker.set_meta("rumour_turn", turn+1)
-	say(walker, [pool[turn % pool.size()], tr("…이건 비밀이에요. 그림자끼리만 아는 이야기.")])
+	say(walker, [pool[turn % pool.size()], t(walker, "…이건 비밀이에요. 그림자끼리만 아는 이야기.")])
 
 ## ------------------------------------------------------------------ riddles
 
@@ -767,11 +791,11 @@ func answer(walker: Node, correct: bool) -> void:
 		walker.smile(6.0)
 		walker.pop("!", 1.6)
 		effect("reward")
-		toast(tr("수수께끼를 풀었어요! 그림자가 하얗게 웃어요."))
-		say(walker, [tr("정답! …역시 눈썰미가 좋네요."), tr("그림자는 칭찬할 때 이렇게 웃는답니다. 히히.")])
+		toast(t(walker, "수수께끼를 풀었어요! 그림자가 하얗게 웃어요."))
+		say(walker, [tr("정답! …역시 눈썰미가 좋네요."), t(walker, "그림자는 칭찬할 때 이렇게 웃는답니다. 히히.")])
 	else:
 		walker.pop("…", 1.4)
-		say(walker, [tr("땡! 아쉽지만 아니에요."), tr("다음에 다시 물어봐 줘요. 그림자는 기다리는 걸 잘하거든요.")])
+		say(walker, [tr("땡! 아쉽지만 아니에요."), t(walker, "다음에 다시 물어봐 줘요. 그림자는 기다리는 걸 잘하거든요.")])
 
 ## ------------------------------------------------------------------ follow me
 
@@ -793,7 +817,7 @@ func follow(walker: Node) -> void:
 			walker.end_talk()
 			walker.begin_lead(route)
 			walker.pop("♪", 1.4)
-	say(walker, [tr("좋아요, 따라와요. 너무 멀어지면 기다릴게요."), tr("…놓치지 마세요. 그림자는 그늘에 잘 섞이거든요.")], [[tr("따라간다"), go]])
+	say(walker, [tr("좋아요, 따라와요. 너무 멀어지면 기다릴게요."), t(walker, "…놓치지 마세요. 그림자는 그늘에 잘 섞이거든요.")], [[tr("따라간다"), go]])
 
 ## Where each shadow likes to take the walker; otherwise the nearest quiet spot
 ## that is at least a short walk away.
@@ -817,14 +841,14 @@ func pick_spot(walker: Node) -> int:
 func lead_arrived(walker: Node) -> void:
 	if walker != leader: return
 	leader = null
-	var name := spot_title(lead_spot)
+	var name := spot_title(lead_spot, walker)
 	walker.smile(6.0)
 	walker.pop("♪", 2.0)
 	effect("reward")
 	toast(tr("숨은 장소를 찾았어요 · %s") % name)
 	float_text(tr("여기가 제 비밀 장소예요"), walker.global_position, Color("d9d2ff"))
 
-func spot_title(node: int) -> String:
+func spot_title(node: int, walker: Node = null) -> String:
 	var key: String = paths.spot_names.get(node, "")
 	match key:
 		"pond_pier": return tr("연못 부두 끝")
@@ -832,7 +856,7 @@ func spot_title(node: int) -> String:
 		"orchard": return tr("과수원 오솔길")
 		"gazebo": return tr("정원 언덕 정자")
 	if paths.faces.has(node): return tr("별빛 천문대 앞")
-	return tr("그림자의 쉼터")
+	return t(walker, "그림자의 쉼터")
 
 ## ------------------------------------------------------------------ favours
 
@@ -842,7 +866,7 @@ func letter(walker: Node) -> void:
 		return
 	var target := letter_target()
 	if target.is_empty():
-		say(walker, [tr("오늘은 배달할 편지가 없네요. 그림자 우체국도 쉬는 날이 있어요.")])
+		say(walker, [t(walker, "오늘은 배달할 편지가 없네요. 그림자 우체국도 쉬는 날이 있어요.")])
 		return
 	var where: String = Minimap.island_name(target.at)
 	if errands.get("letter", "") == target.cast:
@@ -850,7 +874,7 @@ func letter(walker: Node) -> void:
 		return
 	errands["letter"] = target.cast
 	effect("click")
-	say(walker, [tr("이 편지, %s에게 전해 줄 수 있어요?") % target.title, tr("제가 직접 가면 다들 깜짝 놀라서요. %s 쪽에 있을 거예요.") % where],
+	say(walker, [tr("이 편지, %s에게 전해 줄 수 있어요?") % target.title, t(walker, "제가 직접 가면 다들 깜짝 놀라서요. %s 쪽에 있을 거예요.") % where],
 		[[tr("맡겨 줘요"), func(): toast(tr("편지를 받았어요 · %s에게 전해 주세요") % target.title)]])
 
 ## Today's addressee among the named villagers.
@@ -880,8 +904,8 @@ func show_fish(walker: Node) -> void:
 	effect("reward")
 	if done_today.get("fisher", "") != today():
 		mark_done("fisher")
-		toast(tr("낚시꾼 그림자가 엄지를 치켜세웠어요"))
-	say(walker, [tr("오오, %s! 비늘이 반짝반짝하네요.") % fish_name, tr("좋은 솜씨예요. 그림자 낚시회에 들어올래요? …농담이에요.")])
+		toast(t(walker, "낚시꾼 그림자가 엄지를 치켜세웠어요"))
+	say(walker, [tr("오오, %s! 비늘이 반짝반짝하네요.") % fish_name, t(walker, "좋은 솜씨예요. 그림자 낚시회에 들어올래요? …농담이에요.")])
 
 func ask_hoe(walker: Node) -> void:
 	if done_today.get("farmer", "") == today():
@@ -922,8 +946,15 @@ func drop_hoe(at: Vector3) -> void:
 	dropped.name = "DroppedHoe"
 	add_child(dropped)
 	dropped.position = at+Vector3(0, 0.05, 0)
-	var dark := ShaderMaterial.new()
-	dark.shader = Figure.SILHOUETTE
+	# The farmer's own hoe: a silhouette at night, plain wood and iron by day.
+	var dark: Material
+	if persona_day("farmer"):
+		dark = StandardMaterial3D.new()
+		dark.albedo_color = Color(DayFolk.WOOD)
+		dark.roughness = 0.8
+	else:
+		dark = ShaderMaterial.new()
+		dark.shader = Figure.SILHOUETTE
 	var stick := MeshInstance3D.new()
 	var shaft := CylinderMesh.new()
 	shaft.top_radius = 0.02; shaft.bottom_radius = 0.02; shaft.height = 1.1
@@ -959,7 +990,7 @@ func pick_up_hoe() -> void:
 	dropped = null
 	errands["hoe"] = "carried"
 	effect("gather")
-	toast(tr("호미를 주웠어요 · 농부 그림자에게 돌려주세요"))
+	toast(DayFolk.line("호미를 주웠어요 · 농부 그림자에게 돌려주세요", persona_day("farmer")))
 	var player := player_node()
 	if player and player.has_method("react"): player.react("gather")
 
@@ -969,8 +1000,8 @@ func return_hoe(walker: Node) -> void:
 	walker.smile(8.0)
 	walker.pop("!", 1.6)
 	effect("reward")
-	toast(tr("농부 그림자가 하얗게 활짝 웃어요"))
-	say(walker, [tr("내 호미! 정말 고마워요."), tr("이걸로 오늘 순무 한 고랑 더 일구겠네요. 그림자 농사도 손이 많이 가거든요.")])
+	toast(t(walker, "농부 그림자가 하얗게 활짝 웃어요"))
+	say(walker, [tr("내 호미! 정말 고마워요."), t(walker, "이걸로 오늘 순무 한 고랑 더 일구겠네요. 그림자 농사도 손이 많이 가거든요.")])
 
 func update_errands(delta: float) -> void:
 	var here := player_xz()
@@ -980,16 +1011,17 @@ func update_errands(delta: float) -> void:
 			errands.erase("letter")
 			mark_done("postman")
 			effect("reward")
-			toast(tr("%s에게 편지를 전했어요 · \"그림자 우체부가 보냈구나!\"") % target.title)
+			toast(DayFolk.line("%s에게 편지를 전했어요 · \"그림자 우체부가 보냈구나!\"", persona_day("postman")) % target.title)
 			float_text(tr("편지 고마워요!"), target.node.global_position, Color("f5e5b7"))
 	if is_instance_valid(leader):
 		if here.distance_to(leader.xz()) > 25.0: lead_lost += delta
 		else: lead_lost = 0.0
 		if lead_lost > 20.0:
+			var gone := t(leader, "그림자가 한참 기다리다 돌아갔어요")
 			leader.cancel_lead()
 			leader.pop("…", 2.0)
 			leader = null
-			toast(tr("그림자가 한참 기다리다 돌아갔어요"))
+			toast(gone)
 
 func today() -> String:
 	return Time.get_date_string_from_system()

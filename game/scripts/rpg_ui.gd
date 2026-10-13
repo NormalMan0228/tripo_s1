@@ -1139,13 +1139,13 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 		standee.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		standee.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		standee.anchor_left = 0.0; standee.anchor_right = 0.0; standee.anchor_top = 1.0; standee.anchor_bottom = 1.0
-		standee.offset_left = STANDEE_RECT.position.x; standee.offset_right = STANDEE_RECT.end.x
-		standee.offset_top = STANDEE_RECT.position.y; standee.offset_bottom = STANDEE_RECT.end.y
-		standee.pivot_offset = Vector2(STANDEE_RECT.size.x * 0.5, STANDEE_RECT.size.y)
 		standee.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		standee.set_meta("portrait", portrait)
 		standee.set_meta("mood", "neutral")
 		root.add_child(standee)
+		fit_standee(standee)
+		var keep := standee
+		root.resized.connect(func(): if is_instance_valid(keep): fit_standee(keep))
 	# The text box: bottom, full width inside safe margins.
 	var box := PanelContainer.new()
 	box.name = "Box"
@@ -1278,6 +1278,44 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 ## Where the standee stands on the 1280x800 canvas (bottom-left anchored offsets):
 ## its lower part sits behind the text box, which hides the waist crop.
 const STANDEE_RECT := Rect2(28, -26 - 560, 420, 560)
+## The text box's top edge, as an offset from the bottom of the screen.
+const DIALOGUE_BOX_TOP := -224.0
+## Space kept above a standee's head when the screen is short.
+const STANDEE_HEADROOM := 10.0
+## Picture path -> the part that is not transparent (Rect2i), measured once.
+static var _standee_used: Dictionary = {}
+
+## Stands the illustration on the text box with only its cut-off bottom tucked
+## behind it: the lowest 30 % of a waist-up picture (cast villagers, 3:4) or 15 %
+## of a squarer head-and-shoulders one (the shadow folk), so a face never sits
+## behind the box. When a large interface scale leaves too little room above the
+## box, the picture shrinks until the top of the head clears the screen edge.
+static func fit_standee(standee: TextureRect) -> void:
+	var texture := standee.texture
+	if texture == null or not standee.is_inside_tree(): return
+	var picture := texture.get_size()
+	var head := float(standee_used(texture).position.y)
+	var tuck := 0.15 if picture.x/picture.y >= 0.8 else 0.3
+	var scale := minf(STANDEE_RECT.size.x/picture.x, STANDEE_RECT.size.y/picture.y)
+	var room := standee.get_viewport_rect().size.y+DIALOGUE_BOX_TOP-STANDEE_HEADROOM
+	var reach := picture.y*(1.0-tuck)-head
+	if reach > 0.0: scale = minf(scale, room/reach)
+	var drawn := picture*scale
+	var bottom := DIALOGUE_BOX_TOP+drawn.y*tuck
+	var left := STANDEE_RECT.position.x+(STANDEE_RECT.size.x-drawn.x)*0.5
+	standee.offset_left = left; standee.offset_right = left+drawn.x
+	standee.offset_top = bottom-drawn.y; standee.offset_bottom = bottom
+	standee.pivot_offset = Vector2(drawn.x*0.5, drawn.y)
+	standee.remove_meta("rest_y")
+
+static func standee_used(texture: Texture2D) -> Rect2i:
+	var key := texture.resource_path
+	if key.is_empty() or not _standee_used.has(key):
+		var image := texture.get_image()
+		var used := image.get_used_rect() if image else Rect2i(Vector2i.ZERO, Vector2i(texture.get_size()))
+		if key.is_empty(): return used
+		_standee_used[key] = used
+	return _standee_used[key]
 
 ## The background-free illustration for a portrait (<dir>/standee/<name>[_mood].png),
 ## falling back to the neutral one; empty when none was made.

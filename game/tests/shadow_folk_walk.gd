@@ -242,7 +242,10 @@ func interaction_test() -> void:
 				continue
 			opened += 1
 			var dialogue: Dictionary = app.dialogues.back()
-			if not ResourceLoader.exists(dialogue.cast): fail("portrait missing: %s" % dialogue.cast)
+			# By day the rounds are walked by villagers (day_folk.gd), who have no picture.
+			if walker.day_target:
+				if str(dialogue.speaker).contains("그림자"): fail("%s talks as a shadow by day" % walker.spec.id)
+			elif not ResourceLoader.exists(dialogue.cast): fail("portrait missing: %s" % dialogue.cast)
 			run_choices(dialogue, 0)
 			await physics_frame
 	print("TALK checked=", checked, " opened=", opened, " dialogues=", app.dialogues.size(), " toasts=", app.messages.size())
