@@ -22,7 +22,7 @@ usage() {
 
   sudo bash ops/notice.sh release <버전> [받는 주소]
       새 게임이 나왔다고 알립니다(옛 게임도 계속 플레이 가능, 위쪽에 안내만 뜸).
-      예) sudo bash ops/notice.sh release 0.11.4 https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/index.html
+      예) sudo bash ops/notice.sh release 0.11.4 https://example.com/villagen/
 
   sudo bash ops/notice.sh min <버전>
       이 버전보다 오래된 게임은 접속을 막고 "업데이트 필요" 창을 띄웁니다.

@@ -129,11 +129,9 @@ sudo bash ops/update_online_server.sh main --open-signup --per-account 3 --per-d
 
 [7단계] 심사위원·친구에게 보내기
 --------------------------------
-이 링크 하나만 보내면 됩니다.
+게임 압축 파일(Villagen_Windows.zip)을 직접 전달합니다(공개 다운로드 링크 없음).
 
-  https://github.com/NormalMan0228/tripo_s1/releases/tag/v0.10.0
-
-→ https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip 에서 Villagen_Windows.zip 을 받아 압축을 풀고 Villagen.exe 실행
+→ Villagen_Windows.zip 압축을 풀고 Villagen.exe 실행
 → 계정 만들기 (아이디 + 비밀번호만)
 → 마을에서 C 키 → 만들고 싶은 물건을 글로 적기 → 견적 확인 → 제작 확정
 

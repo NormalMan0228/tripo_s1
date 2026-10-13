@@ -132,7 +132,7 @@ Tripo Studio 크레딧과 Scenario CU는 웹사이트에서 확인한 잔액을 
   · 끝에 "점검 공지는 그대로 두었어요"가 나오면 서버가 다시 켜지지 않은 것입니다. 저에게 알려 주시고, 해결되면 아래 cancel 로 점검을 끝냅니다.
 
 2) 새 게임(학교 빌드)을 GitHub 사전 배포(pre-release)로 올린 뒤, 플레이어에게 알리기
-【명령】 sudo bash ops/notice.sh release 0.11.4 https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/index.html
+【명령】 sudo bash ops/notice.sh release 0.11.4 <내려받기 페이지 주소>
   · 버전 숫자와 주소는 실제 배포에 맞게 바꿉니다. 옛 게임도 계속 플레이할 수 있고, 위쪽에 "새 버전이 있어요 · 받기"만 뜹니다.
 
 3) 모두 바꿀 때가 되면 옛 게임 막기

@@ -1,23 +1,18 @@
 # Villagen — village + generate
 
 <!-- school-download:start -->
-## ⬇ 학교판 바로 설치 · 0.11.3 (2026-10-13)
+## 학교판 설치 · 0.11.3 (2026-10-13)
 
-### [▶ 설치 파일 받기 — Villagen_School_Setup.exe (1.19GB)](https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/0.11.3/Villagen_School_Setup.exe)
+설치 파일은 저장소에 두지 않습니다. 내려받기 주소는 **학교 공지(수업 게시판·단톡방)**로 안내합니다.
 
-받은 파일을 실행 → 설치 위치 선택 → 바탕화면·시작 메뉴에 **Villagen** 아이콘이 생깁니다. 이전 버전 위에 그대로 설치하면 됩니다.
+받은 설치 파일을 실행 → 설치 위치 선택 → 바탕화면·시작 메뉴에 **Villagen** 아이콘이 생깁니다. 이전 버전 위에 그대로 설치하면 됩니다.
 처음 실행할 때 Windows "PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누르세요. 로그인 화면의 **학교 월드**에서 계정을 만듭니다.
-
-- 설치 없이 쓰기: [Villagen_School_Windows.zip (1.29GB)](https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/0.11.3/Villagen_School_Windows.zip) → 압축 풀고 `Villagen\Villagen.exe`
-- [내려받기 페이지](https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/index.html) · [체크섬](https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/0.11.3/SHA256SUMS_School.txt) · [로드맵](docs/roadmap/README.md)
-
-<sub>Install (Windows): download Villagen_School_Setup.exe above and run it. 安装：下载上面的 Villagen_School_Setup.exe 并运行。</sub>
+버전별 바뀐 점은 [docs/releases/school_changes_KO.txt](docs/releases/school_changes_KO.txt), 계획은 [로드맵](docs/roadmap/README.md)에 있습니다.
 <!-- school-download:end -->
 
 | 🌐 한국어 | 🌐 English | 🌐 中文 |
 |:---:|:---:|:---:|
 | [**워크스루 보기**](docs/WALKTHROUGH_KO.md) | [**Walkthrough**](docs/WALKTHROUGH_EN.md) | [**游戏攻略**](docs/WALKTHROUGH_ZH.md) |
-| [⬇ 심사판 0.10.2 받기](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ Judging build 0.10.2](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ 评审版 0.10.2](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) |
 | 설정 → 게임플레이 → 언어 → **한국어** | Settings → Gameplay → Language → **English** | 设置 → 游戏 → 语言 → **中文** |
 
 **Villagen**(빌리지 + 제너레이트)은 섬 마을을 가꾸고, 원하는 물건을 글로 적으면 AI가 3D로 만들어 주는 마을 생활 RPG입니다. (이전 작업명: Tripothon)
@@ -28,13 +23,13 @@
 
 ## 학교 개발 라인 (dev 브랜치)
 
-제출판(0.10.2, main, 심사 서버)은 그대로 두고 `dev` 브랜치에서 개발을 이어 갑니다. 학교 서버는 AWS 서울 리전(t4g.small)에 따로 둡니다([학교 서버 만들기](docs/SCHOOL_SERVER_KO.txt)). 학교 빌드는 1회 최대 35크레딧(Tripo가 색까지 입힌 가구, 참고 사진, 사진 다듬기)으로 만들고, 서버 전체 예산은 4,000크레딧입니다. 배포는 GitHub 사전 공개판의 `Villagen_School_Windows.zip`으로 하며, 심사위원이 받는 최신판 링크는 바뀌지 않습니다.
+제출판(0.10.2, main, 심사 서버)은 그대로 두고 `dev` 브랜치에서 개발을 이어 갑니다. 학교 서버는 AWS 서울 리전(t4g.small)에 따로 둡니다([학교 서버 만들기](docs/SCHOOL_SERVER_KO.txt)). 학교 빌드는 1회 최대 35크레딧(Tripo가 색까지 입힌 가구, 참고 사진, 사진 다듬기)으로 만들고, 서버 전체 예산은 4,000크레딧입니다. 설치 파일은 GitHub에 올리지 않고, 내려받기 주소는 학교 공지로만 안내합니다.
 
 ## 바로 플레이 (심사·친구용) · 0.10.1
 
-**설치 없이 플레이:** **[⬇ Villagen_Windows.zip 바로 받기](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip)** (항상 최신판, [모든 릴리스](https://github.com/NormalMan0228/tripo_s1/releases))를 받아 압축을 풀고 `Villagen.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정은 아이디·비밀번호만으로 만듭니다(초대 코드 없음, 공개 가입). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 체험판 규칙으로 계정당 3회, 1회 Tripo 10크레딧(직접 색칠하는 정적인 가구 한 덩어리) 안에서 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다. **처음이라면 15분 워크스루를 따라 해 보세요: [한국어](docs/WALKTHROUGH_KO.md) · [English](docs/WALKTHROUGH_EN.md) · [中文](docs/WALKTHROUGH_ZH.md)**
+**설치 없이 플레이:** 심사용 압축 파일(`Villagen_Windows.zip`, 심사위원에게 따로 전달)을 받아 압축을 풀고 `Villagen.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정은 아이디·비밀번호만으로 만듭니다(초대 코드 없음, 공개 가입). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 체험판 규칙으로 계정당 3회, 1회 Tripo 10크레딧(직접 색칠하는 정적인 가구 한 덩어리) 안에서 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다. **처음이라면 15분 워크스루를 따라 해 보세요: [한국어](docs/WALKTHROUGH_KO.md) · [English](docs/WALKTHROUGH_EN.md) · [中文](docs/WALKTHROUGH_ZH.md)**
 
-**소스로 개발하는 협업자:** 저장소에는 용량이 큰 모델 폴더(`game/maps/archipelago/assets`, `game/assets/interior`, `game/assets/monsters`, `game/maps/survival/assets`, `game/assets/portraits`, `game/assets/npc`)가 없습니다. 같은 Release의 `Villagen_v0.10.0_DevAssets_Map.zip`과 `..._DevAssets_Art.zip`을 **저장소 최상위 폴더에서** 압축 풀면 그대로 채워집니다. 그다음 Godot 4.7.2로 `game/project.godot`을 열고, 서버는 `tools/run_server.ps1`로 켭니다.
+**소스로 개발하는 협업자:** 저장소에는 용량이 큰 모델 폴더(`game/maps/archipelago/assets`, `game/assets/interior`, `game/assets/monsters`, `game/maps/survival/assets`, `game/assets/portraits`, `game/assets/npc`)가 없습니다. 개발용 에셋 묶음(`Villagen_v0.10.0_DevAssets_Map.zip`, `..._DevAssets_Art.zip`)은 팀 안에서 따로 전달하며, **저장소 최상위 폴더에서** 압축 풀면 그대로 채워집니다. 그다음 Godot 4.7.2로 `game/project.godot`을 열고, 서버는 `tools/run_server.ps1`로 켭니다.
 
 ## 전용 UI 이미지·배경 없는 일러스트·접는 HUD·길 안내 · 2026-10-06
 

@@ -9,15 +9,17 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 TOOLS = ROOT / ".tools"
 REPORT = ROOT / "artifacts/detail-map-20261003"
-PACKAGES = [
-    {"name": "Material Maker", "version": "1.7", "dir": "material-maker-1.7",
-     "url": "https://github.com/RodZill4/material-maker/releases/download/1.7/material_maker_1_7_windows.zip",
-     "sha256": "deb4416bc939861d48097a866a8b2bf0363c29ff64874f2e04478658ff900808",
-     "source": "https://github.com/RodZill4/material-maker/releases/tag/1.7"},
-    {"name": "Krita", "version": "5.3.4", "dir": "krita-5.3.4",
-     "url": "https://download.kde.org/stable/krita/5.3.4/krita-x64-5.3.4.zip",
-     "source": "https://krita.org/en/download/"},
-]
+LOCAL = Path(__file__).with_name("third_party_downloads.local.json")
+
+
+def _local(key):
+    """Download addresses live in a git-ignored local file: the repository keeps no archive links."""
+    if not LOCAL.exists():
+        raise SystemExit(f"{LOCAL.name} is missing; put the official download addresses there (see its _note).")
+    return json.loads(LOCAL.read_text(encoding="utf-8"))[key]
+
+
+PACKAGES = _local("art_tools")
 
 
 def install(package):

@@ -3,14 +3,6 @@
  "subtitle": "섬 마을을 직접 만들고 꾸미는 RPG · 학과 개발 라인(dev)",
  "links": [
   [
-   "학교판 내려받기 (사전 공개)",
-   "https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/index.html"
-  ],
-  [
-   "심사용 최신판 0.10.2",
-   "https://github.com/NormalMan0228/tripo_s1/releases/latest"
-  ],
-  [
    "학교 서버 운영 안내",
    "../SCHOOL_SERVER_KO.txt"
   ],
@@ -369,7 +361,11 @@
   {
    "version": "2026.10.13-1449",
    "note": "3단계 제작물 품질 시작: 모양에 맞는 충돌 완료"
+  },
+  {
+   "version": "2026.10.13-2135",
+   "note": "설치 파일 다운로드 링크를 저장소에서 모두 정리 (GitHub 요청)"
   }
  ],
- "version": "2026.10.13-1449"
+ "version": "2026.10.13-2135"
 }

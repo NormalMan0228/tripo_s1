@@ -3,7 +3,7 @@
 2026-10-12부터 설치 파일·압축 파일은 GitHub 릴리스에 올리지 않는다. GitHub은 코드와 작업 기록만 둔다.
 (큰 exe를 며칠 새 여러 번 올린 직후 계정이 바깥에서 숨겨졌다.)
 
-- 내려받기 페이지(항상 최신): https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/index.html
+- 내려받기 페이지(항상 최신): `publish_school_build.py`가 출력하는 `index.html` 주소. **저장소·릴리스·PR에는 이 주소나 exe·zip 링크를 적지 않는다**(2026-10-12 GitHub 계정 제한 사유, 티켓 4850901). 학생에게는 학교 공지로만 알린다.
 - 파일 위치: `school/<버전>/Villagen_School_Setup.exe`, `Villagen_School_Windows.zip`, `SHA256SUMS_School.txt`
 - 설정: `tools/download_host.json` (버킷 `villagen-school-dl`, 서울 리전, 키 프로필 `villagen-upload`)
 - 비용: 보관 GB당 월 약 0.025달러, 내려받기는 AWS 계정 전체 월 100GB까지 무료.
@@ -65,8 +65,8 @@ powershell -ExecutionPolicy Bypass -File tools\aws_upload_login.ps1
 2. `publish_school_build.py upload` → 설치 파일과 함께 `CHANGES_KO.txt`(바뀐 점·고친 점), `ROADMAP_KO.txt`(계획·진행), `roadmap.png`도 올라가고 페이지에 링크된다.
    기록만 고칠 때는 `publish_school_build.py docs`.
 3. `publish_school_build.py check --full` → `download check: PASS`
-4. `python tools/update_download_links.py` → README 첫 화면 링크 갱신
-5. VM: `sudo bash ops/notice.sh release <버전> https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/index.html`
+4. `python tools/update_download_links.py` → README 첫 화면의 설치 안내(버전·방법만, 링크 없음) 갱신
+5. VM: `sudo bash ops/notice.sh release <버전> <내려받기 페이지 주소>` (게임 안 알림은 서버가 주소를 전하므로 저장소에 주소가 없어도 된다)
 6. 오래된 버전 정리: `publish_school_build.py prune 2` (최신 2개만 남김)
 
 ## GitHub이 막혔을 때 서버에 코드 넘기기 (비상용)

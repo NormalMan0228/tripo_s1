@@ -67,7 +67,7 @@ def test_nothing_changes_without_a_policy_file(world):
 def test_old_and_unversioned_games_get_426_with_a_readable_sentence(world):
     app, c, now, path = world
     a = register(c, 'alice', NEW)
-    url = 'https://github.com/NormalMan0228/tripo_s1/releases/tag/v0.11.10-school'
+    url = 'https://example.com/villagen/0.11.10/'
     write(path, min_client_version='0.11.10', latest_client_version='0.11.10', client_download_url=url)
     assert c.get('/v1/me', headers={**a, **NEW}).status_code == 200
     assert c.get('/v1/me', headers={**a, 'X-Villagen-Version': '0.12.0'}).status_code == 200
@@ -184,7 +184,7 @@ def test_maintenance_comes_before_the_version_check(world):
 
 def test_operator_commands_write_a_policy_the_server_reads(tmp_path, capsys):
     run = lambda *args: client_policy.main(['--data-dir', str(tmp_path), *args])
-    run('release', '0.11.4', 'https://github.com/NormalMan0228/tripo_s1/releases/tag/v0.11.4-school')
+    run('release', '0.11.4', 'https://example.com/villagen/0.11.4/')
     run('min', '0.11.4')
     run('maintenance', '--in', '30', '--minutes', '10', '--message', '서버 업데이트가 있어요.', '--hold')
     saved = json.loads((tmp_path / FILE_NAME).read_text(encoding='utf-8'))
