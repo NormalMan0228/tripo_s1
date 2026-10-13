@@ -1388,5 +1388,8 @@ static func field(parent: Node, placeholder: String, secret := false) -> LineEdi
 	line.custom_minimum_size = Vector2(340, 44)
 	line.theme_type_variation = "NightField"
 	line.add_theme_font_size_override("font_size", 16)
+	# Enter must not end typing (Godot's default): a failed login or an early Enter left the
+	# field focused but deaf until it was clicked again.
+	line.keep_editing_on_text_submit = true
 	parent.add_child(line)
 	return line

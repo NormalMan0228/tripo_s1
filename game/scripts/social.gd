@@ -239,6 +239,7 @@ func open_menu() -> void:
 	name_input.placeholder_text = tr("초대할 사용자 이름")
 	name_input.max_length = 24
 	name_input.custom_minimum_size.x = 220
+	name_input.keep_editing_on_text_submit = true
 	invite_row.add_child(name_input)
 	app.button(invite_row, tr("내 마을로 초대"), func():
 		var result: Dictionary = await perform("/v1/social/invites", {"username":name_input.text, "kind":"village"})
@@ -297,6 +298,9 @@ func open_menu() -> void:
 	var chat := LineEdit.new()
 	chat.placeholder_text = tr("메시지를 입력하고 Enter")
 	chat.max_length = 160
+	# Enter sends and the field stays ready for the next line (Godot otherwise stops editing on
+	# Enter: the next message, Korean IME included, did not type until the field was clicked again).
+	chat.keep_editing_on_text_submit = true
 	content.add_child(chat)
 	chat.text_submitted.connect(func(value):
 		send_message(value)
