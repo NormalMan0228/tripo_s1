@@ -3326,7 +3326,17 @@ func village_furniture_event(id: String,event: String) -> void:
 	if social.visiting():
 		if not id.is_empty() and is_instance_valid(item) and item.has_method("local_event"): item.local_event(event)
 		return
-	if id.is_empty() or busy or refreshing or furniture_event_pending:return
+	if id.is_empty() or busy or refreshing:return
+	# Near/leave run every half second and can skip a beat, but a click (E) is the player's own
+	# action: it waits for an event still on its way (sitting down moves the walker, which sends
+	# one) instead of being dropped.
+	if furniture_event_pending:
+		if event!="click":return
+		var waited := 0.0
+		while furniture_event_pending and waited<3.0:
+			await get_tree().process_frame
+			waited+=get_process_delta_time()
+		if furniture_event_pending:return
 	if not is_instance_valid(item) and selected.get("id")==id:item=inspect_model
 	if not is_instance_valid(item) or not item.get_meta("studio",false):return
 	furniture_event_pending=true
