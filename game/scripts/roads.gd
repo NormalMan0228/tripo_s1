@@ -79,6 +79,10 @@ func build(physics: PhysicsDirectSpaceState3D, layout: Node) -> void:
 	mesh.mesh = surface.commit()
 	var material := ShaderMaterial.new()
 	material.shader = load(SHADER)
+	# The ribbon blends into the meadow, so it is drawn with the see-through things,
+	# which are sorted by distance to the island-wide mesh's centre: a name tag or a
+	# glow that sorted before it was painted over. Ground first, always.
+	material.render_priority = Material.RENDER_PRIORITY_MIN
 	mesh.material_override = material
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mesh)

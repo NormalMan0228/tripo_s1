@@ -168,6 +168,7 @@ func sync_peers(players: Array) -> void:
 			nameplate.font_size = 32
 			nameplate.pixel_size = .006
 			nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			preload("res://scripts/art.gd").plate_priority(nameplate)
 			actor.add_child(nameplate)
 			peers[id] = {"node":actor, "label":nameplate, "target":target, "avatar":JSON.stringify(record.get("avatar", {}))}
 		peers[id].target = target
