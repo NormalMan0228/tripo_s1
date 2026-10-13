@@ -34,6 +34,10 @@ func run() -> void:
 		await dialogue()
 		quit()
 		return
+	if shot == "stairs":
+		await stairs()
+		quit()
+		return
 	camera = Camera3D.new()
 	root.add_child(camera)
 	app = Stub.new()
@@ -86,6 +90,39 @@ func dialogue() -> void:
 			await process_frame
 	root.content_scale_factor = 1.0
 
+## Climbs the first stair of a few rooms and logs the walker's clip on the way.
+func stairs() -> void:
+	Engine.set_meta("interior_hour", 13.0)
+	for room in ["home", "11_purple_house", "17_lighthouse"]:
+		Engine.set_meta("studio_session", {"token":"", "url":"http://127.0.0.1:9", "room":room})
+		var studio: Control = load("res://scenes/studio.tscn").instantiate()
+		root.add_child(studio)
+		await create_timer(1.0).timeout
+		for record in studio.decor:
+			if not record.has("link"): continue
+			var front := Vector3(0, 0, 1).rotated(Vector3.UP, float(record.yaw))
+			for distance in [0.7, 0.9, 1.1, 1.4]:
+				var at: Vector3 = record.center+front*(float(record.half.y)+distance)
+				at.y = 0
+				if studio.can_stand(at):
+					studio.hero.position = at
+					break
+			studio.update_camera(0.0, true)
+			await create_timer(0.4).timeout
+			if room == "home": await capture("world-stairs-idle.png", 0, false)
+			studio.travel(record)
+			var hero = studio.hero
+			for i in 24:
+				await create_timer(0.1).timeout
+				print("STAIR %s %s t=%.1f y=%.2f clip=%s anim=%s playing=%s vel=%s ext=%s" % [room, record.kind, i*0.1, hero.position.y, hero.current_clip, hero.animation_player.current_animation, hero.animation_player.is_playing(), hero.locomotion_velocity, hero.external_velocity])
+				if i == 7: await capture("world-stairs-%s.png" % room, 0, room != "home")
+				if not studio.travelling: break
+			break
+		studio.queue_free()
+		await process_frame
+		await process_frame
+	Engine.remove_meta("interior_hour")
+
 func named(id: String) -> Node3D:
 	for walker in folk.walkers:
 		if walker.spec.id == id: return walker
@@ -128,10 +165,10 @@ func focus(at: Vector2, size: float) -> void:
 	camera.look_at(target)
 	camera.current = true
 
-func capture(file: String, settle := 8) -> void:
+func capture(file: String, settle := 8, half := true) -> void:
 	for i in settle: await process_frame
 	await RenderingServer.frame_post_draw
 	var image := root.get_texture().get_image()
 	image.convert(Image.FORMAT_RGB8)
-	image.resize(image.get_width()/2, image.get_height()/2)
+	if half: image.resize(image.get_width()/2, image.get_height()/2)
 	print("CAPTURE ", image.save_png(artifact(file)), " ", artifact(file))

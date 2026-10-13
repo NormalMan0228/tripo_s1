@@ -778,8 +778,12 @@ func follow_path(points: Array[Vector3], speed: float, fade_at: float, veil: Can
 		var before: Vector3=hero.position
 		hero.position=points[segment].lerp(points[segment+1],clampf(along/maxf(lengths[segment],0.0001),0.0,1.0))
 		var step := Vector2(hero.position.x-before.x,hero.position.z-before.z)
-		if climbing_rungs or step.length()<0.0005:
-			if climbing_rungs: hero.facing=face_ladder
+		if climbing_rungs:
+			# Hand over hand up the rungs: the stepping clip in place, facing the ladder.
+			hero.facing=face_ladder
+			hero.external_motion=Vector2(face_ladder.x,face_ladder.z)
+			hero.external_velocity=hero.external_motion*0.8
+		elif step.length()<0.0005:
 			hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
 		else:
 			hero.facing=Vector3(step.x,0,step.y).normalized()
@@ -1783,8 +1787,11 @@ func _process(delta: float) -> void:
 	proximity_time+=delta
 	if proximity_time>0.35:proximity_time=0;proximity()
 	if not is_instance_valid(hero):return
-	hero.external_motion=Vector2.ZERO
-	hero.external_velocity=Vector2.ZERO
+	# A stair climb (follow_path) sets the walker's motion just before this runs each
+	# frame; clearing it here left the idle pose gliding up the steps.
+	if not travelling:
+		hero.external_motion=Vector2.ZERO
+		hero.external_velocity=Vector2.ZERO
 	hint_time+=delta
 	if hint_time>0.15:hint_time=0;update_hint();update_place_label();update_name_plates()
 	daylight_time+=delta
