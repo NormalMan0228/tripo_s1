@@ -1,14 +1,20 @@
 """Player-made interactions for crafted objects (the game's 상호작용 editor).
 
 An owner gives a crafted object new behaviour without a new craft: ready-made presets
-(spin, sway, bounce, glow, pulse, colour, slow turn, open/close a part), each with a
-trigger (click/E, near, leave, always) and a level, or a sentence the studio's designer
+(spin, sway, bounce, glow, pulse, colour, slow turn, open/close a part, and for living
+objects: clock hands on the player's local time, a ticking step, a sliding drawer, a candle's
+flicker, rocking, a rotor), each with a trigger (click/E, near, leave, always) and a level, or a
+sentence the studio's designer
 turns into a program for the object's existing parts (no Tripo call; the fixture designer
 in development). Either way the result is an ordinary VM program that passes the gates of
 designed programs (validate_program, exercise_extended). It is kept per object in
 object_interactions and replaces the crafted program on every runtime path: the owner's
 assembly, event and invoke routes and the visitors' assembly route (apply() below).
 'Rest' (sit/lie) is a flag the room's rest system reads; it needs no program.
+A new craft of a library type (server/archetypes.py) starts with that type's presets here.
+A behaviour the designer made from a sentence is kept in the learned library
+(server/behaviour_library.py): the same sentence on an object with the same parts reuses it,
+free and without the designer.
 
 The emit target 'whole' is the object itself: rotations about its base centre, a lift,
 and glow/colour on every part. One-part crafts already call their only part 'whole'.
@@ -25,8 +31,9 @@ from typing import Literal
 from fastapi import HTTPException, Request
 from pydantic import Field
 from .models import Mutation, Strict
-from .asset_vm import AssetVM, ProgramError, validate_program, exercise, exercise_extended, NAME, EVENTS
+from .asset_vm import AssetVM, ProgramError, validate_program, exercise, exercise_extended, legacy, NAME, EVENTS
 from .provider import ProviderError
+from . import behaviour_library as library
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS object_interactions (
@@ -40,10 +47,17 @@ CREATE INDEX IF NOT EXISTS interaction_designs_owner ON interaction_designs(owne
 '''
 
 WHOLE = 'whole'
-KINDS = ('spin', 'sway', 'bounce', 'glow', 'pulse', 'hue', 'turn', 'hinge')
+KINDS = ('spin', 'sway', 'bounce', 'glow', 'pulse', 'hue', 'turn', 'hinge',
+         'clock', 'tick', 'slide', 'flicker', 'rock', 'rotor')
 TRIGGERS = ('click', 'near', 'leave', 'always')
 # One-shot motions play once per trigger ('always' loops them); toggles switch on and off.
-ACTIONS = ('spin', 'sway', 'bounce', 'hue')
+ACTIONS = ('spin', 'sway', 'bounce', 'hue', 'rock')
+# Kinds that move one part of the object (the whole object does not open or slide).
+PART_KINDS = ('hinge', 'slide')
+# A ticking step gets to its next place in this many seconds, a little past it, and settles.
+TICK_EASE = .16
+# Games that run the living-objects VM say so in this header; others get programs they can run.
+VM_HEADER = 'x-villagen-vm'
 MAX_PRESETS = 6
 # "글로 설명하기": starseeds per description (refunded when the designer fails) and attempts per
 # account per UTC day (failed ones count: they used the model).
@@ -62,7 +76,10 @@ class Preset(Strict):
     level: int = Field(default=2, ge=1, le=3)
     direction: Literal[-1, 1] = 1
     axis: Literal['x', 'y', 'z'] = 'x'
+    # Degrees (hinge), degrees per step (tick) or centimetres (slide).
     angle: int = Field(default=90, ge=-180, le=180)
+    # Which hand a 'clock' preset turns.
+    hand: Literal['hour', 'minute', 'second'] = 'minute'
 
 
 class Choice(Strict):
@@ -123,6 +140,12 @@ def timer(key, duration):
     return ['store', key, ['min', duration, ['add', s(key), DT]]]
 
 
+def jump(u, strength=2.6):
+    """0..1 -> a mechanical step: there quickly, a little past (about 9 %), settled at 1."""
+    rest = ['sub', 1, u]
+    return ['sub', 1, ['mul', ['mul', rest, rest], ['sub', 1, ['mul', strength, u]]]]
+
+
 def targets_of(parts):
     ids = [p['id'] for p in parts]
     return ids if WHOLE in ids else ids + [WHOLE]
@@ -153,7 +176,7 @@ def build(presets, parts, base=None):
         direction = p.get('direction', 1)
         if target != WHOLE and target not in ids:
             raise InteractionError('part_not_found')
-        if kind == 'hinge' and target not in ids:
+        if kind in PART_KINDS and target not in ids:
             raise InteractionError('hinge_needs_part')
         if (kind, target) in seen:
             raise InteractionError('duplicate_preset')
@@ -162,6 +185,54 @@ def build(presets, parts, base=None):
         def key(name):
             return f'{prefix}{n}_{name}'
         tick = events['tick']
+        axis = p.get('axis', 'x')
+        if kind == 'clock':
+            # The player's local time: hour and minute hands glide, the second hand ticks (level 1
+            # sweeps). Clockwise seen from the axis' + side, the front of a dial facing +Z.
+            clock, hand = ['input', 'clock'], p.get('hand', 'minute')
+            if hand == 'hour':
+                theta = ['div', clock, 120]
+            elif hand == 'minute':
+                theta = ['div', clock, 10]
+            elif level == 0:
+                theta = ['mul', ['mod', clock, 60], 6]
+            else:
+                sec, u = key('s'), key('u')
+                tick.append(['set', sec, ['mod', clock, 60]])
+                tick.append(['set', u, ['min', 1, ['div', ['mod', ['var', sec], 1], TICK_EASE]]])
+                whole_seconds = ['sub', ['var', sec], ['mod', ['var', sec], 1]]
+                theta = ['mul', ['add', ['sub', whole_seconds, 1], jump(['var', u], (2.6, 3.4)[level - 1])], 6]
+            channel('rotate_' + axis, target, ['mul', ['mod', theta, 360], -direction])
+            continue
+        if kind == 'tick':
+            # Steps of 'angle' degrees (6 by default) with a mechanical jump: every 2 / 1 / 0.5 s
+            # (level) while running, or one step per click.
+            step = abs(p.get('angle', 6)) or 6
+            period = (2.0, 1.0, .5)[level]
+            count = 360 // math.gcd(step, 360)
+            u = key('u')
+            if trigger == 'click':
+                n, t = key('n'), key('t')
+                state[n], state[t] = 0, TICK_EASE
+                idle[t] = TICK_EASE
+                events['click'].extend([['store', n, ['mod', ['add', s(n), 1], count]], ['store', t, 0]])
+                tick.extend([timer(t, TICK_EASE), ['set', u, ['div', s(t), TICK_EASE]]])
+                theta = ['mul', ['add', ['sub', s(n), 1], jump(['var', u])], step]
+            else:
+                ph, k = key('p'), key('k')
+                state[ph] = 0
+                rate = DT
+                if trigger in ('near', 'leave'):
+                    on = key('on')
+                    state[on] = float(trigger == 'leave')
+                    events['near'].append(['store', on, float(trigger == 'near')])
+                    events['leave'].append(['store', on, float(trigger == 'leave')])
+                    rate = ['mul', DT, s(on)]
+                tick.extend([['store', ph, ['mod', ['add', s(ph), rate], period * count]], ['set', k, ['div', s(ph), period]],
+                             ['set', u, ['min', 1, ['div', ['mul', ['mod', ['var', k], 1], period], TICK_EASE]]]])
+                theta = ['mul', ['add', ['sub', ['var', k], ['mod', ['var', k], 1]], jump(['var', u])], step]
+            channel('rotate_' + axis, target, ['mul', theta, -direction])
+            continue
         if kind in ACTIONS:
             looping = trigger == 'always'
             fire = []
@@ -182,12 +253,15 @@ def build(presets, parts, base=None):
                 elif kind == 'sway':
                     tick.append(advance(ph, TAU * .5, TAU))
                     channel('rotate_z', target, ['mul', (6, 12, 20)[level], ['sin', s(ph)]])
+                elif kind == 'rock':
+                    tick.append(advance(ph, TAU * (.45, .6, .8)[level], TAU))
+                    channel('rotate_' + axis, target, ['mul', (4, 8, 14)[level], ['sin', s(ph)]])
                 else:
                     tick.append(advance(ph, math.pi / .6, math.pi))
                     channel('offset_y', target, ['mul', (.12, .24, .4)[level] * .7, ['sin', s(ph)]])
             else:
                 t = key('t')
-                duration = {'spin': (1.5, 1.0, .6)[level], 'sway': 2.4, 'bounce': .84}[kind]
+                duration = {'spin': (1.5, 1.0, .6)[level], 'sway': 2.4, 'bounce': .84, 'rock': 4.0}[kind]
                 state[t] = idle[t] = duration
                 # A new trigger waits for the running one to finish, so nothing jumps.
                 fire = [['if', ['lt', s(t), duration], [], [['store', t, 0]]]]
@@ -197,6 +271,11 @@ def build(presets, parts, base=None):
                     channel('rotate_y', target, ['mul', smooth(u), 360 * direction])
                 elif kind == 'sway':
                     channel('rotate_z', target, ['mul', ['mul', (6, 12, 20)[level], ['sin', ['mul', s(t), TAU * 1.6]]], ['sub', 1, u]])
+                elif kind == 'rock':
+                    # A push: rocks a few times and settles.
+                    fade = ['sub', 1, u]
+                    swing = ['sin', ['mul', s(t), TAU * (.5, .6, .75)[level]]]
+                    channel('rotate_' + axis, target, ['mul', ['mul', (5, 9, 14)[level], swing], ['mul', fade, fade]])
                 else:
                     hop = ['abs', ['sin', ['mul', s(t), math.pi / .42]]]
                     channel('offset_y', target, ['mul', ['mul', (.12, .24, .4)[level], hop], ['sub', 1, ['mul', .45, u]]])
@@ -219,22 +298,37 @@ def build(presets, parts, base=None):
                 state[ph] = 0
                 tick.extend([approach(g, s(on), 3), advance(ph, TAU * .55, TAU)])
                 channel('emission', target, ['mul', ['mul', s(g), (.8, 1.6, 2.6)[level]], ['add', .55, ['mul', .45, ['sin', s(ph)]]]])
-            elif kind == 'turn':
+            elif kind in ('turn', 'rotor'):
+                # turn: a slow turntable; rotor: blades, sails or a wheel about the part's own axis.
                 a = key('p')
                 state[a] = 0
-                speed = (15, 30, 60)[level] * direction
-                tick.extend([approach(g, s(on), 1.5), ['store', a, ['mod', ['add', s(a), ['mul', ['mul', DT, speed], s(g)]], 360]]])
-                channel('rotate_y', target, s(a))
+                speed = ((15, 30, 60) if kind == 'turn' else (90, 200, 420))[level] * direction
+                tick.extend([approach(g, s(on), 1.5 if kind == 'turn' else 1.1),
+                             ['store', a, ['mod', ['add', s(a), ['mul', ['mul', DT, speed], s(g)]], 360]]])
+                channel('rotate_y' if kind == 'turn' else 'rotate_' + axis, target, s(a))
+            elif kind == 'flicker':
+                # A flame: an uneven glow of three waves, fading in and out.
+                tick.append(approach(g, s(on), 4))
+                waves = [.78]
+                for i, (hz, depth) in enumerate(((1.3, .12), (3.1, .07), (7.3, .05))):
+                    ph = key('p%d' % i)
+                    state[ph] = i * 1.7
+                    tick.append(advance(ph, TAU * hz, TAU))
+                    waves.append(['mul', depth, ['sin', s(ph)]])
+                channel('emission', target, ['mul', ['mul', s(g), (1.2, 2.0, 3.0)[level]], total(waves)])
+            elif kind == 'slide':
+                tick.append(approach(g, s(on), (2.5, 5, 9)[level]))
+                channel('offset_' + axis, target, ['mul', s(g), (p.get('angle', 30) or 30) / 100])
             else:
                 tick.append(approach(g, s(on), (2.5, 5, 9)[level]))
-                channel('rotate_' + p.get('axis', 'x'), target, ['mul', s(g), p.get('angle', 90)])
+                channel('rotate_' + axis, target, ['mul', s(g), p.get('angle', 90)])
     for (op, target), values in channels.items():
         value = total(values)
         if op == 'rotate_y':
             value = ['mod', value, 360]
         elif op in ('rotate_x', 'rotate_z'):
             value = ['sub', ['mod', ['add', value, 180], 360], 180]
-        elif op == 'offset_y':
+        elif op.startswith('offset_'):
             value = ['clamp', value, -2, 2]
         else:
             value = ['clamp', value, 0, 4]
@@ -339,6 +433,47 @@ def apply(conn, object_id, value):
     return value
 
 
+def downgrade(value):
+    if isinstance(value, dict):
+        if set(value) == {'version', 'state', 'functions', 'events'}:
+            return legacy(value)
+        return {k: downgrade(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [downgrade(v) for v in value]
+    return value
+
+
+def for_client(request, value):
+    """A reply for this game. Games that do not run the living-objects VM (no X-Villagen-VM: 2;
+    released games up to 0.11.3) get every program in it reduced to what they can run
+    (asset_vm.legacy): the same state, new operations as plain expressions, clocks on the time
+    since the object loaded."""
+    try:
+        level = int(request.headers.get(VM_HEADER, '1'))
+    except ValueError:
+        level = 1
+    return value if level >= 2 else downgrade(value)
+
+
+def attach(conn, object_id, assigned, now):
+    """A new object's starting interaction (server/archetypes.py assign), as if its owner saved it."""
+    conn.execute('INSERT INTO object_interactions(object_id,spec,compiled,draft,version,updated) VALUES (?,?,?,NULL,1,?) '
+                 'ON CONFLICT(object_id) DO NOTHING',
+                 (object_id, json.dumps(assigned['spec']), json.dumps(assigned['compiled']) if assigned['compiled'] else None, now))
+
+
+def put_draft(conn, object_id, design_id, text, program, idle, now):
+    """A described behaviour waiting in the editor (미리보기 / 저장)."""
+    draft = json.dumps({'id': design_id, 'text': text, 'program': program, 'idle': idle})
+    conn.execute("INSERT INTO object_interactions(object_id,spec,compiled,draft,version,updated) VALUES (?,?,NULL,?,0,?) "
+                 "ON CONFLICT(object_id) DO UPDATE SET draft=excluded.draft,updated=excluded.updated",
+                 (object_id, json.dumps({'mode': 'original', 'presets': [], 'keep': True, 'rest': ''}), draft, now))
+
+
+def describe_key(text, parts):
+    return library.make_key('describe', library.normalize(text), library.signature(parts))
+
+
 def summary(program):
     """What a program reacts to and moves, for the editor's icons."""
     ops = set()
@@ -362,14 +497,24 @@ def summary(program):
 
 WORDS = [
     ('hinge', ('열', '닫', '뚜껑', 'open', 'close', 'lid', 'door')),
+    ('slide', ('서랍', '밀어', '당겨', '미끄러', 'slide', 'drawer', 'pull out')),
+    ('clock', ('시계', '시각', '현재 시간', 'clock', 'tell the time', 'real time')),
+    ('tick', ('째깍', '똑딱', 'tick')),
+    ('rotor', ('프로펠러', '바람개비', '풍차', '날개', 'propeller', 'windmill', 'blade', 'rotor')),
     ('turn', ('천천히 돌', '계속 돌', '빙빙', 'slowly', 'keep turning', 'keep spinning')),
     ('spin', ('돌', '회전', 'spin', 'turn', 'rotate', 'twirl')),
+    ('rock', ('흔들의자', '앞뒤로', '흔들거', 'rocking', 'rock back')),
     ('sway', ('흔들', 'sway', 'wobble', 'rock', 'shake')),
     ('bounce', ('튀', '점프', '뛰', '통통', 'bounce', 'jump', 'hop')),
+    ('flicker', ('촛불', '일렁', '아른', 'flicker', 'candle', 'flame')),
     ('pulse', ('은은', '반짝', '깜빡', 'pulse', 'twinkle', 'shimmer', 'breathe')),
     ('glow', ('빛', '불', '켜', '밝', 'light', 'glow', 'lamp', 'shine')),
     ('hue', ('색', '무지개', 'color', 'colour', 'rainbow')),
 ]
+# A kind that says the same thing more precisely replaces the plainer one.
+PRECISE = {'spin': ('turn', 'rotor'), 'sway': ('rock',), 'pulse': ('flicker',), 'glow': ('flicker',)}
+HANDS = (('hour', 'hour'), ('minute', 'minute'), ('second', 'second'))
+ROTOR_WORDS = ('blade', 'sail', 'rotor', 'propeller', 'wheel', 'fan')
 TRIGGER_WORDS = [
     ('near', ('다가', '가까이', '근처', 'near', 'approach')),
     ('leave', ('멀어', '떠나', 'leave', 'away')),
@@ -389,15 +534,29 @@ def fixture_presets(text, parts):
     for kind, words in WORDS:
         if not any(w in low for w in words) or len(presets) >= MAX_PRESETS:
             continue
-        if kind == 'spin' and any(p['kind'] == 'turn' for p in presets):
+        if any(p['kind'] in PRECISE.get(kind, ()) for p in presets):
             continue
-        if kind == 'hinge' and not children:
+        if kind in PART_KINDS and not children:
             continue
-        when = trigger or ('always' if kind in ('turn', 'pulse') else 'click')
+        when = trigger or ('always' if kind in ('turn', 'pulse', 'rotor', 'tick', 'flicker') else 'click')
         if kind == 'hue' and any(w in low for w in ('무지개', 'rainbow')):
             when = 'always'
-        presets.append({'kind': kind, 'trigger': when, 'target': children[0] if kind == 'hinge' else WHOLE,
-                        'level': level, 'direction': 1, 'axis': 'x', 'angle': -100})
+        base = {'kind': kind, 'trigger': when, 'target': WHOLE, 'level': level, 'direction': 1, 'axis': 'x', 'angle': -100}
+        if kind == 'clock':
+            hands = [(p['id'], hand) for p in parts for word, hand in HANDS if word in p['id'].lower()]
+            presets.extend({**base, 'trigger': 'always', 'target': part, 'axis': 'z', 'hand': hand} for part, hand in hands)
+            del presets[MAX_PRESETS:]
+            continue
+        if kind == 'hinge':
+            base['target'] = children[0]
+        elif kind == 'slide':
+            base.update(target=children[0], axis='z', angle=30)
+        elif kind == 'tick':
+            base.update(axis='y', angle=30)
+        elif kind == 'rotor':
+            rotor = [i for i in children if any(w in i.lower() for w in ROTOR_WORDS)] or children
+            base.update(target=rotor[0] if rotor else WHOLE, axis='z')
+        presets.append(base)
     return presets or [{'kind': 'sway', 'trigger': trigger or 'click', 'target': WHOLE, 'level': level,
                         'direction': 1, 'axis': 'x', 'angle': 90}]
 
@@ -425,6 +584,7 @@ class Interactions:
         self.tasks = {}
         with db.transaction() as conn:
             conn.executescript(SCHEMA)
+            conn.executescript(library.SCHEMA)
 
         def load(conn, user_id, object_id):
             obj = own(conn, user_id, object_id)
@@ -451,9 +611,9 @@ class Interactions:
                 compiled = json.loads(current['compiled']) if current and current['compiled'] else None
                 draft = json.loads(current['draft']) if current and current['draft'] else None
                 day = int(self.clock() // 86400) * 86400
-                used = conn.execute('SELECT count(*) FROM interaction_designs WHERE owner_id=? AND created>=?', (user['id'], day)).fetchone()[0]
+                used = conn.execute('SELECT count(*) FROM interaction_designs WHERE owner_id=? AND created>=? AND cost>0', (user['id'], day)).fetchone()[0]
                 pending = conn.execute("SELECT id FROM interaction_designs WHERE owner_id=? AND object_id=? AND state='designing'", (user['id'], object_id)).fetchone()
-                return {'object_id': object_id, 'listed': obj['state'] == 'listed', 'runtime_version': runtime['version'],
+                return for_client(request, {'object_id': object_id, 'listed': obj['state'] == 'listed', 'runtime_version': runtime['version'],
                         'parts': [{'id': p['id'], 'parent': p['parent']} for p in manifest['plan']['parts']],
                         'spec': {**spec, 'version': current['version'] if current else 0},
                         'program': compiled['program'] if compiled else manifest['program'],
@@ -462,7 +622,7 @@ class Interactions:
                         'describe': {'cost': DESCRIBE_COST, 'limit': DESCRIBE_DAILY_LIMIT, 'left': max(0, DESCRIBE_DAILY_LIMIT - used),
                                      'pending': pending['id'] if pending else None, 'text_limit': TEXT_LIMIT,
                                      'designer': 'fixture' if settings.studio_llm == 'fixture' else 'llm'},
-                        'kinds': list(KINDS), 'triggers': list(TRIGGERS), 'max_presets': MAX_PRESETS, 'shards': user['shards']}
+                        'kinds': list(KINDS), 'triggers': list(TRIGGERS), 'max_presets': MAX_PRESETS, 'shards': user['shards']})
 
         # A private rehearsal: compiles and checks, persists nothing (the 미리보기 button).
         @app.post('/v1/objects/{object_id}/interaction/preview')
@@ -471,7 +631,7 @@ class Interactions:
                 user = auth(conn, request)
                 _, manifest, _, current = load(conn, user['id'], object_id)
                 program, idle, _ = compiled_or_fail(body, manifest, current, False)
-                return {'program': program if program is not None else manifest['program'], 'idle': idle, 'rest': body.rest}
+                return for_client(request, {'program': program if program is not None else manifest['program'], 'idle': idle, 'rest': body.rest})
 
         @app.post('/v1/objects/{object_id}/interaction')
         def save(object_id: str, body: SaveInteraction, request: Request):
@@ -501,26 +661,39 @@ class Interactions:
                 value = apply(conn, object_id, {'plan': manifest['plan'], 'program': manifest['program']})
                 return {'spec': {**spec, 'version': version}, 'interaction': value.get('interaction'), 'program': effective,
                         'runtime': {'state': vm.state, 'version': runtime['version'] + 1}}
-            return mutate(request, body, 'interaction:' + object_id, edit)
+            return for_client(request, mutate(request, body, 'interaction:' + object_id, edit))
 
         @app.post('/v1/objects/{object_id}/interaction/describe')
         async def describe(object_id: str, body: Describe, request: Request):
             started = {}
 
             def reserve(conn, user):
-                obj, _, _, _ = load(conn, user['id'], object_id)
+                obj, manifest, _, _ = load(conn, user['id'], object_id)
                 if obj['state'] == 'listed':
                     fail('object_is_listed')
                 self.expire(conn)
+                text = ' '.join(body.text.split())
+                # Said before about an object with the same parts: the learned behaviour, free.
+                learned = self.learned(conn, text, manifest['plan']['parts'])
+                if learned:
+                    design_id, now = str(uuid.uuid4()), self.clock()
+                    program, idle = learned['value']['program'], learned['value'].get('idle', {})
+                    conn.execute('INSERT INTO interaction_designs(id,owner_id,object_id,text,state,cost,program,provenance,created,updated) '
+                                 'VALUES (?,?,?,?,?,?,?,?,?,?)',
+                                 (design_id, user['id'], object_id, text, 'ready', 0, json.dumps(program),
+                                  json.dumps({'provider': 'library', 'entry': learned['key'], 'made_by': learned['provider']}), now, now))
+                    put_draft(conn, object_id, design_id, text, program, idle, now)
+                    library.used(conn, learned['key'], now)
+                    return {'design_id': design_id, 'state': 'ready', 'cost': 0}
                 if conn.execute("SELECT 1 FROM interaction_designs WHERE owner_id=? AND state='designing'", (user['id'],)).fetchone():
                     fail('design_pending')
                 day = int(self.clock() // 86400) * 86400
-                if conn.execute('SELECT count(*) FROM interaction_designs WHERE owner_id=? AND created>=?', (user['id'], day)).fetchone()[0] >= DESCRIBE_DAILY_LIMIT:
+                if conn.execute('SELECT count(*) FROM interaction_designs WHERE owner_id=? AND created>=? AND cost>0', (user['id'], day)).fetchone()[0] >= DESCRIBE_DAILY_LIMIT:
                     fail('interaction_daily_limit', 429)
                 design_id = str(uuid.uuid4())
                 money(conn, user['id'], -DESCRIBE_COST, 'interaction_charge', design_id)
                 conn.execute('INSERT INTO interaction_designs(id,owner_id,object_id,text,state,cost,created,updated) VALUES (?,?,?,?,?,?,?,?)',
-                             (design_id, user['id'], object_id, ' '.join(body.text.split()), 'designing', DESCRIBE_COST, self.clock(), self.clock()))
+                             (design_id, user['id'], object_id, text, 'designing', DESCRIBE_COST, self.clock(), self.clock()))
                 started['id'] = design_id
                 return {'design_id': design_id, 'state': 'designing', 'cost': DESCRIBE_COST}
             reply = mutate(request, body, 'interaction_describe:' + object_id, reserve)
@@ -530,7 +703,18 @@ class Interactions:
             task = self.tasks.get(design_id)
             if task:
                 await asyncio.shield(task)
-            return self.view(design_id)
+            return for_client(request, self.view(design_id))
+
+    def learned(self, conn, text, parts):
+        """The learned library's behaviour for this sentence on these parts, re-checked, or None."""
+        entry = library.find(conn, describe_key(text, parts))
+        if not entry:
+            return None
+        try:
+            check(entry['value']['program'], parts)
+        except InteractionError:
+            return None
+        return entry
 
     def expire(self, conn):
         for row in conn.execute("SELECT id FROM interaction_designs WHERE state='designing' AND created<?", (self.clock() - DESIGN_TIMEOUT,)).fetchall():
@@ -590,10 +774,12 @@ class Interactions:
                     return
                 conn.execute("UPDATE interaction_designs SET state='ready',program=?,provenance=?,updated=? WHERE id=?",
                              (json.dumps(program), json.dumps(provenance), self.clock(), design_id))
-                draft = json.dumps({'id': design_id, 'text': row['text'], 'program': program, 'idle': idle})
-                conn.execute("INSERT INTO object_interactions(object_id,spec,compiled,draft,version,updated) VALUES (?,?,NULL,?,0,?) "
-                             "ON CONFLICT(object_id) DO UPDATE SET draft=excluded.draft,updated=excluded.updated",
-                             (row['object_id'], json.dumps({'mode': 'original', 'presets': [], 'keep': True, 'rest': ''}), draft, self.clock()))
+                put_draft(conn, row['object_id'], design_id, row['text'], program, idle, self.clock())
+                # What the designer made is kept: the next player saying this about the same parts gets it free.
+                if self.settings.studio_llm != 'fixture':
+                    library.remember(conn, describe_key(row['text'], parts), 'describe', library.normalize(row['text']),
+                                     library.signature(parts), {'program': program, 'idle': idle}, self.clock(),
+                                     provider=str(provenance.get('provider') or ''), origin=design_id, category=plan.get('category', ''))
         except asyncio.CancelledError:
             with self.db.transaction() as conn:
                 self.give_up(conn, design_id, 'design_interrupted', provenance)

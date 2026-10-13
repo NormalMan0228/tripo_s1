@@ -43,5 +43,6 @@ def test_same_room_aggregates_existing_furniture(world,monkeypatch):
     assert response.status_code==409 and response.json()['detail']=='room_render_budget_exceeded'
     # Independent room has its own capacity; changing client geometry/count is forbidden.
     assert c.post('/v1/objects/'+second+'/placement',headers=owner,json=mutation(version=1,room='home',x=-2,z=0,bytes=0)).status_code==422
-    monkeypatch.setitem(room_budget.LIMITS,'draw_calls',3)
+    # The clock is a body and three hands: four draw calls fit an empty workshop.
+    monkeypatch.setitem(room_budget.LIMITS,'draw_calls',4)
     assert c.post('/v1/objects/'+second+'/placement',headers=owner,json=mutation(version=1,room='workshop',x=2,z=0)).status_code==200

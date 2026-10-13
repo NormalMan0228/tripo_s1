@@ -374,9 +374,9 @@ class Multiplayer:
                     part.update(bindings.get(part['id'], {}))
                 # Visitors see the host's interaction too (only when one is set: older replies are unchanged).
                 extra = {'interaction': value['interaction']} if 'interaction' in value else {}
-                return {'schema': value['schema'], 'plan': value['plan'], 'program': interactions.compat(value),
+                return interactions.for_client(request, {'schema': value['schema'], 'plan': value['plan'], 'program': interactions.compat(value),
                         'provenance': {'geometry': value.get('provenance', {}).get('geometry')},
-                        'runtime': dict(state=json.loads(runtime['state']), colors=json.loads(runtime['colors']), bindings=bindings, version=runtime['version']), 'object_version': obj['version'], **extra}
+                        'runtime': dict(state=json.loads(runtime['state']), colors=json.loads(runtime['colors']), bindings=bindings, version=runtime['version']), 'object_version': obj['version'], **extra})
 
         @app.get('/v1/social/village/objects/{object_id}/parts/{part_id}')
         def part(object_id: str, part_id: str, request: Request):

@@ -7,8 +7,10 @@ extends Control
 ##   host_control.add_child(panel)
 ##
 ## Ready-made behaviours cost nothing: pick cards (spin, sway, bounce, light, glow, colour, slow
-## turn, open/close a part), each with when (click/E, near, leave, always), how strong and, for a
-## part, which one. "글로 설명하기" lets the server's designer write it from a sentence (starseeds,
+## turn, open/close a part, and for living objects clock hands on the player's time, a ticking
+## step, a sliding drawer, a flame's flicker, rocking, blades), each with when (click/E, near,
+## leave, always), how strong and, for a part, which one. A crafted clock, lamp or chair arrives
+## with its type's cards already set (server/archetypes.py). "글로 설명하기" lets the server's designer write it from a sentence (starseeds,
 ## a daily limit). 앉기/눕기 makes it a seat or a bed in rooms. Every change plays on the object
 ## right here (미리보기); 저장 keeps it on the server (server/interactions.py) and every copy -
 ## rooms, the village, visitors - runs it from then on; 원래대로 goes back to the crafted motion.
@@ -19,12 +21,21 @@ const RpgUi = preload("res://scripts/rpg_ui.gd")
 const Assembly = preload("res://scripts/asset_assembly.gd")
 ## id, card name. Shown translated.
 const KINDS := [["spin", "빙글 돌기"], ["sway", "흔들흔들"], ["bounce", "통통 튀기"], ["glow", "불 켜기·끄기"],
-	["pulse", "은은하게 빛나기"], ["hue", "색 바꾸기"], ["turn", "천천히 계속 돌기"], ["hinge", "부품 열기·닫기"]]
+	["pulse", "은은하게 빛나기"], ["hue", "색 바꾸기"], ["turn", "천천히 계속 돌기"], ["hinge", "부품 열기·닫기"],
+	["clock", "시계 바늘"], ["tick", "째깍째깍"], ["slide", "서랍 밀기"], ["flicker", "촛불 일렁임"],
+	["rock", "앞뒤로 흔들기"], ["rotor", "날개 돌리기"]]
+## Kinds that move one part (a whole object does not open or slide).
+const PART_KINDS := ["hinge", "slide"]
+## Parts that look like blades, sails or wheels (the rotor card's first choice).
+const ROTOR_WORDS := ["blade", "sail", "rotor", "propeller", "wheel", "fan"]
 const TRIGGERS := [["click", "클릭·E"], ["near", "다가가면"], ["leave", "멀어지면"], ["always", "항상"]]
 const LEVELS := ["약하게", "보통", "세게"]
-const DEFAULT_TRIGGER := {"pulse": "always", "turn": "always"}
+const DEFAULT_TRIGGER := {"pulse": "always", "turn": "always", "clock": "always", "tick": "always", "rotor": "always", "flicker": "always"}
 const PART_NAMES := {"body": "본체", "lid": "뚜껑", "base": "받침", "stem": "줄기", "hour_hand": "시침", "minute_hand": "분침",
-	"second_hand": "초침", "face": "앞면", "bulb": "전구", "door": "문", "center": "가운데"}
+	"second_hand": "초침", "face": "앞면", "bulb": "전구", "door": "문", "center": "가운데", "pendulum": "추", "blades": "날개",
+	"sails": "날개", "wheel": "바퀴", "drawer": "서랍", "screen": "화면", "shade": "갓", "flame": "불꽃", "cloth": "깃발 천",
+	"pole": "깃대", "frame": "틀", "tower": "탑", "dancer": "인형", "sphere": "지구", "stand": "받침대", "chimes": "방울",
+	"top": "윗부분", "box": "상자", "pot": "화분", "leaves": "잎"}
 const MAX_PRESETS := 6
 
 var api: Node
@@ -247,7 +258,7 @@ func _build_stage(parent: Control) -> void:
 
 func _build_presets(page: VBoxContainer) -> void:
 	var grid := GridContainer.new()
-	grid.columns = 4
+	grid.columns = 5
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 8)
 	page.add_child(grid)
@@ -255,7 +266,7 @@ func _build_presets(page: VBoxContainer) -> void:
 		var kind: String = spec[0]
 		var card := Button.new()
 		card.theme_type_variation = "SlotButton"
-		card.custom_minimum_size = Vector2(150, 64)
+		card.custom_minimum_size = Vector2(118, 58)
 		card.focus_mode = Control.FOCUS_NONE
 		card.toggle_mode = true
 		card.name = "Card_" + kind
@@ -267,12 +278,12 @@ func _build_presets(page: VBoxContainer) -> void:
 		inside.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(inside)
 		var glyph := Control.new()
-		glyph.custom_minimum_size = Vector2(36, 36)
+		glyph.custom_minimum_size = Vector2(32, 32)
 		glyph.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		glyph.draw.connect(func(): _draw_glyph(glyph, kind))
 		inside.add_child(glyph)
-		var caption := RpgUi.caption(inside, tr(spec[1]), 13, RpgUi.PAPER_INK)
+		var caption := RpgUi.caption(inside, tr(spec[1]), 12, RpgUi.PAPER_INK)
 		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		caption.autowrap_mode = TextServer.AUTOWRAP_OFF
 		caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -280,7 +291,7 @@ func _build_presets(page: VBoxContainer) -> void:
 		var badge := Control.new()
 		badge.custom_minimum_size = Vector2(18, 18)
 		badge.size = Vector2(18, 18)
-		badge.position = Vector2(126, 5)
+		badge.position = Vector2(95, 4)
 		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		badge.draw.connect(func():
 			badge.draw_circle(Vector2(9, 9), 9, Color("c9822c"))
@@ -407,6 +418,45 @@ func _draw_glyph(c: Control, kind: String) -> void:
 			c.draw_rect(box, ink, false, 2.2)
 			var hinge := Vector2(box.position.x, box.position.y)
 			c.draw_line(hinge, hinge + Vector2(cos(-0.75), sin(-0.75)) * r * 2.0, gold, 3.0, true)
+		"clock", "tick":
+			c.draw_arc(mid, r * 1.05, 0, TAU, 28, ink, 2.2, true)
+			for i in 12:
+				var a := TAU * i / 12.0
+				c.draw_line(mid + Vector2(cos(a), sin(a)) * r * 0.82, mid + Vector2(cos(a), sin(a)) * r * (0.95 if kind == "clock" else 1.0), Color(ink, 0.6), 1.4, true)
+			if kind == "clock":
+				c.draw_line(mid, mid + Vector2(0, -r * 0.75), ink, 2.6, true)
+				c.draw_line(mid, mid + Vector2(r * 0.5, 0), ink, 3.0, true)
+			c.draw_line(mid, mid + Vector2(cos(-1.0), sin(-1.0)) * r * 0.9, gold, 1.8 if kind == "clock" else 2.8, true)
+			c.draw_circle(mid, 2.5, gold)
+		"slide":
+			var chest := Rect2(mid.x - r, mid.y - r * 0.9, r * 1.6, r * 1.8)
+			c.draw_rect(chest, ink, false, 2.2)
+			var drawer := Rect2(mid.x - r * 0.6, mid.y - r * 0.15, r * 1.6, r * 0.6)
+			c.draw_rect(drawer, Color(gold, 0.35), true)
+			c.draw_rect(drawer, gold, false, 2.2)
+			c.draw_line(Vector2(drawer.end.x + 2, drawer.get_center().y), Vector2(s.x - 2, drawer.get_center().y), gold, 2.0, true)
+		"flicker":
+			var flame := PackedVector2Array()
+			for i in 17:
+				var a := TAU * i / 16.0
+				var w := r * 0.55 * (1.0 - 0.45 * (1.0 - cos(a)) * 0.5)
+				flame.append(mid + Vector2(sin(a) * w, -cos(a) * r * (1.1 if cos(a) > 0 else 0.6)))
+			c.draw_colored_polygon(flame, Color("f2a541"))
+			c.draw_circle(mid + Vector2(0, r * 0.15), r * 0.22, Color("fff1b8"))
+			c.draw_line(Vector2(mid.x, mid.y + r * 0.55), Vector2(mid.x, s.y - 3), ink, 2.2, true)
+		"rock":
+			c.draw_arc(Vector2(mid.x, s.y * 0.15), s.y * 0.75, PI * 0.3, PI * 0.7, 16, ink, 2.6, true)
+			c.draw_line(Vector2(mid.x - r * 0.5, mid.y + r * 0.2), Vector2(mid.x - r * 0.65, mid.y - r * 1.0), ink, 2.4, true)
+			c.draw_line(Vector2(mid.x - r * 0.5, mid.y + r * 0.2), Vector2(mid.x + r * 0.6, mid.y + r * 0.2), ink, 2.4, true)
+			c.draw_arc(mid, r * 1.2, -PI * 0.85, -PI * 0.6, 8, gold, 2.0, true)
+			c.draw_arc(mid, r * 1.2, -PI * 0.4, -PI * 0.15, 8, gold, 2.0, true)
+		"rotor":
+			for i in 3:
+				var a := TAU * i / 3.0 - PI * 0.5
+				var tip := mid + Vector2(cos(a), sin(a)) * r * 1.1
+				var side := Vector2(cos(a + PI * 0.5), sin(a + PI * 0.5)) * r * 0.32
+				c.draw_colored_polygon(PackedVector2Array([mid, tip + side, tip - side * 0.2]), Color(gold, 0.85))
+			c.draw_circle(mid, r * 0.2, ink)
 
 # ---------------------------------------------------------------- opening and closing
 
@@ -518,14 +568,38 @@ func _pick_card(kind: String) -> void:
 		_say(tr("움직임은 %d개까지 함께 쓸 수 있어요.") % MAX_PRESETS)
 		return
 	var target := "whole"
-	if kind == "hinge":
+	var axis := "x"
+	var angle := -90
+	var hand := "minute"
+	if kind in PART_KINDS:
 		var movable := _movable_parts()
 		if movable.is_empty():
-			_say(tr("여러 부품으로 만든 물건만 열고 닫을 수 있어요."))
+			_say(tr("여러 부품으로 만든 물건만 열고 닫을 수 있어요.") if kind == "hinge" else tr("여러 부품으로 만든 물건만 밀 수 있어요."))
 			return
 		target = movable[0]
+		if kind == "slide":
+			axis = "z"
+			angle = 30
+	elif kind == "clock":
+		# A hand of a crafted clock not turning yet, else the first part.
+		var hands := _clock_hands()
+		for id in hands:
+			if not _uses_on(kind, id):
+				target = id
+				break
+		if target == "whole" and not _part_ids().is_empty(): target = _part_ids()[-1]
+		hand = _hand_of(target)
+		axis = "z"
+	elif kind == "rotor":
+		var parts := _part_ids()
+		var blades := parts.filter(func(id): return ROTOR_WORDS.any(func(word): return word in str(id).to_lower()))
+		target = blades[0] if not blades.is_empty() else (_movable_parts()[0] if _part_ids().size() > 1 else "whole")
+		axis = "z"
+	elif kind == "tick":
+		axis = "y"
+		angle = 30
 	choice.presets.append({"kind": kind, "trigger": DEFAULT_TRIGGER.get(kind, "click"), "target": target, "level": 2,
-		"direction": 1, "axis": "x", "angle": -90})
+		"direction": 1, "axis": axis, "angle": angle, "hand": hand})
 	focus = choice.presets.size() - 1
 	RpgUi.sfx("confirm")
 	_refresh()
@@ -546,10 +620,11 @@ func _duplicate(index: int) -> void:
 	var used := []
 	for p in choice.presets:
 		if p.kind == copy.kind: used.append(p.target)
-	var targets := _movable_parts() if copy.kind == "hinge" else ["whole"] + _part_ids()
+	var targets := _movable_parts() if copy.kind in PART_KINDS else ["whole"] + _part_ids()
 	for t in targets:
 		if not used.has(t):
 			copy.target = t
+			if copy.kind == "clock": copy.hand = _hand_of(t)
 			choice.presets.append(copy)
 			focus = choice.presets.size() - 1
 			_refresh()
@@ -610,17 +685,21 @@ func _build_options(p: Dictionary) -> void:
 	options_box.add_child(head)
 	var title := RpgUi.heading(head, tr(_kind_name(p.kind)), 18)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if p.kind == "hinge" or _part_ids().size() > 1:
+	if p.kind in PART_KINDS or _part_ids().size() > 1:
 		RpgUi.name_tip(_button(head, "+", func(): _duplicate(focus)), tr("다른 부위에도"))
 	_button(head, tr("빼기"), func(): _remove(focus))
-	var when := HBoxContainer.new()
-	when.add_theme_constant_override("separation", 6)
-	options_box.add_child(when)
-	_row_title(when, tr("언제"))
-	for spec in TRIGGERS:
-		var b := _toggle(when, tr(spec[1]), func(): _set_option("trigger", spec[0]))
-		b.button_pressed = p.trigger == spec[0]
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if p.kind == "clock":
+		_choice_row(tr("바늘"), [["hour", tr("시침")], ["minute", tr("분침")], ["second", tr("초침")]], "hand", str(p.get("hand", "minute")))
+		RpgUi.caption(options_box, tr("내 컴퓨터의 시각에 맞춰 움직여요."), 12)
+	else:
+		var when := HBoxContainer.new()
+		when.add_theme_constant_override("separation", 6)
+		options_box.add_child(when)
+		_row_title(when, tr("언제"))
+		for spec in TRIGGERS:
+			var b := _toggle(when, tr(spec[1]), func(): _set_option("trigger", spec[0]))
+			b.button_pressed = p.trigger == spec[0]
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var level := HBoxContainer.new()
 	level.add_theme_constant_override("separation", 6)
 	options_box.add_child(level)
@@ -629,7 +708,7 @@ func _build_options(p: Dictionary) -> void:
 		var b := _toggle(level, tr(LEVELS[i]), func(): _set_option("level", i + 1))
 		b.button_pressed = int(p.level) == i + 1
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if p.kind in ["spin", "turn"]:
+	if p.kind in ["spin", "turn", "rotor", "tick"]:
 		var turn := HBoxContainer.new()
 		turn.add_theme_constant_override("separation", 6)
 		options_box.add_child(turn)
@@ -638,7 +717,7 @@ func _build_options(p: Dictionary) -> void:
 			var b := _toggle(turn, spec[1], func(): _set_option("direction", spec[0]))
 			b.button_pressed = int(p.direction) == spec[0]
 			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var ids := _movable_parts() if p.kind == "hinge" else ["whole"] + _part_ids()
+	var ids := _movable_parts() if p.kind in PART_KINDS else ["whole"] + _part_ids()
 	if ids.size() > 1:
 		var where := HBoxContainer.new()
 		where.add_theme_constant_override("separation", 6)
@@ -651,8 +730,19 @@ func _build_options(p: Dictionary) -> void:
 			pick.add_item(_part_name(id))
 			pick.set_item_metadata(pick.item_count - 1, id)
 			if id == p.target: pick.select(pick.item_count - 1)
-		pick.item_selected.connect(func(index: int): _set_option("target", str(pick.get_item_metadata(index))))
+		pick.item_selected.connect(func(index: int):
+			var id := str(pick.get_item_metadata(index))
+			if p.kind == "clock": choice.presets[focus].hand = _hand_of(id)
+			_set_option("target", id))
 		where.add_child(pick)
+	if p.kind == "slide":
+		_choice_row(tr("방향"), [["z", tr("앞으로 빼기")], ["x", tr("옆으로 밀기")], ["y", tr("위로 올리기")]], "axis", str(p.axis))
+		_slider_row(tr("거리"), 5, 100, 5, absi(int(p.angle)), "%d cm")
+	elif p.kind in ["rotor", "tick", "clock"]:
+		_choice_row(tr("축"), [["z", tr("정면에서 보기")], ["y", tr("제자리")], ["x", tr("옆에서 보기")]], "axis", str(p.axis))
+		if p.kind == "tick": _slider_row(tr("한 걸음"), 3, 90, 3, absi(int(p.angle)), "%d°")
+	elif p.kind == "rock":
+		_choice_row(tr("방향"), [["x", tr("앞뒤로")], ["z", tr("좌우로")], ["y", tr("비틀기")]], "axis", str(p.axis))
 	if p.kind == "hinge":
 		var axis := HBoxContainer.new()
 		axis.add_theme_constant_override("separation", 6)
@@ -682,6 +772,39 @@ func _build_options(p: Dictionary) -> void:
 			if focus >= 0 and focus < choice.presets.size(): choice.presets[focus].angle = int(v)
 			_changed())
 
+## A row of toggles that sets one option of the focused preset.
+func _choice_row(title: String, specs: Array, key: String, current: String) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	options_box.add_child(row)
+	_row_title(row, title)
+	for spec in specs:
+		var b := _toggle(row, spec[1], func(): _set_option(key, spec[0]))
+		b.button_pressed = current == str(spec[0])
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+## A slider for the focused preset's angle (degrees, cm or degrees a step), kept without rebuilding
+## the row so a drag is never interrupted.
+func _slider_row(title: String, low: int, high: int, step: int, value: int, shown_format: String) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	options_box.add_child(row)
+	_row_title(row, title)
+	var slider := HSlider.new()
+	slider.min_value = low
+	slider.max_value = high
+	slider.step = step
+	slider.value = clampi(value, low, high)
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(slider)
+	var shown := RpgUi.caption(row, shown_format % int(slider.value), 13, RpgUi.PAPER_INK)
+	shown.custom_minimum_size.x = 52
+	slider.value_changed.connect(func(v: float):
+		shown.text = shown_format % int(v)
+		if focus >= 0 and focus < choice.presets.size(): choice.presets[focus].angle = int(v)
+		_changed())
+
 func _update_describe() -> void:
 	if not is_instance_valid(describe_note): return
 	var d: Dictionary = info.get("describe", {})
@@ -695,7 +818,8 @@ func _update_describe() -> void:
 		for e in s.get("events", []):
 			if e != "spawn": _chip(describe_result, tr({"click": "클릭·E", "near": "다가가면", "leave": "멀어지면", "tick": "항상"}.get(e, e)))
 		for op in s.get("ops", []):
-			_chip(describe_result, tr({"rotate_x": "기울기", "rotate_y": "돌기", "rotate_z": "흔들기", "offset_y": "뜨기", "emission": "빛", "hue": "색"}.get(op, op)))
+			_chip(describe_result, tr({"rotate_x": "기울기", "rotate_y": "돌기", "rotate_z": "흔들기", "offset_y": "뜨기", "emission": "빛", "hue": "색",
+				"offset_x": "밀기", "offset_z": "밀기"}.get(op, op)))
 
 # ---------------------------------------------------------------- server
 
@@ -810,6 +934,25 @@ func _uses(kind: String) -> bool:
 	for p in choice.presets:
 		if p.kind == kind: return true
 	return false
+
+func _uses_on(kind: String, target: String) -> bool:
+	for p in choice.presets:
+		if p.kind == kind and p.target == target: return true
+	return false
+
+## Parts named like clock hands, hour first.
+func _clock_hands() -> Array:
+	var hands: Array = []
+	for word in ["hour", "minute", "second"]:
+		for id in _part_ids():
+			if word in str(id).to_lower() and not hands.has(id): hands.append(id)
+	return hands
+
+func _hand_of(id: String) -> String:
+	var low := id.to_lower()
+	if "hour" in low: return "hour"
+	if "second" in low: return "second"
+	return "minute"
 
 func _part_ids() -> Array:
 	var ids: Array = []

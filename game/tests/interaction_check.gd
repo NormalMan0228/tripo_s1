@@ -186,6 +186,9 @@ func run() -> void:
 	check(visit_copy != null and visit_copy.rest == "sit", "the visitor's copy has the interaction")
 	if visit_copy:
 		root.add_child(visit_copy)
+		# Where the visitor looks: copies nobody can see skip their ticks (asset_assembly.in_view).
+		var eye: Camera3D = root.get_viewport().get_camera_3d()
+		if eye: visit_copy.global_position = eye.global_position - eye.global_basis.z * 4.0
 		peak = await spin_peak(visit_copy, func(): visit_copy.local_event("click"))
 		check(peak > 60.0, "the visitor sees it spin (peak %.0f°)" % peak)
 		visit_copy.local_event("near")

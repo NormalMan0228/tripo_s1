@@ -29,12 +29,61 @@ def rejection_reason(error):
 NAME = re.compile(r'^[a-zA-Z][a-zA-Z0-9_]{0,47}$')
 HOST_LIMITS = {'rotate_x': (-180, 180), 'rotate_y': (-360, 360),
                'rotate_z': (-180, 180), 'offset_y': (-2, 2),
-               'emission': (0, 4), 'hue': (0, 1)}
+               'emission': (0, 4), 'hue': (0, 1),
+               'offset_x': (-2, 2), 'offset_z': (-2, 2)}
 ARITY = {'add': 2, 'sub': 2, 'mul': 2, 'div': 2, 'mod': 2,
          'min': 2, 'max': 2, 'lt': 2, 'gt': 2, 'eq': 2,
          'sin': 1, 'cos': 1, 'abs': 1, 'not': 1, 'clamp': 3}
-INPUTS = {'dt', 'time', 'near'}
+# clock: the player's local time of day in seconds (0..86400), for clocks and day/night behaviour.
+INPUTS = {'dt', 'time', 'near', 'clock'}
 EVENTS = {'spawn', 'tick', 'click', 'near', 'leave'}
+DAY = 86400
+# The living-objects VM (2): offset_x/offset_z and the clock input. Games that do not say they
+# run it (X-Villagen-VM, interactions.for_client) get programs reduced by legacy().
+V2_OPS = {'offset_x', 'offset_z'}
+V2_INPUTS = {'clock': ['input', 'time']}
+
+
+def uses_v2(program):
+    text = json.dumps(program)
+    return any('"%s"' % op in text for op in V2_OPS) or '["input", "clock"]' in text
+
+
+def legacy(program):
+    """The program a VM-1 game can run: new host operations become plain expressions (same
+    state, nothing it cannot show) and the clock input becomes the time since the object loaded."""
+    def expr(e):
+        if not isinstance(e, list) or not e:
+            return e
+        if e[0] == 'input' and len(e) == 2 and e[1] in V2_INPUTS:
+            return copy.deepcopy(V2_INPUTS[e[1]])
+        if e[0] in ('state', 'var', 'input'):
+            return e
+        if e[0] == 'call':
+            return e[:2] + [expr(a) for a in e[2:]]
+        return [e[0]] + [expr(a) for a in e[1:]]
+
+    def body(statements):
+        out = []
+        for s in statements:
+            op = s[0] if isinstance(s, list) and s else None
+            if op == 'emit':
+                out.append(['do', expr(s[3])] if s[1] in V2_OPS else s[:3] + [expr(s[3])])
+            elif op in ('set', 'store'):
+                out.append([op, s[1], expr(s[2])])
+            elif op == 'if':
+                out.append(['if', expr(s[1]), body(s[2]), body(s[3])])
+            elif op == 'repeat':
+                out.append(['repeat', s[1], expr(s[2]), body(s[3])])
+            elif op == 'do':
+                out.append(['do', expr(s[1])])
+            else:
+                out.append(s)
+        return out
+    if not uses_v2(program):
+        return program
+    return {**program, 'events': {k: body(v) for k, v in program['events'].items()},
+            'functions': {k: {**f, 'body': body(f['body']), 'return': expr(f['return'])} for k, f in program['functions'].items()}}
 
 
 def number(value):
@@ -142,13 +191,14 @@ class AssetVM:
 
     def run(self, event, inputs=None, fuel=8192):
         if event not in EVENTS: raise ProgramError('unsupported_event')
-        self.inputs = {'dt': 0, 'time': 0, 'near': 0}
+        self.inputs = {'dt': 0, 'time': 0, 'near': 0, 'clock': 0}
         for k, v in (inputs or {}).items():
             if k not in INPUTS: raise ProgramError('unknown_input')
             self.inputs[k] = number(v)
         self.inputs['dt'] = max(0, min(.1, self.inputs['dt']))
         self.inputs['time'] = self.inputs['time'] % 100000
         self.inputs['near'] = max(0, min(1, self.inputs['near']))
+        self.inputs['clock'] = max(0, min(DAY, self.inputs['clock']))
         self.fuel, self.depth, self.commands = min(fuel, 8192), 0, []
         before = self.state.copy()
         try:
@@ -169,7 +219,7 @@ class AssetVM:
         if function not in self.program['functions']:raise ProgramError('unknown_function')
         if not isinstance(args,list) or len(args)!=len(self.program['functions'][function]['params']):raise ProgramError('argument_count')
         args=[number(value) for value in args]
-        self.inputs={'dt':0,'time':0,'near':0};self.fuel,self.depth,self.commands=8192,0,[]
+        self.inputs={'dt':0,'time':0,'near':0,'clock':0};self.fuel,self.depth,self.commands=8192,0,[]
         before=self.state.copy()
         try:return self._expr(['call',function,*args],{})
         except (ProgramError,ArithmeticError,KeyError,TypeError,ValueError,RecursionError) as error:
@@ -233,7 +283,7 @@ def exercise(program, targets):
         if i % 30 == 0: count += len(vm.run('click'))
         if i == 10: count += len(vm.run('near', {'near': 1}))
         if i == 90: count += len(vm.run('leave'))
-        count += len(vm.run('tick', {'dt': 1/60, 'time': i/60, 'near': float(10<=i<90)}))
+        count += len(vm.run('tick', {'dt': 1/60, 'time': i/60, 'near': float(10<=i<90), 'clock': i * 720.0}))
     return {'events_evaluated': 127, 'commands_checked': count, 'finite': True}
 
 
@@ -242,6 +292,7 @@ def exercise_extended(program, targets):
 
     Simulates 60 seconds of accumulated state, repeated interactions and time
     boundaries. Jumping the clock does not simulate a day of accumulated state.
+    The local clock input sweeps a whole day and its midnight edges on the same ticks.
     Historical model benchmarks deliberately retain the original short gate.
     """
     vm = AssetVM(program, targets)
@@ -257,10 +308,10 @@ def exercise_extended(program, targets):
         near = float((i // 75) % 2)
         if i % 75 == 0: step('near' if near else 'leave', {'near':near})
         if i % 10 == 0: step('click', {'near':near})
-        step('tick', {'dt':.1,'time':i*.1,'near':near})
-    for t in (3600,86400,99999.95,100000,100000.05):
+        step('tick', {'dt':.1,'time':i*.1,'near':near,'clock':i*144.0})
+    for t,clock in ((3600,0),(86400,43199.95),(99999.95,43200),(100000,86399.95),(100000.05,86400)):
         for dt in (0,1/120,1/30,.1):
-            step('tick', {'dt':dt,'time':t,'near':1})
+            step('tick', {'dt':dt,'time':t,'near':1,'clock':clock})
     for i in range(64):step('click', {'near':float(i%2)})
     step('leave')
     return {'suite':'publication_v2','events_evaluated':events,'commands_checked':commands,
