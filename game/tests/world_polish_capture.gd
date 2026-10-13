@@ -11,6 +11,9 @@ extends SceneTree
 ##   artifacts/world-folk-night.png           and at night: the shadows
 ##   artifacts/world-folk-lineup.png          all fifteen daytime villagers over their shadows
 ##   artifacts/world-folk-room-<hour>.png     the cafe at 13:00 (villagers) and 22:30
+##   artifacts/world-village-day.png         the real village at noon (pass --hour=12 and
+##   artifacts/world-village-talk.png        --server=URL): a villager on its round, and
+##                                          talking to it (name plate, no shadow picture)
 ##   artifacts/world-gait-turn.png            strip of frames while the walker reverses
 ##                                          at a run (lower body during the turn)
 ##   artifacts/world-loading-<kind>.png      the loading card: game start over the cover
@@ -69,6 +72,10 @@ func run() -> void:
 			studio.queue_free()
 			await process_frame
 		Engine.remove_meta("interior_hour")
+		quit()
+		return
+	if shot == "village":
+		await village_talk()
 		quit()
 		return
 	if shot == "lineup":
@@ -348,6 +355,37 @@ func lineup() -> void:
 	await create_timer(1.0).timeout
 	await capture("world-folk-lineup.png", 2, false)
 	stage.queue_free()
+
+func village_talk() -> void:
+	var server := "http://127.0.0.1:8766"
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
+	var main = load("res://scripts/main.gd").new()
+	root.add_child(main)
+	while main.busy or main.screen != "login": await process_frame
+	# The first request of a fresh window can fail to connect: sign in again.
+	for attempt in 3:
+		await main.authenticate(true, server, "day_"+str(Time.get_ticks_usec() % 100000000), "Day-villager-password-1!", "")
+		if main.screen == "village": break
+		await create_timer(0.5).timeout
+	await create_timer(3.0).timeout
+	var module: Node = null
+	for node in main.modules:
+		if node.has_method("closest") and "walkers" in node: module = node
+	var walker: Node3D = null
+	for who in module.walkers:
+		if who.visible and who.present and who.state != "hidden": walker = who
+	if walker == null:
+		print("VILLAGE nobody outdoors")
+		return
+	main.player.position = walker.global_position+Vector3(1.4, 0.2, 1.0)
+	main.camera_focus_ready = false
+	await create_timer(1.0).timeout
+	await capture("world-village-day.png", 2)
+	module.interact(module.closest(main.player.position))
+	await create_timer(1.6).timeout
+	await capture("world-village-talk.png", 2)
+	print("VILLAGE talked to ", walker.title)
 
 func named(id: String) -> Node3D:
 	for walker in folk.walkers:
