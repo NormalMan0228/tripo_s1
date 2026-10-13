@@ -15,6 +15,7 @@ const TownLayout = preload("res://scripts/town.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const CraftPanel = preload("res://scripts/craft_panel.gd")
+const Fx = preload("res://scripts/fx.gd")
 const Transition = preload("res://scripts/transition.gd")
 const Minimap = preload("res://scripts/minimap.gd")
 const NpcBody = preload("res://scripts/npc.gd")
@@ -1263,6 +1264,11 @@ func refresh_inventory() -> void:
 		var saved = me.get("active_run_summary")
 		expedition_button.tooltip_text=(tr("탐험 이어하기 · %d일") % saved.day) if saved is Dictionary else tr("탐험")
 	if me.get("pending_job")!=null and job_id.is_empty(): job_id=me.pending_job
+	# The craft under way, also after a relaunch: the village follows it again without opening C.
+	var crafting = me.get("pending_craft")
+	if crafting is Dictionary and craft_job.is_empty():
+		craft_job = str(crafting.get("id",""))
+		follow_craft()
 	if frame.has("name") and is_instance_valid(frame.name):
 		frame.name.text = me.username
 		show_portrait()
@@ -1678,14 +1684,36 @@ func place_preview() -> void:
 			var standing: Node3D=loaded.get(preview_moving)
 			if is_instance_valid(standing) and is_instance_valid(preview):
 				standing.position=TownLayout.furniture_point(p.x,p.y);standing.rotation_degrees.y=preview_rotation
+				standing.visible=true
+				Fx.arrive(object_root,standing,self,false)
 			cancel_preview()
 			await refresh_inventory()
 			message(tr("자리와 방향을 바꿨어요."))
 		return
+	var placing_id := str(selected.id)
+	var placing_key := object_key(selected)
 	if await edit_object({"action":"place","x":p.x,"z":p.y,"rotation":preview_rotation}):
+		adopt_preview(placing_id,placing_key,TownLayout.furniture_point(p.x,p.y))
 		cancel_preview()
 		await refresh_inventory()
 		message(tr("마을에 놓았습니다. 다시 접속해도 유지됩니다."))
+
+## The ghost the player put down stays as the placed object, so the refresh finds it already loaded:
+## no second download and no frame without it. It arrives with a pop (fx.gd arrive).
+func adopt_preview(id: String, key: String, at: Vector3) -> void:
+	if not is_instance_valid(preview) or not is_instance_valid(object_root): return
+	var item := preview
+	preview = null
+	var disc := item.get_node_or_null("PlacementDisc")
+	if disc: disc.free()
+	if is_instance_valid(loaded.get(id)): loaded[id].queue_free()
+	item.reparent(object_root)
+	item.position = at
+	item.rotation_degrees.y = preview_rotation
+	item.set_meta("object_key",key)
+	Loader.add_collision(item)
+	loaded[id] = item
+	Fx.arrive(object_root,item,self)
 
 ## Moves or turns an object already standing in the village (one server step, no retrieve).
 func move_object(at: Vector2) -> bool:
@@ -3088,6 +3116,8 @@ func open_studio(destination: String="workshop") -> void:
 var craft_box: CraftPanel
 var craft_polling := false
 var craft_done: Dictionary = {}
+## The picture (or quote) already announced (CraftPanel.announce_key), so it is said once.
+var craft_announced := ""
 
 func open_craft() -> void:
 	if screen!="village" or api.token.is_empty(): return
@@ -3140,25 +3170,48 @@ func confirm_craft() -> void:
 func cancel_craft() -> void:
 	if is_instance_valid(craft_box): await craft_box.cancel()
 
-## Polls the job until it needs the player or finishes, updating the open window.
+## Polls the job until it needs the player or finishes, updating the open window. A dropped
+## connection or a busy server is asked again, slower each time; only a craft that is gone stops it.
+## The picture (or quote) and the finished object are announced once each, window open or not.
 func follow_craft() -> void:
 	if craft_polling: return
 	craft_polling = true
 	var epoch := world_epoch
+	var failures := 0
 	while not craft_job.is_empty() and epoch==world_epoch:
+		var asked := craft_job
 		var response: Dictionary = await api.request("/v1/studio/jobs/"+craft_job)
-		if epoch!=world_epoch or not response.ok: break
+		if epoch!=world_epoch: break
+		if asked!=craft_job: continue
+		if not response.ok:
+			if int(response.get("status",0))==404:
+				craft_job = ""
+				if is_instance_valid(craft_box): craft_box.job_id = ""
+				break
+			failures += 1
+			await get_tree().create_timer(CraftPanel.poll_pause(failures)).timeout
+			continue
+		failures = 0
 		var job: Dictionary = response.data
 		render_craft(job)
-		if job.state=="awaiting_confirmation": break
-		if job.state in ["ready","failed","cancelled"]:
+		if job.state=="awaiting_confirmation":
+			if CraftPanel.announce_key(job)!=craft_announced:
+				craft_announced = CraftPanel.announce_key(job)
+				CraftPanel.chime("twinkle")
+				message(CraftPanel.ready_words(job,not is_instance_valid(craft_box)))
+			break
+		if job.state in CraftPanel.TERMINAL:
 			craft_job = ""
 			if is_instance_valid(craft_box): craft_box.job_id = ""
+			if job.state=="ready": craft_done = job
 			await refresh_inventory()
 			if job.state=="ready":
-				craft_done = job
 				sound.effect("reward")
 				message(tr("새 물건이 완성됐어요! C를 눌러 확인해 보세요."))
+			elif job.state=="unknown":
+				message(tr("제작 요청을 확인하고 있어요. 운영자가 확인하면 맡긴 별씨가 돌아와요."))
+			elif job.state=="failed":
+				message(tr("제작을 마치지 못했어요. 맡긴 별씨는 돌려드렸어요."))
 			break
 		await get_tree().create_timer(2.0).timeout
 	craft_polling = false

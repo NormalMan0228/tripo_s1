@@ -32,6 +32,9 @@ extends RefCounted
 ##       Re-triggering restarts from the rest pose, so it never drifts.
 ##   Fx.squash(node: Node3D, amount := 0.15, seconds := 0.3)
 ##       Squash-and-stretch pop on the node's scale, back to its rest scale.
+##   Fx.arrive(parent: Node3D, item: Node3D, app = null, fresh := true)
+##       Furniture put down: a squash pop, sparkles, a ground ring and a soft glow with a pop and a
+##       twinkle; only a dust ring and a thud when it was just moved (fresh = false).
 ## --- screen-space (need app.ui and app.camera) ----------------------------------
 ##   Fx.item_pop(app, at: Vector3, item: String, count := 1, delay := 0.0)
 ##       "+N" with the item's life_icon.gd icon, pinned to a 3D point, floats up and fades.
@@ -504,6 +507,24 @@ static func squash(node: Node3D, amount := 0.15, seconds := 0.3) -> void:
 	t.tween_property(node, "scale", rest, seconds*0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	t.tween_callback(func(): if is_instance_valid(node): node.remove_meta("fx_squash"))
 	node.set_meta("fx_squash", t)
+
+static func arrive(parent: Node3D, item: Node3D, app = null, fresh := true) -> void:
+	if not _ok(parent) or not is_instance_valid(item) or not item.is_inside_tree(): return
+	var span: Vector3 = item.get_meta("size", Vector3.ONE)
+	var base := item.global_position
+	var reach := maxf(0.5, Vector2(span.x, span.z).length()*0.5)
+	squash(item, 0.16 if fresh else 0.08, 0.36)
+	ring(parent, base+Vector3(0,0.05,0), reach*1.7, Color(1.0,0.9,0.6,0.75) if fresh else Color(0.92,0.86,0.74,0.5), 0.8)
+	var voiced := DisplayServer.get_name() != "headless"
+	if fresh:
+		burst(parent, base+Vector3(0,span.y*0.55,0), "sparkle", 14, Color(0,0,0,0), reach*0.8)
+		glow(parent, base+Vector3(0,span.y*0.5,0), Color("ffd27a"), maxf(1.2, span.y*1.5), 0.9)
+		if voiced:
+			sound(app, "pop", base)
+			sound(app, "twinkle", base, 1.1, -3.0)
+	else:
+		burst(parent, base+Vector3(0,0.1,0), "dust", 8, Color(0,0,0,0), reach*0.6)
+		if voiced: sound(app, "thud", base, 1.0, -2.0)
 
 # ------------------------------------------------------------------ screen-space
 static func _screen(app) -> bool:

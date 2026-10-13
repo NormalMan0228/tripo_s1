@@ -5,6 +5,9 @@ func check(value: bool,message: String) -> void:
 func _initialize() -> void:call_deferred("run")
 func run() -> void:
 	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url="http://127.0.0.1:8766"
+	# --server=URL runs it against another QA server (tools/test.ps1 uses 8766).
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--server="):api.base_url=arg.trim_prefix("--server=")
 	var login: Dictionary=await api.post("/v1/auth/register",{"username":"sync"+str(Time.get_ticks_msec()),"password":"Private-local-test"})
 	if not login.ok:quit(1);return
 	api.token=login.data.token
