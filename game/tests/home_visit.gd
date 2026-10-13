@@ -64,6 +64,30 @@ func run() -> void:
 		await create_timer(0.6).timeout
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png(ProjectSettings.globalize_path("res://../artifacts/home-visit-host.png"))
+	# The host uses crafted furniture at home: the friend's copy takes the new state in place (it used
+	# to ask the owner-only route, fail, and free and reload the model on every use).
+	var queued: Dictionary = await host_api.post("/v1/studio/jobs",host_api.mutation({"prompt":"wooden chest","geometry":"proxy","designer":"fixture"}))
+	var chest := ""
+	for i in 60:
+		var job: Dictionary = await host_api.request("/v1/studio/jobs/"+str(queued.get("data",{}).get("id","")))
+		if job.ok and job.data.state=="ready": chest=job.data.object_id; break
+		await create_timer(0.5).timeout
+	var crafted := func() -> Dictionary:
+		for obj in (await host_api.request("/v1/me")).data.objects:
+			if obj.id==chest: return obj
+		return {}
+	var chest_obj: Dictionary = await crafted.call()
+	expect((await host_api.post("/v1/objects/"+chest+"/placement",host_api.mutation({"version":chest_obj.get("version"),"room":"home","x":-1.5,"z":-1.5}))).ok, "host placed a crafted chest at home")
+	for i in 60:
+		await create_timer(0.25).timeout
+		if guest_room.placed.has(chest): break
+	var copy = guest_room.placed.get(chest)
+	chest_obj = await crafted.call()
+	var used: Dictionary = await host_api.post("/v1/objects/"+chest+"/event",host_api.mutation({"version":chest_obj.get("runtime_version"),"event":"click"}))
+	for i in 40:
+		await create_timer(0.25).timeout
+		if is_instance_valid(copy) and int(copy.runtime_version)==int(used.get("data",{}).get("version",-1)): break
+	expect(used.ok and is_instance_valid(copy) and guest_room.placed.get(chest)==copy and int(copy.runtime_version)==int(used.data.version), "friend's copy of the chest takes the host's use without reloading")
 	# Leaving the visit (host ends it) sends the friend back out.
 	await host_api.post("/v1/social/eject",host_api.mutation({"user_id":accepted.data.self_id}))
 	for i in 20:

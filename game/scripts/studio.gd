@@ -942,7 +942,9 @@ func reload_placed() -> void:
 			var existing: Node3D=placed[obj.id]
 			existing.position=Vector3(obj.x,0.07,obj.z);existing.rotation_degrees.y=obj.rotation
 			if existing.get_meta("studio",false) and obj.get("runtime_version")!=null and existing.runtime_version!=obj.runtime_version:
-				var fresh: Dictionary=await api.request("/v1/objects/"+obj.id+"/assembly")
+				# A visitor reads the host's state through the guest route (the owner route refused it, so
+				# every change of the host's furniture state freed and reloaded the model).
+				var fresh: Dictionary=await api.request(("/v1/objects/" if visit_host.is_empty() else "/v1/social/village/objects/")+obj.id+"/assembly")
 				if current!=epoch:return
 				if fresh.ok and is_instance_valid(existing):
 					if fresh.data.plan!=existing.manifest.plan:
