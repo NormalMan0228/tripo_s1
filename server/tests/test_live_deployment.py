@@ -210,7 +210,7 @@ def test_trial_credit_cap_allows_only_the_cheapest_craft(tmp_path):
         assert job['state'] == 'awaiting_confirmation' and job['provenance']['estimated_tripo_credits'] == 10
 
 
-def test_trial_credit_cap_fails_and_refunds_a_design_over_the_cap(tmp_path):
+def test_trial_credit_cap_turns_an_over_cap_design_into_one_piece(tmp_path):
     from server.asset_assembly import demo_design
 
     class ManyParts:
@@ -234,9 +234,14 @@ def test_trial_credit_cap_fails_and_refunds_a_design_over_the_cap(tmp_path):
         assert job.status_code == 200, job.json()
         asyncio.run(app.state.studio.process(job.json()['id']))
         status = client.get('/v1/studio/jobs/' + job.json()['id'], headers=headers).json()
-        assert status['state'] == 'failed' and status['error'] == 'craft_over_trial_limit'
+        # Eight parts (80 credits) do not fit 25: one complete piece (10) instead of no craft, and the
+        # library type's whole-object behaviour (a lamp lights on E) when it is finished.
+        assert status['state'] == 'awaiting_confirmation', status
+        assert status['provenance']['fallback'] == 'single_piece_credit_cap'
+        assert status['provenance']['estimated_tripo_credits'] == 10 and status['provenance']['archetype'] == 'lamp'
+        assert [p['id'] for p in status['design']['parts']] == ['whole']
         with app.state.db.transaction() as db:
-            assert db.execute("SELECT shards FROM users WHERE username='trial_two'").fetchone()[0] == 500
+            assert db.execute("SELECT shards FROM users WHERE username='trial_two'").fetchone()[0] == 470
 
 
 def test_trial_cap_counts_every_tripo_request_failed_ones_included(tmp_path):

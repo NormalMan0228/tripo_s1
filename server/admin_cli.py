@@ -8,6 +8,14 @@ sessions, ledger, objects and their placement/runtime, studio jobs, parties, mes
 security events, and crafted model files nobody else uses. Without --yes it only lists
 what it would remove. With --yes it first writes a verified backup to /backups.
 Accounts are chosen by exact usernames and/or a regular expression (--pattern).
+
+library lists and manages the learned library (server/behaviour_library.py): behaviours players
+described and designs the LLM made, reused for the next same request without the AI.
+
+    ... python -m server.admin_cli library list [--kind describe|design] [--limit 50]
+    ... python -m server.admin_cli library show KEY        (the first 6+ characters of a key)
+    ... python -m server.admin_cli library disable KEY     (stop serving it; enable undoes)
+    ... python -m server.admin_cli library delete KEY
 """
 from __future__ import annotations
 
@@ -20,6 +28,7 @@ import time
 from pathlib import Path
 
 from .backups import create_backup, verify_backup
+from . import behaviour_library
 
 # Columns that hold a user id and mean "this row belongs to that user". creator_id is left
 # out on purpose: an object one of these accounts made may now belong to someone else.
@@ -122,6 +131,32 @@ def delete_accounts(args):
     return 0
 
 
+def library(args):
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    with sqlite3.connect(database, timeout=30) as conn:
+        conn.executescript(behaviour_library.SCHEMA)
+        if args.command == 'list':
+            print(json.dumps(behaviour_library.listing(conn, args.kind, args.limit), ensure_ascii=False, indent=1))
+            return 0
+        try:
+            key = behaviour_library.resolve(conn, args.key or '')
+        except ValueError as error:
+            print(str(error))
+            return 1
+        if args.command == 'show':
+            print(json.dumps(behaviour_library.show(conn, key), ensure_ascii=False, indent=1))
+        elif args.command == 'delete':
+            conn.execute('DELETE FROM behaviour_library WHERE key=?', (key,))
+            print(json.dumps({'ok': True, 'deleted': key}))
+        else:
+            conn.execute('UPDATE behaviour_library SET disabled=? WHERE key=?', (int(args.command == 'disable'), key))
+            print(json.dumps({'ok': True, args.command + 'd': key}))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     actions = parser.add_subparsers(dest='action', required=True)
@@ -131,7 +166,15 @@ def main(argv=None):
     delete.add_argument('--yes', action='store_true', help='really remove (after a verified backup)')
     delete.add_argument('--data-dir', default='/data')
     delete.add_argument('--backups', default='/backups')
+    learned = actions.add_parser('library', help='list and manage the learned library')
+    learned.add_argument('command', choices=('list', 'show', 'disable', 'enable', 'delete'))
+    learned.add_argument('key', nargs='?', help='a key or its first 6+ characters')
+    learned.add_argument('--kind', choices=('describe', 'design'))
+    learned.add_argument('--limit', type=int, default=50)
+    learned.add_argument('--data-dir', default='/data')
     args = parser.parse_args(argv)
+    if args.action == 'library':
+        return library(args)
     if not args.usernames and not args.pattern:
         parser.error('give usernames or --pattern')
     return delete_accounts(args)

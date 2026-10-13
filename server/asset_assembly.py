@@ -179,13 +179,11 @@ def demo_design(prompt):
             'near':[['store','open',1]],'leave':[['store','open',0]],
             'tick':[['store','progress',['add',['state','progress'],['mul',['sub',['state','open'],['state','progress']],['min',1,['mul',5,['input','dt']]]]]],['do',['call','open_flower',['call','ease',['state','progress']]]]]}}
         return validate_plan({'title':'꽃 조명 · 오프라인 시연','category':'flower_lamp','parts':parts}),program
-    if any(x in low for x in ['시계','clock']):
-        parts=[part('body','box',[1.05,1.05,.16],[0,.65,0],color='#73998e'),part('hand','box',[.04,.4,.035],[0,.65,.12],pivot=[0,-.5,0],color='#f4db9a')]
-        empty['functions']={'clock_angle':{'params':['seconds'],'body':[],'return':['mul',['mod',['var','seconds'],60],-6]}}
-        empty['events']={'tick':[['emit','rotate_z','hand',['call','clock_angle',['input','time']]]]}
-        # Host z rotation range is +/-180; wrap to that interval.
-        empty['functions']['clock_angle']['return']=['sub',['mod',['mul',['var','seconds'],-6],360],180]
-        return validate_plan({'title':'시계 · 오프라인 시연','category':'clock','parts':parts}),empty
+    # Library types with an offline plan (server/archetype_library.py): a clock with separate hands,
+    # a fan, a windmill, drawers... They start with the type's behaviours when crafted.
+    from .archetypes import fixture_design
+    known=fixture_design(prompt)
+    if known:return known
     parts=[part('body','box',[1.2,.65,.8],[0,.325,0]),part('lid','box',[1.2,.12,.8],[0,.69,-.4],pivot=[0,0,-.5],color='#8f6244')]
     empty.update(state={'open':0,'angle':0},functions={'hinge_angle':{'params':['amount'],'body':[],'return':['mul',['var','amount'],-95]}},events={
         'click':[['store','open',['not',['state','open']]]],

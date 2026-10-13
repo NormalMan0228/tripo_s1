@@ -19,12 +19,13 @@ Program: {"version":1,"state":{numeric keys},"functions":{NAME:{"params":[names]
 Expressions: finite numeric literals or arrays ["state",name], ["var",name], ["input",name],
 ["call",functionName,arg,...], [OP,arg,...]. Binary OP add sub mul div mod min max lt gt eq;
 unary sin cos abs not; clamp takes value,min,max. Trig is radians. Comparisons return numeric 0/1.
-Input names: dt (0..0.1 seconds), time (seconds, wraps at 100000), near (0/1).
+Input names: dt (0..0.1 seconds), time (seconds, wraps at 100000), near (0/1), clock (the player's local time of day in seconds, 0..86400; use it for clocks).
 Statements: ["set",local,expr], ["store",stateKey,expr], ["if",expr,[then],[else]],
 ["repeat",local,countExpr,[body]] (integer count 0..64), ["do",expr], ["emit",operation,partId,expr].
 Events: spawn,tick,click,near,leave. All state keys declared upfront. Function locals never escape scope.
 Host operations: rotate_x/-z (-180..180 degrees), rotate_y (-360..360), offset_y (-2..2 meters),
-emission (0..4), hue (0..1). Use operation names rotate_x, rotate_z, rotate_y, offset_y, emission, hue exactly.
+offset_x/offset_z (-2..2 meters, slides such as drawers), emission (0..4), hue (0..1).
+Use operation names rotate_x, rotate_z, rotate_y, offset_x, offset_y, offset_z, emission, hue exactly.
 Commands SET an absolute dynamic value relative to the fixed part pose, not accumulate it.
 Maximum32functions64state2048ASTnodes24nesting16calldepth128commands/event8192fuel/event.
 All numbers, intermediate values and state must remain finite and <=1000000 absolute.

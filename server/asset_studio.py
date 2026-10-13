@@ -29,6 +29,8 @@ from .object_paint import version_column as paint_version
 from . import object_shape
 from . import craft_styles
 from . import interactions
+from . import archetypes
+from . import behaviour_library as library
 
 SCHEMA='''
 CREATE TABLE IF NOT EXISTS studio_jobs (
@@ -245,6 +247,7 @@ class Studio:
         self.claims={}
         with db.transaction() as conn:
             conn.executescript(SCHEMA)
+            conn.executescript(library.SCHEMA)
             if 'bindings' not in [r[1] for r in conn.execute('PRAGMA table_info(studio_runtime)')]:
                 conn.execute("ALTER TABLE studio_runtime ADD COLUMN bindings TEXT NOT NULL DEFAULT '{}'")
         # Worlds made before held (unknown) crafts stopped counting as the owner's craft under way.
@@ -400,8 +403,8 @@ class Studio:
                 program=json.loads(row['program'])
                 exercise(program,[p['id'] for p in plan['parts']])
                 blobs={p['id']:base64.b64encode(fixture_glb(p['shape'],False)).decode() for p in plan['parts']}
-                return {'schema':1,'preview_only':True,'plan':plan,'program':program,
-                    'provenance':{'geometry':'procedural_proxy'},'runtime':{},'blobs':blobs}
+                return interactions.for_client(request,{'schema':1,'preview_only':True,'plan':plan,'program':program,
+                    'provenance':{'geometry':'procedural_proxy'},'runtime':{},'blobs':blobs})
 
         @app.post('/v1/studio/jobs/{job_id}/confirm')
         def confirm(job_id:str,body:StudioConfirm,request:Request):
@@ -470,7 +473,7 @@ class Studio:
                 bindings=json.loads(state['bindings'])
                 original=json.loads(json.dumps(value['plan']))
                 for p in value['plan']['parts']:p.update(bindings.get(p['id'],{}))
-                return {**value,'program':interactions.compat(value),'original_plan':original,'runtime':{'state':json.loads(state['state']),'colors':json.loads(state['colors']),'bindings':bindings,'version':state['version']},'object_version':obj['version']}
+                return interactions.for_client(request,{**value,'program':interactions.compat(value),'original_plan':original,'runtime':{'state':json.loads(state['state']),'colors':json.loads(state['colors']),'bindings':bindings,'version':state['version']},'object_version':obj['version']})
 
         @app.post('/v1/objects/{object_id}/bindings')
         def bindings(object_id:str,body:BindingEdit,request:Request):
@@ -736,16 +739,30 @@ class Studio:
                 return
             look=craft_styles.style(body.style)
             if job['state']=='queued':
+                learned=None
                 if body.designer=='fixture':
                     plan,program=demo_design(body.prompt);provenance={'provider':'authored_fixture','validation':exercise(program,[p['id'] for p in plan['parts']])}
                 elif body.designer=='simple':
                     plan=simple_plan(body.prompt,look['prop']);program={'version':1,'state':{},'functions':{},'events':{}}
                     provenance={'provider':'direct_prompt','validation':exercise(program,['whole'])}
                 else:
-                    request_prompt=body.prompt+('\nOutput ONE complete static part and an empty program.' if body.motion=='static' else '')
-                    with self.db.transaction() as conn:categories=[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')]
-                    request_prompt+='\nExisting category names (reuse a matching kind, otherwise propose a short new kind): '+json.dumps(categories,ensure_ascii=False)
-                    plan,program,provenance=await self.designer.generate(request_prompt,body.model,body.effort,body.image,craft_styles.designer_style(body.style,body.size))
+                    style_text=craft_styles.designer_style(body.style,body.size)
+                    # A text-only request made before (same words, style, size and motion): the learned design, no LLM call.
+                    learned=None if body.image else library.make_key('design',library.normalize(body.prompt),body.style,body.size,body.motion,style_text,archetypes.VERSION)
+                    with self.db.transaction() as conn:cached=library.find(conn,learned) if learned else None
+                    if cached:
+                        plan,program=cached['value']['plan'],cached['value']['program']
+                        provenance={'provider':'library','library':{'key':learned,'made_by':cached['provider'],'origin':cached['origin']},
+                            'validation':exercise(program,[p['id'] for p in plan['parts']])}
+                        with self.db.transaction() as conn:library.used(conn,learned,self.clock())
+                        learned=None
+                    else:
+                        request_prompt=body.prompt+('\nOutput ONE complete static part and an empty program.' if body.motion=='static' else '')
+                        with self.db.transaction() as conn:categories=[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')]
+                        request_prompt+='\nExisting category names (reuse a matching kind, otherwise propose a short new kind): '+json.dumps(categories,ensure_ascii=False)
+                        request_prompt+=archetypes.designer_hint(body.prompt,body.motion)
+                        plan,program,provenance=await self.designer.generate(request_prompt,body.model,body.effort,body.image,style_text)
+                designed=(plan,program)
                 if body.motion=='static':
                     plan=static_plan(plan,body.prompt,look['prop'])
                     program={'version':1,'state':{},'functions':{},'events':{}}
@@ -753,17 +770,39 @@ class Studio:
                 plan=validate_plan(plan);exercise(program,[p['id'] for p in plan['parts']])
                 category=unicodedata.normalize('NFKC',plan['category']).casefold().strip()
                 plan['category']='_'.join(''.join(c if c.isalnum() else ' ' for c in category).split())[:40] or 'decoration'
-                with self.db.transaction() as conn:existed=conn.execute('SELECT 1 FROM asset_categories WHERE name=?',(plan['category'],)).fetchone() is not None
-                provenance.update(category=plan['category'],category_existed=existed,generated_api_count=len(program['functions']))
+                # The library type (server/archetypes.py): its behaviours start on the finished object.
+                kind=archetypes.classify(body.prompt,plan)
+                if kind:provenance['archetype']=kind['id']
                 provenance.update(geometry='procedural_proxy' if body.geometry=='proxy' else 'tripo',material=body.material,motion=body.motion)
                 # The game sizes the finished object by size_m (0 = the designer's own size).
                 provenance.update(style=body.style,size=body.size,size_m=craft_styles.meters(body.size))
                 parts={p['id']:{'state':'pending'} for p in plan['parts']}
                 if body.geometry=='tripo':
-                    provenance.update(tripo_model=mesh_model,estimated_tripo_credits=estimate(mesh_model,body.material=='textured',len(parts),bool(body.image),body.image_mode=='refine'),estimate_source='official_rates_and_measured_2026_10_02')
-                    provenance.update(quoted_game_cost=max(job['cost'],math.ceil(provenance['estimated_tripo_credits']*self.settings.studio_credit_rate)),stars_per_credit=self.settings.studio_credit_rate,reserved_game_cost=job['cost'])
+                    # Thin role parts (clock hands) are made by the game: no Tripo credits.
+                    for part_id in archetypes.primitive_parts(provenance.get('archetype'),plan):parts[part_id]['primitive']=True
+                    def quote():
+                        meshes=sum(1 for entry in parts.values() if not entry.get('primitive'))
+                        return estimate(mesh_model,body.material=='textured',meshes,bool(body.image) and (len(plan['parts'])==1 or body.image_mode=='refine'),body.image_mode=='refine')
                     cap=self.settings.max_credits_per_craft if self.settings.mode=='live' else 0
+                    if cap and quote()>cap and len(plan['parts'])>1:
+                        # Over the per-craft cap with its parts: one complete piece instead, with the type's
+                        # whole-object behaviours, rather than no craft at all.
+                        plan=static_plan(plan,body.prompt,look['prop'])
+                        program={'version':1,'state':{},'functions':{},'events':{}}
+                        parts={p['id']:{'state':'pending'} for p in plan['parts']}
+                        provenance['fallback']='single_piece_credit_cap'
+                    provenance.update(tripo_model=mesh_model,estimated_tripo_credits=quote(),estimate_source='official_rates_and_measured_2026_10_02')
+                    provenance.update(quoted_game_cost=max(job['cost'],math.ceil(provenance['estimated_tripo_credits']*self.settings.studio_credit_rate)),stars_per_credit=self.settings.studio_credit_rate,reserved_game_cost=job['cost'])
                     if cap and provenance['estimated_tripo_credits']>cap:raise ProviderError('craft_over_trial_limit')
+                with self.db.transaction() as conn:existed=conn.execute('SELECT 1 FROM asset_categories WHERE name=?',(plan['category'],)).fetchone() is not None
+                provenance.update(category=plan['category'],category_existed=existed,generated_api_count=len(program['functions']))
+                if learned:
+                    # Kept now, served once this craft has become an object.
+                    provenance['library_key']=learned
+                    with self.db.transaction() as conn:
+                        library.remember(conn,learned,'design',library.normalize(body.prompt),library.signature(designed[0]['parts']),
+                            {'plan':designed[0],'program':designed[1]},self.clock(),provider=str(provenance.get('provider') or ''),
+                            origin=job_id,category=plan['category'],ready=False)
                 concept=body.concept and not body.image and len(plan['parts'])==1
                 if concept:
                     # The craft window shows the picture step while it is drawn.
@@ -788,7 +827,7 @@ class Studio:
             for p in plan['parts']:
                 entry=parts[p['id']]
                 if entry['state']=='ready':continue
-                if body.geometry=='proxy':blob=fixture_glb(p['shape'],textured)
+                if body.geometry=='proxy' or entry.get('primitive'):blob=fixture_glb(p['shape'],textured and not entry.get('primitive'))
                 else:
                     if entry['state']=='pending' and body.image_mode=='refine':
                         self.guard_tripo_cap(job,parts)
@@ -868,6 +907,12 @@ class Studio:
             for p in plan['parts']:p.update(file=parts[p['id']]['file'],sha256=parts[p['id']]['sha256'])
             provenance.update(billing(parts) if body.geometry=='tripo' else {'tripo_credits_consumed':0,'known_tripo_credits':0,'billing_complete':True})
             provenance['image_refinement_credits']=sum(p.get('image_credits_consumed') or 0 for p in parts.values())
+            assigned=None
+            if provenance.get('archetype'):
+                try:assigned=archetypes.assign(provenance['archetype'],plan,program)
+                except interactions.InteractionError as error:provenance['behaviour_error']=error.code
+                if assigned:provenance['behaviour']={'archetype':provenance['archetype'],'presets':len(assigned['spec']['presets']),'rest':assigned['spec']['rest']}
+            effective=assigned['compiled']['program'] if assigned and assigned['compiled'] else program
             manifest={'schema':1,'plan':plan,'program':program,'provenance':provenance}
             with self.db.transaction() as conn:
                 current=conn.execute('SELECT state FROM studio_jobs WHERE id=?',(job_id,)).fetchone()[0]
@@ -879,8 +924,10 @@ class Studio:
                 for name,definition in program['functions'].items():
                     encoded=json.dumps(definition,sort_keys=True,separators=(',',':'))
                     conn.execute('INSERT INTO generated_apis VALUES (?,?,?,?)',(job_id,name,encoded,hashlib.sha256(encoded.encode()).hexdigest()))
-                initial=AssetVM(program,[p['id'] for p in plan['parts']]);initial.run('spawn')
+                initial=AssetVM(effective,interactions.targets_of(plan['parts']));initial.run('spawn')
                 conn.execute('INSERT INTO studio_runtime(object_id,state) VALUES (?,?)',(obj,json.dumps(initial.state)))
+                if assigned:interactions.attach(conn,obj,assigned,self.clock())
+                if provenance.get('library_key'):library.mark_ready(conn,provenance['library_key'])
                 conn.execute('INSERT OR IGNORE INTO asset_categories VALUES (?,?)',(plan['category'],self.clock()))
                 conn.execute("UPDATE studio_jobs SET state='ready',object_id=?,provenance=?,updated=?,error=NULL WHERE id=?",(obj,json.dumps(provenance),self.clock(),job_id))
         except asyncio.CancelledError:raise

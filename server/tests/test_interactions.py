@@ -67,7 +67,7 @@ ONE = [{'id': 'whole', 'parent': ''}]
 @pytest.mark.parametrize('trigger', TRIGGERS)
 def test_every_preset_compiles_through_the_design_gates(kind, trigger):
     parts = CHEST[0]['parts']
-    target = 'lid' if kind == 'hinge' else 'whole'
+    target = 'lid' if kind in interactions.PART_KINDS else 'whole'
     program, idle = build([preset(kind, trigger, target, level=3, direction=-1, angle=-150, axis='z')], parts)
     check(program, parts)  # validate_program + exercise_extended
     for key, goal in idle.items():
@@ -313,12 +313,12 @@ def test_described_interaction_uses_the_studio_designer_and_refunds_failures(wor
     assert saved.status_code == 200
     event = c.post(route + '/event', headers=a, json=mutation(version=2, event='click')).json()
     assert event['patch'] == {'lit': 1}
-    # Daily limit per account (failed attempts count: they used the model).
+    # Daily limit per account (failed attempts count: they used the model; learned reuses do not).
     left = c.get(route + '/interaction', headers=a).json()['describe']['left']
     app.state.studio.designer = Designer()
-    for _ in range(left):
-        assert c.post(route + '/interaction/describe', headers=a, json=mutation(text='glow')).status_code == 200
-    limited = c.post(route + '/interaction/describe', headers=a, json=mutation(text='glow'))
+    for i in range(left):
+        assert c.post(route + '/interaction/describe', headers=a, json=mutation(text='glow %d' % i)).status_code == 200
+    limited = c.post(route + '/interaction/describe', headers=a, json=mutation(text='glow again'))
     assert limited.status_code == 429 and limited.json()['detail'] == 'interaction_daily_limit'
 
 
