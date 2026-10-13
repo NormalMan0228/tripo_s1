@@ -64,6 +64,19 @@ static func t(source: String) -> String:
 	return TranslationServer.translate(source)
 
 ## Server text: an exact catalog entry, else a template such as "{0} {1}개를 수확했어요!".
+## "Talk to <name>" with the Korean particle that fits the name: 와 after a vowel, 과 after a
+## final consonant ("가람 · 시인과 대화"). Other languages use their own translation as is.
+static func talk_to(name: String) -> String:
+	var text := TranslationServer.translate("%s와 대화") % name
+	if language() == "ko" and has_final_consonant(name): text = text.replace(name + "와", name + "과")
+	return text
+
+## Whether a word ends in a Hangul syllable with a final consonant (받침).
+static func has_final_consonant(word: String) -> bool:
+	if word.is_empty(): return false
+	var code := word.unicode_at(word.length() - 1)
+	return code >= 0xAC00 and code <= 0xD7A3 and (code - 0xAC00) % 28 != 0
+
 static func server(source: String) -> String:
 	var direct := TranslationServer.translate(source)
 	if direct != source or TranslationServer.get_locale().begins_with("ko"): return direct

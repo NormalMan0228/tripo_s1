@@ -563,7 +563,7 @@ func closest(at: Vector3) -> Dictionary:
 		var d: float = here.distance_to(walker.xz())
 		if d < gap:
 			gap = d
-			best = {"prompt":tr("%s와 대화") % walker.title, "distance":d, "walker":walker}
+			best = {"prompt":I18n.talk_to(walker.title), "distance":d, "walker":walker}
 	if is_instance_valid(dropped) and errands.get("hoe", "") == "dropped":
 		var d := here.distance_to(Vector2(dropped.position.x, dropped.position.z))
 		if d < 1.7 and d < gap:

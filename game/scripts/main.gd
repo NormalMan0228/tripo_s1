@@ -2599,7 +2599,7 @@ func _process(delta: float) -> void:
 				if not activity.is_empty() and social.visiting() and activity.get("id","")=="home": prompt_text="E  "+tr("%s님의 집 들어가기") % str(social.data.get("host_name",tr("친구")))
 				elif not activity.is_empty() and activity.has("prompt"): prompt_text="E  "+activity.prompt
 				elif not activity.is_empty(): prompt_text="E  "+tr(activity.title)
-				elif npc: prompt_text="E  "+tr("%s와 대화") % tr(npc.get_meta("title"))
+				elif npc: prompt_text="E  "+I18n.talk_to(tr(npc.get_meta("title")))
 				elif not module_entry.is_empty(): prompt_text="E  "+str(module_entry.get("prompt",""))
 				elif not prop.is_empty(): prompt_text="E  "+town.prop_prompt(prop)
 				elif near(TownLayout.GATE,3): prompt_text="E  "+tr("탐험 떠나기")
