@@ -31,7 +31,10 @@
       "Sid": "ManageDownloadFiles",
       "Effect": "Allow",
       "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:AbortMultipartUpload"],
-      "Resource": "arn:aws:s3:::villagen-school-dl/school/*"
+      "Resource": [
+        "arn:aws:s3:::villagen-school-dl/school/*",
+        "arn:aws:s3:::villagen-school-dl/private/*"
+      ]
     }
   ]
 }
@@ -63,3 +66,16 @@ powershell -ExecutionPolicy Bypass -File tools\aws_upload_login.ps1
 4. `python tools/update_download_links.py` → README 첫 화면 링크 갱신
 5. VM: `sudo bash ops/notice.sh release <버전> https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/index.html`
 6. 오래된 버전 정리: `publish_school_build.py prune 2` (최신 2개만 남김)
+
+## GitHub이 막혔을 때 서버에 코드 넘기기 (비상용)
+
+VM은 평소 GitHub에서 코드를 받는다(`update_online_server.sh`의 `git pull`). GitHub이 막히면:
+
+1. PC(사용자가 직접): `.toolsrt-venv\Scripts\python.exe tools\send_code_to_vm.py`
+   → 빠진 커밋만 묶어 `private/villagen-dev.bundle`에 올리고 VM 명령을 출력한다.
+2. VM(EC2 Instance Connect 브라우저 창, PC PowerShell 아님): 출력된 줄을 차례로 붙여 넣는다.
+   받는 곳을 묶음으로 잠시 바꿔 업데이트한 뒤 GitHub 주소로 되돌린다.
+
+`private/`는 버킷 정책 `SchoolServerPrivateRead`로 **학교 서버 IP(54.117.10.64)만** 읽을 수 있다.
+서버 IP가 바뀌면 그 정책의 IP도 바꾼다. 채팅에서 서명 주소를 복사하면 키 부분이 가려져 403이 나므로 서명 주소는 쓰지 않는다.
+
