@@ -4,7 +4,9 @@ extends SceneTree
 ##                                          ribbon drawn after its name (the order the
 ##                                          distance sort picked from some views)
 ##   artifacts/world-nameplate-after.png   the same with the road drawn first
-##   Godot --path game --script res://tests/world_polish_capture.gd [-- --shot=nameplate]
+##   artifacts/world-dialogue-<who>-<scale>.png  the dialogue window with an
+##                                          illustrated speaker at UI scale 80/100/140 %
+##   Godot --path game --script res://tests/world_polish_capture.gd [-- --shot=nameplate|dialogue]
 const Stub = preload("res://tests/shadow_folk_stub.gd")
 const Folk = preload("res://scripts/shadow_folk.gd")
 const Map = preload("res://maps/archipelago/archipelago.gd")
@@ -28,6 +30,10 @@ func artifact(file: String) -> String:
 
 func run() -> void:
 	seed(11)
+	if shot == "dialogue":
+		await dialogue()
+		quit()
+		return
 	camera = Camera3D.new()
 	root.add_child(camera)
 	app = Stub.new()
@@ -54,6 +60,31 @@ func run() -> void:
 	for i in 30: await physics_frame
 	if shot in ["", "nameplate"]: await nameplate()
 	quit()
+
+## The dialogue window over a plain backdrop: a cast standee (waist-up) and two
+## shadow standees (head and shoulders), at three interface sizes.
+func dialogue() -> void:
+	var RpgUi = load("res://scripts/rpg_ui.gd")
+	var layer := CanvasLayer.new()
+	root.add_child(layer)
+	var back := ColorRect.new()
+	back.color = Color("6d8f73")
+	back.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(back)
+	for scale in [1.0, 1.4, 0.8]:
+		root.content_scale_factor = scale
+		for who in [["haeru", "res://assets/portraits/haeru.png"], ["postman", "res://assets/ui/shadow_postman.png"], ["farmer", "res://assets/ui/shadow_farmer.png"]]:
+			var window: Dictionary = RpgUi.dialogue(back, who[0], who[1])
+			window.body.text = "Line one of the conversation, long enough to wrap onto a second line in the box."
+			await create_timer(0.6).timeout
+			var standee: Control = window.get("standee")
+			var box: Control = window.box
+			if standee:
+				print("DIALOGUE ", who[0], " scale=", scale, " standee=", standee.get_global_rect(), " box_top=", box.get_global_rect().position.y, " view=", back.size)
+			await capture("world-dialogue-%s-%d.png" % [who[0], roundi(scale*100)], 2)
+			window.root.queue_free()
+			await process_frame
+	root.content_scale_factor = 1.0
 
 func named(id: String) -> Node3D:
 	for walker in folk.walkers:
