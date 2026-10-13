@@ -137,6 +137,11 @@ def fixture_glb(shape, textured=False):
         for y in range(12):
             for x in range(24):
                 a=y*25+x;b=a+25;indices.extend([a,a+1,b,a+1,b+1,b])
+    return mesh_glb(vertices,normals,uv,indices,textured)
+
+
+def mesh_glb(vertices, normals, uv, indices, textured=False, generator='Tripothon procedural fixture; no AI'):
+    """One embedded GLB mesh (flat lists of positions, normals, UVs and triangle indices)."""
     blob=bytearray();views=[];access=[]
     def data(raw):
         while len(blob)%4:blob.append(0)
@@ -148,7 +153,7 @@ def fixture_glb(shape, textured=False):
     pos=attr(vertices,'fff','VEC3',5126);access[pos].update(min=[min(v[k] for v in vertices) for k in range(3)],max=[max(v[k] for v in vertices) for k in range(3)])
     nor=attr(normals,'fff','VEC3',5126);tex=attr(uv,'ff','VEC2',5126);idx=attr([(i,) for i in indices],'H','SCALAR',5123)
     mat={'pbrMetallicRoughness':{'baseColorFactor':[1,1,1,1],'metallicFactor':0,'roughnessFactor':.8}}
-    doc={'asset':{'version':'2.0','generator':'Tripothon procedural fixture; no AI'},'scene':0,'scenes':[{'nodes':[0]}],
+    doc={'asset':{'version':'2.0','generator':generator},'scene':0,'scenes':[{'nodes':[0]}],
          'nodes':[{'name':'Surface','mesh':0}], 'meshes':[{'primitives':[{'attributes':{'POSITION':pos,'NORMAL':nor,'TEXCOORD_0':tex},'indices':idx,'material':0}]}],
          'materials':[mat],'bufferViews':views,'accessors':access}
     if textured:

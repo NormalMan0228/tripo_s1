@@ -2,8 +2,9 @@
 
 At planning the request is classified into a library type (classify) and the LLM designer is
 told the type's part roles (designer_hint), so a clock comes back as a body with a blank dial and
-separate hands pivoting at the dial centre. Thin role parts such as clock hands are made by the
-game itself in Tripo crafts (primitive_parts: no credits). When the craft becomes an object it
+separate hands pivoting at the dial centre. Role parts such as clock hands are made by the game
+itself (primitive_parts, server/clock_hands.py: no Tripo credits), seated just in front of the
+dial (seat_parts); a clock is always built with its hands (always_moving). When the craft becomes an object it
 starts with the type's behaviours as an ordinary interaction (assign): presets the owner sees and
 edits in the interaction editor, '원래대로' still goes back to the crafted motion. A one-piece craft
 (static, or the credit-cap fallback) gets the type's whole-object behaviours instead.
@@ -13,6 +14,7 @@ import unicodedata
 from .archetype_library import ARCHETYPES, VERSION
 from .asset_assembly import validate_plan
 from . import interactions
+from . import clock_hands
 
 BY_ID = {a['id']: a for a in ARCHETYPES}
 # Korean particles dropped from the end of a word before matching ('시계를' -> '시계').
@@ -129,19 +131,77 @@ def presets_for(arch, parts):
 
 
 def primitive_parts(arch_id, plan):
-    """Thin role parts the game makes itself in a Tripo craft (no credits): box-shaped parts with a
-    parent, never every part."""
+    """{part id: shape} for role parts the game makes itself (no Tripo credits): box-shaped parts
+    with a parent, never every part."""
     arch = BY_ID.get(arch_id)
     if not arch or len(plan['parts']) < 2:
-        return []
+        return {}
     roles = bind(arch, plan['parts'])
     by_id = {p['id']: p for p in plan['parts']}
-    out = [roles[r['id']] for r in arch['roles'] if r.get('primitive') and r['id'] in roles
-           and by_id[roles[r['id']]]['shape'] == 'box' and by_id[roles[r['id']]]['parent']]
-    return out if len(out) < len(plan['parts']) else []
+    out = {roles[r['id']]: r.get('make', 'minute') for r in arch['roles'] if r.get('primitive') and r['id'] in roles
+           and by_id[roles[r['id']]]['shape'] == 'box' and by_id[roles[r['id']]]['parent']}
+    return out if len(out) < len(plan['parts']) else {}
 
 
-def assign(arch_id, plan, program):
+def least_meshes(arch, motion):
+    """Tripo meshes a craft of this type needs at least: one when still, or when every moving role
+    is a part the game makes (a clock: body only), else two (a body and a moving part)."""
+    if motion != 'dynamic':
+        return 1
+    moving = {b['role'] for b in (arch or {}).get('behaviours', [])} - {'whole'}
+    roles = {r['id']: r for r in (arch or {}).get('roles', [])}
+    return 1 if moving and all(roles.get(m, {}).get('primitive') for m in moving) else 2
+
+
+def craft_kind(prompt):
+    """What the craft window needs before a request: the type, whether it is always built moving,
+    and the Tripo meshes a moving craft of it needs."""
+    arch = classify(prompt)
+    if not arch:
+        return {'archetype': None, 'names': {}, 'always_moving': False, 'moving_meshes': 2, 'rest': ''}
+    return {'archetype': arch['id'], 'names': arch['names'], 'always_moving': bool(arch.get('always_moving')),
+            'moving_meshes': least_meshes(arch, 'dynamic'), 'rest': arch.get('rest', '')}
+
+
+# Hands and pendulum: the turning point the shapes are drawn around, back to front.
+PIVOTS = {'pendulum': [0, .5, 0], 'hour': [0, -.4, 0], 'minute': [0, -.4, 0], 'second': [0, -.3, 0]}
+LAYERS = ('pendulum', 'hour', 'minute', 'second')
+# The longest a hand may be, as a share of the dial (the body's smaller face side).
+REACH = {'hour': .34, 'minute': .5, 'second': .52}
+GAP = .003
+
+
+def seat_parts(arch_id, plan):
+    """Puts the game's own parts where they look made: each hand turns at its hub, no longer than
+    the dial allows, and they stand in layers just in front of the body's face (a few millimetres
+    apart, so nothing flickers). Turning points (positions) stay where the designer put them."""
+    makes = primitive_parts(arch_id, plan)
+    if not makes:
+        return plan
+    by_id = {p['id']: p for p in plan['parts']}
+    front = {}
+    for part_id in sorted(makes, key=lambda i: LAYERS.index(makes[i]) if makes[i] in LAYERS else 9):
+        part, make = by_id[part_id], makes[part_id]
+        body = by_id.get(part['parent'])
+        if not body or make not in PIVOTS:
+            continue
+        part['pivot'] = list(PIVOTS[make])
+        dial = min(body['size'][0], body['size'][1])
+        if make in REACH and part['size'][1] > dial * REACH[make]:
+            part['size'][1] = round(max(.02, dial * REACH[make]), 4)
+        # Flat: as thin as a part may be, and thinner than wide so the game never takes the face for
+        # the edge.
+        part['size'][2] = .02
+        if part['size'][2] >= part['size'][0] * .8:
+            part['size'][0] = round(min(3, part['size'][2] / .7), 4)
+        depth = part['size'][2]
+        face = front.get(body['id'], body['size'][2] * (.5 - body['pivot'][2]))
+        part['position'][2] = round(min(3, face + GAP + depth / 2), 4)
+        front[body['id']] = part['position'][2] + depth / 2
+    return validate_plan(plan)
+
+
+def assign(arch_id, plan, program, style=''):
     """The interaction a new object of this type starts with: {'spec', 'compiled', 'roles'} or None.
     A craft that already moves keeps its own motion unless the type overrides it (a clock must
     show real time); the type's rest (sit/lie) applies either way. Raises InteractionError when
@@ -154,6 +214,10 @@ def assign(arch_id, plan, program):
     chosen, roles = presets_for(arch, parts)
     if moving and not arch.get('override'):
         chosen = []
+    # A style whose palette glows lights the type's accent part (a sci-fi clock's second hand).
+    accent = roles.get(arch.get('accent', ''))
+    if chosen and accent and clock_hands.palette(style).get('glow') and len(chosen) < interactions.MAX_PRESETS:
+        chosen.append(interactions.Preset(kind='glow', trigger='always', target=accent, level=1).model_dump())
     rest = arch.get('rest', '')
     if not chosen and not rest:
         return None

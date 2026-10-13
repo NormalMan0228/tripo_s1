@@ -83,6 +83,13 @@ var size_row: HFlowContainer
 var style_buttons := {}
 var size_buttons := {}
 var held_note: Label
+## What the server's object library makes of the words (POST /v1/studio/kind): a type always built
+## moving (a clock: its hands are free) and the Tripo meshes a moving craft of it needs.
+var kind_info: Dictionary = {}
+var kind_supported := true
+var kind_timer: Timer
+## The moving option was chosen for the player (a clock), not by them.
+var forced_motion := false
 
 func setup(network: Node, options: Dictionary) -> void:
 	api = network
@@ -169,6 +176,12 @@ func _build_form() -> void:
 	prompt.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	prompt.placeholder_text = tr("예: 작은 버섯 모양 의자")
 	form.add_child(prompt)
+	kind_timer = Timer.new()
+	kind_timer.one_shot = true
+	kind_timer.wait_time = 0.45
+	kind_timer.timeout.connect(_ask_kind)
+	add_child(kind_timer)
+	prompt.text_changed.connect(func() -> void: kind_timer.start())
 	var photo := _row(form)
 	photo_buttons.append(_button(photo, tr("사진·그림 추가"), func() -> void: _file_dialog().popup_centered_ratio(0.7)))
 	photo_buttons.append(_button(photo, tr("제거"), func() -> void:
@@ -267,8 +280,10 @@ func _update_options() -> void:
 	surface.set_item_disabled(0, not _fits(20))
 	if not _fits(20) and surface.selected == 0: surface.select(1)
 	var simple := _design() == "simple"
-	motion.set_item_disabled(1, not _fits(20) or simple)
-	if (not _fits(20) or simple) and motion.selected == 1: motion.select(0)
+	# Moving furniture needs two Tripo meshes, or one when the game makes every moving part (a clock).
+	var moving_meshes := int(kind_info.get("moving_meshes", 2))
+	motion.set_item_disabled(1, not _fits(10 * moving_meshes) or simple)
+	if (not _fits(10 * moving_meshes) or simple) and motion.selected == 1: motion.select(0)
 	# A photo is read by the LLM designer.
 	var photos := _llm() and _fits(20)
 	for b in photo_buttons: b.disabled = not photos
@@ -284,15 +299,27 @@ func _update_options() -> void:
 	var photo := not image_data.is_empty()
 	var unit := (10 + (10 if photo else 0) + (10 if textured else 0)) if mesh_model.selected == 0 else (110 if textured else 100)
 	if photo and refine.button_pressed: unit += 5
-	var least := unit * (2 if moving else 1)
+	# A clock is always made with its hands (free): the moving option is chosen for the player.
+	var forced := bool(kind_info.get("always_moving", false)) and not simple and not motion.is_item_disabled(1) and (not tripo or _fits(unit * moving_meshes))
+	motion.set_item_disabled(0, forced)
+	if forced and motion.selected != 1:
+		motion.select(1)
+		forced_motion = true
+	elif not forced and forced_motion:
+		motion.select(0)
+		forced_motion = false
+	moving = motion.selected == 1
+	var least := unit * (moving_meshes if moving else 1)
 	var concept := not photo and not moving
 	var with_concept := (unit + 10 + CONCEPT_CREDITS) if mesh_model.selected == 0 else unit + CONCEPT_CREDITS
 	var stars := (40 if textured else 20) + (10 if moving else 0)
 	var over := tripo and cap > 0 and least > cap
 	price_label.text = tr("별씨 %d · Tripo 약 %d크레딧") % [stars, with_concept if concept and _fits(with_concept) else least] if tripo else tr("별씨 %d") % stars
 	if over: price_label.text += tr(" · 한도 %d 크레딧을 넘어요") % cap
-	concept_note.visible = concept
-	if concept:
+	concept_note.visible = concept or forced
+	if forced:
+		concept_note.text = tr("%s는 바늘이 실제 시각에 맞춰 움직이도록 만들어요. 바늘은 공방이 무료로 달아 드려요.") % tr(str(kind_info.get("names", {}).get("ko", "시계")))
+	elif concept:
 		concept_note.text = tr("사진이 없으면 AI가 먼저 그림을 그려 보여 드려요. 마음에 들면 그 그림으로 3D를 만들어요. (그림 1장 5크레딧)") if not tripo or _fits(with_concept) else tr("이번에는 그림 단계 없이 글로 만들어요. (1회 한도)")
 	# Live servers build only with Tripo; a local world makes free sample shapes.
 	var ready_to_build := tripo or not _live()
@@ -314,6 +341,23 @@ func _base_body() -> Dictionary:
 		"model": models.get_item_text(models.selected), "effort": efforts.get_item_text(efforts.selected),
 		"image": image_data, "image_mode": "refine" if tripo and not image_data.is_empty() and refine.button_pressed else "original",
 		"concept": image_data.is_empty() and motion.selected == 0}
+
+## Asks the server what the words name (after a short pause in typing) and updates the options.
+## Older servers do not know the question: the form works as before.
+func _ask_kind() -> void:
+	var words := prompt.text.strip_edges()
+	if not kind_supported or not is_instance_valid(api): return
+	if words.length() < 2:
+		kind_info = {}
+		_update_options()
+		return
+	var reply: Dictionary = await api.post("/v1/studio/kind", {"prompt": words})
+	if not is_instance_valid(prompt) or prompt.text.strip_edges() != words: return
+	if reply.ok and reply.data is Dictionary: kind_info = reply.data
+	else:
+		kind_info = {}
+		if int(reply.get("status", 0)) in [404, 405]: kind_supported = false
+	_update_options()
 
 func request() -> void:
 	if busy or not job_id.is_empty(): return

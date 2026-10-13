@@ -20,6 +20,7 @@ const GameSettings=preload("res://scripts/game_settings.gd")
 const PauseMenu=preload("res://scripts/pause_menu.gd")
 const CraftPanel=preload("res://scripts/craft_panel.gd")
 const Fx=preload("res://scripts/fx.gd")
+const RestSeat=preload("res://scripts/rest_seat.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
 var api: Node
@@ -157,10 +158,10 @@ var cam_distance := 9.0
 var hour_override := -1.0
 var daylight_time := 0.0
 var daylight_sample: Dictionary={}
-## Sitting or lying on furniture.
-var rest_pose: SkeletonModifier3D
-var resting := ""
-var rest_return := Vector3.ZERO
+## Sitting or lying on furniture (rest_seat.gd, shared with the village): "", "sit" or "lie".
+var seat: Node
+var resting: String:
+	get: return seat.mode if is_instance_valid(seat) else ""
 var walk_out := Vector3.ZERO
 ## RPG-style HUD over the full-screen room view.
 var name_panel: PanelContainer
@@ -605,6 +606,9 @@ func build_stage() -> void:
 	if ResourceLoader.exists("res://assets/explorer_b_reference.glb"):
 		hero=preload("res://scripts/player.gd").new();hero.controls_enabled=false;hero.visual_only=true
 		hero.avatar=session_avatar.duplicate(true);stage.add_child(hero)
+		if not is_instance_valid(seat):
+			seat=RestSeat.new();add_child(seat)
+		seat.hero=hero
 		place_hero_at_door()
 
 ## Speech bubble and "E" badge drawn over the room view, pinned to 3D points.
@@ -1571,14 +1575,7 @@ func use_crafted(id: String) -> void:
 
 ## Sits on or lies down on a crafted piece the owner marked as a seat or a bed.
 func rest_on_crafted(item: Node3D, kind: String) -> void:
-	var size: Vector3=item.get_meta("size",Vector3.ONE)
-	var yaw: float=item.rotation.y
-	# A bed lies along its longer side.
-	if kind=="lie" and size.x>size.z:
-		yaw+=PI*0.5;size=Vector3(size.z,size.y,size.x)
-	var record := {"kind":"chair" if kind=="sit" else "bed","size":size,"yaw":yaw,"center":Vector3(item.position.x,0,item.position.z),"node":item}
-	if kind=="sit":sit_on(record)
-	else:lie_on(record)
+	if is_instance_valid(seat): seat.crafted(item,kind)
 
 ## Everything within reach, best first: the piece the walker faces and is closest
 ## to leads; pieces hanging above others (a clock over a wardrobe, a window over
@@ -2171,65 +2168,17 @@ func puff(at: Vector3, color: Color, count: int, rise: float, spread: float, rad
 		tween.set_parallel(false)
 		tween.tween_callback(bit.queue_free)
 
-func ensure_rest_pose() -> bool:
-	if not is_instance_valid(hero) or not is_instance_valid(hero.hand_skeleton): return false
-	if not is_instance_valid(rest_pose) or rest_pose.get_parent()!=hero.hand_skeleton:
-		rest_pose=Interiors.RestPose.new()
-		hero.hand_skeleton.add_child(rest_pose)
-	rest_pose.body=hero.visual
-	return true
-
-func hip_height() -> float:
-	if not is_instance_valid(hero) or not is_instance_valid(hero.hand_skeleton): return 0.85
-	var skeleton: Skeleton3D=hero.hand_skeleton
-	var bone := skeleton.find_bone("L_Thigh")
-	if bone<0: return 0.85
-	var hip: Vector3=skeleton.global_transform*skeleton.get_bone_global_rest(bone).origin
-	return clampf(hip.y-hero.global_position.y,0.5,1.1)
-
 ## Sits on a chair, sofa or bench: hips and knees bend and the walker settles on
 ## the seat facing out. Any movement key or E gets up again.
 func sit_on(record: Dictionary) -> void:
-	if not is_instance_valid(hero) or not resting.is_empty(): return
-	var size: Vector3=record.size
-	var yaw: float=record.yaw
-	var front := Vector3(0,0,1).rotated(Vector3.UP,yaw)
-	var seat_x := 0.0
-	if record.kind=="sofa":
-		var local: Vector3=(hero.position-record.center).rotated(Vector3.UP,-yaw)
-		seat_x=clampf(local.x,-size.x*0.25,size.x*0.25)
-	var seat: Vector3=record.center+Vector3(seat_x,0,0.04).rotated(Vector3.UP,yaw)
-	rest_return=hero.position
-	resting="sit"
-	var height: float=size.y*0.5 if record.kind!="bench" else 0.47
-	hero.position=Vector3(seat.x,height-hip_height()+0.1,seat.z)
-	hero.facing=front
-	hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
-	if ensure_rest_pose(): rest_pose.mode="sit"
+	if is_instance_valid(seat): seat.sit(record)
 
 ## Lies down on a bed, head on the pillow.
 func lie_on(record: Dictionary) -> void:
-	if not is_instance_valid(hero) or not resting.is_empty(): return
-	var size: Vector3=record.size
-	var yaw: float=record.yaw
-	var head := Vector3(0,0,-1).rotated(Vector3.UP,yaw)
-	rest_return=hero.position
-	resting="lie"
-	var feet: Vector3=record.center-head*(size.z*0.5-0.2)
-	hero.facing=Vector3(0,0,-1)
-	var down := Vector3(0,-1,0)
-	hero.basis=Basis(head.cross(down),head,down)
-	hero.position=Vector3(feet.x,minf(size.y*0.5,0.62)+0.14,feet.z)
-	hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
-	if ensure_rest_pose(): rest_pose.mode=""
+	if is_instance_valid(seat): seat.lie(record)
 
 func stand_up(face_away := true) -> void:
-	if resting.is_empty() or not is_instance_valid(hero): return
-	resting=""
-	hero.basis=Basis()
-	hero.position=Vector3(rest_return.x,0,rest_return.z)
-	if is_instance_valid(rest_pose): rest_pose.mode=""
-	if face_away: hero.facing=Vector3.BACK
+	if is_instance_valid(seat): seat.stand(face_away)
 
 # ---------------------------------------------------------------- residents
 

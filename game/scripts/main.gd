@@ -55,6 +55,8 @@ var furniture_event_pending := false
 var sound: Node
 var world: Node3D
 var player: CharacterBody3D
+## Sitting and lying on crafted seats and beds, as in rooms (rest_seat.gd; village_seat()).
+var seat: Node
 var camera: Camera3D
 var environment: Environment
 var sun: DirectionalLight3D
@@ -2605,7 +2607,8 @@ func _process(delta: float) -> void:
 				elif near(TownLayout.GATE,3): prompt_text="E  "+tr("탐험 떠나기")
 				elif near(TownLayout.HOME_DOOR,2): prompt_text="E  "+tr("나의 집 들어가기")
 				elif near(TownLayout.WORKSHOP_DOOR,2.5): prompt_text="E  "+tr("별씨 공방 들어가기")
-				elif not nearest_furniture().is_empty(): prompt_text="E  "+tr("가구 사용하기")
+				elif not nearest_furniture().is_empty(): prompt_text="E  "+{"sit":tr("앉기"),"lie":tr("눕기")}.get(str(loaded[nearest_furniture()].get("rest")),tr("가구 사용하기"))
+				if is_instance_valid(seat) and seat.resting(): prompt_text="E  "+tr("일어나기")
 				if is_instance_valid(village_modal): prompt_text=""
 				if prompt_text.begins_with("E  "): prompt_text=GameSettings.key_label("interact")+prompt_text.substr(1)
 				if str(hint.get_meta("prompt",""))!=prompt_text:
@@ -2684,6 +2687,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if is_instance_valid(village_modal):
 		if event is InputEventKey and event.pressed and not event.echo and key==KEY_E and life.mode=="fish": life.reel()
 		if event is InputEventKey and event.pressed and key==KEY_ESCAPE: close_village_modal()
+		return
+	if event is InputEventKey and event.pressed and not event.echo and key in [KEY_ESCAPE,KEY_E] and screen=="village" and is_instance_valid(seat) and seat.resting():
+		seat.stand()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and key==KEY_ESCAPE and screen in ["village","survival"]:
 		# Esc backs out of placement and the bag first, then opens the pause menu.
@@ -3314,6 +3320,8 @@ func nearest_furniture() -> String:
 
 func village_furniture_event(id: String,event: String) -> void:
 	var item: Node3D=loaded.get(id)
+	# A seat or a bed takes the walker, as in rooms; its click behaviour runs too.
+	if event=="click" and is_instance_valid(item) and str(item.get("rest")) in ["sit","lie"]: village_seat().crafted(item,str(item.rest),item.global_position.y)
 	# A visitor plays the host's interactions on this screen only; the host's object is not changed.
 	if social.visiting():
 		if not id.is_empty() and is_instance_valid(item) and item.has_method("local_event"): item.local_event(event)
@@ -3336,6 +3344,16 @@ func village_furniture_event(id: String,event: String) -> void:
 	if selected.get("id")==id and is_instance_valid(inspect_model) and inspect_model!=item:inspect_model.accept_event(reply.data)
 	for obj in me.objects:
 		if obj.id==id:obj.runtime_version=reply.data.version
+
+## The village's rest_seat.gd, following the walker of the current world.
+func village_seat() -> Node:
+	if not is_instance_valid(seat):
+		seat=preload("res://scripts/rest_seat.gd").new()
+		seat.keep_height=true
+		seat.walk_off=world_movement_allowed
+		add_child(seat)
+	seat.hero=player
+	return seat
 
 ## A click on crafted furniture within reach uses it, like E.
 func click_furniture(at: Vector2) -> void:

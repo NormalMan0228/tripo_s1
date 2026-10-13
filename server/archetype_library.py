@@ -12,7 +12,8 @@ Each archetype:
                id     the part id the designer is asked to use (and the fixture uses)
                words  other part ids that mean the same role ('hourHand', 'clock_case')
                root   a missing root role takes the first part without a parent
-               primitive  a thin bar the game makes itself (no Tripo credits) in Tripo crafts
+               primitive  a part the game makes itself (no Tripo credits): 'make' names the shape
+                      (server/clock_hands.py: hour, minute, second, pendulum)
                hint   what the designer is told the part is
   behaviours interaction presets (server/interactions.py Preset) with 'role' instead of
              'target'; or_whole: when that part is missing, the whole object does it
@@ -20,6 +21,9 @@ Each archetype:
   rest       '' | 'sit' | 'lie' (rooms seat or lay the walker on it)
   override   the type's behaviours win over a crafted program (a clock must show real time);
              otherwise a craft that already moves keeps its own motion
+  always_moving  built with its moving parts even when the player asked for a still piece (a clock
+             always gets its hands; they cost nothing), when the craft fits the credit cap
+  accent     the role that glows in styles whose palette glows (sci-fi clocks)
   hint       one more sentence for the designer
   fixture    the offline designer's plan (development and tests): title + parts
 """
@@ -33,13 +37,13 @@ ARCHETYPES = [
      'roles': [
          {'id': 'body', 'words': ['body', 'case', 'dial', 'face', 'frame', 'housing', 'cabinet'], 'root': True,
           'hint': 'the clock case with a BLANK dial: no hands drawn or modelled on it'},
-         {'id': 'hour_hand', 'words': ['hour'], 'primitive': True,
+         {'id': 'hour_hand', 'words': ['hour'], 'primitive': True, 'make': 'hour',
           'hint': 'short thin flat bar, size about [.05,.24,.025], parent body, pivot [0,-.4,0], position at the dial centre just in front of the dial (+Z)'},
-         {'id': 'minute_hand', 'words': ['minute'], 'primitive': True,
+         {'id': 'minute_hand', 'words': ['minute'], 'primitive': True, 'make': 'minute',
           'hint': 'longer thin flat bar, size about [.035,.36,.02], parent body, pivot [0,-.4,0], same position as the hour hand but slightly further in front'},
-         {'id': 'second_hand', 'words': ['second'], 'primitive': True, 'optional': True,
+         {'id': 'second_hand', 'words': ['second'], 'primitive': True, 'make': 'second', 'optional': True,
           'hint': 'optional very thin red bar, size about [.02,.4,.02], parent body, pivot [0,-.3,0], in front of the minute hand'},
-         {'id': 'pendulum', 'words': ['pendulum', 'bob'], 'primitive': True, 'optional': True,
+         {'id': 'pendulum', 'words': ['pendulum', 'bob'], 'primitive': True, 'make': 'pendulum', 'optional': True,
           'hint': 'optional pendulum (tall clocks only): thin bar, parent body, pivot [0,.5,0] at its top, below the dial'},
      ],
      'behaviours': [
@@ -48,10 +52,10 @@ ARCHETYPES = [
          {'role': 'second_hand', 'kind': 'clock', 'hand': 'second', 'axis': 'z'},
          {'role': 'pendulum', 'kind': 'rock', 'trigger': 'always', 'axis': 'z', 'level': 1},
      ],
-     'single': [], 'rest': '', 'override': True,
+     'single': [], 'rest': '', 'override': True, 'always_moving': True, 'accent': 'second_hand',
      'hint': 'The game turns the hands to the player\'s local time, so the program may stay empty.',
      'fixture': {'title': '벽시계', 'parts': [
-         {'id': 'body', 'shape': 'box', 'size': [.9, .9, .14], 'position': [0, .62, 0], 'color': '#73998e'},
+         {'id': 'body', 'shape': 'box', 'size': [.9, .9, .14], 'position': [0, .62, 0], 'color': '#efe6d2'},
          {'id': 'hour_hand', 'parent': 'body', 'shape': 'box', 'size': [.05, .24, .025], 'position': [0, 0, .085], 'pivot': [0, -.4, 0], 'color': '#2f2a24'},
          {'id': 'minute_hand', 'parent': 'body', 'shape': 'box', 'size': [.035, .36, .02], 'position': [0, 0, .1], 'pivot': [0, -.4, 0], 'color': '#2f2a24'},
          {'id': 'second_hand', 'parent': 'body', 'shape': 'box', 'size': [.02, .4, .02], 'position': [0, 0, .114], 'pivot': [0, -.3, 0], 'color': '#c0392b'}]}},
@@ -214,7 +218,10 @@ ARCHETYPES = [
      'behaviours': [{'role': 'whole', 'kind': 'rock', 'trigger': 'click', 'axis': 'x', 'level': 2}],
      'single': [{'role': 'whole', 'kind': 'rock', 'trigger': 'click', 'axis': 'x', 'level': 2}], 'rest': 'sit',
      'fixture': {'title': '흔들의자', 'parts': [
-         {'id': 'whole', 'shape': 'box', 'size': [.6, 1.0, .75], 'position': [0, .5, 0], 'color': '#a87c56'}]}},
+         {'id': 'rockers', 'shape': 'box', 'size': [.6, .06, .8], 'position': [0, .03, 0], 'color': '#8f6244'},
+         {'id': 'legs', 'parent': 'rockers', 'shape': 'box', 'size': [.46, .36, .46], 'position': [0, .21, 0], 'color': '#a87c56'},
+         {'id': 'seat', 'parent': 'legs', 'shape': 'box', 'size': [.58, .07, .56], 'position': [0, .215, 0], 'color': '#c79a6b'},
+         {'id': 'back', 'parent': 'seat', 'shape': 'box', 'size': [.58, .62, .06], 'position': [0, .34, -.25], 'rotation': [-8, 0, 0], 'color': '#c79a6b'}]}},
 
     {'id': 'music_box', 'names': {'ko': '오르골', 'en': 'Music box'},
      'words': ['오르골', '뮤직박스', '음악상자', 'music box', 'musicbox'],

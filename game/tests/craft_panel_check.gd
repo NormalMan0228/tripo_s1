@@ -94,8 +94,15 @@ func run() -> void:
 	panel.status.find_children("*", "Button", true, false).filter(func(b) -> bool: return b.text == tr("새로 만들기"))[0].pressed.emit()
 	await process_frame
 	expect(panel.form.visible and app.craft_done.is_empty(), "새로 만들기 returns to the form")
-	shards = int(app.me.shards)
+	# A clock is always made moving (its hands are free): the form picks that and says why.
+	panel.prompt.text = "벽시계"
+	await panel._ask_kind()
+	expect(panel.motion.selected == 1 and panel.motion.is_item_disabled(0) and panel.concept_note.visible and panel.concept_note.text.contains("바늘"),
+		"a clock is made moving, and the form says its hands are free")
 	panel.prompt.text = "a round lamp"
+	await panel._ask_kind()
+	expect(panel.motion.selected == 0 and not panel.motion.is_item_disabled(0), "other words give the choice back")
+	shards = int(app.me.shards)
 	await panel.request()
 	job = await wait_state(panel, ["awaiting_confirmation"])
 	await app.cancel_craft()
