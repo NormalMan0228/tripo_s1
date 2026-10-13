@@ -10,7 +10,8 @@ from server.app import create_app
 from server.config import Settings
 from server.asset_vm import AssetVM, HOST_LIMITS, V2_OPS, legacy, uses_v2, validate_program, exercise_extended
 from server.asset_assembly import demo_design, fixture_glb
-from server import archetypes, interactions, admin_cli
+from server import archetypes, interactions, admin_cli, clock_hands
+from server.provider import validate_glb
 from server import behaviour_library as library
 from server.archetype_library import ARCHETYPES
 from server.interactions import build, check, Preset
@@ -416,3 +417,135 @@ def test_operators_list_show_and_disable_learned_entries(world, tmp_path, capsys
     capsys.readouterr()
     craft(app, c, a, 'hourglass', designer='llm')
     assert len(designer.calls) == 2
+
+
+# ---------------------------------------------------------------- clocks on the trial cap, game-made hands
+
+def live_world(tmp_path, designer, cap=35, provider=None):
+    settings = Settings(data_dir=tmp_path, mode='live', paid_enabled=True, tripo_key='test-only-key',
+                        studio_llm='gemini', gemini_key='test-only-key', registration_code='test-only-invitation-123456',
+                        daily_generation_limit=100, user_daily_generation_limit=100, max_credits_per_craft=cap)
+    app = create_app(settings, worker_enabled=False, designer=designer, provider=provider or FurnitureProvider())
+    return app, TestClient(app, base_url='https://testserver'), settings
+
+
+def live_account(app, client, settings, name):
+    token = client.post('/v1/auth/register', json={'username': name, 'password': 'Test-password-123',
+                                                    'invitation': settings.registration_code}).json()['token']
+    with app.state.db.transaction() as db:
+        db.execute('UPDATE users SET shards=500')
+    return {'Authorization': 'Bearer ' + token}
+
+
+class ClockDesigner:
+    def __init__(self):
+        self.prompts = []
+
+    async def generate(self, prompt, model, effort, image=None, style=None):
+        self.prompts.append(prompt)
+        plan = archetypes.fixture_design('clock')[0]
+        return plan, {'version': 1, 'state': {}, 'functions': {}, 'events': {}}, {'provider': 'gemini', 'model': 'test'}
+
+
+def test_a_textured_moving_clock_fits_the_35_credit_trial_cap(tmp_path):
+    app, client, settings = live_world(tmp_path, ClockDesigner())
+    with client:
+        h = live_account(app, client, settings, 'cap_clock')
+        base = {'designer': 'llm', 'geometry': 'tripo', 'material': 'textured', 'motion': 'dynamic', 'mesh_model': 'v3.1-20260211'}
+        # A chest moves with a Tripo lid: two textured meshes (40) do not fit 35.
+        refused = client.post('/v1/studio/jobs', headers=h, json=mutation(prompt='보물상자', **base))
+        assert refused.status_code == 403 and refused.json()['detail'] == 'craft_over_trial_limit'
+        # A clock moves with the game's hands: one textured mesh, 20 credits.
+        job = client.post('/v1/studio/jobs', headers=h, json=mutation(prompt='앤티크 벽시계', **base))
+        assert job.status_code == 200, job.json()
+        asyncio.run(app.state.studio.process(job.json()['id']))
+        status = client.get('/v1/studio/jobs/' + job.json()['id'], headers=h).json()
+        assert status['state'] == 'awaiting_confirmation' and status['provenance']['estimated_tripo_credits'] == 20
+        assert 'fallback' not in status['provenance']
+    kind = archetypes.craft_kind('앤티크 벽시계')
+    assert kind['archetype'] == 'clock' and kind['always_moving'] and kind['moving_meshes'] == 1
+    assert archetypes.craft_kind('보물상자')['moving_meshes'] == 2
+
+
+def test_a_still_clock_request_is_built_with_its_hands(tmp_path):
+    designer = ClockDesigner()
+    app, client, settings = live_world(tmp_path, designer)
+    with client:
+        h = live_account(app, client, settings, 'still_clock')
+        info = client.post('/v1/studio/kind', headers=h, json={'prompt': '탁상시계'}).json()
+        assert info['always_moving'] and info['moving_meshes'] == 1 and info['names']['ko'] == '시계'
+        assert client.post('/v1/studio/kind', json={'prompt': '탁상시계'}).status_code == 401
+        job = client.post('/v1/studio/jobs', headers=h, json=mutation(prompt='탁상시계', designer='llm', geometry='tripo', material='textured',
+                                                                     motion='static', concept=True, mesh_model='v3.1-20260211'))
+        # The still price the player was shown.
+        assert job.status_code == 200 and job.json()['cost'] == 40
+        asyncio.run(app.state.studio.process(job.json()['id']))
+        status = client.get('/v1/studio/jobs/' + job.json()['id'], headers=h).json()
+        assert status['state'] == 'awaiting_confirmation' and status['provenance']['motion'] == 'dynamic'
+        assert [p['id'] for p in status['design']['parts']] == ['body', 'hour_hand', 'minute_hand', 'second_hand']
+        assert status['provenance']['estimated_tripo_credits'] == 20 and 'concept' not in status['stages']
+        assert 'Output ONE complete static part' not in designer.prompts[0] and 'hour_hand' in designer.prompts[0]
+
+
+def test_game_made_hands_fill_their_box_and_turn_at_the_hub():
+    for make, size, pivot in (('hour', [.05, .24, .02], [0, -.4, 0]), ('minute', [.035, .36, .02], [0, -.4, 0]),
+                              ('second', [.0286, .4, .02], [0, -.3, 0]), ('pendulum', [.08, .5, .02], [0, .5, 0])):
+        mesh = clock_hands.hand_mesh(make, size, pivot)
+        extent = [max(v[i] for v in mesh.vertices) - min(v[i] for v in mesh.vertices) for i in range(3)]
+        assert all(abs(e - s) < 1e-9 for e, s in zip(extent, size)), (make, extent)
+        assert len(mesh.vertices) < 600 and len(mesh.indices) % 3 == 0
+        # The hub cap stands proudest: the box front is the hub, around the turning point.
+        front = max(v[2] for v in mesh.vertices)
+        if make != 'pendulum':
+            hub = [v for v in mesh.vertices if abs(v[2] - front) < 1e-9]
+            assert all(abs(v[1] - pivot[1] * size[1]) <= size[0] / 2 + 1e-9 for v in hub)
+        for tripo in (False, True):
+            stats = {}
+            validate_glb(clock_hands.hand_glb(make, size, pivot, tripo), stats=stats)
+            assert stats['draw_calls'] == 1 and stats['texture_pixels'] == 0
+
+
+def test_hand_colours_follow_the_style_and_stand_out_on_the_dial():
+    cream, ebony = (0.95, 0.92, 0.85), (0.08, 0.07, 0.07)
+    # Antique: dark iron on a light dial, brass on a dark one; cozy: warm wood.
+    assert clock_hands.colours('antique', cream)['hour'] == '#2b2622' and clock_hands.colours('antique', ebony)['hour'] == '#c9a55c'
+    assert clock_hands.colours('cozy', cream)['hour'] == '#5a3b26'
+    for style in clock_hands.PALETTES:
+        for dial in (cream, ebony, (0.45, 0.6, 0.56)):
+            chosen = clock_hands.colours(style, dial)
+            assert clock_hands.contrast(clock_hands.rgb(chosen['hour']), dial) >= 2.0, (style, dial)
+    # A textured body: the texture's average colour (the fixture's warm checker).
+    sampled = clock_hands.dial_colour(fixture_glb('box', True), '#000000')
+    assert all(abs(a - b) < .03 for a, b in zip(sampled, (0.894, 0.796, 0.655)))
+    assert clock_hands.dial_colour(b'not a model', '#ffffff') == (1.0, 1.0, 1.0)
+
+
+def test_hands_stand_in_layers_in_front_of_the_dial():
+    plan, _ = demo_design('clock')
+    seated = archetypes.seat_parts('clock', plan)
+    parts = {p['id']: p for p in seated['parts']}
+    previous = parts['body']['size'][2] / 2
+    for hand in ('hour_hand', 'minute_hand', 'second_hand'):
+        part = parts[hand]
+        back, front = part['position'][2] - part['size'][2] / 2, part['position'][2] + part['size'][2] / 2
+        assert back >= previous + .002 and part['size'][2] < part['size'][0]
+        assert part['size'][1] <= .52 * .9 + 1e-9 and part['position'][:2] == [0, 0]
+        previous = front
+    empty = {'version': 1, 'state': {}, 'functions': {}, 'events': {}}
+    # A sci-fi clock's second hand glows; an antique one only turns.
+    assert ('glow', 'second_hand') in [(p['kind'], p['target']) for p in archetypes.assign('clock', seated, empty, 'scifi')['spec']['presets']]
+    assert all(p['kind'] == 'clock' for p in archetypes.assign('clock', seated, empty, 'antique')['spec']['presets'])
+
+
+def test_a_crafted_clock_has_game_made_hands_in_the_styles_colours(world):
+    app, c = world
+    a = account(c, 'alice')
+    oid, _ = craft(app, c, a, '벽시계', style='antique')
+    value = c.get('/v1/objects/' + oid + '/assembly', headers={**a, **VM2}).json()
+    parts = {p['id']: p for p in value['plan']['parts']}
+    # The fixture dial is cream: antique dark iron hands and a brass second hand.
+    assert [parts[h + '_hand']['color'] for h in ('hour', 'minute', 'second')] == ['#2b2622', '#2b2622', '#b08d57']
+    # On a teal dial brass would not show: the second hand is iron too. A glowing accent always shows.
+    assert clock_hands.colours('antique', clock_hands.rgb('#73998e'))['second'] == '#2b2622'
+    assert clock_hands.colours('scifi', clock_hands.rgb('#73998e'))['second'] == '#42d9ff'
+    assert b'procedural clock hand' in c.get('/v1/objects/' + oid + '/parts/hour_hand', headers=a).content

@@ -13,7 +13,7 @@ import uuid
 import unicodedata
 from typing import Literal
 from PIL import Image
-from pydantic import Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from fastapi import Request, HTTPException
 from fastapi.responses import Response
 from .models import Mutation
@@ -30,6 +30,7 @@ from . import object_shape
 from . import craft_styles
 from . import interactions
 from . import archetypes
+from . import clock_hands
 from . import behaviour_library as library
 
 SCHEMA='''
@@ -84,6 +85,10 @@ class StudioRequest(Mutation):
                 im.verify()
         except Exception:raise ValueError('invalid_image') from None
         return v
+
+class KindQuery(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    prompt: str=Field(default='',max_length=1500)
 
 class StudioConfirm(Mutation):
     # With a concept picture: build from it (image-to-3D) or ignore it and build from the text.
@@ -299,8 +304,24 @@ class Studio:
                     'categories':[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')],
                     'shards':user['shards']}
 
+        # The craft window asks what a request is before it is sent: a library type always built
+        # moving (a clock and its free hands) and the Tripo meshes a moving craft of it needs.
+        @app.post('/v1/studio/kind')
+        def kind(body:KindQuery,request:Request):
+            with db.read() as conn:auth(conn,request)
+            return archetypes.craft_kind(body.prompt)
+
         @app.post('/v1/studio/jobs')
         def queue(body:StudioRequest,request:Request):
+            # A clock is always built with its hands, even when asked for a still piece: the game makes
+            # them (no credits, so it fits wherever the still piece fits). The price stays what was asked.
+            asked=body
+            kind=archetypes.classify(body.prompt)
+            if kind and kind.get('always_moving') and body.motion=='static' and body.designer!='simple':
+                body=body.model_copy(update={'motion':'dynamic','concept':False})
+            # Moving furniture keeps separate parts: at least two Tripo meshes, or one when the game
+            # makes every moving part.
+            meshes=archetypes.least_meshes(kind,body.motion)
             def create(conn,user):
                 if body.designer=='llm' and settings.studio_llm=='fixture':fail('llm_not_configured',503)
                 if body.geometry=='tripo' and not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
@@ -318,12 +339,11 @@ class Studio:
                     cap=settings.max_credits_per_craft if settings.mode=='live' else 0
                     if cap:
                         try:
-                            # Moving furniture keeps separate parts: count at least two.
-                            least=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',2 if body.motion=='dynamic' else 1,bool(body.image),body.image_mode=='refine')
+                            least=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',meshes,bool(body.image),body.image_mode=='refine')
                         except ProviderError:least=cap+1
                         if least>cap:fail('craft_over_trial_limit',403)
                     if settings.tripo_credit_budget:
-                        try:need=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',2 if body.motion=='dynamic' else 1,bool(body.image),body.image_mode=='refine')
+                        try:need=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',meshes,bool(body.image),body.image_mode=='refine')
                         except ProviderError:need=0
                         if body.concept and not body.image:need+=CONCEPT_CREDITS
                         if tripo_credits_committed(conn)+need>settings.tripo_credit_budget:fail('tripo_budget_exhausted',429)
@@ -341,7 +361,7 @@ class Studio:
                         # released clients (<= 0.10.2) prints the detail after its own prefix, so it gets
                         # the sentence; it is the only caller that sends image_mode.
                         fail(TRIAL_USED_UP % limit if 'image_mode' in body.model_fields_set else 'user_total_generation_limit',429)
-                job_id=str(uuid.uuid4());cost=price(body)
+                job_id=str(uuid.uuid4());cost=price(asked)
                 money(conn,user['id'],-cost,'studio_charge',job_id)
                 conn.execute('INSERT INTO studio_jobs(id,owner_id,request,state,cost,created,updated) VALUES (?,?,?,?,?,?,?)',
                     (job_id,user['id'],body.model_dump_json(),'queued',cost,clock(),clock()))
@@ -403,8 +423,9 @@ class Studio:
                 program=json.loads(row['program'])
                 exercise(program,[p['id'] for p in plan['parts']])
                 # What the finished object will do: its library type's behaviour when it starts with one.
-                kind=json.loads(row['provenance'] or '{}').get('archetype')
-                try:assigned=archetypes.assign(kind,plan,program) if kind else None
+                quote=json.loads(row['provenance'] or '{}')
+                kind=quote.get('archetype')
+                try:assigned=archetypes.assign(kind,plan,program,quote.get('style','')) if kind else None
                 except interactions.InteractionError:assigned=None
                 if assigned and assigned['compiled']:program=assigned['compiled']['program']
                 blobs={p['id']:base64.b64encode(fixture_glb(p['shape'],False)).decode() for p in plan['parts']}
@@ -658,6 +679,17 @@ class Studio:
                               estimate_text_only=images+mesh_credits(mesh_model,textured,False))
             provenance['quoted_game_cost']=max(job['cost'],math.ceil(provenance['estimated_tripo_credits']*self.settings.studio_credit_rate))
 
+    def part_colour(self,plan,parts,part,entry,body):
+        """A game-made part's colour (a clock hand): the craft style's hand colour that stands out on
+        the dial, sampled from the finished body's texture (or its plan colour)."""
+        dial=next((p for p in plan['parts'] if p['id']==part['parent']),plan['parts'][0])
+        shade=clock_hands.rgb(dial['color'])
+        built=parts.get(dial['id'],{})
+        if body.material=='textured' and body.geometry=='tripo' and built.get('file'):
+            try:shade=clock_hands.dial_colour((self.assets/built['file']).read_bytes(),dial['color'])
+            except OSError:pass
+        return clock_hands.colours(body.style,shade).get(entry.get('make','minute'),part['color'])
+
     def guard_tripo_cap(self,job,parts):
         """Last check before a new Tripo request: the account's earlier requests plus the ones
         this job already sent must leave room for one more (live trial cap)."""
@@ -777,14 +809,16 @@ class Studio:
                 plan['category']='_'.join(''.join(c if c.isalnum() else ' ' for c in category).split())[:40] or 'decoration'
                 # The library type (server/archetypes.py): its behaviours start on the finished object.
                 kind=archetypes.classify(body.prompt,plan)
-                if kind:provenance['archetype']=kind['id']
+                if kind:
+                    provenance['archetype']=kind['id']
+                    plan=archetypes.seat_parts(kind['id'],plan)
                 provenance.update(geometry='procedural_proxy' if body.geometry=='proxy' else 'tripo',material=body.material,motion=body.motion)
                 # The game sizes the finished object by size_m (0 = the designer's own size).
                 provenance.update(style=body.style,size=body.size,size_m=craft_styles.meters(body.size))
                 parts={p['id']:{'state':'pending'} for p in plan['parts']}
+                # Role parts the game makes itself (clock hands, server/clock_hands.py): no Tripo credits.
+                for part_id,make in archetypes.primitive_parts(provenance.get('archetype'),plan).items():parts[part_id].update(primitive=True,make=make)
                 if body.geometry=='tripo':
-                    # Thin role parts (clock hands) are made by the game: no Tripo credits.
-                    for part_id in archetypes.primitive_parts(provenance.get('archetype'),plan):parts[part_id]['primitive']=True
                     def quote():
                         meshes=sum(1 for entry in parts.values() if not entry.get('primitive'))
                         return estimate(mesh_model,body.material=='textured',meshes,bool(body.image) and (len(plan['parts'])==1 or body.image_mode=='refine'),body.image_mode=='refine')
@@ -829,10 +863,14 @@ class Studio:
             for key,limit in (('texture_pixels',32000000),('vertices',300000),('draw_calls',128)):
                 if sum(part.get('render_budget',{}).get(key,0) for part in parts.values())>limit:raise ProviderError('assembly_render_budget_exceeded')
             if sum(part.get('bytes',0) for part in parts.values())>48*1024*1024:raise ProviderError('assembly_too_large')
-            for p in plan['parts']:
+            # The game's own parts come last: their colour follows the finished body.
+            for p in sorted(plan['parts'],key=lambda part:bool(parts[part['id']].get('primitive'))):
                 entry=parts[p['id']]
                 if entry['state']=='ready':continue
-                if body.geometry=='proxy' or entry.get('primitive'):blob=fixture_glb(p['shape'],textured and not entry.get('primitive'))
+                if entry.get('primitive'):
+                    entry['color']=self.part_colour(plan,parts,p,entry,body)
+                    blob=clock_hands.hand_glb(entry.get('make','minute'),p['size'],p['pivot'],body.geometry=='tripo')
+                elif body.geometry=='proxy':blob=fixture_glb(p['shape'],textured)
                 else:
                     if entry['state']=='pending' and body.image_mode=='refine':
                         self.guard_tripo_cap(job,parts)
@@ -909,12 +947,14 @@ class Studio:
                 target=self.assets/filename;temporary=target.with_suffix('.tmp');temporary.write_bytes(blob);temporary.replace(target)
                 entry.update(state='ready',file=filename,sha256=hashlib.sha256(blob).hexdigest(),bytes=len(blob),render_budget=stats)
                 self.update(job_id,state='building',parts=json.dumps(parts))
-            for p in plan['parts']:p.update(file=parts[p['id']]['file'],sha256=parts[p['id']]['sha256'])
+            for p in plan['parts']:
+                p.update(file=parts[p['id']]['file'],sha256=parts[p['id']]['sha256'])
+                if parts[p['id']].get('color'):p['color']=parts[p['id']]['color']
             provenance.update(billing(parts) if body.geometry=='tripo' else {'tripo_credits_consumed':0,'known_tripo_credits':0,'billing_complete':True})
             provenance['image_refinement_credits']=sum(p.get('image_credits_consumed') or 0 for p in parts.values())
             assigned=None
             if provenance.get('archetype'):
-                try:assigned=archetypes.assign(provenance['archetype'],plan,program)
+                try:assigned=archetypes.assign(provenance['archetype'],plan,program,body.style)
                 except interactions.InteractionError as error:provenance['behaviour_error']=error.code
                 if assigned:provenance['behaviour']={'archetype':provenance['archetype'],'presets':len(assigned['spec']['presets']),'rest':assigned['spec']['rest']}
             effective=assigned['compiled']['program'] if assigned and assigned['compiled'] else program
