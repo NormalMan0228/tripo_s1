@@ -2,8 +2,11 @@ extends SceneTree
 ## Living crafted objects against a local demo server: a crafted wall clock arrives with its hands on
 ## the player's local time (hour and minute glide, the second hand ticks 6° a second with a small
 ## mechanical overshoot), it stops working while nobody can see it and is right again when seen, and a
-## crafted chest of drawers slides its drawer out on E. --capture saves two pictures of the ticking
-## clock a second apart (artifacts/clock-tick-1.png, -2.png); run it windowed for those.
+## crafted chest of drawers slides its drawer out on E. The hands are the game's own crafted shapes
+## (spade, arrow, needle with a counterweight, hub caps) in layers in front of the dial, coloured by
+## the craft style. --capture saves two pictures of the ticking clock a second apart
+## (artifacts/clock-tick-1.png, -2.png) and close-ups of antique and sci-fi hands
+## (artifacts/clock-hands-antique.jpg, -scifi.jpg); run it windowed for those.
 ##   godot --path game --script res://tests/living_objects_check.gd -- --server=URL [--capture]
 const Assembly = preload("res://scripts/asset_assembly.gd")
 const Api = preload("res://scripts/api.gd")
@@ -36,8 +39,8 @@ func near(a: float, b: float, tolerance := 0.05) -> bool:
 	return absf(wrapf(a - b, -180.0, 180.0)) <= tolerance
 
 ## A fixture craft (proxy shapes, no paid call) made into an object: its id, or "".
-func craft(api: Node, prompt: String) -> String:
-	var queued: Dictionary = await api.post("/v1/studio/jobs", api.mutation({"prompt": prompt, "geometry": "proxy", "designer": "fixture"}))
+func craft(api: Node, prompt: String, extra := {}) -> String:
+	var queued: Dictionary = await api.post("/v1/studio/jobs", api.mutation({"prompt": prompt, "geometry": "proxy", "designer": "fixture"}.merged(extra)))
 	if not queued.ok: return ""
 	var deadline := Time.get_ticks_msec() + 30000
 	while Time.get_ticks_msec() < deadline:
@@ -69,7 +72,8 @@ func capture(path: String) -> void:
 	await RenderingServer.frame_post_draw
 	var image := root.get_texture().get_image()
 	image.resize(640, int(640.0 * image.get_height() / image.get_width()), Image.INTERPOLATE_LANCZOS)
-	image.save_png(path)
+	if path.ends_with(".jpg"): image.save_jpg(path, 0.88)
+	else: image.save_png(path)
 	print("CAPTURE ", ProjectSettings.globalize_path(path))
 
 func run() -> void:
@@ -84,14 +88,19 @@ func run() -> void:
 	api.token = str(login.data.get("token", ""))
 	var camera := stage()
 
-	# A wall clock: separate hands, turning with the player's local time.
-	var clock_id := await craft(api, "벽시계")
+	# A wall clock asked for as a still piece: it is built moving anyway, with separate hands turning
+	# with the player's local time (the hands cost nothing; the still price is kept).
+	var clock_id := await craft(api, "벽시계", {"motion": "static"})
 	check(not clock_id.is_empty(), "a wall clock is crafted")
 	if clock_id.is_empty(): finish(); return
 	var clock: Node3D = await Assembly.fetch(api, clock_id)
 	check(clock != null and clock.pivots.has("hour_hand") and clock.pivots.has("second_hand"), "the clock has its own hands")
 	if clock == null: finish(); return
 	check(str(clock.manifest.get("interaction", {}).get("mode", "")) == "presets", "it arrives with the clock type's behaviour")
+	var hand_mesh: MeshInstance3D = clock.surfaces["hour_hand"][0]
+	check(hand_mesh.mesh.surface_get_array_len(0) > 100, "the hands are crafted shapes, not bars (%d vertices)" % hand_mesh.mesh.surface_get_array_len(0))
+	var layers := [clock.pose_nodes["hour_hand"].position.z, clock.pose_nodes["minute_hand"].position.z, clock.pose_nodes["second_hand"].position.z]
+	check(layers[0] > 0.07 and layers[0] < layers[1] and layers[1] < layers[2], "they stand in layers in front of the dial (%s)" % str(layers))
 	root.add_child(clock)
 	var at := 10 * 3600 + 8 * 60 + 30.5  # 10:08:30.5
 	Assembly.clock_override = at
@@ -131,8 +140,32 @@ func run() -> void:
 		await capture("res://../artifacts/clock-tick-2.png")
 	clock.queue_free()
 
-	# A chest of drawers: E slides the drawer out, again pushes it back.
+	# Hands in two craft styles: antique dark iron and brass, sci-fi gunmetal with a glowing second hand.
+	for style in ["antique", "scifi"]:
+		var styled_id := await craft(api, "벽시계", {"style": style, "motion": "static"})
+		var styled: Node3D = await Assembly.fetch(api, styled_id) if not styled_id.is_empty() else null
+		check(styled != null, "a %s wall clock is crafted" % style)
+		if styled == null: continue
+		var colours := {}
+		for part in styled.manifest.plan.parts: colours[part.id] = str(part.color)
+		var glows := JSON.stringify(styled.vm.program).contains("emission")
+		if style == "antique": check(colours.hour_hand == "#2b2622" and colours.second_hand == "#b08d57" and not glows, "antique hands: dark iron and a brass second hand")
+		else: check(colours.second_hand == "#42d9ff" and glows, "sci-fi hands: a glowing cyan second hand")
+		root.add_child(styled)
+		Assembly.clock_override = 10 * 3600 + 9 * 60 + 36.5
+		if "--capture" in OS.get_cmdline_user_args():
+			camera.position = Vector3(0.32, 0.5, 1.05)
+			camera.look_at(Vector3(0, 0.45, 0))
+			await create_timer(0.8).timeout
+			await capture("res://../artifacts/clock-hands-%s.jpg" % style)
+		styled.queue_free()
+		await frames()
+
+	# A chest of drawers (a second account: a new one has starseeds for a few crafts): E slides the
+	# drawer out, again pushes it back.
 	Assembly.clock_override = -1.0
+	var second: Dictionary = await api.post("/v1/auth/register", {"username": "lvh_" + str(Time.get_ticks_usec() % 100000000), "password": "Living-check-password"})
+	if second.ok: api.token = str(second.data.get("token", ""))
 	var drawers_id := await craft(api, "서랍장")
 	var drawers: Node3D = await Assembly.fetch(api, drawers_id) if not drawers_id.is_empty() else null
 	check(drawers != null and drawers.pivots.has("drawer"), "a chest of drawers is crafted with a drawer part")
