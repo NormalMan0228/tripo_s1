@@ -4,7 +4,7 @@
  "links": [
   [
    "학교판 내려받기 (사전 공개)",
-   "https://github.com/NormalMan0228/tripo_s1/releases"
+   "https://villagen-school-dl.s3.ap-northeast-2.amazonaws.com/school/index.html"
   ],
   [
    "심사용 최신판 0.10.2",
@@ -196,6 +196,11 @@
      "date": "10-12"
     },
     {
+     "title": "설치 파일 배포를 S3로 이전 (GitHub은 코드·기록만)",
+     "status": "done",
+     "date": "10-13"
+    },
+    {
      "title": "게임을 끌 때 나는 엔진 오류 수정",
      "status": "next"
     }
@@ -345,7 +350,11 @@
   {
    "version": "2026.10.12-1520",
    "note": "학교판 0.11.3 배포, dev 첫 화면에 설치 파일 바로 받기 버튼"
+  },
+  {
+   "version": "2026.10.13-1100",
+   "note": "설치 파일 배포를 GitHub 릴리스에서 S3 내려받기 페이지로 이전"
   }
  ],
- "version": "2026.10.12-1520"
+ "version": "2026.10.13-1100"
 }
