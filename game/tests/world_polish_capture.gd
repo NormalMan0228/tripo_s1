@@ -6,6 +6,11 @@ extends SceneTree
 ##   artifacts/world-nameplate-after.png   the same with the road drawn first
 ##   artifacts/world-dialogue-<who>-<scale>.png  the dialogue window with an
 ##                                          illustrated speaker at UI scale 80/100/140 %
+##   artifacts/world-folk-day.png             the shadow folk's rounds at noon: villagers
+##   artifacts/world-folk-dusk.png            the same five mid-dissolve at dusk
+##   artifacts/world-folk-night.png           and at night: the shadows
+##   artifacts/world-folk-lineup.png          all fifteen daytime villagers over their shadows
+##   artifacts/world-folk-room-<hour>.png     the cafe at 13:00 (villagers) and 22:30
 ##   artifacts/world-gait-turn.png            strip of frames while the walker reverses
 ##                                          at a run (lower body during the turn)
 ##   artifacts/world-loading-<kind>.png      the loading card: game start over the cover
@@ -50,6 +55,26 @@ func run() -> void:
 		await loading_cards()
 		quit()
 		return
+	if shot == "room":
+		for hour in [13.0, 22.5]:
+			Engine.set_meta("interior_hour", hour)
+			Engine.set_meta("studio_session", {"token":"", "url":"http://127.0.0.1:9", "room":"01_cafe"})
+			var studio: Control = load("res://scenes/studio.tscn").instantiate()
+			root.add_child(studio)
+			await create_timer(2.0).timeout
+			var names: Array = []
+			for entry in studio.npcs.values(): names.append(str(entry.body.get("title")))
+			print("ROOM hour=", hour, " ", names)
+			await capture("world-folk-room-%d.png" % int(hour), 2)
+			studio.queue_free()
+			await process_frame
+		Engine.remove_meta("interior_hour")
+		quit()
+		return
+	if shot == "lineup":
+		await lineup()
+		quit()
+		return
 	if shot == "boot":
 		# The real start: main.tscn shows the cover card while the village builds.
 		change_scene_to_file("res://scenes/main.tscn")
@@ -85,6 +110,7 @@ func run() -> void:
 	folk.setup(app)
 	for i in 30: await physics_frame
 	if shot in ["", "nameplate"]: await nameplate()
+	if shot in ["", "folk"]: await folk_day_night()
 	quit()
 
 ## The dialogue window over a plain backdrop: a cast standee (waist-up) and two
@@ -216,6 +242,112 @@ func loading_cards() -> void:
 		await capture("world-loading-%s.png" % card[0], 2)
 	await veil.fade_in()
 	print("LOADING card_cleared=", not veil.card.visible)
+
+## Five residents on the town green at noon, mid-change at dusk and at night.
+func folk_day_night() -> void:
+	var ids := ["postman", "sweeper", "kid", "lamplighter", "gentleman"]
+	await stage(ids, 12.0)
+	focus(Vector2(-32.5, 37.2), 9.0)
+	await capture("world-folk-day.png")
+	await stage(ids, 21.5)
+	for walker in folk.walkers:
+		if walker.spec.id in ids:
+			walker.set_day(true, true)
+			walker.set_day(false)
+			walker.day_blend = 0.5
+			walker.push_day()
+	focus(Vector2(-32.5, 37.2), 9.0)
+	await capture("world-folk-dusk.png", 2)
+	for walker in folk.walkers:
+		if walker.spec.id in ids: walker.set_day(false, true)
+	await capture("world-folk-night.png", 4)
+	var titles: Array = []
+	for walker in folk.walkers:
+		if walker.spec.id in ids: titles.append(walker.title)
+	print("FOLK night titles ", titles)
+
+func stage(ids: Array, hour: float) -> void:
+	app.daylight.override_hour = hour
+	app.daylight.refresh(true)
+	folk.clock = 0.0
+	await physics_frame
+	await physics_frame
+	# One schedule pass picks the looks for the hour; then the module holds still so
+	# nobody walks home mid-capture.
+	folk.set_process(false)
+	var spots := [Vector2(-35.2, 36.4), Vector2(-32.6, 38.6), Vector2(-30.3, 36.6), Vector2(-28.4, 38.4), Vector2(-37.4, 38.2)]
+	for i in ids.size():
+		var walker: Node3D = named(ids[i])
+		walker.set_present(true)
+		# Just under full, so the next step pushes the presence to every material.
+		walker.fade = 0.999
+		walker.visible = true
+		walker.position = walker.ground_point(spots[i], 0.05)
+		walker.state = "pause"
+		walker.pause_left = 999.0
+		walker.look_clock = 999.0
+		walker.face_yaw = [0.35, -0.1, -0.3, 0.15, 0.5][i]
+		walker.has_face = true
+		walker.visual.rotation.y = walker.face_yaw
+	for walker in folk.walkers:
+		if not walker.spec.id in ids and walker.xz().distance_to(Vector2(-32.5, 37.2)) < 12.0:
+			walker.position = walker.ground_point(Vector2(-60, 48), 0.1)
+	for i in 20: await physics_frame
+	var titles: Array = []
+	for id in ids: titles.append("%s=%s" % [id, named(id).title])
+	print("FOLK hour=", hour, " ", titles)
+
+## Every resident twice on a plain floor: the daytime villager in front, the shadow behind.
+func lineup() -> void:
+	var stage := Node3D.new()
+	root.add_child(stage)
+	var ground := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(60, 30)
+	ground.mesh = plane
+	var paint := StandardMaterial3D.new()
+	paint.albedo_color = Color("9cb88f")
+	ground.material_override = paint
+	stage.add_child(ground)
+	var light := DirectionalLight3D.new()
+	light.rotation_degrees = Vector3(-45, -25, 0)
+	stage.add_child(light)
+	var world := WorldEnvironment.new()
+	world.environment = Environment.new()
+	world.environment.background_mode = Environment.BG_COLOR
+	world.environment.background_color = Color("cfe3e8")
+	world.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	world.environment.ambient_light_color = Color.WHITE
+	world.environment.ambient_light_energy = 0.55
+	stage.add_child(world)
+	var Figure = load("res://scripts/shadow_figure.gd")
+	var ids: Array = load("res://scripts/day_folk.gd").LOOKS.keys()
+	for i in ids.size():
+		for day in [true, false]:
+			var who: Node3D = Figure.create_still(ids[i])
+			stage.add_child(who)
+			who.position = Vector3((i-(ids.size()-1)*0.5)*0.95, 0, 0.0 if day else -1.6)
+			who.face(0.0)
+			who.set_day(day, true)
+			who.nameplate.visible = false
+	# The player's own look at the end of the row, for comparison.
+	var player: CharacterBody3D = load("res://scripts/player.gd").new()
+	player.controls_enabled = false
+	player.visual_only = true
+	player.facing = Vector3(0, 0, 1)
+	stage.add_child(player)
+	player.position = Vector3((ids.size()+0.5-(ids.size()-1)*0.5)*0.95, 0, 0)
+	player.visual.rotation.y = PI
+	camera = Camera3D.new()
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = 9.6
+	stage.add_child(camera)
+	camera.position = Vector3(0.5, 2.6, 9.0)
+	camera.look_at(Vector3(0.5, 0.9, -0.8))
+	camera.current = true
+	await create_timer(1.0).timeout
+	await capture("world-folk-lineup.png", 2, false)
+	stage.queue_free()
 
 func named(id: String) -> Node3D:
 	for walker in folk.walkers:

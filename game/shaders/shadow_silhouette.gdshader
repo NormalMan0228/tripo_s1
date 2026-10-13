@@ -2,7 +2,9 @@ shader_type spatial;
 // Flat near-black body for the shadow folk (scripts/shadow_figure.gd), in the spirit
 // of the classic mystery-cartoon culprit: no lighting, a faint smoky grain so the
 // black reads as cloth rather than a hole, and a dark navy rim so the outline still
-// separates from the ground at night. `fade` dithers the figure in and out.
+// separates from the ground at night. `fade` dithers the figure in and out; `day`
+// hands the pixels over to the resident's daytime look (shaders/villager_look.gdshader
+// discards exactly the pixels this keeps), so dawn and dusk dissolve one into the other.
 render_mode unshaded, cull_back, depth_draw_opaque;
 
 uniform vec4 body_color : source_color = vec4(0.07, 0.075, 0.105, 1.0);
@@ -11,6 +13,7 @@ uniform float rim_strength = 0.3;
 uniform float rim_power = 3.6;
 uniform float grain = 0.22;
 uniform float fade : hint_range(0.0, 1.0) = 1.0;
+uniform float day : hint_range(0.0, 1.0) = 0.0;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453);
@@ -25,6 +28,9 @@ float noise(vec2 p) {
 
 void fragment() {
 	if (fade < 0.999 && hash(floor(FRAGCOORD.xy)) > fade) {
+		discard;
+	}
+	if (day > 0.001 && hash(floor(FRAGCOORD.xy)+vec2(37.0, 11.0)) < day) {
 		discard;
 	}
 	float facing = clamp(dot(normalize(NORMAL), normalize(VIEW)), 0.0, 1.0);

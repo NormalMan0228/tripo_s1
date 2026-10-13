@@ -13,6 +13,7 @@ const Detail = preload("res://scripts/world_detail.gd")
 const Loader = preload("res://scripts/model_loader.gd")
 const Daylight = preload("res://scripts/daylight.gd")
 const Residents = preload("res://scripts/residents.gd")
+const DayFolk = preload("res://scripts/day_folk.gd")
 const BUILDINGS := "res://maps/archipelago/building_placements.json"
 const MANIFEST := "res://assets/interior/manifest.json"
 const INTERIOR_DIR := "res://assets/interior/"
@@ -2847,19 +2848,25 @@ const SHOP_LINES := {"farmer":["씨앗 보러 왔어요? 오늘은 별사탕 씨
 	"shopkeeper":["어서 오세요, 마을 잡화점이에요!","필요한 게 있으면 뭐든 말해요."]}
 const FISHING_LINES := ["물때가 바뀔 때 입질이 좋아요.","등대 부두는 새벽이 제일 좋아요."]
 
-static func resident_title(id: String) -> String:
+## A resident's name; shadow folk go by their daytime name while the sun is up
+## (day_folk.gd) when `hour` (local) is given.
+static func resident_title(id: String, hour := -1.0) -> String:
 	var entry: Dictionary = Residents.resident(id)
 	if entry.has("title"): return str(entry.title)
+	if hour >= 0.0 and DayFolk.is_day(id, hour): return str(DayFolk.LOOKS[id].title)
 	return str(SHADOW_TITLES.get(id,"수상한 그림자"))
 
-## "나루" for the cast, the role ("정원사") for shadow folk.
-static func short_name(id: String) -> String:
-	var parts := TranslationServer.translate(resident_title(id)).split(" · ")
+## "나루" for the cast and the daytime villagers, the role ("정원사") for shadow folk.
+static func short_name(id: String, hour := -1.0) -> String:
+	var parts := TranslationServer.translate(resident_title(id, hour)).split(" · ")
 	if str(Residents.resident(id).get("kind",""))=="cast" or parts.size()<2: return parts[0]
+	if hour >= 0.0 and DayFolk.is_day(id, hour): return parts[0]
 	return parts[1]
 
-static func portrait(id: String) -> String:
+## The dialogue picture; daytime villagers have none (the path still names the voice).
+static func portrait(id: String, hour := -1.0) -> String:
 	if str(Residents.resident(id).get("kind",""))=="cast": return "res://assets/portraits/%s.png" % id
+	if hour >= 0.0 and DayFolk.is_day(id, hour): return "res://assets/ui/day_%s.png" % id
 	return "res://assets/ui/shadow_%s.png" % id
 
 ## The piece of furniture an occupant uses: their own bed when asleep, otherwise
@@ -2939,7 +2946,7 @@ static func resident_talk(id: String, occupant: Dictionary, building: Dictionary
 		"visit":
 			var host := ""
 			for resident in Residents.residents_of(str(building.building)):
-				if resident!=id: host=short_name(resident);break
+				if resident!=id: host=short_name(resident,hour);break
 			if not host.is_empty(): lines.append(TranslationServer.translate("%s네 집에 놀러 왔어요. 차 한 잔 얻어 마시는 중이에요.") % host)
 	if id in ["haeru","fisher"]:
 		lines.append(TranslationServer.translate(str(FISHING_LINES[randi()%FISHING_LINES.size()])))

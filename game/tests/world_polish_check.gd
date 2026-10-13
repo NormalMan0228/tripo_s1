@@ -8,7 +8,9 @@ extends SceneTree
 ##  - fade: every change of place fades out and in over the same short times, a
 ##    fade-in after a long build frame still fades (no pop), and the loading card
 ##    shows while covered and is cleared once the veil is gone.
-##   Godot --headless --path game --script res://tests/world_polish_check.gd [-- --only=stairs|gait|fade]
+##  - folk: shadow folk only after dark; villagers on the same rounds by day; a
+##    dissolve in view, an instant change out of sight; rooms and names agree.
+##   Godot --headless --path game --script res://tests/world_polish_check.gd [-- --only=stairs|gait|fade|folk]
 var failures: Array[String] = []
 var only := ""
 
@@ -31,6 +33,7 @@ func run() -> void:
 	if wants("stairs"): await stairs()
 	if wants("gait"): await gait()
 	if wants("fade"): await fade()
+	if wants("folk"): await folk()
 	print("WORLD_POLISH ", JSON.stringify({"ok":failures.is_empty(), "failures":failures}))
 	quit(0 if failures.is_empty() else 1)
 
@@ -219,3 +222,105 @@ func fade() -> void:
 	await veil.fade_out()
 	check(not veil.card.visible, "fade: a plain fade shows no card")
 	await veil.fade_in()
+
+## ------------------------------------------------------------------ folk
+
+## The shadow folk by the player's clock: villagers at noon, shadows at night, a
+## dissolve (never a pop) when the change happens next to the walker, at once out of
+## sight, staggered switch points, and the same rule for room figures and names.
+func folk() -> void:
+	var Stub = load("res://tests/shadow_folk_stub.gd")
+	var Folk = load("res://scripts/shadow_folk.gd")
+	var DayFolk = load("res://scripts/day_folk.gd")
+	var Interiors = load("res://scripts/interiors.gd")
+	var Figure = load("res://scripts/shadow_figure.gd")
+	var camera := Camera3D.new()
+	root.add_child(camera)
+	var app: Node3D = Stub.new()
+	root.add_child(app)
+	app.build(camera)
+	for i in 8: await physics_frame
+	app.spawn_villagers()
+	app.daylight.override_hour = 12.0
+	var module: Node3D = Folk.new()
+	module.persist = false
+	app.add_child(module)
+	module.setup(app)
+	for i in 10: await physics_frame
+	var day_ok := true
+	var shadows_by_day: Array = []
+	for walker in module.walkers:
+		if not (walker.day_target and walker.day_blend == 1.0 and walker.look_phase == 2 and not str(walker.title).contains("그림자")):
+			day_ok = false
+			shadows_by_day.append(walker.spec.id)
+	check(day_ok and module.walkers.size() >= 10, "folk: at noon all %d residents are villagers (%s)" % [module.walkers.size(), shadows_by_day])
+	var outdoors: Array = module.walkers.filter(func(w): return w.visible and w.present)
+	check(not outdoors.is_empty(), "folk: %d villagers are out on their rounds at noon" % outdoors.size())
+	# Night with the walker far away: everyone changes at once.
+	app.player.position = Vector3(0, 30, -400)
+	app.daylight.override_hour = 23.0
+	module.clock = 0.0
+	for i in 4: await physics_frame
+	var night_ok := true
+	for walker in module.walkers:
+		if walker.day_target or walker.day_blend != 0.0 or walker.look_phase != 0 or not str(walker.title).contains("그림자"): night_ok = false
+	check(night_ok, "folk: at 23:00 out of sight every resident is a shadow at once")
+	# Morning beside a walker who is out: it dissolves over seconds.
+	app.daylight.override_hour = 12.0
+	module.clock = 0.0
+	for i in 4: await physics_frame
+	var near: Node3D = null
+	for walker in module.walkers:
+		if walker.visible and walker.present and walker.state != "hidden": near = walker
+	check(near != null, "folk: someone is outdoors to watch change")
+	if near == null: return
+	app.player.position = near.global_position+Vector3(2.0, 0, 0)
+	app.daylight.override_hour = 23.0
+	module.clock = 0.0
+	var started := Time.get_ticks_msec()
+	var blends: Array[float] = []
+	var mixed := false
+	while Time.get_ticks_msec()-started < 4000:
+		await physics_frame
+		app.player.position = near.global_position+Vector3(2.0, 0, 0)
+		blends.append(near.day_blend)
+		if near.look_phase == 1: mixed = true
+		if near.day_blend == 0.0 and blends.size() > 10: break
+	var seconds := (Time.get_ticks_msec()-started)/1000.0
+	var steps: int = blends.filter(func(b): return b > 0.05 and b < 0.95).size()
+	check(not near.day_target and near.day_blend == 0.0, "folk: the %s in view became a shadow" % near.spec.id)
+	check(mixed and steps > 30 and seconds > 1.5, "folk: it dissolved over %.1f s (%d mixed frames), no pop" % [seconds, steps])
+	# Talking to a villager by day: its own name, words and voice, no shadow picture.
+	var postman: Node3D = null
+	for walker in module.walkers:
+		if walker.spec.id == "postman": postman = walker
+	postman.set_day(true, true)
+	app.player.position = postman.global_position+Vector3(1.2, 0, 0)
+	module.talk(postman)
+	var said: Dictionary = app.dialogues[-1] if not app.dialogues.is_empty() else {}
+	var words := " ".join(said.get("lines", []))
+	check(said.get("speaker", "") == DayFolk.title("postman") and not words.contains("그림자"), "folk: the daytime postman talks as %s: %s" % [said.get("speaker", ""), words.left(40)])
+	check(str(said.get("cast", "")).contains("day_postman") and load("res://scripts/voice_babble.gd").resolve(str(said.get("cast", ""))) == "postman", "folk: no shadow picture, the postman's voice")
+	postman.end_talk()
+	# Staggered: residents change at different points of dusk.
+	var points: Array = []
+	for id in DayFolk.LOOKS: points.append(DayFolk.switch_point(id))
+	check(points.max()-points.min() > 0.2, "folk: switch points spread %.2f..%.2f" % [points.min(), points.max()])
+	# Every resident changes on both sides of dusk and dawn, by the local clock.
+	var by_clock := true
+	for id in DayFolk.LOOKS:
+		if not DayFolk.is_day(id, 13.0) or DayFolk.is_day(id, 1.0): by_clock = false
+	check(by_clock, "folk: everyone is a villager at 13:00 and a shadow at 01:00")
+	# Rooms: the still figures and the names follow the same rule.
+	var still: Node3D = Figure.create_still("miller")
+	root.add_child(still)
+	still.set_day(DayFolk.is_day("miller", 13.0), true)
+	check(still.look_phase == 2 and still.nameplate.text == DayFolk.title("miller"), "folk: the miller in the windmill is %s by day" % still.nameplate.text)
+	still.set_day(DayFolk.is_day("miller", 1.0), true)
+	check(still.look_phase == 0 and str(still.nameplate.text).contains("그림자"), "folk: and a shadow at night")
+	still.queue_free()
+	check(str(Interiors.resident_title("miller", 13.0)) == str(DayFolk.LOOKS.miller.title) and str(Interiors.resident_title("miller", 1.0)).contains("그림자"), "folk: room dialogue names follow the clock")
+	check(Interiors.portrait("miller", 13.0).contains("day_") and Interiors.portrait("miller", 1.0).contains("shadow_"), "folk: daytime villagers have no shadow illustration")
+	app.queue_free()
+	camera.queue_free()
+	await process_frame

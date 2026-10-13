@@ -95,6 +95,8 @@ static func resolve(cast_or_id: String, title := "") -> String:
 	var id := cast_or_id.strip_edges().to_lower()
 	if id.contains("/") or id.contains("."): id = id.get_file().get_basename()
 	if id.begins_with("shadow_"): id = id.substr(7)
+	# Daytime villagers (day_folk.gd) keep the voice of the rounds they walk.
+	if id.begins_with("day_"): id = id.substr(4)
 	if VOICES.has(id): return id
 	for name in NAMES:
 		if title.begins_with(name): return NAMES[name]

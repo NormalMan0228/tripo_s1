@@ -15,6 +15,7 @@ const Interiors=preload("res://scripts/interiors.gd")
 const Daylight=preload("res://scripts/daylight.gd")
 const RpgUi=preload("res://scripts/rpg_ui.gd")
 const Residents=preload("res://scripts/residents.gd")
+const DayFolk=preload("res://scripts/day_folk.gd")
 const GameSettings=preload("res://scripts/game_settings.gd")
 const PauseMenu=preload("res://scripts/pause_menu.gd")
 const CraftPanel=preload("res://scripts/craft_panel.gd")
@@ -834,8 +835,11 @@ func apply_daylight(force := false) -> void:
 			var where := "%d/%d" % [index,int(lamp.get_meta("room",0))]
 			var dim := 0.3 if sleeping_rooms.has(where) and not awake_rooms.has(where) else 1.0
 			lamp.light_energy=float(lamp.get_meta("base_energy",0.5))*lerpf(0.8,1.45,night)*dim
+	var clock := resident_clock()
 	for entry in npcs.values():
 		if entry.body.has_method("set_night"): entry.body.set_night(clampf(night,0.0,0.6))
+		# Shadow folk are villagers by day; a room in view dissolves them at dusk and dawn.
+		if entry.body.has_method("set_day"): entry.body.set_day(DayFolk.is_day(str(entry.id),float(clock.hour)),force)
 		# Rooms keep their own lamps only: a carried lantern stays unlit indoors.
 		var lantern = entry.body.get("lantern_light")
 		if lantern is OmniLight3D: lantern.visible=false
@@ -2267,6 +2271,7 @@ func make_body(id: String, holder: Node3D) -> Node3D:
 			var figure = shadow_script.call("create_still",id)
 			if figure is Node3D:
 				holder.add_child(figure)
+				figure.set_day(DayFolk.is_day(id,float(resident_clock().hour)),true)
 				return figure
 	var stand_in := Interiors.stand_in_figure(id)
 	holder.add_child(stand_in)
@@ -2446,7 +2451,8 @@ func open_talk(id: String) -> void:
 	talk_box.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	add_child(talk_box)
 	# The same illustrated card + night box as the village (RpgUi.dialogue).
-	talk_window=RpgUi.dialogue(talk_box,tr(Interiors.resident_title(id)),Interiors.portrait(id))
+	var hour: float=float(resident_clock().hour)
+	talk_window=RpgUi.dialogue(talk_box,tr(Interiors.resident_title(id,hour)),Interiors.portrait(id,hour))
 	talk_window.shade.gui_input.connect(func(event):
 		if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT: advance_talk())
 	talk_body=talk_window.body
