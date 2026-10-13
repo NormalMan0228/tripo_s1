@@ -59,3 +59,5 @@ game/assets/monsters/*
 # tools/build_survival_assets.py rebuild the set.
 game/maps/survival/assets/*
 !game/maps/survival/assets/manifest.json
+# Third-party download addresses stay local (no archive links in the repository).
+tools/third_party_downloads.local.json

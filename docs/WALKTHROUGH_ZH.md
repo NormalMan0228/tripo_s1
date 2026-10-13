@@ -3,12 +3,11 @@
 | 🌐 한국어 | 🌐 English | 🌐 中文 |
 |:---:|:---:|:---:|
 | [**워크스루 보기**](WALKTHROUGH_KO.md) | [**Walkthrough**](WALKTHROUGH_EN.md) | [**游戏攻略**](WALKTHROUGH_ZH.md) |
-| [⬇ 게임 받기 (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ Download (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ 下载游戏 (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) |
 | 설정 → 게임플레이 → 언어 → **한국어** | Settings → Gameplay → Language → **English** | 设置 → 游戏 → 语言 → **中文** |
 
 > **Villagen** = village + generate。在五座岛屿组成的村庄里生活。想要什么物品，**用一句话描述，服务器就会用 AI（Gemini）设计，再用 Tripo 3D 生成模型**，然后放进你的村庄。
 
-**下载：** [Villagen_Windows.zip（始终为最新版）](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) · Windows 10/11 · 免安装
+**获取：** `Villagen_Windows.zip` 另行分发（不提供公开下载链接） · Windows 10/11 · 免安装
 
 **语言：** 一个 ZIP 同时包含韩语、英语和中文。游戏首次启动时跟随 Windows 语言，之后可随时在标题画面的 **设置**，或游戏中 **Esc → 设置 → 游戏 → 语言** 里切换。
 

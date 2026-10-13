@@ -99,7 +99,7 @@ def game_zip(tag: str) -> Path:
     exe, pck = BUILD / "Villagen.exe", BUILD / "Villagen.pck"
     for item in (exe, pck):
         if not item.is_file(): raise SystemExit(f"missing {item}; run tools/build_game.ps1 first")
-    # A fixed name, so .../releases/latest/download/Villagen_Windows.zip always points at the newest game.
+    # A fixed name, so a download page can always point at the newest game.
     target = OUT / "Villagen_Windows.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         archive.write(exe, "Villagen/Villagen.exe")
