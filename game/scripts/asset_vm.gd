@@ -1,6 +1,9 @@
 extends RefCounted
 ## Numeric data interpreter. Generated programs never become GDScript source.
-const LIMITS := {"rotate_x":Vector2(-180,180),"rotate_y":Vector2(-360,360),"rotate_z":Vector2(-180,180),"offset_y":Vector2(-2,2),"emission":Vector2(0,4),"hue":Vector2(0,1)}
+const LIMITS := {"rotate_x":Vector2(-180,180),"rotate_y":Vector2(-360,360),"rotate_z":Vector2(-180,180),"offset_y":Vector2(-2,2),"emission":Vector2(0,4),"hue":Vector2(0,1),
+	"offset_x":Vector2(-2,2),"offset_z":Vector2(-2,2)}
+## Inputs a program reads: dt, time (since the object loaded), near, clock (local time of day, s).
+const INPUTS := ["dt","time","near","clock"]
 var program: Dictionary = {}
 var state: Dictionary = {}
 var inputs: Dictionary = {}
@@ -22,11 +25,12 @@ func run(event: String, values: Dictionary = {}) -> Dictionary:
 	if event not in ["spawn","tick","click","near","leave"]:
 		return {"ok":false,"commands":[]}
 	for key in values:
-		if key not in ["dt","time","near"] or not (values[key] is int or values[key] is float):
+		if key not in INPUTS or not (values[key] is int or values[key] is float):
 			return {"ok":false,"commands":[]}
 		if not is_finite(float(values[key])) or absf(float(values[key]))>1000000:
 			return {"ok":false,"commands":[]}
-	inputs={"dt":clampf(float(values.get("dt",0)),0,0.1),"time":fposmod(float(values.get("time",0)),100000),"near":clampf(float(values.get("near",0)),0,1)}
+	inputs={"dt":clampf(float(values.get("dt",0)),0,0.1),"time":fposmod(float(values.get("time",0)),100000),"near":clampf(float(values.get("near",0)),0,1),
+		"clock":clampf(float(values.get("clock",0)),0,86400)}
 	fuel=8192; depth=0; failed=false; commands=[]
 	_body(program.get("events",{}).get(event,[]),{})
 	if failed:

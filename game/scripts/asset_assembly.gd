@@ -20,6 +20,24 @@ var one_piece := false
 var whole_root: Node3D
 ## "sit" or "lie" when the owner made it a seat or a bed (the room's rest system reads it).
 var rest := ""
+## Whether the program has anything to do on ticks, and the seconds since its last tick.
+var ticking := false
+var waited := 0.0
+## The object's bounding sphere in its own space, for skipping ticks nobody can see.
+var view_centre := Vector3.ZERO
+var view_radius := 1.0
+
+## The VM's clock input: the player's local time of day in seconds. One reading a frame for every
+## object; the time zone is looked up again once a minute. Tests set clock_override (>= 0).
+static var clock_override := -1.0
+static var clock_frame := -1
+static var clock_value := 0.0
+static var clock_offset := 0.0
+static var clock_checked := -1000.0
+## Beyond this distance from the camera, or outside its view (and farther than NEAR_ALWAYS), an
+## object's ticks wait: nothing on screen changes, and a clock reads the real time again on return.
+const CULL_DISTANCE := 90.0
+const NEAR_ALWAYS := 12.0
 
 ## Part models by content (their sha256): a craft's parts download once per session however many
 ## copies show them (the bag preview, the placing ghost, the placed object). Bounded, oldest out first.
@@ -159,6 +177,9 @@ func build(value: Dictionary, blobs: Dictionary) -> bool:
 	for node in roots:remove_child(node);content.add_child(node)
 	content.scale=Vector3.ONE*factor
 	content.position=-Vector3(total.get_center().x,total.position.y,total.get_center().z)*factor
+	# Doors swing and drawers slide a little beyond the resting box.
+	view_centre=Vector3(0,total.size.y*factor*0.5,0)
+	view_radius=total.size.length()*factor*0.5+0.5
 	var runtime: Dictionary=value.get("runtime",{})
 	runtime_version=int(runtime.get("version",1)); colors=runtime.get("colors",{})
 	rest=str(value.get("interaction",{}).get("rest",""))
@@ -191,9 +212,45 @@ static func vector(a: Array) -> Vector3:
 func _process(delta: float) -> void:
 	if not healthy: return
 	elapsed=fposmod(elapsed+delta,100000)
-	var result: Dictionary=vm.run("tick",{"dt":delta,"time":elapsed,"near":int(nearby)})
+	# Nothing to do on ticks, or nobody can see it: no work this frame.
+	if not ticking: return
+	waited+=delta
+	if not in_view(): return
+	var result: Dictionary=vm.run("tick",{"dt":minf(waited,0.1),"time":elapsed,"near":int(nearby),"clock":local_clock()})
+	waited=0.0
 	healthy=result.ok
 	if healthy: apply_commands(result.commands)
+
+## The player's local time of day in seconds (0..86400), fractions included.
+static func local_clock() -> float:
+	if clock_override>=0.0: return clock_override
+	var frame := Engine.get_process_frames()
+	if frame==clock_frame: return clock_value
+	clock_frame=frame
+	var now := Time.get_unix_time_from_system()
+	if absf(now-clock_checked)>60.0:
+		clock_checked=now
+		clock_offset=preload("res://scripts/api.gd").utc_offset_minutes()*60.0
+	clock_value=fposmod(now+clock_offset,86400.0)
+	return clock_value
+
+## Whether a camera may see this object: hidden objects and ones far away or outside the view skip
+## their ticks; anything near the camera always runs (it may swing into view at the edge).
+func in_view() -> bool:
+	if not is_visible_in_tree(): return false
+	var camera := get_viewport().get_camera_3d()
+	if camera==null: return true
+	var centre := global_transform*view_centre
+	var radius := view_radius*global_transform.basis.get_scale().abs().x
+	var distance := camera.global_position.distance_to(centre)
+	if distance<=radius+NEAR_ALWAYS: return true
+	if distance>CULL_DISTANCE+radius: return false
+	# A point just in front of the lens is inside every plane, whichever way their normals point.
+	var inside := camera.global_position-camera.global_basis.z*(camera.near+0.5)
+	for plane in camera.get_frustum():
+		var outward := 1.0 if plane.distance_to(inside)<0.0 else -1.0
+		if plane.distance_to(centre)*outward>radius: return false
+	return true
 
 func apply_commands(commands: Array) -> void:
 	for c in commands:
@@ -204,6 +261,8 @@ func apply_commands(commands: Array) -> void:
 			"rotate_y": pivot.rotation_degrees.y=c.value
 			"rotate_z": pivot.rotation_degrees.z=c.value
 			"offset_y": pivot.position.y=c.value
+			"offset_x": pivot.position.x=c.value
+			"offset_z": pivot.position.z=c.value
 			"emission","hue":
 				for mesh in target_meshes(str(c.target)):
 					for i in mesh.mesh.get_surface_count():
@@ -256,10 +315,12 @@ func start_program(program: Dictionary, saved: Dictionary = {}) -> void:
 	if not ids.has("whole"): ids.append("whole")
 	vm.setup(program,ids)
 	healthy=true
-	apply_commands(vm.run("spawn").commands)
+	var tick_body = program.get("events",{}).get("tick",[])
+	ticking=tick_body is Array and not tick_body.is_empty()
+	apply_commands(vm.run("spawn",{"clock":local_clock()}).commands)
 	for key in saved:
 		if vm.state.has(key): vm.state[key]=saved[key]
-	apply_commands(vm.run("tick",{"dt":0,"time":0}).commands)
+	apply_commands(vm.run("tick",{"dt":0,"time":0,"clock":local_clock()}).commands)
 
 ## A saved interaction (or 원래대로) from the editor or another device: this copy runs it now.
 func use_interaction(value: Dictionary, program: Dictionary, runtime: Dictionary) -> void:
@@ -279,7 +340,7 @@ func sync_interaction(fresh: Dictionary) -> bool:
 
 ## An event on this copy only (visitors, the editor's preview): nothing is saved.
 func local_event(event: String) -> void:
-	var result: Dictionary=vm.run(event,{"near":1 if event=="near" else 0})
+	var result: Dictionary=vm.run(event,{"near":1 if event=="near" else 0,"clock":local_clock()})
 	if result.ok: apply_commands(result.commands)
 	if event=="near" or event=="leave": nearby=event=="near"
 

@@ -1,6 +1,9 @@
 extends Node
 
 var base_url := "http://127.0.0.1:8765"
+## This game runs the living-objects VM (offset_x/offset_z, the local clock input): the server sends
+## crafted programs as they are, not the reduced copies released games get (server/interactions.py).
+const VM_HEADER := "X-Villagen-VM: 2"
 var token := ""
 var mode := "demo"
 
@@ -27,6 +30,7 @@ func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD
 	if not token.is_empty(): headers.append("Authorization: Bearer " + token)
 	headers.append(time_zone_header())
 	headers.append(version_header())
+	headers.append(VM_HEADER)
 	var error := http.request(base_url + path, headers, method, "" if method == HTTPClient.METHOD_GET else JSON.stringify(payload))
 	if error != OK:
 		http.queue_free()
@@ -95,6 +99,7 @@ func _kept_request(path: String, body: String) -> Dictionary:
 	if not token.is_empty(): headers.append("Authorization: Bearer " + token)
 	headers.append(time_zone_header())
 	headers.append(version_header())
+	headers.append(VM_HEADER)
 	if kept.request(HTTPClient.METHOD_POST, prefix + path, headers, body) != OK:
 		kept.close()
 		return {}
