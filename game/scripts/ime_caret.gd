@@ -46,6 +46,10 @@ func _process(_delta: float) -> void:
 	if not pending.is_empty(): _settle()
 
 func _on_focus_changed(control: Control) -> void:
+	# Passwords are typed in Latin letters: an IME left in Hangul mode would compose a hidden
+	# password in Korean. The field turns the IME on as it takes focus, so this runs after it.
+	if ime_supported and control is LineEdit and (control as LineEdit).secret:
+		DisplayServer.call_deferred("window_set_ime_active", false)
 	if composing_text.is_empty() or not is_instance_valid(composing_field) or control == composing_field: return
 	var target: Control = control if _is_text(control) else null
 	pending = {"from": composing_field, "to": target, "text": composing_text,
