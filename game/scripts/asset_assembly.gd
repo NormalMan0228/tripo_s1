@@ -21,6 +21,17 @@ var whole_root: Node3D
 ## "sit" or "lie" when the owner made it a seat or a bed (the room's rest system reads it).
 var rest := ""
 
+## Part models by content (their sha256): a craft's parts download once per session however many
+## copies show them (the bag preview, the placing ghost, the placed object). Bounded, oldest out first.
+static var part_cache := {}
+static var part_order: Array[String] = []
+static var part_bytes := 0
+## Part downloads made (tests check one craft is fetched once).
+static var downloads := 0
+const PART_CACHE_LIMIT := 64*1024*1024
+## A part is up to 20 MB (server/provider.py MAX_GLB): a slow line gets time and a second try.
+const PART_TIMEOUT := 90.0
+
 static func fetch(api: Node, object_id: String, prefix: String="/v1/objects/") -> Node3D:
 	var reply: Dictionary=await api.request(prefix+object_id+"/assembly")
 	if not reply.ok: return null
@@ -28,17 +39,37 @@ static func fetch(api: Node, object_id: String, prefix: String="/v1/objects/") -
 	var blobs := {}
 	var total_bytes := 0
 	for p in value.plan.parts:
-		var response: Dictionary=await api.request(prefix+object_id+"/parts/"+p.id,{},HTTPClient.METHOD_GET,true)
-		if not response.ok: return null
-		total_bytes+=response.bytes.size()
+		var bytes := await part_blob(api,prefix+object_id+"/parts/"+p.id,str(p.sha256))
+		if bytes.is_empty(): return null
+		total_bytes+=bytes.size()
 		if total_bytes>48*1024*1024:return null
-		var hashing := HashingContext.new()
-		hashing.start(HashingContext.HASH_SHA256); hashing.update(response.bytes)
-		if hashing.finish().hex_encode()!=p.sha256: return null
-		blobs[p.id]=response.bytes
+		blobs[p.id]=bytes
 	var root=load("res://scripts/asset_assembly.gd").new()
 	if not root.build(value,blobs): root.free(); return null
 	return root
+
+## One part's GLB, checked against its sha256: from the cache, or downloaded (a dropped or timed-out
+## download is tried once more; a refusal is final). Empty when it cannot be had.
+static func part_blob(api: Node, route: String, digest: String) -> PackedByteArray:
+	if part_cache.has(digest): return part_cache[digest]
+	for attempt in 2:
+		downloads+=1
+		var response: Dictionary=await api.request(route,{},HTTPClient.METHOD_GET,true,PART_TIMEOUT)
+		if response.ok:
+			var hashing := HashingContext.new()
+			hashing.start(HashingContext.HASH_SHA256); hashing.update(response.bytes)
+			if hashing.finish().hex_encode()!=digest: return PackedByteArray()
+			remember(digest,response.bytes)
+			return response.bytes
+		if response.error!="connection_failed": break
+	return PackedByteArray()
+
+static func remember(digest: String, bytes: PackedByteArray) -> void:
+	if bytes.size()*4>PART_CACHE_LIMIT: return
+	part_cache[digest]=bytes;part_order.append(digest);part_bytes+=bytes.size()
+	while part_bytes>PART_CACHE_LIMIT and not part_order.is_empty():
+		var oldest: String=part_order.pop_front()
+		part_bytes-=part_cache[oldest].size();part_cache.erase(oldest)
 
 func build(value: Dictionary, blobs: Dictionary) -> bool:
 	manifest=value.duplicate(true)

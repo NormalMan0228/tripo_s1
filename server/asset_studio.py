@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS studio_jobs (
  state TEXT NOT NULL, cost INTEGER NOT NULL, plan TEXT, program TEXT, provenance TEXT,
  parts TEXT NOT NULL DEFAULT '{}', object_id TEXT, error TEXT, created REAL NOT NULL, updated REAL NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS studio_pending ON studio_jobs(owner_id)
- WHERE state NOT IN ('ready','failed','cancelled');
+ WHERE state NOT IN ('ready','failed','cancelled','unknown');
 CREATE TABLE IF NOT EXISTS studio_assets (
  asset_id TEXT PRIMARY KEY REFERENCES assets(id), manifest TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS studio_runtime (
@@ -52,7 +52,8 @@ CREATE TABLE IF NOT EXISTS furniture_locations (
 '''
 
 class StudioRequest(Mutation):
-    prompt: str=Field(min_length=3,max_length=1500)
+    # Two letters name plenty of furniture ("의자", "책상").
+    prompt: str=Field(min_length=2,max_length=1500)
     material: Literal['mesh','textured']='mesh'
     motion: Literal['static','dynamic']='dynamic'
     designer: Literal['fixture','llm','simple']='fixture'
@@ -203,8 +204,35 @@ def tripo_requests(conn,user_id,exclude=''):
     return total
 
 
+# A held (unknown) submission waits for an operator and uses no provider capacity, so it does not
+# stop other crafts; its credits still count against the budget (tripo_credits_committed).
 def provider_busy(conn,exclude=''):
-    return conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled','awaiting_confirmation') AND id!=?",(exclude,)).fetchone() or         conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone()
+    return conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled','awaiting_confirmation','unknown') AND id!=?",(exclude,)).fetchone() or         conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating')").fetchone()
+
+def track(entry,result):
+    """Keeps the progress (0-100) a Tripo task poll reports, for the craft window's percentage."""
+    value=result.get('progress')
+    if type(value) in (int,float) and math.isfinite(value):entry['progress']=max(0,min(100,int(value)))
+
+def build_progress(parts):
+    """How far the 3D build is (0..1), or None before Tripo reported anything. A refined reference
+    picture is the first fifth of its part."""
+    total=0.0;reported=False
+    for p in parts.values():
+        state=p.get('state');share=(p.get('progress') or 0)/100;picture=.2 if p.get('image_task') else 0.0
+        reported=reported or state=='ready' or 'progress' in p
+        if state=='ready':total+=1
+        elif state=='generating':total+=picture+share*(1-picture)
+        elif state=='image_generating':total+=share*.2
+        elif state=='image_ready':total+=.2
+    return round(total/len(parts),3) if parts and reported else None
+
+def stage(state,provenance):
+    """The step the craft window shows: design, concept (the picture), confirm, mesh, or the final state."""
+    if state in ('queued','planning'):return 'concept' if provenance.get('redraw') or provenance.get('stage')=='concept' else 'design'
+    if state=='awaiting_confirmation':return 'confirm'
+    if state in ('building','submitting'):return 'mesh'
+    return state
 
 class Studio:
     def __init__(self,app,db,settings,clock,provider,auth,mutate,money,own,new_object,assets,designer=None,profile=None):
@@ -219,6 +247,12 @@ class Studio:
             conn.executescript(SCHEMA)
             if 'bindings' not in [r[1] for r in conn.execute('PRAGMA table_info(studio_runtime)')]:
                 conn.execute("ALTER TABLE studio_runtime ADD COLUMN bindings TEXT NOT NULL DEFAULT '{}'")
+        # Worlds made before held (unknown) crafts stopped counting as the owner's craft under way.
+        with db.transaction() as conn:
+            index=conn.execute("SELECT sql FROM sqlite_master WHERE type='index' AND name='studio_pending'").fetchone()
+            if index and "'unknown'" not in index[0]:
+                conn.execute('DROP INDEX studio_pending')
+                conn.execute("CREATE UNIQUE INDEX studio_pending ON studio_jobs(owner_id) WHERE state NOT IN ('ready','failed','cancelled','unknown')")
         # executescript commits implicitly; recovery must start a fresh transaction.
         with db.transaction() as conn:
             for row in conn.execute("SELECT id,cost,provenance FROM studio_jobs WHERE state='awaiting_confirmation'").fetchall():
@@ -273,7 +307,9 @@ class Studio:
                     fail('model_not_available',403)
                 if body.image and body.designer!='llm':fail('image_requires_llm')
                 if body.image_mode=='refine' and (not body.image or body.geometry!='tripo'):fail('refinement_requires_image_and_tripo')
-                if conn.execute("SELECT 1 FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled')",(user['id'],)).fetchone():fail('generation_pending')
+                # A held (unknown) craft waits for an operator (server/operations.py), which may take days; it
+                # keeps its starseeds and still counts toward every limit, but does not stop a new craft.
+                if conn.execute("SELECT 1 FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled','unknown')",(user['id'],)).fetchone():fail('generation_pending')
                 if body.geometry=='tripo':
                     if provider_busy(conn):fail('provider_busy')
                     cap=settings.max_credits_per_craft if settings.mode=='live' else 0
@@ -313,9 +349,11 @@ class Studio:
         def status(job_id:str,request:Request):
             with db.transaction() as conn:
                 user=auth(conn,request)
-                row=conn.execute('SELECT id,state,cost,object_id,error,provenance,parts,plan FROM studio_jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
+                row=conn.execute("SELECT id,state,cost,object_id,error,provenance,parts,plan,json_extract(request,'$.concept') AS concept_asked,"
+                    "COALESCE(json_extract(request,'$.image'),'')!='' AS image_given FROM studio_jobs WHERE id=? AND owner_id=?",(job_id,user['id'])).fetchone()
                 if not row:fail('job_not_found',404)
                 value=dict(row);value['provenance']=json.loads(value['provenance'] or '{}')
+                asked,photo=value.pop('concept_asked'),value.pop('image_given')
                 # What the designer made of the request: the title and the sentence each part sends to Tripo.
                 plan=json.loads(value.pop('plan') or '{}')
                 if plan.get('parts'):
@@ -325,6 +363,11 @@ class Studio:
                 if value['provenance'].get('geometry')=='tripo':
                     value['provenance'].update(billing(parts))
                     if value['state'] in ('submitting','unknown'):value['provenance'].update(billing_complete=False,tripo_credits_consumed=None)
+                # The window's steps: design -> picture (text-only crafts that drew one) -> 3D parts -> done.
+                value['stage']=stage(value['state'],value['provenance'])
+                drawn=value['state'] in ('queued','planning') or bool(value['provenance'].get('concept'))
+                value['stages']=['design']+(['concept'] if asked and not photo and drawn else [])+['mesh','done']
+                value['progress']=build_progress(parts) if value['state'] in ('building','submitting') else None
                 value['parts']={k:v['state'] for k,v in parts.items()}
                 concept=value['provenance'].get('concept')
                 if concept:
@@ -616,6 +659,14 @@ class Studio:
         sent=sum(1 for p in parts.values() for k in ('task','image_task') if p.get(k))
         if used+sent>=limit:raise ProviderError('user_total_generation_limit')
 
+    def overdue(self,parts):
+        """Raises generation_timeout when a submitted part has waited on Tripo past the deadline
+        (settings.studio_part_deadline). Parts submitted before deadlines existed start counting now."""
+        for entry in parts.values():
+            if entry.get('state') not in ('generating','image_generating'):continue
+            started=entry.setdefault('submitted',self.clock())
+            if self.clock()-started>self.settings.studio_part_deadline:raise ProviderError('generation_timeout')
+
     def refund(self,conn,row):
         entries=conn.execute("SELECT reason,amount FROM ledger WHERE user_id=? AND reference=? AND reason IN ('studio_charge','studio_quote_charge','studio_refund','studio_resume_charge','studio_resume_refund')",(row['owner_id'],row['id'])).fetchall()
         outstanding=-sum(r['amount'] for r in entries)
@@ -714,7 +765,10 @@ class Studio:
                     cap=self.settings.max_credits_per_craft if self.settings.mode=='live' else 0
                     if cap and provenance['estimated_tripo_credits']>cap:raise ProviderError('craft_over_trial_limit')
                 concept=body.concept and not body.image and len(plan['parts'])==1
-                if concept:await self.draw_concept(job,body,mesh_model,plan,parts,provenance)
+                if concept:
+                    # The craft window shows the picture step while it is drawn.
+                    self.update(job_id,provenance=json.dumps({**provenance,'stage':'concept'}))
+                    await self.draw_concept(job,body,mesh_model,plan,parts,provenance)
                 waits=body.geometry=='tripo' or concept
                 self.update(job_id,state='awaiting_confirmation' if waits else 'building',plan=json.dumps(plan),program=json.dumps(program),provenance=json.dumps(provenance),parts=json.dumps(parts))
                 if waits:return
@@ -747,14 +801,16 @@ class Studio:
                             'size':'2K','output_format':'png'})
                         task=data.get('task_id')
                         if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)
-                        entry.update(state='image_generating',image_task=task)
+                        entry.update(state='image_generating',image_task=task,submitted=self.clock())
                         self.update(job_id,state='building',parts=json.dumps(parts));return
                     if entry['state']=='image_generating':
                         result=await self.provider_for(entry.get('key')).task(entry['image_task'])
-                        if result.get('status') in ('queued','running'):self.update(job_id,state='building');return
+                        if result.get('status') in ('queued','running'):
+                            track(entry,result);self.overdue(parts)
+                            self.update(job_id,state='building',parts=json.dumps(parts));return
                         if result.get('status') in ('failed','cancelled'):raise ProviderError('image_refinement_failed')
                         if result.get('status')!='success':raise ProviderError('upstream_schema',uncertain=True)
-                        entry.update(state='image_ready',image_credits_consumed=result.get('credits_consumed'))
+                        entry.update(state='image_ready',image_credits_consumed=result.get('credits_consumed'));entry.pop('progress',None)
                         self.update(job_id,state='building',parts=json.dumps(parts))
                     if entry['state'] in ('pending','image_ready'):
                         if entry['state']=='pending':self.guard_tripo_cap(job,parts)
@@ -786,12 +842,14 @@ class Studio:
                         data=await tripo.request('POST',route,payload)
                         task=data.get('task_id')
                         if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)
-                        entry.update(state='generating',task=task,key=getattr(tripo,'fingerprint',''))
+                        entry.update(state='generating',task=task,key=getattr(tripo,'fingerprint',''),submitted=self.clock())
                         self.update(job_id,state='building',parts=json.dumps(parts),provenance=json.dumps(provenance))
                         return
                     tripo=self.provider_for(entry.get('key'))
                     result=await tripo.task(entry['task'])
-                    if result.get('status') in ('queued','running'):self.update(job_id,state='building');return
+                    if result.get('status') in ('queued','running'):
+                        track(entry,result);self.overdue(parts)
+                        self.update(job_id,state='building',parts=json.dumps(parts));return
                     if result.get('status') in ('failed','cancelled'):raise ProviderError('generation_failed')
                     if result.get('status')!='success':raise ProviderError('upstream_schema',uncertain=True)
                     entry['credits_consumed']=result.get('credits_consumed')
@@ -832,8 +890,12 @@ class Studio:
                 self.update(job_id,provenance=json.dumps({'provider':provider_name(self.settings),
                     'model':body.model,'effort':body.effort,'usage':error.usage,'attempts':error.attempts,
                     'tripo_credits_consumed':0,'known_tripo_credits':0,'billing_complete':True}))
-            # Poll/download errors keep the paid task ID. Never submit it again.
+            # Poll/download errors keep the paid task ID. Never submit it again; past the part's deadline
+            # the craft fails (and is refunded) instead of waiting on Tripo forever.
             if 'parts' in locals() and any((p.get('task') and p['state']=='generating') or (p.get('image_task') and p['state']=='image_generating') for p in parts.values()) and error.code in ('upstream_unreachable','upstream_unavailable','upstream_rate_limit','asset_download_failed','key_not_configured','upstream_authentication','upstream_non_json','upstream_invalid_json'):
-                self.update(job_id,state='building',error=error.code);return
+                try:
+                    self.overdue(parts)
+                    self.update(job_id,state='building',error=error.code,parts=json.dumps(parts));return
+                except ProviderError as late:error=late
             self.error(job_id,error)
         except Exception:self.error(job_id,ProviderError('studio_validation_failed'))

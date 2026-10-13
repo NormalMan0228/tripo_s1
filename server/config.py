@@ -113,6 +113,9 @@ class Settings:
     signups_per_day: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SIGNUPS_PER_DAY', '200')))
     legacy_generation_enabled: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_ENABLE_LEGACY_GENERATION', 'false').lower() == 'true')
     credit_reserve: int = field(default_factory=lambda: int(os.getenv('TRIPO_RESERVE_PER_JOB', '200')))
+    # Seconds one submitted Tripo part may take (queued, running or unreachable) before the craft
+    # fails and its starseeds come back; the task is never submitted again.
+    studio_part_deadline: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_PART_DEADLINE', '1200')))
     session_seconds: int = 12 * 60 * 60
     day_seconds: float = 60.0
     studio_llm: str = field(default_factory=lambda: os.getenv('TRIPOTHON_STUDIO_LLM', 'fixture'))
@@ -148,6 +151,8 @@ class Settings:
             raise ValueError('Invalid account craft limit or welcome stars')
         if self.credit_reserve <= 0 or self.daily_generation_limit < 1 or self.user_daily_generation_limit < 1:
             raise ValueError('Generation budget must be positive')
+        if not 60 <= self.studio_part_deadline <= 86400:
+            raise ValueError('Invalid studio part deadline')
         if self.mode == 'live' and self.paid_enabled and not self.tripo_key:
             raise ValueError('Paid live mode requires a Tripo server secret')
         # Without an OpenAI design provider, live crafting offers only the simple

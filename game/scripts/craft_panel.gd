@@ -12,6 +12,7 @@ extends VBoxContainer
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const BuildMode = preload("res://scripts/build_mode.gd")
 const I18n = preload("res://scripts/i18n.gd")
+const Fx = preload("res://scripts/fx.gd")
 ## The chosen look and size follow the account (cloud_prefs.gd syncs this section).
 const SETTINGS_SECTION := "craft"
 
@@ -24,7 +25,13 @@ signal follow_requested
 signal new_craft
 
 const CONCEPT_CREDITS := 5
-const TERMINAL := ["ready", "failed", "cancelled"]
+## "unknown" is a submission the server could not confirm: it waits for an operator (who gives the
+## starseeds back), so the window stops following it and the player can craft again.
+const TERMINAL := ["ready", "failed", "cancelled", "unknown"]
+## The server is still working: the window shows the steps and keeps them between polls.
+const WORKING := ["queued", "planning", "building", "submitting"]
+## Polls back off from 2 s to this while the server cannot be reached.
+const MAX_POLL_PAUSE := 30.0
 
 var api: Node
 var say: Callable
@@ -43,6 +50,10 @@ var busy := false
 var polling := false
 var textures := {}
 var defaults_applied := false
+## The steps view while the server works (see _show_working); empty when another view shows.
+var working: Dictionary = {}
+## The job and picture the player was last told about ("그림이 완성됐어요").
+var announced := ""
 
 var form: VBoxContainer
 var status: VBoxContainer
@@ -71,6 +82,7 @@ var size_title: Label
 var size_row: HFlowContainer
 var style_buttons := {}
 var size_buttons := {}
+var held_note: Label
 
 func setup(network: Node, options: Dictionary) -> void:
 	api = network
@@ -128,6 +140,13 @@ func apply_info(studio: Dictionary) -> void:
 			geometry.select(1 if tripo else 0)
 	_fill_styles()
 	_update_options()
+	# Crafts the server could not confirm wait for an operator; the form says so instead of spinning.
+	var held := 0
+	for entry in studio.get("jobs", []):
+		if str(entry.get("state", "")) == "unknown": held += 1
+	if is_instance_valid(held_note):
+		held_note.visible = held > 0
+		held_note.text = tr("확인을 기다리는 제작 %d건 · 운영자가 확인하면 맡긴 별씨가 돌아와요") % held
 
 func _live() -> bool:
 	return str(info.get("mode", "demo")) == "live"
@@ -205,6 +224,8 @@ func _build_form() -> void:
 	price_row.add_child(RpgUi.icon("res://assets/starseed.svg", 22))
 	price_label = _label(price_row, "", 14, true)
 	ask = _button(form, tr("의뢰하기"), request, "gold")
+	held_note = _label(form, "", 13, true)
+	held_note.visible = false
 
 func _file_dialog() -> FileDialog:
 	if file_dialog == null:
@@ -296,8 +317,9 @@ func _base_body() -> Dictionary:
 
 func request() -> void:
 	if busy or not job_id.is_empty(): return
-	if prompt.text.strip_edges().length() < 2:
-		_say(tr("만들 물건을 두 글자 이상 적어 주세요."))
+	var length := prompt.text.strip_edges().length()
+	if length < 2 or length > 1500:
+		_say(_explain("invalid_craft_request"))
 		return
 	busy = true
 	_update_options()
@@ -321,58 +343,294 @@ func follow() -> void:
 		return
 	if polling or job_id.is_empty(): return
 	polling = true
+	var failures := 0
 	while not job_id.is_empty() and is_inside_tree():
+		var asked := job_id
 		var reply: Dictionary = await api.request("/v1/studio/jobs/" + job_id)
 		if not is_inside_tree(): break
-		if not reply.ok: break
+		if asked != job_id: continue
+		if not reply.ok:
+			# A craft that is gone stops; a dropped connection or a busy server is asked again, slower each time.
+			if int(reply.get("status", 0)) == 404:
+				job_id = ""
+				_show_form()
+				break
+			failures += 1
+			await get_tree().create_timer(poll_pause(failures)).timeout
+			continue
+		failures = 0
 		show_job(reply.data)
 		var state := str(reply.data.state)
-		if state == "awaiting_confirmation": break
+		if state == "awaiting_confirmation":
+			if announce_key(reply.data) != announced:
+				announced = announce_key(reply.data)
+				_say(ready_words(reply.data))
+				chime("twinkle")
+			break
 		if state in TERMINAL:
 			job_id = ""
 			job_finished.emit(reply.data)
-			if state == "ready": RpgUi.sfx("click")
+			if state == "ready": chime("tune")
 			break
 		await get_tree().create_timer(2.0).timeout
 	polling = false
 
+## Seconds before asking again after `failures` failed polls in a row: 4, 8, 16, then 30.
+static func poll_pause(failures: int) -> float:
+	return minf(MAX_POLL_PAUSE, 2.0 * pow(2.0, failures))
+
+## Names the picture (or quote) the player is told about once: the job and its draw count.
+static func announce_key(value: Dictionary) -> String:
+	return str(value.get("id", "")) + ":" + str(value.get("concept", {}).get("draws", 0))
+
+## What the toast says when the craft needs the player; `away` (the village window is closed) adds
+## how to open it.
+static func ready_words(value: Dictionary, away := false) -> String:
+	var picture: bool = not value.get("concept", {}).is_empty()
+	if away: return TranslationServer.translate("AI가 그림을 그렸어요! C를 눌러 확인해 주세요." if picture else "설계와 견적이 나왔어요! C를 눌러 확인해 주세요.")
+	return TranslationServer.translate("AI가 그림을 그렸어요! 마음에 드는지 확인해 주세요." if picture else "설계와 견적이 나왔어요! 확인하고 제작을 맡겨 주세요.")
+
+## A short sound for a craft moment (the picture is ready, the object is done).
+static func chime(kind: String) -> void:
+	if DisplayServer.get_name() == "headless": return
+	Fx.sound(null, kind, Vector3.INF, 1.0, 4.0)
+
 func show_job(value: Dictionary) -> void:
 	job = value
 	var state := str(value.get("state", ""))
-	for child in status.get_children(): child.queue_free()
+	if state in WORKING:
+		form.visible = false
+		_show_working(value)
+		return
+	_clear_status()
 	if state.is_empty() or state in ["failed", "cancelled"]:
 		_show_form()
-		if state == "failed": _label(status, tr("제작에 실패했어요. 맡긴 별씨는 돌려드렸어요."), 15, false, RpgUi.ACCENT)
+		if state == "failed":
+			# A Tripo part that never finished stops at its deadline (asset_studio.py overdue).
+			var words := tr("공방이 너무 오래 걸려 이번 제작을 멈췄어요. 맡긴 별씨는 돌려드렸어요.") if str(value.get("error", "")) == "generation_timeout" else tr("제작에 실패했어요. 맡긴 별씨는 돌려드렸어요.")
+			_label(status, words, 15, false, RpgUi.ACCENT)
 		return
 	form.visible = false
-	var titles := {"queued": tr("주문을 접수했어요"), "planning": tr("장인이 설계도를 그리고 있어요…"), "awaiting_confirmation": tr("설계가 끝났어요!"),
-		"building": tr("공방에서 만들고 있어요…"), "submitting": tr("공방에서 만들고 있어요…"), "unknown": tr("제작 결과를 확인하고 있어요…"), "ready": tr("완성했어요!")}
-	_label(status, str(titles.get(state, tr("제작 중이에요…"))), 20)
-	if state == "awaiting_confirmation": _show_quote(value)
+	if state == "awaiting_confirmation":
+		_label(status, tr("그림이 나왔어요!") if not value.get("concept", {}).is_empty() else tr("설계가 끝났어요!"), 20)
+		_steps(status, value, "confirm")
+		_show_quote(value)
 	elif state == "ready":
+		var title := _label(status, tr("완성했어요!"), 22, false, _accent())
+		RpgUi.pop_in(title, 0.36, 0.7)
+		_steps(status, value, "done")
 		_label(status, tr("가방에 들어왔어요. 마을이든 집이든 비어 있는 곳에 놓을 수 있어요."), 15)
 		var object_id := str(value.get("object_id", ""))
 		var row := _row(status)
 		if place_action.is_valid(): _button(row, place_label, func() -> void: place_action.call(object_id), "gold")
-		_button(row, tr("새로 만들기"), func() -> void:
-			job = {}
-			new_craft.emit()
-			_show_form())
-	else:
-		var bar := ProgressBar.new()
-		bar.indeterminate = true
-		bar.custom_minimum_size = Vector2(0, 14)
-		status.add_child(bar)
-		var parts: Dictionary = value.get("parts", {})
-		if state == "building" and parts.size() > 1:
-			var done := parts.values().filter(func(s) -> bool: return s == "ready").size()
-			_label(status, tr(" · %d / %d부품 완료") % [done, parts.size()], 13, true)
-		_label(status, tr("창을 닫아도 계속 만들어져요. 완성되면 알려 드릴게요."), 14, true)
+		_button(row, tr("새로 만들기"), _start_over)
+	elif state == "unknown":
+		# The server could not tell whether Tripo got the request; an operator checks and refunds it.
+		_label(status, tr("확인이 필요해요"), 20)
+		_label(status, tr("공방이 Tripo에 보낸 요청이 닿았는지 확인하지 못했어요. 운영자가 확인하면 맡긴 별씨가 돌아와요. 그동안 새 물건을 만들 수 있어요."), 15)
+		_button(_row(status), tr("새로 만들기"), _start_over, "gold")
+	else: _show_working(value)
+
+func _start_over() -> void:
+	job = {}
+	new_craft.emit()
+	_show_form()
 
 func _show_form() -> void:
 	form.visible = true
-	for child in status.get_children(): child.queue_free()
+	_clear_status()
 	_update_options()
+
+func _clear_status() -> void:
+	for child in status.get_children(): child.queue_free()
+	working = {}
+
+# ------------------------------------------------------------------ steps
+
+## While the server works: a turning starseed and the step title, the steps (설계 → 그림 → 3D 부품 →
+## 완성) with the current one breathing, and a bar with Tripo's own percentage once it reports one.
+## Built once and updated by each poll, so the motion never restarts.
+func _show_working(value: Dictionary) -> void:
+	var stages := _stages(value)
+	var stage := _stage(value)
+	if working.is_empty() or working.stages != stages or not is_instance_valid(working.root):
+		_clear_status()
+		var root := VBoxContainer.new()
+		root.add_theme_constant_override("separation", 10)
+		status.add_child(root)
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 8)
+		root.add_child(head)
+		var seed := RpgUi.icon("res://assets/starseed.svg", 26)
+		seed.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(seed)
+		if not RpgUi.calm():
+			seed.pivot_offset = Vector2(13, 13)
+			seed.create_tween().set_loops().tween_property(seed, "rotation", TAU, 2.4).from(0.0)
+		var title := _label(head, "", 20)
+		var steps := _steps(root, value, stage)
+		var meter := HBoxContainer.new()
+		meter.add_theme_constant_override("separation", 8)
+		root.add_child(meter)
+		var bar := ProgressBar.new()
+		bar.custom_minimum_size = Vector2(0, 14)
+		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bar.show_percentage = false
+		meter.add_child(bar)
+		var percent := _label(meter, "", 13, true)
+		percent.size_flags_horizontal = Control.SIZE_SHRINK_END
+		percent.autowrap_mode = TextServer.AUTOWRAP_OFF
+		_label(root, tr("창을 닫아도 계속 만들어져요. 완성되면 알려 드릴게요."), 14, true)
+		working = {"root": root, "stages": stages, "title": title, "steps": steps, "bar": bar, "percent": percent}
+	var titles := {"design": tr("장인이 설계도를 그리고 있어요…"), "concept": tr("AI가 그림을 그리고 있어요…"), "mesh": tr("공방에서 3D로 빚고 있어요…")}
+	working.title.text = tr("주문을 접수했어요") if str(value.get("state")) == "queued" and stage == "design" else str(titles.get(stage, tr("제작 중이에요…")))
+	_paint_steps(working.steps, stage, value)
+	var bar: ProgressBar = working.bar
+	var progress = value.get("progress")
+	var known := (progress is float or progress is int) and stage == "mesh"
+	bar.indeterminate = not known
+	working.percent.text = ("%d%%" % roundi(float(progress) * 100.0)) if known else ""
+	working.percent.visible = known
+	if known: bar.create_tween().tween_property(bar, "value", clampf(float(progress) * 100.0, 0.0, 100.0), 0.8).set_trans(Tween.TRANS_SINE)
+
+## The steps this craft goes through (server stages); older servers send none, so the state names them.
+func _stages(value: Dictionary) -> Array:
+	var stages: Array = value.get("stages", [])
+	if stages.is_empty():
+		stages = ["design", "mesh", "done"]
+		if not value.get("concept", {}).is_empty(): stages.insert(1, "concept")
+	return stages
+
+func _stage(value: Dictionary) -> String:
+	var stage := str(value.get("stage", ""))
+	if not stage.is_empty(): return stage
+	var state := str(value.get("state", ""))
+	if state in ["queued", "planning"]: return "design"
+	if state == "awaiting_confirmation": return "confirm"
+	if state in ["building", "submitting"]: return "mesh"
+	return "done" if state == "ready" else state
+
+func _step_name(id: String) -> String:
+	match id:
+		"design": return tr("설계")
+		"concept": return tr("그림")
+		"mesh": return tr("3D 부품")
+	return tr("완성")
+
+## A row of numbered dots joined by lines; returns the pieces _paint_steps colours.
+func _steps(parent: Node, value: Dictionary, stage: String) -> Array:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(row)
+	var steps := []
+	var stages := _stages(value)
+	for i in stages.size():
+		var line: ColorRect = null
+		if i > 0:
+			# The joining line sits at the dots' middle, not the captions'.
+			var lane := VBoxContainer.new()
+			lane.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			lane.add_theme_constant_override("separation", 0)
+			row.add_child(lane)
+			var gap := Control.new()
+			gap.custom_minimum_size.y = 12.5
+			lane.add_child(gap)
+			line = ColorRect.new()
+			line.custom_minimum_size = Vector2(10, 3)
+			line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			lane.add_child(line)
+		var cell := VBoxContainer.new()
+		cell.add_theme_constant_override("separation", 3)
+		row.add_child(cell)
+		var dot := Panel.new()
+		dot.custom_minimum_size = Vector2(28, 28)
+		dot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		dot.pivot_offset = Vector2(14, 14)
+		dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell.add_child(dot)
+		var number := Label.new()
+		number.text = str(i + 1)
+		number.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		number.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		number.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		number.add_theme_font_size_override("font_size", 13)
+		dot.add_child(number)
+		var tick := Line2D.new()
+		tick.points = PackedVector2Array([Vector2(8, 14.5), Vector2(12.5, 19), Vector2(20.5, 9.5)])
+		tick.width = 3.0
+		tick.default_color = RpgUi.PAPER_INK
+		tick.begin_cap_mode = Line2D.LINE_CAP_ROUND
+		tick.end_cap_mode = Line2D.LINE_CAP_ROUND
+		tick.joint_mode = Line2D.LINE_JOINT_ROUND
+		tick.antialiased = true
+		dot.add_child(tick)
+		var caption := Label.new()
+		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		caption.add_theme_font_size_override("font_size", 12)
+		cell.add_child(caption)
+		steps.append({"id": str(stages[i]), "dot": dot, "number": number, "tick": tick, "caption": caption, "line": line, "mode": ""})
+	_paint_steps(steps, stage, value)
+	return steps
+
+## Steps before the current one are done (gold, ticked), the current one breathes, later ones wait.
+## "confirm" (the quote) leaves the 3D step outlined: it starts when the player says so.
+func _paint_steps(steps: Array, stage: String, value: Dictionary) -> void:
+	var target := "mesh" if stage == "confirm" else stage
+	var index := -1
+	if stage == "done": index = steps.size()
+	for i in steps.size():
+		if index < 0 and steps[i].id == target: index = i
+	index = maxi(index, 0)
+	var parts: Dictionary = value.get("parts", {})
+	for i in steps.size():
+		var step: Dictionary = steps[i]
+		var mode := "done" if i < index else ("pending" if i > index else ("next" if stage == "confirm" else "active"))
+		_paint_step(step, mode)
+		var name := _step_name(step.id)
+		if step.id == "mesh" and stage == "mesh" and parts.size() > 1:
+			name += " %d/%d" % [parts.values().filter(func(s) -> bool: return s == "ready").size(), parts.size()]
+		step.caption.text = name
+
+func _paint_step(step: Dictionary, mode: String) -> void:
+	var before := str(step.mode)
+	if before == mode: return
+	step.mode = mode
+	var gold := Color("e9b552")
+	var ink: Color = RpgUi.INK if dark else RpgUi.PAPER_INK
+	var muted := Color(ink, 0.35)
+	var lit := mode != "pending"
+	var box := StyleBoxFlat.new()
+	box.set_corner_radius_all(14)
+	box.corner_detail = 8
+	box.anti_aliasing = true
+	box.set_border_width_all(3 if lit else 2)
+	box.border_color = gold if lit else muted
+	box.bg_color = gold if mode == "done" else (Color(gold, 0.2) if lit else Color(0, 0, 0, 0))
+	var dot: Panel = step.dot
+	dot.add_theme_stylebox_override("panel", box)
+	step.tick.visible = mode == "done"
+	step.number.visible = mode != "done"
+	step.number.add_theme_color_override("font_color", _accent() if lit else muted)
+	step.caption.add_theme_color_override("font_color", ink if lit else muted)
+	if step.line: step.line.color = gold if lit else muted
+	if step.has("pulse") and step.pulse.is_valid(): step.pulse.kill()
+	dot.scale = Vector2.ONE
+	if RpgUi.calm(): return
+	if mode == "active":
+		var pulse := dot.create_tween().set_loops()
+		pulse.tween_property(dot, "scale", Vector2.ONE * 1.14, 0.6).set_trans(Tween.TRANS_SINE)
+		pulse.tween_property(dot, "scale", Vector2.ONE, 0.6).set_trans(Tween.TRANS_SINE)
+		step.pulse = pulse
+	elif mode == "done" and before == "active":
+		# A step finishing pops its tick.
+		dot.scale = Vector2.ONE * 1.3
+		dot.create_tween().tween_property(dot, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+## Gold on the dark drawer, a deeper amber on the paper card.
+func _accent() -> Color:
+	return RpgUi.GOLD if dark else Color("8a5a1c")
 
 func _show_quote(value: Dictionary) -> void:
 	var quote: Dictionary = value.get("provenance", {})
@@ -552,6 +810,8 @@ func _say(value: String) -> void:
 	if say.is_valid(): say.call(value)
 
 func _explain(code: String) -> String:
+	# Bad input in the craft window is about the description, never the login form's name and password.
+	if code in ["invalid_craft_request", "invalid_request"]: return tr("만들 물건을 2~1500자로 적어 주세요.")
 	# Some refusals arrive already worded (the per-account limit).
 	if code.contains(" ") or not explain.is_valid(): return code
 	return str(explain.call(code))

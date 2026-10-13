@@ -4,6 +4,8 @@ extends SceneTree
 ## and lands in the bag. Runs against the QA server (demo mode: placeholder picture, sample shapes).
 const Main = preload("res://scripts/main.gd")
 const CraftPanel = preload("res://scripts/craft_panel.gd")
+const Assembly = preload("res://scripts/asset_assembly.gd")
+const Fx = preload("res://scripts/fx.gd")
 var failed := false
 var app: Node
 
@@ -55,6 +57,8 @@ func run() -> void:
 	expect(not app.craft_job.is_empty(), "village craft request accepted")
 	var job := await wait_state(panel, ["awaiting_confirmation", "failed"])
 	expect(str(job.get("state")) == "awaiting_confirmation" and not job.get("concept", {}).is_empty(), "concept picture drawn before 3D")
+	expect(app.craft_announced == CraftPanel.announce_key(job), "the village announces the picture once")
+	expect(job.get("stages", []) == ["design", "concept", "mesh", "done"] and str(job.get("stage")) == "confirm", "the server names the steps")
 	var deadline := Time.get_ticks_msec() + 5000
 	var picture: TextureRect = null
 	while Time.get_ticks_msec() < deadline:
@@ -98,6 +102,34 @@ func run() -> void:
 	await create_timer(0.5).timeout
 	await app.refresh_inventory()
 	expect(app.craft_job.is_empty() and int(app.me.shards) == shards and panel.form.visible, "cancel refunds and returns to the form")
+	# Two letters name furniture; a craft under way is followed again after a relaunch (/v1/me).
+	panel.prompt.text = "의자"
+	await panel.request()
+	var two_letters := panel.job_id
+	expect(not two_letters.is_empty(), "a two-letter craft (의자) is accepted")
+	app.craft_job = ""
+	await app.refresh_inventory()
+	expect(app.craft_job == two_letters, "the village resumes the craft under way from /v1/me")
+	job = await wait_state(panel, ["awaiting_confirmation"])
+	await app.cancel_craft()
+	await create_timer(0.5).timeout
+	expect(panel._explain("invalid_craft_request").contains("2~1500") and not panel._explain("invalid_request").contains("비밀번호"), "bad craft input is worded for crafting, not the login form")
+	# The steps view: built once and updated in place; Tripo's percentage when it reports one.
+	panel.show_job({"id": "steps", "state": "planning", "stage": "concept", "stages": ["design", "concept", "mesh", "done"]})
+	var view: Control = panel.working.get("root")
+	var modes: Array = panel.working.steps.map(func(step: Dictionary) -> String: return str(step.mode))
+	expect(view != null and modes == ["done", "active", "pending", "pending"] and str(panel.working.title.text).contains("그림"), "the picture step is current while it is drawn (%s)" % [modes])
+	panel.show_job({"id": "steps", "state": "building", "stage": "mesh", "stages": ["design", "concept", "mesh", "done"], "progress": 0.42, "parts": {"base": "ready", "lid": "generating"}})
+	var bar: ProgressBar = panel.working.bar
+	expect(panel.working.get("root") == view and not bar.indeterminate and str(panel.working.percent.text) == "42%", "the same view shows Tripo's percentage")
+	expect(str(panel.working.steps[2].caption.text).ends_with("1/2") and str(panel.working.steps[1].mode) == "done", "the 3D step counts finished parts")
+	await capture("steps")
+	panel.show_job({"id": "steps", "state": "unknown"})
+	expect(labels(panel.status).contains(tr("확인이 필요해요")) and panel.working.is_empty() and "unknown" in CraftPanel.TERMINAL, "a held craft ends in a clear state")
+	panel.show_job({"id": "steps", "state": "failed", "error": "generation_timeout"})
+	expect(panel.form.visible and labels(panel.status).contains(tr("오래")), "a craft stopped at its deadline says so")
+	expect(CraftPanel.poll_pause(1) == 4.0 and CraftPanel.poll_pause(9) == 30.0, "failed polls back off up to 30 s")
+	panel.show_job({})
 	app.close_village_modal()
 	# The room's [만들기] tab is the same window and places the craft in the room.
 	Engine.set_meta("studio_session", {"token": app.api.token, "url": app.api.base_url, "room": "home"})
@@ -132,6 +164,20 @@ func run() -> void:
 	var built: Vector3 = studio.inspected.get_meta("size", Vector3.ZERO) if is_instance_valid(studio.inspected) else Vector3.ZERO
 	expect(absf(maxf(built.x, maxf(built.y, built.z)) - 1.8) < 0.03, "the object is 1.8 m on its longest side (%s)" % built)
 	await capture("room-place")
+	# Putting it down keeps the ghost as the placed piece (no reload, no blink) and plays the arrival.
+	var crafted := str(job.get("object_id", ""))
+	var ghost: Node3D = studio.ghost
+	for spot in [Vector3(-2.5, 0, -2.5), Vector3(2.5, 0, -2.5), Vector3(-2.5, 0, 0.5), Vector3(2.5, 0, 0.5), Vector3(0, 0, -2.5)]:
+		if studio.placement_problem(spot).is_empty():
+			studio.place_at = spot
+			break
+	var fetched := Assembly.downloads
+	var effects := Fx.played
+	await studio.commit_place()
+	await capture("room-placed")
+	expect(is_instance_valid(ghost) and studio.placed.get(crafted) == ghost and ghost.get_parent() == studio.furniture and not studio.placement_mode, "the ghost becomes the placed piece")
+	expect(Assembly.downloads == fetched and Fx.played > effects, "placing downloads nothing again and plays the arrival effect")
+	expect(not str(studio.status_label.text).contains("꾸민 모습"), "refreshes no longer claim something was saved")
 	print("CRAFT_PANEL " + ("FAILED" if failed else "OK"))
 	studio.queue_free()
 	await process_frame

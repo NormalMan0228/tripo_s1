@@ -18,6 +18,7 @@ const Residents=preload("res://scripts/residents.gd")
 const GameSettings=preload("res://scripts/game_settings.gd")
 const PauseMenu=preload("res://scripts/pause_menu.gd")
 const CraftPanel=preload("res://scripts/craft_panel.gd")
+const Fx=preload("res://scripts/fx.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
 var api: Node
@@ -890,7 +891,6 @@ func refresh() -> void:
 			else:
 				if not sync_interaction(inspected,latest.data):inspected.accept_event({"state":latest.data.runtime.state,"commands":[],"version":latest.data.runtime.version})
 				inspected.paint(latest.data.runtime.colors)
-	if not placement_mode:message(tr("꾸민 모습이 저장됐어요 · ")+(tr("내 집") if room=="home" else tr("공방")))
 
 func clear_selection() -> void:
 	cancel_placement()
@@ -1238,6 +1238,10 @@ func begin_place() -> void:
 		# When moving furniture, hide its old instance until confirmation or cancel.
 		if placed.has(object_id):placed[object_id].visible=false
 		for mesh in ghost.find_children("*","MeshInstance3D",true,false):
+			# Its own materials come back when the ghost becomes the placed piece (adopt_ghost).
+			var own: Array=[]
+			for index in mesh.mesh.get_surface_count():own.append(mesh.get_surface_override_material(index))
+			mesh.set_meta("placing_materials",own)
 			for index in mesh.mesh.get_surface_count():
 				var source: Material=mesh.get_active_material(index)
 				if source is StandardMaterial3D:
@@ -1332,9 +1336,29 @@ func commit_place() -> void:
 	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation({"version":selected.version,"room":room,"x":place_at.x,"z":place_at.z,"rotation":placement_rotation}))
 	pending=false
 	if not reply.ok:message(tr("여기에는 놓을 수 없어요 · ")+reply.error);await refresh();return
+	adopt_ghost()
 	cancel_placement()
 	await refresh()
 	message(tr("좋아요! 가구를 놓았어요."))
+
+## The ghost the player put down becomes the placed piece with its own materials, so the refresh
+## finds it already there: no second download and no frame without it. It arrives with a pop, or a
+## puff of dust when it only moved (fx.gd arrive).
+func adopt_ghost() -> void:
+	if not is_instance_valid(ghost) or selected.is_empty():return
+	var id: String=selected.id;var item: Node3D=ghost
+	ghost=null
+	var moved: bool=placed.has(id) and is_instance_valid(placed[id])
+	if moved:placed[id].queue_free()
+	for mesh in item.find_children("*","MeshInstance3D",true,false):
+		var own=mesh.get_meta("placing_materials",null)
+		if own is Array:
+			for index in own.size():mesh.set_surface_override_material(index,own[index])
+			mesh.remove_meta("placing_materials")
+	item.reparent(furniture)
+	item.position=Vector3(place_at.x,0.07,place_at.z);item.rotation_degrees.y=placement_rotation
+	placed[id]=item
+	Fx.arrive(furniture,item,null,not moved)
 
 func retrieve() -> void:
 	if pending or selected.is_empty():return
@@ -1342,6 +1366,7 @@ func retrieve() -> void:
 	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation({"version":selected.version,"action":"retrieve","room":room}))
 	pending=false
 	if not reply.ok:message(reply.error)
+	else:message(tr("보관함으로 옮겼어요."))
 	await refresh()
 
 func interact_selected() -> void:
