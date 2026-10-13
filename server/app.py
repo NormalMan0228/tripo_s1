@@ -229,7 +229,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request,exc):
-        return JSONResponse({'detail':'invalid_request'},422)
+        # Crafting has its own wording (a too short or too long description), not the login form's.
+        return JSONResponse({'detail':'invalid_craft_request' if request.url.path.startswith('/v1/studio/') else 'invalid_request'},422)
 
     @app.exception_handler(ProviderError)
     async def protected_asset_error(request,exc):
@@ -416,6 +417,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 active_summary={k:snapshot[k] for k in ('day','elapsed','hp','hunger','map_id','difficulty')}
             pending_reward = conn.execute("SELECT id,reward,state FROM runs WHERE owner_id=? AND status='won' AND claimed=0 ORDER BY created LIMIT 1",(user['id'],)).fetchone()
             pending_job = conn.execute("SELECT id FROM jobs WHERE owner_id=? AND state IN ('queued','submitting','generating','unknown') ORDER BY created LIMIT 1",(user['id'],)).fetchone()
+            # The craft under way (asset_studio.py), so the village follows it again after a relaunch.
+            craft = conn.execute("SELECT id,state FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled','unknown') ORDER BY created DESC LIMIT 1",(user['id'],)).fetchone()
             return {'username':user['username'],'shards':user['shards'],'mode':settings.mode,'role':user['role'],
                 'generation_enabled': settings.mode=='demo' or bool(settings.legacy_generation_enabled and settings.tripo_key and settings.paid_enabled),
                 'studio_tripo_enabled': bool(settings.tripo_key and settings.paid_enabled),
@@ -424,6 +427,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 'active_run_summary':active_summary,
                 'pending_reward':{'id':pending_reward['id'],'reward':pending_reward['reward']+campaign.pending_bonus(conn,user['id'],json.loads(pending_reward['state']))} if pending_reward else None,
                 'pending_job':pending_job['id'] if pending_job else None,
+                'pending_craft':{'id':craft['id'],'state':craft['state']} if craft else None,
                 'objects':[{**obj_public(r),'room':r['room'],'studio':bool(r['studio']),'runtime_version':r['runtime_version'],'paint_version':r['paint_version'],'shape':object_shape.public(r['shape'])} for r in conn.execute("SELECT objects.*,COALESCE(furniture_locations.room,'village') AS room,CASE WHEN studio_assets.asset_id IS NULL THEN 0 ELSE 1 END AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+object_paint.version_column('objects.id')+" AS paint_version,"+object_shape.column('objects.id')+" AS shape FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id LEFT JOIN studio_assets ON studio_assets.asset_id=objects.asset_id WHERE owner_id=? ORDER BY created",(user['id'],))]}
 
     @app.post('/v1/objects/{object_id}')
