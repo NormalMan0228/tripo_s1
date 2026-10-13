@@ -234,7 +234,7 @@ func interaction_test() -> void:
 			if entry.get("walker") != walker:
 				fail("closest() missed %s (got %s)" % [walker.spec.id, entry])
 				continue
-			if not "와 대화" in str(entry.prompt): fail("odd prompt %s" % entry.prompt)
+			if not ("와 대화" in str(entry.prompt) or "과 대화" in str(entry.prompt)): fail("odd prompt %s" % entry.prompt)
 			var before: int = app.dialogues.size()
 			folk.interact(entry)
 			if app.dialogues.size() == before:
