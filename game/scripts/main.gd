@@ -1043,8 +1043,7 @@ func inspect_object(obj: Dictionary) -> void:
 	# The same object, unchanged: keep the model already in the preview.
 	if is_instance_valid(inspect_model) and str(inspect_model.get_meta("inspect_id",""))==str(obj.id) and str(inspect_model.get_meta("object_key",""))==object_key(obj):
 		sync_shape(inspect_model,obj)
-		await sync_runtime(inspect_model,obj)
-		return
+		if await sync_runtime(inspect_model,obj) or request!=inspect_request: return
 	if is_instance_valid(inspect_model):
 		inspect_model.queue_free()
 		inspect_model=null
@@ -1280,42 +1279,10 @@ func refresh_inventory() -> void:
 	for obj in me.objects:
 		var state_name: String = {"inventory":tr("보관"),"placed":tr("배치"),"listed":tr("판매")}[obj.state]
 		objects_list.add_item("[%s] %s" % [state_name,obj.name])
-	# Only new or changed objects are loaded: rebuilding every placed model (Tripo textures included)
-	# on each refresh froze the village whenever starseeds or a runtime version changed.
-	var wanted := {}
-	for obj in me.objects:
-		if obj.state=="placed" and obj.get("room","village")=="village": wanted[obj.id]=obj
-	for id in loaded.keys():
-		var node: Node3D=loaded[id]
-		if not wanted.has(id) or not is_instance_valid(node) or str(node.get_meta("object_key",""))!=object_key(wanted[id]):
-			if is_instance_valid(node):
-				object_root.remove_child(node)
-				node.queue_free()
-			loaded.erase(id)
-	for obj in me.objects:
-		if not wanted.has(obj.id): continue
-		if loaded.has(obj.id):
-			var existing: Node3D=loaded[obj.id]
-			existing.position = TownLayout.furniture_point(obj.x,obj.z)
-			existing.rotation_degrees.y = obj.rotation
-			sync_shape(existing,obj)
-			await sync_runtime(existing,obj)
-			if epoch!=world_epoch:
-				refreshing=false
-				return
-			continue
-		var asset = await load_object(obj)
-		if epoch!=world_epoch:
-			if is_instance_valid(asset): asset.queue_free()
-			refreshing=false
-			return
-		if asset:
-			asset.set_meta("object_key",object_key(obj))
-			object_root.add_child(asset)
-			asset.position = TownLayout.furniture_point(obj.x,obj.z)
-			asset.rotation_degrees.y = obj.rotation
-			Loader.add_collision(asset)
-			loaded[obj.id] = asset
+	await sync_placed(me.objects.filter(func(obj): return obj.state=="placed" and obj.get("room","village")=="village"))
+	if epoch!=world_epoch:
+		refreshing=false
+		return
 	if objects_list.item_count>0:
 		var index := 0
 		for i in me.objects.size():
@@ -1329,17 +1296,66 @@ func refresh_inventory() -> void:
 func object_key(obj: Dictionary) -> String:
 	return JSON.stringify([obj.get("color",""),obj.get("paint_version"),obj.get("studio",false)])
 
-## A crafted object whose state moved on elsewhere (a room, another PC) takes the server's state
-## without reloading its model.
-func sync_runtime(item: Node3D, obj: Dictionary) -> void:
-	if not item.get_meta("studio",false) or obj.get("runtime_version")==null: return
-	if int(item.runtime_version)==int(obj.runtime_version): return
-	var fresh: Dictionary=await api.request("/v1/objects/"+str(obj.id)+"/assembly")
-	if not fresh.ok or not is_instance_valid(item): return
+## Brings the village's placed models in line with `objects` (the player's own, or the host's
+## during a visit, read through `prefix`). Only a new, removed or repainted object loads or frees a
+## model: rebuilding every placed model (Tripo textures included) on each change froze the village
+## whenever starseeds or a runtime version changed, and kept a visitor's village reloading. The rest
+## move, turn, reshape and take their new interaction state in place. False when a model could not
+## be loaded or the world changed meanwhile (the caller checks world_epoch).
+func sync_placed(objects: Array, prefix: String="/v1/objects/") -> bool:
+	var epoch := world_epoch
+	var wanted := {}
+	for obj in objects: wanted[obj.id]=obj
+	for id in loaded.keys():
+		var node = loaded[id]
+		if not wanted.has(id) or not is_instance_valid(node) or str(node.get_meta("object_key",""))!=object_key(wanted[id]): drop_loaded(id)
+	var complete := true
+	for obj in objects:
+		var existing = loaded.get(obj.id)
+		if is_instance_valid(existing):
+			existing.position = TownLayout.furniture_point(obj.x,obj.z)
+			existing.rotation_degrees.y = obj.rotation
+			sync_shape(existing,obj)
+			var kept: bool=await sync_runtime(existing,obj,prefix)
+			if epoch!=world_epoch: return false
+			if kept: continue
+		drop_loaded(obj.id)
+		var asset = await load_object(obj,prefix)
+		if epoch!=world_epoch:
+			if is_instance_valid(asset): asset.queue_free()
+			return false
+		if not asset:
+			complete=false
+			continue
+		asset.set_meta("object_key",object_key(obj))
+		object_root.add_child(asset)
+		asset.position = TownLayout.furniture_point(obj.x,obj.z)
+		asset.rotation_degrees.y = obj.rotation
+		Loader.add_collision(asset)
+		loaded[obj.id] = asset
+	return complete
+
+func drop_loaded(id: String) -> void:
+	var node = loaded.get(id)
+	if is_instance_valid(node):
+		if node.get_parent(): node.get_parent().remove_child(node)
+		node.queue_free()
+	loaded.erase(id)
+
+## A crafted object whose state moved on elsewhere (a room, another PC, the host while a friend
+## visits) takes the server's state without reloading its model. False when its parts changed (a
+## new binding): the caller loads the model again.
+func sync_runtime(item: Node3D, obj: Dictionary, prefix: String="/v1/objects/") -> bool:
+	if not item.get_meta("studio",false) or obj.get("runtime_version")==null: return true
+	if int(item.runtime_version)==int(obj.runtime_version): return true
+	var fresh: Dictionary=await api.request(prefix+str(obj.id)+"/assembly")
+	if not fresh.ok or not is_instance_valid(item): return true
+	if fresh.data.get("plan")!=item.manifest.get("plan"): return false
 	# A changed interaction (상호작용 saved on another device) runs its new program; otherwise only the state moves.
 	if not (item.has_method("sync_interaction") and item.sync_interaction(fresh.data)):
 		item.accept_event({"state":fresh.data.runtime.state,"commands":[],"version":fresh.data.runtime.version})
 	item.paint(fresh.data.runtime.colors)
+	return true
 
 ## A shape saved elsewhere (another PC) reshapes a kept model in place; the object the shape
 ## window is editing keeps showing its unsaved draft.

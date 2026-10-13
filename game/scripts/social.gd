@@ -1,7 +1,8 @@
 extends Node
 ## Polling transport for a three-player test. Authority and membership stay on the server.
 const Player = preload("res://scripts/player.gd")
-const Loader = preload("res://scripts/model_loader.gd")
+## The host's furniture is read through the guest routes (server/multiplayer.py).
+const GUEST_OBJECTS = "/v1/social/village/objects/"
 var app: Node3D
 var enabled := false
 var data: Dictionary = {}
@@ -113,9 +114,10 @@ func poll() -> void:
 		if Time.get_ticks_msec()*.001-last_failure > 10:
 			last_failure = Time.get_ticks_msec()*.001
 			app.message(tr("함께하기 연결을 확인 중입니다. 잠시 후 다시 시도합니다."))
-		if visiting():
-			for node in app.object_root.get_children(): node.queue_free()
-			app.loaded.clear()
+		# Refused (signed out, no longer let in): the host's furniture goes. A dropped connection
+		# keeps it; the next answer updates it in place.
+		if visiting() and int(response.get("status", 0)) in [401, 403]:
+			for id in app.loaded.keys(): app.drop_loaded(id)
 			object_signature = ""
 		return
 	data = response.data
@@ -182,6 +184,10 @@ func sync_peers(players: Array) -> void:
 			if is_instance_valid(peers[id].node): peers[id].node.queue_free()
 			peers.erase(id)
 
+## The host's furniture during a visit follows the host's changes in place (main.sync_placed): only
+## a new, removed or repainted object loads or frees a model. Moves, shape edits and interaction
+## state update the loaded copy; the host walking up to or using furniture changes its runtime
+## version every few moments, and reloading every model each time kept the village loading.
 func refresh_guest_objects() -> void:
 	if not visiting() or objects_pending or not data.get("village") is Dictionary: return
 	var signature: String = str(data.host_id)+JSON.stringify(data.village.objects)
@@ -189,26 +195,10 @@ func refresh_guest_objects() -> void:
 	objects_pending = true
 	var epoch: int = app.world_epoch
 	var host: String = data.host_id
-	for node in app.object_root.get_children():
-		app.object_root.remove_child(node)
-		node.queue_free()
-	app.loaded.clear()
-	var complete := true
-	for obj in data.village.objects:
-		var model: Node3D = await app.load_object(obj, "/v1/social/village/objects/")
-		if epoch != app.world_epoch or host != str(data.get("host_id", "")):
-			if is_instance_valid(model): model.queue_free()
-			objects_pending = false
-			return
-		if model:
-			app.object_root.add_child(model)
-			model.position = preload("res://scripts/town.gd").furniture_point(obj.x, obj.z)
-			model.rotation_degrees.y = obj.rotation
-			Loader.add_collision(model)
-			app.loaded[obj.id] = model
-		else: complete = false
-	if complete: object_signature = signature
+	var complete: bool = await app.sync_placed(data.village.objects, GUEST_OBJECTS)
 	objects_pending = false
+	if epoch != app.world_epoch or host != str(data.get("host_id", "")): return
+	if complete: object_signature = signature
 	accept_crops()
 
 func perform(path: String, payload: Dictionary = {}) -> Dictionary:
@@ -239,6 +229,7 @@ func open_menu() -> void:
 	name_input.placeholder_text = tr("초대할 사용자 이름")
 	name_input.max_length = 24
 	name_input.custom_minimum_size.x = 220
+	name_input.keep_editing_on_text_submit = true
 	invite_row.add_child(name_input)
 	app.button(invite_row, tr("내 마을로 초대"), func():
 		var result: Dictionary = await perform("/v1/social/invites", {"username":name_input.text, "kind":"village"})
@@ -297,6 +288,9 @@ func open_menu() -> void:
 	var chat := LineEdit.new()
 	chat.placeholder_text = tr("메시지를 입력하고 Enter")
 	chat.max_length = 160
+	# Enter sends and the field stays ready for the next line (Godot otherwise stops editing on
+	# Enter: the next message, Korean IME included, did not type until the field was clicked again).
+	chat.keep_editing_on_text_submit = true
 	content.add_child(chat)
 	chat.text_submitted.connect(func(value):
 		send_message(value)
