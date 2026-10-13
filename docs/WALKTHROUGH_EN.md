@@ -3,12 +3,11 @@
 | 🌐 한국어 | 🌐 English | 🌐 中文 |
 |:---:|:---:|:---:|
 | [**워크스루 보기**](WALKTHROUGH_KO.md) | [**Walkthrough**](WALKTHROUGH_EN.md) | [**游戏攻略**](WALKTHROUGH_ZH.md) |
-| [⬇ 게임 받기 (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ Download (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ 下载游戏 (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) |
 | 설정 → 게임플레이 → 언어 → **한국어** | Settings → Gameplay → Language → **English** | 设置 → 游戏 → 语言 → **中文** |
 
 > **Villagen** = village + generate. Live in a five-island village, and when you want something, **describe it in a sentence: the server designs it with AI (Gemini) and builds it in 3D with Tripo**, then you place it in your village.
 
-**Download:** [Villagen_Windows.zip (always the latest)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) · Windows 10/11 · no installer
+**Getting the game:** `Villagen_Windows.zip` is handed out directly (no public download link) · Windows 10/11 · no installer
 
 **Language:** one ZIP contains Korean, English and Chinese. The game starts in your Windows language; change it any time from **Settings** on the title screen, or **Esc → Settings → Gameplay → Language** in game.
 

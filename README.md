@@ -3,7 +3,6 @@
 | 🌐 한국어 | 🌐 English | 🌐 中文 |
 |:---:|:---:|:---:|
 | [**워크스루 보기**](docs/WALKTHROUGH_KO.md) | [**Walkthrough**](docs/WALKTHROUGH_EN.md) | [**游戏攻略**](docs/WALKTHROUGH_ZH.md) |
-| [⬇ 게임 받기 (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ Download (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) | [⬇ 下载游戏 (Windows)](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip) |
 | 설정 → 게임플레이 → 언어 → **한국어** | Settings → Gameplay → Language → **English** | 设置 → 游戏 → 语言 → **中文** |
 
 **Villagen**(빌리지 + 제너레이트)은 섬 마을을 가꾸고, 원하는 물건을 글로 적으면 AI가 3D로 만들어 주는 마을 생활 RPG입니다. (이전 작업명: Tripothon)
@@ -14,9 +13,9 @@
 
 ## 바로 플레이 (심사·친구용) · 0.10.1
 
-**설치 없이 플레이:** **[⬇ Villagen_Windows.zip 바로 받기](https://github.com/NormalMan0228/tripo_s1/releases/latest/download/Villagen_Windows.zip)** (항상 최신판, [모든 릴리스](https://github.com/NormalMan0228/tripo_s1/releases))를 받아 압축을 풀고 `Villagen.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정은 아이디·비밀번호만으로 만듭니다(초대 코드 없음, 공개 가입). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 체험판 규칙으로 계정당 3회, 1회 Tripo 10크레딧(직접 색칠하는 정적인 가구 한 덩어리) 안에서 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다. **처음이라면 15분 워크스루를 따라 해 보세요: [한국어](docs/WALKTHROUGH_KO.md) · [English](docs/WALKTHROUGH_EN.md) · [中文](docs/WALKTHROUGH_ZH.md)**
+**설치 없이 플레이:** 심사용 압축 파일(`Villagen_Windows.zip`, 심사위원에게 따로 전달)을 받아 압축을 풀고 `Villagen.exe`를 실행합니다. 지도·NPC·실내·몬스터·UI 자원이 모두 들어 있고, 로그인 화면은 **온라인 월드**로 정해져 있습니다. 계정은 아이디·비밀번호만으로 만듭니다(초대 코드 없음, 공개 가입). 온라인 월드에서는 **물건 제작(서버 → Gemini 설계 → Tripo 3D)**을 체험판 규칙으로 계정당 3회, 1회 Tripo 10크레딧(직접 색칠하는 정적인 가구 한 덩어리) 안에서 해 볼 수 있습니다. 서버 운영 절차는 [쉬운 서버 업데이트 안내](docs/SERVER_UPDATE_GUIDE_KO.txt)와 [심사용 온라인 서버 켜기](docs/JUDGING_SERVER_KO.md)에 있습니다. 오늘 작업 요약은 [docs/TODAY_SUMMARY_20261006_KO.txt](docs/TODAY_SUMMARY_20261006_KO.txt)입니다. **처음이라면 15분 워크스루를 따라 해 보세요: [한국어](docs/WALKTHROUGH_KO.md) · [English](docs/WALKTHROUGH_EN.md) · [中文](docs/WALKTHROUGH_ZH.md)**
 
-**소스로 개발하는 협업자:** 저장소에는 용량이 큰 모델 폴더(`game/maps/archipelago/assets`, `game/assets/interior`, `game/assets/monsters`, `game/maps/survival/assets`, `game/assets/portraits`, `game/assets/npc`)가 없습니다. 같은 Release의 `Villagen_v0.10.0_DevAssets_Map.zip`과 `..._DevAssets_Art.zip`을 **저장소 최상위 폴더에서** 압축 풀면 그대로 채워집니다. 그다음 Godot 4.7.2로 `game/project.godot`을 열고, 서버는 `tools/run_server.ps1`로 켭니다.
+**소스로 개발하는 협업자:** 저장소에는 용량이 큰 모델 폴더(`game/maps/archipelago/assets`, `game/assets/interior`, `game/assets/monsters`, `game/maps/survival/assets`, `game/assets/portraits`, `game/assets/npc`)가 없습니다. 개발용 에셋 묶음(`Villagen_v0.10.0_DevAssets_Map.zip`, `..._DevAssets_Art.zip`)은 팀 안에서 따로 전달하며, **저장소 최상위 폴더에서** 압축 풀면 그대로 채워집니다. 그다음 Godot 4.7.2로 `game/project.godot`을 열고, 서버는 `tools/run_server.ps1`로 켭니다.
 
 ## 전용 UI 이미지·배경 없는 일러스트·접는 HUD·길 안내 · 2026-10-06
 

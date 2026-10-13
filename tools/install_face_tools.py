@@ -8,13 +8,18 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / '.tools/face-tools'
-PACKAGES = [
-    ('mpfb-2.0.17.zip', 'https://extensions.blender.org/download/sha256:4f0a879d64a39bf646fbf5f53601ac678855da329d650617dca5737548239a87/add-on-mpfb-v2.0.17.zip', '4f0a879d64a39bf646fbf5f53601ac678855da329d650617dca5737548239a87'),
-    ('makehuman_system_assets_cc0.zip', 'https://files2.makehumancommunity.org/asset_packs/makehuman_system_assets/makehuman_system_assets_cc0.zip', None),
-    ('faceunits01.zip', 'https://files2.makehumancommunity.org/functional/faceunits01.zip', None),
-    ('visemes01.zip', 'https://files2.makehumancommunity.org/functional/visemes01.zip', None),
-    ('visemes02.zip', 'https://files2.makehumancommunity.org/functional/visemes02.zip', None),
-]
+LOCAL = Path(__file__).with_name("third_party_downloads.local.json")
+
+
+def _local(key):
+    """Download addresses live in a git-ignored local file: the repository keeps no archive links."""
+    if not LOCAL.exists():
+        raise SystemExit(f"{LOCAL.name} is missing; put the official download addresses there (see its _note).")
+    return json.loads(LOCAL.read_text(encoding="utf-8"))[key]
+
+
+PACKAGES = [tuple(entry) for entry in _local("face_tools")]
+
 
 def download(entry):
     name, url, expected = entry
