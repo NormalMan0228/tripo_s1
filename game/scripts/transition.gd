@@ -139,9 +139,13 @@ func _fade(alpha: float, seconds: float) -> void:
 	# veil would jump. Two frames later the steps are even.
 	for i in 2: await tree.process_frame
 	if mine != turn: return
-	tween = tree.create_tween()
-	tween.tween_property(veil, "modulate:a", alpha, seconds).set_trans(Tween.TRANS_SINE)
-	await tween.finished
+	var mine_tween := tree.create_tween()
+	tween = mine_tween
+	mine_tween.tween_property(veil, "modulate:a", alpha, seconds).set_trans(Tween.TRANS_SINE)
+	# A later fade kills this tween and `finished` never comes: waiting on it hung the caller
+	# (busy for good). Wait for the tween to end either way; a newer fade owns the veil then.
+	while mine_tween.is_valid() and mine_tween.is_running(): await tree.process_frame
+	if mine != turn: return
 	if alpha <= 0.0:
 		veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if is_zero_approx(veil.modulate.a): clear_card()
