@@ -46,6 +46,15 @@ if [ -n "$announce" ] && ! [[ "$announce" =~ ^[0-9]+$ && "$announce" -le 1440 ]]
   echo "--announce 뒤에는 0~1440 사이의 분을 적어 주세요. 예) --announce 10" >&2; exit 2
 fi
 [[ "$downtime" =~ ^[0-9]+$ && "$downtime" -ge 1 && "$downtime" -le 1440 ]] || { echo "--downtime 은 1~1440 분이에요." >&2; exit 2; }
+# One update at a time: a manual run and the auto-update timer (ops/auto_update.sh) share this lock, so
+# two maintenance notices never overwrite each other and the API is never rebuilt twice at once.
+mkdir -p /var/lib/villagen
+exec 8>/var/lib/villagen/update.lock
+if ! flock -n 8; then
+  echo "다른 업데이트(자동 업데이트일 수 있어요)가 진행 중이에요. 끝난 뒤에 다시 실행해 주세요." >&2
+  echo "진행 상황: sudo bash ops/install_auto_update.sh --status" >&2
+  exit 3
+fi
 cd "$(dirname "$0")/.."
 for key in "${!limits[@]}"; do
   value="${limits[$key]}"
