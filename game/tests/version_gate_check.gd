@@ -14,7 +14,7 @@ extends SceneTree
 ## scene made the engine crash at exit (4.7.2).
 var VersionGate: GDScript
 var failed := false
-var server := "http://127.0.0.1:8814"
+var server := "http://127.0.0.1:8766"  # tools/test.ps1 QA server
 var policy_path := ""
 var resumed := 0
 var account := ""
@@ -94,6 +94,9 @@ func run() -> void:
 		if arg.begins_with("--server="): server = arg.trim_prefix("--server=").trim_suffix("/")
 		if arg.begins_with("--policy="): policy_path = arg.trim_prefix("--policy=")
 		if arg.begins_with("--until="): until = arg.trim_prefix("--until=")
+	# tools/test.ps1 starts its QA server with TRIPOTHON_DATA_DIR set, and this process inherits it.
+	if policy_path.is_empty() and not OS.get_environment("TRIPOTHON_DATA_DIR").is_empty():
+		policy_path = OS.get_environment("TRIPOTHON_DATA_DIR").path_join("client_policy.json")
 	if policy_path.is_empty(): policy_path = ProjectSettings.globalize_path("res://../artifacts/qa-version/client_policy.json")
 	# The title asks the remembered world (a real login remembers it); --qa keeps this in the QA settings.
 	saved_world = str(I18n.setting("server", ""))

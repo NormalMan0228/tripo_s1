@@ -14,7 +14,7 @@ const I18n = preload("res://scripts/i18n.gd")
 const TARGET := "99.0.1"
 
 var failed := false
-var server := "http://127.0.0.1:8818"
+var server := "http://127.0.0.1:8766"  # tools/test.ps1 QA server
 var policy_path := ""
 var saved_world := ""
 var Patcher: GDScript
@@ -160,6 +160,9 @@ func run() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--server="): server = arg.trim_prefix("--server=").trim_suffix("/")
 		if arg.begins_with("--policy="): policy_path = arg.trim_prefix("--policy=")
+	# tools/test.ps1 starts its QA server with TRIPOTHON_DATA_DIR set, and this process inherits it.
+	if policy_path.is_empty() and not OS.get_environment("TRIPOTHON_DATA_DIR").is_empty():
+		policy_path = OS.get_environment("TRIPOTHON_DATA_DIR").path_join("client_policy.json")
 	if policy_path.is_empty(): policy_path = ProjectSettings.globalize_path("res://../artifacts/qa-patch/client_policy.json")
 	Patcher = load("res://scripts/patcher.gd")
 	PatchBoot = load("res://scripts/patch_boot.gd")
