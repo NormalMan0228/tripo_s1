@@ -124,6 +124,8 @@ class Settings:
     npc_shuffle_min: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_SHUFFLE_MIN', '14400')))
     npc_shuffle_max: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_SHUFFLE_MAX', '86400')))
     npc_seed: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_NPC_SEED', '0')))
+    # New accounts start the opening story chapter (server/story.py); off: they never see it.
+    story_enabled: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_STORY', 'on').lower() not in ('off', '0', 'false'))
     # Friendship points for hearts 1..4 (each new heart brings a letter, the fourth a return gift).
     npc_levels: tuple = field(default_factory=lambda: tuple(int(v) for v in os.getenv('TRIPOTHON_NPC_LEVELS', '30,80,160,300').split(',')))
     session_seconds: int = 12 * 60 * 60

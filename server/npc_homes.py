@@ -90,6 +90,9 @@ NPCS = {
     'fisher': {'name': '보람', 'home': '06_orange_cottage', 'personality': 'calm', 'taste': {'sea': 3, 'kitchen': 2}},
     'kid': {'name': '콩이', 'home': '06_orange_cottage', 'personality': 'playful', 'taste': {'toy': 3, 'animal': 2, 'music': 1}},
 }
+# Letter writers who do not take ordinary gifts: 모카, the café owner, writes the story chapter's
+# thank-you letter (server/story.py) and keeps its gift on the café terrace.
+SENDERS = {'regular': {'name': '모카', 'personality': 'cheerful'}}
 
 # Item tags from the piece's name and its design title/category. English words match whole-word
 # prefixes ("lamp" matches "lamps", not "clamp"); Korean words match anywhere in the text.
@@ -204,7 +207,17 @@ SLOTS = {
         ('keeper_desk', 1, 'table', 0.75, -2.2, 0.8, 0, (0.45, 0.45, 0.4), ('book', 'light', 'clock')),
     ),
 }
-SLOT_BY_ID = {home: {s['id']: s for s in slots} for home, slots in SLOTS.items()}
+# Outdoors, in village coordinates: the café '빨간 지붕' terrace beside the road, where the story
+# chapter's gift stands (server/story.py; game/scripts/story.gd draws it). No resident moves it.
+OUTDOOR_SLOTS = {
+    'cafe_terrace': _slots(
+        # On the café's front lawn by its tables, south-west of where 모카 waits (the walker comes
+        # from the road on her other side); turned a little toward the camera, so a seat and its
+        # guest show in three-quarter view.
+        ('terrace', 0, 'floor', -60.2, -27.6, 0.0, 25, (4.0, 4.0, 4.0), ()),
+    ),
+}
+SLOT_BY_ID = {home: {s['id']: s for s in slots} for home, slots in {**SLOTS, **OUTDOOR_SLOTS}.items()}
 
 
 class Gift(Mutation):
@@ -365,12 +378,13 @@ def legacy_size(conn, assets, obj, tags, shape):
     return [round(v, 3) for v in size]
 
 
-def return_gift(conn, assets, host_id, npc_id, now):
+def return_gift(conn, assets, host_id, npc_id, now, preset=None, key=None):
     """The fourth heart's present: a new piece in the player's bag, built from the resident's
-    personality preset (shared part files, written once)."""
-    npc = NPCS[npc_id]
-    preset = RETURN_GIFTS[npc['personality']]
-    asset_id = 'npc_gift_' + npc['personality'] + '_v1'
+    personality preset (shared part files, written once). The story chapter passes its own preset
+    and key (server/story.py)."""
+    npc = NPCS.get(npc_id) or SENDERS[npc_id]
+    preset = preset or RETURN_GIFTS[npc['personality']]
+    asset_id = 'npc_gift_' + (key or npc['personality']) + '_v1'
     parts = []
     for part_id, shape, size, at, color in preset['parts']:
         blob = fixture_glb(shape, False)
@@ -399,12 +413,23 @@ def return_gift(conn, assets, host_id, npc_id, now):
 
 
 def letters(conn, host_id, limit=50):
-    rows = conn.execute('SELECT l.*,o.name AS gift_name FROM npc_letters l LEFT JOIN objects o ON o.id=l.gift_object_id '
+    # A story letter (level 0 or below, server/story.py) names the piece it thanks for: the gift
+    # written down in the same moment.
+    about = 'FROM npc_gifts g WHERE l.level<=0 AND g.host_id=l.host_id AND g.npc_id=l.npc_id AND g.created=l.created ORDER BY g.rowid DESC LIMIT 1'
+    rows = conn.execute('SELECT l.*,o.name AS gift_name,(SELECT t.name ' + about.replace('FROM npc_gifts g', 'FROM npc_gifts g JOIN objects t ON t.id=g.object_id') +
+                        ') AS about_name,(SELECT g.mood ' + about + ') AS about_mood FROM npc_letters l '
+                        'LEFT JOIN objects o ON o.id=l.gift_object_id '
                         'WHERE l.host_id=? ORDER BY l.created DESC,l.level DESC LIMIT ?', (host_id, limit)).fetchall()
-    return [{'id': r['id'], 'npc': r['npc_id'], 'name': NPCS.get(r['npc_id'], {}).get('name', ''),
-             'personality': NPCS.get(r['npc_id'], {}).get('personality', 'calm'), 'level': r['level'], 'created': r['created'],
-             'read': r['read_at'] is not None,
-             'gift': {'id': r['gift_object_id'], 'name': r['gift_name']} if r['gift_object_id'] else None} for r in rows]
+    out = []
+    for r in rows:
+        who = NPCS.get(r['npc_id']) or SENDERS.get(r['npc_id'], {})
+        letter = {'id': r['id'], 'npc': r['npc_id'], 'name': who.get('name', ''), 'personality': who.get('personality', 'calm'),
+                  'level': max(r['level'], 0), 'created': r['created'], 'read': r['read_at'] is not None,
+                  'gift': {'id': r['gift_object_id'], 'name': r['gift_name']} if r['gift_object_id'] else None}
+        if r['level'] <= 0:
+            letter['story'] = {'chapter': 'first_gift', 'object': r['about_name'] or '', 'sittable': r['about_mood'] == 'love'}
+        out.append(letter)
+    return out
 
 
 def unread_letters(conn, host_id):
@@ -683,7 +708,7 @@ class NpcHomes:
         # caller is in (a visit), else the caller. ?version=N answers "unchanged" while N is current.
         @app.get('/v1/social/npc-homes/{home_id}')
         def home(home_id: str, request: Request, version: int = -1):
-            if home_id not in SLOTS:
+            if home_id not in SLOT_BY_ID:
                 fail('home_not_found', 404)
             with db.read() as conn:
                 user = auth(conn, request)

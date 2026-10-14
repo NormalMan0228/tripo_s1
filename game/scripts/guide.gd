@@ -543,8 +543,17 @@ func arrive() -> void:
 	arrived.emit(key)
 
 # ------------------------------------------------------------------ goals
+## The story chapter's module (story.gd), which names and places its own goals ("story_*").
+func chapter() -> Node:
+	for module in app.get("modules") if is_instance_valid(app) and app.get("modules") != null else []:
+		if is_instance_valid(module) and module.has_method("story_goal"): return module
+	return null
+
 ## Where an objective line (or a place) leads: {"at", "name", "key"}, or {}.
 func resolve(key: String) -> Dictionary:
+	if key.begins_with("story_"):
+		var story := chapter()
+		return story.story_goal(key) if story else {}
 	var here := walker_at()
 	match key:
 		"farm":
@@ -669,6 +678,10 @@ static func line_is(line: String, source: String) -> bool:
 	return line.length() > text.length()-2*(parts.size()-1) and line.begins_with(parts[0]) and line.ends_with(parts[parts.size()-1])
 
 func line_key(line: String) -> String:
+	var story := chapter()
+	if story:
+		var key: String = story.story_line_key(line)
+		if not key.is_empty(): return key
 	for entry in LINES:
 		if line_is(line, entry[0]): return entry[1]
 	for spot in Town.PLACES:
@@ -833,6 +846,11 @@ func draw_mark(mark: Control, row: Dictionary) -> void:
 func on_row(row: Dictionary) -> void:
 	var key := str(row.key)
 	if key.is_empty(): return
+	# A chapter line that is not a place (the craft) does its own thing.
+	var story := chapter()
+	if key.begins_with("story_") and story and story.story_row(key):
+		RpgUi.sfx("confirm", -8.0)
+		return
 	if key == str(target.get("key", "")):
 		stop(true)
 		return

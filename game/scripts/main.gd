@@ -198,7 +198,8 @@ var npcs: Array[Node3D]=[]
 ##   interact(entry: Dictionary)         E pressed on what closest() returned
 ##   leave()                             the village is about to be torn down
 ## Missing scripts are skipped, so each add-on can land on its own.
-const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd"]
+## story.gd (the opening chapter) comes before shadow_folk.gd: it holds 모카's plan before her walker is placed.
+const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/story.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd"]
 var modules: Array[Node]=[]
 var prompt_wait := 0.0
 var chosen_map := "forest"
@@ -1060,7 +1061,10 @@ func enter_village() -> void:
 	else: await life.enter()
 	player.controls_enabled = true
 	hint=RpgUi.prompt(ui,560)
-	message(tr("물결빛 마을에 오신 것을 환영해요! 다리를 건너 다섯 섬을 둘러보세요."))
+	# While the opening story chapter runs, its next step is the first word (story.gd).
+	var story := chapter()
+	var hello: String = story.welcome() if story else ""
+	message(hello if not hello.is_empty() else tr("물결빛 마을에 오신 것을 환영해요! 다리를 건너 다섯 섬을 둘러보세요."))
 	await warm_up_shaders()
 
 ## The first time the village opens in a session, draw the whole archipelago once
@@ -1370,6 +1374,9 @@ func refresh_inventory() -> void:
 	var newer: Dictionary = me.get("profile",{})
 	me = result.data
 	NpcGifts.set_versions(me.get("npc_homes"),me.get("npc_homes_host",""))
+	# The opening story chapter (story.gd) follows the server's progress.
+	var story := chapter()
+	if story: story.adopt(me.get("story"))
 	# A newer look adopted while this answer was on its way stays.
 	if int(newer.get("version",-1))>int(me.get("profile",{}).get("version",-1)): me.profile=newer
 	# Also while the village is still loading (screen "loading"): the walker built before /v1/me
@@ -1521,6 +1528,8 @@ func poll_entitlements() -> void:
 		return
 	# Residents' home versions: a house cached at this version opens without asking again.
 	NpcGifts.set_versions(result.data.get("npc_homes"),result.data.get("npc_homes_host",""))
+	var story := chapter()
+	if story: story.adopt(result.data.get("story"))
 	if objects_signature(result.data.objects)!=objects_signature(me.objects) or result.data.shards!=me.shards:
 		cancel_preview()
 		await refresh_inventory()
@@ -2768,6 +2777,9 @@ func _process(delta: float) -> void:
 			elif placed==0: objective.text=tr("첫 번째 마을 꾸미기\nI로 보관함을 열어 색을 고르고,\n환영의 의자를 놓아 보세요.")
 			else: objective.text=tr("나의 마을 · 물건 %d개 배치\n숲에서 7일을 살아남으면\n새 물건을 만들 별씨를 받아요.\n\n돌문 앞에서 E · 탐험 시작") % placed
 			if not is_instance_valid(preview) and (not life.goal.is_empty() or not me.get("active_run_summary") is Dictionary): objective.text=life.goal_text()
+			# The opening story chapter's lines come first while it runs (story.gd).
+			var story := chapter()
+			if story and not is_instance_valid(preview): objective.text=story.objective(objective.text)
 		if not is_instance_valid(preview):
 			player.controls_enabled=world_movement_allowed()
 			# The E prompt scans doors, villagers, add-ons and ~600 props; ten times a
@@ -3132,6 +3144,12 @@ func spawn_modules() -> void:
 		world.add_child(module)
 		modules.append(module)
 		if module.has_method("setup"): await module.setup(self)
+
+## The opening story chapter's module (story.gd), or null.
+func chapter() -> Node:
+	for module in modules:
+		if is_instance_valid(module) and module.has_method("story_goal"): return module
+	return null
 
 func leave_modules() -> void:
 	for module in modules:

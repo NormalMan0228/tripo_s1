@@ -34,6 +34,8 @@ const RemoteMotion=preload("res://scripts/remote_motion.gd")
 const ROOM_PRESENCE := 0.25
 const ROOM_HEARTBEAT := 3.0
 const RestSeat=preload("res://scripts/rest_seat.gd")
+## The opening story chapter at home: the welcome letter on the desk (story_home.gd).
+const StoryHome=preload("res://scripts/story_home.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
 var api: Node
@@ -233,6 +235,8 @@ var gift_pending := false
 var gift_epoch := 0
 ## Visiting a friend's village (gifts go to your own village's residents only).
 var visiting := false
+## The story chapter in the owner's home (the letter on the desk), or null.
+var story_home: Node
 
 func _ready() -> void:
 	I18n.setup()
@@ -286,6 +290,7 @@ func _ready() -> void:
 	veil.fade_in()
 	# The session's craft is told here now (any room: the home, the workshop, a friend's, a building).
 	if not api.token.is_empty(): craft_tracker()
+	show_story()
 	if public_room:
 		# Village buildings are only for looking around: no bag or editing (the craft window still opens;
 		# the finished object waits in the bag).
@@ -1509,7 +1514,17 @@ func change_room(value: String) -> void:
 	clear_selection();room=value;await build_room()
 	update_capacity()
 	place_hero_at_door()
+	show_story()
 	await reload_placed()
+
+## The story chapter's letter and goal card in the owner's own home (story_home.gd).
+func show_story() -> void:
+	if is_instance_valid(story_home): story_home.queue_free()
+	story_home=null
+	if room!="home" or public_room or not visit_host.is_empty() or visiting or api.token.is_empty(): return
+	story_home=StoryHome.new()
+	add_child(story_home)
+	story_home.setup(self)
 
 func update_capacity() -> void:
 	var capacity: Dictionary=data.get("room_usage",{}).get(room,{})
@@ -1760,6 +1775,7 @@ func nearest_decor() -> Dictionary:
 
 func use_decor(record: Dictionary) -> void:
 	last_used=record
+	if is_instance_valid(story_home) and story_home.use(record): return
 	if record.kind=="gift":
 		use_gift(record)
 		return
@@ -1852,6 +1868,7 @@ func update_hint() -> void:
 	if not who.is_empty() and npcs.has(who):
 		set_chip("E",tr("쉿, 자고 있어요") if npcs[who].state.get("asleep",false) else tr("말 걸기"))
 	elif record.has("link"): set_chip("E",(tr("▲ 계단 오르기") if up else tr("▼ 계단 내려가기")))
+	elif is_instance_valid(story_home) and not story_home.chip(record).is_empty(): set_chip("E",story_home.chip(record))
 	else: set_chip("E",tr(str(Interiors.ACTION_HINTS.get(str(Interiors.ACTIONS.get(str(record.kind),"look")),"살펴보기"))))
 
 ## The controls line; the hotbar's keys (I 가방, C 제작) are in it as in the village's slots.

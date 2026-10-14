@@ -908,13 +908,16 @@ func aim_telescope(entry: Dictionary, index: int, snap := false) -> void:
 	else: head.create_tween().tween_property(head, "rotation:y", head.rotation.y+wrapf(yaw-head.rotation.y,-PI,PI), 0.6).set_trans(Tween.TRANS_SINE)
 
 # ------------------------------------------------------------------ uses
-func use_signpost(entry: Dictionary) -> void:
+## `prefer`: the island a goal lies on (story.gd guides there); its arrow comes first.
+func use_signpost(entry: Dictionary, prefer := "") -> void:
 	play("paper", entry.root.global_position, -14.0)
 	var here: String = entry.spec.island
 	var choices := []
 	for other in objects:
 		if other.kind != "signpost" or other.spec.island == here: continue
-		choices.append([tr("%s(으)로 가기") % tr(ISLANDS[other.spec.island]), travel.bind(other)])
+		var choice := [tr("%s(으)로 가기") % tr(ISLANDS[other.spec.island]), travel.bind(other)]
+		if other.spec.island == prefer: choices.push_front(choice)
+		else: choices.append(choice)
 	choices.append([tr("그만두기"), Callable()])
 	var lines := [tr("「%s」 이정표예요. 화살표마다 다른 섬의 이름이 적혀 있어요.") % tr(ISLANDS[here]),
 		tr("어느 섬으로 갈까요? 다리를 건너지 않고 바로 이동해요.")]

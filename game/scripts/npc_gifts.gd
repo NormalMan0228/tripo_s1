@@ -123,8 +123,21 @@ static func thanks_effect(parent: Node3D, at: Vector3, app = null) -> void:
 	Fx.burst(parent,at+Vector3(0,1.7,0),"sparkle",10,Color(0,0,0,0),0.3)
 	if DisplayServer.get_name()!="headless": Fx.sound(app,"twinkle",at,1.15,-2.0)
 
+## 모카's thank-you letter that closes the story chapter (server/story.py), for a seat or for decoration.
+const STORY_LETTERS := {
+	"seat":["제작자님에게. 테라스에 놓아 준 %s, 오늘 벌써 손님 셋이 앉아 쉬다 갔어.","네가 상상한 모습 그대로 우리 마을의 일부가 되었어. 앞으로도 잘 부탁해!"],
+	"decor":["제작자님에게. 테라스에 놓아 준 %s, 지나가는 사람마다 걸음을 멈추고 구경해.","네가 상상한 모습 그대로 우리 마을의 일부가 되었어. 앞으로도 잘 부탁해!"],
+}
+
 ## One letter as dialogue pages: who and how close, the words, and the present if any.
 static func letter_lines(letter: Dictionary) -> Array:
+	if letter.get("story") is Dictionary:
+		var about: Dictionary = letter.story
+		var words: Array = STORY_LETTERS.seat if bool(about.get("sittable",false)) else STORY_LETTERS.decor
+		var page := [t("✉ %s의 편지 · 마을의 첫 선물") % t(str(letter.get("name","")))+"\n"+t(str(words[0])) % str(about.get("object","")),t(str(words[1]))]
+		var gift = letter.get("gift")
+		if gift is Dictionary: page.append(t("편지와 함께 선물이 왔어요: %s. 가방을 확인해 보세요!") % str(gift.get("name","")))
+		return page
 	var pool: Array = LETTERS.get(str(letter.get("personality","calm")),LETTERS.calm)
 	var level := clampi(int(letter.get("level",1)),1,4)
 	var lines := [t("✉ %s의 편지 · %s") % [t(str(letter.get("name",""))),hearts(level)]+"\n"+t(str(pool[level-1]))]
