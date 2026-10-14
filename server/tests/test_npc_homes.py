@@ -312,3 +312,14 @@ INSERT INTO listings VALUES ('l1','o1','u1',5,'cancelled',NULL,1.0);
         db.execute("UPDATE objects SET state='gifted' WHERE id='o1'")
         assert db.execute('PRAGMA foreign_key_check').fetchall() == []
     Database(path, 'demo')  # a second start leaves it alone
+
+
+def test_operator_view(world, capsys):
+    app, c, now = world
+    h = account(c, 'alice')
+    assert give(c, h, 'naru', craft(app, c, h, 'wooden chest')).status_code == 200
+    from server import admin_cli
+    assert admin_cli.main(['npc-homes', 'alice', '--data-dir', str(app.state.settings.data_dir)]) == 0
+    shown = json.loads(capsys.readouterr().out)
+    assert shown['items'][0]['npc_id'] == 'naru' and shown['items'][0]['state'] == 'stored'
+    assert shown['homes'][0]['home_id'] == '02_timber_house' and shown['friendship'][0]['gifts'] == 1
