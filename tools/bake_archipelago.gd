@@ -104,7 +104,7 @@ func run() -> void:
 	var library := Resource.new()
 	library.set_meta("chunks", chunks)
 	var saved := ResourceSaver.save(library, IslandBake.COLLISION, ResourceSaver.FLAG_COMPRESS)
-	var manifest := {"format": IslandBake.FORMAT, "engine": Engine.get_version_info().string, "key": IslandBake.key(),
+	var manifest := {"format": IslandBake.FORMAT, "engine": IslandBake.engine(), "key": IslandBake.key(),
 		"stamp": IslandBake.stamp(), "content_key": IslandBake.content_key(), "made": Time.get_datetime_string_from_system(true),
 		"epsilon_m": epsilon, "ground_epsilon_m": ground_epsilon, "walk_zone_m": zone, "walk_zone_epsilon_m": zone_epsilon, "chunk_tris": IslandBake.CHUNK_TRIS,
 		"collision": groups}

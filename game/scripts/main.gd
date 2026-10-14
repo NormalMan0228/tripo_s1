@@ -287,12 +287,16 @@ func _ready() -> void:
 	# Back from a room, enter_village() below builds the village (once, after the server answers).
 	if not Engine.has_meta("studio_session"):
 		# What the village needs loads on worker threads while the build goes on under the card.
-		LoadPace.want(TownLayout.resource_paths()+NpcBody.resource_paths(CAST.map(func(entry): return entry.cast))+AvatarLook.resource_paths())
+		# (The village modules' scripts too: compiled on the main thread at the first build they held
+		# frames of 30-140 ms.)
+		LoadPace.want(TownLayout.resource_paths()+NpcBody.resource_paths(CAST.map(func(entry): return entry.cast))+AvatarLook.resource_paths()+VILLAGE_MODULES)
 		await build_world(false)
 		world_audio.setup()
 		# The home is the first room after signing in: its scene reads in the background meanwhile.
 		LoadPace.want([STUDIO_SCENE])
 	if Engine.has_meta("studio_session"):
+		# Back from a room: the village modules' scripts read on a worker thread while the server answers.
+		LoadPace.want(VILLAGE_MODULES)
 		var session: Dictionary=Engine.get_meta("studio_session")
 		Engine.remove_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
@@ -319,6 +323,8 @@ func _ready() -> void:
 		if screen=="login" and title_page=="checking": login_ui("menu")
 		# This version reached its title: a downloaded patch works (patch_boot.gd stops counting).
 		PatchBoot.confirm()
+		# --log-load: when the title came (an exported game cannot run the test scripts that time it).
+		if LoadPace.log_slow: print("LOAD_TITLE %d ms after the engine started" % Time.get_ticks_msec())
 		print("[Villagen] v%s at the title (installed v%s%s)" % [Api.client_version(), PatchBoot.base_version, ", patched" if not PatchBoot.patch.is_empty() else ""])
 
 ## The shared cozy theme (fonts, parchment/night frames, buttons, fields, lists,
@@ -3114,7 +3120,8 @@ func spawn_modules() -> void:
 	for path in VILLAGE_MODULES:
 		await LoadPace.step("module "+path.get_file())
 		if not ResourceLoader.exists(path): continue
-		var script: Script=load(path)
+		# Still being read on the worker thread (LoadPace.want): it goes next and the card turns meanwhile.
+		var script: Script=(await LoadPace.fetch(path)) if LoadPace.pending(path) else load(path)
 		if script==null or not script.can_instantiate(): continue
 		var module: Node=script.new()
 		world.add_child(module)

@@ -41,7 +41,9 @@ static func signature(value) -> String:
 ## controls; the look is applied in _ready, so the default character never shows first.
 ## The walker's model and motion files, for LoadPace.want() before the first village build.
 static func resource_paths() -> Array:
-	return ["res://assets/explorer_b_reference.glb", "res://assets/explorer_b_motion.glb"]
+	# The walker wears the wardrobe model (style_character.gd): read on the main thread at its first
+	# build it held a frame for about 0.2-0.3 s.
+	return ["res://assets/explorer_b_wardrobe.glb", "res://assets/explorer_b_motion.glb", "res://assets/explorer_b_reference.glb"]
 
 static func walker(look, version := -1) -> CharacterBody3D:
 	var body: CharacterBody3D = PlayerScript.new()

@@ -49,23 +49,32 @@ static var island_disabled := "--no-island" in OS.get_cmdline_user_args()
 static var _checked := false
 static var _fresh := false
 static var _collision: Dictionary = {}
+## Running from an exported pack (scripts there are compiled and their text is not readable, the
+## assets' sources are not there): the release templates, or the editor binary with --main-pack.
+static var exported := OS.has_feature("template") or not FileAccess.file_exists("res://maps/archipelago/archipelago.gd")
+
+## The engine the bake was made with: version and source commit, not the build's name (the game's
+## IME-patched export templates call themselves "custom_build", the editor "official").
+static func engine() -> String:
+	var info := Engine.get_version_info()
+	return "%d.%d.%d.%s.%s" % [info.major, info.minor, info.patch, info.status, info.hash]
 
 ## The inputs' key: layouts, build scripts, engine version and format.
 static func key() -> String:
 	var context := HashingContext.new()
 	context.start(HashingContext.HASH_SHA256)
-	context.update(("%d|%s|" % [FORMAT, Engine.get_version_info().string]).to_utf8_buffer())
+	context.update(("%d|%s|" % [FORMAT, engine()]).to_utf8_buffer())
 	for path: String in KEY_FILES:
-		var text := FileAccess.get_file_as_string(path)
+		var text := FileAccess.get_file_as_string(path).replace("\r\n", "\n")
 		context.update((path+"|").to_utf8_buffer())
-		context.update(text.replace("\r\n", "\n").to_utf8_buffer())
+		if not text.is_empty(): context.update(text.to_utf8_buffer())
 	return context.finish().hex_encode()
 
 ## Every map asset (GLB, PNG and .import) with its modification time (source runs only; empty in
 ## exports): a re-ported or reimported asset makes the bake stale. Cheap (no file is opened).
 static func stamp() -> Dictionary:
 	var out := {}
-	if OS.has_feature("template"): return out
+	if exported: return out
 	var dirs: Array[String] = [ASSETS]
 	while not dirs.is_empty():
 		var dir: String = dirs.pop_back()
@@ -96,8 +105,8 @@ static func problem() -> String:
 	var data := manifest()
 	if data.is_empty(): return "missing"
 	if int(data.get("format", 0)) != FORMAT: return "format"
-	if String(data.get("engine", "")) != Engine.get_version_info().string: return "engine"
-	if OS.has_feature("template"): return ""
+	if String(data.get("engine", "")) != engine(): return "engine"
+	if exported: return ""
 	if String(data.get("key", "")) != key(): return "key"
 	if data.get("stamp", {}) != stamp(): return "assets"
 	return ""
