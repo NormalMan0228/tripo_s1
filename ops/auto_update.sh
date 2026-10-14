@@ -23,6 +23,8 @@ state=/var/lib/villagen
 mkdir -p "$state"
 exec 9>"$state/autoupdate.lock"
 flock -n 9 || exit 0
+# Any update already running (a manual one counting down or rebuilding): no check until it is done.
+if [ -e /var/lib/villagen/update.lock ] && ! flock -n /var/lib/villagen/update.lock true; then exit 0; fi
 stamp() { date '+%Y-%m-%d %H:%M:%S'; }
 if ! git fetch --quiet origin "$branch" 2>/dev/null; then
   # No release branch yet, or GitHub unreachable: try again next time, quietly.
