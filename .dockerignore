@@ -9,3 +9,6 @@ ops/secrets
 ops/production.env
 ops/backups
 builds
+ops/staging.env
+ops/staging-secrets
+ops/caddy-sites

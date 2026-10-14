@@ -72,17 +72,28 @@ services:
       TRIPOTHON_DOMAIN: ${TRIPOTHON_DOMAIN:?Set TRIPOTHON_DOMAIN in ops/production.env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Extra site blocks (the development server's, see ops/install_staging.sh); empty by default.
+      - ./caddy-sites:/etc/caddy/sites:ro
       - caddy_data:/data
       - caddy_config:/config
     networks:
       backend:
         ipv4_address: 172.30.72.2
+      staging:
+        ipv4_address: 172.30.73.2
 
 networks:
   backend:
     ipam:
       config:
         - subnet: 172.30.72.0/28
+  # Only the proxy and the development server (ops/compose.staging.yaml) join this one, so the
+  # development server never reaches the production API. Unused while no development server runs.
+  staging:
+    name: villagen_staging_edge
+    ipam:
+      config:
+        - subnet: 172.30.73.0/28
 
 volumes:
   game_data:

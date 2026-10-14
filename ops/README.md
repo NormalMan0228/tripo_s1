@@ -40,6 +40,8 @@ Debian 12 VM에서 `sudo apt-get update && sudo apt-get install -y git`으로 Gi
 
 API의 8765 포트는 외부에 게시하지 않는다. Caddy IP `172.30.72.2`만 프록시 헤더를 신뢰한다. 이 서브넷이 호스트 네트워크와 겹치면 **Caddy의 고정 IP, API의 고정 IP, 서브넷, `--forwarded-allow-ips`를 함께** 변경한다. Docker 볼륨의 DB와 자산은 컨테이너 재빌드에도 남는다. SQLite 작업자와 과금 작업을 여러 서버로 수평 확장하는 구성은 아니다.
 
+같은 VM의 **개발 서버**(dev 브랜치, `dev.<도메인>`)는 별도 체크아웃·Compose 프로젝트(`villagen-staging`)·볼륨으로 돌고, Caddy와는 운영 API가 없는 `villagen_staging_edge` 네트워크(172.30.73.0/28)로만 이어진다. 기본은 가짜 Tripo(`server/fake_tripo.py`, 비용 0)다. 설치와 사용: `sudo bash ops/install_staging.sh`, `sudo bash ops/staging.sh`, 문서 `docs/STAGING_SERVER_KO.txt`.
+
 ## 최초 설치
 
 1. Linux 서버에 Docker Engine/Compose를 설치하고, 도메인의 A/AAAA 레코드를 서버 IP로 연결한다. 방화벽에서는 80/TCP, 443/TCP, 필요하면 443/UDP만 공개한다. 8765는 공개하지 않는다.

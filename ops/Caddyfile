@@ -2,3 +2,7 @@
     header Strict-Transport-Security "max-age=31536000"
     reverse_proxy api:8765
 }
+
+# Extra sites, one file each (ops/caddy-sites/*.caddy, not in Git): the development server's
+# dev.<domain> block is written there by ops/install_staging.sh. No file, no extra site.
+import /etc/caddy/sites/*.caddy
