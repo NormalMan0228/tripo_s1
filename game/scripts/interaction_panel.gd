@@ -35,7 +35,19 @@ const PART_NAMES := {"body": "본체", "lid": "뚜껑", "base": "받침", "stem"
 	"second_hand": "초침", "face": "앞면", "bulb": "전구", "door": "문", "center": "가운데", "pendulum": "추", "blades": "날개",
 	"sails": "날개", "wheel": "바퀴", "drawer": "서랍", "screen": "화면", "shade": "갓", "flame": "불꽃", "cloth": "깃발 천",
 	"pole": "깃대", "frame": "틀", "tower": "탑", "dancer": "인형", "sphere": "지구", "stand": "받침대", "chimes": "방울",
-	"top": "윗부분", "box": "상자", "pot": "화분", "leaves": "잎"}
+	"top": "윗부분", "box": "상자", "pot": "화분", "leaves": "잎", "cushion": "쿠션", "footrest": "발받침", "seat": "앉는 자리",
+	"gem": "보석", "ropes": "그넷줄", "net": "그물", "backrest": "등받이", "tabletop": "상판", "quilt": "이불", "heater": "히터",
+	"book": "책", "dial": "다이얼", "coat": "외투", "mount": "고정대", "lights": "조명", "post": "기둥", "lamp_head": "전등",
+	"fire": "불", "logs": "장작", "stick": "자루", "glass": "유리", "blob": "왁스 방울", "string": "전선", "bulbs": "꼬마전구",
+	"light": "불빛", "burner": "화구", "knob": "손잡이", "handle": "레버", "water": "물", "toast": "식빵", "jar": "용기",
+	"blade": "칼날", "cauldron": "솥", "tub": "욕조", "drum": "세탁통", "speaker": "스피커", "antenna": "안테나", "record": "레코드판",
+	"tonearm": "톤암", "buttons": "버튼", "cone": "울림판", "receiver": "수화기", "element": "발열판", "louver": "바람날개",
+	"display": "표시창", "keys": "건반", "bell": "종", "tank": "수조", "fish": "물고기", "basin": "수반", "hook": "고리",
+	"picture": "그림", "rod": "커튼봉", "curtain": "커튼", "cup": "컵", "sculpture": "조각", "globe": "유리구슬", "tree": "나무",
+	"star": "별", "weight": "무게추", "balloon": "풍선", "plank": "판자", "platform": "회전판", "horse": "목마", "mat": "매트",
+	"flag": "깃발", "house": "새집", "bird": "새", "vane": "풍향판", "wall": "벽", "crank": "도르래 손잡이", "bucket": "두레박",
+	"roof": "지붕", "brew": "물약", "scarecrow": "허수아비", "tripod": "삼각대", "tube": "경통", "canvas": "캔버스", "clown": "광대",
+	"pane": "창짝", "panel": "판"}
 const MAX_PRESETS := 6
 
 var api: Node
