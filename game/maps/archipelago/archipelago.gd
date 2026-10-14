@@ -89,14 +89,15 @@ func _build_from_bake() -> bool:
 	var colliders: Array = baked.get_meta("baked_colliders", [])
 	span = LoadPace.narrow(0.7, 0.85)
 	# Each piece goes in whole (a fresh subtree enters the tree in a few ms; its nodes taken out and
-	# put in one by one cost a millisecond each), a step apart.
+	# put in one by one cost a millisecond each), a frame apart: each is first drawn (its materials
+	# set up, its meshes sent to the GPU) in a frame of its own.
 	var pieces := baked.get_children()
 	for index in pieces.size():
 		var piece: Node = pieces[index]
 		LoadPace.done(float(index)/pieces.size())
 		baked.remove_child(piece)
 		add_child(piece)
-		await LoadPace.step("baked island")
+		if LoadPace.covered: await get_tree().process_frame
 	baked.free()
 	LoadPace.mark("island in the tree")
 	LoadPace.span = span
