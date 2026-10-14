@@ -47,10 +47,16 @@ func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD
 	_seen(response[2])
 	var bytes: PackedByteArray = response[3]
 	if binary and code == 200: return {"ok": true, "bytes": bytes}
-	var data = JSON.parse_string(bytes.get_string_from_utf8())
+	var data = parse_body(bytes)
 	if not data is Dictionary: return {"ok":false,"error":"invalid_server_response"}
 	if code >= 400: return _failure(code, data)
 	return {"ok":true,"data":data}
+
+## A reply's JSON body, or null. Quietly: something else answering on the world's address (a web page,
+## a proxy's error page) is "invalid_server_response", not an engine error in the log.
+static func parse_body(bytes: PackedByteArray) -> Variant:
+	var json := JSON.new()
+	return json.data if json.parse(bytes.get_string_from_utf8()) == OK else null
 
 func post(path: String, payload: Dictionary) -> Dictionary:
 	return await request(path, payload, HTTPClient.METHOD_POST)
@@ -143,7 +149,7 @@ func _kept_request(path: String, body: String, timeout := 12.0) -> Dictionary:
 			kept.close()
 			return {"ok": false, "error": "connection_failed"}
 	kept_used = Time.get_ticks_msec()
-	var data = JSON.parse_string(bytes.get_string_from_utf8())
+	var data = parse_body(bytes)
 	if not data is Dictionary: return {"ok":false,"error":"invalid_server_response"}
 	if code >= 400: return _failure(code, data)
 	return {"ok":true,"data":data}
