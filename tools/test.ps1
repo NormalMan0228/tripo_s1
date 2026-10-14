@@ -50,9 +50,14 @@ Get-ChildItem (Join-Path $env:APPDATA 'Godot\app_userdata') -Directory -Filter '
 $taskOldData = $env:TRIPOTHON_DATA_DIR
 $taskOldMode = $env:TRIPOTHON_MODE
 $taskOldLimit = $env:TRIPO_DAILY_REQUEST_LIMIT
+$taskOldNpcMin = $env:TRIPOTHON_NPC_PLACE_MIN
+$taskOldNpcMax = $env:TRIPOTHON_NPC_PLACE_MAX
 $env:TRIPOTHON_DATA_DIR = Join-Path $taskRoot ('artifacts\qa-' + [guid]::NewGuid().ToString('N'))
 $env:TRIPOTHON_MODE = 'demo'
 $env:TRIPO_DAILY_REQUEST_LIMIT = '100'
+# Residents put gifts up within a second or two (npc_gift_check), not minutes to hours.
+$env:TRIPOTHON_NPC_PLACE_MIN = '1'
+$env:TRIPOTHON_NPC_PLACE_MAX = '2'
 try {
     $taskServerExecutable = $taskPython
     $taskServerArguments = @('-m','uvicorn','server.app:create_app','--factory','--host','127.0.0.1','--port','8766','--workers','1','--no-access-log','--no-proxy-headers')
@@ -105,4 +110,6 @@ try {
     $env:TRIPOTHON_DATA_DIR = $taskOldData
     $env:TRIPOTHON_MODE = $taskOldMode
     $env:TRIPO_DAILY_REQUEST_LIMIT = $taskOldLimit
+    $env:TRIPOTHON_NPC_PLACE_MIN = $taskOldNpcMin
+    $env:TRIPOTHON_NPC_PLACE_MAX = $taskOldNpcMax
 }

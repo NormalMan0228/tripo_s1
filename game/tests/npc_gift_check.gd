@@ -10,7 +10,7 @@ const Town = preload("res://scripts/town.gd")
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
 const HOME := "02_timber_house"
 var failed := false
-var url := "http://127.0.0.1:8816"
+var url := "http://127.0.0.1:8766"
 
 func _initialize() -> void:
 	call_deferred("run")
