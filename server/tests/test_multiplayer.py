@@ -303,3 +303,31 @@ def test_presence_expiry_and_logout_remove_visible_player(world):
     c.post('/v1/auth/logout', headers=hs[1])
     assert c.post('/v1/social/presence', headers=hs[1], json={}).status_code == 401
     assert len(c.post('/v1/social/presence', headers=hs[0], json={}).json()['village']['players']) == 1
+
+
+def test_every_view_of_a_player_carries_the_saved_look_and_its_version(world):
+    app, c, now, hs, _ = world
+    signed_in = c.post('/v1/auth/login', json={'username': 'alice', 'password': 'Test-password-123'}).json()
+    assert signed_in['profile']['version'] == 0 and signed_in['profile']['avatar']['character'] == 'explorer_b'
+    invite(c, hs[0], hs[1], 'bravo', 'village')
+
+    def alice_seen_by(h, scene='village'):
+        c.post('/v1/social/presence', headers=hs[0], json={'scene': scene})
+        players = c.post('/v1/social/presence', headers=h, json={'scene': scene}).json()['space']['players']
+        return next(p for p in players if p['username'] == 'alice')
+
+    before = alice_seen_by(hs[1])
+    assert before['avatar_version'] == 0 and before['avatar']['character'] == 'explorer_b'
+    look = dict(before['avatar'], character='ranger', coat='#2f5f9e', headwear='cap', backpack=False)
+    assert post(c, hs[0], '/v1/profile', version=0, avatar=look)['version'] == 1
+    for scene in ('village', 'home'):
+        after = alice_seen_by(hs[1], scene)
+        assert after['avatar_version'] == 1 and after['avatar'] == look
+    # A co-op run started in the old look shows the look saved since.
+    c.post('/v1/social/home', headers=hs[1], json=mutation())
+    run_id = prepare_party(c, hs, 2)
+    newer = dict(look, coat='#6889a1', headwear='beret')
+    assert post(c, hs[0], '/v1/profile', version=1, avatar=newer)['version'] == 2
+    seen = c.get('/v1/coop/runs/'+run_id, headers=hs[1]).json()['players']
+    alice = next(p for p in seen if p['username'] == 'alice')
+    assert alice['avatar_version'] == 2 and alice['avatar'] == newer

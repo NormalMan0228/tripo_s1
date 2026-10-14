@@ -114,12 +114,24 @@ class Multiplayer:
             return dict(self_id=user['id'], host_id=host, host_name=host_name, visiting=host != user['id'],
                         party=party_public(conn, user['id']), invites=invites, pending_rewards=pending, messages=messages)
 
+        def look(conn, user_id):
+            # Every place that draws another player reads the saved look and its version; clients
+            # rebuild a body only when avatar_version changes.
+            saved = profile(conn, user_id)
+            return {'avatar': saved['avatar'], 'avatar_version': saved['version']}
+
+        def live_looks(conn, data):
+            # A co-op run stores each look as it was at the start; the answer shows the look saved now.
+            for player in data['players']:
+                player.update(look(conn, player['id']))
+            return data
+
         def village(conn, user, scene='village'):
             host = host_for(conn, user['id'])
             objects = [object_shape.listed(dict(r)) for r in conn.execute("SELECT o.id,o.name,o.color,o.version,o.state,o.x,o.z,o.rotation,COALESCE(l.room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE asset_id=o.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=o.id) AS runtime_version," + object_paint.version_column('o.id') + " AS paint_version," + object_shape.column('o.id') + " AS shape FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village')=? ORDER BY o.id", (host, scene))]
             players = []
             for row in conn.execute("SELECT p.*,u.username FROM mp_presence p JOIN users u ON u.id=p.user_id WHERE p.host_id=? AND p.scene=? AND p.seen>? AND (p.user_id=? OR EXISTS(SELECT 1 FROM mp_visits v WHERE v.user_id=p.user_id AND v.host_id=? AND v.expires>?))", (host, scene, clock()-coop.PRESENCE_SECONDS, host, host, clock())):
-                players.append(dict(id=row['user_id'], username=row['username'], x=row['x'], z=row['z'], y=row['y'], yaw=row['yaw'], avatar=profile(conn, row['user_id'])['avatar']))
+                players.append(dict(id=row['user_id'], username=row['username'], x=row['x'], z=row['z'], y=row['y'], yaw=row['yaw'], **look(conn, row['user_id'])))
             row = conn.execute('SELECT state FROM homesteads WHERE user_id=?', (host,)).fetchone()
             life = homestead.public(json.loads(row[0]) if row else homestead.initial(), clock())
             # Visitors can see crops, not the host's private inventory or fishing outcome.
@@ -303,7 +315,7 @@ class Multiplayer:
                 row, state = owned_run(conn, user['id'], run_id)
                 coop.advance(state, clock())
                 save(conn, run_id, state)
-                return {**coop.public(state, user['id'], clock()), 'id': run_id, 'claimed': bool(row['claimed'])}
+                return {**live_looks(conn, coop.public(state, user['id'], clock())), 'id': run_id, 'claimed': bool(row['claimed'])}
 
         @app.post('/v1/coop/runs/{run_id}/input')
         def input_run(run_id: str, body: Input, request: Request):
@@ -317,7 +329,7 @@ class Multiplayer:
                     fail('stale_input')
                 coop.apply_input(state, user['id'], body, clock())
                 save(conn, run_id, state)
-                return {**coop.public(state, user['id'], clock()), 'id': run_id, 'claimed': bool(row['claimed'])}
+                return {**live_looks(conn, coop.public(state, user['id'], clock())), 'id': run_id, 'claimed': bool(row['claimed'])}
 
         @app.post('/v1/coop/runs/{run_id}/abandon')
         def abandon(run_id: str, body: Mutation, request: Request):

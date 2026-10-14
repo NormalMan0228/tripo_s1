@@ -72,7 +72,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         conn.execute('DELETE FROM sessions WHERE user_id=? AND token_hash NOT IN (SELECT token_hash FROM sessions '
                      'WHERE user_id=? ORDER BY expires DESC,rowid DESC LIMIT ?)',(user_id,user_id,MAX_SESSIONS_PER_USER))
         role = conn.execute('SELECT role FROM users WHERE id=?',(user_id,)).fetchone()[0]
-        return {'token':token,'mode':settings.mode,'role':role}
+        # The saved look comes with the sign-in so the first walker the client draws already wears it.
+        return {'token':token,'mode':settings.mode,'role':role,'profile':profile(conn,user_id)}
 
     def money(conn,user_id,amount,reason,reference):
         conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',(uid(),user_id,amount,reason,reference,clock()))
