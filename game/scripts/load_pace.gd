@@ -23,8 +23,9 @@ static var frame_from := 0
 static var queue: Array[String] = []
 static var loading: Array[String] = []
 static var held: Dictionary = {}
-## --load-threads=N: loads in flight (default 2).
-static var max_loads := _arg_int("--load-threads=", 2)
+## --load-threads=N: loads in flight (default 2; 1 without a window: the headless renderer's
+## texture storage is not safe for two loads making textures at once).
+static var max_loads := _arg_int("--load-threads=", 2 if DisplayServer.get_name() != "headless" else 1)
 ## The progress shown (0..1, < 0 for none) and the share of it the current stage reports into.
 static var shown := -1.0
 static var span := Vector2(0.0, 1.0)

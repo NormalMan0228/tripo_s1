@@ -232,7 +232,8 @@ func _register_prop_lod(mesh: MeshInstance3D,ident: String) -> void:
 	lod_entries.append({"node":mesh,"high":mesh.mesh,"low":lod_meshes[ident],"low_active":false,"limits":limits,"size":maxf(extent.x,maxf(extent.y,extent.z))*maxf(scale.x,maxf(scale.y,scale.z))})
 
 func _update_prop_lods() -> void:
-	if host.camera == null:
+	# (The baked island's props are in the tree a few frames before restore() names their host.)
+	if not is_instance_valid(host) or host.camera == null:
 		return
 	var camera := host.camera as Camera3D
 	var view := camera.global_transform.affine_inverse()
