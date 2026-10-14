@@ -66,7 +66,7 @@ func run() -> void:
 	app.function_fields[0].value=.5
 	await app.invoke_generated()
 	check(app.function_result.text.contains("-47.5"),"generated function remains callable after remote binding refresh")
-	var tabs=app.find_children("*","TabContainer",true,false);tabs[0].current_tab=2
+	var tabs=app.find_children("*","TabContainer",true,false);tabs[0].current_tab=1 # 동작 코드
 	if "--capture" in OS.get_cmdline_user_args():
 		await RenderingServer.frame_post_draw;root.get_texture().get_image().save_png("res://../artifacts/generated-controls.png")
 	print("STUDIO_SYNC ",JSON.stringify({"ok":failures.is_empty(),"failures":failures}))

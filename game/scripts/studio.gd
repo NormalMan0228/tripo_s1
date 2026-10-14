@@ -20,6 +20,9 @@ const DayFolk=preload("res://scripts/day_folk.gd")
 const GameSettings=preload("res://scripts/game_settings.gd")
 const PauseMenu=preload("res://scripts/pause_menu.gd")
 const CraftPanel=preload("res://scripts/craft_panel.gd")
+const CraftWindow=preload("res://scripts/craft_window.gd")
+const CraftTracker=preload("res://scripts/craft_tracker.gd")
+const CraftWords=preload("res://scripts/craft_words.gd")
 const Fx=preload("res://scripts/fx.gd")
 const NpcGifts=preload("res://scripts/npc_gifts.gd")
 const AvatarLook=preload("res://scripts/avatar_look.gd")
@@ -54,17 +57,28 @@ var status_label: Label
 var wallet: Label
 var detail: Label
 var room_capacity: Label
-## The shared craft window (craft_panel.gd), the same one the village opens with C.
-var craft: CraftPanel
-## The craft window's controls, kept under their old names for tests and tools.
-var prompt: TextEdit
-var surface_mode: OptionButton
-var motion: OptionButton
-var designer: OptionButton
-var geometry: OptionButton
-var models: OptionButton
-var efforts: OptionButton
-var mesh_models: OptionButton
+## The one craft window (craft_window.gd), the same the village opens with C, while it is open here.
+var craft_window: Control
+## Its form and craft view (null while the window is closed).
+var craft: CraftPanel:
+	get: return craft_window.panel if is_instance_valid(craft_window) else null
+## The craft window's controls under their old names for tests and tools (they open the window).
+var prompt: TextEdit:
+	get: return craft_panel().prompt
+var surface_mode: OptionButton:
+	get: return craft_panel().surface
+var motion: OptionButton:
+	get: return craft_panel().motion
+var designer: OptionButton:
+	get: return craft_panel().designer
+var geometry: OptionButton:
+	get: return craft_panel().geometry
+var models: OptionButton:
+	get: return craft_panel().models
+var efforts: OptionButton:
+	get: return craft_panel().efforts
+var mesh_models: OptionButton:
+	get: return craft_panel().mesh_model
 var part_choice: OptionButton
 var code_view: CodeEdit
 var data: Dictionary={}
@@ -102,9 +116,11 @@ var pending := false
 var epoch := 0
 var selection_epoch := 0
 var placement_epoch := 0
-## The craft under way (the craft window keeps it).
+## The session's craft under way (craft_tracker.gd follows it here, in other rooms and outside).
 var job_id: String:
-	get: return craft.job_id if craft else ""
+	get:
+		var tracker := craft_tracker()
+		return tracker.job_id if tracker else ""
 var refreshing := false
 var auth_time := 0.0
 var orbit := 0.0
@@ -166,7 +182,6 @@ var travel_enabled := true
 var sfx_player: AudioStreamPlayer
 ## Server per-craft Tripo credit cap (0 = none), from /v1/studio.
 var craft_cap := 0
-var craft_opened := false
 var place_label: Label
 var current_room := -1
 var cam_distance := 9.0
@@ -186,7 +201,9 @@ var toast_panel: PanelContainer
 var toast_tween: Tween
 var hint_chip: PanelContainer
 var hint_key: Label
+## The hotbar slots, as in the village: 가방 (I) opens the dock, 제작 (C) the craft window.
 var dock_toggle: Button
+var craft_slot: Button
 var leave_button: Button
 ## The last piece of furniture used (tests read it).
 var last_used: Dictionary={}
@@ -267,9 +284,12 @@ func _ready() -> void:
 	set_process(true);set_process_unhandled_key_input(true)
 	LoadPace.done(1.0)
 	veil.fade_in()
+	# The session's craft is told here now (any room: the home, the workshop, a friend's, a building).
+	if not api.token.is_empty(): craft_tracker()
 	if public_room:
-		# Village buildings are only for looking around: no inventory, crafting or editing.
-		dock_panel.visible=false;dock_toggle.visible=false
+		# Village buildings are only for looking around: no bag or editing (the craft window still opens;
+		# the finished object waits in the bag).
+		dock_panel.visible=false;RpgUi.show_slot(dock_toggle,false)
 		for b in room_buttons: b.visible=false
 		message(tr(str(room_spec.flavour)))
 		if not api.token.is_empty():
@@ -277,8 +297,8 @@ func _ready() -> void:
 			refresh_gifts()
 		return
 	if not visit_host.is_empty():
-		# Visitors only look around: no inventory, crafting, room switching or editing.
-		dock_panel.visible=false;dock_toggle.visible=false
+		# Visitors only look around: no bag, room switching or editing (crafting goes on as anywhere).
+		dock_panel.visible=false;RpgUi.show_slot(dock_toggle,false)
 		for b in room_buttons: b.visible=false
 		message(tr("%s님의 집에 놀러 왔어요. 가구는 구경만 할 수 있어요.") % visit_name)
 	if api.token.is_empty():
@@ -463,26 +483,19 @@ func build_ui() -> void:
 	place_button=button(confirm_row,tr("여기에 놓기"),commit_place);place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	button(confirm_row,tr("취소"),cancel_placement)
 	await LoadPace.step("room drawer")
-	# Right: the crafting and decorating drawer, opened from a hotbar-style slot.
+	# Right: the bag and decorating drawer (the village's 가방, I).
 	var dock := PanelContainer.new();dock_panel=dock;dock.name="Dock"
 	dock.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
 	dock.set_anchors_preset(Control.PRESET_RIGHT_WIDE);dock.grow_horizontal=Control.GROW_DIRECTION_BEGIN
 	dock.offset_left=-412;dock.offset_right=-14;dock.offset_top=14;dock.offset_bottom=-112
 	add_child(dock)
-	dock_toggle=Button.new();dock_toggle.name="DockToggle";dock_toggle.custom_minimum_size=Vector2(78,78);dock_toggle.focus_mode=Control.FOCUS_NONE
-	RpgUi.name_tip(dock_toggle,tr("제작"),"C")
-	for state in ["normal","hover","pressed"]:
-		dock_toggle.add_theme_stylebox_override(state,RpgUi.frame({"normal":"slot_night","hover":"slot_night_hover","pressed":"slot_night_pressed"}[state]))
-	RpgUi.hover_motion(dock_toggle,1.08,Vector2(0.5,1.0))
-	dock_toggle.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT);dock_toggle.grow_horizontal=Control.GROW_DIRECTION_BEGIN;dock_toggle.grow_vertical=Control.GROW_DIRECTION_BEGIN
-	dock_toggle.offset_left=-96;dock_toggle.offset_right=-18;dock_toggle.offset_top=-96;dock_toggle.offset_bottom=-18
-	add_child(dock_toggle)
-	var slot := VBoxContainer.new();slot.alignment=BoxContainer.ALIGNMENT_CENTER;slot.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	slot.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);slot.add_theme_constant_override("separation",0);dock_toggle.add_child(slot)
-	var art := RpgUi.icon("res://assets/ui/craft.svg",38);art.size_flags_horizontal=Control.SIZE_SHRINK_CENTER;slot.add_child(art)
-	var caption := RpgUi.label(slot,tr("제작"),12);caption.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;caption.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	var toggle_cap := key_cap(dock_toggle,"C");toggle_cap.position=Vector2(-6,-8)
-	dock_toggle.pressed.connect(func(): set_dock_open(not dock_panel.visible))
+	# Bottom centre: the village's hotbar slots for what rooms have, with the same icons and keys.
+	var hud := Control.new();hud.name="Hotbar";hud.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);hud.theme=RpgUi.theme();add_child(hud)
+	var bar := RpgUi.hotbar(hud,[{"icon":"res://assets/ui/bag.svg","key":"I","label":tr("가방"),"call":func(): set_dock_open(not dock_panel.visible)},
+		{"icon":"res://assets/ui/craft.svg","key":"C","label":tr("제작"),"call":func(): open_craft()}],700)
+	dock_toggle=bar.get_child(0);dock_toggle.name="DockToggle"
+	craft_slot=bar.get_child(1);craft_slot.name="CraftSlot"
 	var box := VBoxContainer.new();dock.add_child(box)
 	wallet=RpgUi.label(box,tr("나의 공방"),18,RpgUi.GOLD)
 	var tabs := TabContainer.new();tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL;box.add_child(tabs)
@@ -503,14 +516,7 @@ func build_ui() -> void:
 	tab_bar.add_theme_color_override("font_hovered_color",Color("ffe08a"))
 	tabs.add_theme_color_override("font_selected_color",Color("ffe08a"))
 	tabs.add_theme_color_override("font_unselected_color",RpgUi.INK)
-	var create_scroll := ScrollContainer.new();create_scroll.name=tr("만들기");tabs.add_child(create_scroll);create_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
-	var create := VBoxContainer.new();create.size_flags_horizontal=Control.SIZE_EXPAND_FILL;create.add_theme_constant_override("separation",10);create_scroll.add_child(create)
-	craft=CraftPanel.new();craft.name="CraftPanel";create.add_child(craft)
-	craft.setup(api,{"say":func(value: String): message(value),"explain":studio_error,"place_label":tr("이 방에 놓기"),"place":place_crafted,"preview":show_design,"dark":true})
-	craft.job_finished.connect(func(_job: Dictionary): refresh())
-	craft.job_started.connect(func(_id: String): refresh())
-	prompt=craft.prompt;surface_mode=craft.surface;motion=craft.motion;designer=craft.designer;geometry=craft.geometry
-	models=craft.models;efforts=craft.efforts;mesh_models=craft.mesh_model
+	# Crafting is the craft window (C), the same as the village's; the drawer keeps the bag.
 	var own := VBoxContainer.new();own.name=tr("보관함");tabs.add_child(own)
 	label(own,tr("내가 만든 작은 세계"),19)
 	room_capacity=label(own,tr("배치한 가구를 확인하고 있어요"),12)
@@ -544,6 +550,8 @@ func build_ui() -> void:
 	var custom_color := ColorPickerButton.new();custom_color.text=tr("직접 색 고르기");custom_color.edit_alpha=false;custom_color.color=Color("dfa958");custom_color.size_flags_horizontal=Control.SIZE_EXPAND_FILL;custom_row.add_child(custom_color)
 	custom_color.popup_closed.connect(func():await paint("#"+custom_color.color.to_html(false)))
 	button(custom_row,tr("원래 색 복원"),func():await paint("#ffffff",true))
+	# The same call to craft as the village bag's.
+	var craft_entry := button(own,tr("C · 새 물건 제작 의뢰"),func(): open_craft());craft_entry.theme_type_variation="GoldButton"
 	button(own,tr("새로고침"),refresh)
 	var source := VBoxContainer.new();source.name=tr("동작 코드");tabs.add_child(source)
 	label(source,tr("생성된 조작 함수와 이벤트"),18)
@@ -582,13 +590,14 @@ func build_ui() -> void:
 	history_detail=label(history,tr("기록을 선택하면 예약·확정 별씨와 확인된 Tripo 비용을 볼 수 있어요."),13)
 	button(history,tr("이 설계의 도형 미리보기"),func():await show_design(history_selected))
 	button(history,tr("기록 새로고침"),refresh)
+	# Tabs: 0 보관함, then (developer builds) 1 동작 코드, 2 부품 맞춤, 3 제작 기록.
 	tabs.tab_changed.connect(func(index: int):
-		if index==0 or index==4:return
-		var target: Control=own if index==1 else (source if index==2 else fit)
+		if index==3:return
+		var target: Control=own if index==0 else (source if index==1 else fit)
 		preview_view.reparent(target)
-		target.move_child(preview_view,1 if index==1 else 2))
+		target.move_child(preview_view,1 if index==0 else 2))
 	if not BuildMode.developer():
-		for index in [2,3,4]: tabs.set_tab_hidden(index,true)
+		for index in [1,2,3]: tabs.set_tab_hidden(index,true)
 
 func message(value: String, toast := true) -> void:
 	# Maintenance or a too-old game: the gate's one screen speaks instead of scattered errors.
@@ -923,12 +932,11 @@ func refresh() -> void:
 	data=response.data
 	wallet.text=tr("별씨 %d")%data.shards
 	if BuildMode.developer(): wallet.text+="  ·  "+(tr("Tripo 실제 생성 가능") if data.geometry_enabled else (tr("개발 공방") if data.llm!="openai" else tr("온라인 공방")))
-	# The craft window opens its options by the server's per-craft cap and setup.
+	# The craft window opens on this at once (its options follow the server's per-craft cap and
+	# setup), and a craft still under way is followed again.
 	craft_cap=int(data.get("max_tripo_credits",0))
-	if not craft_opened:
-		craft_opened=true
-		craft.open(data)
-	else:craft.apply_info(data)
+	var tracker := craft_tracker()
+	if tracker: tracker.adopt(data)
 	wear_profile(data.get("profile",{}))
 	update_capacity()
 	history_list.clear()
@@ -1250,37 +1258,70 @@ func invoke_generated() -> void:
 		function_result.text=tr("반환값: ")+str(reply.data.result)+tr(" · 명령 %d개")%reply.data.commands.size()
 	else:function_result.text=reply.error
 
+# ------------------------------------------------------------------ crafting (craft_window.gd)
+
+## The session's craft follower, with this room as the place that speaks (null before signing in).
+func craft_tracker() -> Node:
+	var tracker := CraftTracker.of(api)
+	if tracker and not is_queued_for_deletion() and tracker.host!=self: tracker.attach(self)
+	return tracker
+
+## C or the 제작 slot: the same craft window as the village's, in every room.
+func open_craft() -> void:
+	if api.token.is_empty() or leaving or VersionGate.is_blocked() or is_instance_valid(craft_window): return
+	if placement_mode: cancel_placement()
+	if is_instance_valid(talk_box): close_talk()
+	if is_instance_valid(shape_panel): shape_panel.close()
+	craft_window=CraftWindow.new()
+	craft_window.setup(self,api)
+	add_child(craft_window)
+	await craft_window.open()
+
+## The open craft window's form; opens the window first when it is closed (tests and tools).
+func craft_panel() -> CraftPanel:
+	if not is_instance_valid(craft_window): open_craft()
+	return craft
+
+func close_craft() -> void:
+	if not is_instance_valid(craft_window): return
+	RpgUi.sfx("close",-10.0)
+	remove_child(craft_window)
+	craft_window.queue_free()
+	craft_window=null
+
+func craft_say(words: String) -> void:
+	message(words)
+
+func craft_bag_changed() -> void:
+	refresh()
+
+## Finished crafts go down in the player's own home and workshop.
+func craft_place_block() -> String:
+	if public_room: return CraftWords.place_block("public")
+	if not visit_host.is_empty(): return CraftWords.place_block("visit")
+	return ""
+
+func craft_place(object_id: String) -> void:
+	await place_crafted(object_id)
+
 func generate() -> void:
-	await craft.request()
+	await craft_panel().request()
 
 func poll_job() -> void:
-	await craft.follow()
-
-## The same player-facing wording the village craft window uses (main.gd error_message).
-func studio_error(code: String) -> String:
-	var over_cap := tr("이 조합은 1회 제작 한도(%d크레딧)를 넘어요. 옵션을 줄이거나 운영자에게 한도를 물어보세요.") % craft_cap
-	var messages := {"craft_over_trial_limit":over_cap if craft_cap>=20 else tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요."),
-		"tripo_budget_exhausted":tr("이번 학기 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요."),
-		"user_total_generation_limit":tr("이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!"),
-		"user_daily_generation_limit":tr("오늘 맡길 수 있는 제작을 모두 썼어요. 내일 다시 찾아와 주세요."),
-		"daily_generation_limit":tr("오늘 생성 한도에 도달했습니다."),
-		"provider_busy":tr("공방 장인이 다른 의뢰를 만들고 있어요. 조금 뒤에 다시 맡겨 주세요."),
-		"generation_pending":tr("진행 중인 생성이 있습니다."),
-		"insufficient_shards":tr("별씨가 부족합니다. 생존 도전을 완료해 보세요."),
-		"live_generation_disabled":tr("공방 장인이 아직 자리를 비웠어요."),
-		"insufficient_provider_credit":tr("지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요.")}
-	# The server words this refusal for released room clients; it is already a sentence.
-	if code.contains(" "): return code
-	return str(messages.get(code,tr("생성을 시작하지 못했어요 · ")+code))
+	var tracker := craft_tracker()
+	if tracker: await tracker.follow()
 
 func confirm_job() -> void:
-	await craft.confirm(true)
+	await craft_panel().confirm(true)
 
 func cancel_job() -> void:
-	await craft.cancel()
+	await craft_panel().cancel()
 
-## The craft window's "이 방에 놓기": pick the new object and start placing it here.
+## "여기에 놓기" in a room: pick the new object and start placing it here.
 func place_crafted(object_id: String) -> void:
+	var tracker := craft_tracker()
+	if tracker: tracker.clear_done()
+	close_craft()
 	for attempt in 2:
 		for i in data.get("objects",[]).size():
 			if data.objects[i].id==object_id:
@@ -1385,14 +1426,9 @@ func select_history(index: int) -> void:
 func preview_design() -> void:
 	await show_design(job_id)
 
+## The design as moving shapes (the history tab; the craft window has the same button).
 func show_design(id: String) -> void:
-	if id.is_empty():return
-	var response: Dictionary=await api.request("/v1/studio/jobs/"+id+"/preview")
-	if not response.ok:message(tr("설계 미리보기 실패 · ")+response.error);return
-	var window=load("res://scripts/design_preview.gd").new()
-	add_child(window)
-	if window.show_plan(response.data):window.popup_centered()
-	else:window.queue_free();message(tr("설계를 표시하지 못했습니다"))
+	await CraftPanel.preview_design(api,id,self,message)
 
 func preview_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and event.button_mask&MOUSE_BUTTON_MASK_LEFT and is_instance_valid(inspected):
@@ -1572,6 +1608,7 @@ func _notification(what: int) -> void:
 ## Maintenance began or the server ended the session (version_gate.gd): to the title, no session.
 func logged_out(_reason: String) -> void:
 	if api.token.is_empty(): return
+	CraftTracker.end(api)
 	api.token=""
 	leaving=true
 	var cloud := get_node_or_null("/root/CloudPrefs")
@@ -1618,6 +1655,12 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				if talk_page>=talk_lines.size()-1 and index<talk_choices.size(): pick_talk(talk_choices[index])
 		get_viewport().set_input_as_handled()
 		return
+	# The craft window takes the keys while open; Esc closes it (also while typing), as in the village.
+	if is_instance_valid(craft_window):
+		if event.physical_keycode==KEY_ESCAPE:
+			close_craft()
+			get_viewport().set_input_as_handled()
+		return
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit:return
 	if event.physical_keycode==KEY_ESCAPE:
@@ -1625,7 +1668,11 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		elif not resting.is_empty(): stand_up()
 		elif is_instance_valid(dock_panel) and dock_panel.visible: set_dock_open(false)
 		else: PauseMenu.open(self)
-	if key==KEY_C and is_instance_valid(dock_toggle) and dock_toggle.visible:
+	# The village's keys: C the craft window, I the bag (here the drawer with the bag).
+	if key==KEY_C:
+		open_craft()
+		return
+	if key==KEY_I and is_instance_valid(dock_toggle) and dock_toggle.visible:
 		set_dock_open(not dock_panel.visible)
 	if key==KEY_E:
 		if not resting.is_empty():stand_up()
@@ -1807,9 +1854,10 @@ func update_hint() -> void:
 	elif record.has("link"): set_chip("E",(tr("▲ 계단 오르기") if up else tr("▼ 계단 내려가기")))
 	else: set_chip("E",tr(str(Interiors.ACTION_HINTS.get(str(Interiors.ACTIONS.get(str(record.kind),"look")),"살펴보기"))))
 
+## The controls line; the hotbar's keys (I 가방, C 제작) are in it as in the village's slots.
 func default_hint() -> String:
-	if public_room or not visit_host.is_empty(): return tr("WASD 이동   E 살펴보기")
-	return tr("WASD 이동   E 상호작용   R 회전   Esc 취소")
+	if public_room or not visit_host.is_empty(): return tr("WASD 이동   E 살펴보기") + "   " + tr("C 제작")
+	return tr("WASD 이동   E 상호작용   R 회전   Esc 취소") + "   " + tr("I 가방   C 제작")
 
 func set_chip(key: String, text: String) -> void:
 	if not is_instance_valid(hint_chip): return
@@ -1825,7 +1873,8 @@ func set_chip(key: String, text: String) -> void:
 	hint_chip.reset_size()
 	var chip: Vector2=hint_chip.get_combined_minimum_size()
 	hint_chip.offset_left=-chip.x*0.5;hint_chip.offset_right=chip.x*0.5
-	hint_chip.offset_top=-chip.y-28;hint_chip.offset_bottom=-28
+	# Just above the hotbar (its tray tops out 94 px above the bottom on the design canvas).
+	hint_chip.offset_top=-chip.y-106;hint_chip.offset_bottom=-106
 
 ## Camera framing: in front of the open front edge, above the door side, framing
 ## the room the walker is in (closer than outside); distance follows that room.
@@ -1945,7 +1994,7 @@ func _process(delta: float) -> void:
 	if cue_time>3.5:cue_time=0;resident_cues()
 	if leaving:
 		walk_out_step(delta)
-	elif not placement_mode and not travelling and not is_instance_valid(talk_box) and not PauseMenu.is_open() and not VersionGate.is_blocked():
+	elif not placement_mode and not travelling and not is_instance_valid(talk_box) and not is_instance_valid(craft_window) and not PauseMenu.is_open() and not VersionGate.is_blocked():
 		var focus := get_viewport().gui_get_focus_owner()
 		if not (focus is TextEdit or focus is LineEdit) and not is_instance_valid(painter) and not is_instance_valid(interaction_panel):walk(delta)
 	update_camera(delta)

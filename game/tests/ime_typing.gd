@@ -254,10 +254,9 @@ func run() -> void:
 	Engine.set_meta("studio_session", {"token": token, "url": url, "room": "home"})
 	var studio: Node = load("res://scenes/studio.tscn").instantiate()
 	root.add_child(studio)
-	if await wait_until(func(): return is_instance_valid(studio.craft) and studio.craft_opened, 30.0):
-		studio.set_dock_open(true)
-		var tabs := studio.craft.get_parent().get_parent().get_parent() as TabContainer
-		if tabs: tabs.current_tab = studio.craft.get_parent().get_parent().get_index()
+	if await wait_until(func(): return not studio.data.is_empty(), 30.0):
+		# The room's C opens the same craft window as the village's.
+		await studio.open_craft()
 		await create_timer(0.4).timeout
 		during = func(): studio.refresh()
 		await typed(studio.craft.prompt, "dhfmrhf. tkdwk ", "오르골 상자 ", "room craft prompt")

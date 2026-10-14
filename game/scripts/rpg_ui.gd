@@ -415,12 +415,16 @@ static func pop_in(c: Control, duration := 0.24, from_scale := 0.94) -> void:
 	if calm(): return
 	c.modulate.a = 0.0
 	c.scale = Vector2.ONE * from_scale
+	# Held weakly: a view replaced in the same frame (a window opened on a known state and changed
+	# at once) is gone before the deferred start.
+	var held: WeakRef = weakref(c)
 	var start := func() -> void:
-		if not is_instance_valid(c) or not c.is_inside_tree(): return
-		c.pivot_offset = c.size * 0.5
-		var tw := c.create_tween().set_parallel(true)
-		tw.tween_property(c, "scale", Vector2.ONE, duration).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		tw.tween_property(c, "modulate:a", 1.0, duration * 0.7).set_trans(Tween.TRANS_SINE)
+		var node: Control = held.get_ref()
+		if node == null or not node.is_inside_tree(): return
+		node.pivot_offset = node.size * 0.5
+		var tw := node.create_tween().set_parallel(true)
+		tw.tween_property(node, "scale", Vector2.ONE, duration).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(node, "modulate:a", 1.0, duration * 0.7).set_trans(Tween.TRANS_SINE)
 	start.call_deferred()
 
 ## Slide from an offset while fading in (toasts, drawers).
@@ -734,8 +738,26 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 		b.pressed.connect(slot.call)
 		hover_motion(b, 1.08, Vector2(0.5, 1.0))
 		bar.add_child(b)
+	bar.set_meta("tray", tray)
+	bar.set_meta("tray_top", y + 6)
 	if not fold_id.is_empty(): fold_dock(ui, fold_id, [tray, bar], 640.0 + width * 0.5, y + 6 + (SLOT + 8) * 0.5)
 	return bar
+
+## Shows or hides one hotbar slot (a room a visitor only looks around has no bag); the tray fits
+## the slots left.
+static func show_slot(slot: Control, shown: bool) -> void:
+	slot.visible = shown
+	var bar := slot.get_parent()
+	if bar == null or not bar.has_meta("tray"): return
+	var tray: Control = bar.get_meta("tray")
+	if not is_instance_valid(tray): return
+	var count := 0
+	for child in bar.get_children():
+		if child is Control and (child as Control).visible: count += 1
+	var fitted := maxf(count, 1) * 80.0 - 10.0 + 36.0
+	tray.custom_minimum_size = Vector2(fitted, tray.custom_minimum_size.y)
+	tray.size = tray.custom_minimum_size
+	pin(tray, 0.5, 1.0, Vector2(640.0 - fitted * 0.5, float(bar.get_meta("tray_top"))))
 
 ## Floating interaction chip above the hotbar; hidden while empty. The leading
 ## "E  " of the text is drawn as a key cap.

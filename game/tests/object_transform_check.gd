@@ -222,7 +222,7 @@ func run() -> void:
 	if index < 0: finish(); return
 	home.set_dock_open(true)
 	var tabs: TabContainer = home.find_children("*", "TabContainer", true, false)[0]
-	tabs.current_tab = 1
+	tabs.current_tab = 0 # 보관함
 	await home.select_item(index)
 	home.open_shape_panel()
 	panel = home.shape_panel
