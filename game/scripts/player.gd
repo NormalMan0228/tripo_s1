@@ -39,6 +39,13 @@ var sprinting := false
 var action_facing := Vector3.ZERO
 var facing_until := 0.0
 var avatar: Dictionary={}
+## The profile version of the look on this body (avatar_look.gd wear()); -1 when unknown.
+var look_version := -1
+## How many times the character was built, for checks that a look is not rebuilt on every poll.
+var look_builds := 0
+## Character models stay loaded once used: a model nothing showed any more was read from disk
+## again (about 0.3 s) at the next change of look, in the wardrobe preview at every click.
+static var models := {}
 var action_until := 0.0
 var tool_grip := Basis.IDENTITY
 var ambient_clip := "idle"
@@ -74,6 +81,7 @@ func _ready() -> void:
 	add_child(visual)
 	_build_explorer()
 	apply_colors()
+	look_builds+=1
 	visual.rotation.y=PI
 	return
 
@@ -128,7 +136,8 @@ func _build_explorer() -> void:
 	# Authored fallback remains playable if the optional Scenario model is unavailable.
 	var hero_path: String="res://assets/"+str(avatar.get("character","explorer"))+".glb"
 	if ResourceLoader.exists(hero_path):
-		var packed := load(hero_path) as PackedScene
+		if not models.has(hero_path): models[hero_path]=load(hero_path)
+		var packed := models[hero_path] as PackedScene
 		if packed:
 			var hero := packed.instantiate() as Node3D
 			if hero:
@@ -404,10 +413,12 @@ func face_point(point: Vector3) -> void:
 	facing_until=Time.get_ticks_msec()*0.001+0.4
 	if avatar.get("character")=="haeru":greeting_until=Time.get_ticks_msec()*.001+2.5
 
-func apply_avatar(value: Dictionary) -> void:
-	if value==avatar: return
+## Rebuilds the character in a new look; returns false when the look is unchanged (or the body
+## is not built yet: _ready builds it in `avatar`).
+func apply_avatar(value: Dictionary) -> bool:
+	if value==avatar: return false
 	avatar=value.duplicate(true)
-	if not is_instance_valid(visual): return
+	if not is_instance_valid(visual): return false
 	var old_tool := equipped
 	equipped=""
 	for child in visual.get_children():
@@ -425,7 +436,9 @@ func apply_avatar(value: Dictionary) -> void:
 	right_leg=null
 	_build_explorer()
 	apply_colors()
+	look_builds+=1
 	equip(old_tool)
+	return true
 
 func apply_colors() -> void:
 	# Partitioned GLBs retain original weights, UVs and textures per semantic surface.
@@ -455,6 +468,7 @@ func apply_colors() -> void:
 	var headwear: String=avatar.get("headwear","none")
 	if headwear!="none":
 		var holder := Node3D.new()
+		holder.name="Headwear_"+headwear
 		visual.add_child(holder)
 		holder.position.y=1.63
 		if avatar.get("character","explorer")!="explorer": holder.scale=Vector3.ONE*0.58
@@ -474,6 +488,7 @@ func apply_colors() -> void:
 		else: Art.sphere(holder,Vector3(0.05,0.09,0),Vector3(0.52,0.16,0.5),hat_color)
 	if avatar.get("backpack",true) and avatar.get("character","explorer")!="explorer":
 		var bag := Node3D.new()
+		bag.name="Backpack"
 		visual.add_child(bag)
 		bag.position=Vector3(0,0.98,0.15)
 		Art.box(bag,Vector3.ZERO,Vector3(0.32,0.4,0.18),Color("aa8c64"))

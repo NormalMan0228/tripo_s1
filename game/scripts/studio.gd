@@ -21,6 +21,7 @@ const PauseMenu=preload("res://scripts/pause_menu.gd")
 const CraftPanel=preload("res://scripts/craft_panel.gd")
 const Fx=preload("res://scripts/fx.gd")
 const NpcGifts=preload("res://scripts/npc_gifts.gd")
+const AvatarLook=preload("res://scripts/avatar_look.gd")
 const RestSeat=preload("res://scripts/rest_seat.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
@@ -68,8 +69,10 @@ var room := "workshop"
 ## shares presence so visitors and the host see each other.
 var visit_host := ""
 var visit_name := ""
-## The look the village handed over, so the walker wears it before /v1/studio answers.
+## The look the village (or the sign-in) handed over, so the walker wears it before /v1/studio
+## answers, and its profile version (avatar_look.gd).
 var session_avatar: Dictionary={}
+var session_version := -1
 var dock_panel: Control
 var room_buttons: Array[Button] = []
 var peers: Dictionary = {}
@@ -224,6 +227,9 @@ func _ready() -> void:
 		visit_name=str(session.get("visit_name",""))
 		visiting=bool(session.get("visiting",false)) or not visit_host.is_empty()
 		if session.get("avatar") is Dictionary: session_avatar=session.avatar
+		if session.get("profile") is Dictionary and session.profile.get("avatar") is Dictionary:
+			session_avatar=session.profile.avatar
+			session_version=int(session.profile.get("version",-1))
 		shared_presence=bool(session.get("multiplayer",false)) and room=="home"
 		Engine.remove_meta("studio_session")
 	if not Interiors.has_interior(room): room="workshop"
@@ -261,7 +267,12 @@ func _ready() -> void:
 func load_avatar() -> void:
 	var response: Dictionary=await api.request("/v1/studio")
 	if response.ok and is_instance_valid(hero) and response.data is Dictionary:
-		hero.apply_avatar(response.data.get("profile",{}).get("avatar",{}))
+		wear_profile(response.data.get("profile",{}))
+
+## The saved look on the room's walker (a no-op when its version is the one already worn).
+func wear_profile(profile: Dictionary, animate := false) -> void:
+	if not is_instance_valid(hero) or not profile.get("avatar") is Dictionary: return
+	AvatarLook.wear(hero,profile.avatar,int(profile.get("version",-1)),animate)
 
 func theme_style() -> Theme:
 	var t := Theme.new()
@@ -618,8 +629,8 @@ func build_stage() -> void:
 	build_room()
 	# Authored character is separate from all player-created furniture.
 	if ResourceLoader.exists("res://assets/explorer_b_reference.glb"):
-		hero=preload("res://scripts/player.gd").new();hero.controls_enabled=false;hero.visual_only=true
-		hero.avatar=session_avatar.duplicate(true);stage.add_child(hero)
+		hero=AvatarLook.walker(session_avatar,session_version);hero.controls_enabled=false;hero.visual_only=true
+		stage.add_child(hero)
 		if not is_instance_valid(seat):
 			seat=RestSeat.new();add_child(seat)
 		seat.hero=hero
@@ -888,7 +899,7 @@ func refresh() -> void:
 		craft_opened=true
 		craft.open(data)
 	else:craft.apply_info(data)
-	if is_instance_valid(hero):hero.apply_avatar(data.get("profile",{}).get("avatar",{}))
+	wear_profile(data.get("profile",{}))
 	update_capacity()
 	history_list.clear()
 	for entry in data.jobs:history_list.add_item(job_status(entry.state)+tr(" · %d 별씨 · %s")%[entry.cost,Time.get_datetime_string_from_unix_time(int(entry.created)).replace("T"," ")])
@@ -1469,19 +1480,24 @@ func share_presence() -> void:
 	var self_id := str(response.data.get("self_id",""))
 	var present := {}
 	for record in space.players:
-		if str(record.id)==self_id: continue
+		var version := int(record.get("avatar_version",-1))
+		if str(record.id)==self_id:
+			# A look saved elsewhere meanwhile reaches the room's walker as well.
+			if record.has("avatar_version"): wear_profile({"avatar":record.get("avatar"),"version":version},true)
+			continue
 		present[record.id]=true
 		var level := int(roundf(float(record.get("y",0.0))/3.0))
 		if not peers.has(record.id):
-			var body: Node3D=preload("res://scripts/player.gd").new()
+			# Built in the visitor's look from the first frame; later changes follow its version.
+			var body: Node3D=AvatarLook.walker(record.get("avatar",{}),version)
 			body.controls_enabled=false;body.visual_only=true
-			stage.add_child(body)
-			body.apply_avatar(record.get("avatar",{}))
 			body.position=Vector3(record.x,0,record.z)
+			stage.add_child(body)
 			var plate := Art.label3d(body,str(record.username),Vector3(0,2.05,0),Color("f0dfba"))
 			Art.style_nameplate(plate)
 			peers[record.id]={"node":body,"target":Vector3(record.x,0,record.z)}
 		peers[record.id].target=Vector3(record.x,0,record.z)
+		AvatarLook.wear(peers[record.id].node,record.get("avatar",{}),version,true)
 		if int(peers[record.id].get("floor",-1))!=level:
 			# Changing floors is a jump, not a glide across the room.
 			peers[record.id].node.position=peers[record.id].target
@@ -1515,7 +1531,10 @@ func leave() -> void:
 	await veil.fade_out()
 	if is_instance_valid(hero):
 		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
-	Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":room})
+	var session := {"token":api.token,"url":api.base_url,"room":room}
+	# The village walker wears the look this room showed from its first frame.
+	if is_instance_valid(hero): session.profile={"avatar":hero.avatar.duplicate(true),"version":int(hero.look_version)}
+	Engine.set_meta("studio_session",session)
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func _unhandled_key_input(event: InputEvent) -> void:
