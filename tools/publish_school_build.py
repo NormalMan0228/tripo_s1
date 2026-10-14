@@ -9,6 +9,16 @@ which always shows the newest version; files sit under <prefix>/<version>/.
   .tools\\art-venv\\Scripts\\python.exe tools/publish_school_build.py check [--full]  # download as a stranger would
   .tools\\art-venv\\Scripts\\python.exe tools/publish_school_build.py docs            # refresh records + page only
   .tools\\art-venv\\Scripts\\python.exe tools/publish_school_build.py prune 2         # keep the newest 2 versions
+  .tools\\art-venv\\Scripts\\python.exe tools/publish_school_build.py patch [--dry-run] # patches from kept bases
+  .tools\\art-venv\\Scripts\\python.exe tools/publish_school_build.py bases           # list the kept bases
+
+Patches (docs/DOWNLOAD_HOSTING_KO.md): an installed game updates itself with a small patch instead of
+the installer. Every full upload keeps its pack as a patch base (builds/bases/<version>/Villagen.pck and
+base.json; the newest KEEP_BASES stay). `patch` exports, for each kept base older than the game,
+builds/patches/<base>_to_<version>.pck with Godot's --export-patch (only the changed files), checks it
+(tools/game_patch.py: engine, exe template, patch_boot.gd and project settings unchanged, else the
+installer is required) and uploads <prefix>/patches/... and <prefix>/patches.json, which the game reads.
+`upload` does the same after a full release (--no-patches skips it).
 
 Next to the installers go Notepad-friendly records (while GitHub is unavailable they are the public history):
   <prefix>/CHANGES_KO.txt  from docs/releases/school_changes_KO.txt (add the new "== x.y.z (date)" section on top first)
@@ -22,10 +32,13 @@ import hashlib
 import html
 import json
 import re
+import shutil
 import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+import game_patch
 
 ROOT = Path(__file__).resolve().parents[1]
 CFG = json.loads((ROOT / "tools" / "download_host.json").read_text(encoding="utf-8"))
@@ -40,6 +53,17 @@ NO_CACHE = "no-cache, max-age=0"
 CHANGES = ROOT / "docs" / "releases" / "school_changes_KO.txt"
 ROADMAP = ROOT / "docs" / "roadmap"
 MARK = {"done": "[완료]", "in_progress": "[진행]", "next": "[다음]", "later": "[이후]", "hold": "[보류]"}
+SCHOOL = ROOT / "builds" / "school"
+BASES = ROOT / "builds" / "bases"
+PATCHES = ROOT / "builds" / "patches"
+GODOT = ROOT / ".tools" / "godot" / "Godot_v4.7.2-stable_win64_console.exe"
+TEMPLATE = ROOT / ".tools" / "godot-templates" / "windows_release_x86_64.exe"
+PRESET = "Windows School"
+MANIFEST = "patches.json"
+KEEP_BASES = 3
+# A patch removing more of its base's files than this looks like an export from a checkout without
+# the git-ignored assets: refused unless --allow-removals.
+REMOVAL_SHARE = 0.10
 
 
 def s3():
@@ -144,7 +168,7 @@ a{{color:var(--accent)}} code{{font-size:13px;word-break:break-all}} small{{colo
 """
 
 
-def upload(ver: str, notes: list) -> None:
+def upload(ver: str, notes: list, patches: bool = True) -> None:
     from boto3.s3.transfer import TransferConfig
     files = local_files()
     c, cfg = s3(), TransferConfig(multipart_chunksize=64 << 20, max_concurrency=8)
@@ -166,7 +190,106 @@ def upload(ver: str, notes: list) -> None:
     info = {"version": ver, "date": datetime.datetime.now(KST).strftime("%Y-%m-%d"), "page": PAGE,
             "files": files, "notes": notes or notes_for(ver)}
     publish_docs(c, info)
+    if patches:
+        # This full release becomes a patch base; older kept bases get a patch to it.
+        register_base(ver)
+        publish_patches(ver, dry_run=False, allow_removals=False)
     check(full=False)
+
+
+# ------------------------------------------------------------------ patches
+
+def kept_bases() -> list:
+    """[(version, folder, base.json)] of the released packs kept as patch bases, oldest first."""
+    out = []
+    for folder in BASES.glob("*"):
+        record = folder / "base.json"
+        if record.is_file() and (folder / "Villagen.pck").is_file():
+            out.append((folder.name, folder, json.loads(record.read_text(encoding="utf-8"))))
+    return sorted(out, key=lambda b: game_patch.version_key(b[0]))
+
+
+def register_base(ver: str, keep: int = KEEP_BASES) -> None:
+    """Keeps builds/school/Villagen.pck (the full release just published) as the base for later patches."""
+    pck = SCHOOL / "Villagen.pck"
+    record = game_patch.base_record(pck, TEMPLATE)
+    if record["version"] != ver:
+        raise SystemExit(f"{pck} is version {record['version'] or '?'}, not {ver}: export the 'Windows School' preset first")
+    folder = BASES / ver
+    folder.mkdir(parents=True, exist_ok=True)
+    print(f"keeping {pck.name} {ver} as a patch base ({pck.stat().st_size / 1024 ** 3:.2f} GB) ...", flush=True)
+    shutil.copy2(pck, folder / "Villagen.pck")
+    (folder / "base.json").write_text(json.dumps(record, indent=1) + "\n", encoding="utf-8")
+    bases = kept_bases()
+    for old, old_folder, _ in bases[:-keep] if keep > 0 else []:
+        # Players still on that version get the installer instead of a patch.
+        shutil.rmtree(old_folder)
+        print("patch base removed (installs of it will need the installer):", old)
+
+
+def build_patches(ver: str, allow_removals: bool) -> dict:
+    """Exports and checks <base>_to_<ver>.pck for every kept base older than ver; the list entries."""
+    template_sha = game_patch.sha256(TEMPLATE) if TEMPLATE.is_file() else ""
+    entries = {}
+    for base, folder, record in kept_bases():
+        if not game_patch.older(base, ver):
+            continue
+        out = PATCHES / f"{base}_to_{ver}.pck"
+        print(f"exporting the patch {base} -> {ver} (Godot --export-patch) ...", flush=True)
+        game_patch.export_patch(GODOT, ROOT / "game", PRESET, folder / "Villagen.pck", out)
+        info = game_patch.inspect(folder / "Villagen.pck", out, record, template_sha)
+        if info["version"] != ver:
+            raise SystemExit(f"{out.name} carries version {info['version'] or '?'}, expected {ver}")
+        if len(info["removed"]) > max(20, REMOVAL_SHARE * info["base_files"]) and not allow_removals:
+            raise SystemExit(f"{out.name} would remove {len(info['removed'])} of {info['base_files']} files "
+                             f"(e.g. {info['removed'][:5]}): are the git-ignored assets missing here? "
+                             "Use --allow-removals only if that is intended.")
+        size = out.stat().st_size
+        print(f"  {len(info['changed'])} files changed, {len(info['removed'])} removed, {size / 1024 ** 2:.1f} MB")
+        if info["settings_changed"]:
+            print("  project settings changed:", ", ".join(info["settings_changed"][:8]))
+        if info["reasons"]:
+            print(f"  {base} needs the installer ({', '.join(info['reasons'])}): no patch published for it")
+            entries[base] = {"requires_reinstall": True, "reason": info["reasons"][0], "reasons": info["reasons"]}
+            out.unlink()
+            continue
+        entries[base] = {"file": f"patches/{out.name}", "size": size, "sha256": game_patch.sha256(out),
+                         "changed": len(info["changed"]), "removed": len(info["removed"])}
+    return entries
+
+
+def publish_patches(ver: str, dry_run: bool, allow_removals: bool) -> None:
+    entries = build_patches(ver, allow_removals)
+    data = game_patch.manifest(ver, entries)
+    PATCHES.mkdir(parents=True, exist_ok=True)
+    (PATCHES / MANIFEST).write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    if not entries:
+        print("no older kept base: installs of", ver, "are current; older installs need the installer")
+    if dry_run:
+        print("dry run: nothing uploaded. List:", PATCHES / MANIFEST)
+        return
+    from boto3.s3.transfer import TransferConfig
+    c, cfg = s3(), TransferConfig(multipart_chunksize=64 << 20, max_concurrency=8)
+    for base, entry in entries.items():
+        if "file" not in entry:
+            continue
+        key = f"{PREFIX}/{entry['file']}"
+        print("uploading", key, flush=True)
+        c.upload_file(str(PATCHES / Path(entry["file"]).name), BUCKET, key, Config=cfg, ExtraArgs={
+            "ContentType": "application/octet-stream", "CacheControl": NO_CACHE, "Metadata": {"sha256": entry["sha256"]}})
+    # The list goes last, so it never names a pack that is not there yet.
+    c.put_object(Bucket=BUCKET, Key=f"{PREFIX}/{MANIFEST}", Body=json.dumps(data, ensure_ascii=False, indent=1).encode(),
+                 ContentType="application/json; charset=utf-8", CacheControl=NO_CACHE)
+    print(f"patch list published: {PREFIX}/{MANIFEST} (latest {ver}). Games read it beside the download page.")
+
+
+def list_bases() -> None:
+    bases = kept_bases()
+    if not bases:
+        print("no patch bases yet (builds/bases/): the next full upload keeps one")
+    for ver, folder, record in bases:
+        size = (folder / "Villagen.pck").stat().st_size / 1024 ** 3
+        print(f"{ver}  engine {record.get('engine', '?')}  {size:.2f} GB  kept {record.get('registered', '?')}")
 
 
 def notes_for(ver: str) -> list:
@@ -261,6 +384,22 @@ def check(full: bool) -> None:
         same = h.hexdigest() == info["files"][SETUP]["sha256"]
         ok &= same
         print(f"{SETUP}: {got / 1024 ** 2:.0f}MB sha256 {'matches' if same else 'DIFFERS'}")
+    try:
+        listing = json.loads(fetch(f"{BASE}/{MANIFEST}")[2])
+    except urllib.error.HTTPError:
+        listing = None
+        print("patch list: none yet (games use the installer)")
+    if listing:
+        print(f"patch list: latest {listing.get('latest')}")
+        for base, entry in listing.get("bases", {}).items():
+            if "file" not in entry:
+                print(f"  {base}: installer ({entry.get('reason', '')})")
+                continue
+            status, headers, _ = fetch(f"{BASE}/{entry['file']}", "bytes=0-1")
+            size = int(headers["Content-Range"].rsplit("/", 1)[1])
+            good = status == 206 and size == entry["size"]
+            ok &= good
+            print(f"  {base}: {entry['file']} {size / 1024 ** 2:.1f}MB {'OK' if good else 'MISMATCH'}")
     print("download check:", "PASS" if ok else "FAIL")
     if not ok:
         sys.exit(1)
@@ -272,6 +411,17 @@ def prune(keep: int) -> None:
     for page_ in c.get_paginator("list_objects_v2").paginate(Bucket=BUCKET, Prefix=f"{PREFIX}/", Delimiter="/"):
         for p in page_.get("CommonPrefixes", []):
             versions.add(p["Prefix"].rstrip("/").rsplit("/", 1)[1])
+    # patches/ is not a version: its packs go when the list stops naming them.
+    versions.discard("patches")
+    try:
+        named = {e["file"] for e in json.loads(fetch(f"{BASE}/{MANIFEST}")[2]).get("bases", {}).values() if "file" in e}
+    except urllib.error.HTTPError:
+        named = set()
+    stale = [{"Key": o["Key"]} for o in c.list_objects_v2(Bucket=BUCKET, Prefix=f"{PREFIX}/patches/").get("Contents", [])
+             if o["Key"][len(PREFIX) + 1:] not in named]
+    if stale:
+        c.delete_objects(Bucket=BUCKET, Delete={"Objects": stale})
+        print("removed", len(stale), "patches no longer listed")
     key = lambda v: [int(x) if x.isdigit() else x for x in re.split(r"[.\-]", v)]
     old = sorted(versions, key=key)[:-keep] if keep > 0 else []
     for ver in old:
@@ -293,7 +443,13 @@ def main() -> None:
             i = args.index("--notes")
             notes = [l.strip().lstrip("-• ").strip() for l in Path(args[i + 1]).read_text(encoding="utf-8").splitlines() if l.strip()]
             del args[i:i + 2]
-        upload(args[0] if args else game_version(), notes)
+        patches = "--no-patches" not in args
+        args = [a for a in args if a != "--no-patches"]
+        upload(args[0] if args else game_version(), notes, patches)
+    elif cmd == "patch":
+        publish_patches(game_version(), dry_run="--dry-run" in args, allow_removals="--allow-removals" in args)
+    elif cmd == "bases":
+        list_bases()
     elif cmd == "docs":
         docs()
     elif cmd == "check":

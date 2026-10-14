@@ -10,6 +10,9 @@
 #      mode stay as ops/production.env has them).
 #   2. ops/notice.sh release <config/version of game/project.godot>: the "new version" notice; the
 #      download address already saved on the server stays.
+#   Players are logged out when the maintenance starts. Installed games from 0.11.5 then update
+#   themselves at their title: publish the patch first (tools/publish_school_build.py patch), or they
+#   wait on "새 버전을 준비하고 있어요" until the patch list names the version.
 # A failed deploy is remembered and not retried until the branch moves again.
 # Settings (environment of the timer's service): VILLAGEN_RELEASE_BRANCH (school-release),
 # VILLAGEN_ANNOUNCE_MINUTES (10). Log: /var/log/villagen-autoupdate.log
