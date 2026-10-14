@@ -8,14 +8,22 @@ var capture_started := false
 var touched_vertices := 0
 var placed: Array[Node3D] = []
 const OUTPUT := "res://../art/maps/archipelago_placement_v1/"
+const LoadPace = preload("res://scripts/load_pace.gd")
 
 func install(owner_node: Node3D, terrain: Node3D) -> void:
 	host = owner_node
 	terrain_root = terrain
 	manifest = JSON.parse_string(FileAccess.get_file_as_string("res://maps/archipelago/building_placements.json"))
-	_prepare_ground()
-	for spec: Dictionary in manifest.buildings:
-		var scene := load(String(spec.model)) as PackedScene
+	# Under the loading card: paced over frames, the models arriving from worker threads (LoadPace).
+	var span := LoadPace.narrow(0.0, 0.3)
+	await _prepare_ground()
+	LoadPace.span = span
+	var count: int = manifest.buildings.size()
+	for index in count:
+		var spec: Dictionary = manifest.buildings[index]
+		LoadPace.done(0.3+0.7*index/maxf(count, 1))
+		await LoadPace.step("building")
+		var scene: PackedScene = await LoadPace.fetch(String(spec.model))
 		assert(scene != null, "Building model missing: " + String(spec.id))
 		var building := scene.instantiate() as Node3D
 		building.name = spec.id
@@ -27,7 +35,8 @@ func install(owner_node: Node3D, terrain: Node3D) -> void:
 		# Building collision is separate from ground sampling (layer 2).
 		for item in building.find_children("*", "MeshInstance3D", true, false):
 			var mesh := item as MeshInstance3D
-			_add_collision(mesh)
+			await LoadPace.step("building collision")
+			await _add_collision(mesh)
 			for child in mesh.get_children():
 				if child is StaticBody3D:
 					child.collision_layer = 2
@@ -43,6 +52,13 @@ func install(owner_node: Node3D, terrain: Node3D) -> void:
 const PATCH_U_MIN := 3.0
 
 func _add_collision(mesh: MeshInstance3D) -> void:
+	if LoadPace.covered:
+		# Under the loading card the faces and the shape's BVH come a frame apart (LoadPace.collide).
+		var surfaces := []
+		for surface in mesh.mesh.get_surface_count(): surfaces.append(mesh.mesh.surface_get_arrays(surface))
+		var box := mesh.mesh.get_aabb()
+		await LoadPace.collide(mesh, _patched_faces(surfaces, Vector3(box.get_center().x, box.position.y-1.0, box.get_center().z)), 2, 0)
+		return
 	var source := mesh.mesh
 	var proxy := ArrayMesh.new()
 	var patched := 0
@@ -71,6 +87,23 @@ func _add_collision(mesh: MeshInstance3D) -> void:
 	body.add_child(collider)
 	mesh.add_child(body)
 
+## The collision faces _add_collision makes (patch vertices sunk to `sink`), from surface arrays.
+static func _patched_faces(surfaces: Array, sink: Vector3) -> PackedVector3Array:
+	var faces := PackedVector3Array()
+	for arrays: Array in surfaces:
+		var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+		if arrays[Mesh.ARRAY_TEX_UV] is PackedVector2Array:
+			var uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV]
+			for i in uv.size():
+				if uv[i].x >= PATCH_U_MIN: vertices[i] = sink
+		var index = arrays[Mesh.ARRAY_INDEX]
+		if index is PackedInt32Array and not index.is_empty():
+			var start := faces.size()
+			faces.resize(start+index.size())
+			for i in index.size(): faces[start+i] = vertices[index[i]]
+		else: faces.append_array(vertices)
+	return faces
+
 func _pad_weight(world: Vector3, spec: Dictionary) -> float:
 	var offset := Vector2(world.x - float(spec.position[0]), world.z - float(spec.position[2]))
 	var a := deg_to_rad(float(spec.yaw_degrees))
@@ -85,18 +118,30 @@ func _prepare_ground() -> void:
 		if "__ground" not in ground.name:
 			continue
 		var sites: Array[Dictionary] = []
+		# Each pad only reaches its rectangle plus the blend: a circle around it skips the
+		# vertices no pad can move without the per-pad trigonometry.
+		var reach: Array[Vector3] = []
 		for spec: Dictionary in manifest.buildings:
 			if String(spec.island) in ground.name:
 				sites.append(spec)
+				var blend := float(spec.pad_blend_m)
+				var radius := Vector2(float(spec.pad_half_extents[0])+blend, float(spec.pad_half_extents[1])+blend).length()+0.05
+				reach.append(Vector3(float(spec.position[0]), float(spec.position[2]), radius*radius))
 		var rebuilt := ArrayMesh.new()
-		var inverse := ground.global_transform.affine_inverse()
+		var to_world := ground.global_transform
+		var inverse := to_world.affine_inverse()
 		for surface in ground.mesh.get_surface_count():
 			var arrays := ground.mesh.surface_get_arrays(surface)
 			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 			var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
 			for i in vertices.size():
-				var world := ground.global_transform * vertices[i]
-				for spec: Dictionary in sites:
+				if i % 4096 == 4095: await LoadPace.step("ground pads")
+				var world := to_world * vertices[i]
+				for site in sites.size():
+					var near := reach[site]
+					if (world.x-near.x)*(world.x-near.x)+(world.z-near.y)*(world.z-near.y) > near.z:
+						continue
+					var spec: Dictionary = sites[site]
 					var weight := _pad_weight(world, spec)
 					if weight <= 0.0:
 						continue

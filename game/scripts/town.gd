@@ -5,6 +5,7 @@ extends Node3D
 const A=preload("res://scripts/art.gd")
 const L=preload("res://scripts/world_detail.gd")
 const Archipelago=preload("res://maps/archipelago/archipelago.gd")
+const LoadPace=preload("res://scripts/load_pace.gd")
 const Fx=preload("res://scripts/fx.gd")
 const TreeFruit=preload("res://scripts/tree_fruit.gd")
 ## Sea level guard for walkers: below this the body returns to its last ground.
@@ -103,6 +104,10 @@ var fishing_line: MeshInstance3D
 var last_plot_signature := ""
 var story_progress := 0
 var camera: Camera3D
+## Under the loading card the first map build is paced over frames (load_pace.gd); main.gd waits
+## for `built` before it goes on. Uncovered, _ready finishes in one go and `finished` is true at once.
+signal built
+var finished := false
 
 ## Ground height from the map's colliders. Before the map exists it falls back to
 ## the islands' typical meadow height.
@@ -129,7 +134,7 @@ func _ready() -> void:
 		map=Archipelago.new()
 		map.name="Archipelago"
 		add_child(map)
-		map.build(camera)
+		await map.build(camera)
 	else:
 		# A fresh clone has no map binaries (tools/port_archipelago_map.py copies them
 		# from the lab). A flat meadow keeps the village playable until then.
@@ -138,10 +143,12 @@ func _ready() -> void:
 	space=get_world_3d().direct_space_state
 	# Paths are part of the kept map, so they are laid only once per session.
 	if is_instance_valid(map) and map is Archipelago and not map.has_node("Roads"):
+		await LoadPace.step("roads")
 		var roads: Node3D=preload("res://scripts/roads.gd").new()
 		roads.name="Roads"
 		map.add_child(roads)
-		roads.build(space,map.get_node_or_null("Environment"))
+		await roads.build(space,map.get_node_or_null("Environment"))
+		await LoadPace.step("town")
 	index_props()
 	var home := point(HOME_DOOR)
 	A.label3d(self,tr("나의 집 · E 들어가기"),home+Vector3(0,3.4,0),Color("f5e5b7"))
@@ -152,6 +159,7 @@ func _ready() -> void:
 		A.sphere(self,at+Vector3(0,.32,0),Vector3.ONE*.28,[Color("eac77b"),Color("c5b5d6"),Color("8bcac2")][i])
 		var glow := OmniLight3D.new();glow.position=at+Vector3(0,.4,0);glow.light_color=Color("edce8c");glow.light_energy=.35;glow.omni_range=2;add_child(glow)
 	L.gate(self,point(GATE))
+	await LoadPace.step("farm")
 	build_farm()
 	build_orchard()
 	for place in PLACES:
@@ -167,6 +175,8 @@ func _ready() -> void:
 	fishing_line=MeshInstance3D.new()
 	add_child(fishing_line)
 	fishing_line.material_override=A.material(Color("e5d9b0"))
+	finished=true
+	built.emit()
 
 func build_farm() -> void:
 	for i in PLOTS.size():
@@ -397,6 +407,10 @@ func water_planter(app: Node, node: Node3D) -> void:
 	if is_instance_valid(app) and is_instance_valid(app.player) and app.player.equipped=="watering_can": app.player.equip("")
 
 ## Frees a kept map when the game is not travelling between village and rooms.
+## What a first build of the village map loads (nothing while the map is kept), for LoadPace.want().
+static func resource_paths() -> Array:
+	return [] if is_instance_valid(kept_map) or not Archipelago.available() else Archipelago.resource_paths()
+
 static func discard_kept() -> void:
 	if is_instance_valid(kept_map): kept_map.free()
 	kept_map=null

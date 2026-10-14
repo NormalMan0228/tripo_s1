@@ -4,10 +4,11 @@ extends RefCounted
 ## maps/survival/layouts.json) and the run state's obstacles, hazards and resources.
 const SurvivalMap = preload("res://maps/survival/survival_map.gd")
 
+## Paced under the loading card (await it; load_pace.gd), in one go otherwise.
 static func build(parent: Node3D, state: Dictionary) -> Node3D:
 	var map := SurvivalMap.new()
 	parent.add_child(map)
-	map.build(state)
+	await map.build(state)
 	return map
 
 ## Optional direct hook for main.gd's resource rendering: dress a resource root with the map's Tripo

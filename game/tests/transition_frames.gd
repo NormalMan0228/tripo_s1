@@ -2,11 +2,15 @@ extends SceneTree
 ## Films the walker through a door round trip (village -> home -> village) with the
 ## fade veil hidden, cropping frames around the walker into one sheet, and logs the
 ## knee angles so a folded leg during the switch shows up as numbers too.
+##   Godot --path game --script res://tests/transition_frames.gd -- --server=http://127.0.0.1:8812 [--start]
 var frames: Array[Image] = []
+var server := "http://127.0.0.1:8766"
 var labels: Array[String] = []
 var worst := {}
 
 func _initialize() -> void:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
 	call_deferred("run")
 
 func walker() -> Node3D:
@@ -57,7 +61,8 @@ func run() -> void:
 		# The real start: the title scene logs in, which now opens the home room.
 		change_scene_to_file("res://scenes/main.tscn")
 		await create_timer(2.0).timeout
-		current_scene.authenticate(true, "http://127.0.0.1:8766", "start_"+str(Time.get_ticks_usec()), "Start-frames-password-1", "")
+		await until_screen("login")
+		current_scene.authenticate(true, server, "start_"+str(Time.get_ticks_usec()), "Start-frames-password-1", "")
 		await grab("start", 90)
 		await create_timer(1.0).timeout
 		await grab("settled", 6)
@@ -65,11 +70,12 @@ func run() -> void:
 		print("WORST_KNEE ", JSON.stringify(worst))
 		quit(0)
 		return
-	var api = load("res://scripts/api.gd").new(); root.add_child(api); api.base_url = "http://127.0.0.1:8766"
+	var api = load("res://scripts/api.gd").new(); root.add_child(api); api.base_url = server
 	var login: Dictionary = await api.post("/v1/auth/register", {"username":"door_"+str(Time.get_ticks_usec()), "password":"Door-frames-password-1"})
 	if not login.ok: print("LOGIN_FAILED"); quit(1); return
 	Engine.set_meta("studio_session", {"token":login.data.token, "url":api.base_url, "room":"home"})
 	change_scene_to_file("res://scenes/main.tscn")
+	await until_screen("village")
 	await grab("in", 14)
 	await create_timer(2.5).timeout
 	await grab("idle", 2)
@@ -85,6 +91,12 @@ func run() -> void:
 	sheet()
 	print("WORST_KNEE ", JSON.stringify(worst))
 	quit(0)
+
+## The village is built under the loading card over frames (load_pace.gd); film once it stands.
+func until_screen(screen: String) -> void:
+	var deadline := Time.get_ticks_msec()+60000
+	while Time.get_ticks_msec() < deadline and not (is_instance_valid(current_scene) and current_scene.get("screen") == screen and not current_scene.get("busy")):
+		await process_frame
 
 func Transition_hide() -> void:
 	var veil = load("res://scripts/transition.gd").of(self)

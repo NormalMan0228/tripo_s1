@@ -6,6 +6,8 @@ const TERRAIN := ROOT+"assets/archipelago_terrain_environment_v1.glb"
 ## Ground and rocks use layer 1, buildings, bridges and piers layer 2, props layer 8.
 const WALK_MASK := 1|2|8
 const SPRAY_AT := Vector3(.996,0,-7.937)
+## Under the loading card the build is paced over frames and its models load on worker threads.
+const LoadPace = preload("res://scripts/load_pace.gd")
 var camera: Camera3D
 var spray: MultiMeshInstance3D
 var mist: MultiMeshInstance3D
@@ -14,18 +16,59 @@ var water_time := 0.0
 static func available() -> bool:
 	return ResourceLoader.exists(TERRAIN)
 
+## Every model and texture build() loads, for LoadPace.want() to start on worker threads early.
+## In the order build() uses them (they load one at a time).
+static func resource_paths() -> Array:
+	var paths := [TERRAIN]+textures()
+	var placements = JSON.parse_string(FileAccess.get_file_as_string(ROOT+"building_placements.json"))
+	if placements is Dictionary:
+		for spec in placements.get("buildings", []): paths.append(String(spec.model))
+	var layout = JSON.parse_string(FileAccess.get_file_as_string(ROOT+"environment_layout.json"))
+	if layout is Dictionary:
+		for spec in layout.get("models", []):
+			paths.append(String(spec.model))
+			paths.append(ROOT+"assets/prop_lods/"+String(spec.id)+".glb")
+		for spec in layout.get("bridges", []):
+			if spec.has("fitted_model"): paths.append(String(spec.fitted_model))
+	return paths
+
+## The water, ground and rock textures build() puts on the terrain.
+static func textures() -> Array:
+	var paths := []
+	for prefix in ["ocean", "pond"]:
+		paths.append(ROOT+"assets/v3/"+prefix+"_surface_color.png")
+		paths.append(ROOT+"assets/v3/"+prefix+"_surface_normal.png")
+	for name in ["current_field", "coast_field", "shore_distance", "organic_foam", "grass_detail", "sand_detail", "rock_detail",
+			"grass_detail_normal", "sand_detail_normal", "headland_normals"]:
+		paths.append(ROOT+"assets/v5/"+name+".png")
+	return paths
+
+## Paced under the loading card (await it); uncovered it runs in one go as before.
 func build(view: Camera3D) -> void:
 	camera = view
-	var terrain: Node3D = load(TERRAIN).instantiate()
+	var span := LoadPace.narrow(0.0, 0.08)
+	var terrain_scene: PackedScene = await LoadPace.fetch(TERRAIN)
+	var terrain: Node3D = terrain_scene.instantiate()
 	add_child(terrain)
+	LoadPace.done(1.0)
+	LoadPace.span = span
+	await LoadPace.step("terrain")
 	var buildings := load(ROOT+"building_layout.gd").new() as Node3D
 	buildings.name = "Buildings"
 	add_child(buildings)
-	buildings.install(self, terrain)
-	for item in terrain.find_children("*", "MeshInstance3D", true, false):
+	span = LoadPace.narrow(0.08, 0.5)
+	await buildings.install(self, terrain)
+	LoadPace.span = span
+	for path in textures(): if LoadPace.pending(path): await LoadPace.fetch(path)
+	var meshes := terrain.find_children("*", "MeshInstance3D", true, false)
+	for index in meshes.size():
+		LoadPace.done(0.5+0.1*index/meshes.size())
+		await LoadPace.step("terrain material")
+		var item: Node = meshes[index]
 		var m := item as MeshInstance3D
 		if "__ground" in m.name or "__shore_rock" in m.name or "Waterfall__cliff_rock" in m.name:
-			m.create_trimesh_collision()
+			if LoadPace.covered: await LoadPace.collide(m)
+			else: m.create_trimesh_collision()
 		if ("Ocean__" in m.name and "seabed" not in m.name) or "__pond" in m.name or "Waterfall__spring_pool" in m.name:
 			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			var water := ShaderMaterial.new()
@@ -81,11 +124,15 @@ func build(view: Camera3D) -> void:
 	var props := load(ROOT+"environment_layout.gd").new() as Node3D
 	props.name = "Environment"
 	add_child(props)
-	props.install(self, terrain)
+	span = LoadPace.narrow(0.6, 1.0)
+	await props.install(self, terrain)
+	LoadPace.span = span
 	_create_water_spray()
 	_bury_tree_roots.call_deferred(props)
 	_ramp_open_structures.call_deferred()
-	_wall_tall_rocks.call_deferred(terrain)
+	# Under the card the rock walls are made before the map shows, paced (in one go they held a frame).
+	if LoadPace.covered: await _wall_tall_rocks(terrain)
+	else: _wall_tall_rocks.call_deferred(terrain)
 
 ## Walkers could climb the shore rocks a step at a time and wedge themselves in
 ## the gaps. Every rock cluster taller than ROCK_WALL_HEIGHT gets an invisible
@@ -113,18 +160,22 @@ func _wall_tall_rocks(terrain: Node3D) -> void:
 		for i in verts.size(): parent[i] = i
 		var cells := {}
 		for i in verts.size():
+			if i % 4096 == 4095: await LoadPace.step("rock walls")
 			var key := Vector3i((verts[i]/0.05).round())
 			if cells.has(key): _union(parent, i, cells[key])
 			else: cells[key] = i
 		for t in range(0, index.size(), 3):
+			if t % 12288 == 12285: await LoadPace.step("rock walls")
 			_union(parent, index[t], index[t+1])
 			_union(parent, index[t], index[t+2])
 		var clusters := {}
 		for i in verts.size():
+			if i % 4096 == 4095: await LoadPace.step("rock walls")
 			var r := _find(parent, i)
 			if not clusters.has(r): clusters[r] = PackedVector3Array()
 			clusters[r].append(mesh_node.global_transform*verts[i])
 		for key in clusters:
+			await LoadPace.step("rock wall")
 			var points: PackedVector3Array = clusters[key]
 			var low := INF
 			var high := -INF

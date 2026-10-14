@@ -18,6 +18,7 @@ const Roads := preload("res://scripts/roads.gd")
 const Daylight := preload("res://scripts/daylight.gd")
 const Profile := preload("res://scripts/controller_profile.gd")
 const Transition := preload("res://scripts/transition.gd")
+const LoadPace := preload("res://scripts/load_pace.gd")
 const Fx := preload("res://scripts/fx.gd")
 const SFX := "res://assets/sfx/field/%s.wav"
 ## Solid parts sit on the props layer (8) like the map's benches and trees.
@@ -92,12 +93,14 @@ func setup(main: Node) -> void:
 		voice.bus = &"SFX"
 		add_child(voice)
 		voices.append(voice)
-	build()
+	await build()
 
-## Places and builds every object. Safe to call once per village build.
+## Places and builds every object. Safe to call once per village build. Paced under the loading
+## card (load_pace.gd), in one go otherwise.
 func build() -> void:
 	space = get_world_3d().direct_space_state
 	for spec in SPECS:
+		await LoadPace.step("field object")
 		var spot := find_spot(spec)
 		if spot.is_empty():
 			skipped.append(spec.id)
