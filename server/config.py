@@ -139,6 +139,12 @@ class Settings:
     # Read-only usage totals for the PC cost monitor (server/usage_report.py, ops/usage_key.sh).
     # Not a login; empty turns the route off.
     usage_key: str = field(default_factory=lambda: configured_secret('TRIPOTHON_USAGE_KEY'), repr=False)
+    # Development servers (ops/staging.sh fake): crafting talks to the built-in stand-in for Tripo
+    # (server/fake_tripo.py) instead of the network; no key, no credits. Optional seconds per fake task.
+    fake_tripo: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_FAKE_TRIPO', 'false').lower() == 'true')
+    fake_tripo_seconds: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_FAKE_TRIPO_SECONDS', '0')))
+    # /health shows it when set (the development server says "staging"); empty on production.
+    environment: str = field(default_factory=lambda: os.getenv('TRIPOTHON_ENVIRONMENT', '').strip())
 
     def validate(self):
         if self.mode not in ('demo', 'live'):
@@ -163,6 +169,15 @@ class Settings:
             raise ValueError('Generation budget must be positive')
         if not 60 <= self.studio_part_deadline <= 86400:
             raise ValueError('Invalid studio part deadline')
+        if self.fake_tripo:
+            from .fake_tripo import FAKE_KEY
+            if any(key and key != FAKE_KEY for key in (self.tripo_key, *self.tripo_keys)):
+                raise ValueError('The fake Tripo (TRIPOTHON_FAKE_TRIPO) runs without real Tripo keys')
+            self.tripo_key, self.tripo_keys = FAKE_KEY, (FAKE_KEY,)
+        if not (math.isfinite(self.fake_tripo_seconds) and 0 <= self.fake_tripo_seconds <= 600):
+            raise ValueError('Invalid fake Tripo task time')
+        if self.environment and not re.fullmatch(r'[a-z0-9-]{1,20}', self.environment):
+            raise ValueError('TRIPOTHON_ENVIRONMENT must be a short lowercase name')
         if self.mode == 'live' and self.paid_enabled and not self.tripo_key:
             raise ValueError('Paid live mode requires a Tripo server secret')
         # Without an OpenAI design provider, live crafting offers only the simple

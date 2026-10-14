@@ -1,0 +1,89 @@
+# Development (staging) server: the dev branch, on the school VM next to production, at
+# https://dev.<TRIPOTHON_DOMAIN>. Run it only through ops/staging.sh (project villagen-staging,
+# env file ops/staging.env of the staging checkout). It has its own container, data volume and
+# invitation code, joins only the proxy's villagen_staging_edge network (never the production
+# API's), and reads no production file. Crafting is fake by default (server/fake_tripo.py: no key,
+# no credits); ops/compose.staging-real.yaml switches to real Tripo with its own budget.
+name: villagen-staging
+
+services:
+  # Not "api": the proxy also sits on the production network, where "api" is the production API.
+  staging-api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+      labels:
+        villagen.staging: "1"
+    image: villagen-staging-api
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 96
+    # The 2 GB VM: production API 640 MB + proxy 96 MB stay as they are; one CPU stays free for them.
+    mem_limit: ${STAGING_MEMORY:-320m}
+    cpus: ${STAGING_CPUS:-1.0}
+    expose: ["8765"]
+    environment:
+      TRIPOTHON_MODE: live
+      TRIPOTHON_ENVIRONMENT: staging
+      TRIPOTHON_DATA_DIR: /data
+      TRIPOTHON_STUDIO_LLM: fixture
+      TRIPOTHON_DESIGN_FORMAT: structured
+      TRIPOTHON_REGISTRATION_CODE_FILE: /run/secrets/staging_registration_code
+      # Fake crafting: the in-process stand-in for Tripo answers every call (sample shapes, 0 credits).
+      TRIPOTHON_FAKE_TRIPO: "true"
+      TRIPOTHON_FAKE_TRIPO_SECONDS: ${STAGING_FAKE_SECONDS:-0}
+      TRIPO_ENABLE_PAID: "true"
+      TRIPOTHON_TRIPO_CREDIT_BUDGET: "0"
+      TRIPOTHON_MAX_CREDITS_PER_CRAFT: "0"
+      TRIPO_DAILY_REQUEST_LIMIT: ${STAGING_CRAFTS_PER_DAY:-200}
+      TRIPO_USER_DAILY_REQUEST_LIMIT: ${STAGING_CRAFTS_PER_ACCOUNT_DAY:-50}
+      TRIPO_USER_TOTAL_REQUEST_LIMIT: "0"
+      TRIPO_RESERVE_PER_JOB: ${STAGING_TRIPO_RESERVE:-200}
+      TRIPOTHON_STARS_PER_CREDIT: "1"
+      TRIPOTHON_WELCOME_STARS: ${STAGING_WELCOME_STARS:-1000}
+      TRIPOTHON_OPEN_REGISTRATION: ${STAGING_OPEN_REGISTRATION:-true}
+      TRIPOTHON_SIGNUPS_PER_IP_DAY: ${STAGING_SIGNUPS_PER_IP_DAY:-20}
+      TRIPOTHON_SIGNUPS_PER_DAY: "200"
+      VILLAGEN_SERVER_COMMIT: ${VILLAGEN_SERVER_COMMIT:-}
+    secrets: [staging_registration_code]
+    volumes:
+      - staging_data:/data
+      - staging_backups:/backups
+    networks:
+      edge:
+        ipv4_address: 172.30.73.3
+    command:
+      - python
+      - -m
+      - uvicorn
+      - server.app:create_app
+      - --factory
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8765"
+      - --workers
+      - "1"
+      - --no-access-log
+      - --proxy-headers
+      - --forwarded-allow-ips
+      - 172.30.73.2
+
+networks:
+  edge:
+    external: true
+    name: villagen_staging_edge
+
+volumes:
+  staging_data:
+    name: villagen_staging_data
+  staging_backups:
+    name: villagen_staging_backups
+
+secrets:
+  staging_registration_code:
+    file: ./staging-secrets/registration-code

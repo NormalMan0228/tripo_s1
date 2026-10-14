@@ -1,0 +1,13 @@
+# ops/staging.sh real (unless --no-gemini) adds this when the school server has ops/secrets/gemini-key:
+# the development server designs with Gemini before Tripo, like production.
+services:
+  staging-api:
+    environment:
+      TRIPOTHON_STUDIO_LLM: gemini
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_key
+      TRIPOTHON_GEMINI_MODELS: ${TRIPOTHON_GEMINI_MODELS:-gemini-3.5-flash,gemini-3.8-flash,gemini-3.1-flash-lite}
+    secrets: [gemini_key]
+
+secrets:
+  gemini_key:
+    file: ${VILLAGEN_PROD_DIR:?ops/install_staging.sh sets it}/ops/secrets/gemini-key

@@ -13,6 +13,10 @@ server-data/
 ops/secrets/
 ops/production.env
 ops/backups/
+# Development server (ops/install_staging.sh): its settings, invitation code and the Caddy site it adds.
+ops/staging.env
+ops/staging-secrets/
+ops/caddy-sites/*.caddy
 
 labs/character_lab/.godot/
 labs/production_lab/.godot/

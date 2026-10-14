@@ -1,0 +1,16 @@
+# ops/staging.sh real: the development server crafts with real Tripo. It reads the school server's
+# Tripo key file (read-only, nothing else of production) and spends at most STAGING_TRIPO_BUDGET
+# credits (counted in the development data only; fake crafts count 0) and STAGING_MAX_CREDITS_PER_CRAFT
+# per craft. ops/staging.sh fake drops this file again, and with it the key.
+services:
+  staging-api:
+    environment:
+      TRIPOTHON_FAKE_TRIPO: "false"
+      TRIPO_API_KEY_FILE: /run/secrets/tripo_key
+      TRIPOTHON_TRIPO_CREDIT_BUDGET: ${STAGING_TRIPO_BUDGET:?ops/staging.sh real --budget N sets it}
+      TRIPOTHON_MAX_CREDITS_PER_CRAFT: ${STAGING_MAX_CREDITS_PER_CRAFT:-10}
+    secrets: [tripo_key]
+
+secrets:
+  tripo_key:
+    file: ${VILLAGEN_PROD_DIR:?ops/install_staging.sh sets it}/ops/secrets/tripo-key

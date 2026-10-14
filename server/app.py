@@ -34,6 +34,10 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     settings = settings or Settings()
     settings.validate()
     db = Database(settings.data_dir/'world.sqlite3',settings.mode)
+    if provider is None and settings.fake_tripo:
+        # Development servers: every Tripo call is answered in-process (server/fake_tripo.py).
+        from .fake_tripo import transport as fake_tripo
+        provider = TripoProvider(settings, fake_tripo(settings.fake_tripo_seconds))
     provider = provider or TripoProvider(settings)
     hasher = PasswordHasher(time_cost=2,memory_cost=19456,parallelism=1)
     dummy = hasher.hash(secrets.token_urlsafe(32))
@@ -260,6 +264,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
               'tripo_keys':len(settings.tripo_keys) or (1 if settings.tripo_key else 0),
               'open_registration':bool(settings.mode=='live' and settings.open_registration)}
         if build_commit: data['build']=build_commit
+        if settings.environment: data['environment']=settings.environment
+        if settings.fake_tripo: data['tripo_fake']=True
         public=client_policy.public()
         data['client'],data['notice']=public['client'],public['notice']
         return data
