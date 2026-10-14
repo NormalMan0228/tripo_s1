@@ -11,8 +11,15 @@ extends SceneTree
 ## survive the refreshes and Enter.
 ##   godot --path game --resolution 1280x800 [--position X,Y] --script res://tests/ime_typing.gd -- --mute --qa --server=http://127.0.0.1:8813
 ##   (add --headless for the committed-syllable mode; --position from tools/test_window_position.ps1)
+## An exported game: Villagen.exe --main-pack Villagen.pck --script <checkout>/game/tests/ime_typing.gd -- ...
+## (the key driver is found next to this script). "--ime-hold=MS" holds each key that long (12 ms
+## by default; 60-90 is a person's press). The IME helper's trace (focus, editing, composition, keys)
+## goes to user://logs/ime_trace.txt; a field whose composed syllables never arrived (Godot 4.7.2
+## engine bug godotengine/godot#123269) fails with that named.
 const Main = preload("res://scripts/main.gd")
 var server := "http://127.0.0.1:8766"
+var hold_ms := 12
+var helper: Node
 var failed := false
 var real_ime := false
 var hwnd := 0
@@ -79,8 +86,9 @@ func type_into(field: Control, keys: String, text: String, clicked := true) -> S
 		return "0 committed syllables"
 	var log := ProjectSettings.globalize_path("user://ime_type.txt")
 	if FileAccess.file_exists(log): DirAccess.remove_absolute(log)
-	var script := ProjectSettings.globalize_path("res://../tools/ime_type.ps1")
-	var pid := OS.create_process("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Hwnd", str(hwnd), "-Keys", keys, "-Log", log, "-DelayMs", "70"])
+	# Next to this script in the checkout (tools/), also when the game runs from an exported pack.
+	var script := ProjectSettings.globalize_path(get_script().resource_path).get_base_dir().path_join("../../tools/ime_type.ps1").simplify_path()
+	var pid := OS.create_process("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Hwnd", str(hwnd), "-Keys", keys, "-Log", log, "-DelayMs", "70", "-HoldMs", str(hold_ms)])
 	while OS.is_process_running(pid):
 		if Time.get_ticks_msec()-last > 300 and during.is_valid(): last = Time.get_ticks_msec(); during.call()
 		await process_frame
@@ -105,6 +113,7 @@ func typed(field: Control, keys: String, text: String, label: String, clicked :=
 	root.gui_focus_changed.connect(on_focus)
 	var report := ""
 	var before: String = field.text
+	var lost_before: int = helper.lost_syllables
 	for attempt in 3:
 		if attempt > 0 or clicked:
 			field.text = "" if clicked else before
@@ -122,7 +131,9 @@ func typed(field: Control, keys: String, text: String, label: String, clicked :=
 		return ""
 	var wanted := text if not text.contains("\n") else ""
 	var ok: bool = is_instance_valid(field) and field.text == wanted
-	expect(ok, "%s: '%s' (%s)" % [label, field.text if is_instance_valid(field) else "<freed>", report])
+	var lost: int = helper.lost_syllables - lost_before
+	if lost > 0: report += ", %d composed syllable(s) never reached the field: engine bug godotengine/godot#123269" % lost
+	expect(ok and lost == 0, "%s: '%s' (%s)" % [label, field.text if is_instance_valid(field) else "<freed>", report])
 	if not ok or text.contains("\n"): print("  trace: ", " | ".join(trace))
 	return report
 
@@ -132,20 +143,35 @@ func fields_in(node: Node, type: String) -> Array:
 func run() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
+		if arg.begins_with("--ime-hold="): hold_ms = int(arg.trim_prefix("--ime-hold="))
 	real_ime = OS.get_name() == "Windows" and DisplayServer.get_name() != "headless" and DisplayServer.has_feature(DisplayServer.FEATURE_IME)
 	if real_ime: hwnd = DisplayServer.window_get_native_handle(DisplayServer.WINDOW_HANDLE)
-	print("IME_TYPING mode: ", "real Korean IME" if real_ime else "committed syllables")
+	helper = root.get_node("ImeCaret")
+	if helper.trace == null: helper.start_trace("user://logs/ime_trace.txt")
+	print("IME_TYPING mode: %s, engine %s, %s, key hold %d ms" % ["real Korean IME" if real_ime else "committed syllables",
+		Engine.get_version_info().string, "exported" if OS.has_feature("template") else "source", hold_ms])
+	print("IME_TYPING trace: ", ProjectSettings.globalize_path("user://logs/ime_trace.txt"))
 	app = Main.new()
 	root.add_child(app)
 	await wait_until(func(): return not app.busy and app.screen == "login", 60.0)
 
-	# Login page: the page focuses the ID itself and the player just types; then the world address.
+	# Login page like a player: Hangul mode in the password is taken out again (Latin only); then the
+	# ID, focused by the page, and the world address.
 	app.login_ui("login")
-	for i in 10: await process_frame
+	await create_timer(1.0).timeout  # the title's veil takes clicks while it fades
 	var lines := fields_in(app.ui, "LineEdit")
+	var secret := lines.filter(func(f): return f.secret)
+	if not secret.is_empty():
+		var password: LineEdit = secret[0]
+		password.text = ""
+		var sent := await type_into(password, "dkssud", "안녕")
+		if sent.begins_with("0"):
+			expect(password.text == "" and str(app.notice.text).contains("영문"), "login password takes Hangul out and says to type Latin letters ('%s', '%s', %s)" % [password.text, app.notice.text, sent])
 	if lines.size() >= 2:
 		lines[0].text = ""
+		lines[0].grab_focus()
 		await typed(lines[0], "gksrmf dkdlel ", "한글 아이디 ", "login ID (focused by the page)", false)
+		expect(root.gui_get_focus_owner() == lines[0] and app.title_page == "login", "login ID keeps focus and the page (%s, %s)" % [root.gui_get_focus_owner(), app.title_page])
 	var servers: Array = app.ui.find_children("*", "OptionButton", true, false)
 	if not servers.is_empty():
 		servers[0].select(servers[0].item_count-1)
@@ -237,5 +263,6 @@ func run() -> void:
 		await typed(studio.craft.prompt, "dhfmrhf. tkdwk ", "오르골 상자 ", "room craft prompt")
 		during = Callable()
 	else: expect(false, "room opened")
+	print("IME_TYPING lost syllables: %d" % helper.lost_syllables)
 	print("IME_TYPING_DONE")
 	quit(1 if failed else 0)

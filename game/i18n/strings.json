@@ -4352,6 +4352,10 @@
    "en": "Password · 10+ chars, A–Z and a symbol",
    "zh": "密码 · 至少10位，含大写字母和特殊字符"
   },
+  "비밀번호는 영문으로 입력해요 · 한/영 키로 바꿔 주세요.": {
+   "en": "Passwords use Latin letters · switch with the Han/Eng key.",
+   "zh": "密码请用英文字母输入 · 请用韩/英键切换。"
+  },
   "비밀번호를 여러 번 틀려 잠시 잠겼어요. 15분 뒤에 다시 시도해 주세요.": {
    "en": "Too many wrong passwords. Please try again in 15 minutes.",
    "zh": "密码错误次数过多，请15分钟后再试。"
@@ -8583,6 +8587,10 @@
   "한국어": {
    "en": "English",
    "zh": "한국어"
+  },
+  "한글이 한 글자씩 덮어써지면 Windows 설정 › 시간 및 언어 › 한국어 › Microsoft 입력기 › 일반에서\n'이전 버전의 Microsoft IME 사용'을 켜 주세요. 이 게임 엔진 버전의 문제예요.": {
+   "en": "If Korean syllables overwrite each other, open Windows Settings › Time & language › Korean › Microsoft IME › General\nand turn on 'Use previous version of Microsoft IME'. It is a problem of this game engine version.",
+   "zh": "如果韩文音节互相覆盖，请在 Windows 设置 › 时间和语言 › 韩语 › Microsoft 输入法 › 常规中\n打开“使用以前版本的 Microsoft IME”。这是此游戏引擎版本的问题。"
   },
   "한낮의 해가 높이 떴어요. 마을이 환해요.": {
    "en": "The midday sun is high. The village is bright.",
