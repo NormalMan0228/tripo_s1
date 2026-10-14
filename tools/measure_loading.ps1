@@ -8,7 +8,8 @@ param(
     [string]$Pack = '',
     [switch]$StopAtTitle,
     [string]$GameArgs = '',
-    [string]$GameDir = ''
+    [string]$GameDir = '',
+    [int]$First = 1
 )
 # Loading measurement (game/tests/loading_frames.gd with --load-phases) in a window on the test
 # monitor, against a QA server you started (never the school or production server).
@@ -50,7 +51,7 @@ if ($Exe -or $Pack) {
     }
 }
 try {
-    for ($run = 1; $run -le $Runs; $run++) {
+    for ($run = $First; $run -lt $First + $Runs; $run++) {
         $env:APPDATA = $appData
         $env:LOCALAPPDATA = $appData
         $tag = $Label + $(if ($Cold -and $run -eq 1) { '-cold' } else { '' }) + '-' + $run

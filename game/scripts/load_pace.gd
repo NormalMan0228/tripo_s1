@@ -14,13 +14,17 @@ static var covered := false
 static var windowed := DisplayServer.get_name() != "headless"
 ## When this frame's processing began (transition.gd marks it on every process_frame and pumps).
 static var frame_from := 0
-## Paths waiting for a worker thread, the one loading, and the loaded ones held until the build
-## that wanted them ends. One load runs at a time: in the Compatibility renderer a finished load's
-## textures and meshes reach the GPU on the main thread at the next frame, so loads started
-## together landed in one frame of seconds; one by one they spread over frames of a few ms.
+## Paths waiting for a worker thread, the ones loading, and the loaded ones held until the build
+## that wanted them ends. In the Compatibility renderer a finished load's textures and meshes reach
+## the GPU on the main thread at the next frame, so many loads started together landed in one frame
+## of seconds. A few at a time (max_loads, each one whole resource on its own worker) they spread
+## over frames; with only one, the worker sat idle until the next frame started the next load
+## (up to a frame between every two of ~100 resources).
 static var queue: Array[String] = []
-static var running := ""
+static var loading: Array[String] = []
 static var held: Dictionary = {}
+## --load-threads=N: loads in flight (default 2).
+static var max_loads := _arg_int("--load-threads=", 2)
 ## The progress shown (0..1, < 0 for none) and the share of it the current stage reports into.
 static var shown := -1.0
 static var span := Vector2(0.0, 1.0)
@@ -47,7 +51,7 @@ static func frame_began() -> void:
 	var now := Time.get_ticks_usec()
 	if log_slow and covered and frame_from > 0 and now-frame_from > 50000:
 		var work := maxi(work_end-frame_from, 0)
-		print("LOAD_FRAME %6.1f ms: paced work %5.1f, other %6.1f (loading %s)" % [(now-frame_from)/1000.0, work/1000.0, (now-frame_from-work)/1000.0, running.get_file()])
+		print("LOAD_FRAME %6.1f ms: paced work %5.1f, other %6.1f (loading %s)" % [(now-frame_from)/1000.0, work/1000.0, (now-frame_from-work)/1000.0, ", ".join(loading.map(func(path): return path.get_file()))])
 	if phases_on and covered and frame_from > 0: _account(now-frame_from)
 	frame_from = now
 	work_end = now
@@ -92,27 +96,32 @@ static func want(paths: Array) -> void:
 
 ## Queued or loading.
 static func pending(path: String) -> bool:
-	return not path.is_empty() and (path == running or queue.has(path))
+	return not path.is_empty() and (loading.has(path) or queue.has(path))
 
-## Collects the finished load and starts the next one (every frame, from transition.gd).
+static func _arg_int(prefix: String, fallback: int) -> int:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with(prefix): return maxi(1, arg.trim_prefix(prefix).to_int())
+	return fallback
+
+## Collects the finished loads and starts the next ones (every frame, from transition.gd).
 static func pump() -> void:
-	if not running.is_empty():
-		var status := ResourceLoader.load_threaded_get_status(running)
-		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS: return
-		var resource := ResourceLoader.load_threaded_get(running) if status == ResourceLoader.THREAD_LOAD_LOADED else null
-		if resource != null: held[running] = resource
-		running = ""
-	while running.is_empty() and not queue.is_empty():
+	for path: String in loading.duplicate():
+		var status := ResourceLoader.load_threaded_get_status(path)
+		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS: continue
+		var resource := ResourceLoader.load_threaded_get(path) if status == ResourceLoader.THREAD_LOAD_LOADED else null
+		if resource != null: held[path] = resource
+		loading.erase(path)
+	while loading.size() < max_loads and not queue.is_empty():
 		var path: String = queue.pop_front()
 		if ResourceLoader.has_cached(path): continue
 		# One worker for the whole resource: its textures (4096² BPTC, ~20 MB each with mipmaps) then
 		# finish one by one and their GPU uploads land in different frames instead of the same one.
-		if ResourceLoader.load_threaded_request(path, "", false) == OK: running = path
+		if ResourceLoader.load_threaded_request(path, "", false) == OK: loading.append(path)
 
 ## The resource at `path`: covered, a queued one goes next and the card turns until it is in.
 static func fetch(path: String) -> Resource:
 	if covered and pending(path):
-		if path != running:
+		if not loading.has(path):
 			queue.erase(path)
 			queue.push_front(path)
 		while covered and pending(path):
@@ -127,9 +136,9 @@ static func fetch(path: String) -> Resource:
 ## The resource at `path` now (waiting for it if it is the one loading).
 static func take(path: String) -> Resource:
 	var from := Time.get_ticks_usec() if phases_on else 0
-	if path == running:
+	if loading.has(path):
 		var resource := ResourceLoader.load_threaded_get(path)
-		running = ""
+		loading.erase(path)
 		pump()
 		if phases_on: _blocked(from)
 		if resource != null:
@@ -143,11 +152,11 @@ static func take(path: String) -> Resource:
 
 ## Waits until every queued load is in, reporting their share as progress (0..1 of the span).
 static func settle() -> void:
-	var total := queue.size()+(0 if running.is_empty() else 1)
-	while covered and (not queue.is_empty() or not running.is_empty()):
+	var total := queue.size()+loading.size()
+	while covered and (not queue.is_empty() or not loading.is_empty()):
 		pump()
-		done(1.0-(queue.size()+(0 if running.is_empty() else 1))/maxf(total, 1.0))
-		if not queue.is_empty() or not running.is_empty():
+		done(1.0-(queue.size()+loading.size())/maxf(total, 1.0))
+		if not queue.is_empty() or not loading.is_empty():
 			frame_waited = true
 			await (Engine.get_main_loop() as SceneTree).process_frame
 			frame_waited = true
@@ -155,7 +164,7 @@ static func settle() -> void:
 	done(1.0)
 
 ## The build is done: drops the queued loads nobody fetched and the references held for it (the
-## built nodes keep what they use). A load still running is collected and let go at the next release.
+## built nodes keep what they use). Loads still running are collected and let go at the next release.
 static func release() -> void:
 	queue.clear()
 	held.clear()
@@ -179,7 +188,7 @@ static func phase_of(what: String) -> String:
 static func add_phase(name: String, usec: int) -> void:
 	if usec > 0: phases[name] = phases.get(name, 0.0)+usec/1000.0
 
-## A load the main thread waited for in one call (load_threaded_get of the running load, or load()).
+## A load the main thread waited for in one call (load_threaded_get of a running load, or load()).
 static func _blocked(from: int) -> void:
 	var spent := Time.get_ticks_usec()-from
 	add_phase("file read (main thread)", spent)
