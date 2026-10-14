@@ -21,7 +21,7 @@ def main():
                 name=PurePosixPath(info.filename);parts={p.casefold() for p in name.parts}
                 if name.is_absolute() or '..' in name.parts:issues.append({'file':info.filename,'reason':'unsafe_path'})
                 trusted_ca=info.filename.endswith('/certifi/cacert.pem') and archive.read(info)==Path(certifi.where()).read_bytes()
-                if (name.suffix.casefold() in ('.db','.sqlite','.sqlite3','.pem','.key') and not trusted_ca) or name.name in ('.env','tripo_key.txt') or parts&{'server-data','.codex','.tools','.git'}:
+                if (name.suffix.casefold() in ('.db','.sqlite','.sqlite3','.pem','.key') and not trusted_ca) or name.name in ('.env','tripo_key.txt','gemini_key.txt') or parts&{'server-data','.codex','.tools','.git'}:
                     issues.append({'file':info.filename,'reason':'private_or_runtime_content'})
                 if needles:
                     tail=b''

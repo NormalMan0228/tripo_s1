@@ -11,13 +11,21 @@ $taskGame = Join-Path $taskRoot 'builds\windows\Villagen_Developer.exe'
 $taskBuilds = Join-Path $taskRoot 'builds'
 $taskDataRoot = Join-Path $env:LOCALAPPDATA 'TripothonDemo'
 $taskData = Join-Path $taskDataRoot 'server-data'
-$taskKeyFile = Join-Path $env:USERPROFILE 'Desktop\tripo_key.txt'
+# Each person's own keys: Desktop\tripo_key.txt and Desktop\gemini_key.txt, or the paths in
+# TRIPO_API_KEY_FILE / GEMINI_API_KEY_FILE (docs/SHARE_GUIDE_KO.md). Only the server reads them.
+$taskKeyFile = if ($env:TRIPO_API_KEY_FILE) { $env:TRIPO_API_KEY_FILE } else { Join-Path $env:USERPROFILE 'Desktop\tripo_key.txt' }
+$taskGeminiFile = if ($env:GEMINI_API_KEY_FILE) { $env:GEMINI_API_KEY_FILE } else { Join-Path $env:USERPROFILE 'Desktop\gemini_key.txt' }
 $taskPidFile = Join-Path $taskRoot 'artifacts\tripo-game-server.pid'
 Set-Location -LiteralPath $taskRoot
 
 if (-not (Test-Path -LiteralPath $taskPython -PathType Leaf)) { throw 'Python server runtime is missing.' }
 if (-not $ServerOnly -and -not (Test-Path -LiteralPath $taskGame -PathType Leaf)) { throw 'Godot game build is missing.' }
-if (-not (Test-Path -LiteralPath $taskKeyFile -PathType Leaf)) { throw 'Server-side Tripo key file is missing.' }
+if (-not (Test-Path -LiteralPath $taskKeyFile -PathType Leaf)) { throw ('Tripo key file is missing: ' + $taskKeyFile) }
+# The design step (what to build, colours, parts) uses Gemini when its key file exists,
+# otherwise a signed-in Codex CLI on this PC.
+$taskCodex = Join-Path $env:APPDATA 'npm\node_modules\@openai\codex\bin\codex.js'
+$taskDesigner = if (Test-Path -LiteralPath $taskGeminiFile -PathType Leaf) { 'gemini' } elseif (Test-Path -LiteralPath $taskCodex -PathType Leaf) { 'codex' } else { '' }
+if (-not $taskDesigner) { throw ('Gemini key file is missing: ' + $taskGeminiFile + ' (free key: aistudio.google.com)') }
 
 # This read-only account request confirms the secret works without echoing it.
 $taskCheckOutput = & $taskPython tools/check_tripo.py --key-file $taskKeyFile
@@ -108,7 +116,9 @@ if (-not $taskReuse) {
     New-Item -ItemType Directory -Path (Join-Path $taskRoot 'artifacts') -Force | Out-Null
     $env:TRIPOTHON_DATA_DIR = $taskData
     $env:TRIPOTHON_MODE = 'demo'
-    $env:TRIPOTHON_STUDIO_LLM = 'codex'
+    $env:TRIPOTHON_STUDIO_LLM = $taskDesigner
+    Remove-Item Env:GEMINI_API_KEY -ErrorAction SilentlyContinue
+    if ($taskDesigner -eq 'gemini') { $env:GEMINI_API_KEY_FILE = $taskGeminiFile } else { Remove-Item Env:GEMINI_API_KEY_FILE -ErrorAction SilentlyContinue }
     $env:TRIPOTHON_DESIGN_FORMAT = 'classic'
     $env:TRIPO_API_KEY_FILE = $taskKeyFile
     Remove-Item Env:TRIPO_API_KEY -ErrorAction SilentlyContinue
@@ -133,11 +143,12 @@ if (-not $taskHealth -or $taskHealth.service -ne 'tripothon' -or $taskHealth.pro
 # The game process never needs the API key or its file path.
 Remove-Item Env:TRIPO_API_KEY_FILE -ErrorAction SilentlyContinue
 Remove-Item Env:TRIPO_API_KEY -ErrorAction SilentlyContinue
+Remove-Item Env:GEMINI_API_KEY_FILE -ErrorAction SilentlyContinue
 if ($Lan) { Write-Output ('Friends on the same router can log in at: http://' + $taskLanAddress + ':8765') }
 if ($Tailscale) { Write-Output ('Friends on your Tailscale network can log in at: http://' + $taskTailnetAddress + ':8765') }
 if ($ServerOnly) {
-    Write-Output ('Tripo-enabled server is ready at http://127.0.0.1:8765. Available provider credits: ' + $taskCheck.available_credits)
+    Write-Output ('Tripo-enabled server is ready at http://127.0.0.1:8765. Available provider credits: ' + $taskCheck.available_credits + ', design: ' + $taskDesigner)
     exit 0
 }
 Start-Process -FilePath $taskGame -WorkingDirectory (Split-Path -Parent $taskGame) -WindowStyle Normal
-Write-Output ('Villagen is running with server-side Tripo access. Available provider credits: ' + $taskCheck.available_credits)
+Write-Output ('Villagen is running with server-side Tripo access. Available provider credits: ' + $taskCheck.available_credits + ', design: ' + $taskDesigner)

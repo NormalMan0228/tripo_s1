@@ -28,7 +28,7 @@ def main():
         parts = {part.casefold() for part in path.parts}
         if parts & {'.tools', 'artifacts', 'builds', 'server-data', '.godot', '__pycache__'}:
             issues.append((name, 'private_or_generated_directory'))
-        if path.suffix.casefold() in {'.db', '.sqlite', '.sqlite3', '.key', '.pem'} or path.name in {'.env', 'tripo_key.txt'}:
+        if path.suffix.casefold() in {'.db', '.sqlite', '.sqlite3', '.key', '.pem'} or path.name in {'.env', 'tripo_key.txt', 'gemini_key.txt'}:
             issues.append((name, 'private_file_type'))
         blob = git('show', ':' + name)
         total += len(blob)

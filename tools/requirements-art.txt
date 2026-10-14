@@ -1,0 +1,9 @@
+# Art tools, UI kit builders and release packaging (.tools/art-venv, tools/setup.ps1 -Art).
+httpx==0.28.1
+pillow==12.3.0
+numpy==2.5.3
+scipy==1.18.1
+opencv-python-headless==5.0.0.93
+fonttools==4.66.1
+Markdown==3.11
+imageio-ffmpeg==0.6.0
