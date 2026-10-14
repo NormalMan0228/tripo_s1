@@ -63,6 +63,16 @@ func _ready() -> void:
 	get_viewport().gui_focus_changed.connect(_on_focus_changed)
 	get_window().window_input.connect(_on_window_input)
 	if "--ime-trace" in OS.get_cmdline_user_args(): start_trace("user://logs/ime_trace.txt")
+	RenderingServer.frame_post_draw.connect(_keep_latin)
+
+## A Latin field (RpgUi.field: password, id, world address) types keyboard letters even when the
+## Korean IME is in Hangul mode. Godot turns the IME on again whenever the field redraws, so it is
+## switched off after every frame's drawing, before the next frame reads the keyboard.
+func _keep_latin() -> void:
+	if not ime_supported or not get_window().has_focus(): return
+	var focus := get_viewport().gui_get_focus_owner()
+	if focus is LineEdit and focus.has_meta("latin") and (focus as LineEdit).is_editing():
+		DisplayServer.window_set_ime_active(false)
 
 func _process(_delta: float) -> void:
 	var focus := get_viewport().gui_get_focus_owner()

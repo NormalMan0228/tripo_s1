@@ -643,7 +643,7 @@ func login_ui(page := "menu") -> void:
 			card.add_child(column)
 			RpgUi.label(column,tr("모험가 로그인"),24,RpgUi.GOLD)
 			RpgUi.divider(column,Color(RpgUi.GOLD,.8))
-			var username := RpgUi.field(column,tr("아이디 · 영문·숫자·밑줄 3~24자"))
+			var username := RpgUi.field(column,tr("아이디 · 영문·숫자·밑줄 3~24자"),false,func(): message(tr("한/영 키가 한글이었어요 · 누른 자판대로 영문으로 넣었어요.")),true)
 			username.text = str(I18n.setting("username",""))
 			var password := RpgUi.field(column,tr("비밀번호 · 10자 이상, 대문자와 특수문자 포함"),true,func(): message(tr("비밀번호는 영문으로 입력해요 · 한/영 키로 바꿔 주세요.")))
 			RpgUi.label(column,tr("월드"),14,RpgUi.GOLD)
@@ -654,7 +654,7 @@ func login_ui(page := "menu") -> void:
 			servers.add_theme_icon_override("arrow",RpgUi.half("arrow_down_light"))
 			servers.alignment = HORIZONTAL_ALIGNMENT_LEFT
 			column.add_child(servers)
-			var custom := RpgUi.field(column,tr("월드 주소 · 예: http://100.101.1.2:8765"))
+			var custom := RpgUi.field(column,tr("월드 주소 · 예: http://100.101.1.2:8765"),false,Callable(),true)
 			# Player builds (the judging ZIP) start on the online world; source runs on this PC.
 			var list := worlds()
 			var saved := default_world()

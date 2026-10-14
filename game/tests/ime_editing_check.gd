@@ -5,7 +5,8 @@ extends SceneTree
 ##   arrow key was held, after Enter without keep_editing_on_text_submit. ImeCaret makes it edit.
 ## - Esc leaves the field (focus goes) instead of leaving it focused but deaf.
 ## - The login page: Korean in the ID stays in the ID (focus and page stay), keys the IME passes on
-##   (Hangul key, letters without text) move nothing; the password keeps Latin letters and says why.
+##   (Hangul key, letters without text) move nothing; the ID and the password are Latin fields: Hangul
+##   becomes the keys that typed it ('한글' -> 'gksrmf') and the page says the keyboard was in Hangul mode.
 ## - The composition helper: caret hidden while composing, committed syllables kept, and syllables
 ##   that never arrive (engine bug godotengine/godot#123269) counted, with the Windows hint shown.
 ##   godot --headless --path game --script res://tests/ime_editing_check.gd
@@ -160,12 +161,12 @@ func run() -> void:
 	for physical in [KEY_W, KEY_D, KEY_E, KEY_M, KEY_I]: await send_key(KEY_UNKNOWN, physical)
 	await commit("아이디")
 	await frames()
-	expect(id_field.text == "한글아이디" and root.gui_get_focus_owner() == id_field and id_field.is_editing() and app.screen == "login" and app.title_page == "login",
-		"Korean in the login ID stays there: '%s', focus %s, page %s/%s" % [id_field.text, root.gui_get_focus_owner(), app.screen, app.title_page])
+	expect(id_field.text == "gksrmfdkdlel" and root.gui_get_focus_owner() == id_field and id_field.is_editing() and app.screen == "login" and app.title_page == "login",
+		"Korean typed in the login ID becomes its keys and stays there: '%s', focus %s, page %s/%s" % [id_field.text, root.gui_get_focus_owner(), app.screen, app.title_page])
 	await click(password)
 	password.text = ""
 	await commit("ab한c")
 	await frames()
-	expect(password.text == "abc" and str(app.notice.text).contains("영문"), "the password keeps Latin letters and says why ('%s', notice '%s')" % [password.text, app.notice.text])
+	expect(password.text == "abgksc" and str(app.notice.text).contains("영문"), "the password takes the keys of Hangul and says why ('%s', notice '%s')" % [password.text, app.notice.text])
 	print("IME_EDITING_DONE")
 	quit(1 if failed else 0)

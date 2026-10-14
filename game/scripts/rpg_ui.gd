@@ -1440,16 +1440,18 @@ static func menu_button(parent: Node, value: String, callback: Callable, width :
 	parent.add_child(b)
 	return b
 
-## Text field matching the night title card. A secret field (password) keeps only Latin letters,
-## digits and symbols and calls `dropped` when it took typed letters out again.
-static func field(parent: Node, placeholder: String, secret := false, dropped := Callable()) -> LineEdit:
+## Text field matching the night title card. A Latin field (a password is always one; ids and
+## addresses ask for it) takes keyboard letters only: ImeCaret keeps the Korean IME off while it is
+## edited, and Hangul that still arrives becomes the keys that typed it ('안녕' -> 'dkssud');
+## `dropped` is called when that happened, so the page can say the keyboard was in Hangul mode.
+static func field(parent: Node, placeholder: String, secret := false, dropped := Callable(), latin := false) -> LineEdit:
 	var line := LineEdit.new()
 	line.placeholder_text = placeholder
 	line.secret = secret
-	# The IME cannot stay off for one field (Godot 4.7 turns it on again at each redraw of the field),
-	# so syllables typed in Hangul mode are taken out and the page says why.
-	if secret: line.text_changed.connect(func(value: String):
-		if latin_only(line, value) and dropped.is_valid(): dropped.call())
+	if secret or latin:
+		line.set_meta("latin", true)
+		line.text_changed.connect(func(value: String):
+			if latin_only(line, value) and dropped.is_valid(): dropped.call())
 	line.custom_minimum_size = Vector2(340, 44)
 	line.theme_type_variation = "NightField"
 	line.add_theme_font_size_override("font_size", 16)
@@ -1459,13 +1461,31 @@ static func field(parent: Node, placeholder: String, secret := false, dropped :=
 	parent.add_child(line)
 	return line
 
-## Takes every character outside printable ASCII out of the field; true when there was one.
+## Hangul typed on a Korean 2-set keyboard back to the keys pressed, everything else outside
+## printable ASCII taken out; true when the field had to change. Shift is not known for plain
+## letters (the IME does not say), so only the doubled consonants and two vowels come back upper case.
 static func latin_only(line: LineEdit, value: String) -> bool:
-	var kept := ""
-	for ch in value:
-		if ch.unicode_at(0) >= 0x20 and ch.unicode_at(0) < 0x7F: kept += ch
+	var kept := hangul_keys(value)
 	if kept == value: return false
-	var caret := line.caret_column - (value.length() - kept.length())
+	var caret := line.caret_column + (kept.length() - value.length())
 	line.text = kept
 	line.caret_column = clampi(caret, 0, kept.length())
 	return true
+
+const HANGUL_LEADS := ["r","R","s","e","E","f","a","q","Q","t","T","d","w","W","c","z","x","v","g"]
+const HANGUL_VOWELS := ["k","o","i","O","j","p","u","P","h","hk","ho","hl","y","n","nj","np","nl","b","m","ml","l"]
+const HANGUL_TAILS := ["","r","R","rt","s","sw","sg","e","f","fr","fa","fq","ft","fx","fv","fg","a","q","qt","t","T","d","w","c","z","x","v","g"]
+## Compatibility jamo U+3131..U+3163 (what the IME shows for a lone letter).
+const HANGUL_JAMO := ["r","R","rt","s","sw","sg","e","E","f","fr","fa","fq","ft","fx","fv","fg","a","q","Q","qt","t","T","d","w","W","c","z","x","v","g",
+	"k","o","i","O","j","p","u","P","h","hk","ho","hl","y","n","nj","np","nl","b","m","ml","l"]
+
+static func hangul_keys(value: String) -> String:
+	var out := ""
+	for ch in value:
+		var code := ch.unicode_at(0)
+		if code >= 0x20 and code < 0x7F: out += ch
+		elif code >= 0xAC00 and code <= 0xD7A3:
+			var index := code - 0xAC00
+			out += HANGUL_LEADS[index / 588] + HANGUL_VOWELS[(index % 588) / 28] + HANGUL_TAILS[index % 28]
+		elif code >= 0x3131 and code <= 0x3163: out += HANGUL_JAMO[code - 0x3131]
+	return out

@@ -4384,6 +4384,10 @@
    "en": "Password · 10+ chars, A–Z and a symbol",
    "zh": "密码 · 至少10位，含大写字母和特殊字符"
   },
+  "한/영 키가 한글이었어요 · 누른 자판대로 영문으로 넣었어요.": {
+    "en": "Your keyboard was in Hangul mode · the keys you pressed went in as English letters.",
+    "zh": "键盘处于韩文模式 · 已按所按的键改为英文字母输入。"
+  },
   "비밀번호는 영문으로 입력해요 · 한/영 키로 바꿔 주세요.": {
    "en": "Passwords use Latin letters · switch with the Han/Eng key.",
    "zh": "密码请用英文字母输入 · 请用韩/英键切换。"

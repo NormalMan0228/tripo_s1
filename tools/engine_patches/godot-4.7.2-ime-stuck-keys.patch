@@ -1,0 +1,24 @@
+Godot 4.7.2-stable, Windows: a movement key stays pressed after Korean typing (the walker keeps
+walking until the window loses focus). A composition ended by switching the IME off (the text
+field lost focus, a click, a closed window) sends WM_IME_ENDCOMPOSITION while the IME is still
+marked active, which sets ime_suppress_next_keyup: the next WM_KEYUP of ANY key is then dropped,
+typically the release of W/A/S/D. window_set_ime_active(false) now clears that flag and
+ime_in_progress. Apply after godot-4.7.2-ime-message-order.patch and build the export templates
+(see that patch's header).
+
+diff --git a/platform/windows/display_server_windows.cpp b/platform/windows/display_server_windows.cpp
+index e821786..d340b0c 100644
+--- a/platform/windows/display_server_windows.cpp
++++ b/platform/windows/display_server_windows.cpp
+@@ -3247,6 +3247,11 @@ void DisplayServerWindows::window_set_ime_active(const bool p_active, DisplaySer
+ 		ImmAssociateContext(wd.hWnd, (HIMC) nullptr);
+ 		DestroyCaret();
+ 		wd.ime_active = false;
++		// A composition ended by switching the IME off (focus left the text field, a click, a closed
++		// window) has no key of its own: its END message must not swallow the next key-up of an
++		// unrelated key (a movement key then stays pressed), and no composition is in progress now.
++		wd.ime_in_progress = false;
++		wd.ime_suppress_next_keyup = false;
+ 	}
+ }
+ 
