@@ -3,4 +3,4 @@
 static func url() -> String:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--server="): return arg.trim_prefix("--server=").trim_suffix("/")
-	return preload("res://tests/qa_server.gd").url()
+	return "http://127.0.0.1:8766"
