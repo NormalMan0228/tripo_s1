@@ -138,7 +138,9 @@ class Multiplayer:
                 host = host_for(conn, user['id'])
                 conn.execute('INSERT INTO mp_presence(user_id,host_id,scene,x,z,y,yaw,seen) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,scene=excluded.scene,x=excluded.x,z=excluded.z,y=excluded.y,yaw=excluded.yaw,seen=excluded.seen', (user['id'], host, body.scene, body.x, body.z, body.y, body.yaw, clock()))
                 space = village(conn, user, body.scene) if body.scene in VISIBLE_SCENES else None
-                return {**overview(conn, user), 'village': space if body.scene == 'village' else None, 'space': space}
+                # The host's residents' home versions (npc_homes.py), so visitors follow their rooms too.
+                homes = app.state.npc_homes.versions_in(conn, host) if hasattr(app.state, 'npc_homes') else {}
+                return {**overview(conn, user), 'village': space if body.scene == 'village' else None, 'space': space, 'npc_homes': homes}
 
         @app.post('/v1/social/invites')
         def invite(body: Invite, request: Request):
@@ -346,7 +348,8 @@ class Multiplayer:
             return mutate(request, body, 'coop_claim:'+run_id, apply)
 
         def visible_object(conn, user_id, object_id):
-            row = conn.execute("SELECT o.* FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.id=? AND o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village') IN ('village','home')", (object_id, host_for(conn, user_id))).fetchone()
+            # Also the pieces the host's residents have put up in their homes (npc_homes.py), not the stored ones.
+            row = conn.execute("SELECT o.* FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.id=? AND o.owner_id=? AND (o.state='placed' AND COALESCE(l.room,'village') IN ('village','home') OR o.state='gifted' AND EXISTS(SELECT 1 FROM npc_items i WHERE i.object_id=o.id AND i.state='placed'))", (object_id, host_for(conn, user_id))).fetchone()
             if not row:
                 fail('object_not_found', 404)
             return row
@@ -400,4 +403,5 @@ class Multiplayer:
                 return object_paint.response(conn, assets, object_id)
 
         self.active_coop = active_coop
+        self.host_for = host_for
 

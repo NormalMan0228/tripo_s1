@@ -121,6 +121,8 @@ func poll() -> void:
 			object_signature = ""
 		return
 	data = response.data
+	# The host's residents' home versions (npc_gifts.gd), so a cached house stays current.
+	preload("res://scripts/npc_gifts.gd").set_versions(data.get("npc_homes"), data.get("host_id", ""))
 	update_status()
 	for entry in data.get("messages", []):
 		if int(entry.id) > seen_message:

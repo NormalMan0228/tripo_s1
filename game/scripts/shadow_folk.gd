@@ -633,6 +633,9 @@ func talk(walker: Node) -> void:
 	var choices: Array = []
 	for action in actions(id):
 		choices.append(action_choice(walker, str(action)))
+	# Residents of a house take gifts (npc_gifts.gd, main.gd open_gift).
+	if preload("res://scripts/npc_gifts.gd").can_receive(id) and app.has_method("can_gift") and app.can_gift():
+		choices.append([tr("선물하기"), func(): app.open_gift(id, str(walker.title), portrait(walker), walker)])
 	choices.append([tr("안녕"), Callable()])
 	say(walker, opening, choices)
 

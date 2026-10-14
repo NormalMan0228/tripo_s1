@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS campaign_progress (
 CREATE TABLE IF NOT EXISTS objects (
  id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id), creator_id TEXT NOT NULL REFERENCES users(id),
  asset_id TEXT NOT NULL, name TEXT NOT NULL, color TEXT NOT NULL DEFAULT '#f6eee0',
- version INTEGER NOT NULL DEFAULT 1, state TEXT NOT NULL DEFAULT 'inventory' CHECK(state IN ('inventory','placed','listed')),
+ version INTEGER NOT NULL DEFAULT 1, state TEXT NOT NULL DEFAULT 'inventory' CHECK(state IN ('inventory','placed','listed','gifted')),
  x REAL, z REAL, rotation INTEGER NOT NULL DEFAULT 0, created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS assets (
  id TEXT PRIMARY KEY, relative_path TEXT NOT NULL, digest TEXT NOT NULL, source TEXT NOT NULL);
@@ -75,12 +75,47 @@ CREATE TABLE IF NOT EXISTS object_paint (
  updated REAL NOT NULL);
 '''
 
+OBJECT_STATES_BEFORE_GIFTS = "CHECK(state IN ('inventory','placed','listed'))"
+
+
+def widen_object_states(db):
+    """Objects gained the 'gifted' state (a gift to a village resident, server/npc_homes.py).
+    SQLite cannot change a CHECK constraint, so an older world rebuilds the table once with the
+    same columns and rows (SQLite's documented rebuild: foreign keys off, copy, swap, check)."""
+    sql = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='objects'").fetchone()[0]
+    if "'gifted'" in sql:
+        return
+    if OBJECT_STATES_BEFORE_GIFTS not in sql or not sql.startswith('CREATE TABLE objects ('):
+        raise ValueError('Unexpected objects table definition')
+    widened = sql.replace(OBJECT_STATES_BEFORE_GIFTS, "CHECK(state IN ('inventory','placed','listed','gifted'))")
+    indexes = [r[0] for r in db.execute("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name='objects' AND sql IS NOT NULL")]
+    db.execute('PRAGMA foreign_keys=OFF')
+    try:
+        db.execute('BEGIN IMMEDIATE')
+        try:
+            db.execute(widened.replace('CREATE TABLE objects (', 'CREATE TABLE objects_widened (', 1))
+            db.execute('INSERT INTO objects_widened SELECT * FROM objects')
+            if db.execute('SELECT count(*) FROM objects_widened').fetchone()[0] != db.execute('SELECT count(*) FROM objects').fetchone()[0]:
+                raise ValueError('Object table rebuild lost rows')
+            db.execute('DROP TABLE objects')
+            db.execute('ALTER TABLE objects_widened RENAME TO objects')
+            for index in indexes:
+                db.execute(index)
+            db.execute('COMMIT')
+        except BaseException:
+            db.execute('ROLLBACK')
+            raise
+    finally:
+        db.execute('PRAGMA foreign_keys=ON')
+
+
 class Database:
     def __init__(self, path, mode):
         self.path = str(path)
         with closing(self.connect()) as db:
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript(SCHEMA)
+            widen_object_states(db)
             # Accounts are players unless an operator promotes them (tools/admin_accounts.py).
             if 'role' not in [r[1] for r in db.execute('PRAGMA table_info(users)')]:
                 db.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'player'")

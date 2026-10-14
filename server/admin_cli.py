@@ -16,6 +16,11 @@ described and designs the LLM made, reused for the next same request without the
     ... python -m server.admin_cli library show KEY        (the first 6+ characters of a key)
     ... python -m server.admin_cli library disable KEY     (stop serving it; enable undoes)
     ... python -m server.admin_cli library delete KEY
+
+npc-homes shows one player's village residents' homes (server/npc_homes.py): every gift, whether
+it is in storage or at which slot, the next change time, and friendship. Read-only.
+
+    ... python -m server.admin_cli npc-homes USERNAME
 """
 from __future__ import annotations
 
@@ -157,6 +162,25 @@ def library(args):
     return 0
 
 
+def npc_homes(args):
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    from .npc_homes import describe
+    with sqlite3.connect(database, timeout=30) as conn:
+        conn.row_factory = sqlite3.Row
+        user = conn.execute('SELECT id FROM users WHERE username=?', (args.username.lower(),)).fetchone()
+        if not user:
+            print('No such account.')
+            return 1
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE name='npc_items'").fetchone():
+            print(json.dumps({'homes': [], 'items': [], 'friendship': []}))
+            return 0
+        print(json.dumps(describe(conn, user['id']), ensure_ascii=False, indent=1))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     actions = parser.add_subparsers(dest='action', required=True)
@@ -172,7 +196,12 @@ def main(argv=None):
     learned.add_argument('--kind', choices=('describe', 'design'))
     learned.add_argument('--limit', type=int, default=50)
     learned.add_argument('--data-dir', default='/data')
+    homes = actions.add_parser('npc-homes', help="show one player's residents' homes and gifts")
+    homes.add_argument('username')
+    homes.add_argument('--data-dir', default='/data')
     args = parser.parse_args(argv)
+    if args.action == 'npc-homes':
+        return npc_homes(args)
     if args.action == 'library':
         return library(args)
     if not args.usernames and not args.pattern:
