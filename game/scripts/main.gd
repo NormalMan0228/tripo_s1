@@ -1935,6 +1935,8 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	close_village_modal()
 	cancel_preview()
 	busy=true
+	# The expedition's props read on a worker thread while the server answers and the card comes up.
+	LoadPace.want(preload("res://maps/survival/survival_map.gd").resource_paths(map_id))
 	coop_run = not party_run_id.is_empty()
 	var result: Dictionary = {"ok":true,"data":{"id":party_run_id}} if coop_run else await api.post("/v1/runs",api.mutation({"map_id":map_id,"difficulty":difficulty,"chapter_id":chapter_id}))
 	if not check(result):

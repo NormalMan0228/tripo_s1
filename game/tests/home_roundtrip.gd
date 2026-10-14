@@ -20,7 +20,7 @@ func run() -> void:
 	await create_timer(4).timeout
 	# In a window (--capture) the village is built under the loading card over frames: wait for it.
 	var deadline:=Time.get_ticks_msec()+60000
-	while Time.get_ticks_msec()<deadline and not (is_instance_valid(current_scene) and current_scene.get("screen")=="village"):await process_frame
+	while Time.get_ticks_msec()<deadline and not (is_instance_valid(current_scene) and current_scene.get("screen")=="village" and is_zero_approx(load("res://scripts/transition.gd").instance.veil.modulate.a)):await process_frame
 	var village=current_scene
 	check(village.screen=="village","village loaded")
 	check(village.player.position.distance_to(load("res://scripts/town.gd").point(load("res://scripts/town.gd").HOME_RETURN_AT,.3))<0.5,"home doorstep return position")

@@ -101,14 +101,29 @@ static func layouts() -> Dictionary:
 	return _layout_cache
 
 ## Every model this map may place, for LoadPace.want() while the expedition's card comes up.
-static func resource_paths() -> Array:
+## The props each map places (its layout, scatter and camp), read on a worker thread while the
+## expedition's card comes up. A stale entry only reads something unused; a prop missing here is
+## read when it is first placed, as before.
+const MAP_PROPS := {
+	"forest":["log_bench","firewood_pile","camp_supplies","tent_orange","signpost","reeds","mossy_boulder","fern_clump",
+		"forest_ruin","oak_broad","fallen_log","pine_tall","birch_slim","bush_round","mushroom_cluster","tree_stump",
+		"white_flowers","yellow_flowers","pink_flowers"],
+	"quarry":["ember_rock","log_bench","firewood_pile","tool_rack","tent_green","signpost","sandstone_cliff","sandstone_boulder",
+		"cut_blocks","quarry_crane","mine_cart","dead_tree","dry_shrub"],
+	"frost":["ice_crystal","log_bench","firewood_pile","sled_empty","tent_orange","signpost","snow_boulder","frost_shrine",
+		"snow_pine","snowman","frost_shrub","snow_fence"]}
+
+static func resource_paths(map: String) -> Array:
 	var paths := []
-	for file in ResourceLoader.list_directory(ASSETS):
-		if file.ends_with(".glb"): paths.append(ASSETS+file)
-	for files in VILLAGE_PROPS.values():
-		for file in files:
-			if not str(file).is_empty(): paths.append(VILLAGE+file)
+	for id in MAP_PROPS.get(map, MAP_PROPS.forest):
+		for path: String in prop_paths(id): if not path.is_empty(): paths.append(path)
 	return paths
+
+## A prop's model and its level-of-detail model ("" when it has none).
+static func prop_paths(id: String) -> Array:
+	if VILLAGE_PROPS.has(id):
+		return [VILLAGE+VILLAGE_PROPS[id][0], VILLAGE+VILLAGE_PROPS[id][1] if VILLAGE_PROPS[id][1] != "" else ""]
+	return [ASSETS+id+".glb", ASSETS+id+"_lod1.glb"]
 
 ## Paced under the loading card (await it), in one go otherwise; the order (and so the seeded layout)
 ## is the same either way.
@@ -136,6 +151,8 @@ func build(run: Dictionary) -> void:
 	await LoadPace.step("survival hazards")
 	_build_hazards()
 	LoadPace.done(0.45)
+	# The props read on a worker thread since the expedition began (main.gd start_run).
+	for path: String in resource_paths(map_id): if LoadPace.pending(path): await LoadPace.fetch(path)
 	await LoadPace.step("survival features")
 	await _build_features()
 	LoadPace.done(0.6)
@@ -464,18 +481,15 @@ func _hazard_dressing(h: Dictionary) -> void:
 # ------------------------------------------------------------------ props
 func _prop(id: String) -> Dictionary:
 	if props.has(id): return props[id]
-	var path := ""; var lod_path := ""
-	if VILLAGE_PROPS.has(id):
-		path = VILLAGE+VILLAGE_PROPS[id][0]
-		lod_path = VILLAGE+VILLAGE_PROPS[id][1] if VILLAGE_PROPS[id][1] != "" else ""
-	else:
-		path = ASSETS+id+".glb"
-		lod_path = ASSETS+id+"_lod1.glb"
+	var paths := prop_paths(id)
+	var path: String = paths[0]
+	var lod_path: String = paths[1]
 	var entry := {"ok":false}
 	if not ResourceLoader.exists(path):
 		props[id] = entry
 		return entry
-	var scene := (load(path) as PackedScene).instantiate()
+	# Read on a worker thread at the start of the expedition (LoadPace.want) when it is listed.
+	var scene := (LoadPace.take(path) as PackedScene).instantiate()
 	var meshes := scene.find_children("*","MeshInstance3D",true,false)
 	if meshes.is_empty():
 		scene.free(); props[id] = entry; return entry
@@ -496,7 +510,7 @@ func _prop(id: String) -> Dictionary:
 	scene.free()
 	var low: ArrayMesh = null
 	if lod_path != "" and ResourceLoader.exists(lod_path):
-		var lod_scene := (load(lod_path) as PackedScene).instantiate()
+		var lod_scene := (LoadPace.take(lod_path) as PackedScene).instantiate()
 		var lod_meshes := lod_scene.find_children("*","MeshInstance3D",true,false)
 		var candidate := ArrayMesh.new()
 		for node in lod_meshes:

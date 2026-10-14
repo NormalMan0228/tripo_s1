@@ -112,7 +112,9 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 				var mesh := item as MeshInstance3D
 				_add_cached_collision(mesh,2 if spec.id=="20_pier" else 8)
 	print("ENVIRONMENT_LAYOUT_READY models=",manifest.models.size()," instances=",prop_nodes.size()," bridges=",bridge_nodes.size())
-	_fit_floor_props.call_deferred()
+	# Under the loading card the props settle before the map shows.
+	if LoadPace.covered: await _fit_floor_props()
+	else: _fit_floor_props.call_deferred()
 
 func _add_authored_deck_collision(bridge: Node3D,spec: Dictionary) -> void:
 	# The nine millimetre plank joints are visual detail. A continuous deck collider
@@ -308,8 +310,7 @@ func _add_pier_supports(prop: Node3D,spec: Dictionary) -> void:
 			prop.add_child(pile)
 
 func _fit_floor_props() -> void:
-	await get_tree().physics_frame
-	await get_tree().physics_frame
+	await LoadPace.physics_frames(self, 2)
 	for prop in prop_nodes:
 		var spec: Dictionary = prop.get_meta("placement_spec")
 		if spec.id in ["20_pier","21_boat","45_reeds","46_water_lily"]:

@@ -67,7 +67,7 @@ static func want(paths: Array) -> void:
 
 ## Queued or loading.
 static func pending(path: String) -> bool:
-	return path == running or queue.has(path)
+	return not path.is_empty() and (path == running or queue.has(path))
 
 ## Collects the finished load and starts the next one (every frame, from transition.gd).
 static func pump() -> void:
@@ -148,6 +148,18 @@ static func collide(mesh: MeshInstance3D, faces := PackedVector3Array(), layer :
 		body.owner = mesh.owner
 		holder.owner = mesh.owner
 	await step("collider")
+
+## Waits `count` physics steps with `node` in the tree. A map finishing itself a few steps after
+## its build may be taken out of the tree meanwhile (kept for the next visit while a room is open);
+## it then goes on once it is back instead of failing without a tree.
+static func physics_frames(node: Node, count: int) -> void:
+	var left := count
+	while left > 0 or not node.is_inside_tree():
+		if not node.is_inside_tree():
+			await node.tree_entered
+			continue
+		await node.get_tree().physics_frame
+		left -= 1
 
 ## This stage is `fraction` (0..1) done; shown within the current span, never going back.
 static func done(fraction: float) -> void:

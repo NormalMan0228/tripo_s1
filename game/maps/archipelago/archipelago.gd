@@ -128,11 +128,16 @@ func build(view: Camera3D) -> void:
 	await props.install(self, terrain)
 	LoadPace.span = span
 	_create_water_spray()
+	if LoadPace.covered:
+		# Under the card the map is finished before it shows: rock walls paced (in one go they held a
+		# frame), then the roots and ramps that wait a few physics steps (bury waits fewer than ramp).
+		await _wall_tall_rocks(terrain)
+		_bury_tree_roots(props)
+		await _ramp_open_structures()
+		return
 	_bury_tree_roots.call_deferred(props)
 	_ramp_open_structures.call_deferred()
-	# Under the card the rock walls are made before the map shows, paced (in one go they held a frame).
-	if LoadPace.covered: await _wall_tall_rocks(terrain)
-	else: _wall_tall_rocks.call_deferred(terrain)
+	_wall_tall_rocks.call_deferred(terrain)
 
 ## Walkers could climb the shore rocks a step at a time and wedge themselves in
 ## the gaps. Every rock cluster taller than ROCK_WALL_HEIGHT gets an invisible
@@ -217,7 +222,7 @@ static func _union(parent: PackedInt32Array, a: int, b: int) -> void:
 ## walkers stroll up from any side; railings and pillars keep their colliders.
 const OPEN_STRUCTURES := {"08_gazebo":[Vector2(71,-36),2.9],"14_stage":[Vector2(37,26),4.5],"15_picnic_shelter":[Vector2(65,29),4.1]}
 func _ramp_open_structures() -> void:
-	for i in 5: await get_tree().physics_frame
+	await LoadPace.physics_frames(self, 5)
 	var space := get_world_3d().direct_space_state
 	for id in OPEN_STRUCTURES:
 		var centre: Vector2 = OPEN_STRUCTURES[id][0]
@@ -259,7 +264,7 @@ func _ramp_open_structures() -> void:
 ## the layout snaps props to the ground, sink each tree so the flares are buried.
 const ROOT_DEPTH := {"37_round_tree":0.42,"38_conifer":0.22,"39_palm":0.12}
 func _bury_tree_roots(props: Node) -> void:
-	for i in 4: await get_tree().physics_frame
+	await LoadPace.physics_frames(self, 4)
 	for prop in props.prop_nodes:
 		var spec: Dictionary = prop.get_meta("placement_spec",{})
 		if ROOT_DEPTH.has(spec.get("id","")):
