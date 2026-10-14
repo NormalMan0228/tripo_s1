@@ -20,7 +20,7 @@ func play() -> void:
 	app=Main.new()
 	root.add_child(app)
 	await process_frame
-	await app.authenticate(true,"http://127.0.0.1:8766","combat_"+str(Time.get_ticks_usec()),"Local-combat-test-123","")
+	await app.authenticate(true,preload("res://tests/qa_server.gd").url(),"combat_"+str(Time.get_ticks_usec()),"Local-combat-test-123","")
 	if app.screen!="village": quit(1); return
 	var region := "forest"
 	var difficulty := "standard"

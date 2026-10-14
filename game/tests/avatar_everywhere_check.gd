@@ -16,7 +16,7 @@ const LOOKS := [
 	{"character":"explorer", "hair":"#d5a250", "coat":"#6889a1", "pants":"#774f3d", "boots":"#30595b", "skin":"#f0cdb1", "headwear":"none", "backpack":false},
 	{"character":"explorer_b", "hair":"#30595b", "coat":"#c47b50", "pants":"#6889a1", "boots":"#774f3d", "skin":"#e4b587", "headwear":"cap", "backpack":true},
 ]
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 var failures: Array[String] = []
 var capture := false
 var out_dir := ""

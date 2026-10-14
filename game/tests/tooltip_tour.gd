@@ -51,7 +51,7 @@ func run() -> void:
 	app = Main.new()
 	root.add_child(app)
 	await create_timer(1.6).timeout
-	await app.authenticate(true,"http://127.0.0.1:8766","tip_"+str(Time.get_ticks_msec()),"Tooltip-tour-password-123","")
+	await app.authenticate(true,preload("res://tests/qa_server.gd").url(),"tip_"+str(Time.get_ticks_msec()),"Tooltip-tour-password-123","")
 	await create_timer(1.5).timeout
 	expect(app.screen=="village","village after login")
 	var bag: Control = app.expedition_button.get_parent().get_child(0)

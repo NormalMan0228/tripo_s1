@@ -10,7 +10,7 @@ extends SceneTree
 const Main = preload("res://scripts/main.gd")
 const PASSWORD := "Host-leaves-password-1"
 var failed := false
-var url := "http://127.0.0.1:8766"
+var url := preload("res://tests/qa_server.gd").url()
 var names: Array[String] = []
 
 func _initialize() -> void:

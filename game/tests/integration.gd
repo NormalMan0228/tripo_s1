@@ -3,7 +3,7 @@ extends SceneTree
 const Main = preload("res://scripts/main.gd")
 var failed := false
 var app: Node3D
-var test_url := "http://127.0.0.1:8766"
+var test_url := preload("res://tests/qa_server.gd").url()
 
 func _initialize() -> void:
 	call_deferred("run_test")

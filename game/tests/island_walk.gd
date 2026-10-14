@@ -6,7 +6,7 @@ const Main = preload("res://scripts/main.gd")
 const Town = preload("res://scripts/town.gd")
 var failed := false
 var app: Node3D
-var test_url := "http://127.0.0.1:8766"
+var test_url := preload("res://tests/qa_server.gd").url()
 var lowest := INF
 
 func _initialize() -> void:

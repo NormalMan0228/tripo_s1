@@ -357,7 +357,7 @@ func lineup() -> void:
 	stage.queue_free()
 
 func village_talk() -> void:
-	var server := "http://127.0.0.1:8766"
+	var server := preload("res://tests/qa_server.gd").url()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
 	var main = load("res://scripts/main.gd").new()

@@ -2,7 +2,7 @@ extends SceneTree
 ## Two accounts: the host places furniture at home and invites a friend; the friend
 ## opens the host's home read-only and both see each other inside.
 var failed := false
-var url := "http://127.0.0.1:8766"
+var url := preload("res://tests/qa_server.gd").url()
 
 func _initialize() -> void:
 	call_deferred("run")

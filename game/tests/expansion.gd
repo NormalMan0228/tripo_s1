@@ -21,7 +21,7 @@ func run_test() -> void:
 	root.add_child(app)
 	await process_frame
 	var username := "expand_"+str(Time.get_unix_time_from_system()).replace(".","_")
-	await app.authenticate(true,"http://127.0.0.1:8766",username,"Qa-expansion-123","")
+	await app.authenticate(true,preload("res://tests/qa_server.gd").url(),username,"Qa-expansion-123","")
 	expect(app.screen=="village","village loads on protocol 6")
 	if app.screen!="village": quit(1); return
 	# main.gd CAST: Naru, Sora, Moru, Haeru (the shadow folk are a separate module).
@@ -63,7 +63,7 @@ func run_test() -> void:
 		expect(app.run.obstacles.size()>=15 and app.run.hazards.all(func(h): return h.kind==hazard_kind) and (app.run.hazards.size()>=3)==(region!="forest"),"region hazards and obstacles received")
 		await app.leave_run()
 	await app.logout()
-	await app.authenticate(false,"http://127.0.0.1:8766",username,"Qa-expansion-123","")
+	await app.authenticate(false,preload("res://tests/qa_server.gd").url(),username,"Qa-expansion-123","")
 	expect(app.player.avatar.character=="ranger" and app.me.profile.version==1,"avatar persists across session replacement")
 	app.queue_free()
 	await process_frame

@@ -11,7 +11,7 @@ extends SceneTree
 ## Every change also reports video/static memory after it, and the start its black screen: from the
 ## engine's start until the first frame that shows the card.
 var failures: Array[String] = []
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 var max_hitch := 0.0
 var transition_script: Script
 var pace: Script

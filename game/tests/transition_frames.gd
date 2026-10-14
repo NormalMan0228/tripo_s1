@@ -4,7 +4,7 @@ extends SceneTree
 ## knee angles so a folded leg during the switch shows up as numbers too.
 ##   Godot --path game --script res://tests/transition_frames.gd -- --server=http://127.0.0.1:8812 [--start]
 var frames: Array[Image] = []
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 var labels: Array[String] = []
 var worst := {}
 

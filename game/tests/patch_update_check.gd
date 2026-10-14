@@ -14,7 +14,7 @@ const I18n = preload("res://scripts/i18n.gd")
 const TARGET := "99.0.1"
 
 var failed := false
-var server := "http://127.0.0.1:8766"  # tools/test.ps1 QA server
+var server := preload("res://tests/qa_server.gd").url()  # tools/test.ps1 QA server
 var policy_path := ""
 var saved_world := ""
 var Patcher: GDScript

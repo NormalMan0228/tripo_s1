@@ -4,7 +4,7 @@ func check(value: bool,message: String) -> void:
 	if not value:failures.append(message);printerr(message)
 func _initialize() -> void:call_deferred("run")
 func run() -> void:
-	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url="http://127.0.0.1:8766"
+	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url=preload("res://tests/qa_server.gd").url()
 	var account := "preview"+str(Time.get_ticks_msec())
 	var login: Dictionary=await api.post("/v1/auth/register",{"username":account,"password":"Private-local-test"})
 	if not login.ok:quit(1);return

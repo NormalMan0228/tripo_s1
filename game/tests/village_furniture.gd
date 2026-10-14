@@ -7,7 +7,7 @@ func _initialize() -> void:call_deferred("run")
 func run() -> void:
 	var app=load("res://scripts/main.gd").new();root.add_child(app);await process_frame
 	await create_timer(0.4).timeout
-	await app.authenticate(true,"http://127.0.0.1:8766","villageprop_"+str(Time.get_ticks_msec()),"Local-furniture-qa-password1","")
+	await app.authenticate(true,preload("res://tests/qa_server.gd").url(),"villageprop_"+str(Time.get_ticks_msec()),"Local-furniture-qa-password1","")
 	for _i in 20:
 		if app.screen=="village":break
 		await create_timer(0.25).timeout

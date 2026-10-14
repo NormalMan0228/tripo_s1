@@ -8,7 +8,7 @@ func capture(path: String) -> void:
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://../artifacts/"+path)
 func run() -> void:
-	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url="http://127.0.0.1:8766"
+	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url=preload("res://tests/qa_server.gd").url()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--server="):api.base_url=arg.trim_prefix("--server=")
 	# A fresh account keeps the test independent of any seeded demo database.

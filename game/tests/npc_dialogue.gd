@@ -19,7 +19,7 @@ func run() -> void:
 	var app = Main.new()
 	root.add_child(app)
 	await create_timer(1.2).timeout
-	await app.authenticate(true,"http://127.0.0.1:8766","talk_"+str(Time.get_ticks_msec()),"Npc-dialogue-1","")
+	await app.authenticate(true,preload("res://tests/qa_server.gd").url(),"talk_"+str(Time.get_ticks_msec()),"Npc-dialogue-1","")
 	await create_timer(1.0).timeout
 	expect(app.npcs.size()==4,"four cast NPCs")
 	for npc in app.npcs:

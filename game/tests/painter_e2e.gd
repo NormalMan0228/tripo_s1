@@ -8,7 +8,7 @@ const PaintApply = preload("res://scripts/painter/paint_apply.gd")
 const Assembly = preload("res://scripts/asset_assembly.gd")
 const Api = preload("res://scripts/api.gd")
 
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 var failures: Array[String] = []
 var passes := 0
 

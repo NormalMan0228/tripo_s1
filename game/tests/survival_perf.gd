@@ -41,7 +41,7 @@ func run() -> void:
 	app = Main.new()
 	root.add_child(app)
 	await create_timer(0.4).timeout
-	await app.authenticate(true, "http://127.0.0.1:8766", "perf_"+str(Time.get_ticks_msec()), "Perf-probe-password-1", "")
+	await app.authenticate(true, preload("res://tests/qa_server.gd").url(), "perf_"+str(Time.get_ticks_msec()), "Perf-probe-password-1", "")
 	report("village", await sample())
 	await app.start_run(region, "standard")
 	await create_timer(3.0).timeout
