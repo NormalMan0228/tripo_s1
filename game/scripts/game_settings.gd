@@ -688,9 +688,25 @@ class Runtime extends CanvasLayer:
 			script.focus_lost = false
 			script.apply_audio()
 		elif what == NOTIFICATION_PREDELETE:
-			# The runtime goes only when the tree shuts down: no callable may stay in the static
-			# list past that point (see listen()).
+			# The runtime goes only when the tree shuts down, after every node has left it. No
+			# callable may stay in the static list past this point (see listen()).
 			script.listeners.clear()
+			_let_audio_release()
+
+	## Sound players stop as they leave the tree, but the audio thread lets go of a stopped sound
+	## only on its next mix or two. A sound it still held when the engine shut the audio server down
+	## was leaked ("4 ObjectDB instances were leaked", "1 resources still in use at exit": the room's
+	## Ogg music, whichever sound was playing at quit). Waits for three mixes, a few tens of ms
+	## (at most a quarter second when no audio driver is mixing).
+	static func _let_audio_release() -> void:
+		var mixes := 0
+		var last := AudioServer.get_time_since_last_mix()
+		var deadline := Time.get_ticks_msec() + 250
+		while mixes < 3 and Time.get_ticks_msec() < deadline:
+			OS.delay_msec(2)
+			var since := AudioServer.get_time_since_last_mix()
+			if since < last: mixes += 1
+			last = since
 
 	func _input(event: InputEvent) -> void:
 		var script := _settings()
