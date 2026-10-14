@@ -9,6 +9,7 @@ extends RefCounted
 ## Coordinates: the room is centred on the origin, the open front edge (door,
 ## camera side) is +z, the back wall is -z. Furniture faces +z before its yaw.
 const Art = preload("res://scripts/art.gd")
+const LoadPace = preload("res://scripts/load_pace.gd")
 const Detail = preload("res://scripts/world_detail.gd")
 const Loader = preload("res://scripts/model_loader.gd")
 const Daylight = preload("res://scripts/daylight.gd")
@@ -899,6 +900,7 @@ static func col(theme: Dictionary, key: String, fallback := "888888") -> Color:
 	return Color(value if not value.is_empty() else fallback)
 
 ## Builds one floor under root and returns its furniture and window records.
+## Paced under the loading card (load_pace.gd): await it. Uncovered it runs in one go.
 static func build(root: Node3D, s: Dictionary) -> Array:
 	var shell := Node3D.new()
 	shell.name="InteriorShell"
@@ -909,6 +911,7 @@ static func build(root: Node3D, s: Dictionary) -> Array:
 	root.add_child(props)
 	var index := 0
 	for entry in s.furniture:
+		await LoadPace.step("room furniture")
 		index+=1
 		if entry.kind=="window":
 			records.append({"kind":"window","node":props,"center":Vector3(entry.at.x,0,entry.at.z),"yaw":0.0,"mounted":true,"solid":false,

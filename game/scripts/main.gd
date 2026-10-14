@@ -18,6 +18,7 @@ const RpgUi = preload("res://scripts/rpg_ui.gd")
 const CraftPanel = preload("res://scripts/craft_panel.gd")
 const Fx = preload("res://scripts/fx.gd")
 const Transition = preload("res://scripts/transition.gd")
+const LoadPace = preload("res://scripts/load_pace.gd")
 const Minimap = preload("res://scripts/minimap.gd")
 const NpcBody = preload("res://scripts/npc.gd")
 const WorldAudio = preload("res://scripts/world_audio.gd")
@@ -219,6 +220,8 @@ func _ready() -> void:
 	# The first load shows the island cover art; a walk out of a room keeps its card.
 	if not Engine.has_meta("studio_session"): veil.loading("", "start")
 	veil.cover()
+	# The ambience is synthesized on a worker thread meanwhile (world_audio.setup() below waits for it).
+	WorldAudio.prepare()
 	api = Api.new()
 	add_child(api)
 	gate = VersionGate.new()
@@ -233,7 +236,8 @@ func _ready() -> void:
 	add_child(sound)
 	world_audio = WorldAudio.new()
 	add_child(world_audio)
-	world_audio.setup()
+	# The first start sets it up once the village is built (by then its thread is done).
+	if Engine.has_meta("studio_session"): world_audio.setup()
 	life=preload("res://scripts/village_life.gd").new()
 	life.app=self
 	add_child(life)
@@ -279,14 +283,24 @@ func _ready() -> void:
 	if not Engine.has_meta("studio_session") and DisplayServer.get_name()!="headless":
 		# Let the loading card reach the screen before the village is built.
 		for i in 2: await get_tree().process_frame
-	build_world(false)
+	# Back from a room, enter_village() below builds the village (once, after the server answers).
+	if not Engine.has_meta("studio_session"):
+		# What the village needs loads on worker threads while the build goes on under the card.
+		LoadPace.want(TownLayout.resource_paths()+NpcBody.resource_paths(CAST.map(func(entry): return entry.cast))+AvatarLook.resource_paths())
+		await build_world(false)
+		world_audio.setup()
+		# The home is the first room after signing in: its scene reads in the background meanwhile.
+		LoadPace.want([STUDIO_SCENE])
 	if Engine.has_meta("studio_session"):
 		var session: Dictionary=Engine.get_meta("studio_session")
 		Engine.remove_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
 		# The room hands over the look it showed, so the village walker wears it from the first frame.
 		if session.get("profile") is Dictionary: me={"profile":session.profile}
+		# No village yet while the server answers: nothing of main's own runs until enter_village() built it.
+		hold(true)
 		var server_status: Dictionary = await api.request("/health")
+		hold(false)
 		# Maintenance began during the walk out of the room: the gate already sent the player to the title.
 		if api.token.is_empty(): return
 		social.enabled = social.feature_enabled() and server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
@@ -757,14 +771,23 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	if get_tree().current_scene==self:
 		# A new session starts at home; walking out of the front door opens the village.
 		Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":"home","multiplayer":social.enabled,"profile":me.profile})
-		get_tree().change_scene_to_file("res://scenes/studio.tscn")
+		# The title's village map waits outside the tree for the walk out of the home (as open_studio).
+		leave_modules()
+		if is_instance_valid(town): town.release_map()
+		get_tree().change_scene_to_packed(studio_scene())
 		return
 	await enter_village()
 	veil.fade_in()
 
-func build_world(survival: bool) -> void:
+## Under the loading card (LoadPace.covered) the build is paced over frames so the card keeps
+## turning: await it. Uncovered it runs in one go as before. False when a newer build (a logout
+## during the load) replaced this one before it finished.
+func build_world(survival: bool) -> bool:
+	var paced := LoadPace.covered
+	if paced: hold(true)
 	social.reset_world()
 	world_epoch += 1
+	var epoch := world_epoch
 	camera_focus_ready=false
 	camera_zoom_active=false
 	paused=false
@@ -777,6 +800,8 @@ func build_world(survival: bool) -> void:
 	if is_instance_valid(world):
 		remove_child(world)
 		world.queue_free()
+	# The old walker goes with its world; nothing should reach it while a paced build runs.
+	player = null
 	preview = null
 	loaded.clear()
 	nodes.clear()
@@ -793,23 +818,32 @@ func build_world(survival: bool) -> void:
 	npcs.clear()
 	close_village_modal()
 	town=null
-	if survival: preload("res://scripts/biomes.gd").build(world,run)
+	var span := LoadPace.narrow(0.0, 0.85)
+	if survival: await preload("res://scripts/biomes.gd").build(world,run)
 	else:
 		town=preload("res://scripts/town.gd").new()
 		town.camera=camera
 		for chapter in me.get("campaign",[]):
 			if chapter.completed:town.story_progress+=1
 		world.add_child(town)
+		if not town.finished: await town.built
+	LoadPace.span = span
+	if epoch!=world_epoch: return false
 	object_root = Node3D.new()
 	world.add_child(object_root)
 	# Built in the saved look from the first frame (applying it after _ready showed the default
 	# explorer first and loaded the character twice).
 	var profile: Dictionary = me.get("profile",{})
+	for path in AvatarLook.resource_paths(): if LoadPace.pending(path): await LoadPace.fetch(path)
+	await LoadPace.step("walker")
 	player = AvatarLook.walker(profile.get("avatar",{}),int(profile.get("version",-1)))
 	player.visual_only=survival
 	world.add_child(player)
-	if not survival: spawn_villagers()
-	if not survival: spawn_modules()
+	LoadPace.done(0.88)
+	if not survival: await spawn_villagers()
+	if epoch!=world_epoch: return false
+	if not survival: await spawn_modules()
+	if epoch!=world_epoch: return false
 	player.position = TownLayout.point(TownLayout.SPAWN,.3) if not survival else Vector3(run.get("x",0),0.1,run.get("z",1.4))
 	player.min_ground_y = TownLayout.SHORE_MIN_Y if not survival else -INF
 	flame = Node3D.new()
@@ -909,6 +943,16 @@ func build_world(survival: bool) -> void:
 	fit_shadow_to_camera()
 	camera_zoom_active=false
 	follow_camera(1)
+	LoadPace.done(1.0)
+	LoadPace.release()
+	hold(false)
+	return true
+
+## While a paced build runs, main's own per-frame work and input wait (the walker, the camera and
+## the HUD are being replaced); its children (network, sound) go on.
+func hold(on: bool) -> void:
+	set_process(not on)
+	set_process_unhandled_input(not on)
 
 ## Shadow splits keep their old distances from the walker after the camera moved
 ## back (CAMERA_PULLBACK), so shadows stay as sharp as before.
@@ -940,7 +984,7 @@ func apply_graphics() -> void:
 func enter_village() -> void:
 	coop_run = false
 	screen = "loading"
-	build_world(false)
+	if not await build_world(false): return
 	clear_ui()
 	frame = RpgUi.player_frame(ui,"res://assets/ui/portrait_explorer.png","profile")
 	left = frame.column
@@ -1001,7 +1045,9 @@ func enter_village() -> void:
 	button(utilities,tr("가방 정리"),refresh_inventory)
 	button(utilities,tr("로그아웃"),logout)
 	right.get_parent().visible=false
+	await LoadPace.step("village hud")
 	build_play_hud(false)
+	await LoadPace.step("inspector")
 	build_inspector()
 	await refresh_inventory()
 	screen = "village"
@@ -1889,6 +1935,8 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	close_village_modal()
 	cancel_preview()
 	busy=true
+	# The expedition's props read on a worker thread while the server answers and the card comes up.
+	LoadPace.want(preload("res://maps/survival/survival_map.gd").resource_paths(map_id))
 	coop_run = not party_run_id.is_empty()
 	var result: Dictionary = {"ok":true,"data":{"id":party_run_id}} if coop_run else await api.post("/v1/runs",api.mutation({"map_id":map_id,"difficulty":difficulty,"chapter_id":chapter_id}))
 	if not check(result):
@@ -1905,7 +1953,11 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	var veil := Transition.of(get_tree())
 	veil.loading(region_name(str(run.get("map_id",map_id))),"run")
 	await veil.fade_out()
-	build_world(true)
+	# The village's own per-frame work stops while the expedition is built under the card.
+	screen="loading"
+	if not await build_world(true):
+		busy=false
+		return
 	clear_ui()
 	screen="survival"
 	player.controls_enabled=false
@@ -2480,7 +2532,7 @@ func logout() -> void:
 	api.token=""
 	social.reset_session()
 	job_id=""
-	build_world(false)
+	await build_world(false)
 	login_ui()
 	busy=false
 	veil.fade_in()
@@ -2510,7 +2562,7 @@ func force_logout(reason: String) -> void:
 	var veil := Transition.of(get_tree())
 	veil.loading("", "start")
 	await veil.fade_out()
-	build_world(false)
+	await build_world(false)
 	busy=false
 	login_ui()
 	veil.fade_in()
@@ -3059,13 +3111,14 @@ const CAST := [
 func spawn_modules() -> void:
 	modules.clear()
 	for path in VILLAGE_MODULES:
+		await LoadPace.step("module "+path.get_file())
 		if not ResourceLoader.exists(path): continue
 		var script: Script=load(path)
 		if script==null or not script.can_instantiate(): continue
 		var module: Node=script.new()
 		world.add_child(module)
 		modules.append(module)
-		if module.has_method("setup"): module.setup(self)
+		if module.has_method("setup"): await module.setup(self)
 
 func leave_modules() -> void:
 	for module in modules:
@@ -3090,6 +3143,10 @@ func use_module(entry: Dictionary) -> void:
 
 func spawn_villagers() -> void:
 	for entry in CAST:
+		await LoadPace.step("villager")
+		# The model may still be arriving from a worker thread (LoadPace.want at the start).
+		var model_path: String = NpcBody.resource_paths([entry.cast])[0]
+		if LoadPace.pending(model_path): await LoadPace.fetch(model_path)
 		var npc: Node3D
 		if NpcBody.available(entry.cast):
 			npc=NpcBody.new()
@@ -3302,7 +3359,15 @@ func open_studio(destination: String="workshop") -> void:
 	await veil.fade_out()
 	leave_modules()
 	if is_instance_valid(town): town.release_map()
-	get_tree().change_scene_to_file("res://scenes/studio.tscn")
+	get_tree().change_scene_to_packed(studio_scene())
+
+## The room scene, read on a worker thread while the title shows (LoadPace.want in _ready) and kept:
+## reading it at the door held the card for about 0.4 s.
+const STUDIO_SCENE := "res://scenes/studio.tscn"
+static var studio_packed: PackedScene
+static func studio_scene() -> PackedScene:
+	if studio_packed == null: studio_packed = LoadPace.take(STUDIO_SCENE)
+	return studio_packed
 
 ## The village craft window (C) is the same craft window every room's [만들기] tab shows
 ## (craft_panel.gd). The village keeps polling the craft after the window closes so it can say

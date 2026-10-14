@@ -61,10 +61,16 @@ func run() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = 0
 	var api = load("res://scripts/api.gd").new(); root.add_child(api); api.base_url = "http://127.0.0.1:8766"
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--server="): api.base_url = arg.trim_prefix("--server=")
 	var login: Dictionary = await api.post("/v1/auth/register", {"username":"perf_"+str(Time.get_ticks_usec()), "password":"Perf-probe-password-1"})
 	if not login.ok: print("LOGIN_FAILED"); quit(1); return
 	Engine.set_meta("studio_session", {"token":login.data.token, "url":api.base_url, "room":"home"})
 	change_scene_to_file("res://scenes/main.tscn")
+	# The village is built under the loading card over frames (load_pace.gd): wait for it.
+	var deadline := Time.get_ticks_msec()+60000
+	while Time.get_ticks_msec() < deadline and not (is_instance_valid(current_scene) and current_scene.get("screen") == "village" and is_instance_valid(current_scene.get("player"))):
+		await process_frame
 	await create_timer(5.0).timeout
 	app = current_scene
 	print("OMNI_LIGHTS ", app.find_children("*", "OmniLight3D", true, false).size(), " visible=", app.find_children("*", "OmniLight3D", true, false).filter(func(l): return l.is_visible_in_tree()).size())

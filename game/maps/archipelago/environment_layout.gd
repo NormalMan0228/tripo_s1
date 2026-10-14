@@ -1,5 +1,6 @@
 extends Node3D
 ## First review batch: four distinct Tripo bridges plus natural garden clusters.
+const LoadPace = preload("res://scripts/load_pace.gd")
 var manifest: Dictionary
 var host: Node3D
 var prototypes: Dictionary = {}
@@ -29,12 +30,16 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 		var clearance: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(output_path+"rock_clearance_verification.json"))
 		for rock: Dictionary in clearance.relocated_rocks:
 			relocated_rocks.append(rock)
+	# Under the loading card: paced over frames, the models arriving from worker threads (LoadPace).
 	for spec: Dictionary in manifest.models:
 		if manifest.bridges.any(func(bridge: Dictionary) -> bool: return bridge.id==spec.id and bridge.has("fitted_model")):
 			continue
-		prototypes[String(spec.id)] = load(String(spec.model)) as PackedScene
+		prototypes[String(spec.id)] = await LoadPace.fetch(String(spec.model)) as PackedScene
+	var steps: int = manifest.bridges.size()+manifest.instances.size()
 	for spec: Dictionary in manifest.bridges:
-		var source: PackedScene = load(String(spec.fitted_model)) if spec.has("fitted_model") else prototypes[String(spec.id)]
+		LoadPace.done(float(bridge_nodes.size())/maxf(steps, 1))
+		await LoadPace.step("bridge")
+		var source: PackedScene = (await LoadPace.fetch(String(spec.fitted_model))) if spec.has("fitted_model") else prototypes[String(spec.id)]
 		var bridge := source.instantiate() as Node3D
 		bridge.name = spec.id
 		add_child(bridge)
@@ -49,6 +54,9 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 						wood.shader = load("res://maps/archipelago/bridge_timber.gdshader")
 						wood.set_shader_parameter("timber_color",original.albedo_color)
 						mesh.set_surface_override_material(surface,wood)
+				if LoadPace.covered:
+					await LoadPace.collide(mesh,PackedVector3Array(),2,0)
+					continue
 				mesh.create_trimesh_collision()
 				for child in mesh.get_children():
 					if child is StaticBody3D:
@@ -57,10 +65,16 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 			_add_authored_deck_collision(bridge,spec)
 		else:
 			bridge.scale.z = spec.scale_z
-			_fit_bridge(bridge,spec)
+			await _fit_bridge(bridge,spec)
 			_add_bridge_supports(bridge,spec)
 		bridge_nodes.append(bridge)
+	# The props' level-of-detail models, in before the props that use them.
+	for spec: Dictionary in manifest.models:
+		var lod_path := "res://maps/archipelago/assets/prop_lods/"+String(spec.id)+".glb"
+		if LoadPace.pending(lod_path): await LoadPace.fetch(lod_path)
 	for spec: Dictionary in manifest.instances:
+		LoadPace.done(float(bridge_nodes.size()+prop_nodes.size())/maxf(steps, 1))
+		await LoadPace.step("prop")
 		var prop := (prototypes[String(spec.id)] as PackedScene).instantiate() as Node3D
 		prop.name = String(spec.id)+"_%03d" % prop_nodes.size()
 		add_child(prop)
@@ -98,7 +112,9 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 				var mesh := item as MeshInstance3D
 				_add_cached_collision(mesh,2 if spec.id=="20_pier" else 8)
 	print("ENVIRONMENT_LAYOUT_READY models=",manifest.models.size()," instances=",prop_nodes.size()," bridges=",bridge_nodes.size())
-	_fit_floor_props.call_deferred()
+	# Under the loading card the props settle before the map shows.
+	if LoadPace.covered: await _fit_floor_props()
+	else: _fit_floor_props.call_deferred()
 
 func _add_authored_deck_collision(bridge: Node3D,spec: Dictionary) -> void:
 	# The nine millimetre plank joints are visual detail. A continuous deck collider
@@ -147,7 +163,7 @@ func _register_prop_lod(mesh: MeshInstance3D,ident: String) -> void:
 	if not ResourceLoader.exists(path):
 		return
 	if not lod_meshes.has(ident):
-		var source := (load(path) as PackedScene).instantiate()
+		var source := (LoadPace.take(path) as PackedScene).instantiate()
 		var nodes := source.find_children("*","MeshInstance3D",true,false)
 		assert(nodes.size()==1)
 		var low: ArrayMesh = nodes[0].mesh
@@ -208,6 +224,10 @@ func _fit_bridge(bridge: Node3D,spec: Dictionary) -> void:
 			rebuilt.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
 			rebuilt.surface_set_material(surface,mesh.mesh.surface_get_material(surface))
 		mesh.mesh = rebuilt
+		if LoadPace.covered:
+			# Under the loading card the faces and the shape come a frame apart.
+			await LoadPace.collide(mesh,PackedVector3Array(),2,0)
+			continue
 		mesh.create_trimesh_collision()
 		for child in mesh.get_children():
 			if child is StaticBody3D:
@@ -290,8 +310,7 @@ func _add_pier_supports(prop: Node3D,spec: Dictionary) -> void:
 			prop.add_child(pile)
 
 func _fit_floor_props() -> void:
-	await get_tree().physics_frame
-	await get_tree().physics_frame
+	await LoadPace.physics_frames(self, 2)
 	for prop in prop_nodes:
 		var spec: Dictionary = prop.get_meta("placement_spec")
 		if spec.id in ["20_pier","21_boat","45_reeds","46_water_lily"]:

@@ -90,7 +90,7 @@ func setup(state: Dictionary) -> void:
 	root.get_viewport().msaa_3d = Viewport.MSAA_2X
 	world = Node3D.new()
 	host.add_child(world)
-	map = Biomes.build(world,state)
+	map = await Biomes.build(world,state)
 	player = _make_player()
 	world.add_child(player)
 	host.set("player",player)

@@ -18,6 +18,8 @@ const WATER_SHADER := preload("res://maps/survival/survival_water.gdshader")
 const HAZARD_SHADER := preload("res://maps/survival/survival_hazard.gdshader")
 const GRASS_SHADER := preload("res://maps/survival/survival_grass.gdshader")
 const CHUNK := 12.0
+## Under the loading card the build is paced over frames and the models load on worker threads.
+const LoadPace = preload("res://scripts/load_pace.gd")
 const LOD_ZOOM := 18.5
 const FAR := 64.0
 const RESOURCE_KINDS := ["tree","stone","berry","fiber"]
@@ -98,6 +100,33 @@ static func layouts() -> Dictionary:
 		_layout_cache = JSON.parse_string(FileAccess.get_file_as_string(ROOT+"layouts.json"))
 	return _layout_cache
 
+## Every model this map may place, for LoadPace.want() while the expedition's card comes up.
+## The props each map places (its layout, scatter and camp), read on a worker thread while the
+## expedition's card comes up. A stale entry only reads something unused; a prop missing here is
+## read when it is first placed, as before.
+const MAP_PROPS := {
+	"forest":["log_bench","firewood_pile","camp_supplies","tent_orange","signpost","reeds","mossy_boulder","fern_clump",
+		"forest_ruin","oak_broad","fallen_log","pine_tall","birch_slim","bush_round","mushroom_cluster","tree_stump",
+		"white_flowers","yellow_flowers","pink_flowers"],
+	"quarry":["ember_rock","log_bench","firewood_pile","tool_rack","tent_green","signpost","sandstone_cliff","sandstone_boulder",
+		"cut_blocks","quarry_crane","mine_cart","dead_tree","dry_shrub"],
+	"frost":["ice_crystal","log_bench","firewood_pile","sled_empty","tent_orange","signpost","snow_boulder","frost_shrine",
+		"snow_pine","snowman","frost_shrub","snow_fence"]}
+
+static func resource_paths(map: String) -> Array:
+	var paths := []
+	for id in MAP_PROPS.get(map, MAP_PROPS.forest):
+		for path: String in prop_paths(id): if not path.is_empty(): paths.append(path)
+	return paths
+
+## A prop's model and its level-of-detail model ("" when it has none).
+static func prop_paths(id: String) -> Array:
+	if VILLAGE_PROPS.has(id):
+		return [VILLAGE+VILLAGE_PROPS[id][0], VILLAGE+VILLAGE_PROPS[id][1] if VILLAGE_PROPS[id][1] != "" else ""]
+	return [ASSETS+id+".glb", ASSETS+id+"_lod1.glb"]
+
+## Paced under the loading card (await it), in one go otherwise; the order (and so the seeded layout)
+## is the same either way.
 func build(run: Dictionary) -> void:
 	name = "SurvivalMap"
 	state = run
@@ -112,14 +141,31 @@ func build(run: Dictionary) -> void:
 	noise.fractal_octaves = 3
 	rng.seed = noise.seed*7919
 	process_priority = 100
-	_build_ground()
+	# Its per-frame work starts once it is built (a paced build spans frames).
+	set_process(false)
+	var span := LoadPace.narrow(0.0, 0.35)
+	await _build_ground()
+	LoadPace.span = span
+	await LoadPace.step("survival water")
 	_build_water()
+	await LoadPace.step("survival hazards")
 	_build_hazards()
-	_build_features()
-	_build_scatter()
+	LoadPace.done(0.45)
+	# The props read on a worker thread since the expedition began (main.gd start_run).
+	for path: String in resource_paths(map_id): if LoadPace.pending(path): await LoadPace.fetch(path)
+	await LoadPace.step("survival features")
+	await _build_features()
+	LoadPace.done(0.6)
+	span = LoadPace.narrow(0.6, 0.9)
+	await _build_scatter()
+	LoadPace.span = span
+	await LoadPace.step("survival particles")
 	_build_particles()
+	await LoadPace.step("survival batches")
 	_finish_batches()
 	_apply_grade(true)
+	set_process(true)
+	LoadPace.done(1.0)
 
 # ------------------------------------------------------------------ terrain
 ## Distance beyond the flat play square (negative inside). A square measure keeps the walkable
@@ -190,6 +236,9 @@ func _build_ground() -> void:
 	var heights := PackedFloat32Array()
 	heights.resize(count*count)
 	for j in count:
+		if j % 2 == 0:
+			LoadPace.done(0.5*j/count)
+			await LoadPace.step("survival heights")
 		for i in count:
 			heights[j*count+i] = height(axis[i],axis[j])
 	var verts := PackedVector3Array()
@@ -199,6 +248,9 @@ func _build_ground() -> void:
 	var obstacles: Array = state.get("obstacles",spec.obstacles)
 	var hazards: Array = state.get("hazards",spec.hazards)
 	for j in count:
+		if j % 2 == 0:
+			LoadPace.done(0.5+0.5*j/count)
+			await LoadPace.step("survival ground")
 		for i in count:
 			var x := axis[i]; var z := axis[j]
 			var k := j*count+i
@@ -429,18 +481,15 @@ func _hazard_dressing(h: Dictionary) -> void:
 # ------------------------------------------------------------------ props
 func _prop(id: String) -> Dictionary:
 	if props.has(id): return props[id]
-	var path := ""; var lod_path := ""
-	if VILLAGE_PROPS.has(id):
-		path = VILLAGE+VILLAGE_PROPS[id][0]
-		lod_path = VILLAGE+VILLAGE_PROPS[id][1] if VILLAGE_PROPS[id][1] != "" else ""
-	else:
-		path = ASSETS+id+".glb"
-		lod_path = ASSETS+id+"_lod1.glb"
+	var paths := prop_paths(id)
+	var path: String = paths[0]
+	var lod_path: String = paths[1]
 	var entry := {"ok":false}
 	if not ResourceLoader.exists(path):
 		props[id] = entry
 		return entry
-	var scene := (load(path) as PackedScene).instantiate()
+	# Read on a worker thread at the start of the expedition (LoadPace.want) when it is listed.
+	var scene := (LoadPace.take(path) as PackedScene).instantiate()
 	var meshes := scene.find_children("*","MeshInstance3D",true,false)
 	if meshes.is_empty():
 		scene.free(); props[id] = entry; return entry
@@ -461,7 +510,7 @@ func _prop(id: String) -> Dictionary:
 	scene.free()
 	var low: ArrayMesh = null
 	if lod_path != "" and ResourceLoader.exists(lod_path):
-		var lod_scene := (load(lod_path) as PackedScene).instantiate()
+		var lod_scene := (LoadPace.take(lod_path) as PackedScene).instantiate()
 		var lod_meshes := lod_scene.find_children("*","MeshInstance3D",true,false)
 		var candidate := ArrayMesh.new()
 		for node in lod_meshes:
@@ -620,6 +669,7 @@ func _fit_scale(id: String, measure: String, metres: float) -> float:
 # ------------------------------------------------------------------ features (server obstacle circles)
 func _build_features() -> void:
 	for f in spec.features:
+		await LoadPace.step("survival feature")
 		var at := Vector3(f.x,0,f.z)
 		var yaw := deg_to_rad(float(f.get("yaw",rng.randf()*360.0)))
 		var r := float(f.get("radius",1.0))
@@ -788,39 +838,69 @@ func _scatter_rim(id: String, count: int, scale_min: float, scale_max: float, mi
 func _build_scatter() -> void:
 	match map_id:
 		"forest":
+			await LoadPace.step("scatter")
 			_scatter_rim("pine_tall",55,0.75,1.1,1.0,8.0,false,{},2.6)
+			await LoadPace.step("scatter")
 			_scatter_rim("pine_tall",110,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8)
+			await LoadPace.step("scatter")
 			_scatter_rim("oak_broad",10,0.85,1.05,2.0,8.0,false,{},4.5)
+			await LoadPace.step("scatter")
 			_scatter_rim("oak_broad",18,0.9,1.2,8.0,26.0,false,{"lod":"low"},4.5)
+			await LoadPace.step("scatter")
 			_scatter_rim("birch_slim",16,0.8,1.05,0.8,8.0,false,{},2.8)
+			await LoadPace.step("scatter")
 			_scatter_rim("birch_slim",16,0.85,1.15,8.0,24.0,false,{"lod":"low"},2.8)
+			await LoadPace.step("scatter")
 			_scatter_rim("bush_round",50,0.8,1.3,0.0,16.0,true,{"shadow":false})
+			await LoadPace.step("scatter")
 			_scatter_rim("fern_clump",60,0.8,1.3,0.0,14.0,true,{"shadow":false})
+			await LoadPace.step("scatter")
 			_shore("reeds",70,0.8,1.2)
+			await LoadPace.step("scatter")
 			_scatter_inside("bush_round",16,0.7,1.0,1.4,{"shadow":false},true,0.9)
+			await LoadPace.step("scatter")
 			_scatter_inside("fern_clump",46,0.7,1.15,0.6,{"shadow":false},true)
+			await LoadPace.step("scatter")
 			_scatter_inside("mushroom_cluster",24,0.6,1.0,0.4,{"shadow":false},true)
+			await LoadPace.step("scatter")
 			_scatter_inside("tree_stump",6,0.7,0.9,1.0,{},true,0.6)
 			for flower in ["white_flowers","yellow_flowers","pink_flowers"]:
+				await LoadPace.step("scatter")
 				_scatter_inside(flower,14,0.55,0.8,0.3,{"shadow":false},true)
 		"quarry":
+			await LoadPace.step("scatter")
 			_cliff_wall()
+			await LoadPace.step("scatter")
 			_scatter_rim("dead_tree",14,0.8,1.2,6.0,26.0,false,{"lod":"low"},5.0)
+			await LoadPace.step("scatter")
 			_scatter_rim("dry_shrub",70,0.8,1.4,0.0,24.0,true,{"shadow":false})
+			await LoadPace.step("scatter")
 			_scatter_rim("sandstone_boulder",40,0.5,1.1,0.8,20.0,true,{"lod":"low"})
+			await LoadPace.step("scatter")
 			_scatter_inside("dry_shrub",26,0.6,1.0,0.8,{"shadow":false},true,0.6)
+			await LoadPace.step("scatter")
 			_scatter_inside("sandstone_boulder",12,0.14,0.22,0.5,{"shadow":false},true)
+			await LoadPace.step("scatter")
 			_scatter_inside("cut_blocks",4,0.18,0.24,1.2,{},true,1.0)
 		"frost":
+			await LoadPace.step("scatter")
 			_scatter_rim("snow_pine",60,0.75,1.1,1.0,8.0,false,{},2.6)
+			await LoadPace.step("scatter")
 			_scatter_rim("snow_pine",120,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8)
+			await LoadPace.step("scatter")
 			_scatter_rim("snow_boulder",26,0.6,1.3,0.8,22.0,true,{"lod":"low"})
+			await LoadPace.step("scatter")
 			_scatter_rim("frost_shrub",40,0.8,1.2,0.0,14.0,true,{"shadow":false})
+			await LoadPace.step("scatter")
 			_scatter_rim("ice_crystal",10,0.5,0.9,2.0,14.0,false,{})
+			await LoadPace.step("scatter")
 			_scatter_inside("frost_shrub",18,0.6,0.95,1.0,{"shadow":false},true,0.7)
+			await LoadPace.step("scatter")
 			_scatter_inside("ice_crystal",8,0.22,0.32,0.6,{"shadow":false},true)
+			await LoadPace.step("scatter")
 			_snow_fences()
-	_grass()
+	await LoadPace.step("scatter")
+	await _grass()
 
 func _shore(id: String, count: int, smin: float, smax: float) -> void:
 	var placed := 0
@@ -880,6 +960,7 @@ func _grass() -> void:
 	var total := int(look.grass)+int(look.rim_grass)
 	for i in total*2:
 		if i >= total*2: break
+		if i % 256 == 255: await LoadPace.step("grass")
 		var inside := i < int(look.grass)*2
 		var p := _sample_inside() if inside else _sample_rim(0.0,20.0,true)
 		if p.x == INF: continue
@@ -899,6 +980,7 @@ func _grass() -> void:
 		var s := rng.randf_range(0.7,1.3)
 		chunks[key].append([Transform3D(Basis(Vector3.UP,rng.randf()*TAU).scaled(Vector3(s,s*rng.randf_range(0.8,1.25),s)),Vector3(p.x,y-0.02,p.y)),Color(rng.randf(),rng.randf(),0,0)])
 	for key in chunks:
+		await LoadPace.step("grass chunk")
 		var list: Array = chunks[key]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D

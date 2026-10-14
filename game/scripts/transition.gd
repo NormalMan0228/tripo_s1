@@ -7,7 +7,10 @@ extends CanvasLayer
 ## a slowly turning star seed among drifting motes and one tip. loading("", "start")
 ## is the game's first load, over the island cover art (assets/ui/loading_cover.jpg)
 ## with the wordmark. A plain fade_out() (stairs) stays a dark veil.
+## While the veil covers the screen, builds pace themselves with LoadPace (load_pace.gd) so the
+## card keeps turning, and the ring around the star seed shows how far they are.
 const RpgUi = preload("res://scripts/rpg_ui.gd")
+const LoadPace = preload("res://scripts/load_pace.gd")
 const OUT := 0.35
 const IN := 0.45
 const COVER_ART := "res://assets/ui/loading_cover.jpg"
@@ -48,6 +51,9 @@ var tip: Label
 var spinner: Control
 var seed: TextureRect
 var halo: TextureRect
+## The thin ring around the seed that fills with LoadPace's progress (hidden when none is reported).
+var ring: Control
+var ring_value := 0.0
 var motes: CPUParticles2D
 var spin: Tween
 ## "" (plain veil), "place" or "start".
@@ -77,8 +83,36 @@ func _init() -> void:
 	door.bus = &"SFX"
 	add_child(door)
 
+func _ready() -> void:
+	get_tree().process_frame.connect(_frame_began)
+	# The game's first card is dressed before this node joins the tree.
+	set_process(card.visible)
+
 func _exit_tree() -> void:
 	if instance == self: instance = null
+	if get_tree().process_frame.is_connected(_frame_began): get_tree().process_frame.disconnect(_frame_began)
+
+## LoadPace measures each frame's work from here.
+func _frame_began() -> void:
+	LoadPace.frame_began()
+
+## The ring eases toward the reported progress (never past it).
+func _process(delta: float) -> void:
+	if not card.visible or LoadPace.shown < 0.0:
+		ring.visible = false
+		return
+	ring.visible = true
+	var target := LoadPace.shown
+	if not is_equal_approx(ring_value, target):
+		ring_value = move_toward(ring_value, target, maxf(target-ring_value, 0.1)*delta*5.0) if target > ring_value else target
+		ring.queue_redraw()
+
+func _draw_ring() -> void:
+	var centre := ring.size*0.5
+	var radius := ring.size.x*0.5
+	ring.draw_arc(centre, radius, 0.0, TAU, 64, Color(1.0, 0.95, 0.82, 0.14), 2.0, true)
+	if ring_value > 0.002:
+		ring.draw_arc(centre, radius, -PI*0.5, -PI*0.5+TAU*ring_value, maxi(6, int(64*ring_value)), Color(RpgUi.GOLD, 0.9), 2.4, true)
 
 ## Fades to black. Await it before changing scenes or rebuilding the world.
 func fade_out(seconds := OUT) -> void:
@@ -92,6 +126,7 @@ func cover() -> void:
 	if tween and tween.is_valid(): tween.kill()
 	turn += 1
 	veil.modulate.a = 1.0
+	LoadPace.cover(true)
 	veil.mouse_filter = Control.MOUSE_FILTER_STOP
 
 ## Dresses the next covered screen as a loading card: `title` is the place being
@@ -112,6 +147,10 @@ func loading(title := "", kind := "") -> void:
 	tip.text = "✦  "+TranslationServer.translate(pool[tip_turn % pool.size()])
 	card.visible = true
 	motes.emitting = true
+	LoadPace.reset()
+	ring_value = 0.0
+	ring.visible = false
+	set_process(true)
 	if spin and spin.is_valid(): spin.kill()
 	seed.rotation = 0.0
 	halo.modulate.a = 0.6
@@ -126,6 +165,9 @@ func clear_card() -> void:
 	card.visible = false
 	motes.emitting = false
 	if spin and spin.is_valid(): spin.kill()
+	ring.visible = false
+	set_process(false)
+	LoadPace.reset()
 
 func _fade(alpha: float, seconds: float) -> void:
 	if tween and tween.is_valid(): tween.kill()
@@ -133,7 +175,12 @@ func _fade(alpha: float, seconds: float) -> void:
 	var mine := turn
 	veil.mouse_filter = Control.MOUSE_FILTER_STOP
 	var tree := Engine.get_main_loop() as SceneTree
-	if alpha > 0.0 and is_equal_approx(veil.modulate.a, alpha): return
+	if alpha > 0.0 and is_equal_approx(veil.modulate.a, alpha):
+		LoadPace.cover(true)
+		return
+	# The place is built once it fades in: work from now on runs unpaced, and the ring is full.
+	LoadPace.cover(false)
+	if alpha <= 0.0 and LoadPace.shown >= 0.0: LoadPace.shown = 1.0
 	# A fade often follows a long frame (a room or the village just built, a reply
 	# just handled); started now, its first step would be that whole frame and the
 	# veil would jump. Two frames later the steps are even.
@@ -146,6 +193,7 @@ func _fade(alpha: float, seconds: float) -> void:
 	# (busy for good). Wait for the tween to end either way; a newer fade owns the veil then.
 	while mine_tween.is_valid() and mine_tween.is_running(): await tree.process_frame
 	if mine != turn: return
+	if alpha >= 1.0: LoadPace.cover(true)
 	if alpha <= 0.0:
 		veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if is_zero_approx(veil.modulate.a): clear_card()
@@ -277,6 +325,16 @@ func build_card() -> void:
 	seed.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	seed.pivot_offset = Vector2(32, 32)
 	spinner.add_child(seed)
+	ring = Control.new()
+	ring.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	ring.offset_left = -6
+	ring.offset_top = -6
+	ring.offset_right = 6
+	ring.offset_bottom = 6
+	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ring.visible = false
+	ring.draw.connect(_draw_ring)
+	spinner.add_child(ring)
 
 static func gradient_rect(fill: int, from: Vector2, to: Vector2, colors: Array, offsets: Array) -> TextureRect:
 	var texture := GradientTexture2D.new()

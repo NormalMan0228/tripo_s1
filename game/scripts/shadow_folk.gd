@@ -19,6 +19,7 @@ const Roads = preload("res://scripts/roads.gd")
 const Town = preload("res://scripts/town.gd")
 const Minimap = preload("res://scripts/minimap.gd")
 const Residents = preload("res://scripts/residents.gd")
+const LoadPace = preload("res://scripts/load_pace.gd")
 const LAYOUT := "res://maps/archipelago/environment_layout.json"
 ## Bridge deck centre lines (environment_layout.json), used if the manifest is missing.
 const BRIDGES := [[Vector2(-11,-36),Vector2(15,-36)],[Vector2(57,-7),Vector2(57,14)],[Vector2(-9,27),Vector2(16,27)],[Vector2(-25,58),Vector2(2,73)]]
@@ -107,7 +108,10 @@ func setup(main: Node) -> void:
 		if node >= 0 and paths.points[node].distance_to(VIEW_ENDS[key]) < 1.5 and paths.links[node].size() == 1:
 			paths.kinds[node] = "spot"
 			paths.spot_names[node] = key
+	# Paced under the loading card (load_pace.gd), in one go otherwise.
+	await LoadPace.step("shadow lanes")
 	lanes_moved = paths.fit_lanes(get_world_3d().direct_space_state)
+	await LoadPace.step("shadow places")
 	index_places()
 	graph_ms = Time.get_ticks_msec()-started
 	update_villager_points()
@@ -118,6 +122,7 @@ func setup(main: Node) -> void:
 	for entry in FOLK:
 		var resident: Dictionary = Residents.resident(str(entry.id))
 		if resident.is_empty() or resident.kind != "shadow": continue
+		await LoadPace.step("shadow walker")
 		var walker: CharacterBody3D = Figure.new()
 		walker.configure(entry, self, paths)
 		add_child(walker)

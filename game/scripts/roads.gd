@@ -7,6 +7,7 @@ extends Node3D
 ## Everything is batched: one ribbon mesh (maps/archipelago/road_surface.gdshader)
 ## plus one MultiMesh each for stones, tufts and boards.
 const Art = preload("res://scripts/art.gd")
+const LoadPace = preload("res://scripts/load_pace.gd")
 const SHADER := "res://maps/archipelago/road_surface.gdshader"
 const ENVIRONMENT := "res://maps/archipelago/environment_layout.json"
 const ROADS := [
@@ -68,12 +69,18 @@ func build(physics: PhysicsDirectSpaceState3D, layout: Node) -> void:
 	surface = SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	crossings = junctions()
+	# Paced under the loading card (load_pace.gd), in one go otherwise.
 	for index in ROADS.size():
+		await LoadPace.step("road")
 		ribbon(ROADS[index][2], float(ROADS[index][1]), LIFT+index*0.001)
 	for spot in crossings:
+		await LoadPace.step("plaza")
 		plaza(spot[0], spot[1], LIFT+0.03)
+	await LoadPace.step("door aprons")
 	door_aprons()
+	await LoadPace.step("bridge boards")
 	bridge_boards()
+	await LoadPace.step("road mesh")
 	var mesh := MeshInstance3D.new()
 	mesh.name = "RoadSurface"
 	mesh.mesh = surface.commit()

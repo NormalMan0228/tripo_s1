@@ -10,6 +10,7 @@ const Art=preload("res://scripts/art.gd")
 const BuildMode=preload("res://scripts/build_mode.gd")
 const ControllerProfile=preload("res://scripts/controller_profile.gd")
 const Transition=preload("res://scripts/transition.gd")
+const LoadPace=preload("res://scripts/load_pace.gd")
 const I18n=preload("res://scripts/i18n.gd")
 const Interiors=preload("res://scripts/interiors.gd")
 const Daylight=preload("res://scripts/daylight.gd")
@@ -221,8 +222,9 @@ func _ready() -> void:
 	Loader.warm_up_compression()
 	var veil := Transition.of(get_tree())
 	veil.cover()
-	# Starts once the room is built (transition.gd waits out the build frame).
-	veil.fade_in()
+	# The room is built under the card, paced over frames (load_pace.gd); the room's own per-frame
+	# work and keys wait for it, and the card fades once it stands.
+	set_process(false);set_process_unhandled_key_input(false)
 	api=Api.new();add_child(api)
 	gate=VersionGate.new();add_child(gate);gate.watch(api)
 	# Maintenance over: the room shows the server's state again (nothing was lost).
@@ -255,9 +257,16 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--hour="): hour_override=clampf(float(arg.trim_prefix("--hour=")),0.0,23.99)
 	if Engine.has_meta("interior_hour"): hour_override=float(Engine.get_meta("interior_hour"))
-	build_ui()
-	build_stage()
+	# The scene switch and the session took this frame; the room's HUD comes in the next ones.
+	await LoadPace.step("room ui")
+	await build_ui()
+	LoadPace.done(0.3)
+	await LoadPace.step("room stage")
+	await build_stage()
 	set_dock_open(room=="workshop")
+	set_process(true);set_process_unhandled_key_input(true)
+	LoadPace.done(1.0)
+	veil.fade_in()
 	if public_room:
 		# Village buildings are only for looking around: no inventory, crafting or editing.
 		dock_panel.visible=false;dock_toggle.visible=false
@@ -426,6 +435,7 @@ func build_ui() -> void:
 	var chip_row := HBoxContainer.new();chip_row.add_theme_constant_override("separation",8);chip_row.mouse_filter=Control.MOUSE_FILTER_IGNORE;hint_chip.add_child(chip_row)
 	hint_key=key_cap(chip_row,"E")
 	controls_label=RpgUi.label(chip_row,tr("WASD 이동   E 상호작용   R 회전   Esc 취소"),15,RpgUi.INK,false)
+	await LoadPace.step("room hud")
 	# Bottom left: the way out (and the player's two rooms).
 	var nav := HBoxContainer.new();nav.name="RoomNav";nav.add_theme_constant_override("separation",8)
 	nav.set_anchors_preset(Control.PRESET_BOTTOM_LEFT);nav.grow_vertical=Control.GROW_DIRECTION_BEGIN
@@ -452,6 +462,7 @@ func build_ui() -> void:
 	var confirm_row := row(tools)
 	place_button=button(confirm_row,tr("여기에 놓기"),commit_place);place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	button(confirm_row,tr("취소"),cancel_placement)
+	await LoadPace.step("room drawer")
 	# Right: the crafting and decorating drawer, opened from a hotbar-style slot.
 	var dock := PanelContainer.new();dock_panel=dock;dock.name="Dock"
 	dock.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
@@ -639,7 +650,10 @@ func build_stage() -> void:
 	floor_grid.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	stage.add_child(floor_grid);floor_grid.visible=false
 	build_overlays()
-	build_room()
+	var span := LoadPace.narrow(0.3, 0.85)
+	await build_room()
+	LoadPace.span = span
+	await LoadPace.step("room walker")
 	# Authored character is separate from all player-created furniture.
 	if ResourceLoader.exists("res://assets/explorer_b_reference.glb"):
 		hero=AvatarLook.walker(session_avatar,session_version);hero.controls_enabled=false;hero.visual_only=true
@@ -702,9 +716,11 @@ func build_room() -> void:
 	gift_home=str(building_spec.building) if public_room and NpcGifts.is_gift_home(str(building_spec.building)) else ""
 	floor_roots.clear();decor_by_floor.clear()
 	for index in building_spec.floors.size():
+		LoadPace.done(float(index)/building_spec.floors.size())
+		await LoadPace.step("room floor")
 		var level := Node3D.new();level.name="Floor_%d" % index;room_root.add_child(level)
 		floor_roots.append(level)
-		decor_by_floor.append(Interiors.build(level,building_spec.floors[index]))
+		decor_by_floor.append(await Interiors.build(level,building_spec.floors[index]))
 	floor_index=-1
 	set_floor(0)
 	title_label.text=tr("나의 작은 집") if room=="home" else tr("물결빛 공방")
@@ -716,6 +732,7 @@ func build_room() -> void:
 	set_chip("",default_hint())
 	show_place_panel()
 	apply_daylight(true)
+	await LoadPace.step("room residents")
 	refresh_residents(true)
 	apply_daylight(true)
 	if is_instance_valid(bubble): bubble.visible=false
@@ -1453,7 +1470,7 @@ func paint(color: String, reset := false) -> void:
 	pending=false
 
 func change_room(value: String) -> void:
-	clear_selection();room=value;build_room()
+	clear_selection();room=value;await build_room()
 	update_capacity()
 	place_hero_at_door()
 	await reload_placed()

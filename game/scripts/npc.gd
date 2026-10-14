@@ -10,6 +10,7 @@ extends Node3D
 ## after a while, with a short shrink/grow fade).
 const Residents = preload("res://scripts/residents.gd")
 const Town = preload("res://scripts/town.gd")
+const LoadPace = preload("res://scripts/load_pace.gd")
 const HEIGHT := 1.72
 const SWAP_DISTANCE := 14.0
 ## Longest wait (s) for the walker to look away before swapping in plain sight.
@@ -33,11 +34,21 @@ var anim_frame := 0
 var outside := true
 var swapping := false
 
+## The cast models, read once per session: the village is rebuilt after every room and expedition,
+## and reading the four models again held that frame for over a second.
+static var scenes := {}
+
 static func available(cast: String) -> bool:
 	return ResourceLoader.exists("res://assets/npc/%s.glb" % cast)
 
+## The model files of these casts, for LoadPace.want().
+static func resource_paths(casts: Array) -> Array:
+	return casts.map(func(cast): return "res://assets/npc/%s.glb" % cast)
+
 func setup(cast: String, facing_yaw: float) -> void:
-	model = (load("res://assets/npc/%s.glb" % cast) as PackedScene).instantiate()
+	var path := "res://assets/npc/%s.glb" % cast
+	if not scenes.has(path): scenes[path] = LoadPace.take(path)
+	model = (scenes[path] as PackedScene).instantiate()
 	add_child(model)
 	# Normalise to the walker's 1.72 m height with the feet on the ground.
 	var box := AABB()

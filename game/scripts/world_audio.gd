@@ -45,7 +45,16 @@ func _init() -> void:
 	# Fades keep running under a paused tree.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
+## The streams are synthesized on a worker thread (about half a second of work) while the game's
+## first loading card is up; setup() waits for them if they are not ready yet.
+static var building_task := -1
+static func prepare() -> void:
+	if cache.is_empty() and building_task < 0: building_task = WorkerThreadPool.add_task(build_streams, true, "world audio")
+
 func setup() -> void:
+	if building_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(building_task)
+		building_task = -1
 	if cache.is_empty(): build_streams()
 	if not steps.is_empty(): return
 	rng.randomize()

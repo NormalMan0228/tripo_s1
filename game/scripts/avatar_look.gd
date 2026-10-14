@@ -39,6 +39,10 @@ static func signature(value) -> String:
 
 ## A walker (player.gd) built in this look from its first frame. Callers set position and
 ## controls; the look is applied in _ready, so the default character never shows first.
+## The walker's model and motion files, for LoadPace.want() before the first village build.
+static func resource_paths() -> Array:
+	return ["res://assets/explorer_b_reference.glb", "res://assets/explorer_b_motion.glb"]
+
 static func walker(look, version := -1) -> CharacterBody3D:
 	var body: CharacterBody3D = PlayerScript.new()
 	body.avatar = normalize(look)
