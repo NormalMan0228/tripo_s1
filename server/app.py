@@ -56,18 +56,24 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def auth(conn, request):
         value = request.headers.get('authorization','')
         if not value.startswith('Bearer ') or len(value)>256: fail('login_required',401)
-        row = conn.execute('SELECT users.* FROM sessions JOIN users ON users.id=sessions.user_id '
+        row = conn.execute('SELECT users.*,sessions.created AS session_created FROM sessions JOIN users ON users.id=sessions.user_id '
                            'WHERE token_hash=? AND expires>?',(digest(value[7:]),clock())).fetchone()
         if not row: fail('session_expired',401)
+        # Signed in before a maintenance began (or an operator's logout-all): the game returns to its title.
+        floor = client_policy.session_floor()
+        if floor and row['session_created'] <= floor: fail('session_reset',401)
         return row
 
     def purge_sessions(conn):
-        conn.execute('DELETE FROM sessions WHERE expires<=?',(clock(),))
+        floor = client_policy.session_floor()
+        conn.execute('DELETE FROM sessions WHERE expires<=? OR (?>0 AND created<=?)',(clock(),floor,floor))
 
     def session(conn,user_id):
         token = secrets.token_urlsafe(32)
         purge_sessions(conn)
-        conn.execute('INSERT INTO sessions VALUES (?,?,?)',(digest(token),user_id,clock()+settings.session_seconds))
+        now = clock()
+        conn.execute('INSERT INTO sessions(token_hash,user_id,expires,created) VALUES (?,?,?,?)',
+                     (digest(token),user_id,now+settings.session_seconds,now))
         # Keep only the newest sessions per account; older devices must log in again.
         conn.execute('DELETE FROM sessions WHERE user_id=? AND token_hash NOT IN (SELECT token_hash FROM sessions '
                      'WHERE user_id=? ORDER BY expires DESC,rowid DESC LIMIT ?)',(user_id,user_id,MAX_SESSIONS_PER_USER))
