@@ -628,7 +628,7 @@ func login_ui(page := "menu") -> void:
 			RpgUi.divider(column,Color(RpgUi.GOLD,.8))
 			var username := RpgUi.field(column,tr("아이디 · 영문·숫자·밑줄 3~24자"))
 			username.text = str(I18n.setting("username",""))
-			var password := RpgUi.field(column,tr("비밀번호 · 10자 이상, 대문자와 특수문자 포함"),true)
+			var password := RpgUi.field(column,tr("비밀번호 · 10자 이상, 대문자와 특수문자 포함"),true,func(): message(tr("비밀번호는 영문으로 입력해요 · 한/영 키로 바꿔 주세요.")))
 			RpgUi.label(column,tr("월드"),14,RpgUi.GOLD)
 			var servers := OptionButton.new()
 			servers.custom_minimum_size = Vector2(340,42)

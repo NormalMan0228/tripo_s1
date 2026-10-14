@@ -1,7 +1,8 @@
-param([Parameter(Mandatory = $true)][long]$Hwnd, [Parameter(Mandatory = $true)][string]$Keys, [string]$Log = "", [int]$DelayMs = 45)
+param([Parameter(Mandatory = $true)][long]$Hwnd, [Parameter(Mandatory = $true)][string]$Keys, [string]$Log = "", [int]$DelayMs = 45, [int]$HoldMs = 12)
 # Types through the real Windows Korean IME into one window (used by game/tests/ime_typing.gd).
 # $Keys is what the fingers press on a 2-beolsik keyboard: a-z (Shift for capitals: ㄲ ㄸ ㅃ ㅆ ㅉ ㅒ ㅖ),
 # space, '>' Enter, '<' Backspace, '.' a short pause. "gksrmf dlqfur" types 한글 입력.
+# Each key is held $HoldMs (a person holds a key 60-90 ms), then $DelayMs pass before the next.
 # The window is brought forward, switched to the Korean layout in Hangul mode, and every key is sent
 # with SendInput only while that window is still in front, so nothing lands in another program.
 # Exit 0 typed; 2 the window could not be brought forward or lost the front; 3 no Korean IME.
@@ -57,7 +58,7 @@ public static class ImeTypeDriver {
 
     static void Key(byte vk, bool up) { keybd_event(vk, (byte)MapVirtualKey(vk, 0), up ? KEYUP : 0, UIntPtr.Zero); }
 
-    public static int Run(IntPtr h, string keys, int delay) {
+    public static int Run(IntPtr h, string keys, int delay, int hold) {
         if (!Forward(h)) { Report = "not in front: " + FrontName(); return 2; }
         uint thread = GetWindowThreadProcessId(h, IntPtr.Zero);
         PostMessage(h, WM_INPUTLANGCHANGEREQUEST, IntPtr.Zero, (IntPtr)0x04120412);
@@ -83,7 +84,7 @@ public static class ImeTypeDriver {
             else if (c == '<') vk = 0x08;
             else continue;
             if (shift) Key(0x10, false);
-            Key(vk, false); Thread.Sleep(12); Key(vk, true);
+            Key(vk, false); Thread.Sleep(hold); Key(vk, true);
             if (shift) Key(0x10, true);
             Thread.Sleep(delay);
         }
@@ -95,6 +96,6 @@ public static class ImeTypeDriver {
 }
 '@
 }
-$code = [ImeTypeDriver]::Run([IntPtr]$Hwnd, $Keys, $DelayMs)
+$code = [ImeTypeDriver]::Run([IntPtr]$Hwnd, $Keys, $DelayMs, $HoldMs)
 if ($Log) { [IO.File]::WriteAllText($Log, "$code $([ImeTypeDriver]::Report)") }
 exit $code

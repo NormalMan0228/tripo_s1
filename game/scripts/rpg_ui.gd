@@ -1418,11 +1418,16 @@ static func menu_button(parent: Node, value: String, callback: Callable, width :
 	parent.add_child(b)
 	return b
 
-## Text field matching the night title card.
-static func field(parent: Node, placeholder: String, secret := false) -> LineEdit:
+## Text field matching the night title card. A secret field (password) keeps only Latin letters,
+## digits and symbols and calls `dropped` when it took typed letters out again.
+static func field(parent: Node, placeholder: String, secret := false, dropped := Callable()) -> LineEdit:
 	var line := LineEdit.new()
 	line.placeholder_text = placeholder
 	line.secret = secret
+	# The IME cannot stay off for one field (Godot 4.7 turns it on again at each redraw of the field),
+	# so syllables typed in Hangul mode are taken out and the page says why.
+	if secret: line.text_changed.connect(func(value: String):
+		if latin_only(line, value) and dropped.is_valid(): dropped.call())
 	line.custom_minimum_size = Vector2(340, 44)
 	line.theme_type_variation = "NightField"
 	line.add_theme_font_size_override("font_size", 16)
@@ -1431,3 +1436,14 @@ static func field(parent: Node, placeholder: String, secret := false) -> LineEdi
 	line.keep_editing_on_text_submit = true
 	parent.add_child(line)
 	return line
+
+## Takes every character outside printable ASCII out of the field; true when there was one.
+static func latin_only(line: LineEdit, value: String) -> bool:
+	var kept := ""
+	for ch in value:
+		if ch.unicode_at(0) >= 0x20 and ch.unicode_at(0) < 0x7F: kept += ch
+	if kept == value: return false
+	var caret := line.caret_column - (value.length() - kept.length())
+	line.text = kept
+	line.caret_column = clampi(caret, 0, kept.length())
+	return true

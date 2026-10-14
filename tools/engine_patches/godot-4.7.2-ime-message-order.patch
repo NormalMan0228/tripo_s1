@@ -1,0 +1,57 @@
+Godot 4.7.2-stable, Windows: Korean typed with the new Microsoft IME loses every syllable
+(each one replaces the last). Upstream: godotengine/godot#123269, fixed by #123274
+(cherry-picked for 4.7.3, not released as of 2026-10-14). 4.7.2's message pump peeks in
+filtered ranges, so keys run before the IME's own messages; with a text field's IME on,
+this patch pumps messages in posting order, like 4.7.1. Unlike the upstream diff it checks
+that a focused window exists (none before the first activation; indexing it would abort).
+
+Apply to a 4.7.2-stable checkout and build the Windows export templates:
+  git clone --depth 1 --branch 4.7.2-stable https://github.com/godotengine/godot.git
+  cd godot && git apply <repo>/tools/engine_patches/godot-4.7.2-ime-message-order.patch
+  scons platform=windows target=template_release arch=x86_64 production=yes
+  (template_debug likewise; output in bin/godot.windows.template_release.x86_64.exe)
+
+diff --git a/platform/windows/display_server_windows.cpp b/platform/windows/display_server_windows.cpp
+--- a/platform/windows/display_server_windows.cpp
++++ b/platform/windows/display_server_windows.cpp
+@@ -4469,17 +4469,29 @@ void DisplayServerWindows::process_events() {
+ 		}
+ 		return ret;
+ 	};
+-	while (peek_discrete()) {
+-		TranslateMessage(&msg);
+-		DispatchMessageW(&msg);
+-	}
+-	if (PeekMessageW(&msg, nullptr, WM_MOUSEMOVE, WM_MOUSEMOVE, PM_REMOVE)) {
+-		TranslateMessage(&msg);
+-		DispatchMessageW(&msg);
+-	}
+-	if (PeekMessageW(&msg, nullptr, WM_NCMOUSEMOVE, WM_NCMOUSEMOVE, PM_REMOVE)) {
+-		TranslateMessage(&msg);
+-		DispatchMessageW(&msg);
++	// While a text field has the IME on, messages go in posting order: the filtered
++	// passes below run keys before the IME's own messages, and the Microsoft Korean IME
++	// then replaces each syllable with the next instead of committing it (GH-123269,
++	// fixed upstream by GH-123274 for 4.7.3). Guarded: no window may have focus yet.
++	const DisplayServerEnums::WindowID ime_window = _get_focused_window_or_popup();
++	if (windows.has(ime_window) && windows[ime_window].ime_active) {
++		while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
++			TranslateMessage(&msg);
++			DispatchMessageW(&msg);
++		}
++	} else {
++		while (peek_discrete()) {
++			TranslateMessage(&msg);
++			DispatchMessageW(&msg);
++		}
++		if (PeekMessageW(&msg, nullptr, WM_MOUSEMOVE, WM_MOUSEMOVE, PM_REMOVE)) {
++			TranslateMessage(&msg);
++			DispatchMessageW(&msg);
++		}
++		if (PeekMessageW(&msg, nullptr, WM_NCMOUSEMOVE, WM_NCMOUSEMOVE, PM_REMOVE)) {
++			TranslateMessage(&msg);
++			DispatchMessageW(&msg);
++		}
+ 	}
+ 	_THREAD_SAFE_UNLOCK_
+ 
