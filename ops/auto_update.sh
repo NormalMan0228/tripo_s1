@@ -11,8 +11,10 @@
 #   2. ops/notice.sh release <config/version of game/project.godot>: the "new version" notice; the
 #      download address already saved on the server stays.
 # A failed deploy is remembered and not retried until the branch moves again.
-# Settings (environment of the timer's service): VILLAGEN_RELEASE_BRANCH (school-release),
-# VILLAGEN_ANNOUNCE_MINUTES (10). Log: /var/log/villagen-autoupdate.log
+# The wait before maintenance: ops/release.json on the release branch ({"announce_minutes": 5}, set per
+# release by tools/deploy_school.py --announce N; 0 = right away), else the timer's default
+# VILLAGEN_ANNOUNCE_MINUTES (10, changed with install_auto_update.sh --announce N).
+# Other setting: VILLAGEN_RELEASE_BRANCH (school-release). Log: /var/log/villagen-autoupdate.log
 set -euo pipefail
 cd "$(dirname "$0")/.."
 branch="${VILLAGEN_RELEASE_BRANCH:-school-release}"
@@ -30,6 +32,8 @@ target=$(git rev-parse "origin/$branch")
 [ "$target" = "$(cat "$state/deployed" 2>/dev/null || true)" ] && exit 0
 [ "$target" = "$(cat "$state/failed" 2>/dev/null || true)" ] && exit 0
 version=$(git show "origin/$branch:game/project.godot" | sed -n 's/^config\/version="\([0-9.]*\)"$/\1/p')
+wanted=$(git show "origin/$branch:ops/release.json" 2>/dev/null | sed -n 's/.*"announce_minutes"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p' | head -n 1)
+if [ -n "$wanted" ] && [ "$wanted" -le 1440 ]; then announce="$wanted"; fi
 echo "$(stamp) new release on $branch: ${target:0:7} (version ${version:-?}), maintenance in $announce min"
 if [ "${1:-}" = "--dry-run" ]; then echo "$(stamp) dry run: nothing changed"; exit 0; fi
 if bash ops/update_online_server.sh "$branch" --announce "$announce"; then
