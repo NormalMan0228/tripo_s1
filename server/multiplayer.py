@@ -25,7 +25,11 @@ CREATE TABLE IF NOT EXISTS mp_visits (
  user_id TEXT PRIMARY KEY REFERENCES users(id), host_id TEXT NOT NULL REFERENCES users(id), expires REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS mp_presence (
  user_id TEXT PRIMARY KEY REFERENCES users(id), host_id TEXT NOT NULL REFERENCES users(id),
- scene TEXT NOT NULL, x REAL NOT NULL, z REAL NOT NULL, y REAL NOT NULL DEFAULT 0, yaw REAL NOT NULL, seen REAL NOT NULL);
+ scene TEXT NOT NULL, x REAL NOT NULL, z REAL NOT NULL, y REAL NOT NULL DEFAULT 0, yaw REAL NOT NULL, seen REAL NOT NULL,
+ vx REAL NOT NULL DEFAULT 0, vz REAL NOT NULL DEFAULT 0, ct REAL);
+CREATE TABLE IF NOT EXISTS mp_visit_notices (
+ user_id TEXT PRIMARY KEY REFERENCES users(id), host_id TEXT NOT NULL REFERENCES users(id),
+ reason TEXT NOT NULL, created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS mp_messages (
  id INTEGER PRIMARY KEY AUTOINCREMENT, room TEXT NOT NULL, user_id TEXT NOT NULL REFERENCES users(id),
  text TEXT NOT NULL, created REAL NOT NULL);
@@ -47,6 +51,19 @@ class Invite(Mutation):
 # Visitors may walk the host's village and the host's home interior.
 VISIBLE_SCENES = ('village', 'home')
 
+# A visit lasts while both sides keep polling; each guest poll moves its end this far ahead.
+VISIT_SECONDS = 3600
+# A host not heard from this long (crashed, connection lost; quitting and logging out end visits at
+# once) has left: the guests' next poll sends them home. Longer than a slow screen change.
+HOST_GONE_SECONDS = 20
+# A guest not heard from this long has left the host's village: the place is free again and the
+# guest's next sign-in starts at home.
+GUEST_GONE_SECONDS = 60
+# Other players are drawn in the village or home only this soon after their last poll.
+VISIBLE_SECONDS = 6
+# How long a guest's client is told why its visit ended (visit_ended).
+NOTICE_SECONDS = 120
+
 
 class Presence(Strict):
     scene: Literal['village', 'home', 'away'] = 'village'
@@ -54,6 +71,11 @@ class Presence(Strict):
     z: float = Field(default=3, ge=-100, le=100)
     y: float = Field(default=0, ge=-20, le=40)
     yaw: float = Field(default=0, ge=-100, le=100)
+    # The walker's velocity and the sender's own clock (seconds) when this spot was taken: other
+    # clients draw the walk between spots at their true moments (remote_motion.gd).
+    vx: float = Field(default=0, ge=-30, le=30)
+    vz: float = Field(default=0, ge=-30, le=30)
+    t: float | None = Field(default=None, ge=0, le=1e10)
 
 
 class Message(Mutation):
@@ -73,8 +95,10 @@ class Multiplayer:
         self.db, self.clock = db, clock
         with db.read() as conn:
             conn.executescript(SCHEMA)
-            if 'y' not in [r[1] for r in conn.execute('PRAGMA table_info(mp_presence)')]:
-                conn.execute('ALTER TABLE mp_presence ADD COLUMN y REAL NOT NULL DEFAULT 0')
+            columns = [r[1] for r in conn.execute('PRAGMA table_info(mp_presence)')]
+            for name, kind in (('y', 'REAL NOT NULL DEFAULT 0'), ('vx', 'REAL NOT NULL DEFAULT 0'), ('vz', 'REAL NOT NULL DEFAULT 0'), ('ct', 'REAL')):
+                if name not in columns:
+                    conn.execute('ALTER TABLE mp_presence ADD COLUMN '+name+' '+kind)
 
         def party_for(conn, user_id):
             return conn.execute('SELECT p.* FROM mp_parties p JOIN mp_members m ON m.party_id=p.id WHERE m.user_id=?', (user_id,)).fetchone()
@@ -82,9 +106,64 @@ class Multiplayer:
         def active_coop(conn, user_id):
             return conn.execute("SELECT r.id FROM coop_runs r JOIN coop_members m ON r.id=m.run_id WHERE m.user_id=? AND m.withdrawn=0 AND r.status='active'", (user_id,)).fetchone()
 
+        def visit_over(conn, visit, host_here=False):
+            """Why a visit has ended without anyone ending it, or None while it goes on."""
+            if visit['expires'] <= clock():
+                return 'expired'
+            host = None if host_here else conn.execute('SELECT seen FROM mp_presence WHERE user_id=?', (visit['host_id'],)).fetchone()
+            if host and clock()-host['seen'] > HOST_GONE_SECONDS:
+                return 'host_lost'
+            if visit['expires'] < clock()+VISIT_SECONDS-GUEST_GONE_SECONDS:
+                return 'lost'
+            return None
+
         def host_for(conn, user_id):
-            visit = conn.execute('SELECT host_id FROM mp_visits WHERE user_id=? AND expires>?', (user_id, clock())).fetchone()
-            return visit['host_id'] if visit else user_id
+            visit = conn.execute('SELECT host_id,expires FROM mp_visits WHERE user_id=?', (user_id,)).fetchone()
+            return visit['host_id'] if visit and not visit_over(conn, visit) else user_id
+
+        def end_visit(conn, guest_id, host_id, reason):
+            # The guest's client hears why once (overview visit_ended) and goes home.
+            conn.execute('DELETE FROM mp_visits WHERE user_id=?', (guest_id,))
+            conn.execute('INSERT INTO mp_visit_notices VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,reason=excluded.reason,created=excluded.created', (guest_id, host_id, reason, clock()))
+
+        def settle_visits(conn, user_id):
+            """Ends this player's own visit, or the visits to this player's village, that are over."""
+            visit = conn.execute('SELECT host_id,expires FROM mp_visits WHERE user_id=?', (user_id,)).fetchone()
+            if visit:
+                reason = visit_over(conn, visit)
+                if reason:
+                    end_visit(conn, user_id, visit['host_id'], reason)
+                return
+            # The host asking is here; only guests who went quiet leave.
+            for guest in conn.execute('SELECT user_id,host_id,expires FROM mp_visits WHERE host_id=?', (user_id,)).fetchall():
+                reason = visit_over(conn, guest, host_here=True)
+                if reason:
+                    end_visit(conn, guest['user_id'], user_id, reason)
+
+        def drop_from_party(conn, user_id):
+            party = party_for(conn, user_id)
+            if not party:
+                return
+            conn.execute('DELETE FROM mp_members WHERE user_id=?', (user_id,))
+            next_member = conn.execute('SELECT user_id FROM mp_members WHERE party_id=? ORDER BY joined,user_id LIMIT 1', (party['id'],)).fetchone()
+            if next_member and party['leader_id'] == user_id:
+                conn.execute('UPDATE mp_parties SET leader_id=? WHERE id=?', (next_member[0], party['id']))
+            elif not next_member:
+                conn.execute('DELETE FROM mp_parties WHERE id=?', (party['id'],))
+            conn.execute("UPDATE mp_invites SET state='revoked' WHERE party_id=? AND sender_id=? AND state='pending'", (party['id'], user_id))
+
+        def leave(conn, user_id):
+            """The player logged out or quit the game: gone from every screen at once. Guests in this
+            player's village go home (told why), this player's own visit ends, pending village
+            invitations from this player lapse, and the party goes on without this player (an
+            expedition under way keeps its place, to resume after the next sign-in)."""
+            conn.execute('DELETE FROM mp_presence WHERE user_id=?', (user_id,))
+            conn.execute('DELETE FROM mp_visits WHERE user_id=?', (user_id,))
+            for guest in conn.execute('SELECT user_id FROM mp_visits WHERE host_id=?', (user_id,)).fetchall():
+                end_visit(conn, guest['user_id'], user_id, 'left')
+            conn.execute("UPDATE mp_invites SET state='revoked' WHERE sender_id=? AND kind='village' AND state='pending'", (user_id,))
+            if not active_coop(conn, user_id):
+                drop_from_party(conn, user_id)
 
         def room_for(conn, user_id):
             party = party_for(conn, user_id)
@@ -111,8 +190,15 @@ class Multiplayer:
             pending = [dict(r) for r in conn.execute("SELECT r.id FROM coop_runs r JOIN coop_members m ON r.id=m.run_id WHERE m.user_id=? AND m.claimed=0 AND m.withdrawn=0 AND r.status='won' ORDER BY r.created LIMIT 20", (user['id'],))]
             room = room_for(conn, user['id'])
             messages = [dict(r) for r in conn.execute('SELECT e.id,u.username,e.text,e.created FROM mp_messages e JOIN users u ON u.id=e.user_id WHERE room=? AND e.created>? ORDER BY e.id DESC LIMIT 20', (room, clock()-3600))][::-1]
+            # Why the last visit ended (the host left, lost the connection or ended it), for a while.
+            ended = None
+            if host == user['id']:
+                notice = conn.execute('SELECT n.host_id,n.reason,n.created,u.username FROM mp_visit_notices n JOIN users u ON u.id=n.host_id WHERE n.user_id=? AND n.created>?', (user['id'], clock()-NOTICE_SECONDS)).fetchone()
+                if notice:
+                    ended = dict(host_id=notice['host_id'], host_name=notice['username'], reason=notice['reason'], at=notice['created'])
             return dict(self_id=user['id'], host_id=host, host_name=host_name, visiting=host != user['id'],
-                        party=party_public(conn, user['id']), invites=invites, pending_rewards=pending, messages=messages)
+                        party=party_public(conn, user['id']), invites=invites, pending_rewards=pending, messages=messages,
+                        visit_ended=ended)
 
         def look(conn, user_id):
             # Every place that draws another player reads the saved look and its version; clients
@@ -130,8 +216,10 @@ class Multiplayer:
             host = host_for(conn, user['id'])
             objects = [object_shape.listed(dict(r)) for r in conn.execute("SELECT o.id,o.name,o.color,o.version,o.state,o.x,o.z,o.rotation,COALESCE(l.room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE asset_id=o.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=o.id) AS runtime_version," + object_paint.version_column('o.id') + " AS paint_version," + object_shape.column('o.id') + " AS shape FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village')=? ORDER BY o.id", (host, scene))]
             players = []
-            for row in conn.execute("SELECT p.*,u.username FROM mp_presence p JOIN users u ON u.id=p.user_id WHERE p.host_id=? AND p.scene=? AND p.seen>? AND (p.user_id=? OR EXISTS(SELECT 1 FROM mp_visits v WHERE v.user_id=p.user_id AND v.host_id=? AND v.expires>?))", (host, scene, clock()-coop.PRESENCE_SECONDS, host, host, clock())):
-                players.append(dict(id=row['user_id'], username=row['username'], x=row['x'], z=row['z'], y=row['y'], yaw=row['yaw'], **look(conn, row['user_id'])))
+            for row in conn.execute("SELECT p.*,u.username FROM mp_presence p JOIN users u ON u.id=p.user_id WHERE p.host_id=? AND p.scene=? AND p.seen>? AND (p.user_id=? OR EXISTS(SELECT 1 FROM mp_visits v WHERE v.user_id=p.user_id AND v.host_id=? AND v.expires>?))", (host, scene, clock()-VISIBLE_SECONDS, host, host, clock())):
+                # t: the sender's clock when the spot was taken (older games send none: seen).
+                players.append(dict(id=row['user_id'], username=row['username'], x=row['x'], z=row['z'], y=row['y'], yaw=row['yaw'],
+                                    vx=row['vx'], vz=row['vz'], t=row['ct'], seen=row['seen'], **look(conn, row['user_id'])))
             row = conn.execute('SELECT state FROM homesteads WHERE user_id=?', (host,)).fetchone()
             life = homestead.public(json.loads(row[0]) if row else homestead.initial(), clock())
             # Visitors can see crops, not the host's private inventory or fishing outcome.
@@ -147,12 +235,24 @@ class Multiplayer:
         def presence(body: Presence, request: Request):
             with db.transaction() as conn:
                 user = auth(conn, request)
+                # A visit whose host is gone (or whose guest was away too long) ends here; a guest
+                # still here keeps the visit going.
+                settle_visits(conn, user['id'])
                 host = host_for(conn, user['id'])
-                conn.execute('INSERT INTO mp_presence(user_id,host_id,scene,x,z,y,yaw,seen) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,scene=excluded.scene,x=excluded.x,z=excluded.z,y=excluded.y,yaw=excluded.yaw,seen=excluded.seen', (user['id'], host, body.scene, body.x, body.z, body.y, body.yaw, clock()))
+                if host != user['id']:
+                    conn.execute('UPDATE mp_visits SET expires=? WHERE user_id=?', (clock()+VISIT_SECONDS, user['id']))
+                conn.execute('INSERT INTO mp_presence(user_id,host_id,scene,x,z,y,yaw,seen,vx,vz,ct) VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,scene=excluded.scene,x=excluded.x,z=excluded.z,y=excluded.y,yaw=excluded.yaw,seen=excluded.seen,vx=excluded.vx,vz=excluded.vz,ct=excluded.ct', (user['id'], host, body.scene, body.x, body.z, body.y, body.yaw, clock(), body.vx, body.vz, body.t))
                 space = village(conn, user, body.scene) if body.scene in VISIBLE_SCENES else None
                 # The host's residents' home versions (npc_homes.py), so visitors follow their rooms too.
                 homes = app.state.npc_homes.versions_in(conn, host) if hasattr(app.state, 'npc_homes') else {}
                 return {**overview(conn, user), 'village': space if body.scene == 'village' else None, 'space': space, 'npc_homes': homes}
+
+        @app.post('/v1/social/offline')
+        def offline(request: Request):
+            # The game is closing (window closed, quit from the menu): to everyone else, it left.
+            with db.transaction() as conn:
+                leave(conn, auth(conn, request)['id'])
+                return {'ok': True}
 
         @app.post('/v1/social/invites')
         def invite(body: Invite, request: Request):
@@ -199,10 +299,16 @@ class Multiplayer:
                             fail('party_full')
                         conn.execute('INSERT INTO mp_members VALUES (?,?,?)', (user['id'], party['id'], clock()))
                     else:
+                        # The host must still be here and at home (not gone, not off visiting).
+                        host_seen = conn.execute('SELECT seen FROM mp_presence WHERE user_id=?', (row['sender_id'],)).fetchone()
+                        if host_seen and clock()-host_seen['seen'] > HOST_GONE_SECONDS or host_for(conn, row['sender_id']) != row['sender_id']:
+                            fail('host_offline')
+                        settle_visits(conn, row['sender_id'])
                         if conn.execute('SELECT count(*) FROM mp_visits WHERE host_id=? AND user_id!=? AND expires>?', (row['sender_id'], user['id'], clock())).fetchone()[0] >= 2:
                             fail('village_full')
-                        conn.execute('INSERT INTO mp_visits VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,expires=excluded.expires', (user['id'], row['sender_id'], clock()+3600))
+                        conn.execute('INSERT INTO mp_visits VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,expires=excluded.expires', (user['id'], row['sender_id'], clock()+VISIT_SECONDS))
                         conn.execute('DELETE FROM mp_presence WHERE user_id=?', (user['id'],))
+                        conn.execute('DELETE FROM mp_visit_notices WHERE user_id=?', (user['id'],))
                 conn.execute('UPDATE mp_invites SET state=? WHERE id=?', (decision, invite_id))
                 return overview(conn, user)
             return mutate(request, body, 'invite:'+invite_id+':'+decision, apply)
@@ -218,7 +324,8 @@ class Multiplayer:
         @app.post('/v1/social/eject')
         def eject(body: Target, request: Request):
             def apply(conn, user):
-                conn.execute('DELETE FROM mp_visits WHERE user_id=? AND host_id=?', (str(body.user_id), user['id']))
+                if conn.execute('SELECT 1 FROM mp_visits WHERE user_id=? AND host_id=?', (str(body.user_id), user['id'])).fetchone():
+                    end_visit(conn, str(body.user_id), user['id'], 'ended')
                 return {'ok': True}
             return mutate(request, body, 'social_eject', apply)
 
@@ -253,18 +360,9 @@ class Multiplayer:
         @app.post('/v1/party/leave')
         def leave_party(body: Mutation, request: Request):
             def apply(conn, user):
-                party = party_for(conn, user['id'])
-                if not party:
-                    return {'ok': True}
-                if active_coop(conn, user['id']):
+                if party_for(conn, user['id']) and active_coop(conn, user['id']):
                     fail('leave_expedition_first')
-                conn.execute('DELETE FROM mp_members WHERE user_id=?', (user['id'],))
-                next_member = conn.execute('SELECT user_id FROM mp_members WHERE party_id=? ORDER BY joined,user_id LIMIT 1', (party['id'],)).fetchone()
-                if next_member and party['leader_id'] == user['id']:
-                    conn.execute('UPDATE mp_parties SET leader_id=? WHERE id=?', (next_member[0], party['id']))
-                elif not next_member:
-                    conn.execute('DELETE FROM mp_parties WHERE id=?', (party['id'],))
-                conn.execute("UPDATE mp_invites SET state='revoked' WHERE party_id=? AND sender_id=? AND state='pending'", (party['id'], user['id']))
+                drop_from_party(conn, user['id'])
                 return {'ok': True}
             return mutate(request, body, 'party_leave', apply)
 
@@ -416,4 +514,5 @@ class Multiplayer:
 
         self.active_coop = active_coop
         self.host_for = host_for
+        self.leave = leave
 

@@ -331,3 +331,110 @@ def test_every_view_of_a_player_carries_the_saved_look_and_its_version(world):
     seen = c.get('/v1/coop/runs/'+run_id, headers=hs[1]).json()['players']
     alice = next(p for p in seen if p['username'] == 'alice')
     assert alice['avatar_version'] == 2 and alice['avatar'] == newer
+
+
+def ids(c, hs):
+    return [c.get('/v1/social', headers=h).json()['self_id'] for h in hs]
+
+
+def presence(c, h, **body):
+    response = c.post('/v1/social/presence', headers=h, json=body)
+    assert response.status_code == 200, response.text
+    return response.json()
+
+
+def test_guests_go_home_when_the_host_quits_logs_out_crashes_or_ends_the_visit(world):
+    app, c, now, hs, _ = world
+    alice, bravo, charlie = hs[:3]
+
+    def visit():
+        presence(c, alice)
+        invite(c, alice, bravo, 'bravo', 'village')
+        view = presence(c, bravo, x=1, z=2)
+        assert view['visiting'] and view['visit_ended'] is None
+        return view
+
+    def sent_home(reason):
+        view = presence(c, bravo)
+        assert not view['visiting'] and view['host_id'] == view['self_id']
+        assert view['visit_ended']['reason'] == reason and view['visit_ended']['host_name'] == 'alice'
+        assert len(view['village']['players']) == 1
+        return view
+
+    # Quitting the game (window closed): guests go home at once; open village invitations lapse.
+    visit()
+    pending = post(c, alice, '/v1/social/invites', username='charlie', kind='village')
+    assert c.post('/v1/social/offline', headers=alice).status_code == 200
+    sent_home('left')
+    assert c.post('/v1/social/invites/'+pending['id']+'/accept', headers=charlie, json=mutation()).json()['detail'] == 'invitation_expired'
+    # The game crashed or lost the connection: no word from the host for a while.
+    visit()
+    pending = post(c, alice, '/v1/social/invites', username='charlie', kind='village')
+    now[0] += 10
+    assert presence(c, bravo)['visiting']  # a short silence (a screen loading) is fine
+    now[0] += 11
+    sent_home('host_lost')
+    assert c.post('/v1/social/invites/'+pending['id']+'/accept', headers=charlie, json=mutation()).json()['detail'] == 'host_offline'
+    # Logging out.
+    visit()
+    c.post('/v1/auth/logout', headers=alice)
+    sent_home('left')
+    # The host ends the visit.
+    login = c.post('/v1/auth/login', json={'username': 'alice', 'password': 'Test-password-123'})
+    alice = {'Authorization': 'Bearer '+login.json()['token']}
+    visit()
+    post(c, alice, '/v1/social/eject', user_id=ids(c, [bravo])[0])
+    sent_home('ended')
+    # A new visit clears the old reason; the reason lapses after a while anyway.
+    view = visit()
+    assert view['visit_ended'] is None
+    post(c, bravo, '/v1/social/home')
+    now[0] += 121
+    assert presence(c, bravo)['visit_ended'] is None
+
+
+def test_a_guest_who_quits_or_vanishes_leaves_the_host_screen_and_frees_the_place(world):
+    app, c, now, hs, _ = world
+    alice, bravo, charlie, delta = hs
+    presence(c, alice)
+    invite(c, alice, bravo, 'bravo', 'village')
+    invite(c, alice, charlie, 'charlie', 'village')
+    presence(c, bravo, x=1, z=1, vx=1.5, vz=-2, t=4321.25)
+    presence(c, charlie, x=2, z=2)
+    players = {p['username']: p for p in presence(c, alice)['village']['players']}
+    assert len(players) == 3
+    # Each spot carries the sender's clock and velocity (older games: no clock, the server's time).
+    assert (players['bravo']['vx'], players['bravo']['vz'], players['bravo']['t']) == (1.5, -2, 4321.25)
+    assert players['charlie']['t'] is None and players['charlie']['seen'] == now[0]
+    # Quitting: gone from the host's next answer, and the visit is over.
+    assert c.post('/v1/social/offline', headers=bravo).status_code == 200
+    assert [p['username'] for p in presence(c, alice)['village']['players']] == ['alice', 'charlie']
+    assert not c.get('/v1/social', headers=bravo).json()['visiting']
+    # A crashed guest disappears within seconds and gives the place back after a minute.
+    for _ in range(5):
+        now[0] += 15
+        assert [p['username'] for p in presence(c, alice)['village']['players']] == ['alice']
+    invite(c, alice, bravo, 'bravo', 'village')
+    invite(c, alice, delta, 'delta', 'village')  # charlie's place
+    back = c.get('/v1/social', headers=charlie).json()
+    assert not back['visiting'] and back['visit_ended']['reason'] == 'lost'
+    # A guest who keeps polling stays past the old one-hour limit.
+    for _ in range(80):
+        now[0] += 50
+        presence(c, alice)
+        presence(c, bravo)
+    assert presence(c, bravo)['visiting']
+
+
+def test_quitting_hands_the_party_on_but_keeps_an_expedition_place(world):
+    app, c, now, hs, _ = world
+    post(c, hs[0], '/v1/party')
+    invite(c, hs[0], hs[1], 'bravo', 'party')
+    assert c.post('/v1/social/offline', headers=hs[0]).status_code == 200
+    party = c.get('/v1/social', headers=hs[1]).json()['party']
+    assert [m['username'] for m in party['members']] == ['bravo'] and party['leader_id'] == ids(c, [hs[1]])[0]
+    post(c, hs[1], '/v1/party/leave')
+    run = prepare_party(c, hs)
+    c.post('/v1/social/offline', headers=hs[2])
+    assert c.get('/v1/social', headers=hs[2]).json()['party']['run_id'] == run
+    assert c.get('/v1/coop/runs/'+run, headers=hs[2]).json()['players'][0]['t'] == now[0]

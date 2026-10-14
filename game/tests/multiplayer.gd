@@ -36,6 +36,10 @@ func add_client(index: int, register: bool) -> Node3D:
 	var app := Main.new()
 	root.add_child(app)
 	await process_frame
+	# The title first asks its default world about this version; signing in meanwhile was refused.
+	for i in 300:
+		if app.title_page != "checking": break
+		await process_frame
 	await app.authenticate(register, url, names[index], "Multiplayer-test-password", "")
 	expect(app.screen == "village", "client %d authenticated" % index)
 	return app

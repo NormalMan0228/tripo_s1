@@ -276,6 +276,14 @@
    "en": "Visiting %s's village",
    "zh": "正在拜访%s的村庄"
   },
+  "%s님의 마을 방문이 끝나서 내 마을로 돌아가요.": {
+   "en": "The visit to %s's village is over. Heading back to your own village.",
+   "zh": "对%s村庄的拜访已结束，正在返回自己的村庄。"
+  },
+  "%s님의 연결이 끊겨서 내 마을로 돌아왔어요.": {
+   "en": "%s lost the connection, so you're back in your own village.",
+   "zh": "%s的连接已断开，你已回到自己的村庄。"
+  },
   "%s님의 집": {
    "en": "%s's Home",
    "zh": "%s的家"
@@ -287,6 +295,14 @@
   "%s님의 집에 놀러 왔어요. 가구는 구경만 할 수 있어요.": {
    "en": "You're visiting %s's home. You can look at the furniture but not change it.",
    "zh": "你正在%s家做客。家具只能观赏，不能更改。"
+  },
+  "%s님이 마을을 떠나서 내 마을로 돌아왔어요.": {
+   "en": "%s left the village, so you're back in your own village.",
+   "zh": "%s离开了村庄，你已回到自己的村庄。"
+  },
+  "%s님이 방문을 마쳐서 내 마을로 돌아왔어요.": {
+   "en": "%s ended the visit, so you're back in your own village.",
+   "zh": "%s结束了拜访，你已回到自己的村庄。"
   },
   "%s에 가는 길이에요.": {
    "en": "On my way to %s.",
@@ -3828,6 +3844,10 @@
    "en": "The visit has ended. Heading back to the village.",
    "zh": "拜访已结束，正在返回村庄。"
   },
+  "방문이 끝나서 내 마을로 돌아왔어요.": {
+   "en": "The visit is over, so you're back in your own village.",
+   "zh": "拜访已结束，你已回到自己的村庄。"
+  },
   "방문한 마을의 텃밭과 물건은 주인만 수정할 수 있습니다.": {
    "en": "Only the owner can change Garden plots and items in a visited village.",
    "zh": "拜访的村庄中，菜园和物品只有主人能修改。"
@@ -5759,6 +5779,10 @@
   "연결 상태 확인 중…": {
    "en": "Checking connection…",
    "zh": "正在检查连接状态…"
+  },
+  "연결이 끊겨서 %s님의 마을에서 내 마을로 돌아왔어요.": {
+   "en": "The connection was lost, so you've returned from %s's village to your own.",
+   "zh": "连接已断开，你已从%s的村庄回到自己的村庄。"
   },
   "연못": {
    "en": "Pond",
@@ -7819,6 +7843,10 @@
   "초대장이 %d통 와 있어요: %s": {
    "en": "You have %d invitation(s): %s",
    "zh": "收到了 %d 封邀请函：%s"
+  },
+  "초대한 친구가 지금 마을에 없어요.": {
+   "en": "The friend who invited you isn't in their village right now.",
+   "zh": "邀请你的朋友现在不在村庄里。"
   },
   "초대할 사용자 이름": {
    "en": "Username to invite",

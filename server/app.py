@@ -415,7 +415,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def logout(request:Request):
         with db.transaction() as conn:
             user=auth(conn,request)
-            conn.execute('DELETE FROM mp_presence WHERE user_id=?',(user['id'],))
+            # Gone for the other players at once: guests in this village go home (multiplayer.py leave).
+            app.state.multiplayer.leave(conn,user['id'])
             conn.execute('DELETE FROM sessions WHERE token_hash=?',(digest(request.headers['authorization'][7:]),))
             purge_sessions(conn)
         return {'ok':True}

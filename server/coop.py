@@ -129,7 +129,7 @@ def public(state, user_id, now):
                 reward=0 if actor['withdrawn'] else state['world'].get('reward', 0),
                 players=[dict(id=key, username=p['username'], avatar=p['avatar'], x=p['x'], z=p['z'],
                               hp=p['hp'], sprinting=p['sprinting'], online=now-p['last_seen'] < PRESENCE_SECONDS,
-                              withdrawn=p['withdrawn']) for key, p in state['players'].items()])
+                              withdrawn=p['withdrawn'], t=now) for key, p in state['players'].items()])
     if actor['hp'] <= 0 and data['status'] == 'active':
         data['message'] = '쓰러졌습니다. 동료가 생존하는 동안 관전합니다.'
     return data
