@@ -1,0 +1,14 @@
+{
+ "centre_valley_z": 0.45300000000000007,
+ "corner_x": 0.09800000000000007,
+ "valley_points": 99,
+ "seam_verts": 241,
+ "seam_symmetric_ok": true,
+ "seam_edges": 240,
+ "seam_y_range": [
+  -0.2790047526359558,
+  -0.22162213921546936
+ ],
+ "boundary_edges": 1004,
+ "nonmanifold_edges": 0
+}

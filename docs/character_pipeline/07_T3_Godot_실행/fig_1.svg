@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 140" role="img" aria-label="T3 순서"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <g font-size="12.5">
+    <rect x="6" y="28" width="150" height="74" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="81" y="56" text-anchor="middle" class="s-ink" font-weight="600">① Blender 결과</text><text x="81" y="76" text-anchor="middle" class="s-muted">얼굴·눈·눈꺼풀 뼈</text><text x="81" y="92" text-anchor="middle" class="s-muted">입 안·이·혀</text>
+    <rect x="176" y="28" width="150" height="74" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="251" y="56" text-anchor="middle" class="s-ink" font-weight="600">② 재질 색</text><text x="251" y="76" text-anchor="middle" class="s-muted">피부·입 안·눈</text><text x="251" y="92" text-anchor="middle" class="s-muted">이·혀</text>
+    <rect x="346" y="28" width="150" height="74" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="421" y="56" text-anchor="middle" class="s-ink" font-weight="600">③ glb 내보내기</text><text x="421" y="76" text-anchor="middle" class="s-muted">셰이프키·스킨 포함</text><text x="421" y="92" text-anchor="middle" class="s-muted">+ 눈꺼풀 각도 json</text>
+    <rect x="516" y="28" width="150" height="74" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="591" y="56" text-anchor="middle" class="s-ink" font-weight="600">④ Godot 실행</text><text x="591" y="76" text-anchor="middle" class="s-muted">GLTFDocument로</text><text x="591" y="92" text-anchor="middle" class="s-muted">실행 중 불러오기</text>
+    <rect x="686" y="28" width="168" height="74" rx="8" class="s-paper st-good" stroke-width="2"/><text x="770" y="56" text-anchor="middle" class="s-ink" font-weight="600">⑤ 표정 재생·캡처</text><text x="770" y="76" text-anchor="middle" class="s-muted">뼈 회전 + 셰이프키</text><text x="770" y="92" text-anchor="middle" class="s-muted">6장 저장</text>
+    <path d="M156 65 H172 M326 65 H342 M496 65 H512 M666 65 H682" class="st-muted" stroke-width="2"/>
+    <text x="6" y="130" class="s-muted">전부 무인 실행. Godot 창은 BenQ 화면에 잠깐 떴다가 캡처 후 닫힘.</text>
+  </g>
+</svg>

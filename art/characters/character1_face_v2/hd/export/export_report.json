@@ -1,0 +1,17 @@
+{
+ "chin_z_model": 0.35184961557388306,
+ "metres_per_unit": 0.37047365692285256,
+ "head_cm": 24.0,
+ "bust_height_cm": 37.047365692285254,
+ "nonmanifold_fixed": 2,
+ "head": {
+  "tris": 199989,
+  "verts": 100435,
+  "boundary_loops_edges": 498,
+  "nonmanifold": 0
+ },
+ "files": {
+  "character1_head_headshot.fbx": 5428476,
+  "character1_eyes_mouth_parts.fbx": 691852
+ }
+}

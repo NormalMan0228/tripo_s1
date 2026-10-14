@@ -1,0 +1,142 @@
+{
+ "f02_european_woman": {
+  "bones_total": 844,
+  "deform": 160,
+  "controls": 170,
+  "mch": 345,
+  "org": 169,
+  "rig_points_def_heads": 151,
+  "deform_by_region": {
+   "brow": 28,
+   "cheek/nasolabial": 22,
+   "ear": 10,
+   "eye/lid": 38,
+   "forehead/temple": 8,
+   "head/neck": 7,
+   "jaw/chin": 12,
+   "lip/mouth": 20,
+   "nose": 9,
+   "teeth": 2,
+   "tongue": 4
+  },
+  "controls_by_region": {
+   "brow": 28,
+   "cheek/nasolabial": 16,
+   "ear": 12,
+   "eye/lid": 37,
+   "forehead/temple": 8,
+   "head/neck": 12,
+   "jaw/chin": 13,
+   "lip/mouth": 21,
+   "nose": 11,
+   "other": 4,
+   "teeth": 2,
+   "tongue": 6
+  }
+ },
+ "f06_game_heroine": {
+  "bones_total": 844,
+  "deform": 160,
+  "controls": 170,
+  "mch": 345,
+  "org": 169,
+  "rig_points_def_heads": 151,
+  "deform_by_region": {
+   "brow": 28,
+   "cheek/nasolabial": 22,
+   "ear": 10,
+   "eye/lid": 38,
+   "forehead/temple": 8,
+   "head/neck": 7,
+   "jaw/chin": 12,
+   "lip/mouth": 20,
+   "nose": 9,
+   "teeth": 2,
+   "tongue": 4
+  },
+  "controls_by_region": {
+   "brow": 28,
+   "cheek/nasolabial": 16,
+   "ear": 12,
+   "eye/lid": 37,
+   "forehead/temple": 8,
+   "head/neck": 12,
+   "jaw/chin": 13,
+   "lip/mouth": 21,
+   "nose": 11,
+   "other": 4,
+   "teeth": 2,
+   "tongue": 6
+  }
+ },
+ "f11_pixar_boy": {
+  "bones_total": 844,
+  "deform": 160,
+  "controls": 170,
+  "mch": 345,
+  "org": 169,
+  "rig_points_def_heads": 151,
+  "deform_by_region": {
+   "brow": 28,
+   "cheek/nasolabial": 22,
+   "ear": 10,
+   "eye/lid": 38,
+   "forehead/temple": 8,
+   "head/neck": 7,
+   "jaw/chin": 12,
+   "lip/mouth": 20,
+   "nose": 9,
+   "teeth": 2,
+   "tongue": 4
+  },
+  "controls_by_region": {
+   "brow": 28,
+   "cheek/nasolabial": 16,
+   "ear": 12,
+   "eye/lid": 37,
+   "forehead/temple": 8,
+   "head/neck": 12,
+   "jaw/chin": 13,
+   "lip/mouth": 21,
+   "nose": 11,
+   "other": 4,
+   "teeth": 2,
+   "tongue": 6
+  }
+ },
+ "f09_anime_girl": {
+  "bones_total": 844,
+  "deform": 160,
+  "controls": 170,
+  "mch": 345,
+  "org": 169,
+  "rig_points_def_heads": 151,
+  "deform_by_region": {
+   "brow": 28,
+   "cheek/nasolabial": 22,
+   "ear": 10,
+   "eye/lid": 38,
+   "forehead/temple": 8,
+   "head/neck": 7,
+   "jaw/chin": 12,
+   "lip/mouth": 20,
+   "nose": 9,
+   "teeth": 2,
+   "tongue": 4
+  },
+  "controls_by_region": {
+   "brow": 28,
+   "cheek/nasolabial": 16,
+   "ear": 12,
+   "eye/lid": 37,
+   "forehead/temple": 8,
+   "head/neck": 12,
+   "jaw/chin": 13,
+   "lip/mouth": 21,
+   "nose": 11,
+   "other": 4,
+   "teeth": 2,
+   "tongue": 6
+  }
+ }
+}

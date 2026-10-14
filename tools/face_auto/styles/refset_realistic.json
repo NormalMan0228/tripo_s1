@@ -1,0 +1,351 @@
+{
+ "style": "realistic",
+ "clips": [
+  {
+   "id": "E01_front",
+   "name": "smile",
+   "keys": [
+    "mouthSmileLeft",
+    "mouthSmileRight",
+    "cheekSquintLeft",
+    "cheekSquintRight",
+    "eyeSquintLeft",
+    "eyeSquintRight",
+    "mouthDimpleLeft",
+    "mouthDimpleRight"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs a warm closed-mouth smile: mouth corners rise, cheeks lift, eyes narrow slightly. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "E02_front",
+   "name": "big_smile",
+   "keys": [
+    "mouthSmileLeft",
+    "mouthSmileRight",
+    "jawOpen",
+    "mouthUpperUpLeft",
+    "mouthUpperUpRight",
+    "mouthLowerDownLeft",
+    "mouthLowerDownRight"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs a big open-mouth laugh-smile showing the upper teeth, without sound. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "E03_front",
+   "name": "surprise",
+   "keys": [
+    "browInnerUp",
+    "browOuterUpLeft",
+    "browOuterUpRight",
+    "eyeWideLeft",
+    "eyeWideRight",
+    "jawOpen"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs surprise: eyebrows go high, eyes open wide, jaw drops into a round open mouth. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "E04_front",
+   "name": "anger",
+   "keys": [
+    "browDownLeft",
+    "browDownRight",
+    "noseSneerLeft",
+    "noseSneerRight",
+    "mouthPressLeft",
+    "mouthPressRight",
+    "eyeSquintLeft",
+    "eyeSquintRight"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs anger: eyebrows pull down and together, nose wrinkles, lips press together, eyes narrow. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "E05_front",
+   "name": "sadness",
+   "keys": [
+    "browInnerUp",
+    "mouthFrownLeft",
+    "mouthFrownRight",
+    "mouthShrugLower"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs sadness: inner eyebrows rise, mouth corners pull down, lower lip pushes up. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "E06_front",
+   "name": "disgust",
+   "keys": [
+    "noseSneerLeft",
+    "noseSneerRight",
+    "mouthUpperUpLeft",
+    "mouthUpperUpRight",
+    "browDownLeft",
+    "browDownRight"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs disgust: nose wrinkles, upper lip curls up, eyebrows lower. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "E07_front",
+   "name": "fear",
+   "keys": [
+    "eyeWideLeft",
+    "eyeWideRight",
+    "mouthStretchLeft",
+    "mouthStretchRight",
+    "browInnerUp"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs fear: eyes open wide, mouth stretches sideways, inner eyebrows rise. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "Y08_front",
+   "name": "blink",
+   "keys": [
+    "eyeBlinkLeft",
+    "eyeBlinkRight"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs one slow full blink of both eyes (close fully at 1.0 s, hold 0.5 s, open), the rest of the face does not move. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "Y09_front",
+   "name": "wink_left",
+   "keys": [
+    "eyeBlinkLeft",
+    "cheekSquintLeft"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs a wink with the character's LEFT eye only (image right side); the other eye stays open. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "Y10_front",
+   "name": "look",
+   "keys": [
+    "eyeLookUpLeft",
+    "eyeLookUpRight",
+    "eyeLookDownLeft",
+    "eyeLookDownRight",
+    "eyeLookInLeft",
+    "eyeLookInRight",
+    "eyeLookOutLeft",
+    "eyeLookOutRight"
+   ],
+   "seconds": 8,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs only the eyes move, the head stays still: look up (1-2 s), centre, look down (3-4 s), centre, look to image left (5-6 s), centre, look to image right (7-8 s). Total length 8 s, start and end on the neutral face as in the image. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "Y11_front",
+   "name": "brow_left",
+   "keys": [
+    "browOuterUpLeft",
+    "browInnerUp"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs raise only the character's LEFT eyebrow (image right side), the other stays down. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M12_front",
+   "name": "vowels",
+   "keys": [
+    "jawOpen",
+    "mouthFunnel",
+    "mouthPucker",
+    "mouthStretchLeft",
+    "mouthStretchRight"
+   ],
+   "seconds": 6,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs silently mouth the vowels A, E, I, O, U slowly and clearly, one per second, with a neutral pause between them. Total length 6 s, start and end on the neutral face as in the image. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M12_side",
+   "name": "vowels",
+   "keys": [
+    "jawOpen",
+    "mouthFunnel",
+    "mouthPucker",
+    "mouthStretchLeft",
+    "mouthStretchRight"
+   ],
+   "seconds": 6,
+   "view": "side",
+   "first_last_frame": "neutral_side",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs silently mouth the vowels A, E, I, O, U slowly and clearly, one per second, with a neutral pause between them. Total length 6 s, start and end on the neutral face as in the image. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Exact side profile view as in the image, head-and-shoulders, face and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M13_front",
+   "name": "lips",
+   "keys": [
+    "mouthPucker",
+    "mouthRollUpper",
+    "mouthRollLower",
+    "mouthShrugUpper"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs push the lips forward into a kiss shape (1-2 s), then roll both lips inward so they disappear (2.5-3.5 s). Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M13_side",
+   "name": "lips",
+   "keys": [
+    "mouthPucker",
+    "mouthRollUpper",
+    "mouthRollLower",
+    "mouthShrugUpper"
+   ],
+   "seconds": 4,
+   "view": "side",
+   "first_last_frame": "neutral_side",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs push the lips forward into a kiss shape (1-2 s), then roll both lips inward so they disappear (2.5-3.5 s). Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Exact side profile view as in the image, head-and-shoulders, face and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M14_front",
+   "name": "mouth_left",
+   "keys": [
+    "mouthLeft",
+    "mouthClose"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs with lips closed, slide the whole mouth to the character's LEFT side (image right). Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M15_front",
+   "name": "cheek_puff",
+   "keys": [
+    "cheekPuff"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs puff both cheeks with air, lips sealed. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M15_side",
+   "name": "cheek_puff",
+   "keys": [
+    "cheekPuff"
+   ],
+   "seconds": 4,
+   "view": "side",
+   "first_last_frame": "neutral_side",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs puff both cheeks with air, lips sealed. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Exact side profile view as in the image, head-and-shoulders, face and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M16_front",
+   "name": "jaw",
+   "keys": [
+    "jawLeft",
+    "jawForward"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs move the lower jaw to the character's LEFT (1-2 s), back to centre, then push the jaw forward (2.5-3.5 s). Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M16_side",
+   "name": "jaw",
+   "keys": [
+    "jawLeft",
+    "jawForward"
+   ],
+   "seconds": 4,
+   "view": "side",
+   "first_last_frame": "neutral_side",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs move the lower jaw to the character's LEFT (1-2 s), back to centre, then push the jaw forward (2.5-3.5 s). Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Exact side profile view as in the image, head-and-shoulders, face and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M17_front",
+   "name": "jaw_max",
+   "keys": [
+    "jawOpen"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs open the mouth as wide as possible, relaxed (like at the dentist), then close. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M17_side",
+   "name": "jaw_max",
+   "keys": [
+    "jawOpen"
+   ],
+   "seconds": 4,
+   "view": "side",
+   "first_last_frame": "neutral_side",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs open the mouth as wide as possible, relaxed (like at the dentist), then close. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Exact side profile view as in the image, head-and-shoulders, face and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  },
+  {
+   "id": "M18_front",
+   "name": "tongue",
+   "keys": [
+    "tongueOut"
+   ],
+   "seconds": 4,
+   "view": "front",
+   "first_last_frame": "neutral_front",
+   "prompt": "Style: realistic human. Natural, anatomically correct expressions of moderate strength. The character performs stick the tongue out straight, then pull it back in. Timeline: 0-0.5 s neutral face as in the image; 0.5-1.0 s the expression forms; 1.0-3.0 s hold the expression at full strength without moving; 3.0-3.6 s relax; ends on the same neutral face as the start. Locked-off static camera on a tripod, no camera movement, no zoom, no cut. Head-and-shoulders shot, face centred and filling the frame. Even studio lighting, plain background. The character keeps the exact same design, proportions and rendering style as the input image for the whole clip. Silent, no speech.",
+   "negative": "camera movement, zoom, head turning, extra people, hands in frame, text, subtitles, style change, realistic skin if the input is stylised, changing hair or clothes, morphing face, extra teeth"
+  }
+ ],
+ "notes": {
+  "first_last": "Use the neutral front (or side) image as BOTH first and last frame where the model allows it (Seedance 2.0, Gemini Omni, Kling Omni 3, Veo). Otherwise first frame only.",
+  "settings": "720p (768p), audio off, duration as given (round up to the model minimum)."
+ },
+ "count": 23,
+ "seconds_total": 100
+}

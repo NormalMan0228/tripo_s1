@@ -1,0 +1,78 @@
+<title>T4·T5 입력 검사</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column; figures full width of the column */
+:root{--bg:#F5F6F8;--paper:#fff;--ink:#1B1F27;--muted:#5B6473;--line:#DDE1E8;--soft:#EEF1F6;--accent:#2F5BD3;--good:#1E8A52;--bad:#C83A32;--warn:#B26A00;
+--f-body:"IBM Plex Sans KR","Malgun Gothic",system-ui,sans-serif;--f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#12151B;--paper:#191D25;--ink:#E5E8EE;--muted:#9BA4B3;--line:#2B313C;--soft:#20252F;--accent:#7FA2FF;--good:#5ACB8C;--bad:#FF6F66;--warn:#F0AE48;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12151B;--paper:#191D25;--ink:#E5E8EE;--muted:#9BA4B3;--line:#2B313C;--soft:#20252F;--accent:#7FA2FF;--good:#5ACB8C;--bad:#FF6F66;--warn:#F0AE48;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.7}
+main{max-width:920px;margin:0 auto;padding-inline:16px;padding-block:26px 60px}
+h1{font-size:clamp(25px,4vw,33px);margin:0;line-height:1.25;text-wrap:balance}
+.sub{color:var(--muted);margin:6px 0 0}
+h2{font-size:21px;margin:38px 0 6px;text-wrap:balance}
+h3{font-size:17px;margin:20px 0 4px}
+p,ul,ol{max-width:72ch} li{margin:3px 0}
+figure{margin:16px 0;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px}
+figure img{display:block;width:100%;height:auto;border-radius:6px;background:#2a2a2e}
+figure svg{display:block;width:100%;height:auto}
+figcaption{font-size:14px;color:var(--muted);margin-top:8px}
+figcaption b{color:var(--ink)}
+.tbl{overflow-x:auto;margin:12px 0}
+table{border-collapse:collapse;font-size:14.5px;min-width:540px;width:100%;background:var(--paper)}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--soft)}
+td.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.good{color:var(--good);font-weight:600}.bad{color:var(--bad);font-weight:600}.warn{color:var(--warn);font-weight:600}
+.box{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0}
+code{font-family:var(--f-mono);font-size:13.5px;background:var(--soft);padding:1px 5px;border-radius:4px;overflow-wrap:anywhere}
+svg text{font-family:var(--f-body)}
+.s-ink{fill:var(--ink)}.s-muted{fill:var(--muted)}.s-paper{fill:var(--paper)}.s-soft{fill:var(--soft)}.s-acc{fill:var(--accent)}.s-good{fill:var(--good)}.s-bad{fill:var(--bad)}
+.st-acc{stroke:var(--accent)}.st-good{stroke:var(--good)}.st-ink{stroke:var(--ink)}.st-muted{stroke:var(--muted)}.st-bad{stroke:var(--bad)}
+</style>
+<main>
+<h1>T4·T5 · 입력 검사 (리깅 전에 거르기)</h1>
+<p class="sub">2026-10-12 · 메쉬·대칭·기준점·눈·입·무표정 8개 항목 자동 판정 · 머리 3개</p>
+<div class="box"><b>결론</b>: 검사가 맞게 걸러냅니다. v3는 "주의"로 통과했습니다(구멍 경계 130변, 리깅에는 지장 없음). 두 explorer 머리는 "실패"입니다. 모듈 머리는 입꼬리가 6.6mm 올라간 웃는 얼굴이고(T2 입술 경계 실패의 원인), 웃는 머리는 입이 열려 있고 입꼬리가 올라갔으며 구멍이 있습니다. 실패한 머리는 리깅으로 보내지 않고 다시 생성하면 됩니다. 사람이 볼 필요가 없습니다.</div>
+
+<h2>1. 검사 항목</h2>
+<div class="tbl"><table>
+<tr><th>항목</th><th>재는 법</th><th>통과 기준</th><th>왜 필요한가</th></tr>
+<tr><td>구멍</td><td>정점을 붙인 뒤 경계 변 수</td><td>0 통과, 200 미만 주의</td><td>구멍이 크면 자르기·입 안이 새어 보임</td></tr>
+<tr><td>좌우 대칭</td><td>얼굴 정점을 거울로 옮겼을 때 표면까지 거리</td><td>95%가 1.5mm 이내</td><td>대칭이 필요한 캐릭터의 기준(사용자 원칙)</td></tr>
+<tr><td>기준점 순서</td><td>눈썹 > 눈 > 코 > 입 > 턱 (높이)</td><td>순서 맞음</td><td>MediaPipe 오검출 걸러내기 (T4)</td></tr>
+<tr><td>눈 간격 비율</td><td>양 바깥 눈꼬리 거리 ÷ 눈 높이의 머리 폭</td><td>0.45~0.95</td><td>엉뚱한 곳을 얼굴로 잡은 경우 걸러냄 (T4)</td></tr>
+<tr><td>두 눈 균형</td><td>깊이로 찾은 두 눈 테두리의 폭·높이 차이</td><td>15% 이내</td><td>한쪽 눈이 평면·깨짐이면 눈꺼풀 부품이 실패</td></tr>
+<tr><td>입 다묾</td><td>입술 경계 가운데에서 앞면보다 얼마나 깊이 들어가는지</td><td>6mm 미만</td><td>열린 입은 입술 자르기·입 안이 틀어짐</td></tr>
+<tr><td>무표정 입꼬리</td><td>입꼬리 높이 − 입술 가운데 높이</td><td>±2.5mm 통과, ±4mm 주의</td><td>웃는 입은 표정의 0점이 틀어지고 경계 검출 실패</td></tr>
+<tr><td>입 너비 비율</td><td>입 너비 ÷ 눈 간격</td><td>0.25~0.9</td><td>입꼬리 오검출 걸러내기</td></tr>
+</table></div>
+
+<h2>2. 결과</h2>
+<figure><img src="img/checks.jpg" alt="세 머리 검사 결과" loading="lazy"><figcaption><b>그림 1.</b> 파란 선은 깊이로 찾은 눈 테두리, 주황 선은 입술 경계, 빨간 점은 MediaPipe 기준점입니다. 웃는 머리는 오른쪽 눈 테두리가 깨지고, 입술 경계가 열린 입 위로 지나갑니다.</figcaption></figure>
+<div class="tbl"><table>
+<tr><th>머리</th><th>판정</th><th>걸린 항목</th><th>조치</th></tr>
+<tr><td>character1 v3</td><td class="warn">주의</td><td>경계 변 130</td><td>리깅 진행 (실제로 T1~T3 정상)</td></tr>
+<tr><td>explorer 모듈 머리</td><td class="bad">실패</td><td>입꼬리 +6.6mm (웃음)</td><td>무표정 레퍼런스로 다시 생성</td></tr>
+<tr><td>explorer 웃는 머리</td><td class="bad">실패</td><td>입 열림 45mm, 입꼬리 +8.8mm, 구멍 407, 두 눈 높이 31/40mm</td><td>무표정·입 다문 레퍼런스로 다시 생성</td></tr>
+</table></div>
+
+<h2>3. 이전 테스트와의 관계</h2>
+<ul>
+  <li>T1 눈꺼풀: 웃는 머리 한쪽 눈 실패 → "두 눈 균형" 경고로 미리 잡힘</li>
+  <li>T2 입 안: 모듈 머리 입술 경계 실패 → "무표정 입꼬리" 실패로 미리 잡힘</li>
+  <li>앞으로 파이프라인은 이 검사를 맨 앞에 두고, 실패하면 리깅을 하지 않고 재생성 목록으로 보냅니다.</li>
+</ul>
+
+<h2>4. 남은 일</h2>
+<ul>
+  <li>기준점 재검출: 실패 시 정면 레퍼런스 이미지에서 MediaPipe를 다시 돌려 3D 기준점과 비율을 대조합니다.</li>
+  <li>v3 경계 변 130: 어디인지 위치를 표시해서 실제 구멍인지 내보내기 분할인지 확인합니다.</li>
+</ul>
+
+<h2>5. 파일</h2>
+<ul><li><code>tools/face_auto/input_check.py</code>: 8개 항목 판정, 결과 json, 표시용 그림 자료</li></ul>
+</main>

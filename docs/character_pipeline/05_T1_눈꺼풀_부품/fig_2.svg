@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 220" role="img" aria-label="눈꺼풀 뼈 9개 배치"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <text x="20" y="26" class="s-ink" font-size="15" font-weight="700">정면에서 본 뼈 배치 (한쪽 눈)</text>
+  <path d="M120 120 Q330 20 640 100 Q470 200 250 170 Q160 160 120 120 Z" class="s-soft st-muted" stroke-width="2"/>
+  <g font-size="12">
+    <line x1="140" y1="200" x2="620" y2="200" class="st-acc" stroke-width="2"/>
+    <g class="s-acc">
+      <circle cx="140" cy="200" r="5"/><circle cx="200" cy="200" r="5"/><circle cx="260" cy="200" r="5"/><circle cx="320" cy="200" r="5"/><circle cx="380" cy="200" r="5"/><circle cx="440" cy="200" r="5"/><circle cx="500" cy="200" r="5"/><circle cx="560" cy="200" r="5"/><circle cx="620" cy="200" r="5"/>
+    </g>
+    <text x="130" y="216" class="s-muted">바깥 눈꼬리</text><text x="575" y="216" class="s-muted">안쪽 눈꼬리</text>
+    <path d="M140 196 V128 M260 196 V68 M380 196 V60 M500 196 V80 M620 196 V108" class="st-muted" stroke-dasharray="3 3"/>
+    <text x="660" y="70" class="s-ink">뼈마다 회전각이 다름</text>
+    <text x="660" y="90" class="s-muted">눈이 높은 가운데는 크게(약 70°)</text>
+    <text x="660" y="110" class="s-muted">눈꼬리는 작게(8~25°)</text>
+    <text x="660" y="140" class="s-muted">부품 정점은 가까운 두 뼈를</text>
+    <text x="660" y="158" class="s-muted">거리 비율로 섞어서 따라감</text>
+  </g>
+</svg>

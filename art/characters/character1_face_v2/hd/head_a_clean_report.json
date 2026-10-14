@@ -1,0 +1,52 @@
+{
+ "faces_in": 969652,
+ "nonmanifold_fixed_1": 0,
+ "nonmanifold_fixed_2": 2,
+ "faces_decimated": 400698,
+ "isolated_pits_smoothed": 886,
+ "cranium_fit_terms": 286,
+ "cranium_fit_move_mm_max": 2.120883633928483,
+ "denoise_move_mm": {
+  "median": 0.6463649543266261,
+  "max": 16.399748346559974
+ },
+ "denoise_protected_share": 0.03789619542733531,
+ "denoise_max_at": [
+  -0.063,
+  -0.066,
+  0.041
+ ],
+ "denoise_move_p999_mm": 6.480147503410543,
+ "eye": {
+  "centre_L": [
+   0.11539,
+   -0.11589,
+   0.63551
+  ],
+  "R": 0.09087,
+  "inliers": 1870,
+  "fit_rms_mm": 0.5325778079101546
+ },
+ "eye_cap_verts": {
+  "L": 4003,
+  "R": 4003
+ },
+ "eye_faces_removed": 16628,
+ "islands_dropped": 0,
+ "margin_tongue_faces_trimmed": 442,
+ "lid_verts_pushed_out": 0,
+ "boundary_loops": [
+  262,
+  262
+ ],
+ "self_intersections_before_fix": 13,
+ "intersection_fix_iters": 1,
+ "nonmanifold_edges": 0,
+ "boundary_edges": 524,
+ "loose_verts": 0,
+ "self_intersections": 0,
+ "mirror_residual_mm_max": 0.0,
+ "eye_L_min_clearance_mm": 0.29996968269740965,
+ "eye_R_min_clearance_mm": 0.29996968269740965,
+ "faces_out": 383948
+}

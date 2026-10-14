@@ -1,0 +1,453 @@
+<title>캐릭터 제작 파이프라인</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: type switcher on top, numbered step rail (left on desktop, chip strip on phone), one step's detail sheet at a time */
+:root{
+  --bg:#F4F6F9; --surface:#FFFFFF; --ink:#1A1E26; --muted:#5A6372; --line:#DCE1E8;
+  --human:#5446CF; --hmon:#A86200; --beast:#0B7A63;
+  --ok:#1F8A4C; --now:#D23F3A; --plan:#8A93A2;
+  --accent:var(--human);
+  --f-body:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11141A; --surface:#191D25; --ink:#E6E9EF; --muted:#9CA5B4; --line:#2B313C;
+  --human:#A99EFF; --hmon:#F0AE48; --beast:#4ED0AC; --ok:#5BD08B; --now:#FF6B63; --plan:#7D8696; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11141A; --surface:#191D25; --ink:#E6E9EF; --muted:#9CA5B4; --line:#2B313C;
+  --human:#A99EFF; --hmon:#F0AE48; --beast:#4ED0AC; --ok:#5BD08B; --now:#FF6B63; --plan:#7D8696; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
+header h1{font-size:clamp(22px,4vw,30px);font-weight:700;margin:0;text-wrap:balance;letter-spacing:-.01em}
+header p{margin:4px 0 0;color:var(--muted);font-size:14px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12.5px;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.legend{display:inline-flex;align-items:center;gap:5px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.dot.done{background:var(--ok)} .dot.now{background:var(--now)} .dot.plan{background:transparent;border:1.5px solid var(--plan)}
+
+/* type switcher */
+.types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:18px 0 10px}
+.type{appearance:none;text-align:left;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;cursor:pointer;min-width:0}
+.type .k{font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;font-family:var(--f-mono)}
+.type .n{display:block;font-weight:700;font-size:15.5px;margin-top:2px}
+.type .e{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.type .bar{height:4px;border-radius:2px;background:var(--line);margin-top:8px;overflow:hidden}
+.type .bar i{display:block;height:100%;background:var(--c)}
+.type[aria-selected="true"]{border-color:var(--c);box-shadow:inset 0 0 0 1px var(--c);background:color-mix(in srgb,var(--c) 7%,var(--surface))}
+.type:focus-visible,.step:focus-visible,.nav button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.route{font-size:13.5px;color:var(--muted);margin:0 0 14px;padding:9px 12px;border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 6%,transparent);border-radius:0 8px 8px 0}
+.route b{color:var(--ink)}
+
+/* body grid */
+.grid{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;align-items:start}
+.rail{position:sticky;top:calc(env(safe-area-inset-top,0px) + 10px);display:flex;flex-direction:column;gap:2px;max-height:calc(100vh - 20px);overflow:auto;padding:4px}
+.step{appearance:none;font:inherit;color:var(--ink);background:none;border:0;border-radius:8px;padding:7px 9px;display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;cursor:pointer}
+.step .no{font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.step .t{font-size:14px;line-height:1.35;min-width:0}
+.step .t small{display:block;color:var(--muted);font-size:11.5px}
+.step:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.step[aria-selected="true"]{background:color-mix(in srgb,var(--accent) 13%,var(--surface))}
+.step[aria-selected="true"] .no{color:var(--accent);font-weight:500}
+
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px 16px;min-width:0}
+.sheet .eyebrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.pill{font-family:var(--f-body);font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:999px;border:1px solid currentColor}
+.pill.done{color:var(--ok)} .pill.now{color:var(--now)} .pill.plan{color:var(--plan)}
+.sheet h2{font-size:21px;margin:6px 0 2px;text-wrap:balance;line-height:1.3}
+.sheet .goal{color:var(--muted);margin:0 0 12px;max-width:68ch}
+.tools{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px;padding:0;list-style:none}
+.tools li{font-size:12.5px;padding:2px 9px;border-radius:6px;background:color-mix(in srgb,var(--accent) 9%,var(--surface));color:var(--ink)}
+.sec{margin-top:16px}
+.sec h3{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);margin:0 0 6px;font-weight:600}
+ol.do{margin:0;padding-left:22px;max-width:72ch}
+ol.do li{margin:3px 0}
+ol.do li::marker{font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+ul.chk{list-style:none;margin:0;padding:0;display:grid;gap:3px;max-width:72ch}
+ul.chk li{padding-left:22px;position:relative}
+ul.chk li::before{content:"";position:absolute;left:2px;top:.42em;width:11px;height:11px;border:1.5px solid var(--ok);border-radius:3px}
+ul.warn{margin:0;padding-left:18px;max-width:72ch}
+ul.warn li{margin:3px 0}
+.kv{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 14px;font-size:14px;margin:0}
+.kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0}
+code,.mono{font-family:var(--f-mono);font-size:12.5px;overflow-wrap:anywhere}
+code{background:color-mix(in srgb,var(--ink) 6%,transparent);padding:1px 5px;border-radius:4px}
+.files{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.files li{font-family:var(--f-mono);font-size:12.5px;overflow-wrap:anywhere;padding:5px 8px;border:1px dashed var(--line);border-radius:6px}
+.cost{display:flex;gap:10px;align-items:baseline;font-size:14px}
+.cost .num{font-family:var(--f-mono);font-weight:500;font-variant-numeric:tabular-nums}
+.note{font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px;margin-top:16px}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px;border-top:1px solid var(--line);padding-top:12px}
+.nav button{appearance:none;font:inherit;font-size:13.5px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;max-width:48%;text-align:left;min-width:0}
+.nav button[disabled]{opacity:.4;cursor:default}
+.nav .next{text-align:right;margin-left:auto}
+.nav small{display:block;color:var(--muted);font-size:11.5px}
+
+@media (max-width:760px){
+  .types{grid-template-columns:1fr;gap:6px}
+  .type .e{display:none}
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .rail{position:sticky;top:env(safe-area-inset-top,0px);z-index:2;flex-direction:row;overflow-x:auto;max-height:none;background:var(--bg);padding:6px 0;margin-inline:-16px;padding-inline:16px;gap:6px;scrollbar-width:none}
+  .rail::-webkit-scrollbar{display:none}
+  .step{grid-template-columns:auto auto;gap:5px;border:1px solid var(--line);background:var(--surface);flex:none;padding:5px 10px}
+  .step .t small{display:none}
+  .step .t{white-space:nowrap;font-size:13px}
+  .step .no{text-align:left}
+  .step .st{display:none}
+  .sheet{padding:15px 14px}
+  .kv{grid-template-columns:minmax(0,1fr)} .kv dd{margin-bottom:6px}
+}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:in .18s ease-out}@keyframes in{from{transform:translateY(4px)}to{transform:none}}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>캐릭터 제작 파이프라인</h1>
+    <p>유형을 고르고, 왼쪽(휴대폰은 위쪽) 단계를 눌러 하나씩 보세요. 2026-10-11 기준 실제로 해 본 설정과 수치입니다. 얼굴은 CC5 대신 애니메이션 템플릿 랩핑으로 바꿔 시험했습니다(인간형 캐릭터 5·6단계).</p>
+    <div class="meta">
+      <span class="legend"><span class="dot done"></span>완료</span>
+      <span class="legend"><span class="dot now"></span>지금 하는 중</span>
+      <span class="legend"><span class="dot plan"></span>예정</span>
+      <span>우선순위 <b>얼굴 워크플로우 → 파츠 분리·일체화 → 얼굴 → 헤어 → 바디 → 애니메이션</b></span>
+    </div>
+  </header>
+
+  <div class="types" role="tablist" id="types" aria-label="캐릭터 유형"></div>
+  <p class="route" id="route"></p>
+
+  <div class="grid">
+    <nav class="rail" id="rail" role="tablist" aria-label="단계"></nav>
+    <article class="sheet" id="sheet" aria-live="polite"></article>
+  </div>
+</div>
+
+<script>
+const TYPES = {
+  human: {
+    key:"TYPE A", name:"인간형 캐릭터", ex:"주인공 · NPC", color:"--human",
+    route:"<b>경로</b> Tripo로 머리 모양을 만들고 → 표정이 들어 있는 애니메이션풍 템플릿 얼굴을 Blender 스크립트로 그 모양에 씌움 → 템플릿 몸(손가락 본 포함)에 그대로 연결 → 헤어·옷은 따로 만들어 얹음 → Godot에서 모든 인간형이 같은 애니메이션을 공유. CC5 Headshot은 대안으로 시험했습니다(5단계 노트).",
+    steps: [
+      { t:"기획과 기본 규칙", s:"맨몸 기본형 · 파츠 목록", st:"done",
+        goal:"나중에 표정·옷·헤어를 바꿔 끼울 수 있도록, 장식 없는 기본형과 따로 만들 파츠부터 정합니다.",
+        tools:["CHARACTER_GENERATION_POLICY.json"],
+        do:["캐릭터 한 줄 설정: 이름, 역할(주인공/NPC), 머리 대 몸 비율, 얼굴에서 드러나야 할 특징.",
+            "기본 몸은 불투명 속옷만 입힌 맨몸. 게임 안에서도 속옷은 항상 남김(심의 기준).",
+            "머리는 대머리 · 무표정 · 입 다묾 · 윗입술과 아랫입술이 분명히 갈라진 모양. 미소·찡그림은 넣지 않음(표정은 리그가 만듦).",
+            "자세는 A포즈(팔 약 45도), 손가락 벌림, 발은 어깨너비.",
+            "따로 만들 파츠 목록 작성: 헤어 · 상의 · 하의 · 신발 · 장갑 · 액세서리."],
+        files:["docs/CHARACTER_GENERATION_POLICY.json → user_decision_20261011_bare_base"],
+        chk:["기본형에 옷·장식·머리카락 없음","표정이 중립(입꼬리 수평)","파츠마다 담당 단계가 정해짐"],
+        warn:["레퍼런스에 미소가 남으면 Tripo가 입꼬리를 올린 채 만들고, 리그를 씌워도 무표정이 안 나옵니다. v2 머리에서 실제로 겪은 문제입니다."] },
+
+      { t:"레퍼런스 이미지", s:"정면 · 좌 · 우 · 뒤 4장", st:"done",
+        goal:"Tripo가 형태를 정확히 읽을 수 있는 4방향 이미지를 무료 도구 위주로 만듭니다.",
+        tools:["Tripo 이미지 도구","Tripo Multiview Image","ChatGPT GPT-6","Gemini 3.1 Pro","Scenario 마스크 편집"],
+        do:["Tripo Studio 이미지 도구(Nano Banana 또는 GPT Image 2.5)에서 정면 1장 생성. 비용 칸이 0이고 Free 표시가 있는지 확인.",
+            "같은 화면의 Multiview Image로 4방향을 생성(0크레딧).",
+            "틀린 부분만 고침. 얼굴을 그대로 유지하며 고치는 데는 ChatGPT GPT-6이 가장 좋았음.",
+            "Gemini는 3.1 Pro에 비율 1:1로 지정. Flash는 16:9로 나오고 눈이 깨짐.",
+            "입술처럼 좁은 부위만 정밀하게 고칠 때는 Scenario 마스크 편집(장당 약 12 CU).",
+            "1024px 정사각형으로 저장."],
+        kv:[["비율","1:1 정사각형"],["배경","연회색 단색"],["조명","그림자 약한 평광"],["구도","4장 모두 같은 크기·높이"]],
+        files:["art/references/character1_v3_neutral/01_front.png","…/02_left.png · 03_back.png · 04_right.png"],
+        chk:["윗입술과 아랫입술 사이 선이 보임","귀 모양이 좌우 같음","눈·입이 그림자에 묻히지 않음","워터마크 없음"],
+        cost:["0","이미지·멀티뷰 무료. Scenario를 쓰면 승인된 한도 안에서 장당 약 12 CU."],
+        warn:["Gemini 결과에는 워터마크가 들어가므로 정면 원본으로 쓰지 않습니다."] },
+
+      { t:"Tripo 3D 생성", s:"형태만, 텍스처 없이", st:"done",
+        goal:"머리 형태(메쉬)만 고품질로 받습니다. 텍스처는 형태가 확정된 뒤에 합니다.",
+        tools:["Tripo Studio (개인)"],
+        do:["Multi-View to 3D 선택 후 이미지 넣기. 정면만 넣고 Tripo 안의 멀티뷰로 진행해도 됨.",
+            "HD Model, 모델 버전 H3.1 선택.",
+            "Generate in Parts는 끔(켜면 45크레딧, 끄면 15크레딧).",
+            "Geometry & Texture에서 텍스처 끔, Triangle, 폴리곤 200,000.",
+            "생성 후 GLB로 내려받아 source/ 폴더에 보관.",
+            "인간형 캐릭터는 머리 모양만 Tripo로 만들고 몸은 템플릿(기본형) 몸을 씀. 헤어·옷은 각각 따로 생성."],
+        kv:[["모델","HD Model · H3.1"],["파츠 생성","끔"],["텍스처","끔"],["면","Triangle 200,000"],["형식","GLB"]],
+        files:["art/characters/character1_face_v3/source/tripo_neutral_head_fe018cfa.glb (188,710 삼각형, 4.5MB)"],
+        chk:["입술이 위·아래로 분리돼 보임","귀 안쪽이 막혀 있지 않음","눈은 붙어 있어도 됨: 눈은 템플릿의 애니메이션 눈을 씀"],
+        cost:["15","크레딧/회. 유료 생성은 레퍼런스 검토 후, 승인 한도 안에서(현재 150 중 15 사용)."] },
+
+      { t:"Blender 정리", s:"구멍·꼬인 면·크기 자동 처리", st:"done",
+        goal:"Tripo 메쉬의 작은 결함을 고치고 랩핑이 받는 크기·방향(턱~정수리 24cm, 정면 -Y)으로 맞춥니다.",
+        tools:["Blender 4.5 (포터블)","prep_headshot_source.py"],
+        do:["실행: <code>blender -b --factory-startup -P art/characters/character1_face_v3/scripts/prep_headshot_source.py -- 입력.glb 출력.fbx</code>",
+            "자동 처리: 떨어진 조각 제거 → 꼬인 면(non-manifold) 제거 → 작은 구멍 메움 → 면적 0인 면 제거.",
+            "턱~정수리를 24cm로 맞추고, 바닥을 원점에, 정면을 -Y로, 좌우 중앙 정렬.",
+            "FBX와 _report.json 저장.",
+            "미소가 남은 머리라면 neutralize_smile.py로 입꼬리를 내림(정점 순서 유지)."],
+        kv:[["크기","HEAD_CM=24 (턱~정수리)"],["순서 유지","대칭화·폴리곤 감축 금지. 정렬점이 삼각형 번호로 저장되기 때문"]],
+        files:["art/characters/character1_face_v3/hd/character1_v3_head_headshot.fbx (4.2MB)","…/character1_v3_head_headshot_report.json"],
+        chk:["report: boundary_edges 0","nonmanifold 0","degenerate 0"],
+        note:"v3 실제 결과: 떨어진 정점 4개 제거, 꼬인 곳 12곳 수리, 구멍 29변 메움, 삼각형 188,690개." },
+
+      { t:"얼굴 리그: 애니 템플릿 랩핑", s:"Tripo 모양 + 애니메이션 눈·입 표정", st:"now",
+        goal:"표정 셰이프키가 들어 있는 애니메이션풍 템플릿 얼굴을 Tripo 머리 모양에 씌웁니다. CC5와 달리 라이선스가 필요 없고, 큰 눈도 깨끗하게 감깁니다.",
+        tools:["Blender 4.5","face_landmarks_mp.py (MediaPipe)","wrap_anime_head.py","템플릿: Seed-san (이후 VRoid로 만든 우리 기본형)"],
+        do:["정렬점: <code>face_landmarks_mp.py</code>가 정면을 렌더하고 MediaPipe로 눈썹·눈꼬리·코끝·입꼬리·입술·턱을 찾아 메쉬에 투사(CC 필요 없음). CC의 35점 ini도 그대로 쓸 수 있음.",
+            "실행: <code>blender -b --factory-startup -P …/scripts/wrap_anime_head.py -- 템플릿.glb head 머리.fbx 정렬점.json 출력폴더</code> (약 15초)",
+            "눈 테두리와 입술 경계를 앞에서 쏜 광선의 깊이 변화로 양쪽 머리에서 찾음. 눈꼬리는 찾은 테두리의 긴 축 양 끝이라 정렬점이 대충이어도 됨.",
+            "Tripo 머리를 템플릿 크기로 맞춘 뒤 thin-plate spline으로 템플릿을 변형.",
+            "피부는 Tripo 표면을 따르는 매끄러운 변위장으로 당김(평균 오차 약 0.4mm).",
+            "눈은 템플릿 눈 모양을 유지하고, 크기·기울기·위치만 Tripo 눈에 맞춤.",
+            "목 경계는 고정해서 템플릿 몸통에 그대로 이어지게 함.",
+            "모든 표정 키에 같은 변형을 적용해서, 템플릿에서 닫히는 눈꺼풀이 새 얼굴에서도 닫힘."],
+        kv:[["템플릿","Seed-san · VRM Public License 1.0 · 상업 사용 가능 · 크레딧 표기 필요"],["표정 키","43개 (eye_close, blink_L/R, lip_a·i·u·e·o, face_happy …)"],["결과 크기","glb 2.2MB · 정점 6,142개"]],
+        files:["art/characters/character1_face_v3/scripts/face_landmarks_mp.py · wrap_anime_head.py","art/characters/character1_face_v3/hd/character1_v3_landmarks_mp.json","art/characters/character1_face_v3/anime_wrap/wrap_head.glb","…/anime_wrap/compare.png · expressions.gif · on_body.png","art/templates/seedsan/ (템플릿과 라이선스)"],
+        chk:["뜬 눈에서 눈 판이 피부를 뚫지 않음","감은 눈이 속눈썹 선 하나로 깔끔히 닫힘","아·이·우·에·오가 벌어짐","목 이음새가 몸통에 맞음"],
+        warn:["애니메이션 머리에는 눈구멍이 없습니다. 피부가 오목한 주머니를 이루고, 흰자·홍채·속눈썹 판이 그 앞에 1~2mm 간격으로 겹쳐 있습니다. 이 겹침을 깨면 판이 피부를 뚫고 나옵니다.",
+              "Tripo 눈 모양에 정확히 맞추면 홍채 그림이 찌그러집니다. 눈 모양은 템플릿(디자인)이 정하고, Tripo에서는 위치·크기·기울기만 가져옵니다.",
+              "glTF에서 가져온 고정 법선을 지우지 않으면 표면이 울퉁불퉁해 보입니다. 스크립트가 지웁니다.",
+              "Tripo 표면에 정점을 하나씩 붙이면 조각의 잔결까지 따라옵니다. 매끄러운 변위장만 씁니다.",
+              "대안인 CC5 Headshot은 큰 눈에서 깜빡임이 접히고, 결과를 내보내려면 Headshot 3 라이선스가 필요합니다."],
+        note:"CC5 Headshot 시험 기록: 35점 정렬 → 머리 전체 → Level 2 → Attach 순서. 자동 감지가 큰 눈의 아래 눈꺼풀 점을 눈알 한가운데에 찍고, 23번은 턱 주름에 찍음. 고쳐도 눈구멍 높이 2.6cm에서는 CC 깜빡임이 끝까지 닫히지 않음. Viseme의 '8+7 Phoneme Pair' 버튼은 표정 프로필을 되돌릴 수 없게 바꾸므로 누르지 않음." },
+
+      { t:"표정 검사", s:"Blender 렌더 · Godot 실행", st:"done",
+        goal:"내보내기 전과 후 모두에서 표정이 제대로 움직이는지 확인합니다.",
+        tools:["Blender Workbench 렌더","Godot 4.7 GLTFDocument"],
+        do:["Blender에서 기본·깜빡임·아·이·우·에·오·기쁨·화남을 정면·3/4·옆으로 렌더.",
+            "표정을 차례로 켜고 끄는 GIF로 움직임 확인.",
+            "glb로 내보내 Godot에서 실행 중에 불러옴(GLTFDocument). 표정 키 43개 이름 확인 후 set_blend_shape_value로 캡처."],
+        files:["art/characters/character1_face_v3/anime_wrap/expressions.gif","…/compare.png (마지막 줄이 Godot 화면)"],
+        chk:["Godot에서 표정 키 43개 로드","깜빡임·입모양이 엔진에서도 같은 모양","GL Compatibility에서 눈 판 겹침 깨짐 없음"] },
+
+      { t:"기본 몸 · 체형", s:"VRoid 기본형 + 체형", st:"plan",
+        goal:"불투명 속옷만 입은 기본 몸(손가락 본 포함)을 만들고 캐릭터 비율로 맞춥니다.",
+        tools:["VRoid Studio (무료)","Blender","wrap_anime_head.py 방식"],
+        do:["VRoid Studio에서 기본형을 만듦: 불투명 속옷, A포즈, 머리카락 없음. VRM으로 내보내기.",
+            "머리는 이 기본형의 얼굴을 템플릿으로 다시 랩핑(Seed-san 대신 우리 템플릿).",
+            "몸 비율은 VRoid 체형 슬라이더로. Tripo로 만든 몸 모양을 같은 랩핑 방식으로 입히는 것은 실험 예정.",
+            "본·웨이트는 템플릿 것을 그대로 쓰므로 리깅을 다시 할 필요가 없음."],
+        chk:["A포즈에서 어깨·골반이 찢어지지 않음","손가락 본이 손 모양과 맞음","머리-목 이음새가 자연스러움"],
+        warn:["VRoid Studio는 창 조작이 필요해서 사용자 승인 후 진행합니다."] },
+
+      { t:"헤어 · 옷 · 액세서리", s:"따로 만들어 얹기", st:"plan",
+        goal:"파츠를 따로 만들어 기본형에 얹고, 몸의 움직임을 따라가게 합니다.",
+        tools:["Tripo (파츠별 생성)","Blender Data Transfer","Godot SpringBoneSimulator3D"],
+        do:["두 가지 출처: ① 템플릿용으로 만든 파츠(VRoid 헤어 프리셋 등)는 랩핑 스크립트에 이름을 넘기면 같은 변형으로 새 얼굴에 자동으로 맞춰짐(본도 함께 이동). ② Tripo로 따로 만든 파츠.",
+            "Tripo 파츠는 기본형 몸에 맞춘 레퍼런스로 따로 생성(15크레딧씩). 머리에 맞춘 파츠는 랩핑 때 쓴 배율·이동을 그대로 적용하면 맞음.",
+            "Blender에서 크기·위치를 기본형에 맞추고 폴리곤 감축.",
+            "Data Transfer 모디파이어로 몸의 웨이트를 파츠에 복사.",
+            "헤어·치마·리본처럼 흔들릴 부분은 Godot의 SpringBoneSimulator3D로 처리.",
+            "옷이 몸을 뚫는 곳은 살짝 부풀리거나, 가려지는 몸 면을 숨김."],
+        kv:[["감축 목표(제안)","헤어 2만~4만 · 옷 1만~2만 삼각형"],["시험","Seed-san 헤어를 v3 얼굴에 옮김: 두피 뚫림 없음 (anime_wrap/hair_transfer.png)"]],
+        chk:["걷기·팔 들기 포즈에서 몸을 뚫지 않음","헤어가 머리에서 뜨지 않음"],
+        cost:["15","크레딧/파츠(형상만)."] },
+
+      { t:"텍스처 · 셰이더", s:"템플릿 UV에 다시 칠하기", st:"plan",
+        goal:"템플릿의 UV를 그대로 쓰고, 피부·눈 그림을 우리 캐릭터 것으로 바꿉니다.",
+        tools:["Krita (설치됨)","Blender","Godot 툰 셰이더"],
+        do:["얼굴 UV는 템플릿 그대로라 눈·눈썹·입 그림만 바꾸면 됨.",
+            "피부색을 다시 칠함(Seed-san 피부 텍스처는 뒤통수 색이 달라 경계가 보임).",
+            "Godot에서 툰 셰이더. 렌더러가 GL Compatibility라 무거운 셰이더는 피함."],
+        chk:["얼굴·뒤통수 색 경계가 보이지 않음","저사양 렌더러에서도 눈이 또렷함"] },
+
+      { t:"glTF · VRM 내보내기", s:"라이선스 필요 없음", st:"plan",
+        goal:"리그·표정이 들어간 캐릭터를 게임으로 가져갈 파일로 만듭니다.",
+        tools:["Blender glTF 내보내기","VRM Add-on for Blender (선택)"],
+        do:["Blender glTF(.glb) 내보내기: 셰이프키·스킨 포함, 애니메이션 제외.",
+            "VRM 표정·흔들림 본 설정까지 옮기려면 VRM 애드온으로 .vrm 내보내기."],
+        kv:[["v3 결과","glb 2.2MB · 표정 키 43개"]],
+        chk:["Godot에서 표정 키가 전부 보임","본 계층이 그대로 유지됨"] },
+
+      { t:"Godot 가져오기", s:"본 매핑 · 표정 · 흔들림", st:"plan",
+        goal:"게임 안에서 걷고 표정을 짓는 것을 직접 확인합니다.",
+        tools:["Godot 4.7 (GL Compatibility)"],
+        do:["glb를 게임 에셋 폴더로 가져오기.",
+            "Import 설정의 Skeleton에서 BoneMap(SkeletonProfileHumanoid)으로 매핑. 모든 인간형이 같은 애니메이션을 씀.",
+            "깜빡임(eye_close)과 립싱크(lip_a·i·u·e·o)를 AnimationPlayer나 스크립트에 연결.",
+            "헤어 등 흔들림은 SpringBoneSimulator3D.",
+            "LOD 설정. 주인공급은 수만 삼각형 이내."],
+        chk:["게임 창에서 걷기와 표정이 함께 재생됨","프레임 저하 없음"] },
+
+      { t:"애니메이션", s:"공유 동작 + 고유 동작", st:"plan",
+        goal:"기본 이동은 공유하고, 캐릭터 고유 동작만 따로 만듭니다.",
+        tools:["Mixamo","Cascadeur","iClone · ActorCore (선택)"],
+        do:["걷기·뛰기·대기 같은 기본 이동은 Mixamo(무료)에서 받아 Godot에서 리타깃.",
+            "고유 동작은 Cascadeur(설치됨. FBX·glTF 내보내기는 Indie 필요).",
+            "고급 모션은 iClone · ActorCore(유료)를 선택적으로.",
+            "대사는 lip_a·i·u·e·o 셰이프키로 립싱크."],
+        chk:["리타깃 후 발이 미끄러지지 않음","손가락이 꺾이지 않음"] }
+    ]
+  },
+
+  hmon: {
+    key:"TYPE B", name:"인간형 몬스터", ex:"오크 · 고블린 · 좀비 · 수인", color:"--hmon",
+    route:"<b>경로</b> 인간형 캐릭터와 같은 템플릿 랩핑 경로. 사람 골격을 쓰므로 인간형 애니메이션을 그대로 공유하고, 엄니·뿔·꼬리·날개는 파츠로 붙입니다. 눈 2개·코·입이 사람처럼 놓여 있어야 랩핑이 됩니다.",
+    steps: [
+      { t:"기획과 판정", s:"템플릿을 씌울 수 있는 얼굴인지", st:"plan",
+        goal:"사람 골격에 과장된 특징을 얹는 몬스터인지 먼저 판정합니다.",
+        do:["두 발로 서고, 눈 2개·코·입이 사람 배치인지 확인 → 맞으면 이 경로.",
+            "주둥이가 긴 수인(늑대·여우)이나 눈이 여러 개면 비인간형 경로로.",
+            "엄니·뿔·꼬리·날개·갑옷은 모두 파츠 목록으로 분리.",
+            "기본형 규칙은 캐릭터와 같음: 불투명 속옷, 대머리(털 없음), 무표정, 입 다묾."],
+        chk:["얼굴 배치가 사람과 같음","분리할 파츠 목록 완성"] },
+      { t:"레퍼런스 이미지", s:"엄니·뿔은 빼고", st:"plan",
+        goal:"입 다문 무표정 얼굴을 얻기 위해 튀어나온 장식은 그리지 않습니다.",
+        tools:["Tripo 이미지 도구","Tripo Multiview Image","ChatGPT GPT-6"],
+        do:["엄니가 있으면 입이 닫힌 모양이 깨지므로 엄니 없이 그림(엄니는 나중에 파츠로).",
+            "큰 귀·주름·눈썹뼈 같은 형태는 그대로 그림.",
+            "측면도에서 귀 뿌리 위치가 잘 보이게.",
+            "설정은 캐릭터와 같음: 1:1, 연회색 배경, 4방향."],
+        chk:["입술 경계 보임","귀 뿌리가 측면에서 보임"] },
+      { t:"Tripo 3D 생성", s:"머리 + 엄니·뿔 따로", st:"plan",
+        goal:"머리와 장식을 따로 받아 각각 다룰 수 있게 합니다.",
+        tools:["Tripo Studio"],
+        do:["머리: 캐릭터와 같은 설정(HD · H3.1 · 파츠 끔 · 텍스처 끔 · 200,000).",
+            "엄니·뿔은 별도 생성.",
+            "몸은 템플릿 몸을 체형 슬라이더로 바꾸는 것이 기본. 비율이 너무 다르면 Tripo 몸 모양을 랩핑으로 입힘(실험 예정)."],
+        cost:["15","크레딧/파츠."] },
+      { t:"Blender 정리", s:"같은 스크립트", st:"plan",
+        goal:"캐릭터와 같은 정리 스크립트로 크기·결함을 맞춥니다.",
+        tools:["prep_headshot_source.py"],
+        do:["prep_headshot_source.py 실행(턱~정수리 24cm).",
+            "큰 귀 끝처럼 얇은 부분에 구멍이 없는지 확인.",
+            "머리가 아주 크거나 작은 종족이면 HEAD_CM 값을 바꿔서 실행."],
+        chk:["boundary 0 · nonmanifold 0"] },
+      { t:"얼굴 리그: 템플릿 랩핑", s:"몬스터용 템플릿", st:"plan",
+        goal:"캐릭터와 같은 랩핑 스크립트로 표정 셰이프키가 있는 얼굴을 씌웁니다.",
+        tools:["wrap_anime_head.py","몬스터 얼굴 템플릿"],
+        do:["캐릭터와 같은 순서(정렬점 → 랩핑 → 표정 검사).",
+            "입이 크게 벌어지는 종족은 포효용 셰이프키가 있는 몬스터 템플릿을 따로 준비.",
+            "큰 귀·주름은 Tripo 모양을 따르고, 눈·입 표정은 템플릿을 따름."],
+        chk:["큰 귀가 머리에서 찢어지지 않음","포효할 때 입꼬리가 찢어지지 않음"] },
+      { t:"표정 검사", s:"으르렁 · 포효", st:"plan",
+        goal:"몬스터다운 표정이 나오는지 봅니다.",
+        do:["으르렁: 입 옆으로 + 눈썹 내림(face_angry).","포효: 입 크게 벌림(mouse_open 100).","엄니를 붙인 뒤 턱을 따라 움직이는지 확인."],
+        chk:["입을 크게 벌려도 입꼬리가 찢어지지 않음","엄니가 입술을 뚫지 않음"] },
+      { t:"체형 만들기", s:"근육 · 굽은 등 · 긴 팔", st:"plan",
+        goal:"사람 골격을 유지한 채 몬스터 실루엣을 만듭니다.",
+        tools:["VRoid 체형 슬라이더","Blender"],
+        do:["근육량·등 굽음·팔 길이·손 크기를 체형 슬라이더나 Blender에서 조절.","극단적인 비율은 어깨·골반 웨이트를 확인."],
+        chk:["사람 애니메이션을 틀었을 때 팔이 몸을 뚫지 않음"] },
+      { t:"뿔 · 엄니 · 꼬리 · 날개", s:"파츠를 본에 붙이기", st:"plan",
+        goal:"장식 파츠를 알맞은 본에 연결합니다.",
+        tools:["Blender","Godot SpringBoneSimulator3D"],
+        do:["뿔 → 머리 본에 액세서리로.","엄니 → 턱 본에 붙여 입과 함께 움직이게.","꼬리 → Blender에서 꼬리 본 체인 추가 → Godot 흔들림 또는 전용 애니.","날개 → 접기·펴기 동작이 필요하면 날개 본을 따로 만듦."],
+        chk:["포효할 때 엄니가 턱을 따라감","걷기 중 꼬리가 다리를 뚫지 않음"] },
+      { t:"텍스처", s:"주름 · 비늘 · 상처", st:"plan",
+        goal:"피부 질감으로 종족 차이를 냅니다.",
+        do:["주름·비늘·상처는 노멀맵으로.","색은 Tripo Texture 또는 직접 칠하기.","GL Compatibility에서 확인."] },
+      { t:"내보내기 · Godot", s:"사람 애니 공유", st:"plan",
+        goal:"사람과 같은 본 매핑으로 공유 애니메이션을 그대로 씁니다.",
+        do:["캐릭터와 같은 FBX 내보내기 · 같은 휴머노이드 본 매핑.","걷기·대기는 공유, 공격·피격·죽음은 몬스터 전용으로 추가."],
+        chk:["공유 걷기 애니가 몬스터 비율에서도 자연스러움"] }
+    ]
+  },
+
+  beast: {
+    key:"TYPE C", name:"비인간형 몬스터", ex:"네발 · 날개 · 곤충 · 촉수", color:"--beast",
+    route:"<b>경로</b> 템플릿을 쓰지 않습니다. Tripo 파츠를 Blender에서 잘라 붙여 한 덩어리로 만들고 → 리토폴로지 → 리깅 → 얼굴은 턱·눈꺼풀 본과 셰이프키로 직접 만듭니다. 애니메이션은 몬스터마다 전용입니다.",
+    steps: [
+      { t:"기획", s:"몸 구조와 필요한 동작", st:"plan",
+        goal:"골격 종류와 꼭 필요한 동작·표정 범위를 먼저 정합니다.",
+        do:["몸 구조: 네발 · 새/날개 · 곤충(다리 6개 이상) · 촉수 중 하나.","필요한 동작 목록: 대기, 이동, 공격, 피격, 죽음.","얼굴 표현 범위: 입 벌림, 눈 깜빡임 정도면 충분한지."],
+        chk:["동작 목록이 리깅 범위를 정해 줌"] },
+      { t:"레퍼런스 이미지", s:"측면도가 가장 중요", st:"plan",
+        goal:"다리·날개 구조가 보이는 이미지를 만듭니다.",
+        tools:["Tripo 이미지 도구","ChatGPT GPT-6"],
+        do:["측면도를 가장 정확하게.","다리는 곧게, 날개는 펼침, 입은 다묾.","1:1, 연회색 배경."] },
+      { t:"Tripo 3D 생성", s:"전체 또는 파츠별", st:"plan",
+        goal:"한 번에 만들기 어려운 몸은 파츠로 나눠 받습니다.",
+        tools:["Tripo Studio"],
+        do:["단순한 몸은 전체 1회 생성.","복잡하면 머리 · 몸통 · 다리 · 날개를 따로 생성.","Tripo의 Generate in Parts를 켜면 한 번에 파츠로 나눠 줌(45크레딧)."],
+        cost:["15–45","크레딧/회 (파츠 생성 켜면 45)."] },
+      { t:"잘라 붙여 합치기", s:"리메시 + 이음새 문지르기", st:"plan",
+        goal:"파츠를 한 덩어리 표면으로 만듭니다. 고폴리 상태에서 작업합니다.",
+        tools:["Blender Sculpt","Voxel Remesh"],
+        do:["파츠를 겹치게 대충 배치(잘린 면이 서로 파묻히게).","Voxel Remesh로 한 덩어리 표면 만들기.","Smooth 브러시로 이음새를 문질러 자연스럽게."],
+        chk:["이음새에 턱(계단)이 없음","안쪽에 남은 면이 없음"] },
+      { t:"리토폴로지", s:"가벼운 사각면으로", st:"plan",
+        goal:"애니메이션이 잘 휘도록 가벼운 사각면 메쉬로 바꿉니다.",
+        tools:["Tripo Retopo / Smart Low Poly","Blender"],
+        do:["Tripo 리토폴로지로 사각면 저폴리 생성.","관절(무릎·어깨) 주변에 고리가 충분한지 확인.","눈·입 주변 고리 보정."],
+        chk:["관절이 접혀도 면이 찌그러지지 않음"] },
+      { t:"UV · 텍스처", s:"고폴리에서 굽기", st:"plan",
+        goal:"고폴리 디테일을 저폴리에 옮깁니다.",
+        do:["Smart UV Project.","고폴리에서 노멀맵 굽기.","색은 Tripo Texture 또는 직접 칠하기."] },
+      { t:"몸 리깅", s:"골격 템플릿 선택", st:"plan",
+        goal:"몸 구조에 맞는 골격을 넣습니다.",
+        tools:["Tripo Rig","Blender Rigify (무료)","Auto-Rig Pro (유료)"],
+        do:["Tripo Rig로 자동 리깅(골격 유형 선택).","부족하면 Rigify의 네발·새 샘플 골격, 또는 Auto-Rig Pro.","꼬리·촉수는 본 체인으로."],
+        chk:["걷기 포즈에서 다리 웨이트가 섞이지 않음"] },
+      { t:"얼굴 리그", s:"턱 · 눈꺼풀 · 셰이프키", st:"plan",
+        goal:"필요한 만큼만 얼굴을 움직이게 합니다.",
+        tools:["Blender","Faceit (유료, 선택)"],
+        do:["턱 본, 눈꺼풀 본, 눈동자 본 추가.","포효·으르렁은 셰이프키로.","Faceit은 선택."],
+        chk:["입을 벌렸을 때 입 안이 비어 보이지 않음"] },
+      { t:"애니메이션", s:"몬스터 전용", st:"plan",
+        goal:"리타깃으로 공유할 수 없으므로 몬스터마다 동작을 만듭니다.",
+        tools:["Tripo 애니메이션 프리셋","Blender","Cascadeur"],
+        do:["Tripo 애니메이션 프리셋으로 빠르게 시작.","Blender나 Cascadeur에서 키프레임 다듬기.","Blender에서 미리보기 렌더로 확인."] },
+      { t:"glTF 내보내기 · Godot", s:"전용 애니메이션 트리", st:"plan",
+        goal:"게임 안에서 동작을 확인합니다.",
+        tools:["Godot 4.7"],
+        do:["glTF로 내보내기.","AnimationPlayer · AnimationTree로 상태 연결.","꼬리·촉수 흔들림은 SpringBoneSimulator3D.","LOD와 삼각형 수 확인."],
+        chk:["게임 창에서 이동·공격이 자연스러움"] }
+    ]
+  }
+};
+
+const ST = {done:"완료", now:"지금 하는 중", plan:"예정"};
+const $ = s => document.querySelector(s);
+let cur = {type:"human", i:4};
+try { const sv = JSON.parse(localStorage.getItem("cpg") || "null"); if (sv && TYPES[sv.type]) cur = sv; } catch(e) {}
+const h = location.hash.slice(1).match(/^(human|hmon|beast)-(\d+)$/);
+if (h) cur = {type:h[1], i:Math.max(0, +h[2]-1)};
+
+function renderTypes(){
+  $("#types").innerHTML = Object.entries(TYPES).map(([k,T])=>{
+    const n=T.steps.length, d=T.steps.filter(s=>s.st==="done").length;
+    return `<button class="type" role="tab" id="tab-${k}" aria-selected="${k===cur.type}" data-k="${k}" style="--c:var(${T.color})">
+      <span class="k">${T.key}</span><span class="n">${T.name}</span><span class="e">${T.ex} · ${d}/${n} 완료</span>
+      <span class="bar"><i style="width:${Math.round(100*d/n)}%"></i></span></button>`;
+  }).join("");
+}
+function renderRail(){
+  const T=TYPES[cur.type];
+  document.documentElement.style.setProperty("--accent", `var(${T.color})`);
+  $("#route").innerHTML=T.route;
+  $("#rail").innerHTML=T.steps.map((s,i)=>`<button class="step" role="tab" aria-selected="${i===cur.i}" data-i="${i}">
+     <span class="no">${String(i+1).padStart(2,"0")}</span><span class="t">${s.t}<small>${s.s}</small></span><span class="st dot ${s.st}" title="${ST[s.st]}"></span></button>`).join("");
+  const sel=$("#rail .step[aria-selected='true']"); if(sel) sel.scrollIntoView({block:"nearest",inline:"center"});
+}
+function renderSheet(){
+  const T=TYPES[cur.type], s=T.steps[cur.i], n=T.steps.length;
+  const list=(a,cls,tag="ul")=>`<${tag} class="${cls}">${a.map(x=>`<li>${x}</li>`).join("")}</${tag}>`;
+  let html=`<div class="eyebrow"><span>${T.name} · ${cur.i+1} / ${n}단계</span><span class="pill ${s.st}">${ST[s.st]}</span></div>
+    <h2>${s.t}</h2><p class="goal">${s.goal}</p>`;
+  if(s.tools) html+=list(s.tools,"tools");
+  if(s.do) html+=`<div class="sec"><h3>순서</h3>${list(s.do,"do","ol")}</div>`;
+  if(s.kv) html+=`<div class="sec"><h3>설정값</h3><dl class="kv">${s.kv.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl></div>`;
+  if(s.files) html+=`<div class="sec"><h3>결과 파일</h3>${list(s.files,"files")}</div>`;
+  if(s.chk) html+=`<div class="sec"><h3>통과 기준</h3>${list(s.chk,"chk")}</div>`;
+  if(s.cost) html+=`<div class="sec"><h3>비용</h3><div class="cost"><span class="num">${s.cost[0]}</span><span>${s.cost[1]}</span></div></div>`;
+  if(s.warn) html+=`<div class="sec"><h3>주의</h3>${list(s.warn,"warn")}</div>`;
+  if(s.note) html+=`<p class="note">${s.note}</p>`;
+  const p=T.steps[cur.i-1], q=T.steps[cur.i+1];
+  html+=`<div class="nav"><button class="prev" ${p?"":"disabled"} data-d="-1"><small>이전</small>${p?p.t:"처음"}</button>
+    <button class="next" ${q?"":"disabled"} data-d="1"><small>다음</small>${q?q.t:"끝"}</button></div>`;
+  $("#sheet").innerHTML=html;
+}
+function go(type,i,scroll){
+  cur={type,i}; renderTypes(); renderRail(); renderSheet();
+  try{ localStorage.setItem("cpg", JSON.stringify(cur)); }catch(e){}
+  try{ history.replaceState(null,"",`#${type}-${i+1}`); }catch(e){}
+  if(scroll && window.matchMedia("(max-width:760px)").matches) $("#rail").scrollIntoView({block:"start",behavior:"smooth"});
+}
+$("#types").addEventListener("click",e=>{const b=e.target.closest(".type"); if(b){ const k=b.dataset.k; go(k, k===cur.type?cur.i:Math.max(0,TYPES[k].steps.findIndex(s=>s.st==="now")) ); }});
+$("#rail").addEventListener("click",e=>{const b=e.target.closest(".step"); if(b) go(cur.type,+b.dataset.i);});
+$("#sheet").addEventListener("click",e=>{const b=e.target.closest(".nav button"); if(b&&!b.disabled) go(cur.type,cur.i+(+b.dataset.d),true);});
+document.addEventListener("keydown",e=>{
+  if(e.target.closest("input,textarea")) return;
+  const n=TYPES[cur.type].steps.length;
+  if(e.key==="ArrowDown"||e.key==="ArrowRight"){ if(cur.i<n-1){go(cur.type,cur.i+1); e.preventDefault();} }
+  if(e.key==="ArrowUp"||e.key==="ArrowLeft"){ if(cur.i>0){go(cur.type,cur.i-1); e.preventDefault();} }
+});
+if(!TYPES[cur.type].steps[cur.i]) cur.i=0;
+go(cur.type,cur.i);
+</script>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 250" role="img" aria-label="T7 순서"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <g font-size="12.5">
+    <rect x="6" y="20" width="196" height="76" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="104" y="46" text-anchor="middle" class="s-ink" font-weight="600">① 원본 정면 이미지</text><text x="104" y="66" text-anchor="middle" class="s-muted">v3를 만든 그 이미지</text><text x="104" y="84" text-anchor="middle" class="s-muted">무표정·입 다묾</text>
+    <rect x="222" y="20" width="196" height="76" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="320" y="46" text-anchor="middle" class="s-ink" font-weight="600">② 표정만 바꾸기 (무료)</text><text x="320" y="66" text-anchor="middle" class="s-muted">Tripo 이미지 도구</text><text x="320" y="84" text-anchor="middle" class="s-muted">Nano Banana / Pro</text>
+    <rect x="438" y="20" width="196" height="76" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="536" y="46" text-anchor="middle" class="s-ink" font-weight="600">③ 4방향 이미지 (무료)</text><text x="536" y="66" text-anchor="middle" class="s-muted">앞·좌·우·뒤</text><text x="536" y="84" text-anchor="middle" class="s-muted">사람이 확인</text>
+    <rect x="654" y="20" width="200" height="76" rx="8" class="s-paper st-bad" stroke-width="1.5"/><text x="754" y="46" text-anchor="middle" class="s-ink" font-weight="600">④ 3D 생성 (15크레딧)</text><text x="754" y="66" text-anchor="middle" class="s-muted">H3.1, 부품 나누기 끔</text><text x="754" y="84" text-anchor="middle" class="s-muted">텍스처 끔, 20만 삼각형</text>
+    <rect x="6" y="140" width="268" height="76" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="140" y="166" text-anchor="middle" class="s-ink" font-weight="600">⑤ 원본에 정렬</text><text x="140" y="186" text-anchor="middle" class="s-muted">회전·이동·크기만 (휘지 않음)</text><text x="140" y="204" text-anchor="middle" class="s-muted">표정과 무관한 부위로 맞춤</text>
+    <rect x="294" y="140" width="268" height="76" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="428" y="166" text-anchor="middle" class="s-ink" font-weight="600">⑥ 표정 부위만 옮기기</text><text x="428" y="186" text-anchor="middle" class="s-muted">원본 점이 스캔 모양을 따라감</text><text x="428" y="204" text-anchor="middle" class="s-muted">= 새 셰이프키 (기본 모양 그대로)</text>
+    <rect x="582" y="140" width="272" height="76" rx="8" class="s-paper st-good" stroke-width="2"/><text x="718" y="166" text-anchor="middle" class="s-ink" font-weight="600">⑦ 검사·Godot</text><text x="718" y="186" text-anchor="middle" class="s-muted">스캔과의 차이, 뒤집힌 면</text><text x="718" y="204" text-anchor="middle" class="s-muted">엔진에서 재생</text>
+    <path d="M202 58 H218 M418 58 H434 M634 58 H650 M754 96 V118 H140 V136 M274 178 H290 M562 178 H578" fill="none" class="st-muted" stroke-width="2"/>
+    <text x="6" y="242" class="s-muted">①~④는 Tripo Studio(사용자 계정, Chrome)에서, ⑤~⑦은 Blender·Godot 무인 실행입니다.</text>
+  </g>
+</svg>

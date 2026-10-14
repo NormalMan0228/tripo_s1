@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 260" role="img" aria-label="T13 순서"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <g font-size="12.5">
+    <rect x="6" y="20" width="196" height="84" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="104" y="44" text-anchor="middle" class="s-ink" font-weight="600">① 메타리그 맞추기</text><text x="104" y="64" text-anchor="middle" class="s-muted">기준점 29쌍 → 닮음 변환</text><text x="104" y="82" text-anchor="middle" class="s-muted">+ 얇은 판 휨(TPS)</text><text x="104" y="98" text-anchor="middle" class="s-muted">눈·입술은 실제 테두리에</text>
+    <rect x="222" y="20" width="196" height="84" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="320" y="44" text-anchor="middle" class="s-ink" font-weight="600">② 리그 생성</text><text x="320" y="64" text-anchor="middle" class="s-muted">Rigify, 화면 없이</text><text x="320" y="82" text-anchor="middle" class="s-muted">뼈 338개 (조종 104)</text><text x="320" y="98" text-anchor="middle" class="s-muted">3초</text>
+    <rect x="438" y="20" width="196" height="84" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="536" y="44" text-anchor="middle" class="s-ink" font-weight="600">③ 가중치</text><text x="536" y="64" text-anchor="middle" class="s-muted">10배 키운 사본에서 자동 계산</text><text x="536" y="82" text-anchor="middle" class="s-muted">40회 다듬기, 목은 머리 뼈로</text><text x="536" y="98" text-anchor="middle" class="s-muted">약 5분</text>
+    <rect x="654" y="20" width="200" height="84" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="754" y="44" text-anchor="middle" class="s-ink" font-weight="600">④ 표정 자세 라이브러리</text><text x="754" y="64" text-anchor="middle" class="s-muted">42개, CC0 템플릿에서 자동</text><text x="754" y="82" text-anchor="middle" class="s-muted">조종 65개의 목표 위치</text><text x="754" y="98" text-anchor="middle" class="s-muted">부위별 세기만 손으로</text>
+    <rect x="6" y="150" width="268" height="76" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="140" y="176" text-anchor="middle" class="s-ink" font-weight="600">⑤ 셰이프키로 굽기</text><text x="140" y="196" text-anchor="middle" class="s-muted">자세 → 얼굴 계산 → 키 저장</text><text x="140" y="214" text-anchor="middle" class="s-muted">아랫니·혀도 함께, 약 1분</text>
+    <rect x="294" y="150" width="268" height="76" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="428" y="176" text-anchor="middle" class="s-ink" font-weight="600">⑥ 검사 + 10% 줄이기 (T6)</text><text x="428" y="196" text-anchor="middle" class="s-muted">원본 차이, 좌우 대칭, 뒤집힌 면</text><text x="428" y="214" text-anchor="middle" class="s-muted">키 49개 모두 유지</text>
+    <rect x="582" y="150" width="272" height="76" rx="8" class="s-paper st-good" stroke-width="2"/><text x="718" y="176" text-anchor="middle" class="s-ink" font-weight="600">⑦ Godot</text><text x="718" y="196" text-anchor="middle" class="s-muted">키 조합 + T1 눈꺼풀 뼈</text><text x="718" y="214" text-anchor="middle" class="s-muted">놀람, 눈 감고 웃음 등</text>
+    <path d="M202 62 H218 M418 62 H434 M634 62 H650 M754 104 V128 H140 V146 M274 188 H290 M562 188 H578" fill="none" class="st-muted" stroke-width="2"/>
+    <text x="6" y="252" class="s-muted">입력은 T1·T2를 거친 원본 머리(눈·입 자르기, 눈꺼풀·입 안 부품)와 T4 자동 기준점입니다.</text>
+  </g>
+</svg>

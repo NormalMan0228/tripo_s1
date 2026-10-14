@@ -1,0 +1,21 @@
+{
+ "source": "tripo_neutral_head_fe018cfa.glb",
+ "stray_verts_removed": 4,
+ "nonmanifold_fixed": 12,
+ "holes_filled_edges": 29,
+ "chin_z_model": 0.345001220703125,
+ "metres_per_unit": 0.3664128966127755,
+ "head_cm": 24.0,
+ "bust_height_cm": 36.64128966127755,
+ "head": {
+  "tris": 188690,
+  "verts": 94347,
+  "sizes": [
+   3
+  ],
+  "boundary_edges": 0,
+  "nonmanifold": 0,
+  "degenerate": 0
+ },
+ "fbx_bytes": 4234076
+}

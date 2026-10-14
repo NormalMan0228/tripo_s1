@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 200" role="img" aria-label="전체 흐름"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <g font-size="12.5">
+    <rect x="6" y="14" width="160" height="70" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="86" y="38" text-anchor="middle" class="s-ink" font-weight="600">① 템플릿 맞춤</text><text x="86" y="58" text-anchor="middle" class="s-muted">face_fit (표정 크기용)</text>
+    <rect x="178" y="14" width="160" height="70" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="258" y="38" text-anchor="middle" class="s-ink" font-weight="600">② 눈·입 자르기</text><text x="258" y="58" text-anchor="middle" class="s-muted">T14 눈 윤곽, 곡선 자르기</text>
+    <rect x="350" y="14" width="160" height="70" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="430" y="38" text-anchor="middle" class="s-ink" font-weight="600">③ 눈꺼풀 부품 (T1)</text><text x="430" y="58" text-anchor="middle" class="s-muted">깜빡임 뼈</text>
+    <rect x="522" y="14" width="160" height="70" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="602" y="38" text-anchor="middle" class="s-ink" font-weight="600">④ 입 안 부품 (T2)</text><text x="602" y="58" text-anchor="middle" class="s-muted">입 안 벽, 이, 혀</text>
+    <rect x="694" y="14" width="160" height="70" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="774" y="38" text-anchor="middle" class="s-ink" font-weight="600">⑤ Rigify (T13+T14)</text><text x="774" y="58" text-anchor="middle" class="s-muted">관절 92 + 얼굴 기준 턱 축</text>
+    <rect x="178" y="112" width="250" height="62" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="303" y="136" text-anchor="middle" class="s-ink" font-weight="600">⑥ ARKit 42개 굽기 (1.0배)</text><text x="303" y="156" text-anchor="middle" class="s-muted">+ 깜빡임 뼈 2개</text>
+    <rect x="448" y="112" width="250" height="62" rx="8" class="s-paper st-good" stroke-width="2"/><text x="573" y="136" text-anchor="middle" class="s-ink" font-weight="600">⑦ 원본 색 + 렌더</text><text x="573" y="156" text-anchor="middle" class="s-muted">정면 그림 1장, 텍스처·회색</text>
+    <path d="M166 49 H174 M338 49 H346 M510 49 H518 M682 49 H690 M774 84 V98 H303 V108 M428 143 H444" fill="none" class="st-muted" stroke-width="2"/>
+  </g>
+</svg>

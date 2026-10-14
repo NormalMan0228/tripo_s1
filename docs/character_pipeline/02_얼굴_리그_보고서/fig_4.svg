@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 300" role="img" aria-label="스타일 공통 파이프라인과 교체 모듈"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <g font-size="13">
+    <text x="10" y="22" class="s-ink" font-size="15" font-weight="700">공통 줄기</text>
+    <rect x="10" y="34" width="120" height="48" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="70" y="63" text-anchor="middle" class="s-ink">준비·정규화</text>
+    <rect x="145" y="34" width="120" height="48" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="205" y="63" text-anchor="middle" class="s-ink">기준점·테두리</text>
+    <rect x="280" y="34" width="130" height="48" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="345" y="56" text-anchor="middle" class="s-ink">자르기·부품</text><text x="345" y="73" text-anchor="middle" class="s-muted" font-size="11">모양 변경 없음</text>
+    <rect x="425" y="34" width="120" height="48" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="485" y="63" text-anchor="middle" class="s-ink">턱·목·눈 뼈</text>
+    <rect x="560" y="34" width="135" height="48" rx="8" class="s-paper st-good" stroke-width="2"/><text x="627" y="56" text-anchor="middle" class="s-ink" font-weight="600">표정 모듈</text><text x="627" y="73" text-anchor="middle" class="s-muted" font-size="11">스타일별 교체</text>
+    <rect x="710" y="34" width="140" height="48" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="780" y="56" text-anchor="middle" class="s-ink">자동 검사</text><text x="780" y="73" text-anchor="middle" class="s-muted" font-size="11">→ glTF → Godot</text>
+    <path d="M130 58 H141 M265 58 H276 M410 58 H421 M545 58 H556 M695 58 H706" class="st-muted" stroke-width="2"/>
+    <path d="M627 82 V104" class="st-good" stroke-width="2"/>
+    <text x="10" y="128" class="s-ink" font-size="15" font-weight="700">표정 모듈 (눈·입)</text>
+    <rect x="10" y="140" width="160" height="140" rx="8" class="s-paper st-muted"/><text x="90" y="162" text-anchor="middle" class="s-ink" font-weight="600">실사</text>
+    <text x="22" y="186" class="s-muted" font-size="12">눈알 + 눈꺼풀 회전</text><text x="22" y="206" class="s-muted" font-size="12">입술·이·혀</text><text x="22" y="226" class="s-muted" font-size="12">ARKit 52 계산</text><text x="22" y="246" class="s-muted" font-size="12">PBR</text>
+    <rect x="180" y="140" width="160" height="140" rx="8" class="s-paper st-muted"/><text x="260" y="162" text-anchor="middle" class="s-ink" font-weight="600">반실사</text>
+    <text x="192" y="186" class="s-muted" font-size="12">실사와 같음</text><text x="192" y="206" class="s-muted" font-size="12">큰 눈은 표정 스캔</text><text x="192" y="226" class="s-muted" font-size="12">입모양 15종</text><text x="192" y="246" class="s-muted" font-size="12">PBR/툰</text>
+    <rect x="350" y="140" width="160" height="140" rx="8" class="s-paper st-muted"/><text x="430" y="162" text-anchor="middle" class="s-ink" font-weight="600">애니메이션</text>
+    <text x="362" y="186" class="s-muted" font-size="12">눈 판(그림) + 주머니</text><text x="362" y="206" class="s-muted" font-size="12">깜빡임 = 판 교체·접기</text><text x="362" y="226" class="s-muted" font-size="12">선 입 + 아이우에오</text><text x="362" y="246" class="s-muted" font-size="12">툰 셰이더</text>
+    <rect x="520" y="140" width="160" height="140" rx="8" class="s-paper st-muted"/><text x="600" y="162" text-anchor="middle" class="s-ink" font-weight="600">카툰</text>
+    <text x="532" y="186" class="s-muted" font-size="12">조각된 큰 눈</text><text x="532" y="206" class="s-muted" font-size="12">감은 눈 = 표정 스캔</text><text x="532" y="226" class="s-muted" font-size="12">과장된 턱 회전</text><text x="532" y="246" class="s-muted" font-size="12">툰/PBR</text>
+    <rect x="690" y="140" width="160" height="140" rx="8" class="s-paper st-muted"/><text x="770" y="162" text-anchor="middle" class="s-ink" font-weight="600">SD (2~3등신)</text>
+    <text x="702" y="186" class="s-muted" font-size="12">눈·입 = 텍스처</text><text x="702" y="206" class="s-muted" font-size="12">표정 = UV/텍스처 교체</text><text x="702" y="226" class="s-muted" font-size="12">머리 통째 뼈</text><text x="702" y="246" class="s-muted" font-size="12">툰 셰이더</text>
+  </g>
+</svg>

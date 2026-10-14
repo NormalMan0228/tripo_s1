@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 210" role="img" aria-label="Faceit 작업 단계와 자동화 가능 여부"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <g font-size="13">
+    <rect x="10" y="30" width="150" height="70" rx="8" class="s-paper st-warn" stroke-width="2"/><text x="85" y="58" text-anchor="middle" class="s-ink" font-weight="600">1 등록</text><text x="85" y="80" text-anchor="middle" class="s-muted" font-size="12">얼굴·눈·이·혀 그룹</text>
+    <rect x="180" y="30" width="150" height="70" rx="8" class="s-paper st-bad" stroke-width="2"/><text x="255" y="58" text-anchor="middle" class="s-ink" font-weight="600">2 점 찍기</text><text x="255" y="80" text-anchor="middle" class="s-muted" font-size="12">모달 조작 + 손 보정</text>
+    <rect x="350" y="30" width="150" height="70" rx="8" class="s-paper st-warn" stroke-width="2"/><text x="425" y="58" text-anchor="middle" class="s-ink" font-weight="600">3 리그·바인드</text><text x="425" y="80" text-anchor="middle" class="s-muted" font-size="12">Rigify · 자동 가중치</text>
+    <rect x="520" y="30" width="150" height="70" rx="8" class="s-paper st-warn" stroke-width="2"/><text x="595" y="58" text-anchor="middle" class="s-ink" font-weight="600">4 표정 자세</text><text x="595" y="80" text-anchor="middle" class="s-muted" font-size="12">ARKit 52 · 입모양</text>
+    <rect x="690" y="30" width="160" height="70" rx="8" class="s-paper st-warn" stroke-width="2"/><text x="770" y="58" text-anchor="middle" class="s-ink" font-weight="600">5 굽기·내보내기</text><text x="770" y="80" text-anchor="middle" class="s-muted" font-size="12">셰이프키 → glTF</text>
+    <path d="M160 65 H176 M330 65 H346 M500 65 H516 M670 65 H686" class="st-muted" stroke-width="2"/>
+    <rect x="10" y="130" width="14" height="14" class="s-paper st-bad" stroke-width="2"/><text x="32" y="142" class="s-muted">손으로 해야 함 (문서상 자동화 방법 없음)</text>
+    <rect x="330" y="130" width="14" height="14" class="s-paper st-warn" stroke-width="2"/><text x="352" y="142" class="s-muted">스크립트로 될 가능성 있음 (구매 후 소스 확인 필요)</text>
+    <text x="10" y="186" class="s-muted" font-size="12.5">공개 문서에 스크립트 API·일괄 처리·백그라운드 실행 방법이 없음. 코드는 GPL 파이썬이라 구매 후 연산자 이름을 확인할 수 있음.</text>
+  </g>
+</svg>

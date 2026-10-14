@@ -1,0 +1,110 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;background:#fff;font-family:"Malgun Gothic",sans-serif;color:#2C2C2A;width:720px;padding:18px 16px 20px}
+h1{font-size:19px;font-weight:700;margin:0 0 2px;text-align:center}
+.sub{font-size:12px;color:#5F5E5A;text-align:center;margin-bottom:12px}
+.stage{border:1px solid #D3D1C7;border-radius:12px;padding:10px 12px 12px;margin-bottom:8px;position:relative}
+.stage h2{font-size:15px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+.tag{font-size:11px;font-weight:400;padding:1px 7px;border-radius:6px;background:#F1EFE8;color:#5F5E5A}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:5px}
+.st{border:1px solid #B4B2A9;border-radius:8px;padding:5px 8px;font-size:12.5px;line-height:1.35;background:#fff;flex:0 1 auto;max-width:200px}
+.st b{display:block;font-size:13px}
+.st small{color:#5F5E5A;font-size:11.5px}
+.ar{align-self:center;color:#888780;font-size:14px}
+.down{text-align:center;color:#888780;font-size:16px;margin:-2px 0 4px}
+.p{border-color:#AFA9EC;background:#EEEDFE}.p h2{color:#3C3489}.p .st{border-color:#AFA9EC}
+.t{border-color:#5DCAA5;background:#E1F5EE}.t h2{color:#085041}.t .st{border-color:#5DCAA5}
+.a{border-color:#EF9F27;background:#FAEEDA}.a h2{color:#633806}.a .st{border-color:#EF9F27}
+.b{border-color:#85B7EB;background:#E6F1FB}.b h2{color:#0C447C}.b .st{border-color:#85B7EB}
+.g{border-color:#D3D1C7;background:#F7F6F2}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cols .stage{margin-bottom:0}
+.cols .st{max-width:none;flex:1 1 100%}
+.money{font-size:12px;color:#712B13;background:#FAECE7;border:1px solid #F0997B;border-radius:8px;padding:6px 9px;margin-top:6px}
+.now{position:absolute;top:-9px;right:12px;background:#E24B4A;color:#fff;font-size:11px;padding:1px 8px;border-radius:8px}
+ul{margin:4px 0 0 16px;padding:0;font-size:12.5px;line-height:1.5}
+</style></head><body>
+<h1>캐릭터 제작 워크플로우</h1>
+<div class="sub">2026-10-11 기준 · 순서: ① 얼굴 워크플로우 → ② 파츠 분리·일체화 → ③ 얼굴 → ④ 헤어 → ⑤ 바디 → ⑥ 애니메이션</div>
+
+<div class="stage g"><h2>0. 공통 규칙 <span class="tag">모든 캐릭터·몬스터</span></h2>
+<ul>
+<li>기본 몸은 불투명 속옷만(심의 안전선, 게임에서도 항상 유지) · A포즈 · 손가락 벌림 · 매끈한 마네킹</li>
+<li>머리는 대머리·장식 없음 · 무표정 · 입 다묾 · 윗입술/아랫입술 분리</li>
+<li>머리카락·상의·하의·신발·장갑·액세서리·뿔/꼬리/날개는 전부 따로 생성</li>
+<li>레퍼런스는 정사각형 1:1 · 연회색 배경 · 4방향 같은 구도</li>
+</ul></div>
+<div class="down">▼</div>
+
+<div class="stage a"><h2>1. 레퍼런스 이미지 <span class="tag">무료 우선</span></h2>
+<div class="flow">
+<div class="st"><b>콘셉트 정면 1장</b><small>Tripo 이미지 도구 (Nano Banana · GPT Image 2.5, 0크레딧)</small></div><span class="ar">→</span>
+<div class="st"><b>Multiview Image</b><small>정면·좌·우·뒤 자동 생성 (0크레딧)</small></div><span class="ar">→</span>
+<div class="st"><b>부분 수정</b><small>ChatGPT GPT-6 (구독) · 정밀 마스크는 Scenario (약 12 CU)</small></div>
+</div></div>
+<div class="down">▼</div>
+
+<div class="stage a"><h2>2. 3D 생성 <span class="tag">Tripo 스튜디오</span></h2>
+<div class="flow">
+<div class="st"><b>Multi-View to 3D</b><small>HD Model · H3.1 최고 품질</small></div><span class="ar">→</span>
+<div class="st"><b>파츠 생성 끔</b><small>45 → 15크레딧</small></div><span class="ar">→</span>
+<div class="st"><b>형상만</b><small>텍스처 끔 · 삼각형 200,000</small></div><span class="ar">→</span>
+<div class="st"><b>파츠별 생성</b><small>머리 · 몸 · 손 · 헤어 · 옷 · 액세서리</small></div><span class="ar">→</span>
+<div class="st"><b>GLB 내려받기</b><small>source/ 폴더 보관</small></div>
+</div></div>
+<div class="down">▼</div>
+
+<div class="stage b"><h2>3. Blender 정리 <span class="tag">자동 스크립트</span></h2>
+<div class="flow">
+<div class="st"><b>prep_headshot_source.py</b><small>떨어진 조각·구멍·꼬인 면 제거 · 턱~정수리 24cm · 바닥 원점 · 정면 -Y · FBX</small></div><span class="ar">→</span>
+<div class="st"><b>표정 보정 (필요시)</b><small>neutralize_smile.py: 미소 → 무표정, 위상 유지</small></div><span class="ar">→</span>
+<div class="st"><b>몬스터 키트배시</b><small>잘라 붙이기 → 복셀 리메시 → 이음새 스무스</small></div>
+</div></div>
+<div class="down">▼ 몸통 구조로 갈림</div>
+
+<div class="cols">
+<div class="stage p"><span class="now">지금 여기</span><h2>4A. 인간형 (캐릭터·인간형 몬스터) <span class="tag">CC5</span></h2>
+<div class="flow">
+<div class="st"><b>Prop로 가져오기 → Headshot 3 메쉬 모드</b></div>
+<div class="st"><b>35점 정렬</b><small>자동 감지 + 수동 · headshot_sym_points.py로 좌우 대칭 · 33번 정중앙</small></div>
+<div class="st"><b>Head Gen (전체 머리) → Refine Level 2</b></div>
+<div class="st"><b>Attach to Body</b><small>Textureless · 바디 타입 선택</small></div>
+<div class="st"><b>체형 모프</b><small>슬라이더 또는 Morph Creator로 카툰 비율 · 근육 과장</small></div>
+<div class="st"><b>헤어·옷·뿔·꼬리 얹기</b><small>체형 맞춤 · 웨이트 전송 · 흔들림 본</small></div>
+<div class="st"><b>표정 검사</b><small>깜빡임 · V_Open/Wide/Tight_O/Affricate · Jaw_Open 캡처 비교</small></div>
+<div class="st"><b>FBX 내보내기</b><small>Blender 프리셋 · 셰이프키 350 · 본 101 (손가락 포함)</small></div>
+</div></div>
+<div class="stage t"><h2>4B. 비인간형 몬스터 <span class="tag">Blender · Tripo</span></h2>
+<div class="flow">
+<div class="st"><b>키트배시된 전신</b><small>머리·몸·다리·날개 합침</small></div>
+<div class="st"><b>리토폴로지</b><small>Tripo Retopo 사각면 · 눈·입 고리 보정</small></div>
+<div class="st"><b>텍스처</b><small>Tripo Texture · Smart UV</small></div>
+<div class="st"><b>몸 리깅</b><small>Tripo Rig · Auto-Rig Pro (네발·날개)</small></div>
+<div class="st"><b>얼굴 리그</b><small>턱·눈꺼풀·눈동자 본 + 표정 셰이프키 (Faceit 선택)</small></div>
+<div class="st"><b>표정·동작 검사</b><small>Blender에서 미리보기 렌더</small></div>
+<div class="st"><b>glTF 내보내기</b></div>
+</div></div>
+</div>
+<div class="down">▼</div>
+
+<div class="stage b"><h2>5. Godot 4.7 <span class="tag">GL Compatibility</span></h2>
+<div class="flow">
+<div class="st"><b>가져오기</b><small>FBX / glTF</small></div><span class="ar">→</span>
+<div class="st"><b>휴머노이드 본 매핑</b><small>모든 인간형이 같은 애니 공유</small></div><span class="ar">→</span>
+<div class="st"><b>표정 연결</b><small>깜빡임 · 립싱크 셰이프키</small></div><span class="ar">→</span>
+<div class="st"><b>셰이더</b><small>툰 또는 PBR · 눈 텍스처</small></div><span class="ar">→</span>
+<div class="st"><b>흔들림 본</b><small>SpringBoneSimulator3D: 헤어·치마·꼬리</small></div><span class="ar">→</span>
+<div class="st"><b>성능</b><small>LOD · 주인공급 수만 삼각형 이내</small></div>
+</div></div>
+<div class="down">▼</div>
+
+<div class="stage g"><h2>6. 애니메이션</h2>
+<div class="flow">
+<div class="st"><b>기본 이동</b><small>Mixamo (무료)</small></div>
+<div class="st"><b>직접 제작</b><small>Cascadeur (설치됨, FBX·glTF는 Indie)</small></div>
+<div class="st"><b>몬스터</b><small>Tripo 애니메이션 프리셋 · 전용 키프레임</small></div>
+<div class="st"><b>고급(선택)</b><small>iClone · ActorCore (유료)</small></div>
+</div></div>
+
+<div class="money">비용 · 라이선스: Tripo 머리 1회 15크레딧(승인 한도 150) · 이미지·멀티뷰 무료 · Headshot 결과 내보내기는 Headshot 3 라이선스 필요(체험판은 일반 캐릭터만 30회) · CC5 체험판 11월 초 종료</div>
+</body></html>

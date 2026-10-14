@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 260" role="img" aria-label="입 안 주머니 구조"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <g transform="translate(30,20)">
+    <text x="0" y="16" class="s-ink" font-size="15" font-weight="700">옆 단면 (입 벌림)</text>
+    <path d="M40 60 C80 52 120 56 150 70" fill="none" stroke="#c9a28a" stroke-width="12" stroke-linecap="round"/>
+    <path d="M40 150 C80 160 120 156 150 140" fill="none" stroke="#c9a28a" stroke-width="12" stroke-linecap="round"/>
+    <text x="0" y="56" class="s-muted" font-size="12">윗입술(원본)</text><text x="0" y="176" class="s-muted" font-size="12">아랫입술(원본, 턱과 회전)</text>
+    <path d="M150 70 L172 72 L300 82 L330 105 L300 128 L172 136 L150 140" fill="none" class="st-acc" stroke-width="4"/>
+    <text x="175" y="66" class="s-acc" font-size="12">① 입술 안쪽 벽 3mm</text><text x="236" y="148" class="s-acc" font-size="12">② 주머니 벽 22mm</text><text x="336" y="110" class="s-acc" font-size="12">③ 뒤 막음</text>
+    <rect x="182" y="78" width="8" height="18" class="s-paper st-muted"/><text x="196" y="94" class="s-muted" font-size="11">윗니</text>
+    <rect x="182" y="118" width="8" height="16" class="s-paper st-muted"/><text x="196" y="132" class="s-muted" font-size="11">아랫니·혀(턱 따라)</text>
+  </g>
+  <g transform="translate(470,20)">
+    <text x="0" y="16" class="s-ink" font-size="15" font-weight="700">움직임 규칙</text>
+    <text x="0" y="50" class="s-ink" font-size="13">새 정점은 자기가 자라난 입술 가장자리 정점의 움직임을 복사</text>
+    <text x="0" y="76" class="s-muted" font-size="13">· 턱 벌림: 그 정점의 회전각(턱 축 기준)을 읽어 같은 각도로 회전</text>
+    <text x="0" y="98" class="s-muted" font-size="13">· 입모양: 그 정점의 이동량을 그대로(주머니 벽은 60%)</text>
+    <text x="0" y="120" class="s-muted" font-size="13">· 아랫니·혀: 아랫입술 가운데 회전각, 윗니는 고정</text>
+    <text x="0" y="156" class="s-ink" font-size="13">윗입술·아랫입술 구분</text>
+    <text x="0" y="180" class="s-muted" font-size="13">자른 뒤 두 가장자리가 같은 위치라서, 위치가 아니라</text>
+    <text x="0" y="200" class="s-muted" font-size="13">"어느 쪽 입술 면에 붙어 있는지"로 판정 (버그 수정)</text>
+  </g>
+</svg>

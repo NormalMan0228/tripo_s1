@@ -61,3 +61,18 @@ game/maps/survival/assets/*
 !game/maps/survival/assets/manifest.json
 # Third-party download addresses stay local (no archive links in the repository).
 tools/third_party_downloads.local.json
+
+# Claude Code worktrees and stray logs.
+.claude/worktrees/
+debug.log
+
+# Third-party template avatars (Seed-san etc.) stay local; the face pipeline docs describe them.
+art/templates/
+
+# Face pipeline working files: Blender scenes and Tripo/Headshot exports stay local (~110 MB).
+# Scripts, settings, reports and preview images under these folders are kept.
+art/characters/character1_face_*/**/*.blend
+art/characters/character1_face_*/**/*.glb
+art/characters/character1_face_*/**/*.fbx
+art/characters/character1_face_*/**/*.obj
+art/characters/character1_face_*/**/*.npz
