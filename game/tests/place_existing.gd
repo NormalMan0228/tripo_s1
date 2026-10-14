@@ -5,12 +5,15 @@ const Town = preload("res://scripts/town.gd")
 func _initialize() -> void: call_deferred("run")
 func run() -> void:
 	var user := ""
+	# The local world by default; --server=URL for another (a QA server).
+	var server := "http://127.0.0.1:8765"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--user="): user = arg.trim_prefix("--user=")
+		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
 	var app = Main.new()
 	root.add_child(app)
 	await create_timer(1.5).timeout
-	await app.authenticate(false,"http://127.0.0.1:8765",user,"Craft-live-password-1","")
+	await app.authenticate(false,server,user,"Craft-live-password-1","")
 	await create_timer(2).timeout
 	var target := ""
 	for obj in app.me.objects:

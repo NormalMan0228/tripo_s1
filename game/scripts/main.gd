@@ -16,6 +16,9 @@ const TownLayout = preload("res://scripts/town.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const CraftPanel = preload("res://scripts/craft_panel.gd")
+const CraftWindow = preload("res://scripts/craft_window.gd")
+const CraftTracker = preload("res://scripts/craft_tracker.gd")
+const CraftWords = preload("res://scripts/craft_words.gd")
 const Fx = preload("res://scripts/fx.gd")
 const Transition = preload("res://scripts/transition.gd")
 const LoadPace = preload("res://scripts/load_pace.gd")
@@ -144,7 +147,6 @@ var objective: Label
 var objective_card: Control
 var minimap: Control
 var frame: Dictionary = {}
-var craft_job := ""
 var world_audio: Node
 var daylight: Node
 var step_distance := 0.0
@@ -470,11 +472,14 @@ func make_toast(at: Vector2, width: float) -> void:
 	last_notice = ""
 
 func error_message(code: String) -> String:
-	var messages := {"connection_failed":tr("마을과의 연결이 끊어졌어요. 잠시 뒤 다시 들어와 주세요."),
+	# Craft refusals read the same in the village and in rooms (craft_words.gd).
+	var craft := CraftWords.refusal(code)
+	if not craft.is_empty(): return craft
+	var messages := {
 		"server_update_required":tr("월드가 새 단장을 하고 있어요. 잠시 뒤 다시 들어와 주세요."),
 		"invalid_credentials":tr("아이디 또는 비밀번호를 확인하세요."),"username_unavailable":tr("이미 사용 중인 이름입니다."),
 		"invalid_request":tr("입력 형식을 확인하세요. 이름 3~24자, 비밀번호 10자 이상입니다."),
-		"insufficient_shards":tr("별씨가 부족합니다. 생존 도전을 완료해 보세요."),"placement_overlap":tr("다른 물건과 겹칩니다."),
+		"placement_overlap":tr("다른 물건과 겹칩니다."),
 		"room_render_budget_exceeded":tr("꾸미기 용량이 꽉 찼습니다. 가구 일부를 회수한 뒤 배치해 주세요."),
 		"login_locked":tr("비밀번호를 여러 번 틀려 잠시 잠겼어요. 15분 뒤에 다시 시도해 주세요."),
 		"username_reserved":tr("이 이름은 쓸 수 없어요. 다른 모험가 이름을 골라 주세요."),
@@ -483,23 +488,14 @@ func error_message(code: String) -> String:
 		"weak_password":tr("비밀번호에는 대문자와 특수문자가 하나 이상 들어가야 해요. (10자 이상)"),
 		"invalid_invitation":tr("이 월드는 지금 새 모험가를 받지 않아요. 잠시 뒤 다시 시도하거나 '이 PC 월드'를 골라 주세요."),
 		"spawn_area_reserved":tr("중앙 광장에는 놓을 수 없습니다."),"workshop_area_reserved":tr("공방 입구 앞은 비워 주세요."),"reserved_area":tr("길과 입구 앞은 비워 주세요."),
-		"gate_area_reserved":tr("숲 입구에는 놓을 수 없습니다."),"daily_generation_limit":tr("오늘 생성 한도에 도달했습니다."),
-		"live_generation_disabled":tr("공방 장인이 아직 자리를 비웠어요."),"generation_pending":tr("진행 중인 생성이 있습니다."),
+		"gate_area_reserved":tr("숲 입구에는 놓을 수 없습니다."),
 		"session_expired":tr("오래 쉬어서 다시 들어와야 해요."),"session_reset":tr("다시 로그인해 주세요."),"object_not_found":tr("내 물건이 아니에요."),
 		"stale_object_version":tr("물건이 그새 바뀌었어요. 가방을 다시 열어 주세요."),"object_is_listed":tr("판매 중인 물건입니다. 판매를 취소하세요."),
-		"insufficient_provider_credit":tr("공방 재료가 떨어졌어요. 맡긴 별씨는 돌려드려요."),
-		"user_total_generation_limit":tr("이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!"),
-		"user_daily_generation_limit":tr("오늘 맡길 수 있는 제작을 모두 썼어요. 내일 다시 찾아와 주세요."),
-		"provider_busy":tr("공방 장인이 다른 의뢰를 만들고 있어요. 조금 뒤에 다시 맡겨 주세요."),
 		"too_many_registrations":tr("이 곳에서는 오늘 계정을 더 만들 수 없어요. 만든 계정으로 로그인해 주세요."),
 		"registration_closed_today":tr("오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요."),
-		"craft_over_trial_limit":tr("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요."),
-		"tripo_budget_exhausted":tr("이번 학기 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요."),
 		"client_update_required":tr("새 버전을 받아야 계속할 수 있어요."),
 		"server_maintenance":tr("서버 점검 중이에요. 잠시 뒤 다시 들어와 주세요.")}
 	if not preload("res://scripts/build_mode.gd").developer():
-		messages.live_generation_disabled=tr("새 가구 제작을 준비하고 있어요. 지금은 보관함의 물건으로 꾸며 보세요.")
-		messages.insufficient_provider_credit=tr("지금은 제작을 완료할 수 없어요. 맡긴 별씨는 돌려드렸어요.")
 		messages.server_update_required=tr("마을을 업데이트하고 있어요. 잠시 뒤 다시 접속해 주세요.")
 	return str(messages.get(code,tr("요청을 완료하지 못했습니다: ")+code if preload("res://scripts/build_mode.gd").developer() else tr("지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.")))
 
@@ -737,6 +733,8 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		message(tr("아이디와 비밀번호를 입력하세요."))
 		return
 	busy = true
+	# Signing in again (another account or world) ends the earlier session's craft follower.
+	CraftTracker.end(api)
 	api.base_url = host
 	api.token = ""
 	message(tr("마을로 가는 중…"))
@@ -1349,6 +1347,8 @@ func status_meter(parent: Node, title: String, color: Color, icon_name := "") ->
 	return RpgUi.meter(parent,title,color,icon_name)
 
 func refresh_inventory() -> void:
+	# The village is where the craft's news is told now (also while visiting a friend).
+	craft_tracker()
 	if social.visiting():
 		if is_instance_valid(wallet):
 			wallet.visible = true
@@ -1382,9 +1382,8 @@ func refresh_inventory() -> void:
 	if me.get("pending_job")!=null and job_id.is_empty(): job_id=me.pending_job
 	# The craft under way, also after a relaunch: the village follows it again without opening C.
 	var crafting = me.get("pending_craft")
-	if crafting is Dictionary and craft_job.is_empty():
-		craft_job = str(crafting.get("id",""))
-		follow_craft()
+	var tracker := craft_tracker()
+	if crafting is Dictionary and tracker and tracker.job_id.is_empty(): tracker.follow(str(crafting.get("id","")))
 	if frame.has("name") and is_instance_valid(frame.name):
 		frame.name.text = me.username
 		show_portrait()
@@ -1514,6 +1513,7 @@ func poll_entitlements() -> void:
 	if not result.ok:
 		# Fail closed on auth loss or disconnection; don't retain protected models.
 		cancel_preview()
+		CraftTracker.end(api)
 		api.token=""
 		build_world(false)
 		login_ui()
@@ -2536,6 +2536,7 @@ func logout() -> void:
 	veil.loading("", "start")
 	await veil.fade_out()
 	await api.post("/v1/auth/logout",{})
+	CraftTracker.end(api)
 	api.token=""
 	social.reset_session()
 	job_id=""
@@ -2549,6 +2550,7 @@ func logout() -> void:
 ## and an active expedition waits under "이어하기" after the next sign-in.
 func force_logout(reason: String) -> void:
 	if api.token.is_empty() or screen=="logging_out": return
+	CraftTracker.end(api)
 	api.token=""
 	screen="logging_out"
 	world_epoch+=1
@@ -2910,6 +2912,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if screen in ["village","survival"] and key==KEY_I:
 			toggle_drawer()
 			return
+		# C opens the craft window over the bag too (as in rooms, where the bag is a drawer as well).
+		if screen=="village" and key==KEY_C and not is_instance_valid(village_modal):
+			open_craft()
+			return
 		if is_instance_valid(right) and right.get_parent().visible:return
 		if screen=="survival":
 			match key:
@@ -2924,7 +2930,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 			if key==KEY_TAB: life.open_map()
 			if key==KEY_B: life.open_storage()
-			if key==KEY_C and not is_instance_valid(village_modal): open_craft()
 			if key==KEY_F9 and preload("res://scripts/build_mode.gd").admin: open_admin()
 			if key==KEY_O and not is_instance_valid(village_modal): open_wardrobe()
 			if key==KEY_E and not life.closest().is_empty(): life.interact()
@@ -3377,59 +3382,73 @@ static func studio_scene() -> PackedScene:
 	if studio_packed == null: studio_packed = LoadPace.take(STUDIO_SCENE)
 	return studio_packed
 
-## The village craft window (C) is the same craft window every room's [만들기] tab shows
-## (craft_panel.gd). The village keeps polling the craft after the window closes so it can say
-## when the object is ready, so the window hands polling to follow_craft.
-var craft_box: CraftPanel
-var craft_polling := false
-var craft_done: Dictionary = {}
-## The picture (or quote) already announced (CraftPanel.announce_key), so it is said once.
-var craft_announced := ""
+## Crafting is one feature wherever the player is: C (or the 제작 slot) opens the same craft window
+## (craft_window.gd) here and in every room, and the session's CraftTracker follows the craft, so it
+## goes on after the window closes and while the player walks into the home and back. The village
+## is one of the window's places: it implements craft_say, craft_place, craft_place_block,
+## craft_bag_changed and close_craft.
+## Crafting works while visiting a friend too (the craft is the player's own and lands in their bag);
+## only putting it down waits for the player's own village or rooms.
+var craft_window: Control
+## The open window's form and craft view (tests and tools).
+var craft_box: CraftPanel:
+	get: return craft_window.panel if is_instance_valid(craft_window) else null
+## The session's craft under way, the finished one and the picture already announced.
+var craft_job: String:
+	get:
+		var tracker := craft_tracker()
+		return tracker.job_id if tracker else ""
+var craft_done: Dictionary:
+	get:
+		var tracker := craft_tracker()
+		return tracker.done if tracker else {}
+var craft_announced: String:
+	get:
+		var tracker := craft_tracker()
+		return tracker.announced if tracker else ""
+
+## The session's craft follower, with this village as the place that speaks (null before signing in).
+func craft_tracker() -> Node:
+	var tracker := CraftTracker.of(api)
+	if tracker and not is_queued_for_deletion() and tracker.host!=self: tracker.attach(self)
+	return tracker
 
 func open_craft() -> void:
 	if screen!="village" or api.token.is_empty(): return
-	if social.visiting():
-		message(tr("방문 중에는 내 마을에서만 제작을 맡길 수 있어요."))
-		return
-	var v := modal_card(tr("공방 제작 의뢰"))
-	craft_box = CraftPanel.new()
-	craft_box.setup(api,{"say":func(value: String): message(value),"explain":error_message,"place_label":tr("지금 마을에 놓기"),
-		"place":place_crafted,"dark":false,"self_poll":false})
-	# Scrolls only when the window would be taller than the screen (style buttons, picture, quote).
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	v.add_child(scroll)
-	scroll.add_child(craft_box)
-	var fit := func() -> void:
-		if not is_instance_valid(craft_box): return
-		var room := maxf(260.0, get_viewport().get_visible_rect().size.y - 230.0)
-		scroll.custom_minimum_size.y = minf(craft_box.get_combined_minimum_size().y, room)
-	craft_box.minimum_size_changed.connect(fit)
-	fit.call()
-	craft_box.job_id = craft_job
-	craft_box.follow_requested.connect(func():
-		craft_job = craft_box.job_id
-		follow_craft())
-	craft_box.job_started.connect(func(_id: String): refresh_inventory())
-	craft_box.job_finished.connect(func(job: Dictionary):
-		if job.get("state","")=="cancelled":
-			craft_job = ""
-			refresh_inventory())
-	craft_box.new_craft.connect(func(): craft_done = {})
-	await craft_box.open()
-	if craft_job.is_empty() and not craft_box.job_id.is_empty(): craft_job = craft_box.job_id
-	if craft_job.is_empty() and not craft_done.is_empty(): render_craft(craft_done)
+	close_village_modal()
+	cancel_preview()
+	craft_window = CraftWindow.new()
+	craft_window.setup(self,api)
+	village_modal = craft_window
+	ui.add_child(craft_window)
+	player.controls_enabled=false
+	await craft_window.open()
+
+func close_craft() -> void:
+	if is_instance_valid(craft_window) and village_modal==craft_window: close_village_modal()
+	elif is_instance_valid(craft_window): craft_window.queue_free()
+
+func craft_say(words: String) -> void:
+	message(words)
+
+func craft_bag_changed() -> void:
+	refresh_inventory()
+
+## Finished crafts go down in the player's own village only.
+func craft_place_block() -> String:
+	return CraftWords.place_block("visit") if social.visiting() else ""
+
+func craft_place(object_id: String) -> void:
+	await place_crafted(object_id)
 
 func render_craft(job: Dictionary) -> void:
-	if not is_instance_valid(craft_box): return
-	craft_box.show_job(job)
+	if is_instance_valid(craft_box): craft_box.show_job(job)
 
 ## Writes the idea into the open craft window and asks for it (tests and tools).
 func request_craft(idea: String) -> void:
 	if not is_instance_valid(craft_box): return
 	craft_box.prompt.text = idea
 	await craft_box.request()
-	craft_job = craft_box.job_id
 
 func confirm_craft() -> void:
 	if is_instance_valid(craft_box): await craft_box.confirm(true)
@@ -3437,60 +3456,24 @@ func confirm_craft() -> void:
 func cancel_craft() -> void:
 	if is_instance_valid(craft_box): await craft_box.cancel()
 
-## Polls the job until it needs the player or finishes, updating the open window. A dropped
-## connection or a busy server is asked again, slower each time; only a craft that is gone stops it.
-## The picture (or quote) and the finished object are announced once each, window open or not.
+## Follows the craft under way (the session's one loop; see craft_tracker.gd).
 func follow_craft() -> void:
-	if craft_polling: return
-	craft_polling = true
-	var epoch := world_epoch
-	var failures := 0
-	while not craft_job.is_empty() and epoch==world_epoch:
-		var asked := craft_job
-		var response: Dictionary = await api.request("/v1/studio/jobs/"+craft_job)
-		if epoch!=world_epoch: break
-		if asked!=craft_job: continue
-		if not response.ok:
-			if int(response.get("status",0))==404:
-				craft_job = ""
-				if is_instance_valid(craft_box): craft_box.job_id = ""
-				break
-			failures += 1
-			await get_tree().create_timer(CraftPanel.poll_pause(failures)).timeout
-			continue
-		failures = 0
-		var job: Dictionary = response.data
-		render_craft(job)
-		if job.state=="awaiting_confirmation":
-			if CraftPanel.announce_key(job)!=craft_announced:
-				craft_announced = CraftPanel.announce_key(job)
-				CraftPanel.chime("twinkle")
-				message(CraftPanel.ready_words(job,not is_instance_valid(craft_box)))
-			break
-		if job.state in CraftPanel.TERMINAL:
-			craft_job = ""
-			if is_instance_valid(craft_box): craft_box.job_id = ""
-			if job.state=="ready": craft_done = job
-			await refresh_inventory()
-			if job.state=="ready":
-				sound.effect("reward")
-				message(tr("새 물건이 완성됐어요! C를 눌러 확인해 보세요."))
-			elif job.state=="unknown":
-				message(tr("제작 요청을 확인하고 있어요. 운영자가 확인하면 맡긴 별씨가 돌아와요."))
-			elif job.state=="failed":
-				message(tr("제작을 마치지 못했어요. 맡긴 별씨는 돌려드렸어요."))
-			break
-		await get_tree().create_timer(2.0).timeout
-	craft_polling = false
+	var tracker := craft_tracker()
+	if tracker: await tracker.follow()
 
+## "여기에 놓기" in the village: the new object follows the cursor to a free spot.
 func place_crafted(object_id: String) -> void:
-	craft_done = {}
+	var tracker := craft_tracker()
+	if tracker: tracker.clear_done()
 	close_village_modal()
-	for i in me.objects.size():
-		if me.objects[i].id==object_id:
-			select_object(i)
-			await begin_place()
-			return
+	# The bag may not have heard of it yet: asked again once.
+	for attempt in 2:
+		for i in me.objects.size():
+			if me.objects[i].id==object_id:
+				select_object(i)
+				await begin_place()
+				return
+		if attempt==0: await refresh_inventory()
 
 ## Operator tools (F9, admin accounts only): top up currencies through the
 ## server's ledgered admin route and jump to any village site.

@@ -1,59 +1,47 @@
 extends VBoxContainer
-## The one crafting window, used by the village (C) and every room's [만들기] tab, so both make
-## things the same way. Flow: describe the object (optionally add a photo) and pick options ->
+## The craft form and the craft under way, inside the one craft window (craft_window.gd) the village
+## and every room open with C. Flow: describe the object (optionally add a photo) and pick options ->
 ## the server designs it (LLM) -> with no photo the AI first draws a concept picture, shown with the
 ## text it will send to Tripo; the player builds from the picture, redraws it (+5 credits) or builds
-## from the text -> quote confirmed -> Tripo builds -> place it. Options open only when their cheapest
-## craft fits the server's per-craft cap (see /v1/studio max_tripo_credits).
+## from the text -> quote confirmed -> Tripo builds -> place it here. Options open only when their
+## cheapest craft fits the server's per-craft cap (see /v1/studio max_tripo_credits).
+## The session's CraftTracker follows the craft (also with the window closed, across rooms); this
+## panel shows what it last heard and sends the player's choices.
 ##   var panel := CraftPanel.new(); parent.add_child(panel)
-##   panel.setup(api, {"say": message, "explain": error_message, "place_label": tr("지금 마을에 놓기"),
-##       "place": place_crafted, "dark": false, "preview": Callable()})
+##   panel.setup(place, api)   # place: the host (craft_window.gd lists what it implements)
 ##   await panel.open()
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const BuildMode = preload("res://scripts/build_mode.gd")
 const I18n = preload("res://scripts/i18n.gd")
-const Fx = preload("res://scripts/fx.gd")
+const CraftTracker = preload("res://scripts/craft_tracker.gd")
+const CraftWords = preload("res://scripts/craft_words.gd")
 ## The chosen look and size follow the account (cloud_prefs.gd syncs this section).
 const SETTINGS_SECTION := "craft"
 
 signal job_started(job_id: String)
 signal job_finished(job: Dictionary)
-## Hosts that watch the craft themselves (the village keeps polling after its window closes) set
-## "self_poll": false and get this instead of the panel polling.
-signal follow_requested
 ## The player cleared a finished craft ("새로 만들기").
 signal new_craft
 
 const CONCEPT_CREDITS := 5
-## "unknown" is a submission the server could not confirm: it waits for an operator (who gives the
-## starseeds back), so the window stops following it and the player can craft again.
-const TERMINAL := ["ready", "failed", "cancelled", "unknown"]
+const TERMINAL = CraftTracker.TERMINAL
 ## The server is still working: the window shows the steps and keeps them between polls.
 const WORKING := ["queued", "planning", "building", "submitting"]
-## Polls back off from 2 s to this while the server cannot be reached.
-const MAX_POLL_PAUSE := 30.0
+const MAX_POLL_PAUSE = CraftTracker.MAX_POLL_PAUSE
 
-var api: Node
-var say: Callable
-var explain: Callable
-var place_action: Callable
-var preview_action: Callable
-var place_label := ""
-var dark := false
-var self_poll := true
+## The place the window is open in (main.gd or studio.gd) and the session's craft follower.
+var host: Node
+var tracker: Node
 var info: Dictionary = {}
 var cap := 0
 var job_id := ""
 var job: Dictionary = {}
 var image_data := ""
 var busy := false
-var polling := false
 var textures := {}
 var defaults_applied := false
 ## The steps view while the server works (see _show_working); empty when another view shows.
 var working: Dictionary = {}
-## The job and picture the player was last told about ("그림이 완성됐어요").
-var announced := ""
 
 var form: VBoxContainer
 var status: VBoxContainer
@@ -91,15 +79,9 @@ var kind_timer: Timer
 ## The moving option was chosen for the player (a clock), not by them.
 var forced_motion := false
 
-func setup(network: Node, options: Dictionary) -> void:
-	api = network
-	say = options.get("say", Callable())
-	explain = options.get("explain", Callable())
-	place_action = options.get("place", Callable())
-	preview_action = options.get("preview", Callable())
-	place_label = str(options.get("place_label", tr("지금 마을에 놓기")))
-	dark = bool(options.get("dark", false))
-	self_poll = bool(options.get("self_poll", true))
+func setup(place: Node, network: Node) -> void:
+	host = place
+	tracker = CraftTracker.of(network)
 	add_theme_constant_override("separation", 10)
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var config := ConfigFile.new()
@@ -108,21 +90,43 @@ func setup(network: Node, options: Dictionary) -> void:
 	size_id = str(config.get_value(SETTINGS_SECTION, "size", size_id))
 	_build_form()
 
-## Reads the server's crafting settings (or uses `studio` already read) and shows the form, or follows
-## a craft that is still under way.
+## Opens on the crafting settings the session last read (at once) and reads them again behind, then
+## shows what the session's craft is doing: the craft under way, the finished one, or the form.
 func open(studio: Dictionary = {}) -> void:
-	if studio.is_empty():
-		var reply: Dictionary = await api.request("/v1/studio")
-		if reply.ok: studio = reply.data
+	if tracker == null: return
+	if not tracker.updated.is_connected(_tracked):
+		tracker.updated.connect(_tracked)
+		tracker.info_changed.connect(apply_info)
+	if studio.is_empty(): studio = tracker.info
+	if studio.is_empty(): studio = await tracker.fetch_info()
+	else: tracker.fetch_info()
 	apply_info(studio)
-	if job_id.is_empty():
-		for entry in studio.get("jobs", []):
-			if not str(entry.get("state", "")) in TERMINAL:
-				job_id = str(entry.id)
-				break
-	_update_options()
-	if job_id.is_empty(): _show_form()
-	else: follow()
+	_show_tracked()
+
+## The session's craft as the tracker last heard it.
+func _show_tracked() -> void:
+	if not tracker.job_id.is_empty():
+		job_id = tracker.job_id
+		show_job(tracker.job if not tracker.job.is_empty() else {"id": job_id, "state": "queued"})
+		if str(tracker.job.get("state", "")) != "awaiting_confirmation": tracker.follow()
+	elif not tracker.done.is_empty():
+		job_id = ""
+		show_job(tracker.done)
+	else:
+		job_id = ""
+		_show_form()
+
+## Each answer the tracker hears about the craft ({} when it is gone or was cleared).
+func _tracked(value: Dictionary) -> void:
+	if value.is_empty():
+		job_id = ""
+		job = {}
+		if not tracker.done.is_empty(): show_job(tracker.done)
+		else: _show_form()
+		return
+	job_id = tracker.job_id
+	show_job(value)
+	if str(value.get("state", "")) in TERMINAL: job_finished.emit(value)
 
 func apply_info(studio: Dictionary) -> void:
 	info = studio
@@ -346,12 +350,12 @@ func _base_body() -> Dictionary:
 ## Older servers do not know the question: the form works as before.
 func _ask_kind() -> void:
 	var words := prompt.text.strip_edges()
-	if not kind_supported or not is_instance_valid(api): return
+	if not kind_supported or tracker == null: return
 	if words.length() < 2:
 		kind_info = {}
 		_update_options()
 		return
-	var reply: Dictionary = await api.post("/v1/studio/kind", {"prompt": words})
+	var reply: Dictionary = await tracker.api.post("/v1/studio/kind", {"prompt": words})
 	if not is_instance_valid(prompt) or prompt.text.strip_edges() != words: return
 	if reply.ok and reply.data is Dictionary: kind_info = reply.data
 	else:
@@ -367,7 +371,7 @@ func request() -> void:
 		return
 	busy = true
 	_update_options()
-	var reply: Dictionary = await api.post("/v1/studio/jobs", api.mutation(_body()))
+	var reply: Dictionary = await tracker.api.post("/v1/studio/jobs", tracker.api.mutation(_body()))
 	busy = false
 	_update_options()
 	if not reply.ok:
@@ -376,68 +380,27 @@ func request() -> void:
 	job_id = str(reply.data.id)
 	job_started.emit(job_id)
 	_say(tr("설계를 준비하고 있어요. 다른 가구를 꾸미며 기다릴 수 있어요."))
-	follow()
+	tracker.start(reply.data)
+	# The starseeds were set aside: the place's wallet and bag show it.
+	tracker.bag_changed()
 
 # ------------------------------------------------------------------ the craft under way
 
-## Polls the craft until it needs the player or finishes.
+## The session's tracker follows the craft: one loop for the whole session, window open or not.
 func follow() -> void:
-	if not self_poll:
-		follow_requested.emit()
-		return
-	if polling or job_id.is_empty(): return
-	polling = true
-	var failures := 0
-	while not job_id.is_empty() and is_inside_tree():
-		var asked := job_id
-		var reply: Dictionary = await api.request("/v1/studio/jobs/" + job_id)
-		if not is_inside_tree(): break
-		if asked != job_id: continue
-		if not reply.ok:
-			# A craft that is gone stops; a dropped connection or a busy server is asked again, slower each time.
-			if int(reply.get("status", 0)) == 404:
-				job_id = ""
-				_show_form()
-				break
-			failures += 1
-			await get_tree().create_timer(poll_pause(failures)).timeout
-			continue
-		failures = 0
-		show_job(reply.data)
-		var state := str(reply.data.state)
-		if state == "awaiting_confirmation":
-			if announce_key(reply.data) != announced:
-				announced = announce_key(reply.data)
-				_say(ready_words(reply.data))
-				chime("twinkle")
-			break
-		if state in TERMINAL:
-			job_id = ""
-			job_finished.emit(reply.data)
-			if state == "ready": chime("tune")
-			break
-		await get_tree().create_timer(2.0).timeout
-	polling = false
+	if tracker != null: await tracker.follow(job_id)
 
-## Seconds before asking again after `failures` failed polls in a row: 4, 8, 16, then 30.
 static func poll_pause(failures: int) -> float:
-	return minf(MAX_POLL_PAUSE, 2.0 * pow(2.0, failures))
+	return CraftTracker.poll_pause(failures)
 
-## Names the picture (or quote) the player is told about once: the job and its draw count.
 static func announce_key(value: Dictionary) -> String:
-	return str(value.get("id", "")) + ":" + str(value.get("concept", {}).get("draws", 0))
+	return CraftTracker.announce_key(value)
 
-## What the toast says when the craft needs the player; `away` (the village window is closed) adds
-## how to open it.
 static func ready_words(value: Dictionary, away := false) -> String:
-	var picture: bool = not value.get("concept", {}).is_empty()
-	if away: return TranslationServer.translate("AI가 그림을 그렸어요! C를 눌러 확인해 주세요." if picture else "설계와 견적이 나왔어요! C를 눌러 확인해 주세요.")
-	return TranslationServer.translate("AI가 그림을 그렸어요! 마음에 드는지 확인해 주세요." if picture else "설계와 견적이 나왔어요! 확인하고 제작을 맡겨 주세요.")
+	return CraftWords.ready_words(value, away)
 
-## A short sound for a craft moment (the picture is ready, the object is done).
 static func chime(kind: String) -> void:
-	if DisplayServer.get_name() == "headless": return
-	Fx.sound(null, kind, Vector3.INF, 1.0, 4.0)
+	CraftTracker.chime(kind)
 
 func show_job(value: Dictionary) -> void:
 	job = value
@@ -466,8 +429,13 @@ func show_job(value: Dictionary) -> void:
 		_label(status, tr("가방에 들어왔어요. 마을이든 집이든 비어 있는 곳에 놓을 수 있어요."), 15)
 		var object_id := str(value.get("object_id", ""))
 		var row := _row(status)
-		if place_action.is_valid(): _button(row, place_label, func() -> void: place_action.call(object_id), "gold")
+		var place := _button(row, tr(CraftWords.PLACE), func() -> void: _place(object_id), "gold")
 		_button(row, tr("새로 만들기"), _start_over)
+		# Placing works where the player can decorate; elsewhere the button says why (the bag keeps it).
+		var block := str(host.craft_place_block()) if is_instance_valid(host) and host.has_method("craft_place_block") else ""
+		if not block.is_empty():
+			place.disabled = true
+			_label(status, block, 13, true)
 	elif state == "unknown":
 		# The server could not tell whether Tripo got the request; an operator checks and refunds it.
 		_label(status, tr("확인이 필요해요"), 20)
@@ -477,8 +445,14 @@ func show_job(value: Dictionary) -> void:
 
 func _start_over() -> void:
 	job = {}
+	if tracker != null: tracker.clear_done()
 	new_craft.emit()
 	_show_form()
+
+## "여기에 놓기": the place puts the new object down where the player is (and closes the window).
+func _place(object_id: String) -> void:
+	if tracker != null: tracker.clear_done()
+	if is_instance_valid(host) and host.has_method("craft_place"): host.craft_place(object_id)
 
 func _show_form() -> void:
 	form.visible = true
@@ -642,7 +616,7 @@ func _paint_step(step: Dictionary, mode: String) -> void:
 	if before == mode: return
 	step.mode = mode
 	var gold := Color("e9b552")
-	var ink: Color = RpgUi.INK if dark else RpgUi.PAPER_INK
+	var ink: Color = RpgUi.PAPER_INK
 	var muted := Color(ink, 0.35)
 	var lit := mode != "pending"
 	var box := StyleBoxFlat.new()
@@ -672,9 +646,9 @@ func _paint_step(step: Dictionary, mode: String) -> void:
 		dot.scale = Vector2.ONE * 1.3
 		dot.create_tween().tween_property(dot, "scale", Vector2.ONE, 0.35).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
-## Gold on the dark drawer, a deeper amber on the paper card.
+## A deeper amber on the paper card.
 func _accent() -> Color:
-	return RpgUi.GOLD if dark else Color("8a5a1c")
+	return Color("8a5a1c")
 
 func _show_quote(value: Dictionary) -> void:
 	var quote: Dictionary = value.get("provenance", {})
@@ -693,7 +667,7 @@ func _show_quote(value: Dictionary) -> void:
 		status.add_child(picture)
 		_load_picture(picture, str(concept.get("url", "")))
 	if not design.get("parts", []).is_empty():
-		_label(status, tr("AI가 이렇게 정리했어요 (Tripo에 보내는 문장)"), 13, false, RpgUi.GOLD if dark else Color("8a5a1c"))
+		_label(status, tr("AI가 이렇게 정리했어요 (Tripo에 보내는 문장)"), 13, false, _accent())
 		for part in design.parts:
 			_label(status, "• %s: %s" % [part.id, part.prompt], 13, true)
 	var rate: float = float(quote.get("stars_per_credit", 1.0))
@@ -714,7 +688,7 @@ func _show_quote(value: Dictionary) -> void:
 		var text_row := _row(status)
 		_button(text_row, tr("그림 없이 글로 만들기 · 별씨 %d") % with_text, func() -> void: confirm(false))
 		row = text_row
-	if preview_action.is_valid(): _button(row, tr("모습 미리보기"), func() -> void: preview_action.call(job_id))
+	_button(row, tr("모습 미리보기"), func() -> void: preview_design(tracker.api, job_id, self, _say))
 	_button(row, tr("취소하고 별씨 돌려받기"), cancel)
 
 func _load_picture(target: TextureRect, url: String) -> void:
@@ -722,7 +696,7 @@ func _load_picture(target: TextureRect, url: String) -> void:
 	if textures.has(url):
 		target.texture = textures[url]
 		return
-	var reply: Dictionary = await api.request(url.split("?")[0], {}, HTTPClient.METHOD_GET, true)
+	var reply: Dictionary = await tracker.api.request(url.split("?")[0], {}, HTTPClient.METHOD_GET, true)
 	if not reply.ok or not is_instance_valid(target): return
 	var image := Image.new()
 	var bytes: PackedByteArray = reply.bytes
@@ -735,37 +709,52 @@ func _load_picture(target: TextureRect, url: String) -> void:
 func confirm(use_picture: bool) -> void:
 	if busy or job_id.is_empty(): return
 	busy = true
-	var reply: Dictionary = await api.post("/v1/studio/jobs/" + job_id + "/confirm", api.mutation({"use_concept": use_picture}))
+	var reply: Dictionary = await tracker.api.post("/v1/studio/jobs/" + job_id + "/confirm", tracker.api.mutation({"use_concept": use_picture}))
 	busy = false
 	if not reply.ok:
 		_say(_explain(reply.error))
 		return
 	RpgUi.sfx("click")
 	_say(tr("확인한 설계로 3D 메시를 만들고 있어요"))
-	follow()
+	tracker.follow(job_id)
 
 func redraw_concept() -> void:
 	if busy or job_id.is_empty(): return
 	busy = true
-	var reply: Dictionary = await api.post("/v1/studio/jobs/" + job_id + "/redraw", api.mutation())
+	var reply: Dictionary = await tracker.api.post("/v1/studio/jobs/" + job_id + "/redraw", tracker.api.mutation())
 	busy = false
 	if not reply.ok:
 		_say(_explain(reply.error))
 		return
-	follow()
+	tracker.follow(job_id)
 
 func cancel() -> void:
 	if busy or job_id.is_empty(): return
 	busy = true
-	var reply: Dictionary = await api.post("/v1/studio/jobs/" + job_id + "/cancel", api.mutation())
+	var reply: Dictionary = await tracker.api.post("/v1/studio/jobs/" + job_id + "/cancel", tracker.api.mutation())
 	busy = false
 	if not reply.ok:
 		_say(_explain(reply.error))
 		return
-	var cancelled := {"id": job_id, "state": "cancelled"}
+	var cancelled := job_id
 	job_id = ""
-	job_finished.emit(cancelled)
+	tracker.cancelled(cancelled)
 	_show_form()
+
+## "모습 미리보기": the design as simple shapes that move, before anything is paid (design_preview.gd).
+static func preview_design(network: Node, id: String, parent: Node, say: Callable) -> void:
+	if id.is_empty() or not is_instance_valid(network): return
+	var response: Dictionary = await network.request("/v1/studio/jobs/" + id + "/preview")
+	if not is_instance_valid(parent): return
+	if not response.ok:
+		say.call(TranslationServer.translate("설계 미리보기 실패 · ") + str(response.error))
+		return
+	var window = load("res://scripts/design_preview.gd").new()
+	parent.add_child(window)
+	if window.show_plan(response.data): window.popup_centered()
+	else:
+		window.queue_free()
+		say.call(TranslationServer.translate("설계를 표시하지 못했습니다"))
 
 # ------------------------------------------------------------------ styles and sizes
 
@@ -850,15 +839,14 @@ func _size_text(entry: Dictionary) -> String:
 func _number(value) -> float:
 	return float(value) if value is int or value is float else 0.0
 
+## In the open window (a note over the card) and as the place's toast.
 func _say(value: String) -> void:
-	if say.is_valid(): say.call(value)
+	if tracker != null: tracker.say(value)
+	elif is_instance_valid(host) and host.has_method("craft_say"): host.craft_say(value)
 
+## The same words for every refusal wherever the window opens (craft_words.gd).
 func _explain(code: String) -> String:
-	# Bad input in the craft window is about the description, never the login form's name and password.
-	if code in ["invalid_craft_request", "invalid_request"]: return tr("만들 물건을 2~1500자로 적어 주세요.")
-	# Some refusals arrive already worded (the per-account limit).
-	if code.contains(" ") or not explain.is_valid(): return code
-	return str(explain.call(code))
+	return CraftWords.error(code, cap)
 
 func _label(parent: Node, value: String, size := 15, muted := false, color := Color(0, 0, 0, 0)) -> Label:
 	var l := Label.new()
@@ -867,12 +855,12 @@ func _label(parent: Node, value: String, size := 15, muted := false, color := Co
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.add_theme_font_size_override("font_size", size)
 	if size >= 20: l.add_theme_font_override("font", RpgUi.FONT_DISPLAY)
-	var tone: Color = color if color.a > 0.0 else ((RpgUi.INK if not muted else Color(RpgUi.INK, .72)) if dark else (RpgUi.PAPER_INK if not muted else RpgUi.PAPER_MUTED))
+	var tone: Color = color if color.a > 0.0 else (RpgUi.PAPER_INK if not muted else RpgUi.PAPER_MUTED)
 	l.add_theme_color_override("font_color", tone)
 	parent.add_child(l)
 	return l
 
-## Button rows wrap, so the same window fits the village card and a room's narrow drawer.
+## Button rows wrap with the window's width.
 func _row(parent: Node) -> HFlowContainer:
 	var r := HFlowContainer.new()
 	r.add_theme_constant_override("h_separation", 8)

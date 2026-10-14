@@ -4,14 +4,17 @@ const Main = preload("res://scripts/main.gd")
 func _initialize() -> void: call_deferred("run")
 func run() -> void:
 	var user := ""
+	# The local world by default; --server=URL for another (a QA server).
+	var server := "http://127.0.0.1:8765"
 	var password := ""
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--user="): user = arg.trim_prefix("--user=")
 		if arg.begins_with("--password="): password = arg.trim_prefix("--password=")
+		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
 	var app = Main.new()
 	root.add_child(app)
 	await create_timer(1.5).timeout
-	await app.authenticate(false,"http://127.0.0.1:8765",user,password,"")
+	await app.authenticate(false,server,user,password,"")
 	await create_timer(4).timeout
 	for id in app.loaded:
 		var node: Node3D = app.loaded[id]

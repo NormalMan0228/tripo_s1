@@ -436,6 +436,10 @@
    "en": "C · Commission a New Item",
    "zh": "C · 委托制作新物品"
   },
+  "C 제작": {
+   "en": "C Craft",
+   "zh": "C 制作"
+  },
   "C를 누르면 새 물건 제작을 맡길 수 있어요.": {
    "en": "Press C to commission a new craft.",
    "zh": "按 C 可以委托制作新物品。"
@@ -523,6 +527,10 @@
   "I  보관함": {
    "en": "I  Bag",
    "zh": "I  背包"
+  },
+  "I 가방   C 제작": {
+   "en": "I Bag   C Craft",
+   "zh": "I 背包   C 制作"
   },
   "I 제작 · F 모닥불 · Q 식사": {
    "en": "I Craft · F Campfire · Q Eat",
@@ -1279,6 +1287,10 @@
   "공방에서 물건을 만들고 있습니다…": {
    "en": "The Workshop is crafting your item…",
    "zh": "工坊正在制作物品…"
+  },
+  "공방이 너무 오래 걸려 이번 제작을 멈췄어요. 맡긴 별씨는 돌려드렸어요.": {
+   "en": "The workshop took too long, so this craft was stopped. Your starseeds were returned.",
+   "zh": "工坊耗时太久，本次制作已停止。已退还托付的星种。"
   },
   "공식 요금·실측 기반 예상: ": {
    "en": "Estimate from official rates and measurements: ",
@@ -6364,6 +6376,10 @@
    "en": "This PC's World",
    "zh": "本机世界"
   },
+  "이 건물은 꾸밀 수 없어요. 가방에 보관돼요.": {
+   "en": "This building can't be decorated. It stays in your bag.",
+   "zh": "这座建筑不能装饰。它会留在你的背包里。"
+  },
   "이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!": {
    "en": "This account has used all its craft requests. Decorate your village with what you made!",
    "zh": "这个账号的制作委托次数已用完。用做好的物品装饰村庄吧！"
@@ -7188,6 +7204,10 @@
    "en": "Crafted",
    "zh": "制作完成"
   },
+  "제작 요청을 확인하고 있어요. 운영자가 확인하면 맡긴 별씨가 돌아와요.": {
+   "en": "We're checking your craft request. Your starseeds come back once an operator confirms it.",
+   "zh": "正在确认制作请求。运营者确认后会退还托付的星种。"
+  },
   "제작 재료가 부족합니다.": {
    "en": "Not enough crafting materials.",
    "zh": "制作材料不足。"
@@ -7227,6 +7247,10 @@
   "제작에 실패했어요. 맡긴 별씨는 돌려드렸어요.": {
    "en": "Crafting failed. Your Starseeds have been returned.",
    "zh": "制作失败了。委托的星种已退还给你。"
+  },
+  "제작을 마치지 못했어요. 맡긴 별씨는 돌려드렸어요.": {
+   "en": "The craft couldn't be finished. Your starseeds were returned.",
+   "zh": "制作未能完成。已退还托付的星种。"
   },
   "제작을 맡겨 마을 꾸미기": {
    "en": "Commission crafts to decorate the village",
@@ -7931,6 +7955,10 @@
   "친구의 공방은 들어갈 수 없어요. 친구 집에는 놀러 갈 수 있어요.": {
    "en": "You can't enter a friend's workshop, but you can visit their home.",
    "zh": "不能进入朋友的工坊，但可以去朋友家做客。"
+  },
+  "친구의 마을과 집에는 놓을 수 없어요. 가방에 보관돼요.": {
+   "en": "You can't place it in a friend's village or home. It stays in your bag.",
+   "zh": "不能放在朋友的村庄或家里。它会留在你的背包里。"
   },
   "칠한 것을 모두 지우고 처음 모습으로": {
    "en": "Remove all paint and return to the original look",

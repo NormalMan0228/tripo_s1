@@ -82,7 +82,7 @@ func run() -> void:
 	job = await wait_state(panel, ["ready", "failed"], 40.0)
 	expect(str(job.get("state")) == "ready", "built from the approved picture")
 	expect(app.craft_job.is_empty() and not app.craft_done.is_empty(), "village knows the craft is done")
-	expect(labels(panel.status).contains(tr("지금 마을에 놓기")), "place button offered")
+	expect(labels(panel.status).contains(tr("여기에 놓기")), "place button offered")
 	var mine: Array = app.me.objects.filter(func(o) -> bool: return o.id == str(job.get("object_id", "")))
 	expect(mine.size() == 1 and int(app.me.shards) < shards, "object in the bag and starseeds spent")
 	await capture("ready")
@@ -90,7 +90,7 @@ func run() -> void:
 	# Photo crafts skip the picture; cancelling gives the starseeds back.
 	await app.open_craft()
 	panel = app.craft_box
-	expect(labels(panel.status).contains(tr("지금 마을에 놓기")), "reopening shows the finished craft")
+	expect(labels(panel.status).contains(tr("여기에 놓기")), "reopening shows the finished craft")
 	panel.status.find_children("*", "Button", true, false).filter(func(b) -> bool: return b.text == tr("새로 만들기"))[0].pressed.emit()
 	await process_frame
 	expect(panel.form.visible and app.craft_done.is_empty(), "새로 만들기 returns to the form")
@@ -114,7 +114,7 @@ func run() -> void:
 	await panel.request()
 	var two_letters := panel.job_id
 	expect(not two_letters.is_empty(), "a two-letter craft (의자) is accepted")
-	app.craft_job = ""
+	app.craft_tracker().job_id = ""
 	await app.refresh_inventory()
 	expect(app.craft_job == two_letters, "the village resumes the craft under way from /v1/me")
 	job = await wait_state(panel, ["awaiting_confirmation"])
@@ -138,15 +138,15 @@ func run() -> void:
 	expect(CraftPanel.poll_pause(1) == 4.0 and CraftPanel.poll_pause(9) == 30.0, "failed polls back off up to 30 s")
 	panel.show_job({})
 	app.close_village_modal()
-	# The room's [만들기] tab is the same window and places the craft in the room.
+	# A room opens the same window (C) and places the craft in the room.
 	Engine.set_meta("studio_session", {"token": app.api.token, "url": app.api.base_url, "room": "home"})
 	var studio: Node = load("res://scenes/studio.tscn").instantiate()
 	app.queue_free()
 	root.add_child(studio)
 	await create_timer(2.5).timeout
+	await studio.open_craft()
 	panel = studio.craft
-	expect(panel is CraftPanel and panel.form.visible and studio.prompt == panel.prompt, "room create tab is the shared craft window")
-	studio.set_dock_open(true)
+	expect(panel is CraftPanel and panel.form.visible and studio.prompt == panel.prompt, "the room's C opens the same craft window")
 	await create_timer(0.3).timeout
 	await capture("room-form")
 	# Named styles and sizes from the server, remembered for the next craft.
@@ -164,7 +164,7 @@ func run() -> void:
 	await capture("room-concept")
 	await studio.confirm_job()
 	job = await wait_state(panel, ["ready", "failed"], 40.0)
-	expect(str(job.get("state")) == "ready" and labels(panel.status).contains(tr("이 방에 놓기")), "room craft finished with a place-here button")
+	expect(str(job.get("state")) == "ready" and labels(panel.status).contains(tr("여기에 놓기")), "room craft finished with a place-here button")
 	await create_timer(0.8).timeout
 	await studio.place_crafted(str(job.get("object_id", "")))
 	expect(studio.placement_mode and str(studio.selected.get("id", "")) == str(job.get("object_id", "")), "place-here starts placing the new object")
