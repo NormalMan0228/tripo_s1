@@ -55,7 +55,7 @@ func build(view: Camera3D) -> void:
 	await _build_runtime()
 
 ## The baked island (tools/bake_archipelago.gd): read with everything it uses on the worker thread,
-## made off the main thread, moved in a piece at a time, its scripts' lists found again, then its
+## made in a frame of its own, moved in a piece at a time, its scripts' lists found again, then its
 ## colliders made a chunk a frame from the generated collision. False (nothing added) when the
 ## scene cannot be read.
 func _build_from_bake() -> bool:
@@ -74,16 +74,13 @@ func _build_from_bake() -> bool:
 	if packed == null:
 		push_warning("The baked island could not be read: the map builds from its layouts")
 		return false
-	var baked: Node3D
-	if LoadPace.covered:
-		# Thousands of nodes: made on a worker thread (they are not in the tree yet) while the card turns.
-		var made := []
-		var task := WorkerThreadPool.add_task(func(): made.append(_instantiate_baked(packed)))
-		while not WorkerThreadPool.is_task_completed(task): await get_tree().process_frame
-		WorkerThreadPool.wait_for_task_completion(task)
-		baked = made[0] if not made.is_empty() else null
-	else:
-		baked = _instantiate_baked(packed)
+	# Made on the main thread at the start of a frame of its own (2500 nodes, 25-40 ms): made on a
+	# worker thread it usually cost the main thread nothing but now and then held it 0.7 s.
+	if LoadPace.covered: await get_tree().process_frame
+	var baked := packed.instantiate() as Node3D
+	if baked != null:
+		await LoadPace.step("baked island")
+		_settle_baked(baked)
 	if baked == null: return false
 	LoadPace.mark("island instantiated")
 	var colliders: Array = baked.get_meta("baked_colliders", [])
@@ -134,16 +131,13 @@ func _build_from_bake() -> bool:
 	LoadPace.mark("island colliders made")
 	return true
 
-## The baked scene's nodes, with what the build changed inside the model instances set again.
-static func _instantiate_baked(packed: PackedScene) -> Node3D:
-	var baked := packed.instantiate() as Node3D
-	if baked == null: return null
+## The baked scene's nodes get what the build changed inside the model instances set again.
+static func _settle_baked(baked: Node3D) -> void:
 	for change: Array in baked.get_meta("baked_overrides", []):
 		var node := baked.get_node_or_null(NodePath(String(change[0])))
 		if node: node.set(String(change[1]), change[2])
 	# Its nodes move into the live map: they belong to no scene there (as the runtime build's).
 	for node in baked.find_children("*", "", true, true): node.owner = null
-	return baked
 
 func _build_runtime() -> void:
 	var span := LoadPace.narrow(0.0, 0.08)
