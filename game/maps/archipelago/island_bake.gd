@@ -23,7 +23,7 @@ const DIR := "res://maps/archipelago/generated/"
 const MANIFEST := DIR+"manifest.json"
 const COLLISION := DIR+"collision.res"
 const ISLAND := DIR+"island.scn"
-const FORMAT := 2
+const FORMAT := 3
 ## Simplification error (metres in the world): the ground, then everything else.
 const GROUND_EPSILON := 0.01
 const EPSILON := 0.02
@@ -70,8 +70,8 @@ static func key() -> String:
 		if not text.is_empty(): context.update(text.to_utf8_buffer())
 	return context.finish().hex_encode()
 
-## Every map asset (GLB, PNG and .import) with its modification time (source runs only; empty in
-## exports): a re-ported or reimported asset makes the bake stale. Cheap (no file is opened).
+## Every map asset: GLB and PNG by modification time, .import by its text (source runs only; empty
+## in exports): a re-ported asset or changed import settings make the bake stale.
 static func stamp() -> Dictionary:
 	var out := {}
 	if exported: return out
@@ -80,7 +80,11 @@ static func stamp() -> Dictionary:
 		var dir: String = dirs.pop_back()
 		for sub in DirAccess.get_directories_at(dir): dirs.append(dir+sub+"/")
 		for file in DirAccess.get_files_at(dir):
-			if file.get_extension() in ["glb", "png", "import"]:
+			if file.get_extension() == "import":
+				# Godot saves .import files again on any reimport (here or in another checkout sharing
+				# the folder) without changing them: their text counts, not their time (small files).
+				out[(dir+file).trim_prefix(ASSETS)] = "md5:" + FileAccess.get_file_as_string(dir+file).replace("\r\n", "\n").md5_text()
+			elif file.get_extension() in ["glb", "png"]:
 				out[(dir+file).trim_prefix(ASSETS)] = str(FileAccess.get_modified_time(dir+file))
 	return out
 
