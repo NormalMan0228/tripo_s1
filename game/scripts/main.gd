@@ -217,8 +217,9 @@ func _ready() -> void:
 	# Window, renderer, buses, key bindings, UI scale (game_settings.gd).
 	GameSettings.apply_all(get_tree())
 	var veil := Transition.of(get_tree())
-	# The first load shows the island cover art; a walk out of a room keeps its card.
-	if not Engine.has_meta("studio_session"): veil.loading("", "start")
+	# The first load shows the island cover art; a walk out of a room keeps its card. At the game's
+	# start boot.gd (main.tscn's first node) has drawn it already: it stays as it is (same tip).
+	if not Engine.has_meta("studio_session") and not (veil.card.visible and veil.style == "start"): veil.loading("", "start")
 	veil.cover()
 	# The ambience is synthesized on a worker thread meanwhile (world_audio.setup() below waits for it).
 	WorldAudio.prepare()

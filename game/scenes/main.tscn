@@ -1,6 +1,8 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/boot.gd" id="1"]
 
 [node name="Tripothon" type="Node3D"]
+
+[node name="Boot" type="Node" parent="."]
 script = ExtResource("1")
