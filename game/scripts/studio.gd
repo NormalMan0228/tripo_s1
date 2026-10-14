@@ -20,6 +20,7 @@ const GameSettings=preload("res://scripts/game_settings.gd")
 const PauseMenu=preload("res://scripts/pause_menu.gd")
 const CraftPanel=preload("res://scripts/craft_panel.gd")
 const Fx=preload("res://scripts/fx.gd")
+const NpcGifts=preload("res://scripts/npc_gifts.gd")
 const RestSeat=preload("res://scripts/rest_seat.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
@@ -190,6 +191,16 @@ var talk_id := ""
 var pick_cycle := 0
 var pick_spot := Vector3(INF,0,INF)
 var pick_time := -100.0
+## Gifts the residents of this house put up (npc_gifts.gd, server/npc_homes.py): the building id
+## when this is a gift home, the layout version shown, and {object id: {item, node, record}}.
+var gift_home := ""
+var gift_version := -1
+var gift_nodes: Dictionary = {}
+var gift_time := 0.0
+var gift_pending := false
+var gift_epoch := 0
+## Visiting a friend's village (gifts go to your own village's residents only).
+var visiting := false
 
 func _ready() -> void:
 	I18n.setup()
@@ -211,6 +222,7 @@ func _ready() -> void:
 		room=str(session.get("room","workshop"))
 		visit_host=str(session.get("visit_host",""))
 		visit_name=str(session.get("visit_name",""))
+		visiting=bool(session.get("visiting",false)) or not visit_host.is_empty()
 		if session.get("avatar") is Dictionary: session_avatar=session.avatar
 		shared_presence=bool(session.get("multiplayer",false)) and room=="home"
 		Engine.remove_meta("studio_session")
@@ -232,7 +244,9 @@ func _ready() -> void:
 		dock_panel.visible=false;dock_toggle.visible=false
 		for b in room_buttons: b.visible=false
 		message(tr(str(room_spec.flavour)))
-		if not api.token.is_empty(): load_avatar()
+		if not api.token.is_empty():
+			load_avatar()
+			refresh_gifts()
 		return
 	if not visit_host.is_empty():
 		# Visitors only look around: no inventory, crafting, room switching or editing.
@@ -659,6 +673,9 @@ func build_room() -> void:
 	close_talk()
 	building_spec=Interiors.spec(room)
 	public_room=bool(building_spec.public)
+	# Floors are rebuilt: the residents' gifts load again on top.
+	gift_nodes.clear();gift_version=-1;gift_epoch+=1
+	gift_home=str(building_spec.building) if public_room and NpcGifts.is_gift_home(str(building_spec.building)) else ""
 	floor_roots.clear();decor_by_floor.clear()
 	for index in building_spec.floors.size():
 		var level := Node3D.new();level.name="Floor_%d" % index;room_root.add_child(level)
@@ -926,9 +943,9 @@ func clear_owned() -> void:
 	for n in furniture.get_children():n.queue_free()
 	placed.clear()
 
-func load_item(obj: Dictionary) -> Node3D:
-	# A visitor reads the host's furniture through the read-only guest routes.
-	var prefix := "/v1/objects/" if visit_host.is_empty() else "/v1/social/village/objects/"
+func load_item(obj: Dictionary, route := "") -> Node3D:
+	# A visitor reads the host's furniture through the read-only guest routes (so do residents' gifts).
+	var prefix := route if not route.is_empty() else ("/v1/objects/" if visit_host.is_empty() else "/v1/social/village/objects/")
 	var value: Node3D=await Assembly.fetch(api,obj.id,prefix)
 	if not value:
 		if obj.get("studio",false):return null
@@ -1613,6 +1630,9 @@ func nearest_decor() -> Dictionary:
 
 func use_decor(record: Dictionary) -> void:
 	last_used=record
+	if record.kind=="gift":
+		use_gift(record)
+		return
 	var who := str(record.get("id","")) if record.kind=="resident" else str(record.get("occupant",""))
 	if not who.is_empty() and npcs.has(who):
 		talk_to(who,record)
@@ -1815,7 +1835,9 @@ func _process(delta: float) -> void:
 		share_presence()
 	update_peers(delta)
 	proximity_time+=delta
-	if proximity_time>0.35:proximity_time=0;proximity()
+	if proximity_time>0.35:proximity_time=0;proximity();gift_proximity()
+	gift_time+=delta
+	if gift_time>3.0:gift_time=0;refresh_gifts()
 	if not is_instance_valid(hero):return
 	# A stair climb (follow_path) sets the walker's motion just before this runs each
 	# frame; clearing it here left the idle pose gliding up the steps.
@@ -2412,11 +2434,17 @@ func talk_to(id: String, record: Dictionary) -> void:
 	open_talk(id)
 
 ## The village's RPG dialogue box: portrait, name plate, typed lines, choices.
-func open_talk(id: String) -> void:
+## lines/choices replace the resident's own talk (the gift conversation); such choices are
+## [label, Callable] instead of [label, action word].
+func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	close_talk()
+	if not npcs.has(id): return
 	var entry: Dictionary=npcs[id]
 	var c := resident_clock()
-	var talk: Dictionary=Interiors.resident_talk(id,entry.state,building_spec,c.hour)
+	var talk: Dictionary=Interiors.resident_talk(id,entry.state,building_spec,c.hour) if lines.is_empty() else {"lines":lines,"choices":choices if not choices.is_empty() else [[tr("알겠어요"),Callable()]]}
+	# Residents of a house take gifts from their own village's player.
+	if lines.is_empty() and NpcGifts.can_receive(id) and not visiting and not api.token.is_empty():
+		talk.choices.insert(maxi(0,talk.choices.size()-1),["선물하기","gift"])
 	talk_id=id;talk_lines=talk.lines;talk_choices=talk.choices;talk_page=0
 	if entry.pose=="stand" and is_instance_valid(hero):
 		var look: Vector3=hero.global_position-entry.holder.global_position
@@ -2451,9 +2479,17 @@ func show_talk_page() -> void:
 		RpgUi.dialogue_more(talk_window,false)
 		var entries := []
 		for choice in talk_choices:
-			var action := str(choice[1])
-			entries.append([tr(str(choice[0])),func(): run_choice(action)])
+			var picked: Array=choice
+			entries.append([tr(str(choice[0])),func(): pick_talk(picked)])
 		RpgUi.dialogue_choices(talk_window,entries)
+
+## A dialogue choice: an action word (run_choice) or, in the gift conversation, a Callable.
+func pick_talk(choice: Array) -> void:
+	if choice[1] is Callable:
+		close_talk()
+		var action: Callable=choice[1]
+		if action.is_valid(): action.call()
+	else: run_choice(str(choice[1]))
 
 func advance_talk() -> void:
 	if not is_instance_valid(talk_box): return
@@ -2464,7 +2500,7 @@ func advance_talk() -> void:
 		sfx_player.stream=Interiors.sfx("click");sfx_player.play()
 		show_talk_page()
 	elif not talk_choices.is_empty():
-		run_choice(str(talk_choices[0][1]))
+		pick_talk(talk_choices[0])
 
 func close_talk() -> void:
 	if is_instance_valid(talk_box): talk_box.queue_free()
@@ -2479,6 +2515,9 @@ func run_choice(action: String) -> void:
 	close_talk()
 	var head: Vector3=hero.global_position+Vector3(0,1.6,0) if is_instance_valid(hero) else Vector3.ZERO
 	match action:
+		"gift":
+			open_gift(id)
+			return
 		"coffee":
 			message(tr("따뜻한 코코아를 받았어요. 달콤해요!"))
 			sfx_player.stream=Interiors.sfx("clink");sfx_player.play()
@@ -2503,6 +2542,122 @@ func run_choice(action: String) -> void:
 					use_decor(record);return
 			message(tr("별자리가 보여요. 오늘은 고래자리가 또렷해요!"))
 	if npcs.has(id) and npcs[id].body.has_method("smile"): npcs[id].body.smile(2.0)
+
+# ---------------------------------------------------------------- residents' gifts
+
+## "선물하기" inside a house: the same conversation as in the village (npc_gifts.gd), in this
+## room's dialogue box, with hearts over the resident.
+func open_gift(id: String) -> void:
+	var say := func(lines: Array, choices: Array) -> void:
+		if is_inside_tree() and npcs.has(id): open_talk(id,lines,choices)
+	var done := func(reply: Dictionary) -> void:
+		if not npcs.has(id): return
+		var entry: Dictionary=npcs[id]
+		NpcGifts.thanks_effect(stage,entry.holder.global_position)
+		pop_over(entry,"♥")
+		if entry.body.has_method("smile"): entry.body.smile(3.0)
+		sfx_player.stream=Interiors.sfx("chime");sfx_player.play()
+		message(NpcGifts.thanks_text(Interiors.short_name(id,float(resident_clock().hour)),reply))
+		gift_time=2.0
+	NpcGifts.start(api,id,say,done)
+
+## The residents' gifts in this house: a layout the village poll still reports current shows at
+## once from the cache; then the guest route (owner and visitors alike) answers "unchanged" until
+## the server moves something, every few seconds while the player is inside.
+func refresh_gifts() -> void:
+	if gift_home.is_empty() or gift_pending or api.token.is_empty() or VersionGate.is_blocked() or not is_inside_tree(): return
+	gift_pending=true
+	var home := gift_home
+	var epoch_now := gift_epoch
+	if gift_version<0:
+		var cached := NpcGifts.cached(home)
+		if not cached.is_empty(): await apply_gifts(cached,false)
+	var reply: Dictionary=await api.request("/v1/social/npc-homes/%s?version=%d" % [home,gift_version])
+	gift_pending=false
+	if epoch_now!=gift_epoch or home!=gift_home or not reply.ok or reply.data.get("unchanged",false): return
+	NpcGifts.remember(home,reply.data)
+	await apply_gifts(reply.data,gift_version>=0)
+
+func apply_gifts(data: Dictionary, fresh: bool) -> void:
+	gift_version=int(data.get("version",0))
+	var epoch_now := gift_epoch
+	var wanted := {}
+	for item in data.get("items",[]): wanted[str(item.id)]=item
+	for id in gift_nodes.keys():
+		var shown: Dictionary=gift_nodes[id].item
+		if not wanted.has(id) or str(wanted[id].slot)!=str(shown.slot) or int(wanted[id].rotation)!=int(shown.rotation): drop_gift(id)
+	for id in wanted:
+		if gift_nodes.has(id): continue
+		var item: Dictionary=wanted[id]
+		var node := await load_item(item,"/v1/social/village/objects/")
+		if epoch_now!=gift_epoch or gift_nodes.has(id):
+			if node: node.queue_free()
+			if epoch_now!=gift_epoch: return
+			continue
+		if node: add_gift(item,node,fresh)
+
+## Sets a piece at its slot: on the floor, against the wall, or on the real table's top.
+func add_gift(item: Dictionary, node: Node3D, fresh: bool) -> void:
+	var level := clampi(int(item.get("floor",0)),0,floor_roots.size()-1)
+	floor_roots[level].add_child(node)
+	var at := Vector3(float(item.x),float(item.y),float(item.z))
+	if str(item.kind)=="table": at.y=table_top(level,at,at.y)
+	node.position=at+Vector3(0,0.02 if str(item.kind)=="floor" else 0.0,0)
+	node.rotation_degrees.y=float(item.rotation)
+	Loader.add_collision(node)
+	var raw: Array=item.get("size",[1,1,1])
+	var size: Vector3=node.get_meta("size",Vector3(float(raw[0]),float(raw[1]),float(raw[2])))
+	var turn := node.rotation.y
+	var record := {"kind":"gift","id":str(item.id),"npc":str(item.get("npc","")),"name":str(item.get("name","")),"node":node,
+		"center":Vector3(at.x,0,at.z),"yaw":turn,"mounted":str(item.kind)=="wall","solid":str(item.kind)=="floor","interactive":true,"glb":true,
+		"size":size,"half":Vector2(size.x*0.5,size.z*0.5),
+		"world_half":Vector2(absf(cos(turn))*size.x*0.5+absf(sin(turn))*size.z*0.5,absf(sin(turn))*size.x*0.5+absf(cos(turn))*size.z*0.5),
+		"top":at.y+size.y,"floor":level,"room":Interiors.room_at(building_spec.floors[level],at.x)}
+	decor_by_floor[level].append(record)
+	gift_nodes[str(item.id)]={"item":item,"node":node,"record":record}
+	# Put up while the player is inside: a little sparkle where it appears.
+	if fresh and level==floor_index: Fx.arrive(floor_roots[level],node,null,true)
+
+func drop_gift(id: String) -> void:
+	var entry: Dictionary=gift_nodes.get(id,{})
+	gift_nodes.erase(id)
+	if entry.is_empty(): return
+	var level := int(entry.record.floor)
+	if level<decor_by_floor.size(): decor_by_floor[level].erase(entry.record)
+	if last_used==entry.record: last_used={}
+	if is_instance_valid(entry.node): entry.node.queue_free()
+
+## The top of the room's own table (or chest, desk...) under a table-top slot.
+func table_top(level: int, at: Vector3, fallback: float) -> float:
+	var best := fallback;var distance := 0.8
+	for record in decor_by_floor[level]:
+		if record.kind=="gift" or record.mounted or not record.has("top"): continue
+		if not record.kind in ["dining_table","round_cafe_table","desk","map_table","chest","side_table"]: continue
+		var d: float=Vector2(record.center.x-at.x,record.center.z-at.z).length()
+		if d<distance: distance=d;best=float(record.top)
+	return best
+
+## E on a gift: its own interaction plays on this screen (the piece is the resident's now), a seat
+## or bed takes the walker, and a word says whose it is.
+func use_gift(record: Dictionary) -> void:
+	var node: Node3D=record.node
+	if not is_instance_valid(node): return
+	var kind: String=str(node.get("rest")) if node.has_method("use_interaction") else ""
+	if kind=="sit" or kind=="lie": rest_on_crafted(node,kind)
+	if node.has_method("local_event"): node.local_event("click")
+	var owner_name := Interiors.short_name(str(record.npc),float(resident_clock().hour)) if not str(record.npc).is_empty() else ""
+	say(tr("%s의 소중한 선물 · %s") % [owner_name,str(record.name)],record)
+	sfx_player.stream=Interiors.sfx("pop");sfx_player.play()
+
+## Gifts react to the walker coming near and leaving, on this screen only.
+func gift_proximity() -> void:
+	if gift_nodes.is_empty() or not is_instance_valid(hero): return
+	for id in gift_nodes:
+		var entry: Dictionary=gift_nodes[id]
+		var node: Node3D=entry.node
+		if not is_instance_valid(node) or not node.get_meta("studio",false) or not node.has_method("local_event"): continue
+		var near: bool=int(entry.record.floor)==floor_index and hero.position.distance_to(node.position)<(2.5 if node.nearby else 1.8)
+		if near!=node.nearby: node.local_event("near" if near else "leave")
 
 ## Name plates show only for residents close to the walker, like in the village.
 func update_name_plates() -> void:

@@ -118,7 +118,7 @@ SLOTS = {
     '02_timber_house': _slots(
         ('hearth_side', 0, 'floor', -1.75, -3.75, 0.0, 0, (1.3, 1.1, 1.3), ('cozy', 'book')),
         ('front_corner', 0, 'floor', -2.8, 2.6, 0.0, 0, (1.6, 2.2, 1.4), ('cozy', 'travel', 'seat')),
-        ('stair_side', 0, 'floor', 4.0, 1.2, 0.0, 0, (1.0, 2.0, 1.0), ('light', 'plant')),
+        ('stair_side', 0, 'floor', 4.0, 0.6, 0.0, 0, (1.0, 2.0, 1.0), ('light', 'plant')),
         ('table', 0, 'table', 2.15, 1.45, 0.78, 0, (0.7, 0.7, 0.7), ('kitchen', 'plant', 'light')),
         ('wall', 0, 'wall', 4.75, 3.25, 1.45, -90, (0.8, 0.9, 0.3), ('art', 'clock')),
         ('loft', 1, 'floor', 1.75, 2.0, 0.0, 0, (1.4, 1.8, 1.1), ('cozy', 'toy')),

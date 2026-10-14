@@ -30,6 +30,7 @@ const SettingsMenu = preload("res://scripts/settings_menu.gd")
 const PauseMenu = preload("res://scripts/pause_menu.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate = preload("res://scripts/version_gate.gd")
+const NpcGifts = preload("res://scripts/npc_gifts.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
@@ -1265,6 +1266,7 @@ func refresh_inventory() -> void:
 		refreshing=false
 		return
 	me = result.data
+	NpcGifts.set_versions(me.get("npc_homes"),me.get("npc_homes_host",""))
 	if screen=="village" and is_instance_valid(player): player.apply_avatar(me.get("profile",{}).get("avatar",{}))
 	reward_button.visible=me.get("pending_reward")!=null
 	if is_instance_valid(expedition_button):
@@ -1408,6 +1410,8 @@ func poll_entitlements() -> void:
 		login_ui()
 		message(error_message(result.error))
 		return
+	# Residents' home versions: a house cached at this version opens without asking again.
+	NpcGifts.set_versions(result.data.get("npc_homes"),result.data.get("npc_homes_host",""))
 	if objects_signature(result.data.objects)!=objects_signature(me.objects) or result.data.shards!=me.shards:
 		cancel_preview()
 		await refresh_inventory()
@@ -3054,7 +3058,29 @@ func talk_to(npc: Node3D) -> void:
 	npc.face_point(player.position)
 	player.face_point(npc.position)
 	var plan := npc_script(npc.get_meta("role"))
-	open_dialogue(str(npc.get_meta("title")),str(npc.get_meta("cast","")),plan.lines,plan.choices)
+	var cast := str(npc.get_meta("cast",""))
+	# Residents of a house take gifts from their own village's player (npc_gifts.gd).
+	if NpcGifts.can_receive(cast) and can_gift():
+		plan.choices.insert(maxi(0,plan.choices.size()-1),[tr("선물하기"),func(): open_gift(cast,str(npc.get_meta("title")),cast,npc)])
+	open_dialogue(str(npc.get_meta("title")),cast,plan.lines,plan.choices)
+
+## Gifts go to the residents of your own village only.
+func can_gift() -> bool:
+	return not api.token.is_empty() and not social.visiting()
+
+## "선물하기" from any village conversation (the cast here, the walkers in shadow_folk.gd):
+## the bag's crafted pieces as choices, the resident's reaction and a thank-you effect.
+func open_gift(npc_id: String, speaker: String, portrait: String, anchor: Node3D) -> void:
+	var say := func(lines: Array, choices: Array) -> void:
+		open_dialogue(speaker,portrait,lines,choices if not choices.is_empty() else [[tr("알겠어요"),Callable()]])
+	var done := func(reply: Dictionary) -> void:
+		if is_instance_valid(anchor):
+			NpcGifts.thanks_effect(world,anchor.global_position,self)
+			if anchor.has_method("pop"): anchor.pop("♥",1.6)
+			if anchor.has_method("smile"): anchor.smile(3.0)
+		message(NpcGifts.thanks_text(speaker.split(" · ")[0],reply))
+		await refresh_inventory()
+	NpcGifts.start(api,npc_id,say,done)
 
 ## RPG dialogue: an illustration on the left, a name plate and a box that types
 ## each line out. E, Space or a click advances; choices appear on the last line.
@@ -3140,6 +3166,7 @@ func open_wardrobe() -> void:
 func open_studio(destination: String="workshop") -> void:
 	var session := {"token":api.token,"url":api.base_url,"room":destination,"multiplayer":social.enabled,
 		"avatar":me.get("profile",{}).get("avatar",{}).duplicate(true)}
+	session.visiting=social.visiting()
 	if social.visiting():
 		# Friends may step into the host's home and public buildings; the workshop stays private.
 		if destination=="workshop":
