@@ -1,0 +1,2 @@
+# Applied to the engine source (LF): keep the patch byte for byte.
+*.patch -text
