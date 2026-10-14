@@ -116,6 +116,14 @@ class Settings:
     # Seconds one submitted Tripo part may take (queued, running or unreachable) before the craft
     # fails and its starseeds come back; the task is never submitted again.
     studio_part_deadline: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_PART_DEADLINE', '1200')))
+    # Village residents decorate their homes with gifts (server/npc_homes.py). Seconds from a gift
+    # until the resident puts it up (random in this range), and between later rearrangements.
+    # Tests and QA shorten them; NPC_SEED fixes every home's dice (0 = a fresh seed per home).
+    npc_place_min: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_PLACE_MIN', '300')))
+    npc_place_max: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_PLACE_MAX', '10800')))
+    npc_shuffle_min: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_SHUFFLE_MIN', '14400')))
+    npc_shuffle_max: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_SHUFFLE_MAX', '86400')))
+    npc_seed: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_NPC_SEED', '0')))
     session_seconds: int = 12 * 60 * 60
     day_seconds: float = 60.0
     studio_llm: str = field(default_factory=lambda: os.getenv('TRIPOTHON_STUDIO_LLM', 'fixture'))
@@ -163,6 +171,11 @@ class Settings:
             raise ValueError('Paid live mode with Gemini design requires a Gemini server secret')
         if self.studio_llm == 'gemini' and not self.gemini_models:
             raise ValueError('Gemini design needs at least one model name')
+        for low, high in ((self.npc_place_min, self.npc_place_max), (self.npc_shuffle_min, self.npc_shuffle_max)):
+            if not (math.isfinite(low) and math.isfinite(high) and 0.5 <= low <= high <= 30 * 86400):
+                raise ValueError('Invalid resident home timing')
+        if not 0 <= self.npc_seed < 2**31:
+            raise ValueError('Invalid resident home seed')
         if not math.isfinite(self.studio_credit_rate) or not .1<=self.studio_credit_rate<=100:
             raise ValueError('Invalid reward currency conversion')
         if self.usage_key and len(self.usage_key) < 32:

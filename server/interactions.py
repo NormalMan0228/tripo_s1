@@ -766,7 +766,7 @@ class Interactions:
             check(program, parts)
             with self.db.transaction() as conn:
                 current = conn.execute('SELECT owner_id,state FROM objects WHERE id=?', (row['object_id'],)).fetchone()
-                if current['owner_id'] != row['owner_id'] or current['state'] == 'listed':
+                if current['owner_id'] != row['owner_id'] or current['state'] in ('listed', 'gifted'):
                     self.give_up(conn, design_id, 'object_unavailable', provenance)
                     return
                 still = conn.execute('SELECT state FROM interaction_designs WHERE id=?', (design_id,)).fetchone()
