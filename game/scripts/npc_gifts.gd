@@ -27,6 +27,32 @@ const LINES := {
 		"thanks":"선물이다! 고마워, 고마워!","again":"또 줘? 헤헤, 오늘은 생일 같아!"},
 }
 
+## Letters at each new heart (1..4) by personality; the fourth comes with a return gift.
+const LETTERS := {
+	"cheerful":["안녕! 선물 정말 고마웠어. 집에 들어갈 때마다 그 생각이 나서 웃게 돼. 또 놀러 와!",
+		"너랑 이야기하는 시간이 점점 기다려져. 다음에 만나면 내가 아는 지름길도 알려 줄게!",
+		"우리 이제 진짜 친한 친구 맞지? 네가 준 선물들 덕분에 집이 훨씬 환해졌어.",
+		"너는 내 가장 소중한 친구야! 고마운 마음을 담아 작은 선물을 같이 보내. 마음에 들면 좋겠다!"],
+	"calm":["선물 고마워. 말로는 잘 못 했지만, 꽤 기뻤어. 잘 쓰고 있어.",
+		"요즘 네가 지나가면 괜히 반가워. 언제든 쉬어 가.",
+		"네 덕분에 집이 한결 아늑해졌어. 고맙다는 말, 이번엔 편지로 할게.",
+		"오래 함께해 줘서 고마워. 내가 아끼는 걸 하나 보내. 너라면 잘 써 줄 거야."],
+	"elegant":["보내 준 선물, 정성스럽게 장식해 두었어요. 안목이 정말 좋으시더군요.",
+		"차 한 잔 함께하고 싶은 친구가 생겼네요. 바로 당신이에요.",
+		"당신의 선물들이 제 방을 작은 전시회로 만들어 주었어요. 고마워요.",
+		"소중한 친구에게 어울리는 답례를 고민하다 이걸 골랐어요. 곁에 두고 저를 떠올려 주세요."],
+	"dreamy":["선물을 받은 날, 하늘이 조금 더 맑아 보였어요. 고마워요.",
+		"당신 이야기를 시로 써 보려다 그만 잠들었어요. 꿈에서도 고마웠어요.",
+		"창가에 둔 당신의 선물에 별빛이 내려앉아요. 매일 밤 인사해요.",
+		"마음을 담은 작은 선물을 보내요. 달이 뜨는 밤마다 우리가 친구라는 걸 기억해 줘요."],
+	"playful":["선물 고마워!!! 매일매일 가지고 놀고 있어! 헤헤.",
+		"너 진짜 좋은 사람이야! 다음엔 같이 술래잡기 하자!",
+		"너는 내 단짝이야! 비밀 기지도 보여 줄게. 아무한테도 말하면 안 돼!",
+		"내 보물 중에 제일 좋은 걸 너한테 줄게! 소중히 해야 해, 약속!"],
+}
+## Storage-chest icons by item tag (the bag's own item pictures).
+const TAG_ICONS := {"storage":"chest","clock":"clock","light":"lamp","plant":"seed","sea":"fish"}
+
 static func t(text: String) -> String:
 	return TranslationServer.translate(text)
 
@@ -96,6 +122,29 @@ static func thanks_effect(parent: Node3D, at: Vector3, app = null) -> void:
 	Fx.burst(parent,at+Vector3(0,1.5,0),"petal",14,Color(0,0,0,0),0.35)
 	Fx.burst(parent,at+Vector3(0,1.7,0),"sparkle",10,Color(0,0,0,0),0.3)
 	if DisplayServer.get_name()!="headless": Fx.sound(app,"twinkle",at,1.15,-2.0)
+
+## One letter as dialogue pages: who and how close, the words, and the present if any.
+static func letter_lines(letter: Dictionary) -> Array:
+	var pool: Array = LETTERS.get(str(letter.get("personality","calm")),LETTERS.calm)
+	var level := clampi(int(letter.get("level",1)),1,4)
+	var lines := [t("✉ %s의 편지 · %s") % [t(str(letter.get("name",""))),hearts(level)]+"\n"+t(str(pool[level-1]))]
+	var present = letter.get("gift")
+	if present is Dictionary: lines.append(t("편지와 함께 선물이 왔어요: %s. 가방을 확인해 보세요!") % str(present.get("name","")))
+	return lines
+
+## A toast for letters that came with a gift reply ("" when none).
+static func letters_note(reply: Dictionary) -> String:
+	var fresh: Array = reply.get("letters",[])
+	if fresh.is_empty(): return ""
+	var name := t(str(fresh[0].get("name","")))
+	for letter in fresh:
+		if letter.get("gift") is Dictionary: return t("%s에게서 편지와 답례 선물이 왔어요! 우편함을 열어 보세요.") % name
+	return t("%s에게서 편지가 왔어요! 우편함을 열어 보세요.") % name
+
+static func icon_for(tags: Array) -> String:
+	for tag in tags:
+		if TAG_ICONS.has(str(tag)): return "res://assets/items/%s.svg" % TAG_ICONS[str(tag)]
+	return "res://assets/items/furniture.svg"
 
 static func thanks_text(name: String, reply: Dictionary) -> String:
 	var level := int(reply.get("friendship",{}).get("level",0))

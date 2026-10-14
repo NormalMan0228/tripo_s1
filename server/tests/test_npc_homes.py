@@ -71,7 +71,7 @@ def test_gift_moves_a_crafted_piece_out_of_the_bag_exactly_once(world):
     h = account(c, 'alice')
     chest = craft(app, c, h, 'wooden chest')
     options = c.get('/v1/npcs/naru/gift', headers=h).json()
-    assert options['can_gift'] and options['home'] == '02_timber_house' and [i['id'] for i in options['items']] == [chest['id']]
+    assert options['can_gift'] and options['home'] == '02_timber_house' and chest['id'] in [i['id'] for i in options['items']]
     body = mutation(object_id=chest['id'], version=chest['version'])
     first = c.post('/v1/npcs/naru/gift', headers=h, json=body)
     assert first.status_code == 200, first.text
@@ -83,7 +83,7 @@ def test_gift_moves_a_crafted_piece_out_of_the_bag_exactly_once(world):
     # Gone from the bag, the studio list and every owner route; never offered again.
     assert obj(c, h, chest['id']) is None
     assert chest['id'] not in [o['id'] for o in c.get('/v1/studio', headers=h).json()['objects']]
-    assert c.get('/v1/npcs/sora/gift', headers=h).json()['items'] == []
+    assert chest['id'] not in [i['id'] for i in c.get('/v1/npcs/sora/gift', headers=h).json()['items']]
     for path in ('/model', '/assembly'):
         assert c.get('/v1/objects/' + chest['id'] + path, headers=h).status_code == 404
     gifted = {**chest, 'version': chest['version'] + 1}
@@ -102,7 +102,6 @@ def test_gift_validation(world):
     h, other = account(c, 'alice'), account(c, 'bravo')
     starter = c.get('/v1/me', headers=h).json()['objects'][0]
     assert give(c, h, 'nobody', starter).status_code == 404
-    assert give(c, h, 'naru', starter).json()['detail'] == 'gift_needs_crafted_furniture'
     chest = craft(app, c, h, 'wooden chest')
     assert give(c, h, 'naru', {**chest, 'version': chest['version'] + 1}).json()['detail'] == 'stale_object_version'
     assert give(c, other, 'naru', chest).json()['detail'] == 'object_not_found'
@@ -323,3 +322,80 @@ def test_operator_view(world, capsys):
     shown = json.loads(capsys.readouterr().out)
     assert shown['items'][0]['npc_id'] == 'naru' and shown['items'][0]['state'] == 'stored'
     assert shown['homes'][0]['home_id'] == '02_timber_house' and shown['friendship'][0]['gifts'] == 1
+
+
+def test_legacy_pieces_are_measured_once_and_placed(world):
+    app, c, now = world
+    alice, bravo = account(c, 'alice'), account(c, 'bravo')
+    starter = c.get('/v1/me', headers=alice).json()['objects'][0]
+    assert not starter['studio'] and starter['id'] in [i['id'] for i in c.get('/v1/npcs/naru/gift', headers=alice).json()['items']]
+    assert give(c, alice, 'naru', starter).status_code == 200
+    with sqlite3.connect(app.state.settings.data_dir / 'world.sqlite3') as db:
+        # The welcome stool is 1.3 x 1.1 x 1.3 m in its file; indoors its longest side is 1.2 m.
+        assert json.loads(db.execute("SELECT size FROM asset_bounds WHERE asset_id='starter'").fetchone()[0]) == [1.3, 1.1, 1.3]
+        assert json.loads(db.execute('SELECT size FROM npc_items').fetchone()[0]) == [1.2, 1.015, 1.2]
+    now[0] += 21
+    [item] = home(c, alice, '02_timber_house')['items']
+    assert item['id'] == starter['id'] and not item['studio'] and fits(npc_homes.SLOT_BY_ID['02_timber_house'][item['slot']], item['size']) is not None
+    assert c.get('/v1/social/village/objects/' + starter['id'] + '/model', headers=alice).status_code == 200
+    visit(c, alice, bravo, 'bravo')
+    assert c.get('/v1/social/village/objects/' + starter['id'] + '/model', headers=bravo).status_code == 200
+    # Bravo's own welcome stool reuses the measurement.
+    assert npc_homes.glb_bounds((ROOT / 'game/assets/sample_stool.glb').read_bytes()) == [1.3, 1.1, 1.3]
+
+
+def test_hearts_bring_letters_and_the_fourth_a_return_gift(world):
+    app, c, now = world
+    h = account(c, 'alice')
+    database = app.state.settings.data_dir / 'world.sqlite3'
+    first = give(c, h, 'naru', craft(app, c, h, 'wooden chest')).json()
+    assert first['letters'] == [] and first['friendship']['level'] == 0
+    with sqlite3.connect(database) as db:
+        db.execute("UPDATE npc_friendship SET points=28")
+    second = give(c, h, 'naru', craft(app, c, h, 'wooden crate')).json()
+    assert [(l['level'], l['gift']) for l in second['letters']] == [(1, None)] and second['letters'][0]['personality'] == 'cheerful'
+    with sqlite3.connect(database) as db:
+        db.execute("UPDATE npc_friendship SET points=298")
+    piece = craft(app, c, h, 'blue chest')
+    body = mutation(object_id=piece['id'], version=piece['version'])
+    third = c.post('/v1/npcs/naru/gift', headers=h, json=body).json()
+    assert [l['level'] for l in third['letters']] == [2, 3, 4] and third['friendship']['level'] == 4
+    present = third['letters'][-1]['gift']
+    assert present and present['name'] == '나루의 답례 · 별빛 랜턴'
+    # A replay is the same answer: no second present.
+    assert c.post('/v1/npcs/naru/gift', headers=h, json=body).json() == third
+    mine = [o for o in c.get('/v1/me', headers=h).json()['objects'] if o['id'] == present['id']]
+    assert len(mine) == 1 and mine[0]['state'] == 'inventory' and mine[0]['studio']
+    assert c.get('/v1/objects/' + present['id'] + '/assembly', headers=h).status_code == 200
+    with sqlite3.connect(database) as db:
+        assert db.execute("SELECT count(*) FROM objects WHERE name LIKE '%답례%'").fetchone()[0] == 1
+        assert db.execute('SELECT count(*) FROM npc_letters').fetchone()[0] == 4
+    # The mailbox: four unread, read two, then the rest; later gifts bring no more letters.
+    listed = c.get('/v1/letters', headers=h).json()
+    assert listed['unread'] == 4 and c.get('/v1/me', headers=h).json()['npc_letters_unread'] == 4
+    assert c.post('/v1/letters/read', headers=h, json=mutation(ids=[l['id'] for l in listed['letters'][:2]])).json() == {'unread': 2}
+    assert c.post('/v1/letters/read', headers=h, json=mutation()).json() == {'unread': 0}
+    assert give(c, h, 'naru', obj(c, h, present['id'])).json()['letters'] == []
+    # The present is a piece like any other: it can go to another resident.
+    assert c.get('/v1/letters', headers=h).json()['letters'][0]['gift']['id'] == present['id']
+
+
+def test_storage_chest_lists_stored_gifts_for_owner_and_visitor(world):
+    app, c, now = world
+    alice, bravo = account(c, 'alice'), account(c, 'bravo')
+    names = []
+    for prompt in ('wooden chest', 'flower lamp'):
+        piece = craft(app, c, alice, prompt)
+        names.append(piece['name'])
+        assert give(c, alice, 'haeru', piece).status_code == 200
+    stored = home(c, alice, '17_lighthouse')['stored']
+    assert [s['name'] for s in stored] == names and {s['npc'] for s in stored} == {'haeru'}
+    visit(c, alice, bravo, 'bravo')
+    assert [s['name'] for s in home(c, bravo, '17_lighthouse')['stored']] == names
+    now[0] += 41
+    after = home(c, alice, '17_lighthouse')
+    assert len(after['items']) + len(after['stored']) == 2 and len(after['items']) >= 1
+
+
+def test_every_gift_home_has_room_for_five():
+    assert all(len(slots) >= 5 for slots in SLOTS.values())

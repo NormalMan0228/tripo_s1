@@ -124,6 +124,8 @@ class Settings:
     npc_shuffle_min: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_SHUFFLE_MIN', '14400')))
     npc_shuffle_max: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_SHUFFLE_MAX', '86400')))
     npc_seed: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_NPC_SEED', '0')))
+    # Friendship points for hearts 1..4 (each new heart brings a letter, the fourth a return gift).
+    npc_levels: tuple = field(default_factory=lambda: tuple(int(v) for v in os.getenv('TRIPOTHON_NPC_LEVELS', '30,80,160,300').split(',')))
     session_seconds: int = 12 * 60 * 60
     day_seconds: float = 60.0
     studio_llm: str = field(default_factory=lambda: os.getenv('TRIPOTHON_STUDIO_LLM', 'fixture'))
@@ -174,6 +176,8 @@ class Settings:
         for low, high in ((self.npc_place_min, self.npc_place_max), (self.npc_shuffle_min, self.npc_shuffle_max)):
             if not (math.isfinite(low) and math.isfinite(high) and 0.5 <= low <= high <= 30 * 86400):
                 raise ValueError('Invalid resident home timing')
+        if len(self.npc_levels) != 4 or any(not 0 <= a < b for a, b in zip((0,) + tuple(self.npc_levels), self.npc_levels)):
+            raise ValueError('Friendship hearts need four rising point thresholds')
         if not 0 <= self.npc_seed < 2**31:
             raise ValueError('Invalid resident home seed')
         if not math.isfinite(self.studio_credit_rate) or not .1<=self.studio_credit_rate<=100:

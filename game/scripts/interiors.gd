@@ -591,6 +591,7 @@ static func layout(id: String, floor_index: int, f: Dictionary) -> Array:
 			l.append(wall("wall_clock",f,0,1,0.0,2.2))
 			l.append(it("coat_rack",-hw+0.4,hd-0.75))
 			l.append(it("potted_plant",hw-0.42,hd-0.95))
+			l.append(wall("chest",f,0,1,2.3,0.0,{"storage":true}))
 		"02_timber_house/1":
 			l.append(link(it("stair_hatch",hw-1.05,-hd+1.05,0.0,{"size":Vector3(1.5,0.95,1.8)}),0,Vector2.ZERO))
 			l.append(back("bed",-2.75,f))
@@ -697,6 +698,7 @@ static func layout(id: String, floor_index: int, f: Dictionary) -> Array:
 			l.append(wall("wall_clock",f,1,-1,1.9,2.0))
 			l.append(it("potted_plant",r[1].x+0.5,hd-0.62))
 			l.append(it("rug",(r[1].x+r[1].y)*0.5,0.7,0.0,{"size":Vector3(1.8,0.02,1.2)}))
+			l.append(wall("chest",f,1,-1,1.5,0.0,{"storage":true}))
 		"07_greenhouse/0":
 			l.append(back("seedling_bench",-3.0,f))
 			l.append(back("seedling_bench",0.2,f))
@@ -736,6 +738,7 @@ static func layout(id: String, floor_index: int, f: Dictionary) -> Array:
 			l.append(it("globe",r[1].x+0.6,2.6))
 			l.append(it("floor_lamp",r[1].y-0.45,hd-0.62))
 			l.append(it("potted_plant",r[1].x+0.45,-0.6))
+			l.append(wall("chest",f,1,1,-3.0,0.0,{"storage":true}))
 		"12_blue_house/0":
 			l.append(back("bed",r[0].x+0.85,f))
 			l.append(back("bed",r[0].x+2.45,f))
@@ -755,6 +758,7 @@ static func layout(id: String, floor_index: int, f: Dictionary) -> Array:
 			l.append(it("basket",r[1].x+1.35,2.6))
 			l.append(it("potted_plant",r[1].y-0.42,-0.75))
 			l.append(it("rug",(r[1].x+r[1].y)*0.5,0.9,0.0,{"size":Vector3(1.2,0.02,0.8),"color":"7fb0d0"}))
+			l.append(wall("chest",f,1,1,1.7,0.0,{"storage":true}))
 		"13_shop/0":
 			l.append(back("shop_counter",r[0].x+1.6,f))
 			l.append(back("shop_sign",r[0].x+1.6,f,2.08))
@@ -789,12 +793,13 @@ static func layout(id: String, floor_index: int, f: Dictionary) -> Array:
 			l.append(wall("wardrobe_closet",f,1,1,1.35))
 			l.append(it("potted_plant",r[1].x+0.45,hd-0.62))
 			l.append(it("floor_lamp",r[1].y-0.45,hd-0.62))
+			l.append(wall("chest",f,1,-1,2.2,0.0,{"storage":true}))
 		"17_lighthouse/0":
 			l.append(link(it("spiral_stair",-1.55,-0.6,90.0,{"size":Vector3(2.1,h,2.1)}),1,Vector2.ZERO))
 			l.append(it("map_table",1.95,0.85,-90.0))
 			l.append(it("wooden_chair",1.2,0.85,90.0))
 			l.append(it("barrel",2.1,-0.95))
-			l.append(it("chest",0.75,-1.95))
+			l.append(it("chest",0.75,-1.95,0.0,{"storage":true}))
 			l.append(it("crate_stack",-hw+0.6,1.9))
 			l.append(wall("ship_wheel",f,0,1,2.2,1.7))
 			l.append(it("coat_rack",1.45,hd-0.6))
@@ -1509,6 +1514,8 @@ static func place(parent: Node3D, entry: Dictionary, s: Dictionary, index: int) 
 	record["room"]=room_at(s,node.position.x)
 	if entry.has("link"): record["link"]=entry.link
 	if entry.has("owner"): record["owner"]=entry.owner
+	# The storage chest of a house whose residents keep gifts (studio.gd open_storage).
+	if entry.has("storage"): record["storage"]=true
 	record["center"]=Vector3(node.position.x,0,node.position.z)
 	record["size"]=actual
 	record["half"]=Vector2(actual.x*0.5,actual.z*0.5)

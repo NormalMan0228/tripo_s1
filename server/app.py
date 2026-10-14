@@ -432,7 +432,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 'pending_craft':{'id':craft['id'],'state':craft['state']} if craft else None,
                 'objects':[{**obj_public(r),'room':r['room'],'studio':bool(r['studio']),'runtime_version':r['runtime_version'],'paint_version':r['paint_version'],'shape':object_shape.public(r['shape'])} for r in conn.execute("SELECT objects.*,COALESCE(furniture_locations.room,'village') AS room,CASE WHEN studio_assets.asset_id IS NULL THEN 0 ELSE 1 END AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+object_paint.version_column('objects.id')+" AS paint_version,"+object_shape.column('objects.id')+" AS shape FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id LEFT JOIN studio_assets ON studio_assets.asset_id=objects.asset_id WHERE owner_id=? AND state!='gifted' ORDER BY created",(user['id'],))],
                 # Residents' home versions (npc_homes.py): a house the client has cached at this version is current.
-                'npc_homes':app.state.npc_homes.versions_for(user['id']),'npc_homes_host':user['id']}
+                'npc_homes':app.state.npc_homes.versions_for(user['id']),'npc_homes_host':user['id'],
+                # Unread letters from residents (the village mailbox raises its flag).
+                'npc_letters_unread':app.state.npc_homes.unread_for(user['id'])}
 
     @app.post('/v1/objects/{object_id}')
     def edit_object(object_id:str,body:ObjectEdit,request:Request):
@@ -619,7 +621,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.object_paint=object_paint.ObjectPaint(app,db,clock,auth,mutate,own,assets)
     app.state.object_shape=object_shape.ObjectShape(app,db,clock,mutate,own)
     from .npc_homes import NpcHomes
-    app.state.npc_homes=NpcHomes(app,db,settings,clock,auth,mutate,multiplayer.host_for)
+    app.state.npc_homes=NpcHomes(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
     from .interactions import Interactions
     app.state.interactions=Interactions(app,db,settings,clock,auth,mutate,own,money,studio)
     from .usage_report import UsageReport; app.state.usage_report=UsageReport(app,db,settings,clock)

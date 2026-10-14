@@ -316,6 +316,14 @@
    "en": "You delivered the letter to %s · \"It's from the postman!\"",
    "zh": "你把信交给了%s · “是邮递员寄来的呀！”"
   },
+  "%s에게서 편지가 왔어요! 우편함을 열어 보세요.": {
+   "en": "A letter came from %s! Open your mailbox.",
+   "zh": "%s寄来了一封信！打开信箱看看吧。"
+  },
+  "%s에게서 편지와 답례 선물이 왔어요! 우편함을 열어 보세요.": {
+   "en": "A letter and a thank-you present came from %s! Open your mailbox.",
+   "zh": "%s寄来了信和回礼！打开信箱看看吧。"
+  },
   "%s에서 약속이 있거든요.": {
    "en": "I have an appointment at %s.",
    "zh": "我在%s有约。"
@@ -323,6 +331,10 @@
   "%s와 대화": {
    "en": "Talk to %s",
    "zh": "与%s交谈"
+  },
+  "%s의 선물": {
+   "en": "%s's gift",
+   "zh": "%s的礼物"
   },
   "%s의 소중한 선물 · %s": {
    "en": "%s's treasured gift · %s",
@@ -435,6 +447,10 @@
   "E 계속 낚시   ·   Esc 그만하기": {
    "en": "E Keep fishing   ·   Esc Stop",
    "zh": "E 继续钓鱼   ·   Esc 停止"
+  },
+  "E 닫기": {
+   "en": "E Close",
+   "zh": "E 关闭"
   },
   "E 살펴보기": {
    "en": "E Look",
@@ -596,6 +612,10 @@
    "en": "Harvested {1} {0}!",
    "zh": "收获了{1}个{0}！"
   },
+  "…그리고 %d개 더": {
+   "en": "…and %d more",
+   "zh": "……还有%d件"
+  },
   "…놓치지 마세요. 그림자는 그늘에 잘 섞이거든요.": {
    "en": "…Don't lose me. Shadows blend into the shade.",
    "zh": "……别跟丢了。影子很容易混进阴影里。"
@@ -683,6 +703,10 @@
   "♪ 새로 배운 곡이에요. 들어 볼래요?": {
    "en": "♪ A tune I just learned. Want to hear it?",
    "zh": "♪ 新学的曲子，要听听吗？"
+  },
+  "✉ %s의 편지 · %s": {
+   "en": "✉ Letter from %s · %s",
+   "zh": "✉ %s的来信 · %s"
   },
   "✓ 준비됨": {
    "en": "✓ Ready",
@@ -859,6 +883,10 @@
   "가끔은 텐트 말고 하늘 아래서 쉬어야 해.": {
    "en": "Sometimes you need to rest under the sky instead of a tent.",
    "zh": "有时候该在天空下休息，而不是帐篷里。"
+  },
+  "가람": {
+   "en": "Garam",
+   "zh": "伽蓝"
   },
   "가람 · 시인": {
    "en": "Garam · Poet",
@@ -1155,6 +1183,10 @@
   "고정 작업대와 겹쳐요.": {
    "en": "It overlaps the fixed workbench.",
    "zh": "与固定工作台重叠了。"
+  },
+  "곧 꺼내 놓을지도 몰라요.": {
+   "en": "They might bring these out soon.",
+   "zh": "说不定很快就会拿出来摆。"
   },
   "곧 끝나요": {
    "en": "Almost done",
@@ -1816,6 +1848,10 @@
    "en": "That isn't yours.",
    "zh": "这不是你的东西。"
   },
+  "내 보물 중에 제일 좋은 걸 너한테 줄게! 소중히 해야 해, 약속!": {
+   "en": "I'm giving you the best of my treasures! Take good care of it, promise!",
+   "zh": "把我最好的宝贝送给你！要好好珍惜，约好了！"
+  },
   "내 이름: ": {
    "en": "My name: ",
    "zh": "我的名字："
@@ -1852,6 +1888,22 @@
    "en": "Munch munch, I'm having a meal.",
    "zh": "吧唧吧唧，正在吃饭。"
   },
+  "너 진짜 좋은 사람이야! 다음엔 같이 술래잡기 하자!": {
+   "en": "You're really nice! Let's play tag next time!",
+   "zh": "你真是个好人！下次一起玩捉迷藏吧！"
+  },
+  "너는 내 가장 소중한 친구야! 고마운 마음을 담아 작은 선물을 같이 보내. 마음에 들면 좋겠다!": {
+   "en": "You're my dearest friend! I'm sending a little present with my thanks. Hope you like it!",
+   "zh": "你是我最珍贵的朋友！附上一份小礼物表达谢意，希望你喜欢！"
+  },
+  "너는 내 단짝이야! 비밀 기지도 보여 줄게. 아무한테도 말하면 안 돼!": {
+   "en": "You're my best buddy! I'll show you my secret base. Don't tell anyone!",
+   "zh": "你是我的好搭档！我带你看秘密基地，不许告诉别人！"
+  },
+  "너랑 이야기하는 시간이 점점 기다려져. 다음에 만나면 내가 아는 지름길도 알려 줄게!": {
+   "en": "I look forward to our chats more and more. Next time I'll show you my shortcuts!",
+   "zh": "越来越期待和你聊天了。下次见面我把我知道的近路告诉你！"
+  },
   "너무 빨리 당겼어요. 다음 입질을 기다려 보세요.": {
    "en": "Too early! Wait for the next bite.",
    "zh": "拉得太早了。等下一次咬钩吧。"
@@ -1859,6 +1911,10 @@
   "넉넉한 나무와 열매. 첫 탐험에 어울리는 숲.": {
    "en": "Plenty of wood and berries. A forest made for your first Expedition.",
    "zh": "树木和果实充足。适合第一次探险的森林。"
+  },
+  "네 덕분에 집이 한결 아늑해졌어. 고맙다는 말, 이번엔 편지로 할게.": {
+   "en": "Thanks to you my home feels much cozier. This time I'll say thank you in a letter.",
+   "zh": "多亏了你，家里舒适多了。这次用信说声谢谢。"
   },
   "노란 우비를 입은 섬의 첫 탐험가.": {
    "en": "The island's first explorer, in a yellow raincoat.",
@@ -1871,6 +1927,10 @@
   "노랑": {
    "en": "Yellow",
    "zh": "黄色"
+  },
+  "노을": {
+   "en": "Noeul",
+   "zh": "晚霞"
   },
   "노을 · 등불지기": {
    "en": "Noeul · Lamplighter",
@@ -2132,6 +2192,10 @@
    "en": "Redo",
    "zh": "重做"
   },
+  "다온": {
+   "en": "Daon",
+   "zh": "多温"
+  },
   "다온 · 우편배달부": {
    "en": "Daon · Postman",
    "zh": "多温 · 邮递员"
@@ -2207,6 +2271,14 @@
   "당근": {
    "en": "Carrot",
    "zh": "胡萝卜"
+  },
+  "당신 이야기를 시로 써 보려다 그만 잠들었어요. 꿈에서도 고마웠어요.": {
+   "en": "I tried to write a poem about you and fell asleep. I was grateful even in my dreams.",
+   "zh": "我想把你写成诗，结果睡着了。梦里也在感谢你。"
+  },
+  "당신의 선물들이 제 방을 작은 전시회로 만들어 주었어요. 고마워요.": {
+   "en": "Your gifts turned my room into a little exhibition. Thank you.",
+   "zh": "你的礼物把我的房间变成了小小的展览。谢谢。"
   },
   "대사 속도": {
    "en": "Text speed",
@@ -2836,6 +2908,10 @@
    "en": "Click a spot you like. Press R to rotate, Esc to cancel.",
    "zh": "点击喜欢的地面。按 R 旋转，按 Esc 取消。"
   },
+  "마음을 담은 작은 선물을 보내요. 달이 뜨는 밤마다 우리가 친구라는 걸 기억해 줘요.": {
+   "en": "I'm sending a little present from the heart. Remember we're friends whenever the moon rises.",
+   "zh": "送你一份心意小礼物。每当月亮升起，请记得我们是朋友。"
+  },
   "마지막 레이어는 지울 수 없어요.": {
    "en": "The last layer cannot be deleted.",
    "zh": "最后一个图层不能删除。"
@@ -3436,6 +3512,10 @@
    "en": "Previewing · save and it moves like this everywhere",
    "zh": "预览中 · 保存后在任何地方都会这样动"
   },
+  "미소": {
+   "en": "Miso",
+   "zh": "微笑"
+  },
   "미소 · 청소부": {
    "en": "Miso · Sweeper",
    "zh": "美笑 · 清洁工"
@@ -3539,6 +3619,10 @@
   "바람이 종이를 넘겨 주니 시가 절로 써져요.": {
    "en": "The wind turns the pages, and the poems write themselves.",
    "zh": "风帮我翻页，诗就自己写出来了。"
+  },
+  "바우": {
+   "en": "Bau",
+   "zh": "巴乌"
   },
   "바우 · 탐험가": {
    "en": "Bau · Explorer",
@@ -3980,6 +4064,10 @@
    "en": "Stored",
    "zh": "收纳"
   },
+  "보관 상자": {
+   "en": "Storage chest",
+   "zh": "收纳箱"
+  },
   "보관 중": {
    "en": "Stored",
    "zh": "收纳中"
@@ -4008,6 +4096,10 @@
    "en": "Comfort",
    "zh": "舒适"
   },
+  "보내 준 선물, 정성스럽게 장식해 두었어요. 안목이 정말 좋으시더군요.": {
+   "en": "I've displayed your gift with care. You truly have a good eye.",
+   "zh": "你送的礼物我精心摆好了。你的眼光真好。"
+  },
   "보낼 말을 적어 주세요.": {
    "en": "Write something to send.",
    "zh": "请输入要发送的内容。"
@@ -4019,6 +4111,10 @@
   "보라색 지붕 주택": {
    "en": "House with a purple roof",
    "zh": "紫顶住宅"
+  },
+  "보람": {
+   "en": "Boram",
+   "zh": "宝蓝"
   },
   "보람 · 낚시꾼": {
    "en": "Boram · Angler",
@@ -4528,6 +4624,10 @@
    "en": "Your new traveler look has been saved.",
    "zh": "新的旅行者造型已保存。"
   },
+  "새벽": {
+   "en": "Saebyeok",
+   "zh": "晨曦"
+  },
   "새벽 · 산책자": {
    "en": "Saebyeok · Stroller",
    "zh": "晨曦 · 散步者"
@@ -4688,9 +4788,21 @@
    "en": "Study",
    "zh": "书房"
   },
+  "선물 고마워!!! 매일매일 가지고 놀고 있어! 헤헤.": {
+   "en": "Thanks for the present!!! I play with it every day! Hehe.",
+   "zh": "谢谢礼物！！！我每天都在玩！嘿嘿。"
+  },
+  "선물 고마워. 말로는 잘 못 했지만, 꽤 기뻤어. 잘 쓰고 있어.": {
+   "en": "Thanks for the gift. I didn't say it well, but I was really glad. I'm using it.",
+   "zh": "谢谢你的礼物。当面没说好，其实我很高兴。我一直在用。"
+  },
   "선물은 내 마을 주민에게만 줄 수 있어요.": {
    "en": "You can only give gifts to residents of your own village.",
    "zh": "只能给自己村子的居民送礼物。"
+  },
+  "선물을 받은 날, 하늘이 조금 더 맑아 보였어요. 고마워요.": {
+   "en": "The day I got your gift, the sky looked a little clearer. Thank you.",
+   "zh": "收到礼物那天，天空好像更晴朗了。谢谢。"
   },
   "선물이다! 고마워, 고마워!": {
    "en": "A present! Thank you, thank you!",
@@ -4887,6 +4999,10 @@
   "소원 우물에 동전 던지기": {
    "en": "Toss a coin into the wishing well",
    "zh": "向许愿井投硬币"
+  },
+  "소중한 친구에게 어울리는 답례를 고민하다 이걸 골랐어요. 곁에 두고 저를 떠올려 주세요.": {
+   "en": "I thought hard about a fitting thank-you for a dear friend and chose this. Keep it near and think of me.",
+   "zh": "为珍贵的朋友挑选回礼，我选了这个。放在身边想起我吧。"
   },
   "손그림 지도 · 씨앗 가게 앞 의자": {
    "en": "Hand-drawn map · chair outside the seed shop",
@@ -5300,6 +5416,10 @@
    "en": "No fish yet, I see.",
    "zh": "还没有鱼啊。"
   },
+  "아직 받은 편지가 없어요.": {
+   "en": "No letters yet.",
+   "zh": "还没有收到信。"
+  },
   "아침 바다는 거울 같아요. 찌가 또렷하게 보여요.": {
    "en": "The morning sea is like a mirror. You can see the float clearly.",
    "zh": "早晨的大海像镜子一样，浮漂看得清清楚楚。"
@@ -5339,6 +5459,10 @@
   "안녕": {
    "en": "Bye",
    "zh": "再见"
+  },
+  "안녕! 선물 정말 고마웠어. 집에 들어갈 때마다 그 생각이 나서 웃게 돼. 또 놀러 와!": {
+   "en": "Hi! Thanks so much for the gift. I smile every time I come home and see it. Come visit again!",
+   "zh": "嗨！真的谢谢你的礼物。每次回家看到它都会笑。再来玩吧！"
   },
   "안녕하세요!": {
    "en": "Hello!",
@@ -5804,6 +5928,10 @@
    "en": "You've been away a while. Please log in again.",
    "zh": "你离开太久了，请重新登录。"
   },
+  "오래 함께해 줘서 고마워. 내가 아끼는 걸 하나 보내. 너라면 잘 써 줄 거야.": {
+   "en": "Thanks for sticking around. I'm sending something I treasure. I know you'll use it well.",
+   "zh": "谢谢你一直陪着我。送你一件我珍惜的东西，你一定会好好用的。"
+  },
   "오래된 배의 키예요. 바다 냄새가 나요.": {
    "en": "An old ship's wheel. It smells of the sea.",
    "zh": "一个旧船舵，带着大海的气味。"
@@ -5948,6 +6076,10 @@
    "en": "Cook",
    "zh": "做饭"
   },
+  "요즘 네가 지나가면 괜히 반가워. 언제든 쉬어 가.": {
+   "en": "Lately I'm glad whenever you pass by. Stop and rest anytime.",
+   "zh": "最近你一经过我就很开心。随时来歇歇吧。"
+  },
   "요청 결과 확인 필요 · 중복 과금 방지를 위해 정지": {
    "en": "Request result needs checking · Paused to avoid double charges",
    "zh": "需确认请求结果 · 为防止重复扣费已暂停"
@@ -5959,6 +6091,10 @@
   "욕실": {
    "en": "Bathroom",
    "zh": "浴室"
+  },
+  "우리 이제 진짜 친한 친구 맞지? 네가 준 선물들 덕분에 집이 훨씬 환해졌어.": {
+   "en": "We're real friends now, right? Your gifts made my home so much brighter.",
+   "zh": "我们现在是真正的好朋友了吧？多亏你的礼物，我家亮堂多了。"
   },
   "우물 깊은 곳에서 맑은 소리가 울려요. 오늘은 걸음이 가벼울 거예요.": {
    "en": "A clear note rings from deep in the well. Your steps will be light today.",
@@ -6079,6 +6215,10 @@
   "유리 온실 옆 향초밭은 제 자랑이에요.": {
    "en": "The herb garden by the glass greenhouse is my pride.",
    "zh": "玻璃温室旁的香草田是我的骄傲。"
+  },
+  "윤재": {
+   "en": "Yunjae",
+   "zh": "允在"
   },
   "윤재 · 산책하는 신사": {
    "en": "Yunjae · Strolling Gentleman",
@@ -7216,6 +7356,10 @@
    "en": "It's closed for now. The owner must be out.",
    "zh": "现在关门了。店主好像不在。"
   },
+  "지금은 상자가 비어 있어요. 선물은 모두 집 안에 나와 있어요.": {
+   "en": "The chest is empty right now. Every gift is out in the house.",
+   "zh": "箱子现在是空的。礼物都摆在屋里了。"
+  },
   "지금은 새 가구 제작을 준비하고 있어요.": {
    "en": "New furniture crafting is getting ready.",
    "zh": "新家具制作正在准备中。"
@@ -7239,6 +7383,10 @@
   "지급했어요 · 별씨 %d · 잎전 %d": {
    "en": "Granted · Starseeds %d · Leaf coins %d",
    "zh": "已发放 · 星种 %d · 叶币 %d"
+  },
+  "지난 편지 다시 읽기": {
+   "en": "Read past letters",
+   "zh": "重读以前的信"
   },
   "지도": {
    "en": "Map",
@@ -7352,6 +7500,10 @@
    "en": "Drink tea",
    "zh": "喝茶"
   },
+  "차 한 잔 함께하고 싶은 친구가 생겼네요. 바로 당신이에요.": {
+   "en": "I've found a friend I'd love to share tea with. It's you.",
+   "zh": "我有了想一起喝茶的朋友，就是你。"
+  },
   "찬 바람과 얼음 웅덩이. 모닥불과 식량을 먼저 준비하세요.": {
    "en": "Cold winds and icy pools. Prepare a Campfire and food first.",
    "zh": "寒风和冰洼。请先准备好篝火和食物。"
@@ -7407,6 +7559,10 @@
   "창가 자리에 햇살이 비쳐요.": {
    "en": "Sunlight falls on the window seat.",
    "zh": "阳光洒在靠窗的座位上。"
+  },
+  "창가에 둔 당신의 선물에 별빛이 내려앉아요. 매일 밤 인사해요.": {
+   "en": "Starlight settles on your gift by the window. I greet it every night.",
+   "zh": "星光落在窗边你的礼物上。我每晚都和它打招呼。"
   },
   "창고": {
    "en": "Storage",
@@ -7828,6 +7984,10 @@
    "en": "Coconut",
    "zh": "椰子"
   },
+  "콩이": {
+   "en": "Kongi",
+   "zh": "小豆"
+  },
   "콩이 · 꼬마": {
    "en": "Kongi · Kid",
    "zh": "豆豆 · 小不点"
@@ -8159,6 +8319,10 @@
   "편지를 받았어요 · %s에게 전해 주세요": {
    "en": "Got the letter · please give it to %s",
    "zh": "收到了信 · 请交给%s"
+  },
+  "편지와 함께 선물이 왔어요: %s. 가방을 확인해 보세요!": {
+   "en": "A present came with the letter: %s. Check your bag!",
+   "zh": "信里还附了一份礼物：%s。看看背包吧！"
   },
   "펼치기": {
    "en": "Expand",
