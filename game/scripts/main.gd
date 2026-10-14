@@ -1310,7 +1310,9 @@ func refresh_inventory() -> void:
 		for i in me.objects.size():
 			if me.objects[i].id==old_selection: index=i
 		objects_list.select(index)
-		select_object(index)
+		# A placement the player started while this refresh was on its way stays: selecting again
+		# would cancel its ghost (select_object -> cancel_preview).
+		if not is_instance_valid(preview): select_object(index)
 	if is_instance_valid(shape_panel): shape_panel.refresh()
 	refreshing=false
 
