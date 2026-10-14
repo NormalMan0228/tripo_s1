@@ -6,7 +6,7 @@ extends SceneTree
 const ObjectTransform = preload("res://scripts/object_transform.gd")
 const Loader = preload("res://scripts/model_loader.gd")
 const TownLayout = preload("res://scripts/town.gd")
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 var failures: Array[String] = []
 
 func check(value: bool, message: String) -> void:

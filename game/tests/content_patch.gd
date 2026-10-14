@@ -16,7 +16,7 @@ func capture(name: String) -> void:
 	expect(root.get_texture().get_image().save_png(folder.path_join(name+".png"))==OK,"capture "+name)
 func run() -> void:
 	app=Main.new();root.add_child(app);await process_frame
-	await app.authenticate(true,"http://127.0.0.1:8766","content_"+str(Time.get_ticks_usec()),"Content-patch-test-password","")
+	await app.authenticate(true,preload("res://tests/qa_server.gd").url(),"content_"+str(Time.get_ticks_usec()),"Content-patch-test-password","")
 	expect(app.screen=="village","authenticated village opens")
 	if app.screen!="village":quit(1);return
 	expect(app.npcs.size()==4,"four village NPCs are available")
@@ -53,7 +53,7 @@ func run() -> void:
 		expect(not is_instance_valid(app.village_modal),"the dialogue closes")
 	var token: String=app.api.token
 	app.queue_free();await process_frame
-	Engine.set_meta("studio_session",{"token":token,"url":"http://127.0.0.1:8766","room":"home"})
+	Engine.set_meta("studio_session",{"token":token,"url":preload("res://tests/qa_server.gd").url(),"room":"home"})
 	app=load("res://scenes/studio.tscn").instantiate();root.add_child(app);await create_timer(1.2).timeout
 	expect(not app.room_root.find_children("InteriorShell","Node3D",true,false).is_empty(),"authored home interior loads")
 	var tabs: TabContainer=app.find_children("*","TabContainer",true,false)[0]

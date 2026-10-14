@@ -3,7 +3,7 @@ const Main = preload("res://scripts/main.gd")
 var apps: Array = []
 var names: Array[String] = []
 var failed := false
-var url := "http://127.0.0.1:8766"
+var url := preload("res://tests/qa_server.gd").url()
 
 func _initialize() -> void:
 	call_deferred("run_test")

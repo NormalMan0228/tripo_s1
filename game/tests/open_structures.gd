@@ -30,7 +30,7 @@ func run() -> void:
 	app = Main.new()
 	root.add_child(app)
 	await create_timer(1.2).timeout
-	await app.authenticate(true,"http://127.0.0.1:8766","open_"+str(Time.get_ticks_msec()),"Open-structures-1","")
+	await app.authenticate(true,preload("res://tests/qa_server.gd").url(),"open_"+str(Time.get_ticks_msec()),"Open-structures-1","")
 	await create_timer(1.0).timeout
 	for spec in [["gazebo",Vector2(71,-36),Vector2(71,-29.5)],["stage",Vector2(37,26),Vector2(37,32.5)],["picnic shelter",Vector2(65,29),Vector2(65,35)]]:
 		var centre: Vector2=spec[1]

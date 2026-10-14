@@ -31,7 +31,7 @@ func place(app: Node, id: String, at: Vector2) -> void:
 	await app.place_preview()
 
 func run() -> void:
-	var server := "http://127.0.0.1:8766"
+	var server := preload("res://tests/qa_server.gd").url()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
 	var app = load("res://scripts/main.gd").new()

@@ -49,7 +49,7 @@ func run() -> void:
 		await capture(code+"-login")
 		if code=="en": expect(find_text(app.ui,"Log In"),"English login button")
 		if code=="zh": expect(find_text(app.ui,"登录"),"Chinese login button")
-		await app.authenticate(true,"http://127.0.0.1:8766","ui_"+code+"_"+str(Time.get_ticks_msec()),"Ui-tour-password-123","")
+		await app.authenticate(true,preload("res://tests/qa_server.gd").url(),"ui_"+code+"_"+str(Time.get_ticks_msec()),"Ui-tour-password-123","")
 		await create_timer(1.2).timeout
 		expect(app.screen=="village","village after login in "+code)
 		await capture(code+"-village")

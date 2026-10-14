@@ -17,7 +17,7 @@ extends SceneTree
 ## goes to user://logs/ime_trace.txt; a field whose composed syllables never arrived (Godot 4.7.2
 ## engine bug godotengine/godot#123269) fails with that named.
 const Main = preload("res://scripts/main.gd")
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 var hold_ms := 12
 var helper: Node
 var failed := false

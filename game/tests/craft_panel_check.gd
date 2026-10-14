@@ -39,7 +39,7 @@ func run() -> void:
 	app = Main.new()
 	root.add_child(app)
 	await create_timer(0.4).timeout
-	var server := "http://127.0.0.1:8766"
+	var server := preload("res://tests/qa_server.gd").url()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
 	await app.authenticate(true, server, "panel_"+str(Time.get_ticks_msec()), "Panel-check-password-1", "")

@@ -9,7 +9,7 @@ extends SceneTree
 const Town = preload("res://scripts/town.gd")
 const GameSettings = preload("res://scripts/game_settings.gd")
 
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 var failures: Array[String] = []
 
 func check(value: bool, label: String) -> void:

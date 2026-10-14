@@ -3,7 +3,7 @@ extends SceneTree
 ## and back in the village, and no other character appears.
 const Main = preload("res://scripts/main.gd")
 var failures: Array[String] = []
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 
 func check(value: bool, message: String) -> void:
 	print(("PASS " if value else "FAIL ") + message)

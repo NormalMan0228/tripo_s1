@@ -6,7 +6,7 @@ extends SceneTree
 ##   godot --headless --path game --script res://tests/visit_furniture_sync.gd -- --mute --qa --server=http://127.0.0.1:8813
 const Main = preload("res://scripts/main.gd")
 const Town = preload("res://scripts/town.gd")
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 var failed := false
 
 func expect(value: bool, label: String) -> void:

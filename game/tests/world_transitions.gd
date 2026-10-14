@@ -5,7 +5,7 @@ extends SceneTree
 ## the loading card (place name and a tip) up while the screen is covered.
 ##   Godot --headless --path game --script res://tests/world_transitions.gd -- --server=http://127.0.0.1:8812
 var failures: Array[String] = []
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 var samples: Array = []
 var veil: CanvasLayer
 
