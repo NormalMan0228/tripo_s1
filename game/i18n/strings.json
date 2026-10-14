@@ -1612,6 +1612,10 @@
    "en": "Landing it…",
    "zh": "正在拉上来……"
   },
+  "끝나는 시각 %02d:%02d (예상)": {
+   "en": "Expected to end at %02d:%02d",
+   "zh": "预计 %02d:%02d 结束"
+  },
   "나": {
    "en": "Me",
    "zh": "我"
@@ -3656,6 +3660,14 @@
    "en": "Check the operator's notice for the download.",
    "zh": "下载地址请查看运营公告。"
   },
+  "받은 파일을 확인하고 있어요…": {
+   "en": "Checking the downloaded file…",
+   "zh": "正在校验下载的文件…"
+  },
+  "받은 파일이 손상되었어요. 다시 시도해 주세요.": {
+   "en": "The downloaded file is damaged. Please try again.",
+   "zh": "下载的文件已损坏。请重试。"
+  },
   "받지 않은 보상 꾸러미가 %d개 있어요. 함께하기 메뉴에서 받을 수 있어요.": {
    "en": "You have %d unclaimed reward bundle(s). Claim them in the Play Together menu.",
    "zh": "还有 %d 个未领取的奖励包，可以在一起玩菜单中领取。"
@@ -4592,6 +4604,14 @@
    "en": "Get the new version to keep playing.",
    "zh": "需要下载新版本才能继续游戏。"
   },
+  "새 버전을 준비하고 있어요. 잠시 뒤 다시 확인할게요.": {
+   "en": "The new version is being prepared. It will be checked again shortly.",
+   "zh": "新版本正在准备中，稍后会再次确认。"
+  },
+  "새 버전을 확인하고 있어요…": {
+   "en": "Checking the new version…",
+   "zh": "正在确认新版本…"
+  },
   "새 버전이 있어요": {
    "en": "New version out",
    "zh": "有新版本"
@@ -4756,6 +4776,10 @@
    "en": "Maintenance in",
    "zh": "距维护还有"
   },
+  "서버 점검이 시작되어 로그아웃했어요. 점검이 끝나면 다시 로그인해 주세요.": {
+   "en": "Maintenance has started, so you were logged out. Log in again once it is over.",
+   "zh": "服务器维护开始，已退出登录。维护结束后请重新登录。"
+  },
   "서버 주소 · 예: http://100.101.1.2:8765 (Tailscale)": {
    "en": "Server address · e.g. http://100.101.1.2:8765 (Tailscale)",
    "zh": "服务器地址 · 例如 http://100.101.1.2:8765（Tailscale）"
@@ -4767,6 +4791,10 @@
   "서버가 검사한 숫자 연산·부품 제어 코드입니다. 파일이나 재화에 접근할 수 없습니다.": {
    "en": "Server-checked code for number math and part control only. It can't access files or currency.",
    "zh": "经服务器检查的数值运算与部件控制代码，无法访问文件或货币。"
+  },
+  "서버가 모두를 로그아웃시켰어요. 다시 로그인해 주세요.": {
+   "en": "The server signed everyone out. Please log in again.",
+   "zh": "服务器已让所有人退出登录。请重新登录。"
   },
   "서버를 업데이트한 뒤 다시 접속해 주세요": {
    "en": "Please reconnect after updating the server",
@@ -4911,6 +4939,10 @@
   "설정을 저장했어요.": {
    "en": "Settings saved.",
    "zh": "设置已保存。"
+  },
+  "설치 파일 받기": {
+   "en": "Get the installer",
+   "zh": "下载安装程序"
   },
   "섬 안쪽에 놓아 주세요.": {
    "en": "Place it on the island.",
@@ -5640,6 +5672,18 @@
    "en": "Ice · Slows movement",
    "zh": "冰面 · 移动减速"
   },
+  "업데이트": {
+   "en": "Update",
+   "zh": "更新"
+  },
+  "업데이트 완료! 게임을 다시 시작해요.": {
+   "en": "Update complete! Restarting the game.",
+   "zh": "更新完成！正在重新启动游戏。"
+  },
+  "업데이트 정보를 받지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.": {
+   "en": "Could not get the update information. Check your internet connection and try again.",
+   "zh": "无法获取更新信息。请检查网络连接后重试。"
+  },
   "업데이트 필요": {
    "en": "Update needed",
    "zh": "需要更新"
@@ -6356,6 +6400,10 @@
    "en": "Place in this room",
    "zh": "放在这个房间"
   },
+  "이 버전은 너무 오래되어 게임을 새로 설치해야 해요.": {
+   "en": "This version is too old: please install the game again.",
+   "zh": "此版本过旧，需要重新安装游戏。"
+  },
   "이 서버는 초대 코드가 있어야 가입할 수 있어요. 초대 코드를 넣거나 '이 PC 서버'를 고르세요.": {
    "en": "This server needs an invite code to sign up. Enter the code or choose \"This PC's Server\".",
    "zh": "该服务器需要邀请码才能注册。请输入邀请码，或选择“本机服务器”。"
@@ -6523,6 +6571,10 @@
   "이미지는 1MB 이하로 준비해 주세요": {
    "en": "Please use an image of 1MB or less",
    "zh": "请准备 1MB 以下的图片"
+  },
+  "이번 업데이트는 게임을 새로 설치해야 해요.": {
+   "en": "This update needs a fresh install of the game.",
+   "zh": "此次更新需要重新安装游戏。"
   },
   "이번 탐험은 여기까지예요.\n귀환 후 다시 도전할 수 있어요.": {
    "en": "This expedition ends here.\nReturn and try again anytime.",
@@ -7003,6 +7055,10 @@
   "접기": {
    "en": "Collapse",
    "zh": "收起"
+  },
+  "접속이 끝났어요. 다시 로그인해 주세요.": {
+   "en": "Your session has ended. Please log in again.",
+   "zh": "连接已结束。请重新登录。"
   },
   "정답! …역시 눈썰미가 좋네요.": {
    "en": "Correct! …You've got a sharp eye.",
@@ -7800,6 +7856,10 @@
    "en": "Max frame rate",
    "zh": "最大帧率"
   },
+  "최신 버전인지 확인하고 있어요…": {
+   "en": "Checking for the latest version…",
+   "zh": "正在确认是否为最新版本…"
+  },
   "추천 물건 물어보기": {
    "en": "Ask for a recommendation",
    "zh": "问问推荐商品"
@@ -8060,6 +8120,10 @@
    "en": "To Title",
    "zh": "返回标题"
   },
+  "타이틀로 돌아가면 업데이트해요": {
+   "en": "Updates when you return to the title",
+   "zh": "返回标题画面时更新"
+  },
   "탁자": {
    "en": "Table",
    "zh": "桌子"
@@ -8291,6 +8355,18 @@
   "팔레트로 전체 색을 바꿔 보세요.\nR · 휠 · 놓을 방향 돌리기": {
    "en": "Change the whole colour with the palette.\nR · Wheel · Turn before placing",
    "zh": "用调色板更换整体颜色。\nR · 滚轮 · 旋转摆放方向"
+  },
+  "패치가 이 PC에서 실행되지 않았어요. 게임을 새로 설치해 주세요.": {
+   "en": "The patch did not run on this PC. Please install the game again.",
+   "zh": "补丁无法在此电脑上运行。请重新安装游戏。"
+  },
+  "패치를 받고 있어요": {
+   "en": "Downloading the patch",
+   "zh": "正在下载补丁"
+  },
+  "패치를 받다가 멈췄어요. 다시 시도하면 이어서 받아요.": {
+   "en": "The download stopped. Try again to continue where it left off.",
+   "zh": "补丁下载中断。重试即可继续下载。"
   },
   "팽이": {
    "en": "Spinning top",
