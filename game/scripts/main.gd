@@ -243,8 +243,8 @@ func _ready() -> void:
 	add_child(daylight)
 	sun_defaults={"rotation":sun.rotation_degrees,"bias":sun.shadow_bias,"normal_bias":sun.shadow_normal_bias,"distance":sun.directional_shadow_max_distance}
 	apply_graphics()
-	GameSettings.listen(func(keys: Array):
-		if "shadows" in keys or "preset" in keys: apply_graphics())
+	# A method, not a lambda: the static listener list holding a lambda crashed the game on exit.
+	GameSettings.listen(settings_changed)
 	camera = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.size = ControllerProfile.CAMERA_DEFAULT
@@ -2442,8 +2442,12 @@ func logout() -> void:
 	veil.fade_in()
 
 func _exit_tree() -> void:
+	GameSettings.unlisten(settings_changed)
 	# A pending studio session means the map is only travelling to a room and back.
 	if not Engine.has_meta("studio_session"): TownLayout.discard_kept()
+
+func settings_changed(keys: Array) -> void:
+	if "shadows" in keys or "preset" in keys: apply_graphics()
 
 ## Footsteps follow the ground under the walker (bridges and floors are wood,
 ## paths gravel, beaches sand, the water's edge shallow) and its pace; the
