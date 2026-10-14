@@ -171,7 +171,10 @@ func show_main() -> void:
 			_item(list, tr("마을로"), func():
 				dismiss()
 				app.leave())
-	_item(list, tr("게임 종료"), func(): ask(tr("게임을 종료할까요?") + ("\n" + tr("진행 중인 탐험은 저장되어 다음에 이어 할 수 있어요.") if context == "survival" and not app.get("coop_run") else ""), func(): get_tree().quit()))
+	_item(list, tr("게임 종료"), func(): ask(tr("게임을 종료할까요?") + ("\n" + tr("진행 중인 탐험은 저장되어 다음에 이어 할 수 있어요.") if context == "survival" and not app.get("coop_run") else ""), func():
+		# The same notice as closing the window, so friends see this player leave at once (social.gd).
+		get_tree().root.propagate_notification(NOTIFICATION_WM_CLOSE_REQUEST)
+		get_tree().quit()))
 	_focus.call_deferred(first)
 
 func _item(parent: Node, text: String, callback: Callable) -> Button:

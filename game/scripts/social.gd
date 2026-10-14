@@ -1,6 +1,17 @@
 extends Node
 ## Polling transport for a three-player test. Authority and membership stay on the server.
 const AvatarLook = preload("res://scripts/avatar_look.gd")
+## Other players' walk, drawn smoothly from the irregular replies (remote_motion.gd).
+const RemoteMotion = preload("res://scripts/remote_motion.gd")
+## The village shares this player's spot four times a second. On an expedition the run carries the
+## party's spots, and while a screen loads a slower heartbeat still says this player is here: a
+## host who goes quiet for long (server/multiplayer.py HOST_GONE_SECONDS) has left, and the guests
+## are sent home.
+const POLL_VILLAGE := 0.25
+const POLL_AWAY := 2.0
+const HEARTBEAT := 3.0
+## A reply that does not come within this long is given up (the next poll goes out).
+const POLL_TIMEOUT := 4.0
 ## The host's furniture is read through the guest routes (server/multiplayer.py).
 const GUEST_OBJECTS = "/v1/social/village/objects/"
 var app: Node3D
@@ -16,6 +27,9 @@ var seen_message := 0
 var status_label: Label
 var menu_messages: Label
 var last_failure := 0.0
+## The spot also carries the walker's velocity and this game's clock (multiplayer.py Presence);
+## a server older than that refuses them (422), and the 0.11.4 fields are sent from then on.
+var rich_presence := true
 
 ## Village visits and co-op are on whenever the server offers them. --no-multiplayer
 ## hides them for a solo client.
@@ -89,17 +103,41 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(app): return
 	for entry in peers.values():
 		if not is_instance_valid(entry.node): continue
-		var actor: CharacterBody3D = entry.node
-		if not is_instance_valid(actor): continue
-		var previous := actor.position
-		actor.position = actor.position.lerp(entry.target, 1.0-exp(-12.0*delta))
-		actor.external_velocity = Vector2(actor.position.x-previous.x, actor.position.z-previous.z)/maxf(delta, .001)
-		actor.external_motion = actor.external_velocity.normalized()
-	if not enabled or app.api.token.is_empty() or app.screen not in ["village", "survival"]: return
+		entry.motion.update(delta)
+		entry.motion.apply_to(entry.node)
+	if not enabled or app.api.token.is_empty(): return
+	var interval := 0.0
+	match app.screen:
+		"village": interval = POLL_VILLAGE
+		"survival": interval = POLL_AWAY
+		"loading": interval = HEARTBEAT
+		_: return
 	timer += delta
-	if timer >= (.25 if app.screen == "village" else 2.0):
-		timer = 0
-		poll()
+	# The next poll goes out on schedule, or as soon as a slow answer is in (a poll skipped while
+	# one was under way halved the rate on a slow connection).
+	if timer < interval or pending or changing: return
+	timer = 0.0
+	if app.screen == "loading": heartbeat()
+	else: poll()
+
+## This player's spot, its velocity and the moment (this game's clock) it was taken.
+func spot(scene: String) -> Dictionary:
+	var body := {"scene":scene}
+	var walker = app.player
+	if is_instance_valid(walker) and walker.is_inside_tree():
+		body.merge({"x":clampf(walker.position.x, -100, 100), "z":clampf(walker.position.z, -100, 100), "y":clampf(walker.position.y, -20, 40),
+			"yaw":wrapf(walker.visual.rotation.y if is_instance_valid(walker.visual) else 0.0, -PI, PI)})
+		if rich_presence:
+			var velocity: Vector3 = walker.get_real_velocity()
+			body.merge({"vx":clampf(velocity.x, -30, 30), "vz":clampf(velocity.z, -30, 30)})
+	if rich_presence: body.t = RemoteMotion.now()
+	return body
+
+## While a screen loads: only "still here" (the answer is not used; the next poll catches up).
+func heartbeat() -> void:
+	pending = true
+	await app.api.post_kept("/v1/social/presence", {"scene":"away"}, POLL_TIMEOUT)
+	pending = false
 
 func poll() -> void:
 	if pending or changing or not enabled or app.api.token.is_empty(): return
@@ -107,9 +145,14 @@ func poll() -> void:
 	var epoch: int = app.world_epoch
 	var old_host: String = str(data.get("host_id", ""))
 	var token: String = app.api.token
-	var response: Dictionary = await app.api.post("/v1/social/presence", {"scene":"village" if app.screen == "village" else "away", "x":app.player.position.x, "z":app.player.position.z, "y":app.player.position.y, "yaw":app.player.visual.rotation.y})
+	# One kept-alive connection (api.post_kept): a new HTTPS connection per poll cost several round
+	# trips each time and made the answers late and uneven.
+	var response: Dictionary = await app.api.post_kept("/v1/social/presence", spot("village" if app.screen == "village" else "away"), POLL_TIMEOUT)
 	pending = false
 	if token != app.api.token or epoch != app.world_epoch: return
+	if not response.ok and int(response.get("status", 0)) == 422 and rich_presence:
+		rich_presence = false
+		return
 	if not response.ok:
 		if Time.get_ticks_msec()*.001-last_failure > 10:
 			last_failure = Time.get_ticks_msec()*.001
@@ -133,7 +176,9 @@ func poll() -> void:
 			changing = true
 			await app.enter_village()
 			changing = false
+			announce_visit_end()
 			return
+		announce_visit_end()
 		if data.get("village") is Dictionary:
 			sync_peers(data.village.players)
 			if visiting():
@@ -166,7 +211,8 @@ func sync_peers(players: Array) -> void:
 			continue
 		if record.get("withdrawn", false): continue
 		retained[id] = true
-		var target := Vector3(record.x, record.get("y", .03), record.z)
+		var y = record.get("y")
+		var target := Vector3(record.x, .03 if y == null else float(y), record.z)
 		var version := int(record.get("avatar_version", -1))
 		if not peers.has(id) or not is_instance_valid(peers[id].node):
 			var actor := AvatarLook.walker(record.get("avatar", {}), version)
@@ -183,8 +229,8 @@ func sync_peers(players: Array) -> void:
 			nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 			preload("res://scripts/art.gd").plate_priority(nameplate)
 			actor.add_child(nameplate)
-			peers[id] = {"node":actor, "label":nameplate, "target":target}
-		peers[id].target = target
+			peers[id] = {"node":actor, "label":nameplate, "motion":RemoteMotion.new()}
+		peers[id].motion.push_record(record, target)
 		AvatarLook.wear(peers[id].node, record.get("avatar", {}), version, true)
 		peers[id].node.sprinting = bool(record.get("sprinting", false))
 		peers[id].label.text = str(record.username)+( tr(" · 연결 끊김") if not record.get("online", true) else "")+(tr(" · 관전") if record.get("hp", 100) <= 0 else "")
@@ -210,10 +256,36 @@ func refresh_guest_objects() -> void:
 	if complete: object_signature = signature
 	accept_crops()
 
+## Why a visit ended, from the server (multiplayer.py visit_ended): said once, in this player's own
+## village (the host's room may have sent the walker back already, studio.gd).
+func announce_visit_end() -> void:
+	var info = data.get("visit_ended")
+	if not info is Dictionary or visiting(): return
+	var key := str(info.get("at", ""))
+	if str(Engine.get_meta("visit_notice_seen", "")) == key: return
+	Engine.set_meta("visit_notice_seen", key)
+	app.message(visit_end_text(info))
+
+func visit_end_text(info: Dictionary) -> String:
+	var host := str(info.get("host_name", ""))
+	match str(info.get("reason", "")):
+		"left": return tr("%s님이 마을을 떠나서 내 마을로 돌아왔어요.") % host
+		"host_lost": return tr("%s님의 연결이 끊겨서 내 마을로 돌아왔어요.") % host
+		"ended": return tr("%s님이 방문을 마쳐서 내 마을로 돌아왔어요.") % host
+		"lost": return tr("연결이 끊겨서 %s님의 마을에서 내 마을로 돌아왔어요.") % host
+	return tr("방문이 끝나서 내 마을로 돌아왔어요.")
+
+## Closing the game (the window, or quitting from the menu: pause_menu.gd sends the same
+## notification): the server hears it at once, so friends see this player leave now and guests in
+## this village go home (multiplayer.py leave), instead of after the presence times out.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and enabled and is_instance_valid(app) and not app.api.token.is_empty():
+		app.api.farewell("/v1/social/offline")
+
 func perform(path: String, payload: Dictionary = {}) -> Dictionary:
 	var result: Dictionary = await app.api.post(path, app.api.mutation(payload))
 	if not result.ok:
-		var messages := {"party_full":tr("파티는 최대 3명입니다."), "village_full":tr("마을은 주인을 포함해 최대 3명입니다."), "already_in_party":tr("이미 파티에 참여 중입니다."), "party_leader_required":tr("파티장만 할 수 있습니다."), "party_members_not_in_village":tr("모두 마을에 접속한 뒤 출발해 주세요."), "member_has_solo_expedition":tr("개인 생존 탐험을 마친 뒤 파티로 출발해 주세요."), "party_needs_two_players":tr("동료를 초대해 2명 이상 모여 주세요."), "party_expedition_active":tr("진행 중인 협동 탐험으로 돌아가 주세요."), "leave_expedition_first":tr("탐험에서 귀환한 뒤 파티를 나갈 수 있습니다."), "invite_target_unavailable":tr("가입한 사용자 이름을 확인해 주세요."), "invitation_expired":tr("만료되었거나 이미 처리된 초대입니다."), "message_rate_limited":tr("메시지는 1초 간격으로 보낼 수 있습니다.")}
+		var messages := {"host_offline":tr("초대한 친구가 지금 마을에 없어요."), "party_full":tr("파티는 최대 3명입니다."), "village_full":tr("마을은 주인을 포함해 최대 3명입니다."), "already_in_party":tr("이미 파티에 참여 중입니다."), "party_leader_required":tr("파티장만 할 수 있습니다."), "party_members_not_in_village":tr("모두 마을에 접속한 뒤 출발해 주세요."), "member_has_solo_expedition":tr("개인 생존 탐험을 마친 뒤 파티로 출발해 주세요."), "party_needs_two_players":tr("동료를 초대해 2명 이상 모여 주세요."), "party_expedition_active":tr("진행 중인 협동 탐험으로 돌아가 주세요."), "leave_expedition_first":tr("탐험에서 귀환한 뒤 파티를 나갈 수 있습니다."), "invite_target_unavailable":tr("가입한 사용자 이름을 확인해 주세요."), "invitation_expired":tr("만료되었거나 이미 처리된 초대입니다."), "message_rate_limited":tr("메시지는 1초 간격으로 보낼 수 있습니다.")}
 		app.message(messages.get(result.error, app.error_message(result.error)))
 	return result
 

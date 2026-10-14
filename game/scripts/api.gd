@@ -55,42 +55,58 @@ func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD
 func post(path: String, payload: Dictionary) -> Dictionary:
 	return await request(path, payload, HTTPClient.METHOD_POST)
 
-## The expedition sends its input ten times a second. A new HTTPRequest per call opens a fresh
-## TCP + TLS connection every time (several round trips to an online world), so these calls
-## share one kept-alive connection. Falls back to a normal request when the channel cannot
-## even send (busy, cannot connect); once a request went out, a failure is reported as is.
+## The expedition sends its input ten times a second and the village shares presence four times a
+## second. A new HTTPRequest per call opens a fresh TCP + TLS connection every time (several round
+## trips to an online world), so these calls share one kept-alive connection. Falls back to a
+## normal request when the channel cannot even send (busy, cannot connect); once a request went
+## out, a failure is reported as is. timeout: seconds before an unanswered request is given up.
 var kept: HTTPClient
 var kept_origin := ""
 var kept_used := 0
 var kept_busy := false
 
-func post_kept(path: String, payload: Dictionary) -> Dictionary:
-	if kept_busy: return await post(path, payload)
+func post_kept(path: String, payload: Dictionary, timeout := 12.0) -> Dictionary:
+	if kept_busy: return await request(path, payload, HTTPClient.METHOD_POST, false, timeout)
 	kept_busy = true
-	var result := await _kept_request(path, JSON.stringify(payload))
+	var result := await _kept_request(path, JSON.stringify(payload), timeout)
 	kept_busy = false
-	if result.is_empty(): return await post(path, payload)
+	if result.is_empty(): return await request(path, payload, HTTPClient.METHOD_POST, false, timeout)
 	return result
 
-func _kept_request(path: String, body: String) -> Dictionary:
+## The server's host, port, TLS and path prefix, from base_url.
+func _origin() -> Dictionary:
 	var https := base_url.begins_with("https://")
 	var rest := base_url.trim_prefix("https://").trim_prefix("http://")
 	var slash := rest.find("/")
-	var prefix := rest.substr(slash) if slash >= 0 else ""
 	var host_port := rest.substr(0, slash) if slash >= 0 else rest
-	var host := host_port
-	var port := 443 if https else 80
+	var origin := {"https":https, "prefix":rest.substr(slash) if slash >= 0 else "", "host":host_port, "port":443 if https else 80}
 	var colon := host_port.rfind(":")
 	if colon > 0 and host_port.substr(colon + 1).is_valid_int():
-		host = host_port.substr(0, colon)
-		port = int(host_port.substr(colon + 1))
+		origin.host = host_port.substr(0, colon)
+		origin.port = int(host_port.substr(colon + 1))
+	return origin
+
+func _headers() -> PackedStringArray:
+	var headers := PackedStringArray(["Content-Type: application/json"])
+	if not token.is_empty(): headers.append("Authorization: Bearer " + token)
+	headers.append(time_zone_header())
+	headers.append(version_header())
+	headers.append(VM_HEADER)
+	return headers
+
+## The kept connection is open to this server and was used recently (servers drop idle keep-alive
+## connections, uvicorn after 5 s).
+func _kept_ready() -> bool:
+	return kept != null and kept.get_status() == HTTPClient.STATUS_CONNECTED and kept_origin == base_url and Time.get_ticks_msec() - kept_used <= 4000
+
+func _kept_request(path: String, body: String, timeout := 12.0) -> Dictionary:
+	var origin := _origin()
 	if kept == null: kept = HTTPClient.new()
 	kept.poll()
-	# Servers drop idle keep-alive connections (uvicorn after 5 s): reconnect after a pause.
-	if kept.get_status() != HTTPClient.STATUS_CONNECTED or kept_origin != base_url or Time.get_ticks_msec() - kept_used > 4000:
+	if not _kept_ready():
 		kept.close()
 		kept_origin = base_url
-		if kept.connect_to_host(host, port, TLSOptions.client() if https else null) != OK: return {}
+		if kept.connect_to_host(origin.host, origin.port, TLSOptions.client() if origin.https else null) != OK: return {}
 		var connect_deadline := Time.get_ticks_msec() + 8000
 		while kept.get_status() in [HTTPClient.STATUS_RESOLVING, HTTPClient.STATUS_CONNECTING]:
 			kept.poll()
@@ -99,16 +115,11 @@ func _kept_request(path: String, body: String) -> Dictionary:
 		if kept.get_status() != HTTPClient.STATUS_CONNECTED:
 			kept.close()
 			return {}
-	var headers := PackedStringArray(["Content-Type: application/json"])
-	if not token.is_empty(): headers.append("Authorization: Bearer " + token)
-	headers.append(time_zone_header())
-	headers.append(version_header())
-	headers.append(VM_HEADER)
-	if kept.request(HTTPClient.METHOD_POST, prefix + path, headers, body) != OK:
+	if kept.request(HTTPClient.METHOD_POST, origin.prefix + path, _headers(), body) != OK:
 		kept.close()
 		return {}
 	kept_used = Time.get_ticks_msec()
-	var deadline := Time.get_ticks_msec() + 12000
+	var deadline := Time.get_ticks_msec() + int(timeout * 1000)
 	while kept.get_status() == HTTPClient.STATUS_REQUESTING:
 		kept.poll()
 		if Time.get_ticks_msec() > deadline: break
@@ -136,6 +147,29 @@ func _kept_request(path: String, body: String) -> Dictionary:
 	if not data is Dictionary: return {"ok":false,"error":"invalid_server_response"}
 	if code >= 400: return _failure(code, data)
 	return {"ok":true,"data":data}
+
+## The game is closing: one last POST (the social offline call), sent at once and waited for at
+## most budget_ms, since nothing runs after this. Uses the kept connection when it is open and
+## free, otherwise a short-lived one.
+func farewell(path: String, budget_ms := 700) -> void:
+	if token.is_empty(): return
+	var deadline := Time.get_ticks_msec() + budget_ms
+	var origin := _origin()
+	var client: HTTPClient = kept if not kept_busy and _kept_ready() else null
+	if client == null:
+		client = HTTPClient.new()
+		if client.connect_to_host(origin.host, origin.port, TLSOptions.client() if origin.https else null) != OK: return
+		while client.get_status() in [HTTPClient.STATUS_RESOLVING, HTTPClient.STATUS_CONNECTING] and Time.get_ticks_msec() < deadline:
+			client.poll()
+			OS.delay_msec(5)
+		if client.get_status() != HTTPClient.STATUS_CONNECTED:
+			client.close()
+			return
+	if client.request(HTTPClient.METHOD_POST, origin.prefix + path, _headers(), "{}") == OK:
+		while client.get_status() == HTTPClient.STATUS_REQUESTING and Time.get_ticks_msec() < deadline:
+			client.poll()
+			OS.delay_msec(5)
+	client.close()
 
 ## An error reply. Maintenance and too-old-game replies carry their code in "code" (their detail is
 ## a Korean sentence for released games, which only print it).

@@ -22,6 +22,13 @@ const CraftPanel=preload("res://scripts/craft_panel.gd")
 const Fx=preload("res://scripts/fx.gd")
 const NpcGifts=preload("res://scripts/npc_gifts.gd")
 const AvatarLook=preload("res://scripts/avatar_look.gd")
+## Visitors' and the host's walk in the home, drawn smoothly from the presence replies.
+const RemoteMotion=preload("res://scripts/remote_motion.gd")
+## The home shares spots four times a second; other rooms (the workshop, a public building) still
+## say every few seconds that this player is here, so a host crafting in the workshop keeps the
+## guests in the village (server/multiplayer.py HOST_GONE_SECONDS).
+const ROOM_PRESENCE := 0.25
+const ROOM_HEARTBEAT := 3.0
 const RestSeat=preload("res://scripts/rest_seat.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
@@ -79,6 +86,10 @@ var peers: Dictionary = {}
 var presence_time := 0.0
 var presence_pending := false
 var shared_presence := false
+## Signed in to a world with multiplayer (the village's session).
+var social_session := false
+## Velocity and clock in the spot (an older server refuses them with 422: then the 0.11.4 fields).
+var rich_presence := true
 var placement_mode := false
 var placement_rotation := 0
 ## The placing tools' angle readout (between the ↶ ↷ arrows).
@@ -231,7 +242,8 @@ func _ready() -> void:
 		if session.get("profile") is Dictionary and session.profile.get("avatar") is Dictionary:
 			session_avatar=session.profile.avatar
 			session_version=int(session.profile.get("version",-1))
-		shared_presence=bool(session.get("multiplayer",false)) and room=="home"
+		social_session=bool(session.get("multiplayer",false))
+		shared_presence=social_session and room=="home"
 		Engine.remove_meta("studio_session")
 	if not Interiors.has_interior(room): room="workshop"
 	public_room=Interiors.is_public(room)
@@ -1461,14 +1473,25 @@ func share_presence() -> void:
 	if presence_pending or not is_instance_valid(hero) or api.token.is_empty() or VersionGate.is_blocked(): return
 	presence_pending=true
 	var heading: float=hero.visual.rotation.y if is_instance_valid(hero.visual) else 0.0
-	var response: Dictionary=await api.post("/v1/social/presence",{"scene":"home","x":hero.position.x,"z":hero.position.z,"y":floor_index*3.0,"yaw":wrapf(heading,-PI,PI)})
+	# The room walker moves by position and reports its pace in external_velocity (report_motion).
+	var moving: Vector2=hero.external_velocity
+	# The walker's velocity and this game's clock, so the others draw the walk at its true pace
+	# (remote_motion.gd); kept-alive like the village's polls.
+	var spot := {"scene":"home","x":hero.position.x,"z":hero.position.z,"y":floor_index*3.0,"yaw":wrapf(heading,-PI,PI)}
+	if rich_presence: spot.merge({"vx":clampf(moving.x,-30,30),"vz":clampf(moving.y,-30,30),"t":RemoteMotion.now()})
+	var response: Dictionary=await api.post_kept("/v1/social/presence",spot,4.0)
 	presence_pending=false
+	if not response.ok and int(response.get("status",0))==422: rich_presence=false
 	if not response.ok or not is_inside_tree(): return
 	var space = response.data.get("space")
 	if not space is Dictionary: return
 	if not visit_host.is_empty():
 		if str(space.host_id)!=visit_host:
-			message(tr("방문이 끝나 마을로 돌아갑니다."))
+			# The host left (logged out, quit, lost the connection) or ended the visit: back out to
+			# this player's own village, which says why (social.gd announce_visit_end).
+			var ended = response.data.get("visit_ended")
+			var host_name: String=str(ended.get("host_name",visit_name)) if ended is Dictionary else visit_name
+			message(tr("%s님의 마을 방문이 끝나서 내 마을로 돌아가요.")%host_name if not host_name.is_empty() else tr("방문이 끝나 마을로 돌아갑니다."))
 			visit_host=""
 			leave()
 			return
@@ -1480,6 +1503,7 @@ func share_presence() -> void:
 			await reload_placed()
 	var self_id := str(response.data.get("self_id",""))
 	var present := {}
+	var arrival := RemoteMotion.now()
 	for record in space.players:
 		var version := int(record.get("avatar_version",-1))
 		if str(record.id)==self_id:
@@ -1496,12 +1520,12 @@ func share_presence() -> void:
 			stage.add_child(body)
 			var plate := Art.label3d(body,str(record.username),Vector3(0,2.05,0),Color("f0dfba"))
 			Art.style_nameplate(plate)
-			peers[record.id]={"node":body,"target":Vector3(record.x,0,record.z)}
-		peers[record.id].target=Vector3(record.x,0,record.z)
+			peers[record.id]={"node":body,"motion":RemoteMotion.new()}
 		AvatarLook.wear(peers[record.id].node,record.get("avatar",{}),version,true)
 		if int(peers[record.id].get("floor",-1))!=level:
 			# Changing floors is a jump, not a glide across the room.
-			peers[record.id].node.position=peers[record.id].target
+			peers[record.id].motion.reset()
+		peers[record.id].motion.push_record(record,Vector3(record.x,0,record.z),arrival)
 		peers[record.id]["floor"]=level
 		peers[record.id].node.visible=level==floor_index
 	for id in peers.keys():
@@ -1511,13 +1535,22 @@ func share_presence() -> void:
 
 func update_peers(delta: float) -> void:
 	for entry in peers.values():
-		var body: Node3D=entry.node
-		if not is_instance_valid(body): continue
-		var before: Vector3=body.position
-		body.position=body.position.lerp(entry.target,ControllerProfile.damping(8.0,delta))
-		var moved := Vector2(body.position.x-before.x,body.position.z-before.z)/maxf(delta,.001)
-		body.external_velocity=moved if moved.length()>.05 else Vector2.ZERO
-		body.external_motion=body.external_velocity.normalized()
+		if not is_instance_valid(entry.node): continue
+		entry.motion.update(delta)
+		entry.motion.apply_to(entry.node)
+
+## Outside the home: only "still here" for friends (the answer is not used).
+func keep_present() -> void:
+	if presence_pending or api.token.is_empty() or VersionGate.is_blocked(): return
+	presence_pending=true
+	await api.post_kept("/v1/social/presence",{"scene":"away"},4.0)
+	presence_pending=false
+
+## Closing the game in a room: friends see this player leave at once (social.gd does the same in
+## the village; server/multiplayer.py leave).
+func _notification(what: int) -> void:
+	if what==NOTIFICATION_WM_CLOSE_REQUEST and social_session and is_instance_valid(api) and not api.token.is_empty():
+		api.farewell("/v1/social/offline")
 
 ## Maintenance began or the server ended the session (version_gate.gd): to the title, no session.
 func logged_out(_reason: String) -> void:
@@ -1866,9 +1899,14 @@ func _process(delta: float) -> void:
 	if visit_host.is_empty() and not public_room and not api.token.is_empty():
 		if auth_time>20:auth_time=0;refresh()
 	presence_time+=delta
-	if (shared_presence or not visit_host.is_empty()) and presence_time>0.35:
+	if shared_presence or not visit_host.is_empty():
+		# On schedule, or as soon as a slow answer is in (not skipped while one is under way).
+		if presence_time>=ROOM_PRESENCE and not presence_pending:
+			presence_time=0
+			share_presence()
+	elif social_session and presence_time>=ROOM_HEARTBEAT and not presence_pending:
 		presence_time=0
-		share_presence()
+		keep_present()
 	update_peers(delta)
 	proximity_time+=delta
 	if proximity_time>0.35:proximity_time=0;proximity();gift_proximity()
