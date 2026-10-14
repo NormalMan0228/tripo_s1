@@ -25,6 +25,13 @@ exec 9>"$state/autoupdate.lock"
 flock -n 9 || exit 0
 # Any update already running (a manual one counting down or rebuilding): no check until it is done.
 if [ -e /var/lib/villagen/update.lock ] && ! flock -n /var/lib/villagen/update.lock true; then exit 0; fi
+# A maintenance notice is up (scheduled or running, from any source, e.g. ops/notice.sh maintenance):
+# no check while players are being told about it, so it is never replaced. A server that does not
+# answer is checked as usual (an update may be what brings it back).
+domain=$(sed -n 's/^TRIPOTHON_DOMAIN=//p' ops/production.env 2>/dev/null | head -n 1)
+if [ -n "$domain" ] && health=$(curl -fsS --max-time 10 "https://$domain/health" 2>/dev/null); then
+  case "$health" in *'"notice":null'*|*'"notice": null'*) ;; *'"notice":'*) exit 0 ;; esac
+fi
 stamp() { date '+%Y-%m-%d %H:%M:%S'; }
 if ! git fetch --quiet origin "$branch" 2>/dev/null; then
   # No release branch yet, or GitHub unreachable: try again next time, quietly.
