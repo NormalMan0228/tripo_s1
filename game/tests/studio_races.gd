@@ -4,7 +4,7 @@ class DelayedStudio:
 	var calls := 0
 	func _ready() -> void:pass
 	func _process(_delta: float) -> void:pass
-	func load_item(_obj: Dictionary) -> Node3D:
+	func load_item(_obj: Dictionary, _route := "") -> Node3D:
 		calls+=1;var serial := calls
 		await get_tree().create_timer(.12 if serial%2 else .035).timeout
 		var value := Node3D.new();value.set_meta("serial",serial);return value

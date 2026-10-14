@@ -7,7 +7,8 @@ param(
     [string]$Exe = '',
     [string]$Pack = '',
     [switch]$StopAtTitle,
-    [string]$GameArgs = ''
+    [string]$GameArgs = '',
+    [string]$GameDir = ''
 )
 # Loading measurement (game/tests/loading_frames.gd with --load-phases) in a window on the test
 # monitor, against a QA server you started (never the school or production server).
@@ -18,6 +19,7 @@ param(
 # neither read nor touched. Runs of one label share the folder (warm caches after the first);
 # -Cold empties it before the first run (Godot's and the driver's shader caches cold).
 # -Exe/-Pack measure an exported build: -Exe builds\windows\Villagen.exe -Pack builds\windows\Villagen.pck.
+# -GameDir runs another copy of the project (e.g. an older commit for interleaved before/after runs).
 # Writes artifacts\loading\<label>[-cold]-<n>.json: the test's LOADING_FRAMES result plus the game
 # process's peak working set and private bytes.
 $ErrorActionPreference = 'Stop'
@@ -45,7 +47,7 @@ try {
             if ($Exe) { $program = (Resolve-Path -LiteralPath $Exe).Path }
             $arguments += @('--main-pack', (Resolve-Path -LiteralPath $Pack).Path, '--script', (Join-Path $root 'game\tests\loading_frames.gd'))
         } else {
-            $arguments += @('--path', (Join-Path $root 'game'), '--script', 'res://tests/loading_frames.gd')
+            $arguments += @('--path', $(if ($GameDir) { (Resolve-Path -LiteralPath $GameDir).Path } else { Join-Path $root 'game' }), '--script', 'res://tests/loading_frames.gd')
         }
         $arguments += @('--', ('--server=' + $Server), '--load-phases', '--mute')
         if ($StopAtTitle) { $arguments += '--stop-at-title' }

@@ -49,6 +49,8 @@ func run() -> void:
 	var generated := await probe_build("generated chunks")
 	var report := compare(exact, generated)
 	report["seconds"] = (Time.get_ticks_msec()-started)/1000.0
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--image="): save_image(exact, generated, arg.trim_prefix("--image="))
 	report["ok"] = failures.is_empty()
 	report["failures"] = failures
 	print("COLLISION_EQUIVALENCE ", JSON.stringify(report))
@@ -187,6 +189,22 @@ func clusters(marks: Dictionary, a: Dictionary, b: Dictionary) -> Array:
 		out.append([group.size(), [snappedf(at.x, 0.1), snappedf(at.y, 0.1)], names.keys().slice(0, 4)])
 	out.sort_custom(func(x, y): return x[0] > y[0])
 	return out
+
+## --image=PATH: the grid as a picture (north up): water, ground the walker reaches, what it cannot
+## reach (buildings, rocks, props), and the cells whose reach changed (red: lost, blue: gained) drawn large.
+func save_image(a: Dictionary, b: Dictionary, path: String) -> void:
+	var scale := 2
+	var image := Image.create(cells.x*scale, cells.y*scale, false, Image.FORMAT_RGB8)
+	var marks := []
+	for index in cells.x*cells.y:
+		var colour := Color("cfe3ea")
+		if not is_nan(a.walk[index]): colour = Color("a9c48f") if a.reach[index] == 1 else Color("8d8b84")
+		if a.reach[index] != b.reach[index]: marks.append([index, Color("e34948") if a.reach[index] == 1 else Color("2a78d6")])
+		image.fill_rect(Rect2i((index % cells.x)*scale, (index/cells.x)*scale, scale, scale), colour)
+	for mark in marks:
+		var index: int = mark[0]
+		image.fill_rect(Rect2i((index % cells.x)*scale-5, (index/cells.x)*scale-5, 12, 12), mark[1])
+	image.save_png(ProjectSettings.globalize_path(path) if path.begins_with("res://") else path)
 
 func cell_of(at: Vector2) -> int:
 	var c := Vector2i(((at-origin)/step).round())
