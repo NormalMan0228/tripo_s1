@@ -46,15 +46,29 @@ if [ -n "$announce" ] && ! [[ "$announce" =~ ^[0-9]+$ && "$announce" -le 1440 ]]
   echo "--announce 뒤에는 0~1440 사이의 분을 적어 주세요. 예) --announce 10" >&2; exit 2
 fi
 [[ "$downtime" =~ ^[0-9]+$ && "$downtime" -ge 1 && "$downtime" -le 1440 ]] || { echo "--downtime 은 1~1440 분이에요." >&2; exit 2; }
-# One update at a time: a manual run and the auto-update timer (ops/auto_update.sh) share this lock, so
-# two maintenance notices never overwrite each other and the API is never rebuilt twice at once.
+# One update at a time: a manual run and the auto-update timer (ops/auto_update.sh, VILLAGEN_AUTO=1)
+# share this lock, so the API is never rebuilt twice at once. A manual run takes over an update that
+# is still counting down (its notice is replaced by this run's); one already backing up or rebuilding
+# finishes first. The timer never takes over: it waits for its next check.
 mkdir -p /var/lib/villagen
+phase_file=/var/lib/villagen/update.phase
 exec 8>/var/lib/villagen/update.lock
 if ! flock -n 8; then
-  echo "다른 업데이트(자동 업데이트일 수 있어요)가 진행 중이에요. 끝난 뒤에 다시 실행해 주세요." >&2
-  echo "진행 상황: sudo bash ops/install_auto_update.sh --status" >&2
-  exit 3
+  other_phase=""; other_pid=""
+  read -r other_phase other_pid < "$phase_file" 2>/dev/null || true
+  if [ -n "${VILLAGEN_AUTO:-}" ]; then
+    echo "다른 업데이트가 진행 중이에요. 다음 확인 때 다시 해요." >&2
+    exit 3
+  elif [ "$other_phase" = "announce" ] && [ -n "$other_pid" ] && kill -0 "$other_pid" 2>/dev/null; then
+    echo "진행 중인 업데이트의 점검 공지(카운트다운)를 이 명령의 시간으로 바꿉니다."
+    kill -USR1 "$other_pid" 2>/dev/null || true
+    flock -w 60 8 || { echo "앞 업데이트가 멈추지 않았어요. 잠시 뒤 다시 실행해 주세요." >&2; exit 3; }
+  else
+    echo "다른 업데이트가 백업·재시작 중이에요. 끝나면 이어서 실행합니다(최대 30분 기다림)."
+    flock -w 1800 8 || { echo "기다려도 끝나지 않았어요. sudo bash ops/install_auto_update.sh --status 로 확인해 주세요." >&2; exit 3; }
+  fi
 fi
+echo "work $$" > "$phase_file"
 cd "$(dirname "$0")/.."
 for key in "${!limits[@]}"; do
   value="${limits[$key]}"
@@ -89,6 +103,7 @@ replaced=""
 # A stop before the new server runs leaves the old one serving: end the maintenance again.
 leave() {
   local status=$?
+  [ "$(cut -d' ' -f2 "$phase_file" 2>/dev/null)" = "$$" ] && rm -f "$phase_file"
   if [ "$status" -ne 0 ] && [ -n "$announced" ] && [ -z "$replaced" ]; then
     echo "업데이트가 중간에 멈췄어요. 서버는 그대로이니 점검 공지를 지웁니다." >&2
     policy cancel >/dev/null || echo "공지를 지우지 못했어요. sudo bash ops/notice.sh cancel 을 실행해 주세요." >&2
@@ -104,6 +119,9 @@ if [ -n "$announce" ]; then
   else
     announced="yes"
     trap 'echo; echo "취소했어요. 점검 공지를 지웁니다."; announced=""; policy cancel >/dev/null || true; exit 130' INT TERM
+    # Taken over by a manual run (USR1): leave the notice for it to replace, so players never see a gap.
+    trap 'echo; echo "수동 업데이트가 이어받았어요."; announced=""; exit 75' USR1
+    echo "announce $$" > "$phase_file"
     if [ "$announce" -eq 0 ]; then echo "지금 바로 점검을 시작해요(약 ${downtime}분)."
     else echo "플레이어에게 ${announce}분 뒤 점검(약 ${downtime}분)을 알렸어요. 게임에는 30분 전부터 남은 시간이 떠요."; fi
     finish=$(( $(date +%s) + announce * 60 ))
@@ -115,7 +133,8 @@ if [ -n "$announce" ]; then
     done
     # A moment past the start, so every reply is already "점검 중" before the backup.
     sleep 2
-    trap - INT TERM
+    trap - INT TERM USR1
+    echo "work $$" > "$phase_file"
     echo
     echo "점검을 시작했어요. 업데이트하는 동안 플레이어 접속을 막아 둡니다."
   fi

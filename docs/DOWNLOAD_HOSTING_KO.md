@@ -92,4 +92,7 @@ VM에서 한 번만: `cd ~/tripo_s1` → `sudo git pull --ff-only origin dev` �
 - 실패하면 그 커밋은 다시 시도하지 않는다(브랜치가 다시 바뀔 때 재시도). 백업은 업데이트 스크립트가 먼저 만든다.
 - 상태: `sudo bash ops/install_auto_update.sh --status` (로그 /var/log/villagen-autoupdate.log), 끄기: `--remove`.
 - 기본 대기 시간 바꾸기(VM): `sudo bash ops/install_auto_update.sh --announce 5`. 배포마다 정한 값(ops/release.json)이 있으면 그것이 우선.
+- 수동 업데이트(`update_online_server.sh`)와 자동 업데이트는 동시에 돌지 않는다. 자동 업데이트가 점검 카운트다운 중일 때
+  수동으로 실행하면 수동이 이어받아 공지를 자기 시간으로 덮어쓴다. 이미 백업·재시작 단계면 끝날 때까지 기다렸다가 실행한다.
+  자동 업데이트는 수동을 덮어쓰지 않고 다음 확인 때 다시 판단하며, 수동으로 이미 올린 코드에 포함된 배포는 건너뛴다(되돌리지 않음).
 
