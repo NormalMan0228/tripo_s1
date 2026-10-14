@@ -6,7 +6,8 @@ param(
     [string]$Label = '',
     [string]$Exe = '',
     [string]$Pack = '',
-    [switch]$StopAtTitle
+    [switch]$StopAtTitle,
+    [string]$GameArgs = ''
 )
 # Loading measurement (game/tests/loading_frames.gd with --load-phases) in a window on the test
 # monitor, against a QA server you started (never the school or production server).
@@ -48,6 +49,7 @@ try {
         }
         $arguments += @('--', ('--server=' + $Server), '--load-phases', '--mute')
         if ($StopAtTitle) { $arguments += '--stop-at-title' }
+        if ($GameArgs) { $arguments += $GameArgs.Split(' ') }
         $log = Join-Path $out ($tag + '.log')
         $process = Start-Process -FilePath $program -ArgumentList $arguments -PassThru -WindowStyle Hidden -RedirectStandardOutput $log -RedirectStandardError ($log + '.err')
         # The console Godot is a small wrapper that starts the game as its child: measure both.

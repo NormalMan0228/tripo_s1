@@ -1,6 +1,7 @@
 extends Node3D
 ## First review batch: four distinct Tripo bridges plus natural garden clusters.
 const LoadPace = preload("res://scripts/load_pace.gd")
+const IslandBake = preload("res://maps/archipelago/island_bake.gd")
 var manifest: Dictionary
 var host: Node3D
 var prototypes: Dictionary = {}
@@ -54,6 +55,8 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 						wood.shader = load("res://maps/archipelago/bridge_timber.gdshader")
 						wood.set_shader_parameter("timber_color",original.albedo_color)
 						mesh.set_surface_override_material(surface,wood)
+				if await _add_generated_collision(mesh):
+					continue
 				if LoadPace.covered:
 					await LoadPace.collide(mesh,PackedVector3Array(),2,0)
 					continue
@@ -110,7 +113,7 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 		if spec.id in ["20_pier","21_boat","22_tent_orange","23_tent_green","25_picnic_table","26_bench","24_firepit","28_beach_umbrella","29_beach_lounger","30_cafe_umbrella","31_cafe_table","32_cafe_chair","33_signboard","34_timber_fence","35_picket_fence","36_speaker","41_planter"]:
 			for item in prop.find_children("*","MeshInstance3D",true,false):
 				var mesh := item as MeshInstance3D
-				_add_cached_collision(mesh,2 if spec.id=="20_pier" else 8)
+				await _add_cached_collision(mesh,2 if spec.id=="20_pier" else 8,String(spec.id))
 	print("ENVIRONMENT_LAYOUT_READY models=",manifest.models.size()," instances=",prop_nodes.size()," bridges=",bridge_nodes.size())
 	# Under the loading card the props settle before the map shows.
 	if LoadPace.covered: await _fit_floor_props()
@@ -146,7 +149,21 @@ func _add_authored_deck_collision(bridge: Node3D,spec: Dictionary) -> void:
 	collision.shape = shape
 	body.add_child(collision)
 
-func _add_cached_collision(mesh: MeshInstance3D, layer: int) -> void:
+## The bridge mesh's simplified collider from the generated data (island_bake.gd); false without one.
+func _add_generated_collision(mesh: MeshInstance3D) -> bool:
+	var chunks: Array = IslandBake.collision_chunks(IslandBake.collider_key(host, mesh))
+	if chunks.is_empty(): return false
+	await LoadPace.collide_chunks(mesh, chunks, 2, 0)
+	return true
+
+func _add_cached_collision(mesh: MeshInstance3D, layer: int, ident := "") -> void:
+	# Simplified chunks from the generated data, their shapes shared by every instance of the prop.
+	var library_key: String = IslandBake.collider_key(host, mesh, ident) if not ident.is_empty() else ""
+	var chunks: Array = IslandBake.collision_chunks(library_key) if not library_key.is_empty() else []
+	if not chunks.is_empty():
+		if not collision_shapes.has(library_key): collision_shapes[library_key] = []
+		await LoadPace.collide_chunks(mesh, chunks, layer, 0, collision_shapes[library_key])
+		return
 	var key := mesh.mesh.get_instance_id()
 	if not collision_shapes.has(key):
 		collision_shapes[key] = mesh.mesh.create_trimesh_shape()
@@ -224,6 +241,8 @@ func _fit_bridge(bridge: Node3D,spec: Dictionary) -> void:
 			rebuilt.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
 			rebuilt.surface_set_material(surface,mesh.mesh.surface_get_material(surface))
 		mesh.mesh = rebuilt
+		if await _add_generated_collision(mesh):
+			continue
 		if LoadPace.covered:
 			# Under the loading card the faces and the shape come a frame apart.
 			await LoadPace.collide(mesh,PackedVector3Array(),2,0)

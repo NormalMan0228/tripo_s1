@@ -1,0 +1,42 @@
+{
+ "chunk_tris": 6000,
+ "collision": {
+  "bridges": {
+   "chunks": 28,
+   "colliders": 4,
+   "largest_chunk": 4780,
+   "tris_after": 105646,
+   "tris_before": 225368
+  },
+  "buildings": {
+   "chunks": 64,
+   "colliders": 21,
+   "largest_chunk": 5695,
+   "tris_after": 259624,
+   "tris_before": 660337
+  },
+  "props": {
+   "chunks": 35,
+   "colliders": 34,
+   "largest_chunk": 4193,
+   "tris_after": 27468,
+   "tris_before": 345550
+  },
+  "terrain": {
+   "chunks": 31,
+   "colliders": 12,
+   "largest_chunk": 4583,
+   "tris_after": 94417,
+   "tris_before": 383999
+  }
+ },
+ "content_key": "c440fb3f89152efcd62d70b57b39d14f032addc679931930a95fe2dc8c4ebd54",
+ "engine": "4.7.2-stable (official)",
+ "epsilon_m": 0.02,
+ "format": 1,
+ "ground_epsilon_m": 0.01,
+ "key": "625f9fbd892445d6d7486ab409e6217897e58d59580985fa27fbca0fe67a1687",
+ "made": "2026-10-14T09:22:05",
+ "walk_zone_epsilon_m": 0.003,
+ "walk_zone_m": 3.6
+}

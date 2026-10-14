@@ -1,0 +1,539 @@
+{
+ "rule": "props: >= 300 texels/m on 90% of the surface, never below 1024 px; buildings unchanged; terrain ocean/pond materials (never drawn) 256 px",
+ "textures": [
+  {
+   "texture": "environment/tent_orange_Color_79c70f7f-b3c0-4de8-b76a-029dd14b50d9.png",
+   "model": "22_tent_orange",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 637,
+   "limit": 2048,
+   "p10_texels_per_m_after": 318,
+   "previous_limit": 2048
+  },
+  {
+   "texture": "environment/tent_orange_NormalGL_79c70f7f-b3c0-4de8-b76a-029dd14b50d9.png",
+   "model": "22_tent_orange",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 318,
+   "limit": 0,
+   "p10_texels_per_m_after": 318,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/tent_green_Color_96579d0e-c00b-411b-9352-579aacd95e6c.png",
+   "model": "23_tent_green",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 354,
+   "limit": 0,
+   "p10_texels_per_m_after": 354,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/tent_green_NormalGL_96579d0e-c00b-411b-9352-579aacd95e6c.png",
+   "model": "23_tent_green",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 177,
+   "limit": 0,
+   "p10_texels_per_m_after": 177,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/firepit_Color_fbe48e1e-ecc1-4337-bed7-1dd66a8651f3.png",
+   "model": "24_firepit",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 1394,
+   "limit": 1024,
+   "p10_texels_per_m_after": 349,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/firepit_NormalGL_fbe48e1e-ecc1-4337-bed7-1dd66a8651f3.png",
+   "model": "24_firepit",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 697,
+   "limit": 1024,
+   "p10_texels_per_m_after": 349,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/bench_Color_66853057-2b50-4f54-9f63-f53915f05259.png",
+   "model": "26_bench",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 1886,
+   "limit": 1024,
+   "p10_texels_per_m_after": 472,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/bench_NormalGL_66853057-2b50-4f54-9f63-f53915f05259.png",
+   "model": "26_bench",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 943,
+   "limit": 1024,
+   "p10_texels_per_m_after": 472,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/lamp_Color_b98cb36e-7ff7-4891-96d6-1182256f796d.png",
+   "model": "27_lamp",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 1592,
+   "limit": 1024,
+   "p10_texels_per_m_after": 398,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/lamp_NormalGL_b98cb36e-7ff7-4891-96d6-1182256f796d.png",
+   "model": "27_lamp",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 796,
+   "limit": 1024,
+   "p10_texels_per_m_after": 398,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/lamp_ORM_b98cb36e-7ff7-4891-96d6-1182256f796d.png",
+   "model": "27_lamp",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 796,
+   "limit": 1024,
+   "p10_texels_per_m_after": 398,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/round_tree_Color_5beb571a-b4f5-42e2-8f06-81a838c5647a.png",
+   "model": "37_round_tree",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 215,
+   "limit": 0,
+   "p10_texels_per_m_after": 215,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/round_tree_NormalGL_5beb571a-b4f5-42e2-8f06-81a838c5647a.png",
+   "model": "37_round_tree",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 108,
+   "limit": 0,
+   "p10_texels_per_m_after": 108,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/conifer_Color_f13e2b58-d9ac-41fd-846d-5f23b02f2614.png",
+   "model": "38_conifer",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 289,
+   "limit": 0,
+   "p10_texels_per_m_after": 289,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/conifer_NormalGL_f13e2b58-d9ac-41fd-846d-5f23b02f2614.png",
+   "model": "38_conifer",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 145,
+   "limit": 0,
+   "p10_texels_per_m_after": 145,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/palm_Color_f25baf94-a9d0-4674-8749-879e9f0f9316.png",
+   "model": "39_palm",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 364,
+   "limit": 0,
+   "p10_texels_per_m_after": 364,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/palm_NormalGL_f25baf94-a9d0-4674-8749-879e9f0f9316.png",
+   "model": "39_palm",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 182,
+   "limit": 0,
+   "p10_texels_per_m_after": 182,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/shrub_Color_f1acd4cd-208a-45de-9dde-dbe10f8670b9.png",
+   "model": "40_shrub",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 946,
+   "limit": 2048,
+   "p10_texels_per_m_after": 473,
+   "previous_limit": 2048
+  },
+  {
+   "texture": "environment/shrub_NormalGL_f1acd4cd-208a-45de-9dde-dbe10f8670b9.png",
+   "model": "40_shrub",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 473,
+   "limit": 0,
+   "p10_texels_per_m_after": 473,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/white_flowers_Color_ba4b5a53-7280-470c-974c-06fdc8a9e587.png",
+   "model": "42_white_flowers",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 4320,
+   "limit": 1024,
+   "p10_texels_per_m_after": 1080,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/white_flowers_NormalGL_ba4b5a53-7280-470c-974c-06fdc8a9e587.png",
+   "model": "42_white_flowers",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 2160,
+   "limit": 1024,
+   "p10_texels_per_m_after": 1080,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/yellow_flowers_Color_86563262-acbd-40cd-878a-6513f07da3a1.png",
+   "model": "43_yellow_flowers",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 4453,
+   "limit": 1024,
+   "p10_texels_per_m_after": 1113,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/yellow_flowers_NormalGL_86563262-acbd-40cd-878a-6513f07da3a1.png",
+   "model": "43_yellow_flowers",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 2226,
+   "limit": 1024,
+   "p10_texels_per_m_after": 1113,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/pier_Color_979c40be-9ebb-433c-a161-a9b0da6e7875.png",
+   "model": "20_pier",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 169,
+   "limit": 0,
+   "p10_texels_per_m_after": 169,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/pier_NormalGL_979c40be-9ebb-433c-a161-a9b0da6e7875.png",
+   "model": "20_pier",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 85,
+   "limit": 0,
+   "p10_texels_per_m_after": 85,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/boat_Color_f6900b28-a7d7-4a99-bcb2-15b996c10c83.png",
+   "model": "21_boat",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 600,
+   "limit": 2048,
+   "p10_texels_per_m_after": 300,
+   "previous_limit": 2048
+  },
+  {
+   "texture": "environment/boat_NormalGL_f6900b28-a7d7-4a99-bcb2-15b996c10c83.png",
+   "model": "21_boat",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 300,
+   "limit": 0,
+   "p10_texels_per_m_after": 300,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/picnic_table_Color_3ecd9033-4765-4746-8833-313a3ebec999.png",
+   "model": "25_picnic_table",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 1008,
+   "limit": 2048,
+   "p10_texels_per_m_after": 504,
+   "previous_limit": 2048
+  },
+  {
+   "texture": "environment/picnic_table_NormalGL_3ecd9033-4765-4746-8833-313a3ebec999.png",
+   "model": "25_picnic_table",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 504,
+   "limit": 0,
+   "p10_texels_per_m_after": 504,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/beach_umbrella_Color_fbb30f27-e6dc-448e-b34b-8a6e1eab66ad.png",
+   "model": "28_beach_umbrella",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 664,
+   "limit": 2048,
+   "p10_texels_per_m_after": 332,
+   "previous_limit": 2048
+  },
+  {
+   "texture": "environment/beach_umbrella_NormalGL_fbb30f27-e6dc-448e-b34b-8a6e1eab66ad.png",
+   "model": "28_beach_umbrella",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 332,
+   "limit": 0,
+   "p10_texels_per_m_after": 332,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/beach_lounger_Color_705deb97-2a86-42be-8e8b-a87fcb315059.png",
+   "model": "29_beach_lounger",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 680,
+   "limit": 2048,
+   "p10_texels_per_m_after": 340,
+   "previous_limit": 2048
+  },
+  {
+   "texture": "environment/beach_lounger_NormalGL_705deb97-2a86-42be-8e8b-a87fcb315059.png",
+   "model": "29_beach_lounger",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 340,
+   "limit": 0,
+   "p10_texels_per_m_after": 340,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/cafe_umbrella_Color_2c3c2d31-e03d-4b03-8e04-75106e4bfa24.png",
+   "model": "30_cafe_umbrella",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 651,
+   "limit": 2048,
+   "p10_texels_per_m_after": 326,
+   "previous_limit": 2048
+  },
+  {
+   "texture": "environment/cafe_umbrella_NormalGL_2c3c2d31-e03d-4b03-8e04-75106e4bfa24.png",
+   "model": "30_cafe_umbrella",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 326,
+   "limit": 0,
+   "p10_texels_per_m_after": 326,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/cafe_table_Color_31aae595-6cee-4d30-92a7-da2288a89607.png",
+   "model": "31_cafe_table",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 1843,
+   "limit": 1024,
+   "p10_texels_per_m_after": 461,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/cafe_table_NormalGL_31aae595-6cee-4d30-92a7-da2288a89607.png",
+   "model": "31_cafe_table",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 922,
+   "limit": 1024,
+   "p10_texels_per_m_after": 461,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/cafe_chair_Color_3f920afa-43d2-404b-80c5-db06d3c24f57.png",
+   "model": "32_cafe_chair",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 1542,
+   "limit": 1024,
+   "p10_texels_per_m_after": 386,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/cafe_chair_NormalGL_3f920afa-43d2-404b-80c5-db06d3c24f57.png",
+   "model": "32_cafe_chair",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 771,
+   "limit": 1024,
+   "p10_texels_per_m_after": 386,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/signboard_Color_f480e3f8-6464-43a7-a509-bb4f2f472f0f.png",
+   "model": "33_signboard",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 1553,
+   "limit": 1024,
+   "p10_texels_per_m_after": 388,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/signboard_NormalGL_f480e3f8-6464-43a7-a509-bb4f2f472f0f.png",
+   "model": "33_signboard",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 777,
+   "limit": 1024,
+   "p10_texels_per_m_after": 388,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/timber_fence_Color_f6bc7804-5f9a-4155-922c-d99519634c6f.png",
+   "model": "34_timber_fence",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 1664,
+   "limit": 1024,
+   "p10_texels_per_m_after": 416,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/timber_fence_NormalGL_f6bc7804-5f9a-4155-922c-d99519634c6f.png",
+   "model": "34_timber_fence",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 832,
+   "limit": 1024,
+   "p10_texels_per_m_after": 416,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/picket_fence_Color_88f6e103-8430-4daf-95bb-3ee22a3e258d.png",
+   "model": "35_picket_fence",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 460,
+   "limit": 0,
+   "p10_texels_per_m_after": 460,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/picket_fence_NormalGL_88f6e103-8430-4daf-95bb-3ee22a3e258d.png",
+   "model": "35_picket_fence",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 230,
+   "limit": 0,
+   "p10_texels_per_m_after": 230,
+   "previous_limit": 0
+  },
+  {
+   "texture": "environment/speaker_Color_e53f8c86-543f-4b26-9e67-0a2799eb63af.png",
+   "model": "36_speaker",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 1624,
+   "limit": 1024,
+   "p10_texels_per_m_after": 406,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/speaker_NormalGL_e53f8c86-543f-4b26-9e67-0a2799eb63af.png",
+   "model": "36_speaker",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 812,
+   "limit": 1024,
+   "p10_texels_per_m_after": 406,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/planter_Color_887b8829-fc9d-4f7d-85bc-06a08b893ccb.png",
+   "model": "41_planter",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 2246,
+   "limit": 1024,
+   "p10_texels_per_m_after": 561,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/planter_NormalGL_887b8829-fc9d-4f7d-85bc-06a08b893ccb.png",
+   "model": "41_planter",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 1123,
+   "limit": 1024,
+   "p10_texels_per_m_after": 561,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/pink_flowers_Color_3ea7acb1-e901-4012-bdec-da5f56e8c51e.png",
+   "model": "44_pink_flowers",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 3399,
+   "limit": 1024,
+   "p10_texels_per_m_after": 850,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/pink_flowers_NormalGL_3ea7acb1-e901-4012-bdec-da5f56e8c51e.png",
+   "model": "44_pink_flowers",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 1699,
+   "limit": 1024,
+   "p10_texels_per_m_after": 850,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/reeds_Color_7748e7d8-69c3-45fc-98fa-03fcd4a7f9f2.png",
+   "model": "45_reeds",
+   "size": 4096,
+   "p10_texels_per_m_at_size": 1900,
+   "limit": 1024,
+   "p10_texels_per_m_after": 475,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "environment/reeds_NormalGL_7748e7d8-69c3-45fc-98fa-03fcd4a7f9f2.png",
+   "model": "45_reeds",
+   "size": 2048,
+   "p10_texels_per_m_at_size": 950,
+   "limit": 1024,
+   "p10_texels_per_m_after": 475,
+   "previous_limit": 1024
+  },
+  {
+   "texture": "archipelago_terrain_environment_v1_ocean_surface_color.png",
+   "model": "never drawn (terrain water material replaced, or unsampled)",
+   "size": 4096,
+   "p10_texels_per_m_at_size": null,
+   "limit": 256,
+   "p10_texels_per_m_after": null,
+   "previous_limit": 256
+  },
+  {
+   "texture": "archipelago_terrain_environment_v1_ocean_surface_normal.png",
+   "model": "never drawn (terrain water material replaced, or unsampled)",
+   "size": 4096,
+   "p10_texels_per_m_at_size": null,
+   "limit": 256,
+   "p10_texels_per_m_after": null,
+   "previous_limit": 256
+  },
+  {
+   "texture": "archipelago_terrain_environment_v1_pond_surface_color.png",
+   "model": "never drawn (terrain water material replaced, or unsampled)",
+   "size": 2048,
+   "p10_texels_per_m_at_size": null,
+   "limit": 256,
+   "p10_texels_per_m_after": null,
+   "previous_limit": 256
+  },
+  {
+   "texture": "archipelago_terrain_environment_v1_pond_surface_normal.png",
+   "model": "never drawn (terrain water material replaced, or unsampled)",
+   "size": 2048,
+   "p10_texels_per_m_at_size": null,
+   "limit": 256,
+   "p10_texels_per_m_after": null,
+   "previous_limit": 256
+  },
+  {
+   "texture": "v3/ocean_surface_color.png",
+   "model": "never drawn (terrain water material replaced, or unsampled)",
+   "size": 4096,
+   "p10_texels_per_m_at_size": null,
+   "limit": 256,
+   "p10_texels_per_m_after": null,
+   "previous_limit": 0
+  },
+  {
+   "texture": "v3/pond_surface_color.png",
+   "model": "never drawn (terrain water material replaced, or unsampled)",
+   "size": 2048,
+   "p10_texels_per_m_at_size": null,
+   "limit": 256,
+   "p10_texels_per_m_after": null,
+   "previous_limit": 0
+  }
+ ],
+ "capped": 40,
+ "estimated_mb_before": 816,
+ "estimated_mb_after": 284
+}

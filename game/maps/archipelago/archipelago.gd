@@ -8,6 +8,8 @@ const WALK_MASK := 1|2|8
 const SPRAY_AT := Vector3(.996,0,-7.937)
 ## Under the loading card the build is paced over frames and its models load on worker threads.
 const LoadPace = preload("res://scripts/load_pace.gd")
+## Generated data (simplified collision, tools/bake_archipelago.gd), used only while it matches the inputs.
+const IslandBake = preload("res://maps/archipelago/island_bake.gd")
 var camera: Camera3D
 var spray: MultiMeshInstance3D
 var mist: MultiMeshInstance3D
@@ -19,7 +21,7 @@ static func available() -> bool:
 ## Every model and texture build() loads, for LoadPace.want() to start on worker threads early.
 ## In the order build() uses them (they load one at a time).
 static func resource_paths() -> Array:
-	var paths := [TERRAIN]+textures()
+	var paths := ([IslandBake.COLLISION] if IslandBake.fresh() else [])+[TERRAIN]+textures()
 	var placements = JSON.parse_string(FileAccess.get_file_as_string(ROOT+"building_placements.json"))
 	if placements is Dictionary:
 		for spec in placements.get("buildings", []): paths.append(String(spec.model))
@@ -35,8 +37,8 @@ static func resource_paths() -> Array:
 ## The water, ground and rock textures build() puts on the terrain.
 static func textures() -> Array:
 	var paths := []
+	# (The water shaders never sample a surface colour map: v3/*_surface_color.png is not loaded.)
 	for prefix in ["ocean", "pond"]:
-		paths.append(ROOT+"assets/v3/"+prefix+"_surface_color.png")
 		paths.append(ROOT+"assets/v3/"+prefix+"_surface_normal.png")
 	for name in ["current_field", "coast_field", "shore_distance", "organic_foam", "grass_detail", "sand_detail", "rock_detail",
 			"grass_detail_normal", "sand_detail_normal", "headland_normals"]:
@@ -67,14 +69,15 @@ func build(view: Camera3D) -> void:
 		var item: Node = meshes[index]
 		var m := item as MeshInstance3D
 		if "__ground" in m.name or "__shore_rock" in m.name or "Waterfall__cliff_rock" in m.name:
-			if LoadPace.covered: await LoadPace.collide(m)
+			var chunks := IslandBake.collision_chunks(IslandBake.collider_key(self, m))
+			if not chunks.is_empty(): await LoadPace.collide_chunks(m, chunks)
+			elif LoadPace.covered: await LoadPace.collide(m)
 			else: m.create_trimesh_collision()
 		if ("Ocean__" in m.name and "seabed" not in m.name) or "__pond" in m.name or "Waterfall__spring_pool" in m.name:
 			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			var water := ShaderMaterial.new()
 			water.shader = load(ROOT+("water_surface.gdshader" if "Ocean__" in m.name else "pond_water.gdshader"))
 			var prefix := "ocean" if "Ocean__" in m.name else "pond"
-			water.set_shader_parameter("surface_color", load(ROOT+"assets/v3/"+prefix+"_surface_color.png"))
 			water.set_shader_parameter("surface_normal", load(ROOT+"assets/v3/"+prefix+"_surface_normal.png"))
 			water.set_shader_parameter("current_field", load(ROOT+"assets/v5/current_field.png"))
 			water.set_shader_parameter("coast_field", load(ROOT+"assets/v5/coast_field.png"))
@@ -127,6 +130,7 @@ func build(view: Camera3D) -> void:
 	span = LoadPace.narrow(0.6, 1.0)
 	await props.install(self, terrain)
 	LoadPace.span = span
+	IslandBake.drop_collision()
 	_create_water_spray()
 	if LoadPace.covered:
 		# Under the card the map is finished before it shows: rock walls paced (in one go they held a

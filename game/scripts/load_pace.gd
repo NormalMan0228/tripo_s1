@@ -233,6 +233,32 @@ static func collide(mesh: MeshInstance3D, faces := PackedVector3Array(), layer :
 		holder.owner = mesh.owner
 	await step("collider")
 
+## A collider for `mesh` from precomputed faces (maps/archipelago/island_bake.gd: simplified and cut
+## into chunks of a few thousand triangles): a StaticBody3D "<mesh>_col" with one shape per chunk,
+## made a step apart (each a few ms instead of one 30-130 ms trimesh). `shapes` holds the shapes
+## another instance of the same prop already made (shared, nothing to build); empty, they are made
+## here and appended to it. Uncovered it runs in one go.
+static func collide_chunks(mesh: MeshInstance3D, chunks: Array, layer := 1, mask := 1, shapes: Array = []) -> void:
+	var body := StaticBody3D.new()
+	body.name = String(mesh.name)+"_col"
+	body.collision_layer = layer
+	body.collision_mask = mask
+	mesh.add_child(body, true)
+	if mesh.owner != null: body.owner = mesh.owner
+	var make := shapes.is_empty()
+	for index in chunks.size():
+		var holder := CollisionShape3D.new()
+		var shape: ConcavePolygonShape3D = ConcavePolygonShape3D.new() if make else shapes[index]
+		holder.shape = shape
+		if make:
+			shape.set_faces(chunks[index])
+			shapes.append(shape)
+		body.add_child(holder, true)
+		if mesh.owner != null: holder.owner = mesh.owner
+		if make:
+			await step("collider chunk")
+			if not is_instance_valid(body): return
+
 ## Waits `count` physics steps with `node` in the tree. A map finishing itself a few steps after
 ## its build may be taken out of the tree meanwhile (kept for the next visit while a room is open);
 ## it then goes on once it is back instead of failing without a tree.

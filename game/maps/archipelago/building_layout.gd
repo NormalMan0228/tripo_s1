@@ -9,6 +9,7 @@ var touched_vertices := 0
 var placed: Array[Node3D] = []
 const OUTPUT := "res://../art/maps/archipelago_placement_v1/"
 const LoadPace = preload("res://scripts/load_pace.gd")
+const IslandBake = preload("res://maps/archipelago/island_bake.gd")
 
 func install(owner_node: Node3D, terrain: Node3D) -> void:
 	host = owner_node
@@ -52,6 +53,11 @@ func install(owner_node: Node3D, terrain: Node3D) -> void:
 const PATCH_U_MIN := 3.0
 
 func _add_collision(mesh: MeshInstance3D) -> void:
+	# Simplified chunks from the generated data when it is fresh (island_bake.gd).
+	var chunks: Array = IslandBake.collision_chunks(IslandBake.collider_key(host, mesh))
+	if not chunks.is_empty():
+		await LoadPace.collide_chunks(mesh, chunks, 2, 0)
+		return
 	if LoadPace.covered:
 		# Under the loading card the faces and the shape's BVH come a frame apart (LoadPace.collide).
 		var surfaces := []

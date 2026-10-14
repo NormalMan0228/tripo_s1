@@ -39,6 +39,8 @@ labs/archipelago_object_lab/reviews/
 
 # The archipelago map binaries are copied from labs/terrain_lab by tools/port_archipelago_map.py.
 game/maps/archipelago/assets/
+# Generated from them by tools/bake_archipelago.py (simplified collision, the baked island).
+game/maps/archipelago/generated/
 # Working list written by tools/i18n_catalog.py extract.
 game/i18n/source.json
 .cc5_bridge/
