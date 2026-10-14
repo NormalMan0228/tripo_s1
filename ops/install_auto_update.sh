@@ -20,6 +20,7 @@ case "${1:-}" in
   --status)
     systemctl --no-pager status villagen-autoupdate.timer | head -n 6 || true
     echo "--- deployed: $(cat /var/lib/villagen/deployed 2>/dev/null || echo none)"
+    [ -s /var/lib/villagen/fetch-error ] && echo "--- last fetch error: $(cat /var/lib/villagen/fetch-error)"
     tail -n 15 "$log" 2>/dev/null || echo "(no log yet)"
     exit 0 ;;
   --remove)
@@ -60,6 +61,8 @@ EOF
 mkdir -p /var/lib/villagen
 # What runs now counts as deployed, so installing never redeploys it.
 [ -f /var/lib/villagen/deployed ] || git -C "$repo" rev-parse HEAD > /var/lib/villagen/deployed
+# git refuses a root-run checkout owned by another user unless it is marked safe.
+git config --system --get-all safe.directory 2>/dev/null | grep -qxF "$repo" || git config --system --add safe.directory "$repo"
 systemctl daemon-reload
 systemctl enable --now villagen-autoupdate.timer
 echo "자동 업데이트를 켰어요. school-release 브랜치가 바뀌면 5분 안에 점검 공지(기본 ${minutes:-10}분 뒤 시작)가 나가고 업데이트됩니다."

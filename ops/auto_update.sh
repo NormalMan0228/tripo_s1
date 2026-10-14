@@ -17,11 +17,15 @@
 # Other setting: VILLAGEN_RELEASE_BRANCH (school-release). Log: /var/log/villagen-autoupdate.log
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# The timer runs as root on a checkout owned by the login user: git refuses such a repository
+# ("dubious ownership") unless it is marked safe. Sudo runs got a pass (SUDO_UID); the timer does not.
+export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$PWD"
 branch="${VILLAGEN_RELEASE_BRANCH:-school-release}"
 announce="${VILLAGEN_ANNOUNCE_MINUTES:-10}"
 state=/var/lib/villagen
 mkdir -p "$state"
 exec 9>"$state/autoupdate.lock"
+stamp() { date '+%Y-%m-%d %H:%M:%S'; }
 flock -n 9 || exit 0
 # Any update already running (a manual one counting down or rebuilding): no check until it is done.
 if [ -e /var/lib/villagen/update.lock ] && ! flock -n /var/lib/villagen/update.lock true; then exit 0; fi
@@ -32,19 +36,27 @@ domain=$(sed -n 's/^TRIPOTHON_DOMAIN=//p' ops/production.env 2>/dev/null | head 
 if [ -n "$domain" ] && health=$(curl -fsS --max-time 10 "https://$domain/health" 2>/dev/null); then
   case "$health" in *'"notice":null'*|*'"notice": null'*) ;; *'"notice":'*) exit 0 ;; esac
 fi
-stamp() { date '+%Y-%m-%d %H:%M:%S'; }
-if ! git fetch --quiet origin "$branch" 2>/dev/null; then
-  # No release branch yet, or GitHub unreachable: try again next time, quietly.
+if ! fetch_error=$(git fetch --quiet origin "$branch" 2>&1); then
+  # GitHub unreachable or no release branch yet: try again next time. The reason is logged once.
+  if [ "$fetch_error" != "$(cat "$state/fetch-error" 2>/dev/null || true)" ]; then
+    printf '%s\n' "$fetch_error" > "$state/fetch-error"
+    echo "$(stamp) fetch of $branch failed: $fetch_error"
+  fi
   exit 0
 fi
+rm -f "$state/fetch-error"
 target=$(git rev-parse "origin/$branch")
 [ "$target" = "$(cat "$state/deployed" 2>/dev/null || true)" ] && exit 0
 [ "$target" = "$(cat "$state/failed" 2>/dev/null || true)" ] && exit 0
-# A manual update already brought this release (or newer code that contains it): count it as
-# deployed instead of checking the release out again, which would roll the server back.
-if git merge-base --is-ancestor "$target" HEAD 2>/dev/null; then
+# A manual update already brought this release (or newer code that contains it) INTO THE RUNNING
+# SERVER: count it as deployed instead of checking it out again, which would roll the server back.
+# The running build is the commit /health reports, not the checkout (a plain git pull moves the
+# checkout without rebuilding anything).
+running=$(printf '%s' "${health:-}" | sed -n 's/.*"build":"\([0-9a-f]\{7,40\}\)".*/\1/p' | head -n 1)
+if [ -n "$running" ] && running_full=$(git rev-parse -q --verify "$running^{commit}" 2>/dev/null) \
+    && git merge-base --is-ancestor "$target" "$running_full" 2>/dev/null; then
   echo "$target" > "$state/deployed"
-  echo "$(stamp) ${target:0:7} is already on the server (manual update); nothing to do"
+  echo "$(stamp) ${target:0:7} is already running (build $running); nothing to do"
   exit 0
 fi
 version=$(git show "origin/$branch:game/project.godot" | sed -n 's/^config\/version="\([0-9.]*\)"$/\1/p')
