@@ -6,10 +6,15 @@ extends SceneTree
 ## A frame counts while the veil is up (fading out, covered, fading in). Prints one LOADING line per
 ## change of place (worst frame, frames over 50 ms, seconds under the veil) and LOADING_FRAMES {...}.
 ## --max-hitch=MS fails a change whose worst frame under the card is longer than MS.
+## --load-phases (passed on to the game's LoadPace) adds each change's phase times (ms): paced build
+## work by kind, waiting for file reads, GPU upload + engine, render, first render after the build.
+## Every change also reports video/static memory after it, and the start its black screen: from the
+## engine's start until the first frame that shows the card.
 var failures: Array[String] = []
 var server := "http://127.0.0.1:8766"
 var max_hitch := 0.0
 var transition_script: Script
+var pace: Script
 ## [usec, frame ms, veil alpha, card visible, style]
 var samples: Array = []
 var last_usec := 0
@@ -22,6 +27,7 @@ func _initialize() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = 0
 	transition_script = load("res://scripts/transition.gd")
+	pace = load("res://scripts/load_pace.gd")
 	call_deferred("run")
 	create_timer(300).timeout.connect(func():
 		failures.append("timed out after 300 seconds")
@@ -50,7 +56,7 @@ func record() -> void:
 	if ms > 50.0 and "--log-hitches" in OS.get_cmdline_user_args():
 		print("HITCH %.1f ms at %d (process %.1f, physics %.1f)" % [ms, Time.get_ticks_msec(), Performance.get_monitor(Performance.TIME_PROCESS)*1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)*1000.0])
 	var v := veil()
-	samples.append([now, ms, v.veil.modulate.a if v else 0.0, v.card.visible if v else false, v.style if v else ""])
+	samples.append([now, ms, v.veil.modulate.a if v else 0.0, v.card.visible and v.is_inside_tree() if v else false, v.style if v else ""])
 
 func wait_until(condition: Callable, seconds: float) -> bool:
 	var deadline := Time.get_ticks_msec()+int(seconds*1000.0)
@@ -92,7 +98,15 @@ func judge(name: String, from: int) -> void:
 	longest = longest.slice(0, 5).map(func(ms): return snappedf(ms, 0.1))
 	var seconds: float = (samples[last][0]-samples[first][0])/1000000.0
 	results[name] = {"worst_ms":snappedf(worst, 0.1), "over_50ms":over, "frames":frames.size(), "seconds":snappedf(seconds, 0.01),
-		"mean_ms":snappedf(total/frames.size(), 0.1), "longest":longest}
+		"mean_ms":snappedf(total/frames.size(), 0.1), "longest":longest,
+		"video_mb":snappedf(Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)/1048576.0, 0.1),
+		"texture_mb":snappedf(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)/1048576.0, 0.1),
+		"static_mb":snappedf(Performance.get_monitor(Performance.MEMORY_STATIC)/1048576.0, 0.1)}
+	if pace.phases_on:
+		var phases: Dictionary = pace.take_phases()
+		for key in phases: phases[key] = snappedf(phases[key], 0.1)
+		results[name]["phases"] = phases
+		print("LOAD_PHASES %s %s" % [name, JSON.stringify(phases)])
 	print("LOADING %-28s worst=%7.1f ms  >50ms=%3d  frames=%4d  under veil=%5.2f s  longest=%s" % [name, worst, over, frames.size(), seconds, str(longest)])
 	if max_hitch > 0.0: check(worst <= max_hitch, "%s: worst frame %.1f ms <= %.0f ms" % [name, worst, max_hitch])
 
@@ -100,6 +114,7 @@ func change(name: String, action: Callable, arrived: Callable, seconds := 90.0) 
 	await wait_until(settled, 10.0)
 	await create_timer(0.5).timeout
 	var mark := samples.size()
+	if pace.phases_on: pace.take_phases()
 	action.call()
 	var ok := await wait_until(func(): return arrived.call() and settled(), seconds)
 	check(ok, name+": arrived")
@@ -116,6 +131,12 @@ func run() -> void:
 		finish()
 		return
 	judge("start -> title", mark)
+	# The boot's black screen: until the frame after the first one that drew the card.
+	for i in samples.size()-1:
+		if samples[i][3]:
+			results["start -> title"]["black_until_card_s"] = snappedf(samples[i+1][0]/1000000.0, 0.01)
+			print("LOADING black screen until the card: %.2f s after the engine started" % (samples[i+1][0]/1000000.0))
+			break
 	if "--stop-at-title" in OS.get_cmdline_user_args():
 		finish()
 		return

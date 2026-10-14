@@ -29,6 +29,15 @@ static var log_slow := "--log-load" in OS.get_cmdline_user_args()
 static var last_step := 0
 static var last_what := ""
 static var work_end := 0
+## --load-phases: where the frames under the card went, in ms by phase (tests/loading_frames.gd
+## reads and clears `phases` per change of place). Off, the checks below cost one bool each.
+static var phases_on := "--load-phases" in OS.get_cmdline_user_args()
+static var phases := {}
+## This frame: paced work done so far (usec), and whether the build waited for a worker load.
+static var frame_work := 0
+static var frame_waited := false
+## The build released its loads (LoadPace.release): later frames under the card are its first renders.
+static var built := false
 
 ## transition.gd at each process_frame: starts this frame's clock and the next threaded load. With
 ## --log-load a long frame under the card is printed with the share the paced work had in it.
@@ -37,17 +46,23 @@ static func frame_began() -> void:
 	if log_slow and covered and frame_from > 0 and now-frame_from > 50000:
 		var work := maxi(work_end-frame_from, 0)
 		print("LOAD_FRAME %6.1f ms: paced work %5.1f, other %6.1f (loading %s)" % [(now-frame_from)/1000.0, work/1000.0, (now-frame_from-work)/1000.0, running.get_file()])
+	if phases_on and covered and frame_from > 0: _account(now-frame_from)
 	frame_from = now
 	work_end = now
+	frame_work = 0
+	frame_waited = false
 	pump()
 
 ## Gives the frame back when this frame's work is over budget; a no-op while uncovered.
 static func step(what := "") -> void:
 	if not covered: return
 	var now := Time.get_ticks_usec()
-	if log_slow:
+	if log_slow or phases_on:
 		var chunk := now-maxi(last_step, frame_from)
-		if chunk > 2*BUDGET_USEC: print("LOAD_SLOW %6.1f ms after %s (before %s)" % [chunk/1000.0, last_what, what])
+		if log_slow and chunk > 2*BUDGET_USEC: print("LOAD_SLOW %6.1f ms after %s (before %s)" % [chunk/1000.0, last_what, what])
+		if phases_on:
+			add_phase(phase_of(last_what), chunk)
+			frame_work += chunk
 		last_what = what
 		last_step = now
 	if now-frame_from < BUDGET_USEC: return
@@ -92,21 +107,29 @@ static func fetch(path: String) -> Resource:
 			queue.push_front(path)
 		while covered and pending(path):
 			pump()
-			if pending(path): await (Engine.get_main_loop() as SceneTree).process_frame
+			if pending(path):
+				frame_waited = true
+				await (Engine.get_main_loop() as SceneTree).process_frame
+				frame_waited = true
+				last_step = Time.get_ticks_usec()
 	return take(path)
 
 ## The resource at `path` now (waiting for it if it is the one loading).
 static func take(path: String) -> Resource:
+	var from := Time.get_ticks_usec() if phases_on else 0
 	if path == running:
 		var resource := ResourceLoader.load_threaded_get(path)
 		running = ""
 		pump()
+		if phases_on: _blocked(from)
 		if resource != null:
 			held[path] = resource
 			return resource
 	queue.erase(path)
 	if held.has(path): return held[path]
-	return load(path)
+	var loaded := load(path)
+	if phases_on: _blocked(from)
+	return loaded
 
 ## Waits until every queued load is in, reporting their share as progress (0..1 of the span).
 static func settle() -> void:
@@ -114,7 +137,11 @@ static func settle() -> void:
 	while covered and (not queue.is_empty() or not running.is_empty()):
 		pump()
 		done(1.0-(queue.size()+(0 if running.is_empty() else 1))/maxf(total, 1.0))
-		if not queue.is_empty() or not running.is_empty(): await (Engine.get_main_loop() as SceneTree).process_frame
+		if not queue.is_empty() or not running.is_empty():
+			frame_waited = true
+			await (Engine.get_main_loop() as SceneTree).process_frame
+			frame_waited = true
+			last_step = Time.get_ticks_usec()
 	done(1.0)
 
 ## The build is done: drops the queued loads nobody fetched and the references held for it (the
@@ -122,6 +149,63 @@ static func settle() -> void:
 static func release() -> void:
 	queue.clear()
 	held.clear()
+	if phases_on:
+		# The work since the last step belongs to it; frames after this are the place's first renders.
+		var now := Time.get_ticks_usec()
+		var chunk := now-maxi(last_step, frame_from)
+		add_phase(phase_of(last_what), chunk)
+		frame_work += chunk
+		last_step = now
+		last_what = "after build"
+		built = true
+
+## --load-phases: the phase a paced piece of work counts for.
+static func phase_of(what: String) -> String:
+	if what == "ground pads": return "pad levelling"
+	if what == "after build": return "after build"
+	if "collid" in what or "collision" in what or "rock wall" in what or "ramp" in what: return "collision"
+	return "node assembly"
+
+static func add_phase(name: String, usec: int) -> void:
+	if usec > 0: phases[name] = phases.get(name, 0.0)+usec/1000.0
+
+## A load the main thread waited for in one call (load_threaded_get of the running load, or load()).
+static func _blocked(from: int) -> void:
+	var spent := Time.get_ticks_usec()-from
+	add_phase("file read (main thread)", spent)
+	frame_work += spent
+	last_step = Time.get_ticks_usec()
+
+## One frame under the card (usec from its start to the next): the paced work in it is already
+## counted; the rest is waiting for worker-thread file reads (a frame the build only waited in),
+## the renderer's CPU time, or the engine's own work (resources reaching the GPU: in the
+## Compatibility renderer a loaded texture or mesh is uploaded on the main thread; physics; sync).
+static func _account(length: int) -> void:
+	var rest := maxf(length-frame_work, 0.0)/1000.0
+	var viewport := (Engine.get_main_loop() as SceneTree).root.get_viewport_rid()
+	if not phases.has("_measuring"):
+		RenderingServer.viewport_set_measure_render_time(viewport, true)
+		phases["_measuring"] = true
+	var render := minf(rest, RenderingServer.viewport_get_measured_render_time_cpu(viewport)+RenderingServer.get_frame_setup_time_cpu())
+	phases["frames"] = phases.get("frames", 0)+1
+	phases["longest frame"] = maxf(phases.get("longest frame", 0.0), length/1000.0)
+	if built:
+		add_phase("first render", length)
+		return
+	if frame_waited and frame_work < 1000:
+		add_phase("waiting for file reads", int(rest*1000.0))
+		return
+	add_phase("render", int(render*1000.0))
+	add_phase("GPU upload + engine", int((rest-render)*1000.0))
+
+## --load-phases: this change of place's phases (ms) and a fresh count for the next one.
+static func take_phases() -> Dictionary:
+	var result := phases.duplicate()
+	result.erase("_measuring")
+	phases = {"_measuring": true} if phases.has("_measuring") else {}
+	built = false
+	last_what = ""
+	return result
 
 ## Under the card, a trimesh collider for `mesh` as MeshInstance3D.create_trimesh_collision() makes
 ## it (a StaticBody3D "<mesh>_col" holding the shape, under the mesh), in pieces a frame apart:

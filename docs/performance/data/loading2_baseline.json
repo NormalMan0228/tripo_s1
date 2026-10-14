@@ -1,0 +1,802 @@
+{
+ "base-gl": {
+  "label": "base-gl",
+  "warm_runs": 3,
+  "cold_runs": 1,
+  "changes": {
+   "start -> title": {
+    "seconds": [
+     5.69,
+     5.69,
+     5.68
+    ],
+    "worst_ms": [
+     234.5,
+     218.7,
+     217.5
+    ],
+    "over_50ms": [
+     29,
+     27,
+     30
+    ],
+    "cold": {
+     "black_until_card_s": 5.01,
+     "frames": 265,
+     "longest": [
+      248.9,
+      243.0,
+      164.7,
+      157.4,
+      149.2
+     ],
+     "mean_ms": 26.7,
+     "over_50ms": 51,
+     "phases": {
+      "GPU upload + engine": 1970.3,
+      "collision": 1645.8,
+      "frames": 189.0,
+      "longest frame": 248.9,
+      "node assembly": 1999.1,
+      "pad levelling": 292.4,
+      "render": 258.0,
+      "waiting for file reads": 315.7
+     },
+     "seconds": 7.07,
+     "static_mb": 624.5,
+     "texture_mb": 1833.2,
+     "video_mb": 1987.4,
+     "worst_ms": 248.9
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 260.2,
+     "GPU upload + engine": 1411.4,
+     "node assembly": 1829.9,
+     "pad levelling": 169.8,
+     "collision": 1299.1,
+     "render": 211.2,
+     "first render": 0.0
+    },
+    "video_mb": 1989.5,
+    "texture_mb": 1833.4,
+    "black_s": [
+     4.49,
+     4.51,
+     4.47
+    ],
+    "cold_black_s": 5.01
+   },
+   "title -> home": {
+    "seconds": [
+     1.08,
+     1.09,
+     1.08
+    ],
+    "worst_ms": [
+     61.2,
+     60.1,
+     60.2
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 257,
+     "longest": [
+      62.0,
+      61.7,
+      54.2,
+      38.0,
+      34.9
+     ],
+     "mean_ms": 4.5,
+     "over_50ms": 3,
+     "phases": {
+      "GPU upload + engine": 101.8,
+      "frames": 11.0,
+      "longest frame": 62.1,
+      "node assembly": 224.5,
+      "render": 15.6
+     },
+     "seconds": 1.15,
+     "static_mb": 629.3,
+     "texture_mb": 1863.0,
+     "video_mb": 2008.6,
+     "worst_ms": 62.0
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 50.6,
+     "node assembly": 204.4,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 13.3,
+     "first render": 0.0
+    },
+    "video_mb": 2010.8,
+    "texture_mb": 1863.1
+   },
+   "home -> village": {
+    "seconds": [
+     1.61,
+     1.62,
+     1.62
+    ],
+    "worst_ms": [
+     193.6,
+     196.5,
+     202.9
+    ],
+    "over_50ms": [
+     5,
+     4,
+     4
+    ],
+    "cold": {
+     "frames": 220,
+     "longest": [
+      235.4,
+      122.1,
+      79.5,
+      68.5,
+      53.4
+     ],
+     "mean_ms": 8.5,
+     "over_50ms": 5,
+     "phases": {
+      "GPU upload + engine": 149.3,
+      "after build": 19.6,
+      "first render": 657.5,
+      "frames": 40.0,
+      "longest frame": 235.4,
+      "node assembly": 265.5,
+      "render": 39.9
+     },
+     "seconds": 1.86,
+     "static_mb": 643.8,
+     "texture_mb": 1853.5,
+     "video_mb": 2011.3,
+     "worst_ms": 235.4
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 293.2,
+     "node assembly": 189.7,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 17.4,
+     "first render": 361.4
+    },
+    "video_mb": 2013.4,
+    "texture_mb": 1853.6
+   },
+   "village -> resident's house": {
+    "seconds": [
+     1.01,
+     1.0,
+     1.0
+    ],
+    "worst_ms": [
+     73.3,
+     74.1,
+     81.3
+    ],
+    "over_50ms": [
+     1,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 232,
+     "longest": [
+      114.2,
+      56.8,
+      32.7,
+      25.9,
+      16.7
+     ],
+     "mean_ms": 4.8,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 37.1,
+      "frames": 8.0,
+      "longest frame": 114.3,
+      "node assembly": 234.9,
+      "render": 20.8
+     },
+     "seconds": 1.11,
+     "static_mb": 634.9,
+     "texture_mb": 1872.4,
+     "video_mb": 2018.6,
+     "worst_ms": 114.2
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 23.7,
+     "node assembly": 154.5,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 9.7,
+     "first render": 0.0
+    },
+    "video_mb": 2020.8,
+    "texture_mb": 1872.5
+   },
+   "resident's house -> village": {
+    "seconds": [
+     1.47,
+     1.51,
+     1.48
+    ],
+    "worst_ms": [
+     194.9,
+     209.6,
+     206.2
+    ],
+    "over_50ms": [
+     3,
+     3,
+     4
+    ],
+    "cold": {
+     "frames": 348,
+     "longest": [
+      203.2,
+      94.4,
+      57.0,
+      43.2,
+      40.4
+     ],
+     "mean_ms": 4.4,
+     "over_50ms": 3,
+     "phases": {
+      "GPU upload + engine": 314.6,
+      "after build": 12.6,
+      "first render": 228.1,
+      "frames": 37.0,
+      "longest frame": 203.2,
+      "node assembly": 202.1,
+      "render": 18.4
+     },
+     "seconds": 1.54,
+     "static_mb": 646.2,
+     "texture_mb": 1856.3,
+     "video_mb": 2014.7,
+     "worst_ms": 203.2
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 298.2,
+     "node assembly": 187.2,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 17.4,
+     "first render": 231.5
+    },
+    "video_mb": 2016.8,
+    "texture_mb": 1856.4
+   },
+   "village -> expedition": {
+    "seconds": [
+     1.83,
+     1.84,
+     1.84
+    ],
+    "worst_ms": [
+     88.6,
+     113.0,
+     112.9
+    ],
+    "over_50ms": [
+     1,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 342,
+     "longest": [
+      181.2,
+      46.3,
+      32.2,
+      22.9,
+      20.1
+     ],
+     "mean_ms": 5.7,
+     "over_50ms": 1,
+     "phases": {
+      "GPU upload + engine": 84.6,
+      "file read (main thread)": 14.4,
+      "frames": 64.0,
+      "longest frame": 46.3,
+      "node assembly": 801.5,
+      "render": 83.1
+     },
+     "seconds": 1.93,
+     "static_mb": 638.1,
+     "texture_mb": 1872.5,
+     "video_mb": 2028.3,
+     "worst_ms": 181.2
+    },
+    "phases": {
+     "file read (main thread)": 13.3,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 69.0,
+     "node assembly": 796.5,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 78.8,
+     "first render": 0.0
+    },
+    "video_mb": 2030.4,
+    "texture_mb": 1872.6
+   },
+   "expedition -> village": {
+    "seconds": [
+     1.28,
+     1.23,
+     1.25
+    ],
+    "worst_ms": [
+     93.8,
+     92.2,
+     91.3
+    ],
+    "over_50ms": [
+     1,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 287,
+     "longest": [
+      99.1,
+      91.8,
+      42.8,
+      28.7,
+      21.9
+     ],
+     "mean_ms": 4.5,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 105.7,
+      "after build": 9.6,
+      "first render": 228.7,
+      "frames": 25.0,
+      "longest frame": 99.2,
+      "node assembly": 184.6,
+      "render": 26.6
+     },
+     "seconds": 1.3,
+     "static_mb": 650.6,
+     "texture_mb": 1859.5,
+     "video_mb": 2017.9,
+     "worst_ms": 99.1
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 42.9,
+     "node assembly": 189.3,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 31.7,
+     "first render": 213.8
+    },
+    "video_mb": 2020.0,
+    "texture_mb": 1859.7
+   }
+  },
+  "peak_working_set_mb": [
+   1347,
+   1342,
+   1354
+  ]
+ },
+ "base-fp": {
+  "label": "base-fp",
+  "warm_runs": 3,
+  "cold_runs": 1,
+  "changes": {
+   "start -> title": {
+    "seconds": [
+     7.82,
+     8.2,
+     7.86
+    ],
+    "worst_ms": [
+     308.2,
+     339.4,
+     317.0
+    ],
+    "over_50ms": [
+     37,
+     40,
+     38
+    ],
+    "cold": {
+     "black_until_card_s": 7.8,
+     "frames": 669,
+     "longest": [
+      2686.9,
+      2037.3,
+      1259.4,
+      380.4,
+      318.1
+     ],
+     "mean_ms": 24.3,
+     "over_50ms": 53,
+     "phases": {
+      "GPU upload + engine": 5456.9,
+      "collision": 1906.3,
+      "frames": 622.0,
+      "longest frame": 2686.9,
+      "node assembly": 3601.1,
+      "pad levelling": 293.9,
+      "render": 1901.9,
+      "waiting for file reads": 1374.4
+     },
+     "seconds": 16.21,
+     "static_mb": 672.4,
+     "texture_mb": 2007.6,
+     "video_mb": 2447.7,
+     "worst_ms": 2686.9
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 809.9,
+     "GPU upload + engine": 677.6,
+     "node assembly": 3613.8,
+     "pad levelling": 254.2,
+     "collision": 1866.8,
+     "render": 192.5,
+     "first render": 0.0
+    },
+    "video_mb": 2447.8,
+    "texture_mb": 2007.7,
+    "black_s": [
+     6.38,
+     6.73,
+     6.31
+    ],
+    "cold_black_s": 7.8
+   },
+   "title -> home": {
+    "seconds": [
+     1.3,
+     1.33,
+     1.29
+    ],
+    "worst_ms": [
+     87.1,
+     94.7,
+     90.2
+    ],
+    "over_50ms": [
+     3,
+     3,
+     3
+    ],
+    "cold": {
+     "frames": 277,
+     "longest": [
+      2178.4,
+      2070.8,
+      204.1,
+      115.7,
+      98.2
+     ],
+     "mean_ms": 20.7,
+     "over_50ms": 6,
+     "phases": {
+      "GPU upload + engine": 4259.1,
+      "frames": 18.0,
+      "longest frame": 2178.4,
+      "node assembly": 538.1,
+      "render": 123.4
+     },
+     "seconds": 5.72,
+     "static_mb": 685.1,
+     "texture_mb": 2071.5,
+     "video_mb": 2518.8,
+     "worst_ms": 2178.4
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 74.5,
+     "node assembly": 399.0,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 10.5,
+     "first render": 0.0
+    },
+    "video_mb": 2519.0,
+    "texture_mb": 2071.7
+   },
+   "home -> village": {
+    "seconds": [
+     2.35,
+     2.55,
+     2.3
+    ],
+    "worst_ms": [
+     180.6,
+     196.5,
+     175.9
+    ],
+    "over_50ms": [
+     5,
+     8,
+     6
+    ],
+    "cold": {
+     "frames": 225,
+     "longest": [
+      1912.7,
+      234.8,
+      168.7,
+      145.9,
+      76.0
+     ],
+     "mean_ms": 19.2,
+     "over_50ms": 8,
+     "phases": {
+      "GPU upload + engine": 384.1,
+      "after build": 26.1,
+      "first render": 582.5,
+      "frames": 58.0,
+      "longest frame": 234.8,
+      "node assembly": 834.2,
+      "render": 51.6
+     },
+     "seconds": 4.31,
+     "static_mb": 706.4,
+     "texture_mb": 2029.8,
+     "video_mb": 2475.4,
+     "worst_ms": 1912.7
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 330.1,
+     "node assembly": 759.2,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 48.7,
+     "first render": 507.1
+    },
+    "video_mb": 2475.5,
+    "texture_mb": 2029.9
+   },
+   "village -> resident's house": {
+    "seconds": [
+     1.18,
+     1.2,
+     1.2
+    ],
+    "worst_ms": [
+     107.1,
+     110.0,
+     105.0
+    ],
+    "over_50ms": [
+     3,
+     2,
+     3
+    ],
+    "cold": {
+     "frames": 275,
+     "longest": [
+      107.3,
+      55.2,
+      48.3,
+      32.5,
+      25.6
+     ],
+     "mean_ms": 4.2,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 48.5,
+      "frames": 9.0,
+      "longest frame": 107.4,
+      "node assembly": 277.0,
+      "render": 7.2
+     },
+     "seconds": 1.14,
+     "static_mb": 693.6,
+     "texture_mb": 2082.6,
+     "video_mb": 2531.1,
+     "worst_ms": 107.3
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 59.0,
+     "node assembly": 310.8,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 7.7,
+     "first render": 0.0
+    },
+    "video_mb": 2531.6,
+    "texture_mb": 2082.7
+   },
+   "resident's house -> village": {
+    "seconds": [
+     2.17,
+     2.23,
+     2.19
+    ],
+    "worst_ms": [
+     169.0,
+     194.3,
+     179.1
+    ],
+    "over_50ms": [
+     5,
+     5,
+     4
+    ],
+    "cold": {
+     "frames": 269,
+     "longest": [
+      178.4,
+      160.5,
+      88.4,
+      73.5,
+      69.8
+     ],
+     "mean_ms": 8.4,
+     "over_50ms": 6,
+     "phases": {
+      "GPU upload + engine": 350.4,
+      "after build": 16.0,
+      "first render": 394.7,
+      "frames": 53.0,
+      "longest frame": 178.4,
+      "node assembly": 754.0,
+      "render": 48.6
+     },
+     "seconds": 2.25,
+     "static_mb": 706.4,
+     "texture_mb": 2033.0,
+     "video_mb": 2479.1,
+     "worst_ms": 178.4
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 325.6,
+     "node assembly": 745.9,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 46.5,
+     "first render": 361.5
+    },
+    "video_mb": 2479.3,
+    "texture_mb": 2033.1
+   },
+   "village -> expedition": {
+    "seconds": [
+     2.52,
+     2.64,
+     2.54
+    ],
+    "worst_ms": [
+     133.1,
+     157.1,
+     141.1
+    ],
+    "over_50ms": [
+     3,
+     4,
+     3
+    ],
+    "cold": {
+     "frames": 296,
+     "longest": [
+      2545.4,
+      1127.4,
+      1110.1,
+      140.5,
+      127.4
+     ],
+     "mean_ms": 25.0,
+     "over_50ms": 6,
+     "phases": {
+      "GPU upload + engine": 3719.5,
+      "file read (main thread)": 17.3,
+      "frames": 113.0,
+      "longest frame": 2545.4,
+      "node assembly": 1481.1,
+      "render": 298.0
+     },
+     "seconds": 7.4,
+     "static_mb": 694.3,
+     "texture_mb": 2050.2,
+     "video_mb": 2496.7,
+     "worst_ms": 2545.4
+    },
+    "phases": {
+     "file read (main thread)": 16.8,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 192.6,
+     "node assembly": 1353.0,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 73.1,
+     "first render": 0.0
+    },
+    "video_mb": 2496.8,
+    "texture_mb": 2050.3
+   },
+   "expedition -> village": {
+    "seconds": [
+     1.97,
+     2.15,
+     1.99
+    ],
+    "worst_ms": [
+     160.5,
+     192.9,
+     166.3
+    ],
+    "over_50ms": [
+     2,
+     3,
+     2
+    ],
+    "cold": {
+     "frames": 230,
+     "longest": [
+      174.2,
+      68.6,
+      49.7,
+      49.0,
+      40.0
+     ],
+     "mean_ms": 8.9,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 149.1,
+      "after build": 14.5,
+      "first render": 360.8,
+      "frames": 44.0,
+      "longest frame": 174.2,
+      "node assembly": 757.1,
+      "render": 60.3
+     },
+     "seconds": 2.04,
+     "static_mb": 711.3,
+     "texture_mb": 2036.0,
+     "video_mb": 2482.1,
+     "worst_ms": 174.2
+    },
+    "phases": {
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 132.8,
+     "node assembly": 745.7,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 58.4,
+     "first render": 334.1
+    },
+    "video_mb": 2482.2,
+    "texture_mb": 2036.1
+   }
+  },
+  "peak_working_set_mb": [
+   1739,
+   1742,
+   1843
+  ]
+ }
+}
