@@ -7,6 +7,7 @@ const ObjectTransform = preload("res://scripts/object_transform.gd")
 const ShapePanel = preload("res://scripts/shape_panel.gd")
 const InteractionPanel = preload("res://scripts/interaction_panel.gd")
 const Player = preload("res://scripts/player.gd")
+const AvatarLook = preload("res://scripts/avatar_look.gd")
 const ControllerProfile=preload("res://scripts/controller_profile.gd")
 const Api = preload("res://scripts/api.gd")
 const Sound = preload("res://scripts/sound.gd")
@@ -73,6 +74,8 @@ var prompt: LineEdit
 var price: SpinBox
 var screen := "login"
 var me: Dictionary = {}
+## The HUD medallion's live face (avatar_portrait.gd), made the first time the village HUD needs it.
+var portrait_view: SubViewport
 var selected: Dictionary = {}
 var run: Dictionary = {}
 var run_id := ""
@@ -261,6 +264,8 @@ func _ready() -> void:
 		var session: Dictionary=Engine.get_meta("studio_session")
 		Engine.remove_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
+		# The room hands over the look it showed, so the village walker wears it from the first frame.
+		if session.get("profile") is Dictionary: me={"profile":session.profile}
 		var server_status: Dictionary = await api.request("/health")
 		social.enabled = social.feature_enabled() and server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
 		await enter_village()
@@ -692,6 +697,9 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	social.enabled = social.feature_enabled() and int(health.data.get("multiplayer_protocol", 0)) == 1
 	api.token = result.data.token
 	api.mode = result.data.mode
+	# The sign-in answer carries the look: the first walker (home or village) already wears it, and
+	# the previous account's look never shows.
+	me = {"profile":result.data.get("profile",{})}
 	# Settings follow the account: read them now (a fresh install picks up the player's own).
 	var cloud := get_node_or_null("/root/CloudPrefs")
 	if cloud: cloud.start(api.base_url, api.token)
@@ -705,7 +713,7 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	await veil.fade_out()
 	if get_tree().current_scene==self:
 		# A new session starts at home; walking out of the front door opens the village.
-		Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":"home","multiplayer":social.enabled})
+		Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":"home","multiplayer":social.enabled,"profile":me.profile})
 		get_tree().change_scene_to_file("res://scenes/studio.tscn")
 		return
 	await enter_village()
@@ -751,13 +759,12 @@ func build_world(survival: bool) -> void:
 		world.add_child(town)
 	object_root = Node3D.new()
 	world.add_child(object_root)
-	player = Player.new()
-	player.visual_only=survival
 	# Built in the saved look from the first frame (applying it after _ready showed the default
 	# explorer first and loaded the character twice).
-	player.avatar=me.get("profile",{}).get("avatar",{}).duplicate(true)
+	var profile: Dictionary = me.get("profile",{})
+	player = AvatarLook.walker(profile.get("avatar",{}),int(profile.get("version",-1)))
+	player.visual_only=survival
 	world.add_child(player)
-	player.apply_avatar(me.get("profile",{}).get("avatar",{}))
 	if not survival: spawn_villagers()
 	if not survival: spawn_modules()
 	player.position = TownLayout.point(TownLayout.SPAWN,.3) if not survival else Vector3(run.get("x",0),0.1,run.get("z",1.4))
@@ -1264,8 +1271,13 @@ func refresh_inventory() -> void:
 	if epoch!=world_epoch or not check(result):
 		refreshing=false
 		return
+	var newer: Dictionary = me.get("profile",{})
 	me = result.data
-	if screen=="village" and is_instance_valid(player): player.apply_avatar(me.get("profile",{}).get("avatar",{}))
+	# A newer look adopted while this answer was on its way stays.
+	if int(newer.get("version",-1))>int(me.get("profile",{}).get("version",-1)): me.profile=newer
+	# Also while the village is still loading (screen "loading"): the walker built before /v1/me
+	# answered wears the saved look now.
+	wear_profile()
 	reward_button.visible=me.get("pending_reward")!=null
 	if is_instance_valid(expedition_button):
 		var saved = me.get("active_run_summary")
@@ -2489,12 +2501,39 @@ func ground_surface() -> String:
 	if player.position.y<1.55: return "sand"
 	return "grass"
 
-## The HUD medallion shows the face of the character the player wears.
+## The HUD medallion shows the player's own character as it is dressed: the same walker drawn
+## from the head (avatar_portrait.gd). Until that first drawing is ready, the authored picture of
+## the same character stands in.
 func show_portrait() -> void:
 	if not frame.has("portrait") or not is_instance_valid(frame.portrait): return
-	var character := str(me.get("profile",{}).get("avatar",{}).get("character","explorer_b"))
-	var path := "res://assets/ui/portrait_%s.png" % character
-	if ResourceLoader.exists(path): frame.portrait.texture=load(path)
+	var profile: Dictionary = me.get("profile",{})
+	var look := AvatarLook.normalize(profile.get("avatar",{}))
+	if not is_instance_valid(portrait_view):
+		portrait_view = preload("res://scripts/avatar_portrait.gd").new()
+		add_child(portrait_view)
+		portrait_view.rendered.connect(func():
+			if frame.has("portrait") and is_instance_valid(frame.portrait): frame.portrait.texture=portrait_view.get_texture())
+	# A face already drawn stays up while a new look is drawn over it (no flash of another picture).
+	if not portrait_view.drawn_key.is_empty():
+		frame.portrait.texture=portrait_view.get_texture()
+	else:
+		var path := "res://assets/ui/portrait_%s.png" % str(look.character)
+		if ResourceLoader.exists(path): frame.portrait.texture=load(path)
+	portrait_view.show_look(look,int(profile.get("version",-1)))
+
+## Puts the saved look (me.profile) on the walker and the HUD medallion.
+func wear_profile(animate := false) -> void:
+	var profile: Dictionary = me.get("profile",{})
+	if is_instance_valid(player): AvatarLook.wear(player,profile.get("avatar",{}),int(profile.get("version",-1)),animate)
+	show_portrait()
+
+## A newer saved look from elsewhere (the wardrobe, this account's own presence record): every
+## place this client draws the player follows it.
+func adopt_profile(profile: Dictionary, animate := false) -> void:
+	if not profile.get("avatar") is Dictionary: return
+	if int(profile.get("version",-1))<=int(me.get("profile",{}).get("version",-1)): return
+	me.profile={"avatar":profile.avatar.duplicate(true),"version":int(profile.get("version",0))}
+	wear_profile(animate)
 
 ## Village distance on the ground plane; island terrain heights vary by metres.
 func near(at: Vector2, radius: float) -> bool:
@@ -3125,9 +3164,7 @@ func open_wardrobe() -> void:
 		var result: Dictionary=await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":editor.avatar}))
 		if not is_instance_valid(editor): return
 		if result.ok:
-			me.profile=result.data
-			player.apply_avatar(me.profile.avatar)
-			show_portrait()
+			adopt_profile(result.data,true)
 			close_village_modal()
 			message(tr("새로운 여행자 모습이 저장되었습니다."))
 		else:
@@ -3139,7 +3176,7 @@ func open_wardrobe() -> void:
 
 func open_studio(destination: String="workshop") -> void:
 	var session := {"token":api.token,"url":api.base_url,"room":destination,"multiplayer":social.enabled,
-		"avatar":me.get("profile",{}).get("avatar",{}).duplicate(true)}
+		"profile":me.get("profile",{}).duplicate(true)}
 	if social.visiting():
 		# Friends may step into the host's home and public buildings; the workshop stays private.
 		if destination=="workshop":

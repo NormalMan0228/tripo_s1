@@ -19,7 +19,10 @@ func run() -> void:
 	var app = Main.new()
 	root.add_child(app)
 	await create_timer(1.5).timeout
-	await app.authenticate(true,"http://127.0.0.1:8766","dress_"+str(Time.get_ticks_msec()),"Wardrobe-check-1","")
+	var server := "http://127.0.0.1:8766"
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--server="): server=arg.trim_prefix("--server=")
+	await app.authenticate(true,server,"dress_"+str(Time.get_ticks_msec()),"Wardrobe-check-1","")
 	await create_timer(1.0).timeout
 	expect(app.screen=="village","village")
 	app.open_wardrobe()

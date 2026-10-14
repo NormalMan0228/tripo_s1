@@ -123,5 +123,8 @@ func _process(_delta: float) -> void:
 	if (on_furniture and not is_instance_valid(furniture)) or hero.position.distance_to(settled_at)>0.05:
 		release()
 		return
+	# A new look rebuilt the character while seated (avatar_look.gd): its new skeleton sits too.
+	if mode=="sit" and is_instance_valid(hero.hand_skeleton) and (not is_instance_valid(pose) or pose.get_parent()!=hero.hand_skeleton) and ensure_pose():
+		pose.mode="sit"
 	if walk_off.is_valid() and walk_off.call() and Input.get_vector("move_left","move_right","move_forward","move_back").length()>0.3:
 		stand()

@@ -3,10 +3,12 @@ var avatar: Dictionary={}
 var preview: Node3D
 var actor: CharacterBody3D
 const RpgUi=preload("res://scripts/rpg_ui.gd")
-const DEFAULTS={"character":"explorer_b","hair":"#30595b","coat":"#dba448","pants":"#526552","boots":"#765744","skin":"#e4b587","headwear":"none","backpack":true}
+## The preview is the same walker (player.gd through avatar_look.gd) that wears the look everywhere.
+const AvatarLook=preload("res://scripts/avatar_look.gd")
+const DEFAULTS=AvatarLook.DEFAULTS
 
 func _ready() -> void:
-	avatar=DEFAULTS.merged(avatar,true)
+	avatar=AvatarLook.normalize(avatar)
 	add_theme_constant_override("separation",24)
 	var container := SubViewportContainer.new()
 	container.custom_minimum_size=Vector2(280,350)
@@ -35,8 +37,7 @@ func _ready() -> void:
 	camera.position=Vector3(0,1.15,4)
 	preview.add_child(camera)
 	camera.look_at(Vector3(0,0.9,0))
-	actor=preload("res://scripts/player.gd").new()
-	actor.avatar=avatar.duplicate(true)
+	actor=AvatarLook.walker(avatar)
 	actor.controls_enabled=false
 	# visual_only keeps the idle animation ticking without moving the body.
 	actor.visual_only=true
@@ -102,7 +103,7 @@ func _ready() -> void:
 	refresh()
 
 func refresh() -> void:
-	actor.apply_avatar(avatar)
+	AvatarLook.wear(actor,avatar)
 	for b in find_children("*","Button",true,false):
 		if b.has_meta("character"): b.button_pressed=b.get_meta("character")==avatar.character
 		if b.has_meta("part"):

@@ -25,6 +25,8 @@ func capture(name: String) -> void:
 		push_error("Could not save integration evidence: "+name)
 
 func run_test() -> void:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--server="): test_url=argument.trim_prefix("--server=")
 	app=Main.new()
 	root.add_child(app)
 	await process_frame

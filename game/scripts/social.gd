@@ -1,6 +1,6 @@
 extends Node
 ## Polling transport for a three-player test. Authority and membership stay on the server.
-const Player = preload("res://scripts/player.gd")
+const AvatarLook = preload("res://scripts/avatar_look.gd")
 ## The host's furniture is read through the guest routes (server/multiplayer.py).
 const GUEST_OBJECTS = "/v1/social/village/objects/"
 var app: Node3D
@@ -149,22 +149,31 @@ func accept_crops() -> void:
 	app.life.state = {"version":crops.version, "plots":crops.plots, "server_time":crops.server_time, "coins":0, "bag":{}, "fishing":null}
 	app.life.synced_at = Time.get_ticks_msec()*.001
 
+## Other players in the village or the co-op expedition. Each record carries the player's saved
+## look and its version (avatar_version): a body is built in that look, and rebuilt only when the
+## version changes (a wardrobe save shows here within one poll, without re-entering).
 func sync_peers(players: Array) -> void:
 	var retained := {}
+	var self_id := str(data.get("self_id", app.run.get("self_id", "")))
 	for record in players:
 		var id: String = record.id
-		if id == str(data.get("self_id", app.run.get("self_id", ""))) or record.get("withdrawn", false): continue
+		if id == self_id:
+			# This account's own look, saved on another screen or device, reaches this walker too.
+			if record.get("avatar") is Dictionary and record.has("avatar_version"):
+				app.adopt_profile({"avatar":record.avatar, "version":int(record.avatar_version)}, true)
+			continue
+		if record.get("withdrawn", false): continue
 		retained[id] = true
 		var target := Vector3(record.x, record.get("y", .03), record.z)
+		var version := int(record.get("avatar_version", -1))
 		if not peers.has(id) or not is_instance_valid(peers[id].node):
-			var actor := Player.new()
+			var actor := AvatarLook.walker(record.get("avatar", {}), version)
 			actor.visual_only = true
 			actor.controls_enabled = false
 			actor.collision_layer = 0
 			actor.collision_mask = 0
-			app.world.add_child(actor)
-			actor.apply_avatar(record.get("avatar", {}))
 			actor.position = target
+			app.world.add_child(actor)
 			var nameplate := Label3D.new()
 			nameplate.position.y = 2.05
 			nameplate.font_size = 32
@@ -172,12 +181,9 @@ func sync_peers(players: Array) -> void:
 			nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 			preload("res://scripts/art.gd").plate_priority(nameplate)
 			actor.add_child(nameplate)
-			peers[id] = {"node":actor, "label":nameplate, "target":target, "avatar":JSON.stringify(record.get("avatar", {}))}
+			peers[id] = {"node":actor, "label":nameplate, "target":target}
 		peers[id].target = target
-		var avatar_key: String = JSON.stringify(record.get("avatar", {}))
-		if peers[id].avatar != avatar_key:
-			peers[id].node.apply_avatar(record.get("avatar", {}))
-			peers[id].avatar = avatar_key
+		AvatarLook.wear(peers[id].node, record.get("avatar", {}), version, true)
 		peers[id].node.sprinting = bool(record.get("sprinting", false))
 		peers[id].label.text = str(record.username)+( tr(" · 연결 끊김") if not record.get("online", true) else "")+(tr(" · 관전") if record.get("hp", 100) <= 0 else "")
 	for id in peers.keys():
