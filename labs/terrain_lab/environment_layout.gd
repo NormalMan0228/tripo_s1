@@ -10,6 +10,10 @@ var capturing := false
 var relocated_rocks: Array[Dictionary] = []
 var floating_boats: Array[Dictionary] = []
 var ground_fit_samples: Array[Dictionary] = []
+var collision_shapes: Dictionary = {}
+var lod_meshes: Dictionary = {}
+var lod_entries: Array[Dictionary] = []
+var lod_timer := 0.0
 var output_path := "res://../../art/maps/archipelago_environment_v1/"
 
 func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
@@ -21,16 +25,35 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 		for rock: Dictionary in clearance.relocated_rocks:
 			relocated_rocks.append(rock)
 	for spec: Dictionary in manifest.models:
+		if manifest.bridges.any(func(bridge: Dictionary) -> bool: return bridge.id==spec.id and bridge.has("fitted_model")):
+			continue
 		prototypes[String(spec.id)] = load(String(spec.model)) as PackedScene
 	for spec: Dictionary in manifest.bridges:
-		var bridge := (prototypes[String(spec.id)] as PackedScene).instantiate() as Node3D
+		var source: PackedScene = load(String(spec.fitted_model)) if spec.has("fitted_model") else prototypes[String(spec.id)]
+		var bridge := source.instantiate() as Node3D
 		bridge.name = spec.id
 		add_child(bridge)
 		bridge.position = Vector3(spec.position[0],spec.position[1],spec.position[2])
 		bridge.rotation.y = deg_to_rad(float(spec.yaw_degrees))
-		bridge.scale.z = spec.scale_z
-		_fit_bridge(bridge,spec)
-		_add_bridge_supports(bridge,spec)
+		if spec.get("authored_at_bank_span",false):
+			for mesh: MeshInstance3D in bridge.find_children("*","MeshInstance3D",true,false):
+				for surface in mesh.mesh.get_surface_count():
+					var original := mesh.mesh.surface_get_material(surface) as StandardMaterial3D
+					if original.resource_name.begins_with("Wood_"):
+						var wood := ShaderMaterial.new()
+						wood.shader = load("res://bridge_timber.gdshader")
+						wood.set_shader_parameter("timber_color",original.albedo_color)
+						mesh.set_surface_override_material(surface,wood)
+				mesh.create_trimesh_collision()
+				for child in mesh.get_children():
+					if child is StaticBody3D:
+						child.collision_layer = 2
+						child.collision_mask = 0
+			_add_authored_deck_collision(bridge,spec)
+		else:
+			bridge.scale.z = spec.scale_z
+			_fit_bridge(bridge,spec)
+			_add_bridge_supports(bridge,spec)
 		bridge_nodes.append(bridge)
 	for spec: Dictionary in manifest.instances:
 		var prop := (prototypes[String(spec.id)] as PackedScene).instantiate() as Node3D
@@ -41,6 +64,9 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 		prop.scale = Vector3.ONE*float(spec.scale)
 		prop.set_meta("placement_spec",spec)
 		prop_nodes.append(prop)
+		for mesh: MeshInstance3D in prop.find_children("*","MeshInstance3D",true,false):
+			mesh.lod_bias = .12 if spec.id in ["40_shrub","42_white_flowers","43_yellow_flowers","44_pink_flowers","45_reeds"] else .35
+			_register_prop_lod(mesh,String(spec.id))
 		if spec.id == "27_lamp":
 			_light_lantern(prop)
 		if spec.id == "24_firepit":
@@ -64,13 +90,86 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 		if spec.id in ["20_pier","21_boat","22_tent_orange","23_tent_green","25_picnic_table","26_bench","24_firepit","28_beach_umbrella","29_beach_lounger","30_cafe_umbrella","31_cafe_table","32_cafe_chair","33_signboard","34_timber_fence","35_picket_fence","36_speaker","41_planter"]:
 			for item in prop.find_children("*","MeshInstance3D",true,false):
 				var mesh := item as MeshInstance3D
-				mesh.create_trimesh_collision()
-				for child in mesh.get_children():
-					if child is StaticBody3D:
-						child.collision_layer = 2 if spec.id=="20_pier" else 8
-						child.collision_mask = 0
+				_add_cached_collision(mesh,2 if spec.id=="20_pier" else 8)
 	print("ENVIRONMENT_LAYOUT_READY models=",manifest.models.size()," instances=",prop_nodes.size()," bridges=",bridge_nodes.size())
 	_fit_floor_props.call_deferred()
+
+func _add_authored_deck_collision(bridge: Node3D,spec: Dictionary) -> void:
+	# The nine millimetre plank joints are visual detail. A continuous deck collider
+	# just below the board tops avoids point probes and feet falling into joints.
+	var span := Vector2(float(spec.a[0])-float(spec.b[0]),float(spec.a[1])-float(spec.b[1])).length()
+	var half_width: float = float(spec.deck_width_m)*.5
+	var faces := PackedVector3Array()
+	var count := ceili(span/.25)
+	for i in count:
+		var a := float(i)/count
+		var b := float(i+1)/count
+		var za := (a-.5)*span
+		var zb := (b-.5)*span
+		var ya := lerpf(float(spec.bank_heights_m[0]),float(spec.bank_heights_m[1]),a)+.005+float(spec.authored_rise_m)*pow(sin(PI*a),2)
+		var yb := lerpf(float(spec.bank_heights_m[0]),float(spec.bank_heights_m[1]),b)+.005+float(spec.authored_rise_m)*pow(sin(PI*b),2)
+		var p := Vector3(-half_width,ya,za)
+		var q := Vector3(half_width,ya,za)
+		var r := Vector3(-half_width,yb,zb)
+		var s := Vector3(half_width,yb,zb)
+		faces.append_array(PackedVector3Array([p,r,q,q,r,s]))
+	var body := StaticBody3D.new()
+	body.collision_layer = 2
+	body.collision_mask = 0
+	bridge.add_child(body)
+	var shape := ConcavePolygonShape3D.new()
+	shape.backface_collision = true
+	shape.set_faces(faces)
+	var collision := CollisionShape3D.new()
+	collision.shape = shape
+	body.add_child(collision)
+
+func _add_cached_collision(mesh: MeshInstance3D, layer: int) -> void:
+	var key := mesh.mesh.get_instance_id()
+	if not collision_shapes.has(key):
+		collision_shapes[key] = mesh.mesh.create_trimesh_shape()
+	var body := StaticBody3D.new()
+	body.collision_layer = layer
+	body.collision_mask = 0
+	mesh.add_child(body)
+	var collision := CollisionShape3D.new()
+	collision.shape = collision_shapes[key]
+	body.add_child(collision)
+
+func _register_prop_lod(mesh: MeshInstance3D,ident: String) -> void:
+	var path := "res://assets/prop_lods/"+ident+".glb"
+	if not ResourceLoader.exists(path):
+		return
+	if not lod_meshes.has(ident):
+		var source := (load(path) as PackedScene).instantiate()
+		var nodes := source.find_children("*","MeshInstance3D",true,false)
+		assert(nodes.size()==1)
+		var low: ArrayMesh = nodes[0].mesh
+		assert(low.get_surface_count()==mesh.mesh.get_surface_count())
+		for surface in low.get_surface_count():
+			low.surface_set_material(surface,mesh.mesh.surface_get_material(surface))
+		lod_meshes[ident] = low
+		source.free()
+	var extent := mesh.get_aabb().size
+	var scale := mesh.global_basis.get_scale()
+	lod_entries.append({"node":mesh,"high":mesh.mesh,"low":lod_meshes[ident],"low_active":false,"size":maxf(extent.x,maxf(extent.y,extent.z))*maxf(scale.x,maxf(scale.y,scale.z))})
+
+func _update_prop_lods() -> void:
+	if host.camera == null:
+		return
+	var camera := host.camera as Camera3D
+	var view := camera.global_transform.affine_inverse()
+	var pixels := get_viewport().get_visible_rect().size.y
+	for entry in lod_entries:
+		var mesh := entry.node as MeshInstance3D
+		var projected: float = entry.size*pixels/maxf(camera.size,.1)
+		if camera.projection == Camera3D.PROJECTION_PERSPECTIVE:
+			var depth := maxf(.1,-(view*mesh.global_position).z)
+			projected = entry.size*pixels/(2.0*tan(deg_to_rad(camera.fov)*.5)*depth)
+		var use_low := projected < (92.0 if entry.low_active else 72.0)
+		if use_low != bool(entry.low_active):
+			mesh.mesh = entry.low if use_low else entry.high
+			entry.low_active = use_low
 
 func _bridge_offset(local_z: float,spec: Dictionary) -> float:
 	var q := clampf((local_z/float(spec.source_length_m)-float(spec.walk_bounds[0]))/float(spec.walk_fraction),0.0,1.0)
@@ -251,6 +350,10 @@ func _create_fire(prop: Node3D) -> void:
 		prop.add_child(flame)
 
 func _process(_delta: float) -> void:
+	lod_timer += _delta
+	if lod_timer > .2:
+		lod_timer = 0.0
+		_update_prop_lods()
 	var seconds := float(Time.get_ticks_msec())/1000.0
 	for entry: Dictionary in floating_boats:
 		var boat := entry.node as Node3D

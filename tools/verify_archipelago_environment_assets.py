@@ -28,7 +28,13 @@ for spec in manifest['models']:
         assert view(a,x,aa)==view(b,y,bb),(spec['id'],'geometry changed')
     results.append({'id':spec['id'],'reviewed_source_sha256':hashlib.sha256(original.read_bytes()).hexdigest(),
                     'all_geometry_and_material_records_preserved':True})
+authored=[b for b in manifest['bridges'] if b.get('authored_at_bank_span')]
+for b in authored:
+    assert b['scale_z']==1.0
+    assert (ROOT/'labs/terrain_lab'/b['fitted_model'].replace('res://','')).exists()
 report={'passed':True,'models':len(results),'results':results,
-        'bridge_runtime_deformation':'Intentional bank height fitting and additional arch, checked separately in Godot.'}
+        'retained_tripo_copies_preserved':True,
+        'active_authored_bridge_models':[{'id':b['id'],'model':b['fitted_model'],'scale_z':b['scale_z']} for b in authored],
+        'bridge_runtime_deformation':'Active fitted bridges use separately authored metre-sized planks, posts and rails. Reviewed Tripo copies are retained unchanged.' if authored else 'Intentional bank height fitting and additional arch, checked separately in Godot.'}
 (OUT/'source_preservation_verification.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
 print('ENVIRONMENT_SOURCE_PRESERVATION_PASS count=',len(results))

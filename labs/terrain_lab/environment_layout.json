@@ -8092,13 +8092,13 @@
       ],
       "name": "북서 ↔ 북동 · 삼나무 아치 다리",
       "position": [
-        2.3513513513513513,
+        2.0,
         0,
         -36.0
       ],
       "yaw_degrees": 90.0,
-      "scale_z": 1.1590972415714684,
-      "width_m": 4.799999713897705,
+      "scale_z": 1.0,
+      "width_m": 3.3899999999999997,
       "source_length_m": 25.0,
       "bank_heights_m": [
         2.064644480760505,
@@ -8319,7 +8319,11 @@
         -0.46075,
         0.4365
       ],
-      "additional_arch_m": 0.7
+      "additional_arch_m": 0.7,
+      "fitted_model": "res://assets/fitted_bridges/18_bridge_short.glb",
+      "authored_at_bank_span": true,
+      "deck_width_m": 3.15,
+      "authored_rise_m": 1.1
     },
     {
       "id": "49_bridge_boardwalk",
@@ -8339,11 +8343,11 @@
       "position": [
         57.0,
         0,
-        4.083333333333333
+        3.5
       ],
       "yaw_degrees": 0.0,
-      "scale_z": 1.2660516001614541,
-      "width_m": 4.5,
+      "scale_z": 1.0,
+      "width_m": 3.24,
       "source_length_m": 19.000001907348633,
       "bank_heights_m": [
         2.3398875942012873,
@@ -8559,7 +8563,11 @@
         -0.46075,
         0.41225
       ],
-      "additional_arch_m": 0
+      "additional_arch_m": 0,
+      "fitted_model": "res://assets/fitted_bridges/49_bridge_boardwalk.glb",
+      "authored_at_bank_span": true,
+      "deck_width_m": 3.0,
+      "authored_rise_m": 0.12
     },
     {
       "id": "48_bridge_rope",
@@ -8577,13 +8585,13 @@
       ],
       "name": "남서 ↔ 남동 · 밧줄 난간 다리",
       "position": [
-        3.8378378378378377,
+        3.5,
         0,
         27.0
       ],
       "yaw_degrees": 90.0,
-      "scale_z": 1.2664961118569367,
-      "width_m": 4.200000286102295,
+      "scale_z": 1.0,
+      "width_m": 3.09,
       "source_length_m": 22.0,
       "bank_heights_m": [
         2.5959963582827985,
@@ -8804,7 +8812,11 @@
         -0.46075,
         0.4365
       ],
-      "additional_arch_m": 0
+      "additional_arch_m": 0,
+      "fitted_model": "res://assets/fitted_bridges/48_bridge_rope.glb",
+      "authored_at_bank_span": true,
+      "deck_width_m": 2.85,
+      "authored_rise_m": -0.35
     },
     {
       "id": "19_bridge_long",
@@ -8822,13 +8834,13 @@
       ],
       "name": "남서 ↔ 등대 · 긴 참나무 아치 다리",
       "position": [
-        -11.909090909090908,
+        -11.5,
         0,
-        65.27272727272727
+        65.5
       ],
       "yaw_degrees": 60.94539590092286,
-      "scale_z": 1.2865517202108092,
-      "width_m": 4.799999713897705,
+      "scale_z": 1.0,
+      "width_m": 3.6900000000000004,
       "source_length_m": 30.0,
       "bank_heights_m": [
         2.6136403786813354,
@@ -9044,7 +9056,11 @@
         -0.388,
         0.41225
       ],
-      "additional_arch_m": 0.8
+      "additional_arch_m": 0.8,
+      "fitted_model": "res://assets/fitted_bridges/19_bridge_long.glb",
+      "authored_at_bank_span": true,
+      "deck_width_m": 3.45,
+      "authored_rise_m": 1.65
     }
   ],
   "piers": [
