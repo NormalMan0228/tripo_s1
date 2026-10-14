@@ -5,6 +5,9 @@ $taskGodot = Join-Path $taskRoot '.tools\godot\Godot_v4.7.2-stable_win64_console
 $taskTemplate = Join-Path $taskRoot '.tools\godot-templates\windows_release_x86_64.exe'
 if (-not (Test-Path -LiteralPath $taskTemplate)) { throw 'Install the official Godot 4.7.2 Windows export template at .tools/godot-templates/windows_release_x86_64.exe.' }
 New-Item -ItemType Directory -Path builds/windows -Force | Out-Null
+# The archipelago's generated data (collision, baked island) must match the map: bake it when stale.
+& (Join-Path $taskRoot '.tools\art-venv\Scripts\python.exe') (Join-Path $taskRoot 'tools\bake_archipelago.py')
+if ($LASTEXITCODE -ne 0) { throw 'Archipelago bake failed.' }
 & $taskGodot --headless --path game --export-release 'Windows Desktop'
 if ($LASTEXITCODE -ne 0) { throw 'Godot export failed.' }
 & $taskGodot --headless --path game --export-release 'Windows Developer'

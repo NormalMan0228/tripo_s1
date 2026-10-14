@@ -98,6 +98,8 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 			_add_pier_supports(prop,spec)
 		if spec.id == "21_boat":
 			floating_boats.append({"node":prop,"base_y":prop.position.y})
+			# The baked island keeps it (restore()): the bobbing moves position.y.
+			prop.set_meta("base_y",prop.position.y)
 		if spec.id in ["37_round_tree","38_conifer","39_palm"]:
 			var trunk := StaticBody3D.new()
 			trunk.collision_layer = 8
@@ -118,6 +120,40 @@ func install(owner_node: Node3D,_terrain_node: Node3D) -> void:
 	# Under the loading card the props settle before the map shows.
 	if LoadPace.covered: await _fit_floor_props()
 	else: _fit_floor_props.call_deferred()
+
+## The map came from the baked island (tools/bake_archipelago.gd, island_bake.gd): every node is there,
+## placed and fitted, but this script's lists are not saved with them. They are found again here
+## (bridges by id, props by their placement_spec), the props' LOD meshes registered again (only the
+## model's own meshes: the ones its scene owns), the boats bob from their saved base height.
+func restore(owner_node: Node3D) -> void:
+	host = owner_node
+	manifest = JSON.parse_string(FileAccess.get_file_as_string("res://maps/archipelago/environment_layout.json"))
+	output_path = "res://../"+String(manifest.get("output_directory","art/maps/archipelago_environment_v1"))+"/"
+	bridge_nodes.clear()
+	prop_nodes.clear()
+	floating_boats.clear()
+	lod_entries.clear()
+	for spec: Dictionary in manifest.bridges:
+		var bridge := get_node_or_null(String(spec.id)) as Node3D
+		if bridge: bridge_nodes.append(bridge)
+	for child in get_children():
+		if child.has_meta("placement_spec"): prop_nodes.append(child)
+	for prop in prop_nodes:
+		var spec: Dictionary = prop.get_meta("placement_spec")
+		for mesh: MeshInstance3D in prop.find_children("*","MeshInstance3D",true,false):
+			if mesh.owner == prop: _register_prop_lod(mesh,String(spec.id))
+		if spec.id == "21_boat":
+			floating_boats.append({"node":prop,"base_y":float(prop.get_meta("base_y",prop.position.y))})
+
+## Every prop back on its full mesh and the boats at rest: the state the island is baked in.
+func settle_for_bake() -> void:
+	for entry: Dictionary in lod_entries:
+		(entry.node as MeshInstance3D).mesh = entry.high
+		entry.low_active = false
+	for entry: Dictionary in floating_boats:
+		var boat := entry.node as Node3D
+		boat.position.y = float(entry.base_y)
+		boat.rotation.z = 0.0
 
 func _add_authored_deck_collision(bridge: Node3D,spec: Dictionary) -> void:
 	# The nine millimetre plank joints are visual detail. A continuous deck collider

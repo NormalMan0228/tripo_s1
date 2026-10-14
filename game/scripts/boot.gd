@@ -12,6 +12,7 @@ const SCENE := "res://scenes/main.tscn"
 const Transition = preload("res://scripts/transition.gd")
 const GameSettings = preload("res://scripts/game_settings.gd")
 const I18n = preload("res://scripts/i18n.gd")
+const LoadPace = preload("res://scripts/load_pace.gd")
 ## The main script read on the worker thread, held until main.tscn opens again.
 static var loaded: Script
 static var started := 0
@@ -44,7 +45,12 @@ func _ready() -> void:
 	set_process(true)
 
 func _process(_delta: float) -> void:
-	if ResourceLoader.load_threaded_get_status(MAIN) == ResourceLoader.THREAD_LOAD_IN_PROGRESS: return
+	if ResourceLoader.load_threaded_get_status(MAIN) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		# (--load-phases: these frames count as reading the game's scripts.)
+		LoadPace.frame_waited = true
+		LoadPace.wait_phase = "reading the game's scripts"
+		return
+	LoadPace.wait_phase = "waiting for file reads"
 	set_process(false)
 	var script := ResourceLoader.load_threaded_get(MAIN) as Script
 	if "--log-load" in OS.get_cmdline_user_args(): print("BOOT main.gd read in %d ms (from %d ms)" % [Time.get_ticks_msec()-started, started])

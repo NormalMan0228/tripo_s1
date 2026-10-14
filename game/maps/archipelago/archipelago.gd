@@ -32,6 +32,8 @@ static func resource_paths() -> Array:
 			paths.append(ROOT+"assets/prop_lods/"+String(spec.id)+".glb")
 		for spec in layout.get("bridges", []):
 			if spec.has("fitted_model"): paths.append(String(spec.fitted_model))
+	# The baked island last: what it uses is in by then, one piece at a time.
+	if IslandBake.island_ready(): paths.append(IslandBake.ISLAND)
 	return paths
 
 ## The water, ground and rock textures build() puts on the terrain.
@@ -45,9 +47,104 @@ static func textures() -> Array:
 		paths.append(ROOT+"assets/v5/"+name+".png")
 	return paths
 
-## Paced under the loading card (await it); uncovered it runs in one go as before.
+## Paced under the loading card (await it); uncovered it runs in one go as before. The baked island
+## (island_bake.gd) when it is fresh, else built here from the layouts.
 func build(view: Camera3D) -> void:
 	camera = view
+	if IslandBake.island_ready() and await _build_from_bake(): return
+	await _build_runtime()
+
+## The baked island (tools/bake_archipelago.gd): read with everything it uses on the worker thread,
+## made off the main thread, moved in a piece at a time, its scripts' lists found again, then its
+## colliders made a chunk a frame from the generated collision. False (nothing added) when the
+## scene cannot be read.
+func _build_from_bake() -> bool:
+	var paths := resource_paths()
+	var span := LoadPace.narrow(0.0, 0.7)
+	# Held here until the island has them (uncovered, fetch() only loads; nothing else holds them).
+	var keep := []
+	for index in paths.size():
+		LoadPace.done(float(index)/paths.size())
+		var path: String = paths[index]
+		if path != IslandBake.ISLAND and ResourceLoader.exists(path) and (LoadPace.pending(path) or not LoadPace.covered): keep.append(await LoadPace.fetch(path))
+	LoadPace.span = span
+	LoadPace.mark("island models and textures in")
+	var packed := await LoadPace.fetch(IslandBake.ISLAND) as PackedScene
+	LoadPace.mark("island scene read")
+	if packed == null:
+		push_warning("The baked island could not be read: the map builds from its layouts")
+		return false
+	var baked: Node3D
+	if LoadPace.covered:
+		# Thousands of nodes: made on a worker thread (they are not in the tree yet) while the card turns.
+		var made := []
+		var task := WorkerThreadPool.add_task(func(): made.append(_instantiate_baked(packed)))
+		while not WorkerThreadPool.is_task_completed(task): await get_tree().process_frame
+		WorkerThreadPool.wait_for_task_completion(task)
+		baked = made[0] if not made.is_empty() else null
+	else:
+		baked = _instantiate_baked(packed)
+	if baked == null: return false
+	LoadPace.mark("island instantiated")
+	var colliders: Array = baked.get_meta("baked_colliders", [])
+	span = LoadPace.narrow(0.7, 0.85)
+	# Each piece goes in whole (a fresh subtree enters the tree in a few ms; its nodes taken out and
+	# put in one by one cost a millisecond each), a step apart.
+	var pieces := baked.get_children()
+	for index in pieces.size():
+		var piece: Node = pieces[index]
+		LoadPace.done(float(index)/pieces.size())
+		baked.remove_child(piece)
+		add_child(piece)
+		await LoadPace.step("baked island")
+	baked.free()
+	LoadPace.mark("island in the tree")
+	LoadPace.span = span
+	(get_node("Buildings") as Node).restore(self)
+	(get_node("Environment") as Node).restore(self)
+	_create_water_spray()
+	LoadPace.mark("island lists restored")
+	span = LoadPace.narrow(0.85, 1.0)
+	var shared := {}
+	for index in colliders.size():
+		var entry: Dictionary = colliders[index]
+		LoadPace.done(float(index)/colliders.size())
+		if entry.has("faces"):
+			# A ramp or a bridge deck: its body is there, the shape comes back.
+			var body := get_node_or_null(NodePath(String(entry.body))) as StaticBody3D
+			if body == null: continue
+			await LoadPace.step("baked collider")
+			var shape := ConcavePolygonShape3D.new()
+			shape.backface_collision = entry.get("backface", false)
+			var holder := CollisionShape3D.new()
+			holder.shape = shape
+			shape.set_faces(entry.faces)
+			body.add_child(holder, true)
+			continue
+		var mesh := get_node_or_null(NodePath(String(entry.mesh))) as MeshInstance3D
+		if mesh == null: continue
+		var shapes: Array = []
+		if entry.get("shared", false):
+			if not shared.has(entry.key): shared[entry.key] = []
+			shapes = shared[entry.key]
+		await LoadPace.collide_chunks(mesh, IslandBake.collision_chunks(String(entry.key)), int(entry.layer), int(entry.mask), shapes)
+	LoadPace.span = span
+	IslandBake.drop_collision()
+	LoadPace.mark("island colliders made")
+	return true
+
+## The baked scene's nodes, with what the build changed inside the model instances set again.
+static func _instantiate_baked(packed: PackedScene) -> Node3D:
+	var baked := packed.instantiate() as Node3D
+	if baked == null: return null
+	for change: Array in baked.get_meta("baked_overrides", []):
+		var node := baked.get_node_or_null(NodePath(String(change[0])))
+		if node: node.set(String(change[1]), change[2])
+	# Its nodes move into the live map: they belong to no scene there (as the runtime build's).
+	for node in baked.find_children("*", "", true, true): node.owner = null
+	return baked
+
+func _build_runtime() -> void:
 	var span := LoadPace.narrow(0.0, 0.08)
 	var terrain_scene: PackedScene = await LoadPace.fetch(TERRAIN)
 	var terrain: Node3D = terrain_scene.instantiate()
@@ -157,7 +254,8 @@ func _wall_tall_rocks(terrain: Node3D) -> void:
 	walls.name = "RockWalls"
 	walls.collision_layer = ROCK_WALL_LAYER
 	walls.collision_mask = 0
-	add_child(walls)
+	# Filled before it joins the tree: every shape added to a body in the tree updates all its shapes
+	# (650 prisms one by one took over a second).
 	for surface in mesh_node.mesh.get_surface_count():
 		var arrays := mesh_node.mesh.surface_get_arrays(surface)
 		var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
@@ -209,6 +307,7 @@ func _wall_tall_rocks(terrain: Node3D) -> void:
 			var holder := CollisionShape3D.new()
 			holder.shape = shape
 			walls.add_child(holder)
+	add_child(walls)
 
 static func _find(parent: PackedInt32Array, i: int) -> int:
 	while parent[i] != i:

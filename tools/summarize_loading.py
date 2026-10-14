@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DIR = ROOT / "artifacts" / "loading"
 ORDER = ["start -> title", "title -> home", "home -> village", "village -> resident's house",
          "resident's house -> village", "village -> expedition", "expedition -> village"]
-PHASES = ["file read (main thread)", "waiting for file reads", "GPU upload + engine", "node assembly",
+PHASES = ["reading the game's scripts", "file read (main thread)", "waiting for file reads", "GPU upload + engine", "node assembly",
           "pad levelling", "collision", "render", "first render"]
 
 

@@ -30,13 +30,25 @@
    "tris_before": 383999
   }
  },
- "content_key": "c440fb3f89152efcd62d70b57b39d14f032addc679931930a95fe2dc8c4ebd54",
+ "content_key": "73a43f8496c46f3b64ba4501867fe3f71637b612ecd9f478541a6b2b4cf1c176",
  "engine": "4.7.2-stable (official)",
  "epsilon_m": 0.02,
- "format": 1,
+ "format": 2,
  "ground_epsilon_m": 0.01,
- "key": "625f9fbd892445d6d7486ab409e6217897e58d59580985fa27fbca0fe67a1687",
- "made": "2026-10-14T09:22:05",
+ "island": {
+  "build_ms": 1869,
+  "bytes": 5977622,
+  "colliders": 142,
+  "concave_stripped": 24,
+  "instances": 615,
+  "lost": [],
+  "ms": 2198,
+  "nodes": 2159,
+  "overrides": 1008,
+  "saved": 0
+ },
+ "key": "1605590c2fb55aa3fda54f4f63c4157da7b9493d1c84d867a1825df2a17c04cc",
+ "made": "2026-10-14T09:50:42",
  "walk_zone_epsilon_m": 0.003,
  "walk_zone_m": 3.6
 }

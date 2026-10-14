@@ -104,6 +104,9 @@ def game_zip(tag: str) -> Path:
         if not item.is_file(): raise SystemExit(f"missing {item}; export the 'Windows {'School' if school else 'Desktop'}' preset first")
     if school and 'SCHOOL_SERVER := ""' in (ROOT / "game" / "scripts" / "main.gd").read_text(encoding="utf-8"):
         raise SystemExit("set SCHOOL_SERVER in game/scripts/main.gd to the school server address first")
+    # The pack must carry the archipelago bake that matches the map (tools/bake_archipelago.py).
+    import bake_archipelago
+    bake_archipelago.verify_pack(pck)
     # A fixed name, so a download page can always point at the newest game.
     # School builds (--school) ship as pre-releases under their own name and never replace it.
     target = OUT / ("Villagen_School_Windows.zip" if school else "Villagen_Windows.zip")

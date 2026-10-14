@@ -5,6 +5,12 @@ extends RefCounted
 ## collision.res  every collider the build makes from a render mesh, as simplified faces
 ##                (meshoptimizer, at most EPSILON off the render mesh) in chunks of at most
 ##                CHUNK_TRIS triangles: one cheap shape a frame instead of a 30-130 ms trimesh.
+## island.scn     the unchanging part of the map as the build leaves it (terrain with its levelled
+##                ground pads and materials, buildings, bridges, props placed and fitted, rock walls,
+##                ramps, roads), GLB models referenced, not copied. The colliders with simplified faces
+##                are left out (their bodies stay) and listed in the root's "baked_colliders" meta:
+##                read on a worker thread, a scene's shapes would all reach the physics server in one
+##                frame; they are made a chunk a frame after it is in (Archipelago.build).
 ## manifest.json  {"format", "engine", "key", "stamp", "content_key", ...}: `key` hashes the inputs
 ##                that decide the build (KEY_FILES: layouts and the scripts that build; the engine
 ##                version); `stamp` lists every map asset's modification time, so a source run
@@ -16,7 +22,8 @@ extends RefCounted
 const DIR := "res://maps/archipelago/generated/"
 const MANIFEST := DIR+"manifest.json"
 const COLLISION := DIR+"collision.res"
-const FORMAT := 1
+const ISLAND := DIR+"island.scn"
+const FORMAT := 2
 ## Simplification error (metres in the world): the ground, then everything else.
 const GROUND_EPSILON := 0.01
 const EPSILON := 0.02
@@ -37,6 +44,8 @@ const KEY_FILES := [
 ]
 ## --no-bake: build the map as if there were no generated data (tests compare both).
 static var disabled := "--no-bake" in OS.get_cmdline_user_args()
+## --no-island: build at runtime (with the generated collision) instead of loading the baked island.
+static var island_disabled := "--no-island" in OS.get_cmdline_user_args()
 static var _checked := false
 static var _fresh := false
 static var _collision: Dictionary = {}
@@ -102,6 +111,10 @@ static func fresh() -> bool:
 		_fresh = why.is_empty()
 		if not _fresh and why != "missing": push_warning("Archipelago bake is stale (%s): the map builds without it; run tools/bake_archipelago.py" % why)
 	return _fresh
+
+## The baked island can be used: fresh, present, and not switched off.
+static func island_ready() -> bool:
+	return not island_disabled and fresh() and ResourceLoader.exists(ISLAND)
 
 ## The simplified collision chunks for a collider key (see collider_key), or [] for none.
 static func collision_chunks(collider: String) -> Array:

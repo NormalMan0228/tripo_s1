@@ -36,6 +36,8 @@ static var phases := {}
 ## This frame: paced work done so far (usec), and whether the build waited for a worker load.
 static var frame_work := 0
 static var frame_waited := false
+## What a frame spent only waiting counts as (boot.gd: the game's scripts being read).
+static var wait_phase := "waiting for file reads"
 ## The build released its loads (LoadPace.release): later frames under the card are its first renders.
 static var built := false
 
@@ -52,6 +54,14 @@ static func frame_began() -> void:
 	frame_work = 0
 	frame_waited = false
 	pump()
+
+## --log-load: prints how long since the last mark (the stages of a build).
+static var last_mark := 0
+static func mark(what: String) -> void:
+	if not log_slow: return
+	var now := Time.get_ticks_msec()
+	if last_mark > 0: print("LOAD_MARK %6d ms %s" % [now-last_mark, what])
+	last_mark = now
 
 ## Gives the frame back when this frame's work is over budget; a no-op while uncovered.
 static func step(what := "") -> void:
@@ -193,7 +203,7 @@ static func _account(length: int) -> void:
 		add_phase("first render", length)
 		return
 	if frame_waited and frame_work < 1000:
-		add_phase("waiting for file reads", int(rest*1000.0))
+		add_phase(wait_phase, int(rest*1000.0))
 		return
 	add_phase("render", int(render*1000.0))
 	add_phase("GPU upload + engine", int((rest-render)*1000.0))
@@ -237,14 +247,16 @@ static func collide(mesh: MeshInstance3D, faces := PackedVector3Array(), layer :
 ## into chunks of a few thousand triangles): a StaticBody3D "<mesh>_col" with one shape per chunk,
 ## made a step apart (each a few ms instead of one 30-130 ms trimesh). `shapes` holds the shapes
 ## another instance of the same prop already made (shared, nothing to build); empty, they are made
-## here and appended to it. Uncovered it runs in one go.
-static func collide_chunks(mesh: MeshInstance3D, chunks: Array, layer := 1, mask := 1, shapes: Array = []) -> void:
-	var body := StaticBody3D.new()
-	body.name = String(mesh.name)+"_col"
-	body.collision_layer = layer
-	body.collision_mask = mask
-	mesh.add_child(body, true)
-	if mesh.owner != null: body.owner = mesh.owner
+## here and appended to it. `body`: the body to fill (the baked island keeps its bodies), else a new
+## one under `mesh`. Uncovered it runs in one go.
+static func collide_chunks(mesh: Node3D, chunks: Array, layer := 1, mask := 1, shapes: Array = [], body: StaticBody3D = null) -> void:
+	if body == null:
+		body = StaticBody3D.new()
+		body.name = String(mesh.name)+"_col"
+		body.collision_layer = layer
+		body.collision_mask = mask
+		mesh.add_child(body, true)
+		if mesh.owner != null: body.owner = mesh.owner
 	var make := shapes.is_empty()
 	for index in chunks.size():
 		var holder := CollisionShape3D.new()

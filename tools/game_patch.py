@@ -158,6 +158,9 @@ def export_patch(godot, project, preset, base_pck, out):
     out.parent.mkdir(parents=True, exist_ok=True)
     if out.exists():
         out.unlink()
+    # The archipelago's generated data must match the map before it goes into a patch.
+    import bake_archipelago
+    bake_archipelago.ensure()
     command = [str(godot), '--headless', '--path', str(project), '--export-patch', preset, str(out), '--patches', str(base_pck)]
     result = subprocess.run(command, capture_output=True, text=True, encoding='utf-8', errors='replace')
     if not out.is_file():

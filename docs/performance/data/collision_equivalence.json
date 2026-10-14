@@ -1,15 +1,15 @@
 {
  "cells": 157728,
  "exact": {
-  "build_ms": 5037,
-  "reachable": 146366,
+  "build_ms": 4063,
+  "reachable": 146365,
   "shapes": 877,
-  "standable": 149803,
+  "standable": 149802,
   "triangles": 2936211
  },
  "failures": [],
  "generated": {
-  "build_ms": 573,
+  "build_ms": 411,
   "reachable": 146380,
   "shapes": 966,
   "standable": 149809,
@@ -24,7 +24,7 @@
   "largest_m": 0.0494,
   "moved_over_2cm": 337
  },
- "moves_changed": 209,
+ "moves_changed": 212,
  "ok": true,
  "places": {
   "bridge 18_bridge_short a": [
@@ -128,7 +128,7 @@
    2.92
   ]
  },
- "reach_gained_count": 16,
+ "reach_gained_count": 17,
  "reach_gained_groups": [
   [
    2,
@@ -270,8 +270,8 @@
    ]
   ]
  ],
- "seconds": 15.964,
- "stand_changed": 46,
+ "seconds": 14.554,
+ "stand_changed": 47,
  "walk_height": {
   "hit_changed": 0,
   "largest_m": 5.2981,

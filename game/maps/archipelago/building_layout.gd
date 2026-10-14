@@ -44,6 +44,16 @@ func install(owner_node: Node3D, terrain: Node3D) -> void:
 					child.collision_mask = 0
 	print("BUILDING_LAYOUT_READY count=", placed.size(), " level_pad_vertices=", touched_vertices)
 
+## The map came from the baked island (island_bake.gd): the buildings are there, the lists are found again.
+func restore(owner_node: Node3D) -> void:
+	host = owner_node
+	terrain_root = owner_node.get_child(0) as Node3D
+	manifest = JSON.parse_string(FileAccess.get_file_as_string("res://maps/archipelago/building_placements.json"))
+	placed.clear()
+	for spec: Dictionary in manifest.buildings:
+		var building := get_node_or_null(String(spec.id)) as Node3D
+		if building: placed.append(building)
+
 ## Hole patches (tools/patch_building_holes.py) are small quads appended to a
 ## building's main surface, tucked into cracks behind the outer walls. Their texcoords
 ## are shifted by whole atlas tiles (u >= PATCH_U_MIN). For the collision their
