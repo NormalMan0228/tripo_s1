@@ -1549,9 +1549,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		match key:
 			KEY_E,KEY_SPACE,KEY_ENTER: advance_talk()
 			KEY_ESCAPE: close_talk()
-			KEY_1,KEY_2,KEY_3:
+			KEY_1,KEY_2,KEY_3,KEY_4,KEY_5,KEY_6,KEY_7,KEY_8,KEY_9:
 				var index: int=event.physical_keycode-KEY_1
-				if talk_page>=talk_lines.size()-1 and index<talk_choices.size(): run_choice(str(talk_choices[index][1]))
+				if talk_page>=talk_lines.size()-1 and index<talk_choices.size(): pick_talk(talk_choices[index])
 		get_viewport().set_input_as_handled()
 		return
 	var focus := get_viewport().gui_get_focus_owner()
@@ -1651,6 +1651,9 @@ func use_decor(record: Dictionary) -> void:
 	last_used=record
 	if record.kind=="gift":
 		use_gift(record)
+		return
+	if record.get("storage",false) and not gift_home.is_empty() and not api.token.is_empty():
+		open_storage(record)
 		return
 	var who := str(record.get("id","")) if record.kind=="resident" else str(record.get("occupant",""))
 	if not who.is_empty() and npcs.has(who):
@@ -2512,6 +2515,10 @@ func pick_talk(choice: Array) -> void:
 
 func advance_talk() -> void:
 	if not is_instance_valid(talk_box): return
+	# The storage chest's list has no pages: E closes it.
+	if talk_window.is_empty():
+		close_talk()
+		return
 	if talk_body.visible_ratio<1.0:
 		talk_body.visible_ratio=1.0
 	elif talk_page<talk_lines.size()-1:
@@ -2577,6 +2584,8 @@ func open_gift(id: String) -> void:
 		if entry.body.has_method("smile"): entry.body.smile(3.0)
 		sfx_player.stream=Interiors.sfx("chime");sfx_player.play()
 		message(NpcGifts.thanks_text(Interiors.short_name(id,float(resident_clock().hour)),reply))
+		var note := NpcGifts.letters_note(reply)
+		if not note.is_empty(): create_tween().tween_callback(func(): message(note)).set_delay(2.6)
 		gift_time=2.0
 	NpcGifts.start(api,id,say,done)
 
@@ -2623,9 +2632,14 @@ func add_gift(item: Dictionary, node: Node3D, fresh: bool) -> void:
 	if str(item.kind)=="table": at.y=table_top(level,at,at.y)
 	node.position=at+Vector3(0,0.02 if str(item.kind)=="floor" else 0.0,0)
 	node.rotation_degrees.y=float(item.rotation)
-	Loader.add_collision(node)
 	var raw: Array=item.get("size",[1,1,1])
-	var size: Vector3=node.get_meta("size",Vector3(float(raw[0]),float(raw[1]),float(raw[2])))
+	var wanted := Vector3(float(raw[0]),float(raw[1]),float(raw[2]))
+	# An older one-mesh model loads 1.6 m long; indoors the server sized it smaller.
+	if not item.get("studio",true) and node.has_meta("size") and Vector3(node.get_meta("size")).length()>0.001:
+		node.scale*=wanted.length()/Vector3(node.get_meta("size")).length()
+		node.set_meta("size",wanted)
+	Loader.add_collision(node)
+	var size: Vector3=node.get_meta("size",wanted)
 	var turn := node.rotation.y
 	var record := {"kind":"gift","id":str(item.id),"npc":str(item.get("npc","")),"name":str(item.get("name","")),"node":node,
 		"center":Vector3(at.x,0,at.z),"yaw":turn,"mounted":str(item.kind)=="wall","solid":str(item.kind)=="floor","interactive":true,"glb":true,
@@ -2667,6 +2681,43 @@ func use_gift(record: Dictionary) -> void:
 	var owner_name := Interiors.short_name(str(record.npc),float(resident_clock().hour)) if not str(record.npc).is_empty() else ""
 	say(tr("%s의 소중한 선물 · %s") % [owner_name,str(record.name)],record)
 	sfx_player.stream=Interiors.sfx("pop");sfx_player.play()
+
+## E on the house's storage chest: what the residents keep in storage (names and pictures only),
+## for the owner and visitors alike. E or Esc closes it.
+func open_storage(record: Dictionary) -> void:
+	if gift_home.is_empty(): return
+	var reply: Dictionary=await api.request("/v1/social/npc-homes/%s" % gift_home)
+	if not reply.ok or not is_inside_tree(): return
+	close_talk()
+	sfx_player.stream=Interiors.sfx("creak");sfx_player.play()
+	if is_instance_valid(record.get("node")): Fx.wobble(record.node,0.05)
+	talk_box=Control.new();talk_box.name="StorageChest";talk_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(talk_box)
+	talk_window={};talk_lines=[];talk_choices=[]
+	var shade := ColorRect.new();shade.color=Color(0,0,0,0.35);shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.gui_input.connect(func(event): if event is InputEventMouseButton and event.pressed: close_talk())
+	talk_box.add_child(shade)
+	var middle := CenterContainer.new();middle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	middle.mouse_filter=Control.MOUSE_FILTER_IGNORE;talk_box.add_child(middle)
+	var card := PanelContainer.new();card.add_theme_stylebox_override("panel",RpgUi.panel_style("night",22))
+	card.custom_minimum_size=Vector2(440,0)
+	middle.add_child(card)
+	var column := VBoxContainer.new();column.add_theme_constant_override("separation",10);card.add_child(column)
+	RpgUi.label(column,tr("보관 상자"),22,RpgUi.GOLD)
+	var stored: Array=reply.data.get("stored",[])
+	var hour: float=float(resident_clock().hour)
+	RpgUi.label(column,tr("곧 꺼내 놓을지도 몰라요.") if not stored.is_empty() else tr("지금은 상자가 비어 있어요. 선물은 모두 집 안에 나와 있어요."),14,RpgUi.SOFT)
+	for item in stored.slice(0,8):
+		var row := HBoxContainer.new();row.add_theme_constant_override("separation",12);column.add_child(row)
+		row.add_child(RpgUi.icon(NpcGifts.icon_for(item.get("tags",[])),40))
+		var words := VBoxContainer.new();row.add_child(words)
+		RpgUi.label(words,str(item.get("name","")),16)
+		RpgUi.label(words,tr("%s의 선물") % Interiors.short_name(str(item.get("npc","")),hour),12,RpgUi.SOFT)
+	if stored.size()>8: RpgUi.label(column,tr("…그리고 %d개 더") % (stored.size()-8),13,RpgUi.SOFT)
+	RpgUi.label(column,tr("E 닫기"),12,RpgUi.SOFT)
+	RpgUi.pop_in(card)
+	for item in [name_panel,hint_chip,hint_label,bubble]:
+		if is_instance_valid(item): item.visible=false
 
 ## Gifts react to the walker coming near and leaving, on this screen only.
 func gift_proximity() -> void:

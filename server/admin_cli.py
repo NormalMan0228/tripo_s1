@@ -167,16 +167,15 @@ def npc_homes(args):
     if not database.is_file():
         print('No world database at ' + str(database))
         return 1
-    from .npc_homes import describe
+    from .npc_homes import describe, SCHEMA
     with sqlite3.connect(database, timeout=30) as conn:
         conn.row_factory = sqlite3.Row
         user = conn.execute('SELECT id FROM users WHERE username=?', (args.username.lower(),)).fetchone()
         if not user:
             print('No such account.')
             return 1
-        if not conn.execute("SELECT 1 FROM sqlite_master WHERE name='npc_items'").fetchone():
-            print(json.dumps({'homes': [], 'items': [], 'friendship': []}))
-            return 0
+        # A world from before resident gifts has none of these tables yet (they start empty).
+        conn.executescript(SCHEMA)
         print(json.dumps(describe(conn, user['id']), ensure_ascii=False, indent=1))
     return 0
 

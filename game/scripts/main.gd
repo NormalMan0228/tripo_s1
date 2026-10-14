@@ -3122,6 +3122,9 @@ func open_gift(npc_id: String, speaker: String, portrait: String, anchor: Node3D
 			if anchor.has_method("pop"): anchor.pop("♥",1.6)
 			if anchor.has_method("smile"): anchor.smile(3.0)
 		message(NpcGifts.thanks_text(speaker.split(" · ")[0],reply))
+		# A new heart brings a letter (and at the fourth a present in the bag): say so after the thanks.
+		var note := NpcGifts.letters_note(reply)
+		if not note.is_empty(): create_tween().tween_callback(func(): message(note)).set_delay(2.6)
 		await refresh_inventory()
 	NpcGifts.start(api,npc_id,say,done)
 
