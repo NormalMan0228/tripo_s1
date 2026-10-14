@@ -85,7 +85,8 @@ func _init() -> void:
 
 func _ready() -> void:
 	get_tree().process_frame.connect(_frame_began)
-	set_process(false)
+	# The game's first card is dressed before this node joins the tree.
+	set_process(card.visible)
 
 func _exit_tree() -> void:
 	if instance == self: instance = null
