@@ -31,7 +31,7 @@ func run() -> void:
 	app = Main.new()
 	root.add_child(app)
 	await create_timer(1.6).timeout
-	await app.authenticate(true,"http://127.0.0.1:8766","fold_"+str(Time.get_ticks_msec()),"Fold-tour-password-123","")
+	await app.authenticate(true,preload("res://tests/qa_server.gd").url(),"fold_"+str(Time.get_ticks_msec()),"Fold-tour-password-123","")
 	await create_timer(1.2).timeout
 	expect(app.screen=="village","village after login")
 	app.message(tr("물결빛 마을에 오신 것을 환영해요! 다리를 건너 다섯 섬을 둘러보세요."))

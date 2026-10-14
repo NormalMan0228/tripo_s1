@@ -7,7 +7,7 @@ extends SceneTree
 ##   godot --path game --script res://tests/village_rest_check.gd -- --server=URL [--capture]
 const Town = preload("res://scripts/town.gd")
 
-var server := "http://127.0.0.1:8766"
+var server := preload("res://tests/qa_server.gd").url()
 var failures: Array[String] = []
 var passes := 0
 

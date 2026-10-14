@@ -7,7 +7,7 @@ func check(ok: bool,text: String) -> void:
 	if not ok:failures.append(text)
 func _initialize() -> void:call_deferred("run")
 func run() -> void:
-	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url="http://127.0.0.1:8766"
+	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url=preload("res://tests/qa_server.gd").url()
 	var credentials := {"username":"studioqa_"+str(Time.get_ticks_usec()),"password":"Local-studio-qa-password"}
 	var login: Dictionary=await api.post("/v1/auth/register",credentials)
 	check(login.ok,"new independent account")

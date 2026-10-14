@@ -23,7 +23,7 @@ func run() -> void:
 	app = Main.new()
 	root.add_child(app)
 	await create_timer(0.4).timeout
-	await app.authenticate(true, "http://127.0.0.1:8766", "ime_"+str(Time.get_ticks_msec()), "Ime-check-password-1", "")
+	await app.authenticate(true, preload("res://tests/qa_server.gd").url(), "ime_"+str(Time.get_ticks_msec()), "Ime-check-password-1", "")
 	root.gui_focus_changed.connect(func(c: Control) -> void: focus_log.append("%d %s" % [Time.get_ticks_msec(), c.get_path() if c else "null"]))
 	app.me["studio_tripo_enabled"] = true
 	await app.open_craft()

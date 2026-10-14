@@ -61,21 +61,30 @@ $env:TRIPOTHON_NPC_PLACE_MIN = '1'
 $env:TRIPOTHON_NPC_PLACE_MAX = '2'
 # ...and friendship hearts come after a gift or two (letters at each heart, a present at the fourth).
 $env:TRIPOTHON_NPC_LEVELS = '6,8,10,12'
+# The QA server's port: TRIPOTHON_QA_PORT (default 8766). Parallel runs from other worktrees must
+# each pick their own; a port that is already serving is refused, so a test never talks to another
+# worktree's server (and its code) by accident. Every Godot run is told the address (--server=).
+$taskPort = 8766
+if ($env:TRIPOTHON_QA_PORT) { $taskPort = [int]$env:TRIPOTHON_QA_PORT }
+if (Get-NetTCPConnection -LocalPort $taskPort -State Listen -ErrorAction SilentlyContinue) {
+    throw "Port $taskPort already has a server (another QA run?). Set TRIPOTHON_QA_PORT to a free port."
+}
+$taskServerUrl = 'http://127.0.0.1:' + $taskPort
 try {
     $taskServerExecutable = $taskPython
-    $taskServerArguments = @('-m','uvicorn','server.app:create_app','--factory','--host','127.0.0.1','--port','8766','--workers','1','--no-access-log','--no-proxy-headers')
+    $taskServerArguments = @('-m','uvicorn','server.app:create_app','--factory','--host','127.0.0.1','--port',[string]$taskPort,'--workers','1','--no-access-log','--no-proxy-headers')
     if ($PortableServer) {
         $taskServerExecutable = Join-Path $taskRoot 'builds\TripothonDemoServer\TripothonDemoServer.exe'
-        $taskServerArguments = @('--port','8766','--data-dir',('"' + $env:TRIPOTHON_DATA_DIR + '"'))
+        $taskServerArguments = @('--port',[string]$taskPort,'--data-dir',('"' + $env:TRIPOTHON_DATA_DIR + '"'))
     }
     $taskServer = Start-Process -FilePath $taskServerExecutable -ArgumentList $taskServerArguments -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput 'artifacts\qa-server.log' -RedirectStandardError 'artifacts\qa-server-error.log'
     for ($taskAttempt=0; $taskAttempt -lt 30; $taskAttempt++) {
         Start-Sleep -Milliseconds 200
         if ($taskServer.HasExited) { throw 'QA server failed to start' }
-        try { $null = Invoke-RestMethod http://127.0.0.1:8766/health -TimeoutSec 1; break } catch {}
+        try { $null = Invoke-RestMethod ($taskServerUrl + '/health') -TimeoutSec 1; break } catch {}
     }
     if ($Capture) {
-        $taskArguments = $taskGameArguments + @('--','--capture','--mute','--qa',('--region=' + $Region),('--difficulty=' + $Difficulty),('--artifacts=' + (Join-Path $taskRoot 'artifacts')))
+        $taskArguments = $taskGameArguments + @('--',('--server=' + $taskServerUrl),'--capture','--mute','--qa',('--region=' + $Region),('--difficulty=' + $Difficulty),('--artifacts=' + (Join-Path $taskRoot 'artifacts')))
         # Windowed runs open on the BenQ monitor when it is connected (tools/test_window_position.ps1).
         $taskWindow = & (Join-Path $PSScriptRoot 'test_window_position.ps1')
         if ($taskWindow) { $taskArguments = @('--position',$taskWindow) + $taskArguments }
@@ -91,7 +100,7 @@ try {
         if ($taskProcess.ExitCode -ne 0) { throw "Rendered integration failed (exit $('0x{0:X8}' -f $taskProcess.ExitCode))" }
         if ((Get-Content artifacts\integration-render-error.log -Raw) -match '(?m)^\s*(SCRIPT ERROR|ERROR):') { throw 'Godot reported runtime errors during rendered integration.' }
     } else {
-        $taskArguments = @('--headless') + $taskGameArguments + @('--','--mute','--qa',('--region=' + $Region),('--difficulty=' + $Difficulty))
+        $taskArguments = @('--headless') + $taskGameArguments + @('--',('--server=' + $taskServerUrl),'--mute','--qa',('--region=' + $Region),('--difficulty=' + $Difficulty))
         if ($Loss) { $taskArguments += '--loss' }
         if ($Chapter) { $taskArguments += ('--chapter=' + $Chapter) }
         if ($Developer) { $taskArguments += '--developer' }

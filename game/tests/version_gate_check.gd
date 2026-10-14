@@ -14,7 +14,7 @@ extends SceneTree
 ## scene made the engine crash at exit (4.7.2).
 var VersionGate: GDScript
 var failed := false
-var server := "http://127.0.0.1:8766"  # tools/test.ps1 QA server
+var server := preload("res://tests/qa_server.gd").url()  # tools/test.ps1 QA server
 var policy_path := ""
 var resumed := 0
 var account := ""

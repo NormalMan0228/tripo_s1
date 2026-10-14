@@ -60,7 +60,7 @@ func toggle(node: Node, on: bool) -> void:
 func run() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = 0
-	var api = load("res://scripts/api.gd").new(); root.add_child(api); api.base_url = "http://127.0.0.1:8766"
+	var api = load("res://scripts/api.gd").new(); root.add_child(api); api.base_url = preload("res://tests/qa_server.gd").url()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--server="): api.base_url = arg.trim_prefix("--server=")
 	var login: Dictionary = await api.post("/v1/auth/register", {"username":"perf_"+str(Time.get_ticks_usec()), "password":"Perf-probe-password-1"})
