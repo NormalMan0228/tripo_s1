@@ -61,7 +61,7 @@
 | Godot 내보내기 템플릿 | 4.7.2 | 게임 exe(배포 ZIP)를 직접 만들 때 | `tools/setup.ps1 -Export` |
 | 아트용 Python 환경 | 3.13 + `tools/requirements-art.txt` | UI·아트 도구, 배포 ZIP 만들 때 | `tools/setup.ps1 -Art` |
 | Blender | **4.5 LTS** (확인한 버전 4.5.3) | 캐릭터·몬스터·소품을 손볼 때 | [blender.org](https://www.blender.org/download/lts/4-5/) 포터블 ZIP을 `.tools\blender-portable\`에 풀기 |
-| Tailscale | 최신 | 내 PC 서버에 친구를 부를 때 | [tailscale.com/download](https://tailscale.com/download) |
+| Tailscale | 최신 | 내 PC 서버에 친구를 부를 때 | [tailscale.com/download](https://tailscale.com) |
 | Inno Setup | 6 | 설치 파일(Setup.exe)을 만들 때 | `.tools\innosetup\`에 설치 |
 
 ### 서버 쪽 (C, 자동 설치)
@@ -160,7 +160,7 @@ Gemini는 "무엇을, 몇 부품으로, 어떤 색으로 만들지"를 정하는
 
 서버를 인터넷에 공개하지 않고 사설망으로만 엽니다.
 
-1. 나와 친구 모두 [Tailscale](https://tailscale.com/download)을 설치하고 로그인합니다. Tailscale 관리 화면에서 친구를 내 네트워크에 초대합니다.
+1. 나와 친구 모두 [Tailscale](https://tailscale.com)을 설치하고 로그인합니다. Tailscale 관리 화면에서 친구를 내 네트워크에 초대합니다.
 2. 내 PC에서 `Host_Friends.cmd`를 실행합니다. 창에 친구가 쓸 주소(`http://100.x.x.x:8765`)가 나옵니다.
 3. 친구는 A의 3번처럼 **직접 입력**에 그 주소를 넣고 가입합니다.
 
