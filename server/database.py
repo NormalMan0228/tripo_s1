@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS users (
  id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,
  shards INTEGER NOT NULL DEFAULT 0 CHECK(shards>=0), created REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS sessions (
- token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires REAL NOT NULL);
+ token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires REAL NOT NULL,
+ created REAL NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS profiles (
  user_id TEXT PRIMARY KEY REFERENCES users(id), avatar TEXT NOT NULL,
  version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1));
@@ -119,6 +120,10 @@ class Database:
             # Accounts are players unless an operator promotes them (tools/admin_accounts.py).
             if 'role' not in [r[1] for r in db.execute('PRAGMA table_info(users)')]:
                 db.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'player'")
+            # When each session signed in: maintenance ends the ones from before it (client_policy.py).
+            # Sessions saved before this column count as older than any maintenance.
+            if 'created' not in [r[1] for r in db.execute('PRAGMA table_info(sessions)')]:
+                db.execute('ALTER TABLE sessions ADD COLUMN created REAL NOT NULL DEFAULT 0')
             db.execute("INSERT OR IGNORE INTO metadata VALUES ('mode',?)", (mode,))
             if db.execute("SELECT value FROM metadata WHERE key='mode'").fetchone()[0] != mode:
                 raise ValueError('Demo and live must use different database directories')

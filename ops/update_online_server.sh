@@ -7,7 +7,9 @@
 #        [--budget N]        (Tripo credits this server may spend in total; 0 = no budget)
 #        [--announce N]      (warn players first: maintenance starts in N minutes, the terminal
 #                             counts down, then the update runs and the notice is cleared once
-#                             /health answers again; Ctrl+C during the countdown cancels both)
+#                             /health answers again; Ctrl+C during the countdown cancels both.
+#                             When it starts, every player is logged out to the title: the server
+#                             ends all sessions from before it, server/client_policy.py)
 #        [--downtime N]      (minutes the announcement says the update takes; default 5)
 # 1. Optionally writes the craft limits, welcome stars and sign-up mode into ops/production.env
 #    (--per-day sets the server-wide and per-account daily limits; --craft-day-limit only the

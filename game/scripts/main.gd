@@ -31,6 +31,8 @@ const SettingsMenu = preload("res://scripts/settings_menu.gd")
 const PauseMenu = preload("res://scripts/pause_menu.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate = preload("res://scripts/version_gate.gd")
+## Loaded first of all as an autoload (project.godot): this is that same, cached copy.
+const PatchBoot = preload("res://scripts/patch_boot.gd")
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
@@ -206,6 +208,8 @@ var camera_zoom_target := ControllerProfile.CAMERA_DEFAULT
 var camera_zoom_active := false
 var developer_label: Label
 var developer_panel: Control
+## The title's page ("checking" while the launch version check runs).
+var title_page := ""
 
 func _ready() -> void:
 	I18n.setup()
@@ -221,6 +225,7 @@ func _ready() -> void:
 	add_child(gate)
 	gate.watch(api)
 	gate.resumed.connect(gate_resumed)
+	gate.logout_required.connect(force_logout)
 	social = preload("res://scripts/social.gd").new()
 	social.app = self
 	add_child(social)
@@ -282,6 +287,8 @@ func _ready() -> void:
 		# The room hands over the look it showed, so the village walker wears it from the first frame.
 		if session.get("profile") is Dictionary: me={"profile":session.profile}
 		var server_status: Dictionary = await api.request("/health")
+		# Maintenance began during the walk out of the room: the gate already sent the player to the title.
+		if api.token.is_empty(): return
 		social.enabled = social.feature_enabled() and server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
 		await enter_village()
 		player.position=TownLayout.door_return(str(session.get("room","workshop")))
@@ -289,8 +296,15 @@ func _ready() -> void:
 		veil.play_door("close",str(session.get("room","workshop")))
 		veil.fade_in()
 	else:
-		login_ui()
+		# The game opens on its title, which first asks the remembered world whether this version may
+		# play: an update (patch or installer) or the maintenance screen comes before the menu.
+		login_ui("checking")
 		veil.fade_in()
+		await gate.check(default_world())
+		if screen=="login" and title_page=="checking": login_ui("menu")
+		# This version reached its title: a downloaded patch works (patch_boot.gd stops counting).
+		PatchBoot.confirm()
+		print("[Villagen] v%s at the title (installed v%s%s)" % [Api.client_version(), PatchBoot.base_version, ", patched" if not PatchBoot.patch.is_empty() else ""])
 
 ## The shared cozy theme (fonts, parchment/night frames, buttons, fields, lists,
 ## sliders, tooltips). Built once in RpgUi so the studio and menus match.
@@ -450,7 +464,7 @@ func error_message(code: String) -> String:
 		"spawn_area_reserved":tr("중앙 광장에는 놓을 수 없습니다."),"workshop_area_reserved":tr("공방 입구 앞은 비워 주세요."),"reserved_area":tr("길과 입구 앞은 비워 주세요."),
 		"gate_area_reserved":tr("숲 입구에는 놓을 수 없습니다."),"daily_generation_limit":tr("오늘 생성 한도에 도달했습니다."),
 		"live_generation_disabled":tr("공방 장인이 아직 자리를 비웠어요."),"generation_pending":tr("진행 중인 생성이 있습니다."),
-		"session_expired":tr("오래 쉬어서 다시 들어와야 해요."),"object_not_found":tr("내 물건이 아니에요."),
+		"session_expired":tr("오래 쉬어서 다시 들어와야 해요."),"session_reset":tr("다시 로그인해 주세요."),"object_not_found":tr("내 물건이 아니에요."),
 		"stale_object_version":tr("물건이 그새 바뀌었어요. 가방을 다시 열어 주세요."),"object_is_listed":tr("판매 중인 물건입니다. 판매를 취소하세요."),
 		"insufficient_provider_credit":tr("공방 재료가 떨어졌어요. 맡긴 별씨는 돌려드려요."),
 		"user_total_generation_limit":tr("이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!"),
@@ -509,9 +523,11 @@ static func title_art_for(hour: float) -> String:
 ## quit). Starting opens the server login card; every session plays on a server account.
 func login_ui(page := "menu") -> void:
 	screen = "login"
+	title_page = page
 	clear_ui()
 	# The world this game would log in to: is this game still allowed there, is a newer one out?
-	if page != "settings": gate.check(default_world())
+	# (At launch, _ready asks and waits before the menu appears.)
+	if page not in ["settings","checking"]: gate.check(default_world())
 	if is_instance_valid(player): player.controls_enabled = false
 	var art := TextureRect.new()
 	var hour: float = daylight.current_hour() if is_instance_valid(daylight) else Daylight.clock_hour()
@@ -573,6 +589,18 @@ func login_ui(page := "menu") -> void:
 	body.add_theme_constant_override("separation",12)
 	ui.add_child(body)
 	match page:
+		"checking":
+			# The version check at launch (a few seconds at most; offline goes on to the menu).
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation",12)
+			body.add_child(row)
+			var seed_spin := RpgUi.icon("res://assets/starseed.svg",30)
+			seed_spin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			row.add_child(seed_spin)
+			if not RpgUi.calm():
+				seed_spin.pivot_offset = Vector2(15,15)
+				seed_spin.create_tween().set_loops().tween_property(seed_spin,"rotation",TAU,2.4).from(0.0)
+			RpgUi.label(row,tr("최신 버전인지 확인하고 있어요…"),19,Color("f1e8d2")).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		"menu":
 			var entries := [RpgUi.menu_button(body,tr("게임 시작"),func(): login_ui("login")),
 				RpgUi.menu_button(body,tr("설정"),func(): login_ui("settings")),
@@ -2455,6 +2483,36 @@ func logout() -> void:
 	build_world(false)
 	login_ui()
 	busy=false
+	veil.fade_in()
+
+## Maintenance began or the server ended this session (version_gate.gd): back to the title at once.
+## No logout call (the server is closed or forgot the session); progress is already on the server,
+## and an active expedition waits under "이어하기" after the next sign-in.
+func force_logout(reason: String) -> void:
+	if api.token.is_empty() or screen=="logging_out": return
+	api.token=""
+	screen="logging_out"
+	world_epoch+=1
+	busy=true
+	paused=true
+	pending_action=""
+	run_id=""
+	coop_run=false
+	job_id=""
+	preload("res://scripts/build_mode.gd").admin = false
+	PauseMenu.close()
+	CombatAudio.heartbeat(self,0.0)
+	VoiceBabble.stop()
+	var cloud := get_node_or_null("/root/CloudPrefs")
+	if cloud: cloud.stop()
+	social.reset_session()
+	print("[Villagen] logged out: ", reason)
+	var veil := Transition.of(get_tree())
+	veil.loading("", "start")
+	await veil.fade_out()
+	build_world(false)
+	busy=false
+	login_ui()
 	veil.fade_in()
 
 func _exit_tree() -> void:

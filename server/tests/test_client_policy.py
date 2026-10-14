@@ -60,7 +60,7 @@ def test_nothing_changes_without_a_policy_file(world):
     assert c.get('/v1/homestead', headers=a).status_code == 200
     health = c.get('/health').json()
     assert health['protocol'] == 6 and health['service'] == 'tripothon'
-    assert health['client'] == {'min': '', 'latest': '', 'download_url': ''} and health['notice'] is None
+    assert health['client'] == {'min': '', 'latest': '', 'download_url': '', 'patch_manifest_url': ''} and health['notice'] is None
     assert c.get('/v1/me', headers=a).headers['x-villagen-notice-version'] == '0'
 
 
@@ -76,7 +76,7 @@ def test_old_and_unversioned_games_get_426_with_a_readable_sentence(world):
         assert reply.status_code == 426, extra
         body = reply.json()
         assert body['code'] == 'client_update_required'
-        assert body['client'] == {'min': '0.11.10', 'latest': '0.11.10', 'download_url': url}
+        assert body['client'] == {'min': '0.11.10', 'latest': '0.11.10', 'download_url': url, 'patch_manifest_url': url + 'patches.json'}
         # Released games print the detail (the room studio after its own prefix): a sentence, not a code.
         assert body['detail'] == '새 버전(0.11.10)이 나왔어요. 게임을 새로 받아 주세요: ' + url
     # Posts are refused before their body is even read.
@@ -156,10 +156,13 @@ def test_scheduled_maintenance_counts_down_then_closes_every_route_but_health(wo
     assert c.post('/v1/auth/login', json={'username': 'carol', 'password': 'Testing-only-12345'}).status_code == 503
     assert c.get('/health').status_code == 200 and c.get('/health').json()['notice']['active'] is True
     assert c.get('/v1/client').status_code == 200
-    # Without hold the window ends by itself.
+    # Without hold the window ends by itself. Everyone signed in before it starts again from the title.
     now[0] = NOW + 2400
-    assert c.get('/v1/me', headers={**a, **NEW}).status_code == 200
+    reset = c.get('/v1/me', headers={**a, **NEW})
+    assert reset.status_code == 401 and reset.json()['detail'] == 'session_reset'
     assert c.get('/health').json()['notice'] is None
+    again = c.post('/v1/auth/login', headers=NEW, json={'username': 'carol', 'password': 'Testing-only-12345'})
+    assert c.get('/v1/me', headers={'Authorization': 'Bearer ' + again.json()['token'], **NEW}).status_code == 200
 
 
 def test_held_maintenance_lasts_until_the_operator_cancels(world):
@@ -171,9 +174,13 @@ def test_held_maintenance_lasts_until_the_operator_cancels(world):
     assert reply.status_code == 503
     assert reply.json()['detail'] == '서버 점검 중이에요. 곧 끝나요. 잠시 뒤 다시 들어와 주세요.'
     assert reply.json()['notice']['message'] == client_policy.DEFAULT_MESSAGE
-    client_policy.main(['--data-dir', str(path.parent), 'cancel'])
+    client_policy.main(['--data-dir', str(path.parent), 'cancel'], clock=lambda: now[0])
     os.utime(path, ns=(time.time_ns() + 9_000_000_000,) * 2)
-    assert c.get('/v1/me', headers={**a, **NEW}).status_code == 200
+    # The server is open again, but the session from before the maintenance is over (cancel keeps that).
+    assert json.loads(path.read_text(encoding='utf-8'))['sessions_valid_after'] == NOW
+    assert c.get('/v1/me', headers={**a, **NEW}).json()['detail'] == 'session_reset'
+    fresh = c.post('/v1/auth/login', headers=NEW, json={'username': 'dave', 'password': 'Testing-only-12345'})
+    assert c.get('/v1/me', headers={'Authorization': 'Bearer ' + fresh.json()['token'], **NEW}).status_code == 200
 
 
 def test_maintenance_comes_before_the_version_check(world):
@@ -212,7 +219,7 @@ def test_unsafe_download_links_and_messages_are_dropped(world):
     write(path, latest_client_version='0.11.4', client_download_url='file:///C:/Windows/System32/calc.exe',
           notice={'id': 'n4', 'starts_at': NOW + 60, 'minutes': 5, 'message': '점검\u202e 해요\n'})
     health = c.get('/health').json()
-    assert health['client'] == {'min': '', 'latest': '0.11.4', 'download_url': ''}
+    assert health['client'] == {'min': '', 'latest': '0.11.4', 'download_url': '', 'patch_manifest_url': ''}
     assert health['notice']['message'] == '점검 해요'
 
 
@@ -244,3 +251,101 @@ def test_the_cost_monitor_reads_usage_through_the_gate_and_maintenance(tmp_path)
         assert reply.status_code == 200, reply.text
         assert c.get('/v1/me').status_code == 503  # the rest of the server is in maintenance
 
+
+
+def test_patch_list_address_follows_the_download_page(world):
+    """Games read patches.json beside the download page unless the operator names another or turns it off."""
+    app, c, now, path = world
+    page = 'https://downloads.example/school/index.html'
+    write(path, latest_client_version='0.11.6', client_download_url=page)
+    assert c.get('/v1/client').json()['client']['patch_manifest_url'] == 'https://downloads.example/school/patches.json'
+    write(path, latest_client_version='0.11.6', client_download_url=page, client_patch_url='https://cdn.example/p/patches.json')
+    assert c.get('/v1/client').json()['client']['patch_manifest_url'] == 'https://cdn.example/p/patches.json'
+    write(path, latest_client_version='0.11.6', client_download_url=page, client_patch_url='off')
+    assert c.get('/v1/client').json()['client']['patch_manifest_url'] == ''
+    # QA runs serve patches from this PC; any other plain-http or odd address is dropped.
+    write(path, client_patch_url='http://127.0.0.1:8890/patches.json')
+    assert c.get('/v1/client').json()['client']['patch_manifest_url'] == 'http://127.0.0.1:8890/patches.json'
+    for bad in ('http://evil.example/patches.json', 'file:///C:/patch.pck', 'javascript:alert(1)'):
+        write(path, client_patch_url=bad)
+        assert c.get('/v1/client').json()['client']['patch_manifest_url'] == '', bad
+    # A page without a folder (or no page) gives no automatic list.
+    write(path, client_download_url='https://downloads.example')
+    assert c.get('/v1/client').json()['client']['patch_manifest_url'] == ''
+
+
+def test_patch_and_logout_commands(tmp_path, capsys):
+    clock = [NOW]
+    run = lambda *args: client_policy.main(['--data-dir', str(tmp_path), *args], clock=lambda: clock[0])
+    saved = lambda: json.loads((tmp_path / FILE_NAME).read_text(encoding='utf-8'))
+    run('release', '0.11.5', 'https://downloads.example/school/index.html')
+    assert '패치 목록: https://downloads.example/school/patches.json (받는 곳 옆 자동)' in capsys.readouterr().out
+    run('patches', 'off')
+    assert saved()['client_patch_url'] == 'off'
+    run('patches', 'auto')
+    assert 'client_patch_url' not in saved()
+    with pytest.raises(SystemExit):
+        run('patches', 'http://plain.example/patches.json')
+    run('logout-all')
+    assert saved()['sessions_valid_after'] == NOW
+    assert '모두 로그아웃' in capsys.readouterr().out
+    # A maintenance that already began keeps ending older sessions once it is replaced or cancelled.
+    clock[0] = NOW + 60
+    run('maintenance', '--in', '0', '--minutes', '5', '--hold')
+    clock[0] = NOW + 600
+    run('maintenance', '--in', '30', '--minutes', '5')
+    assert saved()['sessions_valid_after'] == int(NOW + 60)
+    clock[0] = NOW + 900
+    run('cancel')      # this one had not begun: nothing more ends
+    assert saved()['sessions_valid_after'] == int(NOW + 60)
+
+
+def test_maintenance_start_ends_every_older_session(world):
+    """Signed in before an announced maintenance: 503 while it runs, then 401 session_reset; new sign-ins play."""
+    app, c, now, path = world
+    a = register(c, 'erin', NEW)
+    write(path, notice={'id': 'u1', 'starts_at': NOW + 600, 'minutes': 5, 'message': '서버 업데이트가 있어요.', 'hold': True})
+    assert c.get('/v1/me', headers={**a, **NEW}).status_code == 200      # the countdown: play goes on
+    now[0] = NOW + 601
+    assert c.get('/v1/me', headers={**a, **NEW}).status_code == 503
+    # The update restarts the server while the maintenance holds: the new process keeps the rule.
+    restarted_app = create_app(Settings(data_dir=path.parent), clock=lambda: now[0], worker_enabled=False)
+    restarted_app.state.client_policy.check_seconds = 0
+    with TestClient(restarted_app) as restarted:
+        assert restarted.get('/v1/me', headers={**a, **NEW}).status_code == 503
+        client_policy.main(['--data-dir', str(path.parent), 'cancel'], clock=lambda: now[0])
+        os.utime(path, ns=(time.time_ns() + 9_000_000_000,) * 2)
+        gone = restarted.get('/v1/me', headers={**a, **NEW})
+        assert gone.status_code == 401 and gone.json()['detail'] == 'session_reset'
+        login = restarted.post('/v1/auth/login', headers=NEW, json={'username': 'erin', 'password': 'Testing-only-12345'})
+        fresh = {'Authorization': 'Bearer ' + login.json()['token'], **NEW}
+        assert restarted.get('/v1/me', headers=fresh).status_code == 200
+        # Signing in again also cleared the old rows.
+        with restarted_app.state.db.read() as conn:
+            assert conn.execute('SELECT count(*) FROM sessions WHERE created < ?', (NOW + 600,)).fetchone()[0] == 0
+
+
+def test_operator_logout_all_without_maintenance(world):
+    app, c, now, path = world
+    a = register(c, 'frank', NEW)
+    write(path, sessions_valid_after=NOW + 1)
+    now[0] = NOW + 2
+    assert c.get('/v1/me', headers={**a, **NEW}).json()['detail'] == 'session_reset'
+    b = register(c, 'grace', NEW)
+    assert c.get('/v1/me', headers={**b, **NEW}).status_code == 200
+
+
+def test_sessions_saved_before_the_created_column_migrate(tmp_path):
+    import sqlite3
+    db = sqlite3.connect(tmp_path / 'world.sqlite3')
+    db.executescript("CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL,"
+                     " shards INTEGER NOT NULL DEFAULT 0 CHECK(shards>=0), created REAL NOT NULL);"
+                     "CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), expires REAL NOT NULL);"
+                     "INSERT INTO users VALUES ('u','old','x',0,1); INSERT INTO sessions VALUES ('h','u',9e9);")
+    db.commit()
+    db.close()
+    from server.database import Database
+    Database(tmp_path / 'world.sqlite3', 'demo')
+    db = sqlite3.connect(tmp_path / 'world.sqlite3')
+    assert db.execute('SELECT created FROM sessions').fetchone()[0] == 0
+    db.close()

@@ -219,6 +219,7 @@ func _ready() -> void:
 		if public_room:
 			if not api.token.is_empty(): load_avatar()
 		else: refresh())
+	gate.logout_required.connect(logged_out)
 	if Engine.has_meta("studio_session"):
 		var session: Dictionary=Engine.get_meta("studio_session")
 		api.token=session.token;api.base_url=session.url
@@ -1517,6 +1518,19 @@ func update_peers(delta: float) -> void:
 		var moved := Vector2(body.position.x-before.x,body.position.z-before.z)/maxf(delta,.001)
 		body.external_velocity=moved if moved.length()>.05 else Vector2.ZERO
 		body.external_motion=body.external_velocity.normalized()
+
+## Maintenance began or the server ended the session (version_gate.gd): to the title, no session.
+func logged_out(_reason: String) -> void:
+	if api.token.is_empty(): return
+	api.token=""
+	leaving=true
+	var cloud := get_node_or_null("/root/CloudPrefs")
+	if cloud: cloud.stop()
+	Engine.remove_meta("studio_session")
+	var veil := Transition.of(get_tree())
+	veil.loading("", "start")
+	await veil.fade_out()
+	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func leave() -> void:
 	var veil := Transition.of(get_tree())

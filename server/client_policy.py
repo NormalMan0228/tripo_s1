@@ -8,6 +8,14 @@ server) answers exactly as before.
   min_client_version     games older than this get 426 client_update_required
   latest_client_version  a newer game is published: games show a gentle banner
   client_download_url    where players get it (https only)
+  client_patch_url       the patch list (patches.json, tools/publish_school_build.py patch): games
+                         from 0.11.5 download a small patch instead of the installer. Absent:
+                         patches.json beside the download page (.../index.html -> .../patches.json);
+                         "off": no patches, the installer only
+  sessions_valid_after   sessions signed in before this moment (unix s) are over: 401 session_reset,
+                         and the game goes back to the title. Maintenance does this by itself: every
+                         session from before a maintenance's start ends once it starts, so the
+                         update script's announced maintenance logs everyone out before the restart
   notice                 scheduled maintenance {"id", "starts_at" (unix s), "minutes",
                          "message", "hold"}: announced ahead, and from starts_at every route
                          except /health and /v1/client answers 503 server_maintenance, until
@@ -23,6 +31,8 @@ Every reply carries X-Villagen-Notice-Version, so a running game notices a chang
     python -m server.client_policy cancel
     python -m server.client_policy release 0.11.4 https://...   (latest version + download link)
     python -m server.client_policy min 0.11.4 | latest 0.11.4 | url https://... (each also: off)
+    python -m server.client_policy patches https://.../patches.json | auto | off
+    python -m server.client_policy logout-all      (every player signs in again)
 """
 from __future__ import annotations
 
@@ -56,6 +66,9 @@ DEFAULT_MESSAGE = '서버 점검이 있어요.'
 KOREA = 9 * 3600
 VERSION = re.compile(r'v?(\d{1,4}(?:\.\d{1,4}){0,3})(?:[-+][0-9A-Za-z.-]{0,32})?')
 URL = re.compile(r'https://[A-Za-z0-9.-]+(?::\d{1,5})?(?:/[\x21-\x7e]*)?')
+# A patch list may also come from this PC (QA runs): plain http to the loopback address only.
+LOOPBACK_URL = re.compile(r'http://(?:127\.0\.0\.1|localhost)(?::\d{1,5})?(?:/[\x21-\x7e]*)?')
+PATCHES_OFF = 'off'
 
 
 def parse_version(value):
@@ -87,15 +100,44 @@ def valid_url(value):
     return isinstance(value, str) and len(value) <= 300 and bool(URL.fullmatch(value))
 
 
+def valid_patch_url(value):
+    return valid_url(value) or (isinstance(value, str) and len(value) <= 300 and bool(LOOPBACK_URL.fullmatch(value)))
+
+
+def patch_list_url(state):
+    """Where games read the patch list: the operator's address, else patches.json beside the page."""
+    chosen = state['client_patch_url']
+    if chosen == PATCHES_OFF:
+        return ''
+    if chosen:
+        return chosen
+    page = state['client_download_url'].split('?', 1)[0].split('#', 1)[0]
+    if page.endswith('/index.html'):
+        return page[:-len('index.html')] + 'patches.json'
+    if page.endswith('/') and page.count('/') > 2:
+        return page + 'patches.json'
+    return ''
+
+
 def clean(raw):
     """The file's settings with anything unreadable dropped (that part is then off)."""
-    out = {'min_client_version': '', 'latest_client_version': '', 'client_download_url': '', 'notice': None}
+    out = {'min_client_version': '', 'latest_client_version': '', 'client_download_url': '', 'client_patch_url': '',
+           'sessions_valid_after': 0.0, 'notice': None}
     if not isinstance(raw, dict):
         return out
     for key in ('min_client_version', 'latest_client_version'):
         out[key] = canonical(raw.get(key))
     if valid_url(raw.get('client_download_url')):
         out['client_download_url'] = raw['client_download_url']
+    patches = raw.get('client_patch_url')
+    if patches == PATCHES_OFF or valid_patch_url(patches):
+        out['client_patch_url'] = patches
+    try:
+        floor = float(raw.get('sessions_valid_after') or 0)
+        if math.isfinite(floor) and floor > 0:
+            out['sessions_valid_after'] = floor
+    except (TypeError, ValueError, OverflowError):
+        pass
     notice = raw.get('notice')
     if isinstance(notice, dict):
         try:
@@ -175,19 +217,32 @@ class ClientPolicy:
         now = self.clock() if now is None else now
         state = self.state()
         return {'client': {'min': state['min_client_version'], 'latest': state['latest_client_version'],
-                           'download_url': state['client_download_url']},
+                           'download_url': state['client_download_url'], 'patch_manifest_url': patch_list_url(state)},
                 'notice': public_notice(state['notice'], now),
                 'notice_version': self.tag(now), 'server_time': int(now)}
+
+    def session_floor(self, now=None):
+        """Sessions signed in before this moment are over (0: none): the operator's logout-all, and the
+        start of the latest maintenance once it has begun."""
+        now = self.clock() if now is None else now
+        state = self.state()
+        floor = state['sessions_valid_after']
+        notice = state['notice']
+        if notice and notice['starts_at'] <= now:
+            floor = max(floor, notice['starts_at'])
+        return floor
 
     def tag(self, now=None):
         """Changes whenever what players should see changes (also when maintenance starts)."""
         now = self.clock() if now is None else now
         state = self.state()
         notice = public_notice(state['notice'], now)
-        if not notice and not any(state[k] for k in ('min_client_version', 'latest_client_version', 'client_download_url')):
+        if not notice and not any(state[k] for k in ('min_client_version', 'latest_client_version', 'client_download_url', 'client_patch_url')):
             return '0'
         mark = [state['min_client_version'], state['latest_client_version'], state['client_download_url'],
                 notice and [notice['id'], notice['starts_at'], notice['minutes'], notice['message'], notice['active']]]
+        if state['client_patch_url']:
+            mark.append(state['client_patch_url'])
         return hashlib.sha256(json.dumps(mark, ensure_ascii=False).encode()).hexdigest()[:12]
 
     def refusal(self, path, version, now=None):
@@ -263,7 +318,11 @@ def describe(path, now=None):
     state = clean(read_file(path))
     lines = ['최소 버전: ' + (state['min_client_version'] + ' (이보다 오래된 게임은 접속할 수 없어요)' if state['min_client_version'] else '없음 (모든 버전 접속 가능)'),
              '최신 버전: ' + (state['latest_client_version'] or '없음'),
-             '받는 곳:   ' + (state['client_download_url'] or '없음')]
+             '받는 곳:   ' + (state['client_download_url'] or '없음'),
+             '패치 목록: ' + (patch_list_url(state) or '없음 (설치 파일로만 업데이트)')
+             + (' (받는 곳 옆 자동)' if patch_list_url(state) and not state['client_patch_url'] else '')]
+    if state['sessions_valid_after']:
+        lines.append('모두 로그아웃: %s (한국 시간) 전에 로그인한 플레이어는 다시 로그인해요' % korea_time(state['sessions_valid_after']))
     notice = public_notice(state['notice'], now)
     if not notice:
         lines.append('점검 공지: 없음')
@@ -285,6 +344,24 @@ def version_value(text):
     return canonical(text)
 
 
+def patch_value(text):
+    if text.lower() in ('auto', 'default', '-'):
+        return ''
+    if text.lower() in ('off', 'none'):
+        return PATCHES_OFF
+    if not valid_patch_url(text):
+        raise SystemExit('패치 목록 주소는 https:// 로 시작해야 해요(이 PC 시험용만 http://127.0.0.1): ' + text)
+    return text
+
+
+def fold_started_notice(data, now):
+    """A maintenance that has begun ended every session from before its start. That must stay true
+    once the notice is cancelled or replaced, so its start moves into sessions_valid_after."""
+    notice = clean(data)['notice']
+    if notice and notice['starts_at'] <= now:
+        data['sessions_valid_after'] = max(clean(data)['sessions_valid_after'], notice['starts_at'])
+
+
 def url_value(text):
     if text.lower() in ('off', 'none', '-'):
         return ''
@@ -293,7 +370,7 @@ def url_value(text):
     return text
 
 
-def main(argv=None):
+def main(argv=None, clock=time.time):
     parser = argparse.ArgumentParser(prog='python -m server.client_policy', description='Client versions and maintenance notices')
     parser.add_argument('--data-dir', default=None)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -304,21 +381,24 @@ def main(argv=None):
     maintenance.add_argument('--message', default=DEFAULT_MESSAGE)
     maintenance.add_argument('--hold', action='store_true', help='stay in maintenance until cancel')
     commands.add_parser('cancel')
-    for name in ('min', 'latest', 'url'):
+    for name in ('min', 'latest', 'url', 'patches'):
         commands.add_parser(name).add_argument('value')
+    commands.add_parser('logout-all')
     release = commands.add_parser('release')
     release.add_argument('version')
     release.add_argument('url', nargs='?', default=None)
     args = parser.parse_args(argv)
     path = (Path(args.data_dir) if args.data_dir else data_dir()) / FILE_NAME
     data = read_file(path)
+    if args.command != 'show':
+        fold_started_notice(data, clock())
     if args.command == 'maintenance':
         if not 0 <= args.start_in <= 7 * 24 * 60:
             raise SystemExit('시작까지 남은 시간은 0~10080분이어야 해요.')
         if not 1 <= args.minutes <= MAX_MINUTES:
             raise SystemExit('점검 시간은 1~1440분이어야 해요.')
         message = clean_text(args.message)[:MAX_MESSAGE] or DEFAULT_MESSAGE
-        starts = time.time() + args.start_in * 60
+        starts = clock() + args.start_in * 60
         data['notice'] = {'id': 'n%d' % int(starts), 'starts_at': int(starts), 'minutes': args.minutes,
                           'message': message, 'hold': bool(args.hold)}
     elif args.command == 'cancel':
@@ -329,6 +409,10 @@ def main(argv=None):
         data['latest_client_version'] = version_value(args.value)
     elif args.command == 'url':
         data['client_download_url'] = url_value(args.value)
+    elif args.command == 'patches':
+        data['client_patch_url'] = patch_value(args.value)
+    elif args.command == 'logout-all':
+        data['sessions_valid_after'] = clock()
     elif args.command == 'release':
         data['latest_client_version'] = version_value(args.version)
         if args.url is not None:
@@ -339,7 +423,7 @@ def main(argv=None):
             data['latest_client_version'] = state['min_client_version']
         write_file(path, data)
         print('저장했어요. 게임에는 몇 초 안에 반영돼요.')
-    print(describe(path))
+    print(describe(path, clock()))
     return 0
 
 

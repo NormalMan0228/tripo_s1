@@ -14,6 +14,7 @@ config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]
 
+PatchBoot="*res://scripts/patch_boot.gd"
 CleanExit="*res://scripts/clean_exit.gd"
 ImeCaret="*res://scripts/ime_caret.gd"
 CloudPrefs="*res://scripts/cloud_prefs.gd"

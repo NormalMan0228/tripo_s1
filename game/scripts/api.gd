@@ -15,6 +15,10 @@ signal notice_seen(version: String)
 ## shows one clean screen instead of each caller's error.
 signal refused(code: String, data: Dictionary)
 const GATE_CODES := ["client_update_required", "server_maintenance"]
+## 401 for a session the server no longer knows (session_reset: it ended every older session at a
+## maintenance; session_expired): version_gate.gd returns the game to its title.
+signal session_lost(code: String)
+const SESSION_CODES := ["session_reset", "session_expired"]
 
 ## The login screen chooses the server; there is no offline or bundled sample play.
 
@@ -140,7 +144,9 @@ func _failure(code: int, data: Dictionary) -> Dictionary:
 	if reason in GATE_CODES and code in [426, 503]:
 		refused.emit(reason, data)
 		return {"ok":false,"error":reason,"status":code,"data":data}
-	return {"ok":false,"error":str(data.get("detail","request_failed")),"status":code}
+	var detail := str(data.get("detail","request_failed"))
+	if code == 401 and detail in SESSION_CODES and not token.is_empty(): session_lost.emit(detail)
+	return {"ok":false,"error":detail,"status":code}
 
 func _seen(headers: PackedStringArray) -> void:
 	for line in headers:
