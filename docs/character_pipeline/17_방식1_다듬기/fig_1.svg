@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 900 300" role="img" aria-label="방식 1 다듬기 체인"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+<defs><marker id="ar" viewbox="0 0 10 10" refx="9" refy="5" markerwidth="7" markerheight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="s-muted"/></marker></defs>
+<g font-size="13">
+<rect x="10" y="20" width="160" height="62" rx="8" class="s-soft st-line" stroke-width="1"/><text x="90" y="44" text-anchor="middle" class="s-ink" font-weight="600">P2 새 원본</text><text x="90" y="64" text-anchor="middle" class="s-muted">대칭화 (p2_base)</text>
+<rect x="190" y="20" width="160" height="62" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="270" y="40" text-anchor="middle" class="s-ink" font-weight="600">눈 맞춤</text><text x="270" y="58" text-anchor="middle" class="s-muted">eye_fit_ref · canthus_wedge</text><text x="270" y="74" text-anchor="middle" class="s-muted">lid_fair</text>
+<rect x="370" y="20" width="160" height="62" rx="8" class="s-soft st-line" stroke-width="1"/><text x="450" y="40" text-anchor="middle" class="s-ink" font-weight="600">고리 따라 자르기</text><text x="450" y="58" text-anchor="middle" class="s-muted">loop_organs</text><text x="450" y="74" text-anchor="middle" class="s-muted">+ caruncle (눈물언덕)</text>
+<rect x="550" y="20" width="160" height="62" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="630" y="44" text-anchor="middle" class="s-ink" font-weight="600">치아·잇몸·혀 v3</text><text x="630" y="64" text-anchor="middle" class="s-muted">organ_teeth_v3</text>
+<rect x="730" y="20" width="160" height="62" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="810" y="40" text-anchor="middle" class="s-ink" font-weight="600">리그 맞춤</text><text x="810" y="58" text-anchor="middle" class="s-muted">rigify_fit (본 162개,</text><text x="810" y="74" text-anchor="middle" class="s-muted">입 +12, 혀 4본)</text>
+<path d="M170,51 H186 M350,51 H366 M530,51 H546 M710,51 H726" class="st-muted" stroke-width="1.5" marker-end="url(#ar)"/>
+<path d="M810,82 V118 H90 V140" fill="none" class="st-muted" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="10" y="144" width="160" height="62" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="90" y="168" text-anchor="middle" class="s-ink" font-weight="600">웨이트</text><text x="90" y="188" text-anchor="middle" class="s-muted">입술 위/아래 분리 · 눈 묶기</text>
+<rect x="190" y="144" width="160" height="62" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="270" y="164" text-anchor="middle" class="s-ink" font-weight="600">표정 굽기</text><text x="270" y="182" text-anchor="middle" class="s-muted">템플릿 대응 · 봉합</text><text x="270" y="198" text-anchor="middle" class="s-muted">입술 늘어남 상한</text>
+<rect x="370" y="144" width="160" height="62" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="450" y="164" text-anchor="middle" class="s-ink" font-weight="600">눈 감기</text><text x="450" y="182" text-anchor="middle" class="s-muted">두 구석 고정</text><text x="450" y="198" text-anchor="middle" class="s-muted">organ_blink_keys</text>
+<rect x="550" y="144" width="160" height="62" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="630" y="164" text-anchor="middle" class="s-ink" font-weight="600">시선 키</text><text x="630" y="182" text-anchor="middle" class="s-muted">눈꺼풀 따라옴</text><text x="630" y="198" text-anchor="middle" class="s-muted">organ_eye_look_keys</text>
+<rect x="730" y="144" width="160" height="62" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="810" y="164" text-anchor="middle" class="s-ink" font-weight="600">좌우 맞춤 + 조각 묶기</text><text x="810" y="182" text-anchor="middle" class="s-muted">sym_lock · bind_pieces</text><text x="810" y="198" text-anchor="middle" class="s-muted">(눈썹이 표정을 따라감)</text>
+<path d="M170,175 H186 M350,175 H366 M530,175 H546 M710,175 H726" class="st-muted" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="10" y="236" width="18" height="14" rx="3" class="s-paper st-acc" stroke-width="1.5"/><text x="36" y="248" class="s-muted">이번에 새로 만들거나 크게 고친 단계</text>
+<rect x="300" y="236" width="18" height="14" rx="3" class="s-soft st-line" stroke-width="1"/><text x="326" y="248" class="s-muted">조금 고친 단계 (loop_organs는 입 공간, 눈 구석 기록만)</text>
+</g></svg>

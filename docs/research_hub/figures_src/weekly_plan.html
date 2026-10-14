@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<style>
+body{font-family:"Malgun Gothic",sans-serif;margin:0;padding:28px 30px;width:1140px;background:#fff;color:#1d1d1f}
+h1{font-size:34px;margin:0 0 6px}
+.sub{color:#555;font-size:17px;margin-bottom:16px}
+h2{font-size:24px;margin:22px 0 10px}
+.flow{display:flex;gap:8px;align-items:stretch}
+.step{flex:1;border:2px solid #c9d3e6;border-radius:10px;padding:10px 11px;font-size:15.5px;line-height:1.45;background:#f7f9fd}
+.step b.n{display:inline-block;background:#2f5bd3;color:#fff;border-radius:50%;width:26px;height:26px;text-align:center;line-height:26px;margin-right:4px}
+.step .t{font-size:17px;font-weight:bold;margin-bottom:4px}
+.arr{align-self:center;font-size:26px;color:#8a97b0}
+table{border-collapse:collapse;width:100%;font-size:16px}
+th,td{border:1px solid #d9dde3;padding:6px 9px;vertical-align:top;line-height:1.4}
+th{background:#f2f4f7;text-align:left}
+.ok{color:#1f8a3b;font-weight:bold}.no{color:#c62828;font-weight:bold}.mid{color:#c77700;font-weight:bold}
+.two{display:flex;gap:14px}
+.card{flex:1;border-radius:10px;padding:12px 15px;font-size:16px;line-height:1.55}
+.green{border:2px solid #9ccfa8;background:#f4fbf5}
+.red{border:2px solid #e3aaaa;background:#fdf5f5}
+.blue{border-left:6px solid #2f5bd3;background:#f3f6fd;padding:12px 16px;margin-top:16px;font-size:17px;line-height:1.6}
+.card h3{margin:0 0 6px;font-size:19px}
+</style></head><body>
+<h1>매주 자동 수집 계획 (승인 요청)</h1>
+<div class="sub">2026-10-14 · 오늘 각 사이트에 실제 요청을 보내 접속 여부를 확인함 · 가입·로그인·결제·생성 없음</div>
+
+<h2>한 번 돌 때의 순서 (매주 월요일 09:00 KST 제안)</h2>
+<div class="flow">
+<div class="step"><div class="t"><b class="n">1</b>API·RSS 수집</div>art-venv 파이썬 스크립트<br>키 없이 공개 API만<br>지난주 본 글은 건너뜀<br><span style="color:#666">토큰 거의 안 씀</span></div>
+<div class="arr">→</div>
+<div class="step"><div class="t"><b class="n">2</b>공개 페이지 검색</div>하위 에이전트 2개<br>(한·일 / 영·중)<br><b>검색 합계 ≤ 30회</b></div>
+<div class="arr">→</div>
+<div class="step"><div class="t"><b class="n">3</b>가격 확인</div>Scenario: 사용자 Chrome에서 생성 버튼의 CU만 읽음 (<b>누르지 않음</b>)<br>Higgsfield: 공식 요금표</div>
+<div class="arr">→</div>
+<div class="step"><div class="t"><b class="n">4</b>정리</div>weekly/날짜.md<br>모델별 긍정·부정 ×<br>주제 7개</div>
+<div class="arr">→</div>
+<div class="step"><div class="t"><b class="n">5</b>알림</div>INDEX.md 갱신<br>요약 PNG 1장 전송<br>새 모델·가격 변동은 맨 위</div>
+</div>
+
+<h2>수집처 (오늘 접속 시험 결과)</h2>
+<table>
+<tr><th style="width:150px">방식</th><th>곳</th><th style="width:260px">오늘 결과</th></tr>
+<tr><td><b>공개 API</b></td><td>BlenderArtists · Godot Forum · Unreal Forum (Discourse 검색) · Hacker News · Bluesky · Mastodon gamedev.place · Civitai · Hugging Face · GitHub · note 검색</td><td class="ok">모두 응답 200</td></tr>
+<tr><td><b>RSS</b></td><td>80.lv · Zenn · Qiita · note 작성자별</td><td class="ok">응답 200</td></tr>
+<tr><td><b>웹 검색으로</b></td><td>Unity 포럼 · Polycount · 디시(AI·인디게임·게임개발·3D) · 아카라이브 AI · 인벤·루리웹 · OKKY · gamedev.net·itch.io · CGWORLD.jp · bilibili·知乎·GameRes</td><td class="mid">Unity는 봇 차단(403), Polycount는 직접 접속 안 됨 → 검색으로</td></tr>
+<tr><td><b>나중에</b></td><td>YouTube (API 키가 생기면) · Reddit (승인 나면)</td><td class="mid">대기</td></tr>
+<tr><td><b>건너뜀</b></td><td>X · 네이버 카페 · 小红书 · Discord (로그인 필요)</td><td class="no">수집 안 함</td></tr>
+</table>
+<div style="font-size:15px;color:#444;margin-top:6px">키워드: Seedance · H3/Hailuo · Kling(+4.0) · Veo · Gemini Omni · Wan · Vidu(Q4) · Uthana · QuickMagic · Rokoko · Tripo · Meshy · 자동 리깅 · 표정 자동 생성 · 영상→모캡 · 텍스트→모션 &nbsp;|&nbsp; 주제: 애니·카툰 화풍 유지 · 얼굴·입 · 몸 동작 · 괴물 · 가격 · 재시도율 · 결제·지원</div>
+
+<h2>실행 방식 고르기</h2>
+<div class="two">
+<div class="card green"><h3>추천: 이 PC의 예약 작업</h3>· Claude 데스크톱 앱이 매주 새 세션을 띄워 실행<br>· 사용자 Chrome(Scenario 가격)과 로컬 파일을 쓸 수 있음<br>· 단점: 그 시각에 PC와 앱이 켜져 있어야 함 (꺼져 있으면 다음에 켤 때)</div>
+<div class="card red"><h3>대안: 클라우드 예약</h3>· PC가 꺼져 있어도 실행<br>· 단점: 사용자 Chrome을 못 써서 <b>Scenario 가격은 못 읽음</b><br>· 결과를 저장소에 올리려면 git push가 필요</div>
+</div>
+
+<h2>Reddit: 상황이 바뀜</h2>
+<div class="card red" style="font-size:16px">
+· <b>2025년 11월부터 Reddit API 키 셀프 발급이 막히고 승인제가 됨</b> (n8n 공식 문서·여러 블로그가 같은 내용, Reddit 공지 원문은 도구로 못 엶)<br>
+· 순서: Responsible Builder Policy 읽기 → Developer Support 신청서 제출(비상업·읽기 전용 목적 설명) → <b>승인 후에</b> reddit.com/prefs/apps 에서 script 앱 생성 → 키를 Desktop 파일에 저장<br>
+· 심사 2~4주라는 글, <b>개인 스크립트는 거절된다는 글</b>도 있음 [블로그]. 2025년 11월 이전에 만든 앱이 있으면 그대로 쓸 수 있음
+</div>
+
+<div class="blue">
+<b>비용 상한:</b> 1회당 웹 검색 ≤ 30회 · 하위 에이전트 ≤ 2개 · 페이지 열람은 새 글만 · 주간 사용량 99%면 즉시 중단하고 현황만 남김<br>
+<b>파일:</b> 저장소에는 docs/research_hub/weekly/날짜.md + .png만 · 원본 JSON은 저장소 밖(%LOCALAPPDATA%\tripothon_research)<br>
+<b>승인해 주실 것:</b> ① 요일·시각 ② 실행 방식(이 PC / 클라우드) ③ 첫 회를 지금 손으로 한 번 돌려 볼지
+</div>
+</body></html>

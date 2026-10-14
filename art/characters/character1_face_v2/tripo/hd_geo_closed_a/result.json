@@ -1,0 +1,63 @@
+{
+ "job": "hd_geo_closed_a",
+ "task_id": "9a0d3424-6bc9-41ab-b74a-d0a6e1f0f91f",
+ "status": "success",
+ "progress": 100,
+ "credits_consumed": 40.0,
+ "files": {
+  "model_url": "art\\characters\\character1_face_v2\\tripo\\hd_geo_closed_a\\model_url.glb",
+  "rendered_image_url": "art\\characters\\character1_face_v2\\tripo\\hd_geo_closed_a\\rendered_image_url.png"
+ },
+ "output_keys": [
+  "model_url",
+  "rendered_image_url"
+ ],
+ "task": {
+  "type": "multiview_to_model",
+  "status": "success",
+  "progress": 100,
+  "input": {
+   "pbr": false,
+   "quad": false,
+   "files": [
+    {
+     "object": {
+      "key": "tcli_03ef822cde1443379e98b164bb1c5702/20261005/ea0a0d36-e847-4ebd-873a-2e660a346a39/file.png",
+      "bucket": "tripo-data"
+     }
+    },
+    {
+     "object": {
+      "key": "tcli_03ef822cde1443379e98b164bb1c5702/20261005/7d582d6a-d59b-4107-9475-6f9fdc9adc1e/file.png",
+      "bucket": "tripo-data"
+     }
+    },
+    {
+     "object": {
+      "key": "tcli_03ef822cde1443379e98b164bb1c5702/20261005/46947f07-9a56-4c4a-b0f2-7136f715569e/file.png",
+      "bucket": "tripo-data"
+     }
+    },
+    {
+     "object": {
+      "key": "tcli_03ef822cde1443379e98b164bb1c5702/20261005/c62e82af-b727-467f-a9a5-fc4fca835d1d/file.png",
+      "bucket": "tripo-data"
+     }
+    }
+   ],
+   "texture": false,
+   "export_uv": false,
+   "face_limit": 1000000,
+   "model_seed": 2026100581,
+   "orientation": "align_image",
+   "model_version": "v3.1-20260211",
+   "generate_parts": false,
+   "smart_low_poly": false,
+   "geometry_quality": "detailed"
+  },
+  "task_id": "9a0d3424-6bc9-41ab-b74a-d0a6e1f0f91f",
+  "created_at": "2026-10-05T14:00:38.068669Z",
+  "completed_at": "2026-10-05T14:01:56.691788Z",
+  "credits_consumed": 40.0
+ }
+}

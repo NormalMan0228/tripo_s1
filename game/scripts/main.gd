@@ -39,7 +39,21 @@ const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","h
 ## the judging server. Empty until that server has an address; tools/package_release.py --school checks.
 const SCHOOL_SERVER := "https://54-117-10-64.sslip.io"
 
+## A world.cfg beside Villagen.exe replaces the online world, so another group can ship the
+## same ZIP for its own server without rebuilding (docs/SHARE_GUIDE_KO.md):
+##   [world]
+##   name="우리 학과 월드"
+##   url="https://1-2-3-4.sslip.io"
+static func custom_world() -> Array:
+	var config := ConfigFile.new()
+	if OS.has_feature("editor") or config.load(OS.get_executable_path().get_base_dir().path_join("world.cfg"))!=OK: return []
+	var url := str(config.get_value("world","url","")).strip_edges().trim_suffix("/")
+	if not (url.begins_with("https://") or url.begins_with("http://")): return []
+	return ["online",url,str(config.get_value("world","name","온라인 월드"))]
+
 static func worlds() -> Array:
+	var own := custom_world()
+	if not own.is_empty(): return [SERVERS[0],own]
 	if OS.has_feature("villagen_school") and not SCHOOL_SERVER.is_empty():
 		return [SERVERS[0],["online",SCHOOL_SERVER,"학교 월드"]]
 	return SERVERS

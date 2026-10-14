@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 150" role="img" aria-label="T1 처리 순서"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <g font-size="12.5">
+    <rect x="6" y="30" width="128" height="74" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="70" y="58" text-anchor="middle" class="s-ink" font-weight="600">① 원본 리깅</text><text x="70" y="78" text-anchor="middle" class="s-muted">눈·입 자르기</text><text x="70" y="94" text-anchor="middle" class="s-muted">rig_original</text>
+    <rect x="148" y="30" width="128" height="74" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="212" y="58" text-anchor="middle" class="s-ink" font-weight="600">② 눈 정보</text><text x="212" y="78" text-anchor="middle" class="s-muted">중심·축·테두리</text><text x="212" y="94" text-anchor="middle" class="s-muted">eyes_meta.json</text>
+    <rect x="290" y="30" width="128" height="74" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="354" y="58" text-anchor="middle" class="s-ink" font-weight="600">③ 단면 28개</text><text x="354" y="78" text-anchor="middle" class="s-muted">위·아래 틈 각도</text><text x="354" y="94" text-anchor="middle" class="s-muted">눈알 표면 반지름</text>
+    <rect x="432" y="30" width="128" height="74" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="496" y="58" text-anchor="middle" class="s-ink" font-weight="600">④ 부품 생성</text><text x="496" y="78" text-anchor="middle" class="s-muted">28×18 격자</text><text x="496" y="94" text-anchor="middle" class="s-muted">띠 밑에 숨김</text>
+    <rect x="574" y="30" width="128" height="74" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="638" y="58" text-anchor="middle" class="s-ink" font-weight="600">⑤ 뼈 9개</text><text x="638" y="78" text-anchor="middle" class="s-muted">회전각·가중치</text><text x="638" y="94" text-anchor="middle" class="s-muted">방향 자동 판정</text>
+    <rect x="716" y="30" width="138" height="74" rx="8" class="s-paper st-good" stroke-width="2"/><text x="785" y="58" text-anchor="middle" class="s-ink" font-weight="600">⑥ 자동 검사</text><text x="785" y="78" text-anchor="middle" class="s-muted">숨김·덮임·뚫림</text><text x="785" y="94" text-anchor="middle" class="s-muted">원본 변경</text>
+    <path d="M134 67 H144 M276 67 H286 M418 67 H428 M560 67 H570 M702 67 H712" class="st-muted" stroke-width="2"/>
+    <text x="6" y="136" class="s-muted">전부 무인 실행 (Blender 백그라운드). 사람 손이 들어가는 단계 없음.</text>
+  </g>
+</svg>

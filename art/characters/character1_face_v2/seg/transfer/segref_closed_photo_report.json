@@ -1,0 +1,14 @@
+{
+ "job": "segref_closed_photo",
+ "output_parts": 180,
+ "parts_on_source": 177,
+ "geom_dist_mm": {
+  "median": 0.0,
+  "p99": 0.0,
+  "max": 0.0
+ },
+ "mirror_agreement_all": 0.548,
+ "mirror_agreement_body": 0.484,
+ "body_parts": 74,
+ "body_parts_ge1pct": 8
+}

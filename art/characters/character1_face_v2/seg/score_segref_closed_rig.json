@@ -1,0 +1,1087 @@
+{
+ "job": "segref_closed_rig",
+ "parts": 114,
+ "significant_parts": 67,
+ "fragment_faces": 471,
+ "faces": 43618,
+ "weighted_purity": 0.839,
+ "per_label": {
+  "brow_L": {
+   "parts_majority": 1,
+   "best_part_share": 0.503
+  },
+  "brow_R": {
+   "parts_majority": 0,
+   "best_part_share": 0.537
+  },
+  "cheek_L": {
+   "parts_majority": 0,
+   "best_part_share": 0.594
+  },
+  "cheek_R": {
+   "parts_majority": 1,
+   "best_part_share": 0.591
+  },
+  "chin": {
+   "parts_majority": 4,
+   "best_part_share": 0.486
+  },
+  "ear_L": {
+   "parts_majority": 2,
+   "best_part_share": 0.908
+  },
+  "ear_R": {
+   "parts_majority": 2,
+   "best_part_share": 0.928
+  },
+  "eye_L": {
+   "parts_majority": 1,
+   "best_part_share": 0.999
+  },
+  "eye_R": {
+   "parts_majority": 1,
+   "best_part_share": 0.999
+  },
+  "gum_lo": {
+   "parts_majority": 8,
+   "best_part_share": 0.563
+  },
+  "jaw_L": {
+   "parts_majority": 0,
+   "best_part_share": 0.986
+  },
+  "jaw_R": {
+   "parts_majority": 0,
+   "best_part_share": 0.741
+  },
+  "lid_lo_L": {
+   "parts_majority": 1,
+   "best_part_share": 0.905
+  },
+  "lid_lo_R": {
+   "parts_majority": 1,
+   "best_part_share": 0.892
+  },
+  "lid_up_L": {
+   "parts_majority": 1,
+   "best_part_share": 0.757
+  },
+  "lid_up_R": {
+   "parts_majority": 1,
+   "best_part_share": 0.748
+  },
+  "lip_lo": {
+   "parts_majority": 1,
+   "best_part_share": 0.698
+  },
+  "lip_up": {
+   "parts_majority": 0,
+   "best_part_share": 0.819
+  },
+  "mouth_in": {
+   "parts_majority": 7,
+   "best_part_share": 0.374
+  },
+  "neck": {
+   "parts_majority": 2,
+   "best_part_share": 0.964
+  },
+  "nose": {
+   "parts_majority": 1,
+   "best_part_share": 1.0
+  },
+  "philtrum": {
+   "parts_majority": 0,
+   "best_part_share": 0.638
+  },
+  "scalp": {
+   "parts_majority": 1,
+   "best_part_share": 1.0
+  },
+  "skin": {
+   "parts_majority": 3,
+   "best_part_share": 0.464
+  },
+  "teeth_lo": {
+   "parts_majority": 12,
+   "best_part_share": 0.084
+  },
+  "teeth_up": {
+   "parts_majority": 13,
+   "best_part_share": 0.105
+  },
+  "tongue": {
+   "parts_majority": 3,
+   "best_part_share": 0.579
+  }
+ },
+ "parts_detail": [
+  {
+   "name": "tripo_part_0",
+   "faces": 5010,
+   "major": "neck",
+   "purity": 0.9988023952095808,
+   "mix": {
+    "neck": 5004,
+    "skin": 6
+   },
+   "centre": [
+    -0.001,
+    0.066,
+    0.11
+   ]
+  },
+  {
+   "name": "tripo_part_3",
+   "faces": 2671,
+   "major": "skin",
+   "purity": 0.5338824410333208,
+   "mix": {
+    "skin": 1426,
+    "jaw_L": 280,
+    "jaw_R": 275,
+    "mouth_in": 269
+   },
+   "centre": [
+    0.004,
+    0.044,
+    0.422
+   ]
+  },
+  {
+   "name": "tripo_part_1",
+   "faces": 2570,
+   "major": "ear_R",
+   "purity": 0.8385214007782101,
+   "mix": {
+    "ear_R": 2155,
+    "skin": 359,
+    "cheek_R": 56
+   },
+   "centre": [
+    -0.27,
+    0.033,
+    0.576
+   ]
+  },
+  {
+   "name": "tripo_part_13",
+   "faces": 2494,
+   "major": "ear_L",
+   "purity": 0.8496391339214114,
+   "mix": {
+    "ear_L": 2119,
+    "skin": 365,
+    "cheek_L": 10
+   },
+   "centre": [
+    0.271,
+    0.036,
+    0.576
+   ]
+  },
+  {
+   "name": "tripo_part_5",
+   "faces": 2180,
+   "major": "mouth_in",
+   "purity": 0.8307339449541284,
+   "mix": {
+    "mouth_in": 1811,
+    "teeth_up": 76,
+    "gum_lo": 62,
+    "jaw_R": 53
+   },
+   "centre": [
+    -0.001,
+    -0.168,
+    0.445
+   ]
+  },
+  {
+   "name": "tripo_part_29",
+   "faces": 2160,
+   "major": "eye_R",
+   "purity": 0.9962962962962963,
+   "mix": {
+    "eye_R": 2152,
+    "lid_up_R": 7,
+    "lid_lo_R": 1
+   },
+   "centre": [
+    -0.12,
+    -0.129,
+    0.628
+   ]
+  },
+  {
+   "name": "tripo_part_30",
+   "faces": 2160,
+   "major": "eye_L",
+   "purity": 0.9976851851851852,
+   "mix": {
+    "eye_L": 2155,
+    "lid_up_L": 3,
+    "lid_lo_L": 2
+   },
+   "centre": [
+    0.12,
+    -0.129,
+    0.628
+   ]
+  },
+  {
+   "name": "tripo_part_2",
+   "faces": 2116,
+   "major": "scalp",
+   "purity": 0.6568998109640832,
+   "mix": {
+    "scalp": 1390,
+    "skin": 454,
+    "brow_R": 94,
+    "brow_L": 80
+   },
+   "centre": [
+    0.0,
+    0.033,
+    0.849
+   ]
+  },
+  {
+   "name": "tripo_part_126",
+   "faces": 1947,
+   "major": "tongue",
+   "purity": 0.9958911145351823,
+   "mix": {
+    "tongue": 1939,
+    "gum_lo": 6,
+    "mouth_in": 2
+   },
+   "centre": [
+    0.001,
+    -0.176,
+    0.434
+   ]
+  },
+  {
+   "name": "tripo_part_31",
+   "faces": 1922,
+   "major": "gum_lo",
+   "purity": 0.9614984391259105,
+   "mix": {
+    "gum_lo": 1848,
+    "teeth_lo": 42,
+    "mouth_in": 28,
+    "tongue": 4
+   },
+   "centre": [
+    0.001,
+    -0.213,
+    0.433
+   ]
+  },
+  {
+   "name": "tripo_part_7",
+   "faces": 1915,
+   "major": "mouth_in",
+   "purity": 0.7879895561357703,
+   "mix": {
+    "mouth_in": 1509,
+    "cheek_L": 171,
+    "cheek_R": 171,
+    "teeth_up": 46
+   },
+   "centre": [
+    -0.0,
+    -0.215,
+    0.469
+   ]
+  },
+  {
+   "name": "tripo_part_4",
+   "faces": 1777,
+   "major": "nose",
+   "purity": 0.8733821046707935,
+   "mix": {
+    "nose": 1552,
+    "philtrum": 76,
+    "cheek_L": 64,
+    "cheek_R": 64
+   },
+   "centre": [
+    0.0,
+    -0.304,
+    0.522
+   ]
+  },
+  {
+   "name": "tripo_part_8",
+   "faces": 1308,
+   "major": "cheek_R",
+   "purity": 0.42201834862385323,
+   "mix": {
+    "cheek_R": 552,
+    "cheek_L": 524,
+    "lid_up_R": 61,
+    "lid_up_L": 60
+   },
+   "centre": [
+    -0.004,
+    -0.213,
+    0.563
+   ]
+  },
+  {
+   "name": "tripo_part_6",
+   "faces": 1049,
+   "major": "mouth_in",
+   "purity": 0.3489037178265014,
+   "mix": {
+    "mouth_in": 366,
+    "lip_up": 354,
+    "lip_lo": 182,
+    "philtrum": 134
+   },
+   "centre": [
+    -0.001,
+    -0.29,
+    0.453
+   ]
+  },
+  {
+   "name": "tripo_part_127",
+   "faces": 890,
+   "major": "tongue",
+   "purity": 1.0,
+   "mix": {
+    "tongue": 890
+   },
+   "centre": [
+    -0.001,
+    -0.193,
+    0.457
+   ]
+  },
+  {
+   "name": "tripo_part_14",
+   "faces": 754,
+   "major": "lip_lo",
+   "purity": 0.596816976127321,
+   "mix": {
+    "lip_lo": 450,
+    "mouth_in": 166,
+    "lip_up": 78,
+    "jaw_R": 22
+   },
+   "centre": [
+    -0.0,
+    -0.296,
+    0.437
+   ]
+  },
+  {
+   "name": "tripo_part_9",
+   "faces": 545,
+   "major": "chin",
+   "purity": 0.9889908256880734,
+   "mix": {
+    "chin": 539,
+    "jaw_R": 4,
+    "jaw_L": 2
+   },
+   "centre": [
+    -0.0,
+    -0.26,
+    0.362
+   ]
+  },
+  {
+   "name": "tripo_part_15",
+   "faces": 532,
+   "major": "chin",
+   "purity": 0.6954887218045113,
+   "mix": {
+    "chin": 370,
+    "mouth_in": 120,
+    "skin": 42
+   },
+   "centre": [
+    0.0,
+    -0.077,
+    0.363
+   ]
+  },
+  {
+   "name": "tripo_part_128",
+   "faces": 523,
+   "major": "tongue",
+   "purity": 0.9808795411089866,
+   "mix": {
+    "tongue": 513,
+    "gum_lo": 10
+   },
+   "centre": [
+    -0.0,
+    -0.196,
+    0.426
+   ]
+  },
+  {
+   "name": "tripo_part_16",
+   "faces": 475,
+   "major": "lid_lo_R",
+   "purity": 0.9431578947368421,
+   "mix": {
+    "lid_lo_R": 448,
+    "cheek_R": 13,
+    "lid_up_R": 13,
+    "eye_R": 1
+   },
+   "centre": [
+    -0.135,
+    -0.196,
+    0.582
+   ]
+  },
+  {
+   "name": "tripo_part_10",
+   "faces": 470,
+   "major": "lid_lo_L",
+   "purity": 0.9574468085106383,
+   "mix": {
+    "lid_lo_L": 450,
+    "lid_up_L": 14,
+    "cheek_L": 5,
+    "eye_L": 1
+   },
+   "centre": [
+    0.137,
+    -0.195,
+    0.582
+   ]
+  },
+  {
+   "name": "tripo_part_11",
+   "faces": 431,
+   "major": "skin",
+   "purity": 0.4547563805104408,
+   "mix": {
+    "skin": 196,
+    "ear_L": 194,
+    "cheek_L": 41
+   },
+   "centre": [
+    0.243,
+    -0.006,
+    0.558
+   ]
+  },
+  {
+   "name": "tripo_part_17",
+   "faces": 351,
+   "major": "skin",
+   "purity": 0.5754985754985755,
+   "mix": {
+    "skin": 202,
+    "ear_R": 146,
+    "cheek_R": 3
+   },
+   "centre": [
+    -0.241,
+    0.012,
+    0.555
+   ]
+  },
+  {
+   "name": "tripo_part_33",
+   "faces": 336,
+   "major": "gum_lo",
+   "purity": 0.9940476190476191,
+   "mix": {
+    "gum_lo": 334,
+    "mouth_in": 2
+   },
+   "centre": [
+    -0.0,
+    -0.275,
+    0.427
+   ]
+  },
+  {
+   "name": "tripo_part_12",
+   "faces": 294,
+   "major": "lid_up_R",
+   "purity": 0.8163265306122449,
+   "mix": {
+    "lid_up_R": 240,
+    "lid_lo_R": 53,
+    "eye_R": 1
+   },
+   "centre": [
+    -0.142,
+    -0.188,
+    0.645
+   ]
+  },
+  {
+   "name": "tripo_part_18",
+   "faces": 286,
+   "major": "lid_up_L",
+   "purity": 0.8391608391608392,
+   "mix": {
+    "lid_up_L": 240,
+    "lid_lo_L": 45,
+    "eye_L": 1
+   },
+   "centre": [
+    0.144,
+    -0.187,
+    0.647
+   ]
+  },
+  {
+   "name": "tripo_part_19",
+   "faces": 284,
+   "major": "brow_L",
+   "purity": 0.2852112676056338,
+   "mix": {
+    "brow_L": 81,
+    "brow_R": 81,
+    "cheek_R": 65,
+    "cheek_L": 57
+   },
+   "centre": [
+    0.001,
+    -0.251,
+    0.73
+   ]
+  },
+  {
+   "name": "tripo_part_88",
+   "faces": 270,
+   "major": "teeth_up",
+   "purity": 0.937037037037037,
+   "mix": {
+    "teeth_up": 253,
+    "mouth_in": 17
+   },
+   "centre": [
+    -0.001,
+    -0.279,
+    0.447
+   ]
+  },
+  {
+   "name": "tripo_part_20",
+   "faces": 188,
+   "major": "mouth_in",
+   "purity": 0.9414893617021277,
+   "mix": {
+    "mouth_in": 177,
+    "teeth_up": 8,
+    "gum_lo": 3
+   },
+   "centre": [
+    0.082,
+    -0.213,
+    0.454
+   ]
+  },
+  {
+   "name": "tripo_part_21",
+   "faces": 188,
+   "major": "mouth_in",
+   "purity": 0.9414893617021277,
+   "mix": {
+    "mouth_in": 177,
+    "teeth_up": 8,
+    "gum_lo": 3
+   },
+   "centre": [
+    -0.082,
+    -0.213,
+    0.454
+   ]
+  },
+  {
+   "name": "tripo_part_90",
+   "faces": 182,
+   "major": "teeth_up",
+   "purity": 0.9395604395604396,
+   "mix": {
+    "teeth_up": 171,
+    "mouth_in": 5,
+    "teeth_lo": 4,
+    "cheek_L": 2
+   },
+   "centre": [
+    0.091,
+    -0.165,
+    0.461
+   ]
+  },
+  {
+   "name": "tripo_part_94",
+   "faces": 182,
+   "major": "teeth_up",
+   "purity": 0.9340659340659341,
+   "mix": {
+    "teeth_up": 170,
+    "mouth_in": 6,
+    "cheek_R": 4,
+    "teeth_lo": 2
+   },
+   "centre": [
+    -0.089,
+    -0.19,
+    0.459
+   ]
+  },
+  {
+   "name": "tripo_part_91",
+   "faces": 181,
+   "major": "teeth_up",
+   "purity": 0.9392265193370166,
+   "mix": {
+    "teeth_up": 170,
+    "mouth_in": 5,
+    "teeth_lo": 4,
+    "cheek_R": 2
+   },
+   "centre": [
+    -0.091,
+    -0.165,
+    0.461
+   ]
+  },
+  {
+   "name": "tripo_part_92",
+   "faces": 178,
+   "major": "teeth_up",
+   "purity": 0.9382022471910112,
+   "mix": {
+    "teeth_up": 167,
+    "teeth_lo": 5,
+    "cheek_L": 4,
+    "mouth_in": 2
+   },
+   "centre": [
+    0.094,
+    -0.138,
+    0.465
+   ]
+  },
+  {
+   "name": "tripo_part_93",
+   "faces": 178,
+   "major": "teeth_up",
+   "purity": 0.9382022471910112,
+   "mix": {
+    "teeth_up": 167,
+    "teeth_lo": 5,
+    "cheek_R": 4,
+    "mouth_in": 2
+   },
+   "centre": [
+    -0.094,
+    -0.138,
+    0.465
+   ]
+  },
+  {
+   "name": "tripo_part_95",
+   "faces": 176,
+   "major": "teeth_up",
+   "purity": 0.9318181818181818,
+   "mix": {
+    "teeth_up": 164,
+    "mouth_in": 6,
+    "cheek_L": 4,
+    "teeth_lo": 2
+   },
+   "centre": [
+    0.089,
+    -0.19,
+    0.459
+   ]
+  },
+  {
+   "name": "tripo_part_58",
+   "faces": 166,
+   "major": "teeth_lo",
+   "purity": 0.9216867469879518,
+   "mix": {
+    "teeth_lo": 153,
+    "gum_lo": 10,
+    "mouth_in": 2,
+    "teeth_up": 1
+   },
+   "centre": [
+    0.058,
+    -0.233,
+    0.439
+   ]
+  },
+  {
+   "name": "tripo_part_60",
+   "faces": 165,
+   "major": "teeth_lo",
+   "purity": 0.9212121212121213,
+   "mix": {
+    "teeth_lo": 152,
+    "gum_lo": 10,
+    "mouth_in": 2,
+    "teeth_up": 1
+   },
+   "centre": [
+    -0.058,
+    -0.233,
+    0.439
+   ]
+  },
+  {
+   "name": "tripo_part_34",
+   "faces": 161,
+   "major": "gum_lo",
+   "purity": 0.9503105590062112,
+   "mix": {
+    "gum_lo": 153,
+    "teeth_lo": 6,
+    "teeth_up": 2
+   },
+   "centre": [
+    0.066,
+    -0.211,
+    0.443
+   ]
+  },
+  {
+   "name": "tripo_part_35",
+   "faces": 160,
+   "major": "gum_lo",
+   "purity": 0.95,
+   "mix": {
+    "gum_lo": 152,
+    "teeth_lo": 6,
+    "teeth_up": 2
+   },
+   "centre": [
+    -0.066,
+    -0.21,
+    0.443
+   ]
+  },
+  {
+   "name": "tripo_part_61",
+   "faces": 158,
+   "major": "teeth_lo",
+   "purity": 0.9430379746835443,
+   "mix": {
+    "teeth_lo": 149,
+    "gum_lo": 7,
+    "mouth_in": 1,
+    "teeth_up": 1
+   },
+   "centre": [
+    0.082,
+    -0.134,
+    0.459
+   ]
+  },
+  {
+   "name": "tripo_part_64",
+   "faces": 158,
+   "major": "teeth_lo",
+   "purity": 0.9050632911392406,
+   "mix": {
+    "teeth_lo": 143,
+    "gum_lo": 10,
+    "teeth_up": 5
+   },
+   "centre": [
+    -0.08,
+    -0.16,
+    0.454
+   ]
+  },
+  {
+   "name": "tripo_part_65",
+   "faces": 157,
+   "major": "teeth_lo",
+   "purity": 0.9426751592356688,
+   "mix": {
+    "teeth_lo": 148,
+    "gum_lo": 7,
+    "mouth_in": 1,
+    "teeth_up": 1
+   },
+   "centre": [
+    -0.082,
+    -0.134,
+    0.459
+   ]
+  },
+  {
+   "name": "tripo_part_96",
+   "faces": 157,
+   "major": "teeth_up",
+   "purity": 0.910828025477707,
+   "mix": {
+    "teeth_up": 143,
+    "mouth_in": 10,
+    "gum_lo": 2,
+    "teeth_lo": 2
+   },
+   "centre": [
+    0.07,
+    -0.232,
+    0.453
+   ]
+  },
+  {
+   "name": "tripo_part_98",
+   "faces": 155,
+   "major": "teeth_up",
+   "purity": 0.9419354838709677,
+   "mix": {
+    "teeth_up": 146,
+    "mouth_in": 9
+   },
+   "centre": [
+    -0.047,
+    -0.267,
+    0.45
+   ]
+  },
+  {
+   "name": "tripo_part_36",
+   "faces": 154,
+   "major": "gum_lo",
+   "purity": 0.9675324675324676,
+   "mix": {
+    "gum_lo": 149,
+    "teeth_lo": 4,
+    "mouth_in": 1
+   },
+   "centre": [
+    -0.023,
+    -0.27,
+    0.429
+   ]
+  },
+  {
+   "name": "tripo_part_62",
+   "faces": 154,
+   "major": "teeth_lo",
+   "purity": 0.9155844155844156,
+   "mix": {
+    "teeth_lo": 141,
+    "gum_lo": 10,
+    "teeth_up": 3
+   },
+   "centre": [
+    0.08,
+    -0.16,
+    0.454
+   ]
+  },
+  {
+   "name": "tripo_part_97",
+   "faces": 153,
+   "major": "teeth_up",
+   "purity": 0.9150326797385621,
+   "mix": {
+    "teeth_up": 140,
+    "mouth_in": 9,
+    "gum_lo": 2,
+    "teeth_lo": 2
+   },
+   "centre": [
+    -0.07,
+    -0.232,
+    0.453
+   ]
+  },
+  {
+   "name": "tripo_part_66",
+   "faces": 152,
+   "major": "teeth_lo",
+   "purity": 0.8947368421052632,
+   "mix": {
+    "teeth_lo": 136,
+    "gum_lo": 16
+   },
+   "centre": [
+    -0.036,
+    -0.262,
+    0.429
+   ]
+  },
+  {
+   "name": "tripo_part_99",
+   "faces": 152,
+   "major": "teeth_up",
+   "purity": 0.9407894736842105,
+   "mix": {
+    "teeth_up": 143,
+    "mouth_in": 9
+   },
+   "centre": [
+    0.047,
+    -0.267,
+    0.45
+   ]
+  },
+  {
+   "name": "tripo_part_63",
+   "faces": 151,
+   "major": "teeth_lo",
+   "purity": 0.8940397350993378,
+   "mix": {
+    "teeth_lo": 135,
+    "gum_lo": 16
+   },
+   "centre": [
+    0.036,
+    -0.262,
+    0.43
+   ]
+  },
+  {
+   "name": "tripo_part_22",
+   "faces": 150,
+   "major": "neck",
+   "purity": 1.0,
+   "mix": {
+    "neck": 150
+   },
+   "centre": [
+    0.0,
+    -0.07,
+    0.229
+   ]
+  },
+  {
+   "name": "tripo_part_37",
+   "faces": 150,
+   "major": "gum_lo",
+   "purity": 0.9666666666666667,
+   "mix": {
+    "gum_lo": 145,
+    "teeth_lo": 4,
+    "mouth_in": 1
+   },
+   "centre": [
+    0.023,
+    -0.27,
+    0.429
+   ]
+  },
+  {
+   "name": "tripo_part_67",
+   "faces": 148,
+   "major": "teeth_lo",
+   "purity": 0.9594594594594594,
+   "mix": {
+    "teeth_lo": 142,
+    "gum_lo": 6
+   },
+   "centre": [
+    0.049,
+    -0.251,
+    0.433
+   ]
+  },
+  {
+   "name": "tripo_part_68",
+   "faces": 148,
+   "major": "teeth_lo",
+   "purity": 0.9594594594594594,
+   "mix": {
+    "teeth_lo": 142,
+    "gum_lo": 6
+   },
+   "centre": [
+    -0.049,
+    -0.251,
+    0.433
+   ]
+  },
+  {
+   "name": "tripo_part_101",
+   "faces": 138,
+   "major": "teeth_up",
+   "purity": 0.9057971014492754,
+   "mix": {
+    "teeth_up": 125,
+    "mouth_in": 13
+   },
+   "centre": [
+    -0.063,
+    -0.25,
+    0.452
+   ]
+  },
+  {
+   "name": "tripo_part_100",
+   "faces": 137,
+   "major": "teeth_up",
+   "purity": 0.9124087591240876,
+   "mix": {
+    "teeth_up": 125,
+    "mouth_in": 12
+   },
+   "centre": [
+    0.064,
+    -0.25,
+    0.452
+   ]
+  },
+  {
+   "name": "tripo_part_70",
+   "faces": 130,
+   "major": "teeth_lo",
+   "purity": 0.8923076923076924,
+   "mix": {
+    "teeth_lo": 116,
+    "gum_lo": 12,
+    "teeth_up": 2
+   },
+   "centre": [
+    0.073,
+    -0.186,
+    0.448
+   ]
+  },
+  {
+   "name": "tripo_part_69",
+   "faces": 129,
+   "major": "teeth_lo",
+   "purity": 0.8914728682170543,
+   "mix": {
+    "teeth_lo": 115,
+    "gum_lo": 11,
+    "teeth_up": 3
+   },
+   "centre": [
+    -0.073,
+    -0.186,
+    0.449
+   ]
+  },
+  {
+   "name": "tripo_part_23",
+   "faces": 122,
+   "major": "chin",
+   "purity": 0.7049180327868853,
+   "mix": {
+    "chin": 86,
+    "neck": 36
+   },
+   "centre": [
+    0.0,
+    -0.136,
+    0.307
+   ]
+  }
+ ]
+}

@@ -1,0 +1,115 @@
+{
+ "side": "POSITIVE_X",
+ "align": {
+  "yaw_deg": 0.03219969837019273,
+  "tilt_deg": -0.013726715230127013,
+  "eye_center_L": [
+   0.1201,
+   -0.1291,
+   0.6274
+  ],
+  "eye_radius": 0.0915
+ },
+ "removed_fin_verts": 60,
+ "eye_sliver_faces_removed": 923,
+ "removed_after_sliver": 190,
+ "holes": {
+  "eye": [
+   74,
+   70
+  ],
+  "kept": [
+   35,
+   11,
+   4,
+   4,
+   88,
+   4,
+   5,
+   3,
+   3,
+   4,
+   4,
+   5,
+   4,
+   4,
+   3,
+   2,
+   1,
+   4,
+   2,
+   4,
+   6,
+   3
+  ],
+  "filled": 81,
+  "filled_sizes": [
+   61,
+   53,
+   23,
+   18,
+   17,
+   17,
+   16,
+   14,
+   12,
+   12,
+   12,
+   12
+  ]
+ },
+ "lid_lining_verts": 432,
+ "post_sym_components": [
+  14366,
+  1267,
+  331
+ ],
+ "final_small_holes_filled": 29,
+ "TeethUpper_verts": 1298,
+ "TeethLower_verts": 1016,
+ "Tongue_verts": 1683,
+ "final": {
+  "Body": {
+   "verts": 14366,
+   "nonmanifold": 2,
+   "boundary_edges": 310,
+   "mirror_err_max_mm": 0.0
+  },
+  "Eye.L": {
+   "verts": 1082,
+   "nonmanifold": 0,
+   "boundary_edges": 0,
+   "mirror_err_max_mm": null
+  },
+  "Eye.R": {
+   "verts": 1082,
+   "nonmanifold": 0,
+   "boundary_edges": 0,
+   "mirror_err_max_mm": null
+  },
+  "MouthLower": {
+   "verts": 1598,
+   "nonmanifold": 10,
+   "boundary_edges": 2,
+   "mirror_err_max_mm": 0.0
+  },
+  "TeethLower": {
+   "verts": 1016,
+   "nonmanifold": 0,
+   "boundary_edges": 124,
+   "mirror_err_max_mm": 0.0
+  },
+  "TeethUpper": {
+   "verts": 1298,
+   "nonmanifold": 1,
+   "boundary_edges": 156,
+   "mirror_err_max_mm": 0.0
+  },
+  "Tongue": {
+   "verts": 1683,
+   "nonmanifold": 2,
+   "boundary_edges": 0,
+   "mirror_err_max_mm": 0.0
+  }
+ }
+}

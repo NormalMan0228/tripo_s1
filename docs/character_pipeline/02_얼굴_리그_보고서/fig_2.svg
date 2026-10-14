@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 330" role="img" aria-label="모양을 바꾸는 방식과 원본 유지 방식 비교"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <text x="20" y="28" class="s-bad" font-size="16" font-weight="700">✕ 지금까지: 모양을 바꾸는 방식</text>
+  <g font-size="14">
+    <rect x="20" y="44" width="150" height="54" rx="8" class="s-paper st-muted" stroke-width="1.5"/><text x="95" y="76" text-anchor="middle" class="s-ink">Tripo 원본</text>
+    <rect x="200" y="44" width="170" height="54" rx="8" class="s-paper st-muted" stroke-width="1.5"/><text x="285" y="68" text-anchor="middle" class="s-ink">템플릿을 늘여 붙임</text><text x="285" y="88" text-anchor="middle" class="s-muted" font-size="12">원본은 버림</text>
+    <rect x="400" y="44" width="170" height="54" rx="8" class="s-paper st-bad" stroke-width="1.5"/><text x="485" y="68" text-anchor="middle" class="s-ink">템플릿 표정 복사</text><text x="485" y="88" text-anchor="middle" class="s-muted" font-size="12">고정 이동값</text>
+    <rect x="600" y="44" width="240" height="54" rx="8" class="s-paper st-bad" stroke-width="1.5"/><text x="720" y="68" text-anchor="middle" class="s-bad">찌그러짐 · 비대칭</text><text x="720" y="88" text-anchor="middle" class="s-bad" font-size="12">큰 눈 안 감김 · 접힘</text>
+    <path d="M170 71 H196 M370 71 H396 M570 71 H596" class="st-muted" stroke-width="2"/>
+  </g>
+  <text x="20" y="150" class="s-good" font-size="16" font-weight="700">○ 앞으로: 원본 유지 방식</text>
+  <g font-size="14">
+    <rect x="20" y="166" width="150" height="54" rx="8" class="s-paper st-muted" stroke-width="1.5"/><text x="95" y="198" text-anchor="middle" class="s-ink">Tripo 원본</text>
+    <rect x="200" y="166" width="170" height="54" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="285" y="190" text-anchor="middle" class="s-ink">자르기만</text><text x="285" y="210" text-anchor="middle" class="s-muted" font-size="12">눈꺼풀|눈알, 윗입술|아랫입술</text>
+    <rect x="400" y="166" width="170" height="54" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="485" y="190" text-anchor="middle" class="s-ink">부품 추가</text><text x="485" y="210" text-anchor="middle" class="s-muted" font-size="12">입 안, 이, 혀</text>
+    <rect x="600" y="166" width="240" height="54" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="720" y="190" text-anchor="middle" class="s-ink">이 얼굴에서 계산한 표정</text><text x="720" y="210" text-anchor="middle" class="s-muted" font-size="12">깜빡임·턱·입모양 셰이프키</text>
+    <path d="M170 193 H196 M370 193 H396 M570 193 H596" class="st-muted" stroke-width="2"/>
+    <rect x="200" y="246" width="370" height="54" rx="8" class="s-soft st-muted" stroke-width="1" stroke-dasharray="5 4"/>
+    <text x="385" y="270" text-anchor="middle" class="s-ink">템플릿(MPFB)은 기증자 역할만</text><text x="385" y="290" text-anchor="middle" class="s-muted" font-size="12">턱 가중치 · 턱 회전축 · 입모양 움직임을 가장 가까운 점으로 빌려옴</text>
+    <path d="M485 246 V224" class="st-muted" stroke-width="1.5" stroke-dasharray="4 3"/>
+  </g>
+  <text x="20" y="322" class="s-muted" font-size="13">검사 기준: 기본 상태의 모든 정점이 원본 정점과 같은 위치에 있어야 한다 (최대 오차 0.0mm).</text>
+</svg>

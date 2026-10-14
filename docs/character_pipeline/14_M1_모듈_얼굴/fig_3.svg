@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 250" role="img" aria-label="입 부품 고리 구조"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+ <g font-size="12.5">
+  <ellipse cx="200" cy="125" rx="180" ry="105" class="s-soft st-muted" stroke-width="1.5"/>
+  <ellipse cx="200" cy="125" rx="150" ry="80" fill="none" class="st-muted" stroke-width="1"/>
+  <ellipse cx="200" cy="125" rx="125" ry="58" fill="none" class="st-muted" stroke-width="1"/>
+  <path d="M95 125 C140 85 260 85 305 125 C260 170 140 170 95 125 Z" class="s-paper st-acc" stroke-width="2"/>
+  <path d="M110 125 C150 105 250 105 290 125" fill="none" class="st-acc" stroke-width="1"/>
+  <path d="M110 125 C150 145 250 145 290 125" fill="none" class="st-acc" stroke-width="1"/>
+  <path d="M95 125 H305" class="st-bad" stroke-width="2.5"/>
+  <text x="200" y="30" text-anchor="middle" class="s-muted">구멍 테두리 (지운 머리)</text>
+  <text x="200" y="112" text-anchor="middle" class="s-ink" font-size="11.5">윗입술 고리 6줄</text>
+  <text x="200" y="146" text-anchor="middle" class="s-ink" font-size="11.5">아랫입술 고리 6줄</text>
+  <text x="200" y="245" text-anchor="middle" class="s-muted">피부 고리 6줄 (바깥 2줄은 머리 표면에 섞음)</text>
+  <g transform="translate(420,20)">
+   <text x="0" y="16" class="s-ink" font-weight="600">만드는 순서</text>
+   <text x="0" y="42" class="s-ink">① 입 둘레 타원(입꼬리 폭 ×1.45)을 지운 머리에서 잘라냄</text>
+   <text x="0" y="66" class="s-ink">② 테두리 점 수 = 모든 고리의 점 수 (80~151)</text>
+   <text x="0" y="90" class="s-ink">③ 테두리 → 바깥 입술선(MediaPipe 61~291) → 입술 맞닿는 선</text>
+   <text x="0" y="114" class="s-ink">④ 맨 안쪽 고리는 위·아래가 <tspan class="s-bad" font-weight="600">다른 점</tspan> = 입술 틈</text>
+   <text x="0" y="138" class="s-ink">⑤ 틈 뒤에 입 주머니 3줄 + 마개</text>
+   <text x="0" y="162" class="s-ink">⑥ 깊이: 원본 표면(orig) 또는 볼록 입술 계산식(proc)</text>
+   <text x="0" y="186" class="s-ink">⑦ 정점 그룹 mouth_upper / lower / skin / bag</text>
+   <text x="0" y="216" class="s-muted">u 값: 입꼬리 0 → 윗입술 → 반대 입꼬리 0.5 → 아랫입술</text>
+  </g>
+ </g>
+</svg>

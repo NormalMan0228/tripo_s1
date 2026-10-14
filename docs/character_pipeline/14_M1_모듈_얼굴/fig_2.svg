@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 470" role="img" aria-label="얼굴 리깅 전체 흐름"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+ <defs><marker id="ar" viewbox="0 0 10 10" refx="9" refy="5" markerwidth="7" markerheight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" class="s-muted"/></marker></defs>
+ <g font-size="12.5">
+  <text x="10" y="20" class="s-muted" font-weight="600">공통 (완성)</text>
+  <g>
+   <rect x="10" y="30" width="155" height="58" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="87" y="54" text-anchor="middle" class="s-ink" font-weight="600">입력 검사</text><text x="87" y="73" text-anchor="middle" class="s-muted">input_check · 8항목</text>
+   <rect x="182" y="30" width="155" height="58" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="259" y="54" text-anchor="middle" class="s-ink" font-weight="600">대칭 정렬</text><text x="259" y="73" text-anchor="middle" class="s-muted">sym_align</text>
+   <rect x="354" y="30" width="155" height="58" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="431" y="54" text-anchor="middle" class="s-ink" font-weight="600">정면 색 입히기</text><text x="431" y="73" text-anchor="middle" class="s-muted">texture_front · 1장</text>
+   <rect x="526" y="30" width="155" height="58" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="603" y="54" text-anchor="middle" class="s-ink" font-weight="600">조밀 기준점</text><text x="603" y="73" text-anchor="middle" class="s-muted">5방향 MediaPipe</text>
+   <rect x="698" y="30" width="155" height="58" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="775" y="54" text-anchor="middle" class="s-ink" font-weight="600">리깅 포인트</text><text x="775" y="73" text-anchor="middle" class="s-muted">rig_points · 관절 92</text>
+   <path d="M165 59 H180 M337 59 H352 M509 59 H524 M681 59 H696" class="st-muted" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+  </g>
+  <path d="M775 88 V112 H120 V130" class="st-muted" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+  <path d="M430 112 V130" class="st-muted" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+
+  <text x="10" y="150" class="s-ink" font-weight="700">A · 원본 자르기 (T14b)</text>
+  <rect x="10" y="160" width="220" height="50" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="120" y="181" text-anchor="middle" class="s-ink" font-weight="600">눈·입 곡선 자르기</text><text x="120" y="199" text-anchor="middle" class="s-muted">rig_original · 원본 0.0mm</text>
+  <rect x="10" y="222" width="220" height="50" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="120" y="243" text-anchor="middle" class="s-ink" font-weight="600">눈꺼풀 껍질 부품</text><text x="120" y="261" text-anchor="middle" class="s-muted">lid_parts · 덮임 100%</text>
+  <rect x="10" y="284" width="220" height="50" rx="8" class="s-paper st-acc" stroke-width="1.5" stroke-dasharray="5 3"/><text x="120" y="305" text-anchor="middle" class="s-ink" font-weight="600">입 안·이·혀</text><text x="120" y="323" text-anchor="middle" class="s-muted">mouth_parts · 벽 구겨짐</text>
+  <path d="M120 210 V220 M120 272 V282" class="st-muted" stroke-width="1.5" marker-end="url(#ar)"/>
+
+  <text x="260" y="150" class="s-ink" font-weight="700">B · 모듈 부품 (M1, 이번 테스트)</text>
+  <rect x="260" y="160" width="190" height="50" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="355" y="181" text-anchor="middle" class="s-ink" font-weight="600">눈·입 지운 그림</text><text x="355" y="199" text-anchor="middle" class="s-muted">Nano Banana Pro · 무료</text>
+  <rect x="260" y="222" width="190" height="50" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="355" y="243" text-anchor="middle" class="s-ink" font-weight="600">지운 머리 3D + 정렬</text><text x="355" y="261" text-anchor="middle" class="s-muted">Tripo 15 · align_noface</text>
+  <rect x="470" y="160" width="185" height="50" rx="8" class="s-paper st-acc" stroke-width="1.5" stroke-dasharray="5 3"/><text x="562" y="181" text-anchor="middle" class="s-ink" font-weight="600">Blender 입 부품</text><text x="562" y="199" text-anchor="middle" class="s-muted">organ_mouth · 고리 13줄</text>
+  <rect x="470" y="222" width="185" height="50" rx="8" class="s-paper st-bad" stroke-width="1.5"/><text x="562" y="243" text-anchor="middle" class="s-ink" font-weight="600">Blender 눈 부품</text><text x="562" y="261" text-anchor="middle" class="s-bad">organ_eye · 고치는 중</text>
+  <rect x="675" y="160" width="178" height="50" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="764" y="181" text-anchor="middle" class="s-ink" font-weight="600">Tripo 눈·입 부품</text><text x="764" y="199" text-anchor="middle" class="s-muted">8개 · 한 덩어리</text>
+  <rect x="675" y="222" width="178" height="50" rx="8" class="s-paper st-muted" stroke-width="1.5" stroke-dasharray="2 3"/><text x="764" y="243" text-anchor="middle" class="s-ink" font-weight="600">Tripo 모양 + 고리</text><text x="764" y="261" text-anchor="middle" class="s-muted">아직</text>
+  <rect x="470" y="284" width="383" height="50" rx="8" class="s-paper st-muted" stroke-width="1.5" stroke-dasharray="2 3"/><text x="661" y="305" text-anchor="middle" class="s-ink" font-weight="600">이·혀 넣기 (두 방식 공통)</text><text x="661" y="323" text-anchor="middle" class="s-muted">아직</text>
+  <path d="M355 210 V220 M450 247 H468 M562 210 V220 M764 210 V220 M562 272 V282 M764 272 V282" class="st-muted" stroke-width="1.5" marker-end="url(#ar)" fill="none"/>
+
+  <path d="M120 334 V370 H300 M661 334 V370 H520" class="st-muted" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+  <text x="10" y="364" class="s-muted" font-weight="600">합류</text>
+  <rect x="300" y="350" width="220" height="40" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="410" y="375" text-anchor="middle" class="s-ink" font-weight="600">Rigify 맞춤 · rigify_fit</text>
+  <rect x="10" y="410" width="200" height="44" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="110" y="437" text-anchor="middle" class="s-ink" font-weight="600">ARKit 42개 굽기</text>
+  <rect x="226" y="410" width="200" height="44" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="326" y="437" text-anchor="middle" class="s-ink" font-weight="600">원본 색 입히기</text>
+  <rect x="442" y="410" width="200" height="44" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="542" y="437" text-anchor="middle" class="s-ink" font-weight="600">면 수 10%</text>
+  <rect x="658" y="410" width="195" height="44" rx="8" class="s-paper st-good" stroke-width="1.5"/><text x="755" y="437" text-anchor="middle" class="s-ink" font-weight="600">Godot 실행</text>
+  <path d="M410 390 V400 H110 V408 M210 432 H224 M426 432 H440 M642 432 H656" class="st-muted" stroke-width="1.5" fill="none" marker-end="url(#ar)"/>
+ </g>
+</svg>

@@ -1,0 +1,63 @@
+CC5 headshot mesh run 2026-10-11 04:26:38 python 3.8.8
+[ok] RHeadshot methods (0.0s): ['CreateHeadFromPhoto', 'ImportHeadFromObj', 'thisown']
+[ok] RHeadshot.ImportHeadFromObj doc (0.0s): ImportHeadFromObj(std::wstring const & strObjPath, RO::EHSBodyType eBodyType, RO::EHSLevel eLevel, IntVector kPtMap={}, bool bNeutralNeck=True) -> RStatus
+[ok] RLPy2 headshot-ish names (0.0s): ['EHSBodyAge', 'EHSBodyGender', 'EHSBodyMuscle', 'EHSBodyShape', 'EHSBodyType', 'Headshot3', 'RBaseHeadUpdateOption']
+[ok] RLPy2.Headshot3.GetInterface (0.0s): <RLPy2.Headshot3 object at 0x0000018E7A72A0F0>
+[ok] Headshot3 interface methods (0.0s): ['ActiveImageMatching', 'AiGenBodyImage', 'AiGenFrontImage', 'AiGenSideImage', 'BlendSkinPhotoDiffuse', 'BlendSkinPhotoNormal', 'CenerateCharacter', 'CenerateCharacterBody', 'CheckPresetSettingsValid', 'DeActiveImageMatching', 'GenerateSkinPhotos', 'GetEyeColor', 'GetInterface', 'GetLandmarks', 'GetSkinColor', 'GetTextureSize', 'PresetMorphSlider', 'RefineMesh', 'ReprojectPhoto', 'ResetSkinColor', 'RestoreTextureSetting', 'SetEyeColor', 'SetHeadScale', 'SetIrisUVRadius', 'SetSkinColor', 'SetTextureSize']
+[ok] doc ActiveImageMatching (0.0s): ActiveImageMatching(self: RLPy2.Headshot3, bSide: bool, bEnterMode: bool = True) -> RLPy2.RResult
+
+[ok] doc AiGenBodyImage (0.0s): AiGenBodyImage(self: RLPy2.Headshot3, arg0: str, arg1: str, arg2: str) -> RLPy2.RResult
+
+[ok] doc AiGenFrontImage (0.0s): AiGenFrontImage(self: RLPy2.Headshot3, arg0: str, arg1: str) -> RLPy2.RResult
+
+[ok] doc AiGenSideImage (0.0s): AiGenSideImage(self: RLPy2.Headshot3, arg0: str, arg1: str, arg2: str) -> RLPy2.RResult
+
+[ok] doc BlendSkinPhotoDiffuse (0.0s): BlendSkinPhotoDiffuse(self: RLPy2.Headshot3, fDelight: float, fRedness: float) -> RLPy2.RResult
+
+[ok] doc BlendSkinPhotoNormal (0.0s): BlendSkinPhotoNormal(self: RLPy2.Headshot3, fRoughStrength: float, fDetailStrength: float, Eye: float, Nose: float, fMouthInterior: float, fForehed: float) -> RLPy2.RResult
+
+[ok] doc CenerateCharacter (0.0s): CenerateCharacter(self: RLPy2.Headshot3, arg0: str, arg1: RLPy2.EHSBodyType, arg2: bool, arg3: RLPy2.RArrayListWString, arg4: RLPy2.RArrayListWString, arg5: RLPy2.RArrayListWString) -> RLPy2.RResult
+
+[ok] doc CenerateCharacterBody (0.0s): CenerateCharacterBody(self: RLPy2.Headshot3, strPhotoPath: str, eBodyAge: RLPy2.EHSBodyAge, eBodyShape: RLPy2.EHSBodyShape, eBodyGender: RLPy2.EHSBodyGender, eBodyMuscle: RLPy2.EHSBodyMuscle) -> RLPy2.RResult
+
+[ok] doc CheckPresetSettingsValid (0.0s): CheckPresetSettingsValid(self: RLPy2.Headshot3) -> RLPy2.RArrayListWString
+
+[ok] doc DeActiveImageMatching (0.0s): DeActiveImageMatching(self: RLPy2.Headshot3) -> RLPy2.RResult
+
+[ok] doc GenerateSkinPhotos (0.0s): GenerateSkinPhotos(self: RLPy2.Headshot3, bUpscale: bool, eUpscaleModel: RLPy2.EUpscaleModel, bUsePhotoEyeBrow: bool, bMirrorEyeBrow: bool) -> RLPy2.RResult
+
+[ok] doc GetEyeColor (0.0s): GetEyeColor(self: RLPy2.Headshot3) -> RLPy2.RRgb
+
+[ok] doc GetInterface (0.0s): GetInterface() -> RLPy2.Headshot3
+
+[ok] doc GetLandmarks (0.0s): GetLandmarks(self: RLPy2.Headshot3, bFront: bool) -> RLPy2.RArrayListRVector2f
+
+[ok] doc GetSkinColor (0.0s): GetSkinColor(self: RLPy2.Headshot3) -> RLPy2.RRgb
+
+[ok] doc GetTextureSize (0.0s): GetTextureSize(self: RLPy2.Headshot3) -> int
+
+[ok] doc PresetMorphSlider (0.0s): PresetMorphSlider(self: RLPy2.Headshot3) -> RLPy2.RResult
+
+[ok] doc RefineMesh (0.0s): RefineMesh(self: RLPy2.Headshot3, arg0: RLPy2.RArrayListRVector2f, arg1: RLPy2.RArrayListRVector2f, arg2: RLPy2.RArrayListBool) -> RLPy2.RResult
+
+[ok] doc ReprojectPhoto (0.0s): ReprojectPhoto(self: RLPy2.Headshot3) -> RLPy2.RResult
+
+[ok] doc ResetSkinColor (0.0s): ResetSkinColor(self: RLPy2.Headshot3) -> RLPy2.RResult
+
+[ok] doc RestoreTextureSetting (0.0s): RestoreTextureSetting(self: RLPy2.Headshot3) -> RLPy2.RResult
+
+[ok] doc SetEyeColor (0.0s): SetEyeColor(*args, **kwargs)
+Overloaded function.
+
+1. SetEyeColor(self: RLPy2.Headshot3, eColor: RLPy2.EEyeColor) -> RLPy2.RResult
+
+2. SetEyeColor(self: RLPy2.Headshot3, kColor: RLPy2.RRgb) -> RLPy2.RResult
+
+[ok] doc SetHeadScale (0.0s): SetHeadScale(self: RLPy2.Headshot3, fValue: float) -> RLPy2.RResult
+
+[ok] doc SetIrisUVRadius (0.0s): SetIrisUVRadius(self: RLPy2.Headshot3, fValue: float) -> RLPy2.RResult
+
+[ok] doc SetSkinColor (0.0s): SetSkinColor(self: RLPy2.Headshot3, kColor: RLPy2.RRgb) -> RLPy2.RResult
+
+[ok] doc SetTextureSize (0.0s): SetTextureSize(self: RLPy2.Headshot3, nTextureSize: int) -> RLPy2.RResult
+

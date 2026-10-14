@@ -1,0 +1,29 @@
+{
+ "shift_back": 0.0,
+ "outside": 0,
+ "min_clearance_mm": 10.967808082340891,
+ "TeethUpper": {
+  "faces": 3360,
+  "boundary_edges": 0
+ },
+ "TeethLower": {
+  "faces": 3360,
+  "boundary_edges": 0
+ },
+ "GumUpper": {
+  "faces": 4512,
+  "boundary_edges": 0
+ },
+ "GumLower": {
+  "faces": 4512,
+  "boundary_edges": 0
+ },
+ "Tongue": {
+  "faces": 800,
+  "boundary_edges": 0
+ },
+ "overlap_upper_lower_teeth": 0,
+ "overlap_tongue_teethlower": 0,
+ "overlap_tongue_gumlower": 0,
+ "overlap_tongue_upper": 0
+}

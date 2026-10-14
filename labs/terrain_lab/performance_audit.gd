@@ -19,6 +19,9 @@ func _capture() -> void:
 	host.get_node("CanvasLayer").visible = false
 	host.camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	var views := [["overview",Vector3(0,3,3),145.0,.86,-.08],["village",Vector3(-42,4,-39),63.0,.69,-.15],["bridge",Vector3(-11,2,65),38.0,.50,.6]]
+	var flying := OS.get_cmdline_user_args().has("--free-benchmark")
+	if flying:
+		views = [["free_flight",Vector3(-45,3,-36),63.0,.69,-.15]]
 	for view in views:
 		var target: Vector3 = view[1]
 		var elevation: float = view[3]
@@ -26,12 +29,20 @@ func _capture() -> void:
 		host.camera.size = view[2]
 		host.camera.position = target+Vector3(sin(azimuth)*cos(elevation),sin(elevation),cos(azimuth)*cos(elevation))*190
 		host.camera.look_at(target)
+		if flying:
+			host.camera.projection = Camera3D.PROJECTION_PERSPECTIVE
+			host.camera.fov = 55
+			host.camera.position = Vector3(-63,9,-17)
+			host.camera.look_at(target)
 		await get_tree().create_timer(2.0).timeout
 		var samples: Array[float] = []
 		var gpu: Array[float] = []
 		var cpu: Array[float] = []
 		var previous := Time.get_ticks_usec()
 		for i in range(180):
+			if flying:
+				host.camera.position.x += .05
+				host.camera.look_at(target)
 			await RenderingServer.frame_post_draw
 			var now := Time.get_ticks_usec()
 			samples.append(float(now-previous)/1000.0)
@@ -41,6 +52,9 @@ func _capture() -> void:
 		var mean := _mean(samples)
 		samples.sort()
 		var entry := {"view":view[0],"mean_frame_ms":mean,"fps":1000.0/mean,"p95_frame_ms":samples[int(samples.size()*.95)],"gpu_ms":_mean(gpu),"render_cpu_ms":_mean(cpu),"draw_calls":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),"primitives":RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),"video_memory_mb":float(RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_VIDEO_MEM_USED))/1048576.0}
+		var environment := host.get_node("ReferenceEnvironment")
+		entry["distant_lod_instances"] = environment.lod_entries.filter(func(lod: Dictionary) -> bool: return lod.low_active).size()
+		entry["full_detail_instances"] = environment.lod_entries.size()-int(entry.distant_lod_instances)
 		report.views.append(entry)
 		print("PERFORMANCE_VIEW ",JSON.stringify(entry))
 		get_viewport().get_texture().get_image().save_png(ProjectSettings.globalize_path("res://../../art/maps/archipelago_performance_v1/"+tag+"_"+String(view[0])+".png"))

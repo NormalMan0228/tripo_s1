@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 300" role="img" aria-label="고정 이동값 복사가 큰 눈에서 실패하는 원리"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <text x="20" y="28" class="s-ink" font-size="17" font-weight="700">템플릿 눈 (높이 1cm)</text>
+  <text x="450" y="28" class="s-ink" font-size="17" font-weight="700">큰 카툰 눈 (높이 2.6cm), 같은 이동값</text>
+  <ellipse cx="200" cy="160" rx="120" ry="40" class="s-soft st-muted" stroke-width="2"/>
+  <circle cx="200" cy="160" r="24" class="s-acc" opacity=".55"/>
+  <path d="M80 160 Q200 100 320 160" fill="none" class="st-ink" stroke-width="4"/>
+  <path d="M200 120 L200 158" class="st-good" stroke-width="3" marker-end="url(#ag)"/>
+  <text x="212" y="142" class="s-good" font-size="14">1cm 내려옴 → 닫힘</text>
+  <ellipse cx="640" cy="160" rx="150" ry="104" class="s-soft st-muted" stroke-width="2"/>
+  <circle cx="640" cy="160" r="40" class="s-acc" opacity=".55"/>
+  <path d="M490 160 Q640 30 790 160" fill="none" class="st-ink" stroke-width="4" opacity=".35"/>
+  <path d="M490 160 Q640 82 790 160" fill="none" class="st-bad" stroke-width="4"/>
+  <path d="M640 58 L640 118" class="st-bad" stroke-width="3" marker-end="url(#ab)"/>
+  <text x="652" y="95" class="s-bad" font-size="14">1cm만 내려옴</text>
+  <path d="M640 124 L640 262" class="st-muted" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="652" y="215" class="s-bad" font-size="14">남은 틈 ≈ 1.6cm</text>
+  <text x="20" y="290" class="s-muted" font-size="13">고정 이동값은 "얼마나 움직일지"를 템플릿 얼굴 기준으로 저장한다. 눈 크기가 다르면 닫히지 않거나, 늘어난 면에서 방향이 틀어져 접힌다.</text>
+  <defs><marker id="ag" markerwidth="8" markerheight="8" refx="4" refy="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" class="s-good"/></marker>
+        <marker id="ab" markerwidth="8" markerheight="8" refx="4" refy="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" class="s-bad"/></marker></defs>
+</svg>

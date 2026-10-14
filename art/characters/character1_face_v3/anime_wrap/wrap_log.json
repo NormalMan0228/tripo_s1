@@ -1,0 +1,77 @@
+{
+ "target_rim_points": {
+  "R": 79,
+  "L": 83
+ },
+ "neck_ring_verts": 46,
+ "template_rim_points": {
+  "R": 86,
+  "L": 90
+ },
+ "target_to_template_scale": 1.030469881612844,
+ "target_to_template_translation": [
+  0.0004850039592719115,
+  -0.004600767883022522,
+  1.1782615755074157
+ ],
+ "landmark_residual_mm_after_similarity": {
+  "eye_outer_R": 8.7,
+  "eye_inner_R": 11.8,
+  "eye_outer_L": 9.7,
+  "eye_inner_L": 15.5,
+  "mouth_R": 4.6,
+  "mouth_L": 6.6,
+  "brow1": 13.3,
+  "brow2": 10.9,
+  "brow3": 7.7,
+  "brow4": 7.6,
+  "brow5": 11.8,
+  "brow6": 13.5,
+  "nose": 4.5,
+  "chin": 18.3,
+  "crown": 10.3,
+  "back": 16.6,
+  "ear_top_R": 33.2,
+  "ear_bot_R": 42.2,
+  "ear_back_R": 33.1,
+  "ear_top_L": 31.7,
+  "ear_bot_L": 39.6,
+  "ear_back_L": 34.8,
+  "neck": 0.0
+ },
+ "eye_fit_R": {
+  "scale": 0.9583812510532588,
+  "tilt_deg": -14.036025171008442
+ },
+ "eye_fit_L": {
+  "scale": 1.0221916086853058,
+  "tilt_deg": 14.239235757086986
+ },
+ "eye_rim_depth_change_mm": 5.147861224283412,
+ "masked": {
+  "pocket": 311,
+  "cavity": 344,
+  "pulled": 3628
+ },
+ "field_fit_0": {
+  "n": 788,
+  "mean_mm": 3.8212597309502323
+ },
+ "field_fit_1": {
+  "n": 797,
+  "mean_mm": 0.4979919791635503
+ },
+ "field_fit_2": {
+  "n": 800,
+  "mean_mm": 0.36396384772230433
+ },
+ "skin_offset_mm": {
+  "mean": 4.12763458046055,
+  "max": 27.47295287004924
+ },
+ "eye_ring_points_R": 35,
+ "eye_region_verts_R": 1008,
+ "eye_ring_points_L": 34,
+ "eye_region_verts_L": 995,
+ "hidden_fix_basis": 0
+}

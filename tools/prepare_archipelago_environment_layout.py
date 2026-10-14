@@ -289,6 +289,16 @@ for link in links:
     record['additional_arch_m'] = {'18_bridge_short':.7,'19_bridge_long':.8,'48_bridge_rope':0,'49_bridge_boardwalk':0}[link['id']]
     bridge_records.append(record)
 
+# Physical bridge rebuilds survive later prop-only layout updates. A changed bank
+# route requires rebuilding the authored geometry, rather than scaling it again.
+authored_path=LAB/'assets/fitted_bridges/layout.json'
+if authored_path.exists():
+    authored={b['id']:b for b in json.loads(authored_path.read_text(encoding='utf-8'))['bridges']}
+    for index,record in enumerate(bridge_records):
+        fitted=authored.get(record['id'])
+        if fitted and fitted['a']==record['a'] and fitted['b']==record['b']:
+            bridge_records[index]=fitted
+
 if '--plan-only' in sys.argv:
     design={'instances':instances,'bridges':bridge_records,'piers':piers,'counts':dict(Counter(p['id'] for p in instances))}
     (OUT/'environment_design.json').write_text(json.dumps(design,ensure_ascii=False,indent=2),encoding='utf-8')

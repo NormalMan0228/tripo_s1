@@ -1,0 +1,14 @@
+{
+ "purpose": "Optional comparison: Tripo P2 multiview head of character1 in the neutral closed-mouth pose, to test whether a directly generated neutral is a better rig base than the repaired segmented open-mouth source.",
+ "reference_source": "Front/left/right Workbench renders of art/characters/character1_face_v1/04_rig.blend (neutral pose).",
+ "reference_sha256_by_view": {
+  "front": "721f7decd41b4cd22cb5b213a9a85965e6f88e61681d4e6588264c452ad8534f",
+  "left": "ce42b658dc116942766a58e21375b04b7f4770d3e4cd0bd37f313d68f4137ceb",
+  "right": "e1c876d426f2504436ccd2b2455ff75a2594fd2a31353be27ebbdc1a3b6d722d"
+ },
+ "reference_approved": false,
+ "user_authorization": "",
+ "credit_cap": 150,
+ "expected_credits": 120,
+ "note": "Fill reference_approved=true and user_authorization (the user's words + date) only after the user reviews the three images. Without both, `submit` refuses to make a paid call."
+}

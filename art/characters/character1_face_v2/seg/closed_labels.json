@@ -1,0 +1,118 @@
+{
+ "lip_front": -0.3168678283691406,
+ "n_open_pts": 90,
+ "face_label_counts": {
+  "mouth_in": 2896,
+  "lid_up_R": 169,
+  "lid_lo_R": 251,
+  "neck": 2692,
+  "lips": 581,
+  "skin": 4656,
+  "scalp": 752,
+  "ear_R": 1181,
+  "lid_lo_L": 276,
+  "lid_up_L": 159,
+  "ear_L": 1225
+ },
+ "closed_mouth": true,
+ "palette": {
+  "skin": [
+   0.2,
+   0.35,
+   1.0
+  ],
+  "scalp": [
+   0.2,
+   0.35,
+   1.0
+  ],
+  "neck": [
+   0.0,
+   0.85,
+   0.85
+  ],
+  "ear_L": [
+   1.0,
+   0.6,
+   0.0
+  ],
+  "ear_R": [
+   0.85,
+   0.45,
+   0.0
+  ],
+  "eye_L": [
+   1.0,
+   1.0,
+   0.0
+  ],
+  "eye_R": [
+   0.85,
+   0.85,
+   0.0
+  ],
+  "lid_up_L": [
+   0.0,
+   0.8,
+   0.0
+  ],
+  "lid_up_R": [
+   0.0,
+   0.6,
+   0.0
+  ],
+  "lid_lo_L": [
+   0.55,
+   1.0,
+   0.55
+  ],
+  "lid_lo_R": [
+   0.4,
+   0.8,
+   0.4
+  ],
+  "lips": [
+   1.0,
+   0.0,
+   0.9
+  ],
+  "mouth_in": [
+   0.5,
+   0.0,
+   0.2
+  ],
+  "teeth_up": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "teeth_lo": [
+   0.75,
+   0.75,
+   0.75
+  ],
+  "tongue": [
+   1.0,
+   0.0,
+   0.0
+  ],
+  "gum_lo": [
+   0.6,
+   0.2,
+   0.0
+  ]
+ },
+ "coarse_map": {
+  "lid_up_L": "skin",
+  "lid_up_R": "skin",
+  "lid_lo_L": "skin",
+  "lid_lo_R": "skin",
+  "lips": "skin",
+  "mouth_in": "mouth_in",
+  "gum_lo": "mouth_in",
+  "teeth_lo": "teeth_up",
+  "eye_R": "eye_L",
+  "ear_R": "ear_L",
+  "lid_dummy": "skin"
+ }
+}

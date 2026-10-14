@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 860 170" role="img" aria-label="T6 순서"><style>
+text{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+.s-ink{fill:#1B1F27}.s-muted{fill:#5B6473}.s-paper{fill:#fff}.s-soft{fill:#EEF1F6}.s-acc{fill:#2F5BD3}.s-good{fill:#1E8A52}.s-bad{fill:#C83A32}.s-warn{fill:#B26A00}
+.st-acc{stroke:#2F5BD3}.st-good{stroke:#1E8A52}.st-ink{stroke:#1B1F27}.st-muted{stroke:#5B6473}.st-bad{stroke:#C83A32}.st-warn{stroke:#B26A00}
+</style>
+  <g font-size="12.5">
+    <rect x="6" y="28" width="150" height="86" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="81" y="54" text-anchor="middle" class="s-ink" font-weight="600">① 리그 완성본</text><text x="81" y="74" text-anchor="middle" class="s-muted">얼굴 9만 4천 점</text><text x="81" y="92" text-anchor="middle" class="s-muted">표정 키 6개</text>
+    <rect x="176" y="28" width="150" height="86" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="251" y="54" text-anchor="middle" class="s-ink" font-weight="600">② 경계선 잠금</text><text x="251" y="74" text-anchor="middle" class="s-muted">눈 구멍·입술 가장자리</text><text x="251" y="92" text-anchor="middle" class="s-muted">점에 가중치 1</text>
+    <rect x="346" y="28" width="150" height="86" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="421" y="54" text-anchor="middle" class="s-ink" font-weight="600">③ 편집 모드 축소</text><text x="421" y="74" text-anchor="middle" class="s-muted">모서리 합치기</text><text x="421" y="92" text-anchor="middle" class="s-muted">표정 키가 함께 따라옴</text>
+    <rect x="516" y="28" width="150" height="86" rx="8" class="s-paper st-acc" stroke-width="1.5"/><text x="591" y="54" text-anchor="middle" class="s-ink" font-weight="600">④ 자동 검사</text><text x="591" y="74" text-anchor="middle" class="s-muted">모양 차이·대칭</text><text x="591" y="92" text-anchor="middle" class="s-muted">경계·접힘</text>
+    <rect x="686" y="28" width="168" height="86" rx="8" class="s-paper st-good" stroke-width="2"/><text x="770" y="54" text-anchor="middle" class="s-ink" font-weight="600">⑤ glb → Godot</text><text x="770" y="74" text-anchor="middle" class="s-muted">T3과 같은 방식으로</text><text x="770" y="92" text-anchor="middle" class="s-muted">불러와 캡처</text>
+    <path d="M156 71 H172 M326 71 H342 M496 71 H512 M666 71 H682" class="st-muted" stroke-width="2"/>
+    <text x="6" y="146" class="s-muted">점을 옮겨 모양을 바꾸는 단계는 없습니다. 모서리를 합칠 때 새 점은 원래 표면 위의 가장 오차가 작은 자리에 놓입니다.</text>
+  </g>
+</svg>
