@@ -11,6 +11,7 @@ extends Node3D
 ## the spot is nudged until it is off the roads, clear of doors, villagers,
 ## activity spots, water, buildings, bridges and other props, then turned to face
 ## the nearest road so it is used from the path side.
+const NpcGifts = preload("res://scripts/npc_gifts.gd")
 const A := preload("res://scripts/art.gd")
 const Town := preload("res://scripts/town.gd")
 const Roads := preload("res://scripts/roads.gd")
@@ -266,6 +267,7 @@ func _process(delta: float) -> void:
 		apply_night(night_level())
 	for entry in objects:
 		match entry.kind:
+			"mailbox": raise_flag(entry)
 			"vane": animate_vane(entry, delta)
 			"chimes": animate_chimes(entry, delta)
 			"feeder": animate_birds(entry, delta)
@@ -971,11 +973,41 @@ func use_mailbox(entry: Dictionary) -> void:
 	tween.tween_property(flap, "rotation:x", 1.35, 0.25).set_trans(Tween.TRANS_BACK)
 	tween.tween_interval(2.4)
 	tween.tween_property(flap, "rotation:x", 0.0, 0.3)
-	var lines := mail_lines()
+	# Letters from residents (npc_gifts.gd) come first: the unread ones are read out and marked.
+	var letters: Array = []
+	var api = app.get("api") if app else null
+	if api and not str(api.token).is_empty():
+		var reply: Dictionary = await api.request("/v1/letters")
+		if reply.ok: letters = reply.data.get("letters", [])
+	var lines := []
+	var shown := []
+	for letter in letters:
+		if letter.get("read", true): continue
+		lines.append_array(NpcGifts.letter_lines(letter))
+		shown.append(letter.id)
+	lines.append_array(mail_lines() if shown.is_empty() else [])
 	var choices := []
+	if letters.size() > shown.size(): choices.append([tr("지난 편지 다시 읽기"), func(): reread_letters(letters)])
 	if app.social and app.social.enabled: choices.append([tr("함께하기 메뉴 열기"), app.social.open_menu])
 	choices.append([tr("우편함 닫기"), Callable()])
 	if app.has_method("open_dialogue"): app.open_dialogue(tr("나의 우편함"), "", lines, choices)
+	if not shown.is_empty():
+		var marked: Dictionary = await api.post("/v1/letters/read", api.mutation({"ids":shown}))
+		if marked.ok and app.me is Dictionary: app.me["npc_letters_unread"] = int(marked.data.get("unread", 0))
+
+## Every letter again, newest first.
+func reread_letters(letters: Array) -> void:
+	var lines := []
+	for letter in letters: lines.append_array(NpcGifts.letter_lines(letter))
+	if lines.is_empty(): lines = [tr("아직 받은 편지가 없어요.")]
+	if app.has_method("open_dialogue"): app.open_dialogue(tr("나의 우편함"), "", lines, [[tr("우편함 닫기"), Callable()]])
+
+## The flag stands up while letters, invites or rewards are waiting.
+func raise_flag(entry: Dictionary) -> void:
+	if not entry.has("flag") or not is_instance_valid(entry.flag): return
+	var unread := int(app.me.get("npc_letters_unread", 0)) if app and app.me is Dictionary else 0
+	var goal := -PI*0.5 if unread > 0 or mail_waiting() else 0.0
+	entry.flag.rotation.x = move_toward(entry.flag.rotation.x, goal, get_process_delta_time()*4.0)
 
 ## What the mailbox says: invites, rewards waiting and recent notes (read-only).
 func mail_lines() -> Array:
