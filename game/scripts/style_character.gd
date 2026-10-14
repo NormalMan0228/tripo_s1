@@ -5,9 +5,16 @@ var animator: AnimationPlayer
 var active := ""
 var body_skeleton: Skeleton3D
 var wardrobe := false
+## The model and the motion clips retargeted onto its rig, made once and shared by every copy (the
+## walker, other players' copies, the wardrobe preview, the HUD medallion). Reading and retargeting
+## them for each copy took about 0.2-0.35 s, a hitch at every change of look.
+static var scenes := {}
+static var movement_libraries := {}
 
 func _ready() -> void:
-	actor=(load("res://assets/explorer_b_wardrobe.glb" if wardrobe else "res://assets/explorer_b_reference.glb") as PackedScene).instantiate()
+	var model := "res://assets/explorer_b_wardrobe.glb" if wardrobe else "res://assets/explorer_b_reference.glb"
+	if not scenes.has(model): scenes[model]=load(model)
+	actor=(scenes[model] as PackedScene).instantiate()
 	actor.rotation.y=-PI*.5
 	add_child(actor)
 	var skeletons := actor.find_children("*","Skeleton3D",true,false)
@@ -16,6 +23,10 @@ func _ready() -> void:
 	var animations := actor.find_children("*","AnimationPlayer",true,false)
 	if animations.is_empty():return
 	animator=animations[0]
+	if movement_libraries.has(model):
+		animator.add_animation_library("movement",movement_libraries[model])
+		set_walking(false)
+		return
 	var reference := (load("res://assets/explorer_b_motion.glb") as PackedScene).instantiate()
 	var sources := reference.find_children("*","AnimationPlayer",true,false)
 	if not sources.is_empty():
@@ -35,6 +46,7 @@ func _ready() -> void:
 			clip.loop_mode=Animation.LOOP_LINEAR
 			library.add_animation(source_name,clip)
 		animator.add_animation_library("movement",library)
+		movement_libraries[model]=library
 	reference.free()
 	set_walking(false)
 
