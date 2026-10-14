@@ -81,3 +81,15 @@ VM은 평소 GitHub에서 코드를 받는다(`update_online_server.sh`의 `git 
 `private/`는 버킷 정책 `SchoolServerPrivateRead`로 **학교 서버 IP(54.117.10.64)만** 읽을 수 있다.
 서버 IP가 바뀌면 그 정책의 IP도 바꾼다. 채팅에서 서명 주소를 복사하면 키 부분이 가려져 403이 나므로 서명 주소는 쓰지 않는다.
 
+## 학교 서버 자동 업데이트 (2026-10-14부터)
+
+VM에서 한 번만: `cd ~/tripo_s1` → `sudo git pull --ff-only origin dev` → `sudo bash ops/install_auto_update.sh`.
+그 뒤로는 VM에 들어갈 필요가 없다.
+
+- 배포: 위 1~4가 끝나면 `git push origin <커밋>:school-release`. dev에 올리는 것만으로는 배포되지 않는다.
+- 서버가 5분마다 확인 → 새 커밋이면 10분 점검 공지(게임 안 카운트다운) → 백업 → 새 코드 → 재시작 →
+  `notice.sh release <버전>`(저장된 내려받기 주소 유지). 대략 push 후 15~20분이면 끝난다.
+- 실패하면 그 커밋은 다시 시도하지 않는다(브랜치가 다시 바뀔 때 재시도). 백업은 업데이트 스크립트가 먼저 만든다.
+- 상태: `sudo bash ops/install_auto_update.sh --status` (로그 /var/log/villagen-autoupdate.log), 끄기: `--remove`.
+- 점검 공지 시간·브랜치는 `/etc/systemd/system/villagen-autoupdate.service`의 Environment 줄.
+

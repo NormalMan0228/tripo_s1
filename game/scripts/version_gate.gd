@@ -204,7 +204,9 @@ func _process(delta: float) -> void:
 	poll_wait -= delta
 	if poll_wait <= 0.0:
 		poll_wait = RETRY_SECONDS if is_blocked() else POLL_SECONDS
-		if online() or (is_blocked() and not host.is_empty()): ask()
+		# The title and login screens ask too: a maintenance notice posted while a player waits there
+		# (before signing in) shows its countdown instead of surprising them after login.
+		if online() or not host.is_empty(): ask()
 	if notice.is_empty(): return
 	var left := seconds_to_start()
 	var active := bool(notice.get("active", false))
