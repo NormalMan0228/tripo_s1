@@ -85,7 +85,7 @@ try {
         $taskProcess = Start-Process -FilePath $taskGodot -ArgumentList $taskArguments -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput 'artifacts\integration-render.log' -RedirectStandardError 'artifacts\integration-render-error.log'
         Get-Content artifacts\integration-render.log
         Get-Content artifacts\integration-render-error.log
-        if ($taskProcess.ExitCode -ne 0) { throw 'Rendered integration failed' }
+        if ($taskProcess.ExitCode -ne 0) { throw "Rendered integration failed (exit $('0x{0:X8}' -f $taskProcess.ExitCode))" }
         if ((Get-Content artifacts\integration-render-error.log -Raw) -match '(?m)^\s*(SCRIPT ERROR|ERROR):') { throw 'Godot reported runtime errors during rendered integration.' }
     } else {
         $taskArguments = @('--headless') + $taskGameArguments + @('--','--mute','--qa',('--region=' + $Region),('--difficulty=' + $Difficulty))
@@ -97,8 +97,13 @@ try {
         $taskProcess = Start-Process -FilePath $taskGodot -ArgumentList $taskArguments -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput 'artifacts\integration-headless.log' -RedirectStandardError 'artifacts\integration-headless-error.log'
         Get-Content artifacts\integration-headless.log
         Get-Content artifacts\integration-headless-error.log
-        if ($taskProcess.ExitCode -ne 0) { throw 'Godot integration failed' }
-        if ((Get-Content artifacts\integration-headless-error.log -Raw) -match '(?m)^\s*(SCRIPT ERROR|ERROR):') { throw 'Godot reported runtime errors during headless integration.' }
+        if ($taskProcess.ExitCode -ne 0) { throw "Godot integration failed (exit $('0x{0:X8}' -f $taskProcess.ExitCode))" }
+        # The headless (dummy) renderer keeps no instance shader parameters and complains when a
+        # tinted walker is drawn; the real renderer stays silent (checked in a window), so that one
+        # message does not fail a run. Every other error still does.
+        $taskErrors = [string](Get-Content artifacts\integration-headless-error.log -Raw)
+        $taskErrors = $taskErrors -replace '(?m)^ERROR: Parameter "material" is null\.\r?\n\s*at: material_get_instance_shader_parameters \(servers/rendering/dummy/[^\r\n]*(\r?\n)?',''
+        if ($taskErrors -match '(?m)^\s*(SCRIPT ERROR|ERROR):') { throw 'Godot reported runtime errors during headless integration.' }
     }
 } finally {
     if ($taskServer -and -not $taskServer.HasExited) { Stop-Process -Id $taskServer.Id; $taskServer.WaitForExit(5000) | Out-Null }
