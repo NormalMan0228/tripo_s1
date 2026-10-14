@@ -1,0 +1,2594 @@
+{
+ "bas-gl": {
+  "label": "bas-gl",
+  "warm_runs": 3,
+  "cold_runs": 1,
+  "changes": {
+   "start -> title": {
+    "seconds": [
+     5.93,
+     5.83,
+     5.88
+    ],
+    "worst_ms": [
+     241.8,
+     238.7,
+     243.0
+    ],
+    "over_50ms": [
+     36,
+     35,
+     35
+    ],
+    "cold": {
+     "black_until_card_s": 4.59,
+     "frames": 232,
+     "longest": [
+      285.8,
+      244.6,
+      147.5,
+      140.9,
+      121.6
+     ],
+     "mean_ms": 26.2,
+     "over_50ms": 39,
+     "phases": {
+      "GPU upload + engine": 1590.0,
+      "collision": 1362.6,
+      "frames": 193.0,
+      "longest frame": 244.6,
+      "node assembly": 1882.2,
+      "pad levelling": 168.8,
+      "render": 229.6,
+      "waiting for file reads": 197.9
+     },
+     "seconds": 6.08,
+     "static_mb": 625.0,
+     "texture_mb": 1841.2,
+     "video_mb": 2003.5,
+     "worst_ms": 285.8
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 275.2,
+     "GPU upload + engine": 1469.9,
+     "node assembly": 1904.0,
+     "pad levelling": 167.3,
+     "collision": 1313.0,
+     "render": 217.6,
+     "first render": 0.0
+    },
+    "video_mb": 1995.3,
+    "texture_mb": 1841.2,
+    "black_s": [
+     4.64,
+     4.62,
+     4.6
+    ],
+    "cold_black_s": 4.59
+   },
+   "title -> home": {
+    "seconds": [
+     1.08,
+     1.07,
+     1.08
+    ],
+    "worst_ms": [
+     62.8,
+     62.2,
+     65.3
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 326,
+     "longest": [
+      62.9,
+      59.9,
+      53.0,
+      32.4,
+      26.0
+     ],
+     "mean_ms": 3.4,
+     "over_50ms": 3,
+     "phases": {
+      "GPU upload + engine": 90.6,
+      "frames": 10.0,
+      "longest frame": 62.9,
+      "node assembly": 203.7,
+      "render": 15.8
+     },
+     "seconds": 1.11,
+     "static_mb": 629.9,
+     "texture_mb": 1870.9,
+     "video_mb": 2024.7,
+     "worst_ms": 62.9
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 46.5,
+     "node assembly": 207.4,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 13.8,
+     "first render": 0.0
+    },
+    "video_mb": 2016.5,
+    "texture_mb": 1870.9
+   },
+   "home -> village": {
+    "seconds": [
+     1.47,
+     1.46,
+     1.47
+    ],
+    "worst_ms": [
+     107.4,
+     102.1,
+     103.6
+    ],
+    "over_50ms": [
+     4,
+     3,
+     4
+    ],
+    "cold": {
+     "frames": 309,
+     "longest": [
+      126.3,
+      99.9,
+      57.0,
+      51.3,
+      48.8
+     ],
+     "mean_ms": 5.0,
+     "over_50ms": 4,
+     "phases": {
+      "GPU upload + engine": 122.1,
+      "after build": 14.6,
+      "first render": 454.9,
+      "frames": 38.0,
+      "longest frame": 126.3,
+      "node assembly": 198.1,
+      "render": 24.5
+     },
+     "seconds": 1.55,
+     "static_mb": 644.3,
+     "texture_mb": 1861.4,
+     "video_mb": 2027.3,
+     "worst_ms": 126.3
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 97.0,
+     "node assembly": 199.4,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 23.0,
+     "first render": 363.5
+    },
+    "video_mb": 2019.2,
+    "texture_mb": 1861.4
+   },
+   "village -> resident's house": {
+    "seconds": [
+     1.0,
+     1.03,
+     1.01
+    ],
+    "worst_ms": [
+     75.0,
+     78.1,
+     77.3
+    ],
+    "over_50ms": [
+     1,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 298,
+     "longest": [
+      77.5,
+      51.1,
+      41.2,
+      23.0,
+      12.8
+     ],
+     "mean_ms": 3.6,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 46.9,
+      "frames": 7.0,
+      "longest frame": 77.5,
+      "node assembly": 167.8,
+      "render": 14.5
+     },
+     "seconds": 1.06,
+     "static_mb": 636.1,
+     "texture_mb": 1880.7,
+     "video_mb": 2036.3,
+     "worst_ms": 77.5
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 23.6,
+     "node assembly": 163.9,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 12.5,
+     "first render": 0.0
+    },
+    "video_mb": 2028.1,
+    "texture_mb": 1880.7
+   },
+   "resident's house -> village": {
+    "seconds": [
+     1.32,
+     1.31,
+     1.29
+    ],
+    "worst_ms": [
+     103.9,
+     99.8,
+     99.0
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 314,
+     "longest": [
+      97.0,
+      55.8,
+      44.5,
+      38.7,
+      36.1
+     ],
+     "mean_ms": 4.2,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 89.4,
+      "after build": 12.0,
+      "first render": 251.5,
+      "frames": 34.0,
+      "longest frame": 97.0,
+      "node assembly": 192.2,
+      "render": 19.9
+     },
+     "seconds": 1.32,
+     "static_mb": 644.8,
+     "texture_mb": 1864.2,
+     "video_mb": 2030.7,
+     "worst_ms": 97.0
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 87.1,
+     "node assembly": 186.9,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 17.4,
+     "first render": 254.8
+    },
+    "video_mb": 2022.6,
+    "texture_mb": 1864.2
+   },
+   "village -> expedition": {
+    "seconds": [
+     1.85,
+     1.86,
+     1.85
+    ],
+    "worst_ms": [
+     125.2,
+     118.2,
+     118.2
+    ],
+    "over_50ms": [
+     1,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 305,
+     "longest": [
+      174.9,
+      51.3,
+      32.5,
+      22.7,
+      19.9
+     ],
+     "mean_ms": 6.3,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 86.0,
+      "file read (main thread)": 13.6,
+      "frames": 63.0,
+      "longest frame": 51.3,
+      "node assembly": 797.4,
+      "render": 84.9
+     },
+     "seconds": 1.92,
+     "static_mb": 636.7,
+     "texture_mb": 1872.6,
+     "video_mb": 2036.5,
+     "worst_ms": 174.9
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 13.8,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 69.5,
+     "node assembly": 800.9,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 84.5,
+     "first render": 0.0
+    },
+    "video_mb": 2028.4,
+    "texture_mb": 1872.6
+   },
+   "expedition -> village": {
+    "seconds": [
+     1.26,
+     1.28,
+     1.29
+    ],
+    "worst_ms": [
+     93.5,
+     97.7,
+     98.0
+    ],
+    "over_50ms": [
+     1,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 262,
+     "longest": [
+      93.9,
+      90.3,
+      36.5,
+      31.2,
+      30.2
+     ],
+     "mean_ms": 5.1,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 106.8,
+      "after build": 9.6,
+      "first render": 229.0,
+      "frames": 27.0,
+      "longest frame": 93.9,
+      "node assembly": 190.0,
+      "render": 32.0
+     },
+     "seconds": 1.34,
+     "static_mb": 649.3,
+     "texture_mb": 1867.4,
+     "video_mb": 2033.9,
+     "worst_ms": 93.9
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 42.9,
+     "node assembly": 191.2,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 30.5,
+     "first render": 235.6
+    },
+    "video_mb": 2025.8,
+    "texture_mb": 1867.4
+   }
+  },
+  "peak_working_set_mb": [
+   1362,
+   1367,
+   1365
+  ]
+ },
+ "fin-gl": {
+  "label": "fin-gl",
+  "warm_runs": 3,
+  "cold_runs": 1,
+  "changes": {
+   "start -> title": {
+    "seconds": [
+     6.41,
+     6.53,
+     6.32
+    ],
+    "worst_ms": [
+     1214.4,
+     1113.5,
+     1147.8
+    ],
+    "over_50ms": [
+     17,
+     18,
+     14
+    ],
+    "cold": {
+     "black_until_card_s": 1.25,
+     "frames": 4008,
+     "longest": [
+      1163.7,
+      236.1,
+      149.9,
+      121.7,
+      106.4
+     ],
+     "mean_ms": 1.6,
+     "over_50ms": 18,
+     "phases": {
+      "GPU upload + engine": 1890.6,
+      "collision": 315.7,
+      "frames": 3950.0,
+      "longest frame": 1163.7,
+      "node assembly": 223.0,
+      "reading the game's scripts": 2238.7,
+      "render": 93.0,
+      "waiting for file reads": 1226.5
+     },
+     "seconds": 6.61,
+     "static_mb": 270.8,
+     "texture_mb": 1337.5,
+     "video_mb": 1500.6,
+     "worst_ms": 1163.7
+    },
+    "phases": {
+     "reading the game's scripts": 2258.4,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 1195.6,
+     "GPU upload + engine": 1691.2,
+     "node assembly": 266.1,
+     "pad levelling": 0.0,
+     "collision": 328.8,
+     "render": 100.3,
+     "first render": 0.0
+    },
+    "video_mb": 1482.4,
+    "texture_mb": 1337.5,
+    "black_s": [
+     1.15,
+     1.24,
+     1.23
+    ],
+    "cold_black_s": 1.25
+   },
+   "title -> home": {
+    "seconds": [
+     1.09,
+     1.08,
+     1.08
+    ],
+    "worst_ms": [
+     65.7,
+     63.2,
+     64.9
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 339,
+     "longest": [
+      60.8,
+      58.0,
+      49.5,
+      32.1,
+      26.0
+     ],
+     "mean_ms": 3.3,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 94.2,
+      "frames": 10.0,
+      "longest frame": 60.8,
+      "node assembly": 198.6,
+      "render": 13.5
+     },
+     "seconds": 1.12,
+     "static_mb": 275.5,
+     "texture_mb": 1367.3,
+     "video_mb": 1521.9,
+     "worst_ms": 60.8
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 49.5,
+     "node assembly": 210.6,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 15.1,
+     "first render": 0.0
+    },
+    "video_mb": 1503.6,
+    "texture_mb": 1367.3
+   },
+   "home -> village": {
+    "seconds": [
+     1.46,
+     1.5,
+     1.4
+    ],
+    "worst_ms": [
+     68.7,
+     69.9,
+     63.6
+    ],
+    "over_50ms": [
+     4,
+     5,
+     3
+    ],
+    "cold": {
+     "frames": 294,
+     "longest": [
+      138.5,
+      57.8,
+      51.6,
+      44.5,
+      43.8
+     ],
+     "mean_ms": 5.2,
+     "over_50ms": 3,
+     "phases": {
+      "GPU upload + engine": 121.7,
+      "after build": 14.6,
+      "first render": 417.2,
+      "frames": 39.0,
+      "longest frame": 138.5,
+      "node assembly": 195.5,
+      "render": 23.6
+     },
+     "seconds": 1.51,
+     "static_mb": 289.9,
+     "texture_mb": 1357.7,
+     "video_mb": 1524.5,
+     "worst_ms": 138.5
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 103.5,
+     "node assembly": 197.6,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 21.3,
+     "first render": 334.8
+    },
+    "video_mb": 1508.3,
+    "texture_mb": 1357.7
+   },
+   "village -> resident's house": {
+    "seconds": [
+     1.02,
+     1.01,
+     1.0
+    ],
+    "worst_ms": [
+     77.7,
+     76.5,
+     73.4
+    ],
+    "over_50ms": [
+     1,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 314,
+     "longest": [
+      82.4,
+      40.8,
+      40.6,
+      22.9,
+      11.9
+     ],
+     "mean_ms": 3.3,
+     "over_50ms": 1,
+     "phases": {
+      "GPU upload + engine": 17.9,
+      "frames": 7.0,
+      "longest frame": 82.4,
+      "node assembly": 167.5,
+      "render": 15.6
+     },
+     "seconds": 1.03,
+     "static_mb": 281.7,
+     "texture_mb": 1377.0,
+     "video_mb": 1533.5,
+     "worst_ms": 82.4
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 16.4,
+     "node assembly": 162.2,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 12.0,
+     "first render": 0.0
+    },
+    "video_mb": 1517.2,
+    "texture_mb": 1377.0
+   },
+   "resident's house -> village": {
+    "seconds": [
+     1.3,
+     1.25,
+     1.26
+    ],
+    "worst_ms": [
+     100.9,
+     57.2,
+     57.7
+    ],
+    "over_50ms": [
+     3,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 320,
+     "longest": [
+      106.1,
+      60.7,
+      56.0,
+      42.6,
+      41.2
+     ],
+     "mean_ms": 4.2,
+     "over_50ms": 3,
+     "phases": {
+      "GPU upload + engine": 107.9,
+      "after build": 11.9,
+      "first render": 264.7,
+      "frames": 35.0,
+      "longest frame": 106.1,
+      "node assembly": 191.2,
+      "render": 19.6
+     },
+     "seconds": 1.34,
+     "static_mb": 290.3,
+     "texture_mb": 1360.6,
+     "video_mb": 1527.9,
+     "worst_ms": 106.1
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 103.9,
+     "node assembly": 183.8,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 17.7,
+     "first render": 195.1
+    },
+    "video_mb": 1511.7,
+    "texture_mb": 1360.6
+   },
+   "village -> expedition": {
+    "seconds": [
+     1.84,
+     1.86,
+     1.87
+    ],
+    "worst_ms": [
+     128.0,
+     118.2,
+     124.3
+    ],
+    "over_50ms": [
+     1,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 350,
+     "longest": [
+      190.2,
+      35.4,
+      29.2,
+      22.7,
+      19.1
+     ],
+     "mean_ms": 5.4,
+     "over_50ms": 1,
+     "phases": {
+      "GPU upload + engine": 62.8,
+      "file read (main thread)": 14.5,
+      "frames": 63.0,
+      "longest frame": 35.4,
+      "node assembly": 792.2,
+      "render": 71.1
+     },
+     "seconds": 1.89,
+     "static_mb": 282.2,
+     "texture_mb": 1368.9,
+     "video_mb": 1533.7,
+     "worst_ms": 190.2
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 15.1,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 71.9,
+     "node assembly": 798.1,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 85.4,
+     "first render": 0.0
+    },
+    "video_mb": 1517.4,
+    "texture_mb": 1368.9
+   },
+   "expedition -> village": {
+    "seconds": [
+     1.19,
+     1.22,
+     1.2
+    ],
+    "worst_ms": [
+     48.2,
+     50.1,
+     53.4
+    ],
+    "over_50ms": [
+     0,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 249,
+     "longest": [
+      82.7,
+      55.5,
+      37.9,
+      29.5,
+      19.9
+     ],
+     "mean_ms": 5.0,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 93.7,
+      "after build": 9.8,
+      "first render": 174.9,
+      "frames": 25.0,
+      "longest frame": 82.7,
+      "node assembly": 181.4,
+      "render": 26.8
+     },
+     "seconds": 1.23,
+     "static_mb": 294.9,
+     "texture_mb": 1363.8,
+     "video_mb": 1531.1,
+     "worst_ms": 82.7
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 43.5,
+     "node assembly": 189.0,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 32.4,
+     "first render": 181.6
+    },
+    "video_mb": 1514.9,
+    "texture_mb": 1363.8
+   }
+  },
+  "peak_working_set_mb": [
+   1028,
+   1008,
+   1016
+  ]
+ },
+ "bas-fp": {
+  "label": "bas-fp",
+  "warm_runs": 3,
+  "cold_runs": 1,
+  "changes": {
+   "start -> title": {
+    "seconds": [
+     6.12,
+     5.97,
+     6.07
+    ],
+    "worst_ms": [
+     244.1,
+     241.4,
+     245.8
+    ],
+    "over_50ms": [
+     19,
+     17,
+     21
+    ],
+    "cold": {
+     "black_until_card_s": 5.22,
+     "frames": 533,
+     "longest": [
+      286.2,
+      227.9,
+      225.7,
+      180.0,
+      174.6
+     ],
+     "mean_ms": 14.0,
+     "over_50ms": 30,
+     "phases": {
+      "GPU upload + engine": 573.7,
+      "collision": 1412.5,
+      "frames": 456.0,
+      "longest frame": 228.0,
+      "node assembly": 2475.6,
+      "pad levelling": 170.4,
+      "render": 1233.2,
+      "waiting for file reads": 1018.6
+     },
+     "seconds": 7.42,
+     "static_mb": 665.6,
+     "texture_mb": 2007.7,
+     "video_mb": 2447.8,
+     "worst_ms": 286.2
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 716.5,
+     "GPU upload + engine": 473.5,
+     "node assembly": 2650.2,
+     "pad levelling": 174.2,
+     "collision": 1419.2,
+     "render": 133.1,
+     "first render": 0.0
+    },
+    "video_mb": 2447.8,
+    "texture_mb": 2007.7,
+    "black_s": [
+     4.48,
+     4.51,
+     4.57
+    ],
+    "cold_black_s": 5.22
+   },
+   "title -> home": {
+    "seconds": [
+     1.15,
+     1.15,
+     1.13
+    ],
+    "worst_ms": [
+     61.1,
+     61.8,
+     61.4
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 355,
+     "longest": [
+      128.2,
+      106.8,
+      60.3,
+      52.9,
+      52.1
+     ],
+     "mean_ms": 3.7,
+     "over_50ms": 5,
+     "phases": {
+      "GPU upload + engine": 98.2,
+      "frames": 12.0,
+      "longest frame": 128.2,
+      "node assembly": 307.5,
+      "render": 117.3
+     },
+     "seconds": 1.32,
+     "static_mb": 667.8,
+     "texture_mb": 2071.7,
+     "video_mb": 2519.0,
+     "worst_ms": 128.2
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 46.5,
+     "node assembly": 274.8,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 6.1,
+     "first render": 0.0
+    },
+    "video_mb": 2519.0,
+    "texture_mb": 2071.7
+   },
+   "home -> village": {
+    "seconds": [
+     1.87,
+     1.87,
+     1.94
+    ],
+    "worst_ms": [
+     128.5,
+     128.3,
+     128.4
+    ],
+    "over_50ms": [
+     3,
+     3,
+     4
+    ],
+    "cold": {
+     "frames": 310,
+     "longest": [
+      135.0,
+      101.7,
+      94.6,
+      56.6,
+      46.2
+     ],
+     "mean_ms": 6.1,
+     "over_50ms": 4,
+     "phases": {
+      "GPU upload + engine": 215.7,
+      "after build": 15.5,
+      "first render": 355.4,
+      "frames": 50.0,
+      "longest frame": 135.0,
+      "node assembly": 550.6,
+      "render": 29.0
+     },
+     "seconds": 1.88,
+     "static_mb": 695.9,
+     "texture_mb": 2029.9,
+     "video_mb": 2475.5,
+     "worst_ms": 135.0
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 216.2,
+     "node assembly": 543.8,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 29.9,
+     "first render": 355.5
+    },
+    "video_mb": 2475.5,
+    "texture_mb": 2029.9
+   },
+   "village -> resident's house": {
+    "seconds": [
+     1.05,
+     1.08,
+     1.05
+    ],
+    "worst_ms": [
+     74.4,
+     85.7,
+     71.4
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 354,
+     "longest": [
+      74.6,
+      52.6,
+      33.7,
+      33.6,
+      27.5
+     ],
+     "mean_ms": 3.0,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 38.9,
+      "frames": 8.0,
+      "longest frame": 74.6,
+      "node assembly": 213.8,
+      "render": 4.1
+     },
+     "seconds": 1.07,
+     "static_mb": 683.7,
+     "texture_mb": 2082.7,
+     "video_mb": 2531.6,
+     "worst_ms": 74.6
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 42.0,
+     "node assembly": 215.0,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 4.6,
+     "first render": 0.0
+    },
+    "video_mb": 2531.6,
+    "texture_mb": 2082.7
+   },
+   "resident's house -> village": {
+    "seconds": [
+     1.76,
+     1.77,
+     1.81
+    ],
+    "worst_ms": [
+     125.2,
+     132.4,
+     127.7
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 361,
+     "longest": [
+      127.6,
+      98.8,
+      42.9,
+      42.0,
+      37.7
+     ],
+     "mean_ms": 4.9,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 207.6,
+      "after build": 12.0,
+      "first render": 254.5,
+      "frames": 50.0,
+      "longest frame": 127.6,
+      "node assembly": 535.5,
+      "render": 29.3
+     },
+     "seconds": 1.77,
+     "static_mb": 696.2,
+     "texture_mb": 2033.1,
+     "video_mb": 2479.3,
+     "worst_ms": 127.6
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 214.8,
+     "node assembly": 541.8,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 30.4,
+     "first render": 261.6
+    },
+    "video_mb": 2479.3,
+    "texture_mb": 2033.1
+   },
+   "village -> expedition": {
+    "seconds": [
+     1.95,
+     1.95,
+     1.92
+    ],
+    "worst_ms": [
+     95.5,
+     90.7,
+     92.8
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 343,
+     "longest": [
+      133.4,
+      100.9,
+      91.6,
+      85.7,
+      37.9
+     ],
+     "mean_ms": 6.2,
+     "over_50ms": 4,
+     "phases": {
+      "GPU upload + engine": 133.1,
+      "file read (main thread)": 12.7,
+      "frames": 68.0,
+      "longest frame": 133.5,
+      "node assembly": 940.1,
+      "render": 173.3
+     },
+     "seconds": 2.14,
+     "static_mb": 683.9,
+     "texture_mb": 2050.3,
+     "video_mb": 2496.8,
+     "worst_ms": 133.4
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 10.9,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 93.0,
+     "node assembly": 932.6,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 31.3,
+     "first render": 0.0
+    },
+    "video_mb": 2496.8,
+    "texture_mb": 2050.3
+   },
+   "expedition -> village": {
+    "seconds": [
+     1.6,
+     1.61,
+     1.61
+    ],
+    "worst_ms": [
+     120.5,
+     117.1,
+     118.3
+    ],
+    "over_50ms": [
+     1,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 292,
+     "longest": [
+      120.7,
+      42.9,
+      33.2,
+      30.3,
+      30.2
+     ],
+     "mean_ms": 5.6,
+     "over_50ms": 1,
+     "phases": {
+      "GPU upload + engine": 83.8,
+      "after build": 10.3,
+      "first render": 244.9,
+      "frames": 41.0,
+      "longest frame": 120.7,
+      "node assembly": 537.3,
+      "render": 38.8
+     },
+     "seconds": 1.65,
+     "static_mb": 701.4,
+     "texture_mb": 2036.3,
+     "video_mb": 2482.4,
+     "worst_ms": 120.7
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 77.7,
+     "node assembly": 533.3,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 35.2,
+     "first render": 228.8
+    },
+    "video_mb": 2482.2,
+    "texture_mb": 2036.1
+   }
+  },
+  "peak_working_set_mb": [
+   1796,
+   1735,
+   1732
+  ]
+ },
+ "fin-fp": {
+  "label": "fin-fp",
+  "warm_runs": 3,
+  "cold_runs": 1,
+  "changes": {
+   "start -> title": {
+    "seconds": [
+     6.21,
+     6.47,
+     6.28
+    ],
+    "worst_ms": [
+     456.8,
+     479.4,
+     444.8
+    ],
+    "over_50ms": [
+     7,
+     7,
+     7
+    ],
+    "cold": {
+     "black_until_card_s": 2.26,
+     "frames": 3142,
+     "longest": [
+      334.2,
+      243.3,
+      203.0,
+      176.5,
+      172.8
+     ],
+     "mean_ms": 2.3,
+     "over_50ms": 19,
+     "phases": {
+      "GPU upload + engine": 799.7,
+      "collision": 314.6,
+      "frames": 3022.0,
+      "longest frame": 334.2,
+      "node assembly": 707.0,
+      "reading the game's scripts": 2553.0,
+      "render": 617.7,
+      "waiting for file reads": 1803.2
+     },
+     "seconds": 7.27,
+     "static_mb": 312.3,
+     "texture_mb": 1504.0,
+     "video_mb": 2071.0,
+     "worst_ms": 334.2
+    },
+    "phases": {
+     "reading the game's scripts": 2446.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 1471.8,
+     "GPU upload + engine": 753.2,
+     "node assembly": 795.9,
+     "pad levelling": 0.0,
+     "collision": 312.0,
+     "render": 55.6,
+     "first render": 0.0
+    },
+    "video_mb": 2071.0,
+    "texture_mb": 1504.0,
+    "black_s": [
+     1.71,
+     1.69,
+     1.7
+    ],
+    "cold_black_s": 2.26
+   },
+   "title -> home": {
+    "seconds": [
+     1.15,
+     1.11,
+     1.14
+    ],
+    "worst_ms": [
+     61.0,
+     58.4,
+     58.7
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 347,
+     "longest": [
+      122.1,
+      112.3,
+      59.3,
+      55.2,
+      53.5
+     ],
+     "mean_ms": 3.8,
+     "over_50ms": 5,
+     "phases": {
+      "GPU upload + engine": 99.8,
+      "frames": 12.0,
+      "longest frame": 122.1,
+      "node assembly": 312.1,
+      "render": 113.3
+     },
+     "seconds": 1.33,
+     "static_mb": 314.0,
+     "texture_mb": 1568.0,
+     "video_mb": 2142.1,
+     "worst_ms": 122.1
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 46.2,
+     "node assembly": 281.1,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 6.2,
+     "first render": 0.0
+    },
+    "video_mb": 2142.1,
+    "texture_mb": 1568.0
+   },
+   "home -> village": {
+    "seconds": [
+     1.84,
+     1.8,
+     1.86
+    ],
+    "worst_ms": [
+     104.1,
+     99.9,
+     101.1
+    ],
+    "over_50ms": [
+     3,
+     3,
+     4
+    ],
+    "cold": {
+     "frames": 345,
+     "longest": [
+      101.2,
+      93.4,
+      86.4,
+      51.0,
+      46.0
+     ],
+     "mean_ms": 5.3,
+     "over_50ms": 4,
+     "phases": {
+      "GPU upload + engine": 214.4,
+      "after build": 15.3,
+      "first render": 301.7,
+      "frames": 52.0,
+      "longest frame": 101.2,
+      "node assembly": 542.8,
+      "render": 29.9
+     },
+     "seconds": 1.82,
+     "static_mb": 335.1,
+     "texture_mb": 1526.3,
+     "video_mb": 2098.7,
+     "worst_ms": 101.2
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 212.7,
+     "node assembly": 548.3,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 28.6,
+     "first render": 323.8
+    },
+    "video_mb": 2098.7,
+    "texture_mb": 1526.3
+   },
+   "village -> resident's house": {
+    "seconds": [
+     1.07,
+     1.08,
+     1.06
+    ],
+    "worst_ms": [
+     72.0,
+     78.3,
+     71.8
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 337,
+     "longest": [
+      70.3,
+      51.1,
+      34.1,
+      29.9,
+      20.6
+     ],
+     "mean_ms": 3.2,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 40.1,
+      "frames": 9.0,
+      "longest frame": 70.3,
+      "node assembly": 208.8,
+      "render": 4.7
+     },
+     "seconds": 1.07,
+     "static_mb": 322.9,
+     "texture_mb": 1579.1,
+     "video_mb": 2154.8,
+     "worst_ms": 70.3
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 39.6,
+     "node assembly": 210.9,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 4.6,
+     "first render": 0.0
+    },
+    "video_mb": 2154.8,
+    "texture_mb": 1579.1
+   },
+   "resident's house -> village": {
+    "seconds": [
+     1.69,
+     1.7,
+     1.7
+    ],
+    "worst_ms": [
+     102.4,
+     105.8,
+     97.6
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 348,
+     "longest": [
+      102.3,
+      87.6,
+      44.5,
+      42.7,
+      31.9
+     ],
+     "mean_ms": 5.0,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 217.8,
+      "after build": 12.4,
+      "first render": 227.1,
+      "frames": 49.0,
+      "longest frame": 102.4,
+      "node assembly": 544.7,
+      "render": 28.8
+     },
+     "seconds": 1.74,
+     "static_mb": 335.3,
+     "texture_mb": 1529.5,
+     "video_mb": 2102.4,
+     "worst_ms": 102.3
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 212.1,
+     "node assembly": 539.7,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 28.2,
+     "first render": 199.2
+    },
+    "video_mb": 2102.4,
+    "texture_mb": 1529.5
+   },
+   "village -> expedition": {
+    "seconds": [
+     1.91,
+     1.93,
+     1.91
+    ],
+    "worst_ms": [
+     92.3,
+     97.3,
+     90.8
+    ],
+    "over_50ms": [
+     2,
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 343,
+     "longest": [
+      144.6,
+      98.9,
+      93.1,
+      90.7,
+      42.1
+     ],
+     "mean_ms": 6.3,
+     "over_50ms": 4,
+     "phases": {
+      "GPU upload + engine": 137.3,
+      "file read (main thread)": 12.8,
+      "frames": 67.0,
+      "longest frame": 144.6,
+      "node assembly": 941.5,
+      "render": 185.4
+     },
+     "seconds": 2.15,
+     "static_mb": 330.2,
+     "texture_mb": 1546.7,
+     "video_mb": 2119.9,
+     "worst_ms": 144.6
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 10.8,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 93.0,
+     "node assembly": 927.7,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 29.6,
+     "first render": 0.0
+    },
+    "video_mb": 2119.9,
+    "texture_mb": 1546.7
+   },
+   "expedition -> village": {
+    "seconds": [
+     1.54,
+     1.64,
+     1.56
+    ],
+    "worst_ms": [
+     69.7,
+     83.9,
+     69.6
+    ],
+    "over_50ms": [
+     1,
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 293,
+     "longest": [
+      73.5,
+      40.3,
+      33.7,
+      29.5,
+      27.7
+     ],
+     "mean_ms": 5.3,
+     "over_50ms": 1,
+     "phases": {
+      "GPU upload + engine": 77.7,
+      "after build": 10.0,
+      "first render": 181.8,
+      "frames": 41.0,
+      "longest frame": 73.5,
+      "node assembly": 529.6,
+      "render": 36.9
+     },
+     "seconds": 1.55,
+     "static_mb": 347.5,
+     "texture_mb": 1532.5,
+     "video_mb": 2105.4,
+     "worst_ms": 73.5
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 74.8,
+     "node assembly": 518.4,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 34.9,
+     "first render": 186.1
+    },
+    "video_mb": 2105.4,
+    "texture_mb": 1532.5
+   }
+  },
+  "peak_working_set_mb": [
+   1891,
+   1910,
+   1882
+  ]
+ },
+ "bas-pack": {
+  "label": "bas-pack",
+  "warm_runs": 2,
+  "cold_runs": 1,
+  "changes": {
+   "start -> title": {
+    "seconds": [
+     5.8,
+     5.78
+    ],
+    "worst_ms": [
+     230.0,
+     231.3
+    ],
+    "over_50ms": [
+     34,
+     33
+    ],
+    "cold": {
+     "black_until_card_s": 3.94,
+     "frames": 254,
+     "longest": [
+      296.6,
+      240.8,
+      130.8,
+      128.1,
+      116.7
+     ],
+     "mean_ms": 24.4,
+     "over_50ms": 42,
+     "phases": {
+      "GPU upload + engine": 1796.7,
+      "collision": 1296.9,
+      "frames": 200.0,
+      "longest frame": 240.8,
+      "node assembly": 1820.8,
+      "pad levelling": 174.7,
+      "render": 207.6,
+      "waiting for file reads": 251.1
+     },
+     "seconds": 6.2,
+     "static_mb": 619.3,
+     "texture_mb": 1841.2,
+     "video_mb": 1999.4,
+     "worst_ms": 296.6
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 237.20000000000002,
+     "GPU upload + engine": 1543.5,
+     "node assembly": 1816.6,
+     "pad levelling": 173.25,
+     "collision": 1301.8000000000002,
+     "render": 195.95,
+     "first render": 0.0
+    },
+    "video_mb": 1998.35,
+    "texture_mb": 1841.2,
+    "black_s": [
+     3.93,
+     3.95
+    ],
+    "cold_black_s": 3.94
+   },
+   "title -> home": {
+    "seconds": [
+     1.06,
+     1.06
+    ],
+    "worst_ms": [
+     60.8,
+     62.5
+    ],
+    "over_50ms": [
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 352,
+     "longest": [
+      62.2,
+      57.9,
+      48.6,
+      31.2,
+      26.8
+     ],
+     "mean_ms": 3.3,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 86.0,
+      "frames": 12.0,
+      "longest frame": 62.2,
+      "node assembly": 231.4,
+      "render": 14.3
+     },
+     "seconds": 1.14,
+     "static_mb": 624.2,
+     "texture_mb": 1870.9,
+     "video_mb": 2020.6,
+     "worst_ms": 62.2
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 47.5,
+     "node assembly": 191.10000000000002,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 12.75,
+     "first render": 0.0
+    },
+    "video_mb": 2019.55,
+    "texture_mb": 1870.9
+   },
+   "home -> village": {
+    "seconds": [
+     1.45,
+     1.46
+    ],
+    "worst_ms": [
+     98.1,
+     94.4
+    ],
+    "over_50ms": [
+     3,
+     3
+    ],
+    "cold": {
+     "frames": 298,
+     "longest": [
+      161.6,
+      106.1,
+      56.0,
+      51.5,
+      45.9
+     ],
+     "mean_ms": 5.4,
+     "over_50ms": 4,
+     "phases": {
+      "GPU upload + engine": 118.6,
+      "after build": 14.5,
+      "first render": 514.1,
+      "frames": 37.0,
+      "longest frame": 161.6,
+      "node assembly": 200.3,
+      "render": 25.6
+     },
+     "seconds": 1.6,
+     "static_mb": 638.6,
+     "texture_mb": 1861.4,
+     "video_mb": 2023.3,
+     "worst_ms": 161.6
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 96.5,
+     "node assembly": 195.55,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 24.5,
+     "first render": 348.20000000000005
+    },
+    "video_mb": 2022.25,
+    "texture_mb": 1861.4
+   },
+   "village -> resident's house": {
+    "seconds": [
+     1.02,
+     1.03
+    ],
+    "worst_ms": [
+     76.1,
+     76.8
+    ],
+    "over_50ms": [
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 285,
+     "longest": [
+      75.9,
+      38.8,
+      38.7,
+      21.1,
+      12.4
+     ],
+     "mean_ms": 3.6,
+     "over_50ms": 1,
+     "phases": {
+      "GPU upload + engine": 43.6,
+      "frames": 8.0,
+      "longest frame": 75.9,
+      "node assembly": 164.4,
+      "render": 12.7
+     },
+     "seconds": 1.02,
+     "static_mb": 630.4,
+     "texture_mb": 1880.7,
+     "video_mb": 2032.2,
+     "worst_ms": 75.9
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 28.75,
+     "node assembly": 159.55,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 12.75,
+     "first render": 0.0
+    },
+    "video_mb": 2031.15,
+    "texture_mb": 1880.7
+   },
+   "resident's house -> village": {
+    "seconds": [
+     1.3,
+     1.33
+    ],
+    "worst_ms": [
+     55.3,
+     96.8
+    ],
+    "over_50ms": [
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 312,
+     "longest": [
+      94.4,
+      57.1,
+      40.7,
+      38.4,
+      37.5
+     ],
+     "mean_ms": 4.3,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 91.8,
+      "after build": 10.3,
+      "first render": 247.9,
+      "frames": 35.0,
+      "longest frame": 94.4,
+      "node assembly": 188.0,
+      "render": 20.6
+     },
+     "seconds": 1.33,
+     "static_mb": 639.1,
+     "texture_mb": 1864.2,
+     "video_mb": 2026.7,
+     "worst_ms": 94.4
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 112.75,
+     "node assembly": 190.3,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 20.450000000000003,
+     "first render": 225.85000000000002
+    },
+    "video_mb": 2026.3000000000002,
+    "texture_mb": 1864.9
+   },
+   "village -> expedition": {
+    "seconds": [
+     1.83,
+     1.83
+    ],
+    "worst_ms": [
+     114.1,
+     109.4
+    ],
+    "over_50ms": [
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 317,
+     "longest": [
+      149.5,
+      62.7,
+      52.6,
+      35.9,
+      22.4
+     ],
+     "mean_ms": 6.2,
+     "over_50ms": 3,
+     "phases": {
+      "GPU upload + engine": 139.1,
+      "file read (main thread)": 22.4,
+      "frames": 64.0,
+      "longest frame": 62.7,
+      "node assembly": 805.9,
+      "render": 91.5
+     },
+     "seconds": 1.97,
+     "static_mb": 630.9,
+     "texture_mb": 1872.6,
+     "video_mb": 2032.4,
+     "worst_ms": 149.5
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 10.05,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 69.4,
+     "node assembly": 793.3,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 81.9,
+     "first render": 0.0
+    },
+    "video_mb": 2032.1,
+    "texture_mb": 1873.25
+   },
+   "expedition -> village": {
+    "seconds": [
+     1.27,
+     1.28
+    ],
+    "worst_ms": [
+     94.6,
+     98.9
+    ],
+    "over_50ms": [
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 266,
+     "longest": [
+      99.8,
+      84.1,
+      39.1,
+      30.9,
+      21.6
+     ],
+     "mean_ms": 4.9,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 96.7,
+      "after build": 8.9,
+      "first render": 233.0,
+      "frames": 25.0,
+      "longest frame": 99.9,
+      "node assembly": 181.3,
+      "render": 27.8
+     },
+     "seconds": 1.3,
+     "static_mb": 643.6,
+     "texture_mb": 1867.4,
+     "video_mb": 2029.8,
+     "worst_ms": 99.8
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 44.95,
+     "node assembly": 192.3,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 33.45,
+     "first render": 226.10000000000002
+    },
+    "video_mb": 2029.55,
+    "texture_mb": 1868.1999999999998
+   }
+  },
+  "peak_working_set_mb": [
+   1353,
+   1346
+  ]
+ },
+ "fin-pack": {
+  "label": "fin-pack",
+  "warm_runs": 2,
+  "cold_runs": 1,
+  "changes": {
+   "start -> title": {
+    "seconds": [
+     5.85,
+     5.7
+    ],
+    "worst_ms": [
+     1236.9,
+     1205.0
+    ],
+    "over_50ms": [
+     15,
+     15
+    ],
+    "cold": {
+     "black_until_card_s": 1.11,
+     "frames": 3085,
+     "longest": [
+      1127.4,
+      237.6,
+      169.8,
+      103.6,
+      95.4
+     ],
+     "mean_ms": 1.9,
+     "over_50ms": 18,
+     "phases": {
+      "GPU upload + engine": 1824.8,
+      "collision": 334.9,
+      "frames": 3024.0,
+      "longest frame": 1127.4,
+      "node assembly": 286.7,
+      "reading the game's scripts": 1643.8,
+      "render": 92.2,
+      "waiting for file reads": 1124.0
+     },
+     "seconds": 5.93,
+     "static_mb": 264.7,
+     "texture_mb": 1337.5,
+     "video_mb": 1500.6,
+     "worst_ms": 1127.4
+    },
+    "phases": {
+     "reading the game's scripts": 1616.8000000000002,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 1144.35,
+     "GPU upload + engine": 1824.2,
+     "node assembly": 258.45000000000005,
+     "pad levelling": 0.0,
+     "collision": 312.15,
+     "render": 98.85,
+     "first render": 0.0
+    },
+    "video_mb": 1480.3,
+    "texture_mb": 1337.5,
+    "black_s": [
+     1.14,
+     1.21
+    ],
+    "cold_black_s": 1.11
+   },
+   "title -> home": {
+    "seconds": [
+     1.05,
+     1.06
+    ],
+    "worst_ms": [
+     60.8,
+     61.4
+    ],
+    "over_50ms": [
+     2,
+     2
+    ],
+    "cold": {
+     "frames": 326,
+     "longest": [
+      61.7,
+      60.6,
+      51.8,
+      30.3,
+      27.9
+     ],
+     "mean_ms": 3.5,
+     "over_50ms": 3,
+     "phases": {
+      "GPU upload + engine": 93.3,
+      "frames": 12.0,
+      "longest frame": 61.7,
+      "node assembly": 232.1,
+      "render": 14.7
+     },
+     "seconds": 1.15,
+     "static_mb": 269.4,
+     "texture_mb": 1367.3,
+     "video_mb": 1521.9,
+     "worst_ms": 61.7
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 43.2,
+     "node assembly": 187.7,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 12.4,
+     "first render": 0.0
+    },
+    "video_mb": 1504.6,
+    "texture_mb": 1367.3
+   },
+   "home -> village": {
+    "seconds": [
+     1.4,
+     1.36
+    ],
+    "worst_ms": [
+     64.3,
+     66.2
+    ],
+    "over_50ms": [
+     3,
+     3
+    ],
+    "cold": {
+     "frames": 276,
+     "longest": [
+      160.1,
+      58.4,
+      55.3,
+      45.2,
+      40.9
+     ],
+     "mean_ms": 5.4,
+     "over_50ms": 3,
+     "phases": {
+      "GPU upload + engine": 112.3,
+      "after build": 12.6,
+      "first render": 419.4,
+      "frames": 37.0,
+      "longest frame": 160.1,
+      "node assembly": 182.9,
+      "render": 19.3
+     },
+     "seconds": 1.48,
+     "static_mb": 283.7,
+     "texture_mb": 1357.7,
+     "video_mb": 1524.5,
+     "worst_ms": 160.1
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 92.30000000000001,
+     "node assembly": 190.65,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 21.25,
+     "first render": 302.3
+    },
+    "video_mb": 1508.3,
+    "texture_mb": 1357.7
+   },
+   "village -> resident's house": {
+    "seconds": [
+     1.03,
+     1.02
+    ],
+    "worst_ms": [
+     75.9,
+     82.0
+    ],
+    "over_50ms": [
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 317,
+     "longest": [
+      75.7,
+      45.7,
+      39.5,
+      21.0,
+      11.7
+     ],
+     "mean_ms": 3.3,
+     "over_50ms": 1,
+     "phases": {
+      "GPU upload + engine": 41.9,
+      "frames": 7.0,
+      "longest frame": 75.7,
+      "node assembly": 161.8,
+      "render": 12.3
+     },
+     "seconds": 1.03,
+     "static_mb": 275.5,
+     "texture_mb": 1377.0,
+     "video_mb": 1533.5,
+     "worst_ms": 75.7
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 27.85,
+     "node assembly": 162.05,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 13.3,
+     "first render": 0.0
+    },
+    "video_mb": 1517.2,
+    "texture_mb": 1377.0
+   },
+   "resident's house -> village": {
+    "seconds": [
+     1.36,
+     1.23
+    ],
+    "worst_ms": [
+     101.2,
+     56.4
+    ],
+    "over_50ms": [
+     4,
+     2
+    ],
+    "cold": {
+     "frames": 301,
+     "longest": [
+      57.4,
+      46.4,
+      39.9,
+      37.1,
+      34.4
+     ],
+     "mean_ms": 4.4,
+     "over_50ms": 1,
+     "phases": {
+      "GPU upload + engine": 124.0,
+      "after build": 10.9,
+      "first render": 214.8,
+      "frames": 34.0,
+      "longest frame": 57.4,
+      "node assembly": 190.7,
+      "render": 20.5
+     },
+     "seconds": 1.32,
+     "static_mb": 284.2,
+     "texture_mb": 1360.6,
+     "video_mb": 1527.9,
+     "worst_ms": 57.4
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 120.45,
+     "node assembly": 180.35,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 17.4,
+     "first render": 221.9
+    },
+    "video_mb": 1512.3,
+    "texture_mb": 1361.25
+   },
+   "village -> expedition": {
+    "seconds": [
+     1.83,
+     1.85
+    ],
+    "worst_ms": [
+     113.9,
+     114.8
+    ],
+    "over_50ms": [
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 323,
+     "longest": [
+      179.6,
+      51.3,
+      33.7,
+      22.0,
+      18.6
+     ],
+     "mean_ms": 5.9,
+     "over_50ms": 2,
+     "phases": {
+      "GPU upload + engine": 76.3,
+      "file read (main thread)": 19.9,
+      "frames": 63.0,
+      "longest frame": 51.4,
+      "node assembly": 796.9,
+      "render": 83.6
+     },
+     "seconds": 1.91,
+     "static_mb": 276.1,
+     "texture_mb": 1368.9,
+     "video_mb": 1533.7,
+     "worst_ms": 179.6
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 10.2,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 66.95,
+     "node assembly": 798.25,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 76.0,
+     "first render": 0.0
+    },
+    "video_mb": 1518.1,
+    "texture_mb": 1369.6
+   },
+   "expedition -> village": {
+    "seconds": [
+     1.2,
+     1.21
+    ],
+    "worst_ms": [
+     54.9,
+     54.4
+    ],
+    "over_50ms": [
+     1,
+     1
+    ],
+    "cold": {
+     "frames": 239,
+     "longest": [
+      77.8,
+      48.8,
+      35.1,
+      30.2,
+      20.5
+     ],
+     "mean_ms": 5.2,
+     "over_50ms": 1,
+     "phases": {
+      "GPU upload + engine": 93.5,
+      "after build": 9.3,
+      "first render": 166.1,
+      "frames": 26.0,
+      "longest frame": 77.8,
+      "node assembly": 180.8,
+      "render": 30.7
+     },
+     "seconds": 1.25,
+     "static_mb": 288.8,
+     "texture_mb": 1363.8,
+     "video_mb": 1531.1,
+     "worst_ms": 77.8
+    },
+    "phases": {
+     "reading the game's scripts": 0.0,
+     "file read (main thread)": 0.0,
+     "waiting for file reads": 0.0,
+     "GPU upload + engine": 42.8,
+     "node assembly": 188.95,
+     "pad levelling": 0.0,
+     "collision": 0.0,
+     "render": 31.0,
+     "first render": 182.3
+    },
+    "video_mb": 1515.5,
+    "texture_mb": 1364.4499999999998
+   }
+  },
+  "peak_working_set_mb": [
+   996,
+   1018
+  ]
+ },
+ "exe": {
+  "bas-exe": [
+   {
+    "ok": true,
+    "card_s": 2.726,
+    "title_s": 8.359,
+    "frames_over_50ms": 32,
+    "worst_ms": 229.9,
+    "longest": [
+     229.9,
+     125,
+     108.9,
+     96.8,
+     93.3
+    ],
+    "peak_working_set_mb": 1007,
+    "peak_private_mb": 1892,
+    "renderer": "gl_compatibility",
+    "cold": false,
+    "file": "bas-exe-2"
+   },
+   {
+    "ok": true,
+    "card_s": 2.704,
+    "title_s": 8.299,
+    "frames_over_50ms": 32,
+    "worst_ms": 221.7,
+    "longest": [
+     221.7,
+     117.5,
+     107.1,
+     96.5,
+     92.1
+    ],
+    "peak_working_set_mb": 1018,
+    "peak_private_mb": 1923,
+    "renderer": "gl_compatibility",
+    "cold": false,
+    "file": "bas-exe-3"
+   },
+   {
+    "ok": true,
+    "card_s": 2.782,
+    "title_s": 8.222,
+    "frames_over_50ms": 28,
+    "worst_ms": 203.9,
+    "longest": [
+     203.9,
+     120.3,
+     103.5,
+     100.4,
+     98.7
+    ],
+    "peak_working_set_mb": 1004,
+    "peak_private_mb": 1888,
+    "renderer": "gl_compatibility",
+    "cold": false,
+    "file": "bas-exe-4"
+   },
+   {
+    "ok": true,
+    "card_s": 2.818,
+    "title_s": 11.153,
+    "frames_over_50ms": 34,
+    "worst_ms": 237.6,
+    "longest": [
+     237.6,
+     151.2,
+     127.8,
+     127.7,
+     110.9
+    ],
+    "peak_working_set_mb": 1011,
+    "peak_private_mb": 2047,
+    "renderer": "gl_compatibility",
+    "cold": true,
+    "file": "bas-exe-cold-1"
+   }
+  ],
+  "fin-exe": [
+   {
+    "ok": true,
+    "card_s": 0.992,
+    "title_s": 5.253,
+    "frames_over_50ms": 14,
+    "worst_ms": 124.5,
+    "longest": [
+     124.5,
+     92.6,
+     82.9,
+     82.1,
+     80
+    ],
+    "peak_working_set_mb": 665,
+    "peak_private_mb": 2012,
+    "renderer": "gl_compatibility",
+    "cold": false,
+    "file": "fin-exe-2"
+   },
+   {
+    "ok": true,
+    "card_s": 0.989,
+    "title_s": 5.269,
+    "frames_over_50ms": 9,
+    "worst_ms": 110.4,
+    "longest": [
+     110.4,
+     87.1,
+     85.5,
+     68,
+     64.1
+    ],
+    "peak_working_set_mb": 668,
+    "peak_private_mb": 2010,
+    "renderer": "gl_compatibility",
+    "cold": false,
+    "file": "fin-exe-3"
+   },
+   {
+    "ok": true,
+    "card_s": 1.054,
+    "title_s": 5.319,
+    "frames_over_50ms": 13,
+    "worst_ms": 93.8,
+    "longest": [
+     93.8,
+     89,
+     82.1,
+     78.9,
+     76.2
+    ],
+    "peak_working_set_mb": 664,
+    "peak_private_mb": 1969,
+    "renderer": "gl_compatibility",
+    "cold": false,
+    "file": "fin-exe-4"
+   },
+   {
+    "ok": true,
+    "card_s": 1.196,
+    "title_s": 6.618,
+    "frames_over_50ms": 16,
+    "worst_ms": 151.1,
+    "longest": [
+     151.1,
+     102.1,
+     97.2,
+     92.3,
+     90
+    ],
+    "peak_working_set_mb": 674,
+    "peak_private_mb": 1739,
+    "renderer": "gl_compatibility",
+    "cold": true,
+    "file": "fin-exe-cold-1"
+   }
+  ]
+ },
+ "memory": {
+  "video_mb": [
+   1995.3,
+   1482.4
+  ],
+  "ram_mb": [
+   1365,
+   1016
+  ],
+  "pck_mb": [
+   1838.9,
+   1318.7
+  ],
+  "exe_ram_mb": [
+   1007,
+   665
+  ]
+ },
+ "renderers": {
+  "gl": {
+   "start -> title": 7.64,
+   "title -> home": 1.08,
+   "home -> village": 1.46,
+   "village -> resident's house": 1.01,
+   "resident's house -> village": 1.26,
+   "village -> expedition": 1.86,
+   "expedition -> village": 1.2
+  },
+  "fp": {
+   "start -> title": 7.98,
+   "title -> home": 1.14,
+   "home -> village": 1.84,
+   "village -> resident's house": 1.07,
+   "resident's house -> village": 1.7,
+   "village -> expedition": 1.91,
+   "expedition -> village": 1.56
+  }
+ }
+}
