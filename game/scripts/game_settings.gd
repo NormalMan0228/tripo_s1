@@ -283,7 +283,15 @@ static func end_preview() -> void:
 	_apply_changed(touched)
 
 ## callback(keys: Array[String]) after each commit. Callables of freed objects drop out.
+## Pass a plain method (`listen(_on_settings)`), never a lambda, and unlisten in _exit_tree.
+## `listeners` is static, so it outlives every node, and a lambda still held here when the game quit
+## crashed the engine on exit (access violation 0xC0000005, Godot 4.7.2): at shutdown GDScript frees
+## the code of the scripts that own the lambdas before it releases static variables, and destroying
+## the stale lambda then touches freed memory. A method callable is only an object id and a name.
+## As a backstop the settings runtime empties the list while the tree shuts down (Runtime, PREDELETE).
 static func listen(callback: Callable) -> void:
+	if callback.is_custom():
+		push_error("GameSettings.listen wants a plain method, not a lambda or bound callable: %s" % callback)
 	if not callback in listeners: listeners.append(callback)
 
 static func unlisten(callback: Callable) -> void:
@@ -679,6 +687,10 @@ class Runtime extends CanvasLayer:
 		elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
 			script.focus_lost = false
 			script.apply_audio()
+		elif what == NOTIFICATION_PREDELETE:
+			# The runtime goes only when the tree shuts down: no callable may stay in the static
+			# list past that point (see listen()).
+			script.listeners.clear()
 
 	func _input(event: InputEvent) -> void:
 		var script := _settings()

@@ -41,7 +41,6 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if ResourceLoader.exists(TownMap.MAP_IMAGE): background = load(TownMap.MAP_IMAGE)
 	font = RpgUi.FONT_STRONG
-	GameSettings.listen(func(_keys): refresh())
 	# Placed by absolute position in the right half of the 1280-wide layout: keep the
 	# same gap to the right edge, so a larger interface scale does not push it off.
 	var base_width := float(ProjectSettings.get_setting("display/window/size/viewport_width", 1280))
@@ -76,6 +75,17 @@ func _ready() -> void:
 	RpgUi.name_tip(self, tr("미니맵"), "Tab")
 	key = RpgUi.fold_toggle(self, "minimap", Vector2.UP)
 	RpgUi.foldable(self, "minimap", fold_to)
+
+## Settings changes redraw the map. A method, paired enter/exit: the static listener list holding a
+## lambda crashed the game on exit (game_settings.gd, listen()).
+func _enter_tree() -> void:
+	GameSettings.listen(settings_changed)
+
+func _exit_tree() -> void:
+	GameSettings.unlisten(settings_changed)
+
+func settings_changed(_keys: Array) -> void:
+	refresh()
 
 func refresh() -> void:
 	if not is_instance_valid(disc): return
