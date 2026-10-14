@@ -67,7 +67,9 @@ def tick(program, parts, clock, dt=0.0):
     ('시계가 달린 램프', 'lamp'), ('흔들의자를 만들어 주세요', 'rocking_chair'), ('나무 의자', 'seat'), ('rocking chair', 'rocking_chair'),
     ('chest of drawers', 'drawer'), ('나무 서랍장', 'drawer'), ('fancy lamp', 'lamp'), ('보물상자', 'chest'), ('풍차', 'windmill'),
     ('선풍기', 'fan'), ('오르골', 'music_box'), ('촛불', 'candle'), ('침대', 'bed'), ('a light wooden chair', 'seat'),
-    ('가습기', None), ('fantasy sword', None), ('table', None)])
+    ('가습기', None), ('fantasy sword', None), ('table', 'table'), ('흔들 의자를', 'rocking_chair'), ('소파 옆 테이블', 'table'),
+    ('크리스마스 트리', 'christmas_tree'), ('전화로', 'telephone'), ('a table lamp', 'lamp'), ('빨간 우체통', 'mailbox'),
+    ('종이 등불', 'lantern'), ('bird bath', 'fountain'), ('a cozy reading nook', None)])
 def test_requests_are_classified_into_library_types(text, expected):
     found = archetypes.classify(text)
     assert (found['id'] if found else None) == expected

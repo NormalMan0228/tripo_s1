@@ -304,6 +304,12 @@ class Studio:
                     'categories':[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')],
                     'shards':user['shards']}
 
+        # The library of object types (server/archetype_library.py), for listings and the QA gallery.
+        @app.get('/v1/studio/library')
+        def library_listing(request:Request):
+            with db.read() as conn:auth(conn,request)
+            return archetypes.public()
+
         # The craft window asks what a request is before it is sent: a library type always built
         # moving (a clock and its free hands) and the Tripo meshes a moving craft of it needs.
         @app.post('/v1/studio/kind')

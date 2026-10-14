@@ -11,7 +11,7 @@ edits in the interaction editor, '원래대로' still goes back to the crafted m
 """
 import re
 import unicodedata
-from .archetype_library import ARCHETYPES, VERSION
+from .archetype_library import ARCHETYPES, VERSION, FAMILIES, ROOMS, ROLE_NAMES
 from .asset_assembly import validate_plan
 from . import interactions
 from . import clock_hands
@@ -55,7 +55,8 @@ def best_match(text):
             if hangul(word) and ' ' not in word:
                 spans = [(start, end) for token, start, end in tokens if token.endswith(word) or stripped(token).endswith(word)]
             elif hangul(word):
-                spans = [(m.start(), m.end()) for m in re.finditer(re.escape(word), text)]
+                # A phrase ('흔들 의자') reaches to the end of its last word, particle and all.
+                spans = [(m.start(), max(end for _, start, end in tokens if start < m.end())) for m in re.finditer(re.escape(word), text)]
             else:
                 spans = [(m.start(), m.end()) for m in re.finditer(r'(?<!\w)' + re.escape(word) + r'(?:s|es)?(?!\w)', text)]
             for start, end in spans:
@@ -243,7 +244,9 @@ def fixture_design(prompt):
 
 
 def public():
-    """The library for listings: id, names, roles, rest and what it does."""
-    return {'version': VERSION, 'archetypes': [
-        {'id': a['id'], 'names': a['names'], 'rest': a.get('rest', ''), 'roles': [r['id'] for r in a['roles']],
-         'behaviours': [{k: v for k, v in b.items()} for b in a['behaviours']], 'single': a['single']} for a in ARCHETYPES]}
+    """The library for listings (GET /v1/studio/library): each type's names, family, room, roles
+    with their Korean names, rest, what it does, and whether an offline fixture exists."""
+    return {'version': VERSION, 'families': FAMILIES, 'rooms': ROOMS, 'archetypes': [
+        {'id': a['id'], 'names': a['names'], 'family': a['family'], 'room': a['room'], 'rest': a.get('rest', ''),
+         'roles': [r['id'] for r in a['roles']], 'optional': [r['id'] for r in a['roles'] if r.get('optional')], 'role_names': {r['id']: ROLE_NAMES[r['id']] for r in a['roles']},
+         'behaviours': [dict(b) for b in a['behaviours']], 'single': a['single'], 'fixture': 'fixture' in a} for a in ARCHETYPES]}
