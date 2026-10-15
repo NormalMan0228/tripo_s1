@@ -20,6 +20,7 @@ const Town = preload("res://scripts/town.gd")
 const Minimap = preload("res://scripts/minimap.gd")
 const Residents = preload("res://scripts/residents.gd")
 const LoadPace = preload("res://scripts/load_pace.gd")
+const AnimLod = preload("res://scripts/anim_lod.gd")
 const LAYOUT := "res://maps/archipelago/environment_layout.json"
 ## Bridge deck centre lines (environment_layout.json), used if the manifest is missing.
 const BRIDGES := [[Vector2(-11,-36),Vector2(15,-36)],[Vector2(57,-7),Vector2(57,14)],[Vector2(-9,27),Vector2(16,27)],[Vector2(-25,58),Vector2(2,73)]]
@@ -261,11 +262,15 @@ func _process(delta: float) -> void:
 		clock = 1.0
 		refresh_schedule()
 	var camera = app.get("camera")
-	var eye: Vector3 = camera.global_position if is_instance_valid(camera) and camera.is_inside_tree() else Vector3(player_xz().x, 10, player_xz().y)
+	# On screen: every frame (the orthographic camera is ~47 m back, so its distance
+	# kept residents in plain view at 3-8 frames). Off screen: by distance from the walker.
+	var frustum := AnimLod.planes(camera if camera is Camera3D else null)
+	var focus := player_xz()
+	var fraction := clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0)
 	for walker in walkers:
 		if not walker.present and walker.state == "hidden": continue
-		var d: float = eye.distance_to(walker.global_position)
-		walker.anim_stride = 1 if d < 26.0 else (3 if d < 50.0 else 8)
+		walker.anim_stride = AnimLod.stride(frustum, walker.global_position, Vector3(focus.x, 0, focus.y))
+		if walker.visible: walker.draw(fraction)
 	# A closed conversation lets the shadow go back to what it was doing.
 	var modal = app.get("village_modal")
 	for walker in walkers:
