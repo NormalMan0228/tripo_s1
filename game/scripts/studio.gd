@@ -2649,10 +2649,8 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 func show_talk_page() -> void:
 	if not is_instance_valid(talk_box): return
 	talk_body.text=str(talk_lines[talk_page])
-	talk_body.visible_ratio=0.0
 	RpgUi.dialogue_line(talk_window,talk_body.text)
-	var typing := talk_body.create_tween()
-	typing.tween_property(talk_body,"visible_ratio",1.0,GameSettings.typing_seconds(talk_body.text.length()))
+	RpgUi.dialogue_type(talk_window,GameSettings.typing_seconds(talk_body.text.length()))
 	if talk_page<talk_lines.size()-1:
 		RpgUi.dialogue_more(talk_window,true)
 	else:
@@ -2677,8 +2675,8 @@ func advance_talk() -> void:
 	if talk_window.is_empty():
 		close_talk()
 		return
-	if talk_body.visible_ratio<1.0:
-		talk_body.visible_ratio=1.0
+	if RpgUi.dialogue_typing(talk_window):
+		RpgUi.dialogue_skip(talk_window)
 	elif talk_page<talk_lines.size()-1:
 		talk_page+=1
 		sfx_player.stream=Interiors.sfx("click");sfx_player.play()

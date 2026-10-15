@@ -2243,7 +2243,9 @@ static func dialogue_choices(d: Dictionary, entries: Array) -> Array:
 			if event.echo: return
 			if key in [KEY_E, KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]:
 				b.accept_event()
-				if dialogue_ready(d): b.pressed.emit()
+				# The last line still typing: the key shows it whole (and the guard starts again).
+				if dialogue_typing(d): dialogue_skip(d)
+				elif dialogue_ready(d): b.pressed.emit()
 			elif event.keycode >= KEY_1 and event.keycode <= KEY_9:
 				var pick: int = event.keycode - KEY_1
 				if pick < made.size():
@@ -2262,6 +2264,24 @@ static func dialogue_choices(d: Dictionary, entries: Array) -> Array:
 	d.choices_at = Time.get_ticks_msec()
 	return made
 
+## Types the dialogue's current line out over `seconds` (the body's text is already set).
+static func dialogue_type(d: Dictionary, seconds: float) -> void:
+	var body: Label = d.body
+	if d.get("typing") is Tween and (d.typing as Tween).is_valid(): (d.typing as Tween).kill()
+	body.visible_ratio = 0.0
+	var typing := body.create_tween()
+	typing.tween_property(body, "visible_ratio", 1.0, seconds)
+	d.typing = typing
+
+static func dialogue_typing(d: Dictionary) -> bool:
+	return is_instance_valid(d.get("body")) and (d.body as Label).visible_ratio < 1.0
+
+## The whole line at once (a key while it types). Choices already up wait their guard again.
+static func dialogue_skip(d: Dictionary) -> void:
+	if d.get("typing") is Tween and (d.typing as Tween).is_valid(): (d.typing as Tween).kill()
+	if is_instance_valid(d.get("body")): (d.body as Label).visible_ratio = 1.0
+	if d.has("choices_at"): d.choices_at = Time.get_ticks_msec()
+
 ## True once the choices have been up long enough for a key to mean "pick this" (not the
 ## tail of reading on with E or Space).
 static func dialogue_ready(d: Dictionary) -> bool:
@@ -2270,6 +2290,9 @@ static func dialogue_ready(d: Dictionary) -> bool:
 ## E, Space or Enter on the last page when no choice holds the focus (a click elsewhere took
 ## it): picks the highlighted choice, or the first. False when there is nothing to pick.
 static func dialogue_pick(d: Dictionary) -> bool:
+	if dialogue_typing(d):
+		dialogue_skip(d)
+		return true
 	if not is_instance_valid(d.get("choices")) or not dialogue_ready(d): return false
 	var buttons := (d.choices as Node).get_children().filter(func(child): return child is Button and not child.is_queued_for_deletion())
 	if buttons.is_empty(): return false

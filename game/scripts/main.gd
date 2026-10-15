@@ -3275,10 +3275,8 @@ func open_dialogue(speaker: String, cast: String, lines: Array, choices: Array) 
 	var page := [0]
 	var show_page := func(index: int) -> void:
 		body.text=lines[index]
-		body.visible_ratio=0.0
 		RpgUi.dialogue_line(window,lines[index])
-		var typing := create_tween()
-		typing.tween_property(body,"visible_ratio",1.0,GameSettings.typing_seconds(lines[index].length()))
+		RpgUi.dialogue_type(window,GameSettings.typing_seconds(lines[index].length()))
 		VoiceBabble.speak(self,cast,lines[index],0.0,body)
 		if index<lines.size()-1:
 			RpgUi.dialogue_more(window,true)
@@ -3292,8 +3290,8 @@ func open_dialogue(speaker: String, cast: String, lines: Array, choices: Array) 
 					if action.is_valid(): action.call()])
 			RpgUi.dialogue_choices(window,entries)
 	var advance := func() -> void:
-		if body.visible_ratio<1.0:
-			body.visible_ratio=1.0
+		if RpgUi.dialogue_typing(window):
+			RpgUi.dialogue_skip(window)
 		elif page[0]<lines.size()-1:
 			page[0]+=1
 			RpgUi.sfx("click",-8.0)

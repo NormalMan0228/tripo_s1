@@ -554,7 +554,7 @@ func open_shop() -> void:
 	app.text(v,tr("잎전으로 씨앗과 미끼를 사고, 직접 얻은 수확물을 팔아요."),14)
 	# Selling also pays starseeds up to a daily allowance (shop_sell.gd, server app.py sell_stars).
 	var allowance := ShopSell.status_text(state)
-	if not allowance.is_empty(): app.text(v,allowance,14).add_theme_color_override("font_color",RpgUi.HOVER)
+	if not allowance.is_empty(): app.text(v,allowance,14).add_theme_color_override("font_color",RpgUi.ACCENT)
 	var row := HBoxContainer.new()
 	v.add_child(row)
 	var shop: Dictionary=state.catalog.get("shop",{"turnip_seed":2,"pumpkin_seed":4,"bait":1})
