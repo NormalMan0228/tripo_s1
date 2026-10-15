@@ -453,16 +453,15 @@ func build_ui() -> void:
 	await LoadPace.step("room hud")
 	# Bottom centre: the village's hotbar slots for what rooms have (same icons, keys and tooltips)
 	# and the ways out, so the bottom left stays the chat's.
-	var bar := RpgUi.hotbar(hud,[{"icon":"res://assets/ui/bag.svg","action":"inventory","label":tr("가방"),"call":func(): set_dock_open(not dock_panel.visible)},
+	# One sound for the bag slot's press: the drawer's own slide (set_dock_open, RpgUi.show_drawer),
+	# not the slot's click a moment before it ("press" "").
+	var bar := RpgUi.hotbar(hud,[{"icon":"res://assets/ui/bag.svg","action":"inventory","label":tr("가방"),"press":"","call":func(): set_dock_open(not dock_panel.visible)},
 		{"icon":"res://assets/ui/craft.svg","action":"craft","label":tr("제작"),"call":func(): open_craft()},
 		{"icon":"res://assets/ui/icons/leave.png","action":"","label":tr("마을로"),"call":func(): leave()},
 		{"icon":"res://assets/ui/icons/home.png","action":"","label":tr("내 집"),"call":func(): await change_room("home")},
 		{"icon":"res://assets/ui/icons/starseed.png","action":"","label":tr("공방"),"call":func(): await change_room("workshop")}],700,"hotbar")
 	bar.name="RoomNav"
 	dock_toggle=bar.get_child(0);dock_toggle.name="DockToggle"
-	# One sound for the bag slot's press: the drawer's own slide (set_dock_open, RpgUi.show_drawer),
-	# not the slot's click a moment before it (button_down only carries hover_motion's press sound).
-	for link in dock_toggle.button_down.get_connections(): dock_toggle.button_down.disconnect(link.callable)
 	craft_slot=bar.get_child(1);craft_slot.name="CraftSlot"
 	leave_button=bar.get_child(2);leave_button.name="LeaveSlot"
 	room_buttons=[bar.get_child(3),bar.get_child(4)]
@@ -3248,7 +3247,8 @@ func open_sell(id: String) -> void:
 	for item in [name_panel,hint_chip,hint_label,bubble]:
 		if is_instance_valid(item): item.visible=false
 
-## A sale at the counter: sparkles over 단비, a coin chime, starseeds into the wallet line.
+## A sale at the counter: sparkles over 단비, starseeds into the wallet line (the coins' jingle is
+## ShopSell's).
 func sold(id: String, reply: Dictionary) -> void:
 	var stars := int(reply.get("stars",0))
 	if npcs.has(id):
@@ -3264,8 +3264,10 @@ func sold(id: String, reply: Dictionary) -> void:
 		var bump := wallet.create_tween()
 		bump.tween_property(wallet,"scale",Vector2.ONE*1.2,0.08)
 		bump.tween_property(wallet,"scale",Vector2.ONE,0.14)
-	# The coin chime stands in for the toast's chime (hush_toast), never both.
-	Interiors.play(self,"ding");RpgUi.hush_toast()
+	# ShopSell's coin_gain is the sale's sound and stands in for the toast's chime (hush_toast, never
+	# both); starseeds add a star over 단비's sparkles.
+	if stars>0: RpgUi.sfx("star",-9.0)
+	RpgUi.hush_toast()
 	message(str(reply.get("message","")))
 
 ## E on the house's storage chest: what the residents keep in storage (names and pictures only),
@@ -3278,8 +3280,9 @@ func open_storage(record: Dictionary) -> void:
 	Interiors.play(self,"creak")
 	if is_instance_valid(record.get("node")): Fx.wobble(record.node,0.05)
 	# The shared window (RpgUi.window): a small parchment card in the middle with the close key (Esc);
-	# E closes it too (advance_talk), shown as a key hint.
-	var w := RpgUi.window(self,tr("보관 상자"),{"width":RpgUi.WINDOW_W.small,"place":"centre","scroll":false,"on_close":close_talk,"id":"storage_chest"})
+	# E closes it too (advance_talk), shown as a key hint. The chest's creak is its opening sound
+	# (no window open over it); closing it is the window's close.
+	var w := RpgUi.window(self,tr("보관 상자"),{"width":RpgUi.WINDOW_W.small,"place":"centre","scroll":false,"on_close":close_talk,"id":"storage_chest","sound":false})
 	talk_box=w.root
 	talk_window={};talk_lines=[];talk_choices=[]
 	w.shade.gui_input.connect(func(event): if event is InputEventMouseButton and event.pressed: close_talk())

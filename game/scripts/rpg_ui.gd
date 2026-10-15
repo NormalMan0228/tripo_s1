@@ -609,7 +609,8 @@ static func fade(c: CanvasItem, to := 0.0, duration := 0.18) -> Tween:
 	return tw
 
 ## Hover lift + brightness and the soft hover tick; a press sound on press (`press`, at `press_db`:
-## click, or a kind of its own: a dialogue choice, a swatch, a danger button's deny).
+## click, or a kind of its own: a dialogue choice, a swatch, a danger button's deny; "" for none,
+## when what the press opens has its own sound: a drawer's slide).
 static func hover_motion(c: Control, lift := 1.05, pivot := Vector2(0.5, 0.5), sounds := true, press := "click", press_db := -4.0) -> void:
 	var to := func(target: float, bright: float) -> void:
 		if not is_instance_valid(c) or calm(): return
@@ -622,7 +623,7 @@ static func hover_motion(c: Control, lift := 1.05, pivot := Vector2(0.5, 0.5), s
 		to.call(lift, 1.08)
 		if sounds: sfx("hover"))
 	c.mouse_exited.connect(func(): to.call(1.0, 1.0))
-	if sounds and c is BaseButton: (c as BaseButton).button_down.connect(func(): sfx(press, press_db))
+	if sounds and c is BaseButton and not press.is_empty(): (c as BaseButton).button_down.connect(func(): sfx(press, press_db))
 
 ## Counts a number label up (or down) to value with a small pulse. A change of a count already shown
 ## ticks softly as the digits roll (at most ~12 a second) and a gain ends on a coin jingle; the first
@@ -1260,8 +1261,10 @@ static func player_frame(ui: Control, portrait: String, fold_id := "") -> Dictio
 	return {"panel":shell, "name":name, "stars":stars, "leaves":leaves, "status":status, "column":column, "portrait":face}
 
 ## Square slots with an icon, a key cap and a caption on a glass tray. A slot spec is
-## {icon, label, call, action ("inventory" or a literal key like "F9"), primary}; an action's key cap
-## and its "name  ·  key" tooltip follow rebinding. With a
+## {icon, label, call, action ("inventory" or a literal key like "F9"), primary, press, press_db}; an
+## action's key cap and its "name  ·  key" tooltip follow rebinding. press: the slot's press sound
+## (hover_motion: "click" by default, "select" for a pick, "" when what it opens slides in with its
+## own sound, as the bag's drawer), at press_db (-4). With a
 ## fold_id a chevron key at the tray's right end slides it below the screen.
 static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxContainer:
 	var tray := PanelContainer.new()
@@ -1314,7 +1317,7 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 			var cap := keycap(b, key_id, 11)
 			cap.position = Vector2(-7,-9)
 		b.pressed.connect(slot.call)
-		hover_motion(b, 1.08, Vector2(0.5, 1.0))
+		hover_motion(b, 1.08, Vector2(0.5, 1.0), true, str(slot.get("press", "click")), float(slot.get("press_db", -4.0)))
 		bar.add_child(b)
 	bar.set_meta("tray", tray)
 	bar.set_meta("tray_top", y + 6)
@@ -1586,6 +1589,9 @@ static func clear_toasts(lane: Control) -> void:
 		item.set_meta("leaving", true)
 		item.queue_free()
 
+## Least time (ms) between two of the prompt chip's appearance ticks.
+const PROMPT_TICK_MS := 800
+
 ## Floating interaction chip above the hotbar; hidden while empty. The leading
 ## "E  " of the text is drawn as a key cap.
 static func prompt(ui: Control, y: float) -> Label:
@@ -1610,11 +1616,19 @@ static func prompt(ui: Control, y: float) -> Label:
 	cap.name = "Key"
 	cap.position = Vector2(14, 9)
 	cap.visible = false
-	# Gentle breathing so the chip reads as "you can act here".
+	# Gentle breathing so the chip reads as "you can act here". When the place shows it (its own
+	# visible turning on, not the HUD around it coming back after a talk) a very soft hover tick, at
+	# most once in PROMPT_TICK_MS while walking past a row of props.
 	pill.visibility_changed.connect(func():
+		var toggled: bool = pill.visible != bool(pill.get_meta("own_shown", false))
+		pill.set_meta("own_shown", pill.visible)
 		if pill.visible and pill.is_inside_tree():
 			pill.modulate.a = 0.0
-			pill.create_tween().tween_property(pill, "modulate:a", 1.0, 0.15))
+			pill.create_tween().tween_property(pill, "modulate:a", 1.0, 0.15)
+			var now := Time.get_ticks_msec()
+			if toggled and pill.is_visible_in_tree() and now - int(pill.get_meta("tick_at", -100000)) > PROMPT_TICK_MS:
+				pill.set_meta("tick_at", now)
+				sfx("hover", -14.0))
 	ui.add_child(pill)
 	pin(pill, 0.5, 1.0)
 	# A new UI scale narrows the canvas and moves the chip: it keeps clear of the chat corner.
@@ -2090,7 +2104,9 @@ static func shade(parent: Control, dim := 0.0) -> TextureRect:
 ## GameSettings action that opens it: the close key is named with its key; "" names Esc); icon (a
 ## picture before the title); on_close (what the close key does; default close_window); scroll
 ## (true: the body scrolls once the card would pass the screen's foot); id; dim (shade opacity for a
-## darker shade); closable (false: no close key, and Esc routing leaves it open: a blocking screen).
+## darker shade); closable (false: no close key, and Esc routing leaves it open: a blocking screen);
+## sound (false: no open sound, for a page swapped in place or a window whose opening is heard in
+## the world: a chest's creak).
 ## Returns {root, shade, card, head, title, body, close, id, action, kind, modal}; free it with
 ## close_window(w). Opens with pop_in and the open sound and joins the window stack.
 static func window(host: Control, title: String, opts := {}) -> Dictionary:
@@ -2164,7 +2180,7 @@ static func window(host: Control, title: String, opts := {}) -> Dictionary:
 		w["body"] = body
 	_push_window(root, w)
 	pop_in(card)
-	sfx("open", -8.0)
+	if bool(opts.get("sound", true)): sfx("open", -8.0)
 	return w
 
 ## Card placement on the design canvas: top centre at WINDOW_TOP growing down, the screen's centre,
@@ -2294,15 +2310,16 @@ static func _slide_card(card: Control, dx: float) -> void:
 
 ## Closes a window or drawer: leaves the stack, plays the close sound (a drawer its own slide) and
 ## frees it (a short fade first when animate; at once otherwise, so callers that test is_instance_valid
-## see it gone).
-static func close_window(w: Dictionary, animate := true) -> void:
+## see it gone). sound false: a window swapped for the next page or refreshed in place (the new one's
+## open, or what replaced it, is the one sound), or one whose outcome has its own sound.
+static func close_window(w: Dictionary, animate := true, sound := true) -> void:
 	var root: Control = w.get("root") if w.has("root") and is_instance_valid(w.get("root")) else null
 	if root == null: return
 	if root.get_meta("rpg_closing", false): return
 	root.set_meta("rpg_closing", true)
 	_forget_window(root.get_instance_id())
 	_hand_over_shade(root, w)
-	sfx("drawer_close" if str(w.get("kind", "")) == "drawer" else "close", -10.0)
+	if sound: sfx("drawer_close" if str(w.get("kind", "")) == "drawer" else "close", -10.0)
 	if animate and not calm() and root.is_inside_tree():
 		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		for child in root.get_children(): if child is Control: (child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2744,10 +2761,13 @@ static func dialogue_type(d: Dictionary, seconds: float) -> void:
 static func dialogue_typing(d: Dictionary) -> bool:
 	return is_instance_valid(d.get("body")) and (d.body as Label).visible_ratio < 1.0
 
-## The whole line at once (a key while it types). Choices already up wait their guard again.
+## The whole line at once (a key while it types), with a very soft page flick (a page turn proper is
+## -8 dB). Choices already up wait their guard again.
 static func dialogue_skip(d: Dictionary) -> void:
 	if d.get("typing") is Tween and (d.typing as Tween).is_valid(): (d.typing as Tween).kill()
-	if is_instance_valid(d.get("body")): (d.body as Label).visible_ratio = 1.0
+	if is_instance_valid(d.get("body")):
+		if (d.body as Label).visible_ratio < 1.0: sfx("page", -15.0)
+		(d.body as Label).visible_ratio = 1.0
 	if d.has("choices_at"): d.choices_at = Time.get_ticks_msec()
 
 ## True once the choices have been up long enough for a key to mean "pick this" (not the

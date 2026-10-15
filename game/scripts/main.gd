@@ -174,10 +174,9 @@ var was_airborne := false
 var fall_speed := 0.0
 var was_wading := false
 var wade_splash_at := 0
-## Throttles (msec) for the frequent placement and prompt ticks.
+## Throttles (msec) for the frequent placement ticks (the prompt chip keeps its own: RpgUi.prompt).
 var snap_tick_at := 0
 var flip_tick_at := 0
-var prompt_tick_at := 0
 var survival_deny_at := 0
 ## When the last sprint-start whoosh and warded cue played (s, Time ticks).
 var sprint_cue_at := -10.0
@@ -1233,8 +1232,9 @@ func build_village_hud() -> void:
 			["chest.svg","storage",tr("창고"),life.open_storage],["wardrobe.svg","wardrobe",tr("옷장"),open_wardrobe],["expedition.svg","",tr("탐험"),open_expedition]]+(
 			[["admin.svg","F9",tr("관리"),open_admin]] if preload("res://scripts/build_mode.gd").admin else []):
 		var action: Callable = spec[3]
+		# The bag slot's press is heard as the drawer's own slide (toggle_drawer), as in rooms.
 		slots.append({"icon":"res://assets/ui/"+spec[0],"action":spec[1],"label":tr(spec[2]),"primary":spec[0]=="expedition.svg",
-			"call":func(): action.call()})
+			"press":"" if spec[1]=="inventory" else "click","call":func(): action.call()})
 	var bar := RpgUi.hotbar(ui,slots,700,"hotbar")
 	expedition_button = bar.get_child(5)
 	lay_toasts(94)
@@ -1300,7 +1300,11 @@ func build_play_hud(survival: bool) -> void:
 			["fire","campfire",tr("모닥불"),func(): intent("fire")],["heart","heal",tr("붕대"),func(): intent("heal")],
 			["home","",tr("귀환"),confirm_return]]:
 		var action: Callable=spec[3]
-		slots.append({"icon":"res://assets/ui/icons/%s.png" % spec[0],"action":spec[1],"label":spec[2],"call":func(): action.call()})
+		# A press picks: a soft select for eat, fire and bandage (their outcome sounds when the field
+		# acts); the bag's drawer slide and the return question's window are the bag and home slots' sound.
+		var press: String="" if spec[0] in ["bag","home"] else "select"
+		slots.append({"icon":"res://assets/ui/icons/%s.png" % spec[0],"action":spec[1],"label":spec[2],"press":press,"press_db":-8.0,
+			"call":func(): action.call()})
 	# Folds to a handle tab like the village hotbar (fold id "toolbar"); the keys keep working.
 	toolbar_bar=RpgUi.hotbar(ui,slots,700,"toolbar")
 	toolbar_bar.name="FieldHotbar"
@@ -3042,11 +3046,7 @@ func _process(delta: float) -> void:
 				if is_instance_valid(seat) and seat.resting(): prompt_text=key+tr("일어나기")
 				if is_instance_valid(village_modal): prompt_text=""
 				if str(hint.get_meta("prompt",""))!=prompt_text:
-					# A very soft tick when the E chip appears (not on every change of its text, and
-					# at most once in 0.8 s while walking past a row of props).
-					if not prompt_text.is_empty() and str(hint.get_meta("prompt","")).is_empty() and GameSettings.show_prompts() and Time.get_ticks_msec()-prompt_tick_at>800:
-						prompt_tick_at=Time.get_ticks_msec()
-						RpgUi.sfx("hover",-14.0)
+					# The chip ticks very softly as it appears (RpgUi.prompt, every place alike).
 					RpgUi.set_prompt(hint,prompt_text)
 					fit_chip(hint)
 				hint.visible=not prompt_text.is_empty() and GameSettings.show_prompts()
@@ -3245,15 +3245,17 @@ func region_name(id: String) -> String:
 func difficulty_name(id: String) -> String:
 	return {"relaxed":tr("산책"),"standard":tr("탐험"),"veteran":tr("개척")}.get(id,id)
 
-func close_village_modal() -> void:
+## sound false: closed for the next window (its open is the one sound) or by an outcome with its own
+## sound (a seed planted).
+func close_village_modal(sound := true) -> void:
 	if is_instance_valid(life): life.closed()
 	restore_hud()
 	if is_instance_valid(village_modal):
 		# A shared window (modal_card) leaves the window stack; dialogues and the craft window (its
 		# window lives under its holder) are freed whole.
-		if village_modal.has_meta("rpg_window"): RpgUi.close_window(village_modal.get_meta("rpg_window"),false)
+		if village_modal.has_meta("rpg_window"): RpgUi.close_window(village_modal.get_meta("rpg_window"),false,sound)
 		else:
-			RpgUi.sfx("close",-10.0)
+			if sound: RpgUi.sfx("close",-10.0)
 			village_modal.get_parent().remove_child(village_modal)
 			village_modal.queue_free()
 	village_modal=null
@@ -3263,11 +3265,13 @@ func close_village_modal() -> void:
 ## key, an ornamented rule, then the caller's content. `action` is the GameSettings action that
 ## opens it (its key names the close key; "" names Esc). Opens with a fade + pop.
 ## The opening key closes the window too (main._unhandled_input); Esc always does.
-func modal_card(title: String, action := "") -> VBoxContainer:
-	close_village_modal()
+## A window already open is swapped out without its close sound (the new one's open is heard);
+## quiet: the same window rebuilt in place (the stall after a trade), no sound at all.
+func modal_card(title: String, action := "", quiet := false) -> VBoxContainer:
+	close_village_modal(false)
 	cancel_preview()
 	player.controls_enabled=false
-	var w := RpgUi.window(ui,title,{"action":action,"scroll":false,"on_close":close_village_modal,"id":"village_modal"})
+	var w := RpgUi.window(ui,title,{"action":action,"scroll":false,"on_close":close_village_modal,"id":"village_modal","sound":not quiet})
 	village_modal=w.root
 	player.controls_enabled=false
 	return w.body

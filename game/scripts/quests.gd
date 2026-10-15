@@ -486,13 +486,14 @@ static func room_done(room: Node, id: String, kind: String, reply: Dictionary) -
 		if not note.is_empty(): room.create_tween().tween_callback(func(): room.message(note)).set_delay(3.0)
 
 ## The moment of the hand-over, over the thanks: sparkles, a glow and a ring at the resident and
-## a "+N" starseed rising over them.
-static func reward_burst(app: Node, at: Vector3, stars: int) -> void:
+## a "+N" starseed rising over them. fanfare false: the same sight without the request fanfare
+## (starseeds from a sale at the stall, whose coins already jingled).
+static func reward_burst(app: Node, at: Vector3, stars: int, fanfare := true) -> void:
 	var world: Node3D = app.world
 	Fx.burst(world, at+Vector3(0, 1.6, 0), "sparkle", 24, Color(0,0,0,0), 0.55)
 	Fx.glow(world, at+Vector3(0, 1.4, 0), Color("ffd27a"), 2.4, 1.3)
 	Fx.ring(world, at+Vector3(0, 0.05, 0), 1.8, Color(1.0, 0.88, 0.5, 0.8), 0.9)
-	RpgUi.sfx("quest_complete", -4.0)
+	if fanfare: RpgUi.sfx("quest_complete", -4.0)
 	if stars <= 0 or not is_instance_valid(app.get("camera")) or not is_instance_valid(app.get("ui")): return
 	var from: Vector2 = app.camera.unproject_position(at+Vector3(0, 1.9, 0))
 	var badge := HBoxContainer.new()

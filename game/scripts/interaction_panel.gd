@@ -457,7 +457,8 @@ func _draw_glyph(c: Control, kind: String) -> void:
 # ---------------------------------------------------------------- opening and closing
 
 func _open() -> void:
-	RpgUi.sfx("open", -8.0)
+	# The shared window (_build) already opened with its sound; a second "open" a slow frame later
+	# would play twice.
 	if not is_instance_valid(model) or not model.has_method("start_program"):
 		_say(tr("물건을 불러오는 중이에요."))
 		model = await Assembly.fetch(api, str(obj.id))
@@ -508,7 +509,8 @@ func close_panel(saved := false) -> void:
 			home.add_child(model)
 			model.transform = home_transform
 		else: model.queue_free()
-	RpgUi.sfx("close")
+	# Freed whole (not through RpgUi.close_window): the shared windows' close, at their level.
+	RpgUi.sfx("close", -10.0)
 	if options.get("closed") is Callable and options.closed.is_valid(): options.closed.call()
 	finished.emit(saved or saved_once)
 	queue_free()

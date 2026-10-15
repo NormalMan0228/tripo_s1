@@ -60,10 +60,11 @@ func _ready() -> void:
 	GameSettings.listen(_on_saved)
 	_build()
 
-func _build() -> void:
+## sound false: the window rebuilt in place (a new language), heard as the save, not an open.
+func _build(sound := true) -> void:
 	# A modal window already open around this one (the pause page) lends its shade.
 	win = RpgUi.window(self, tr("설정"), {"kind":"night", "width":_size().x, "place":"centre", "scroll":false,
-		"on_close":request_close, "id":"settings"})
+		"on_close":request_close, "id":"settings", "sound":sound})
 	panel = win.card
 	var column: VBoxContainer = win.body
 	column.add_theme_constant_override("separation", RpgUi.GAP)
@@ -375,8 +376,8 @@ func apply() -> void:
 	if language_changed:
 		# Every label on the panel was built in the old language: a new window takes over the shade.
 		var old := win
-		_build()
-		RpgUi.close_window(old, false)
+		_build(false)
+		RpgUi.close_window(old, false, false)
 	else:
 		show_tab(tab)
 	_update_status(tr("설정을 저장했어요."))

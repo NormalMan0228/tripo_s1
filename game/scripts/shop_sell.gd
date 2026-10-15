@@ -111,10 +111,12 @@ static func window(parent: Node, api: Node, sold: Callable) -> Control:
 				busy[0] = false
 				if not is_instance_valid(root): return
 				if reply.ok:
-					RpgUi.sfx("confirm", -4.0)
+					# The sale's coins: the one sound of it (a message kind, so the sale's toast stays quiet).
+					RpgUi.sfx("coin_gain", -5.0)
 					if sold.is_valid(): sold.call(reply.data)
 					again.call(reply.data, again)
 				else:
+					RpgUi.sfx("deny", -8.0)
 					head.text = t("지금은 팔 수 없어요. 다시 해 볼게요.")
 					var fresh: Dictionary = await api.request("/v1/homestead")
 					if is_instance_valid(root) and fresh.ok: again.call(fresh.data, again))

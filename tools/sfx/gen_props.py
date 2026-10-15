@@ -1279,6 +1279,110 @@ def field_box(rng, i):
     return room(out, SR, rng, 0.15, 0.05), {"kind": kind}
 
 
+# --------------------------------------------------------------------------- treasure chests (treasure.gd)
+CHEST_SPARKLES = ["rise", "fall", "chord", "dust", "trill"]
+
+
+def chest_latch(rng, sr, kind):
+    """The catch let go: a hasp unhooked and flipped down, a spring catch snapping, or a small bolt."""
+    out = np.zeros(L.secs(0.14, sr))
+    if kind == "hasp":
+        L.place(out, knock(sr, rng, rng.uniform(2300, 2600), "metal", dur=0.06), 0.0, sr, 0.5)
+        L.place(out, knock(sr, rng, rng.uniform(1500, 1750), "metal", dur=0.08), rng.uniform(0.035, 0.05), sr, 0.45)
+    elif kind == "snap":
+        L.place(out, knock(sr, rng, rng.uniform(2900, 3300), "metal", dur=0.05, bright=1.3), 0.0, sr, 0.6)
+        L.place(out, knock(sr, rng, rng.uniform(700, 820), "wood", dur=0.05), 0.004, sr, 0.35)
+    else:
+        n = L.secs(0.05, sr)
+        L.place(out, L.bp(L.white(n, rng), sr, 2200, 6000) * np.hanning(n) * 0.35, 0.0, sr)
+        L.place(out, knock(sr, rng, rng.uniform(1900, 2200), "metal", dur=0.05), 0.05, sr, 0.5)
+    return out
+
+
+def chest_hinge(rng, sr, kind, f0):
+    """The lid's hinges while it swings up (the game's swing takes about half a second)."""
+    if kind == "long":
+        return creak(rng, sr, rng.uniform(0.36, 0.44), f0, f0 * 1.35, rough=0.14, release=0.12, swell=0.05) * 0.6
+    if kind == "two":      # stick, a breath, then the rest of the way
+        out = np.zeros(L.secs(0.5, sr))
+        L.place(out, creak(rng, sr, 0.16, f0 * 1.1, f0 * 0.95, rough=0.2, release=0.05, swell=0.02), 0.0, sr, 0.55)
+        L.place(out, creak(rng, sr, 0.22, f0 * 0.95, f0 * 1.3, rough=0.16, release=0.08, swell=0.03), 0.21, sr, 0.6)
+        return out
+    if kind == "low":      # a heavy lid, groaning down the scale
+        return creak(rng, sr, rng.uniform(0.3, 0.36), f0 * 0.75, f0 * 0.62, body=(150, 330, 640, 1150), rough=0.22,
+                     release=0.1, swell=0.04) * 0.65
+    out = np.zeros(L.secs(0.45, sr))   # "airy": a quick smooth swing, a short squeak and the lid's air
+    L.place(out, creak(rng, sr, 0.12, f0 * 1.5, f0 * 1.8, rough=0.08, release=0.05, swell=0.02), 0.02, sr, 0.4)
+    L.place(out, sweep_noise(rng, sr, 0.35, 300, 1400, q=1.0) * 0.35, 0.04, sr)
+    return out
+
+
+def chest_stop(rng, sr, kind, f):
+    """The open lid meeting its stop: one wooden thunk, or a small bounce."""
+    if kind == "thunk":
+        return L.mix(knock(sr, rng, f, "wood"), (thump(sr, rng, 110, 0.18, 0.04, grit=0.3), 0.6)) * 0.55
+    out = np.zeros(L.secs(0.25, sr))
+    L.place(out, knock(sr, rng, f * 1.05, "wood"), 0.0, sr, 0.45)
+    L.place(out, knock(sr, rng, f * 1.08, "wood"), rng.uniform(0.07, 0.09), sr, 0.2)
+    return out
+
+
+def chest_sparkle(rng, sr, kind, root_hz):
+    """The gold inside catching the light: a short run of glassy notes over a little dust."""
+    out = np.zeros(L.secs(1.1, sr))
+    steps = {"rise": [0, 4, 7, 12], "fall": [12, 9, 4], "chord": [0, 4, 7], "dust": [], "trill": [7, 12, 7, 12, 7]}[kind]
+    gap = {"rise": 0.075, "fall": 0.11, "chord": 0.012, "dust": 0.0, "trill": 0.055}[kind]
+    for k, st in enumerate(steps):
+        f = root_hz * 2 ** (st / 12.0)
+        if kind in ("fall", "chord"):
+            v = L.fm_bell(sr, f, 0.7, ratio=3.5, index=rng.uniform(1.2, 2.0), t60=0.6, rng=rng)
+        else:
+            v = L.modal(sr, f, "glass", dur=0.5, rng=rng)
+        L.place(out, v, k * gap * rng.uniform(0.92, 1.08), sr, (0.75 * 0.82 ** k) if kind == "trill" else 0.8 ** k)
+    swirl = kind == "dust"
+    dust = L.scatter(sr, 0.6 if swirl else 0.35, rng, lambda r: L.modal(sr, r.uniform(4500, 9000), "glass", dur=0.06, rng=r),
+                     count=10 if swirl else 4, gain=(0.12, 0.35), env=np.hanning(32) if swirl else None)
+    L.place(out, dust, 0.03, sr, 1.0 if swirl else 0.6)
+    return out
+
+
+@family("field", "chest", 6, sr=BR, ref=lambda: ref_field("box"))
+def field_chest(rng, i):
+    """Treasure chest opening: latch x hinge creak x the lid's stop x the gold's sparkle (rise, fall, chord, dust, trill)."""
+    latch, stop, sparkle, hinge = L.cycle(i, ["hasp", "snap", "bolt"], ["thunk", "bounce"], CHEST_SPARKLES, ["long", "two", "low", "airy"])
+    f0 = [230, 260, 210, 280, 245, 220][i] * rng.uniform(0.97, 1.03)
+    out = np.zeros(L.secs(1.7, BR))
+    L.place(out, chest_latch(rng, BR, latch), 0.0, BR)
+    swing = chest_hinge(rng, BR, hinge, f0)
+    at = rng.uniform(0.04, 0.07)
+    L.place(out, swing, at, BR)
+    L.place(out, chest_stop(rng, BR, stop, [300, 340, 270, 360, 320, 290][i]), at + min(swing.size / BR, 0.48), BR)
+    L.place(out, chest_sparkle(rng, BR, sparkle, [1046.5, 1174.7, 987.8, 1318.5, 1108.7, 1244.5][i]), 0.28 + 0.04 * (i % 2), BR, 0.5)
+    return room(out, BR, rng, 0.15, 0.06), {"latch": latch, "hinge": hinge, "stop": stop, "sparkle": sparkle}
+
+
+# knock gaps (s): even, rushing, slow pair, dragging, flam then a gap, a gap then a quick pair
+RATTLE_GAPS = [(0.09, 0.07), (0.07, 0.06, 0.05), (0.13,), (0.05, 0.07, 0.09, 0.11), (0.035, 0.13), (0.11, 0.05, 0.05)]
+
+
+@family("field", "chest_rattle", 6, ref=lambda: ref_field("box") - 4.0)
+def field_chest_rattle(rng, i):
+    """A chest's lid jiggled against its catch while it gives (treasure.gd): knock rhythm x lid pitch x hasp."""
+    gaps = RATTLE_GAPS[i]
+    f, hasp = L.cycle(i, [430, 380, 470, 400, 450, 360], ["jingle", "clack", "none"])
+    out = np.zeros(L.secs(0.6, SR))
+    at = 0.0
+    for k in range(len(gaps) + 1):
+        g = 1.0 if k == 0 else rng.uniform(0.55, 0.85)
+        L.place(out, knock(SR, rng, f * rng.uniform(0.96, 1.05), "wood", dur=0.09), at, SR, g * 0.8)
+        if hasp == "jingle" or (hasp == "clack" and k == len(gaps)):
+            L.place(out, knock(SR, rng, rng.uniform(2200, 2800), "metal", dur=0.05), at + rng.uniform(0.008, 0.02), SR,
+                    0.25 if hasp == "jingle" else 0.4)
+        if k < len(gaps):
+            at += gaps[k] * rng.uniform(0.92, 1.08)
+    return room(out, SR, rng, 0.12, 0.05), {"knocks": len(gaps) + 1, "hasp": hasp}
+
+
 def brass_slide(rng, sr, sections, step, direction=1):
     s = S(rng, sr)
     out = np.zeros(L.secs(1.0, sr))

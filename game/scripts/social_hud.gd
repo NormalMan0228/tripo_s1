@@ -321,7 +321,9 @@ func _add_line(entry: Dictionary, live: bool) -> void:
 	var mine := str(entry.get("username", "")) == my_name()
 	if str(entry.get("channel", "")) == "whisper" and not mine: last_whisper = str(entry.get("username", ""))
 	if not mine and not chat.reading(): unread += 1
-	if not mine: RpgUi.sfx("toast" if str(entry.get("channel", "")) == "whisper" else "hover", -16.0)
+	# Someone else's live line: chat_in (a whisper its own), at most one per 400 ms (RpgUi SFX_GAP_MS)
+	# when a poll brings several; history and this player's own lines stay silent (sending sounded).
+	if not mine: RpgUi.sfx("whisper" if str(entry.get("channel", "")) == "whisper" else "chat_in", -11.0)
 	if place and place.has_method("chat_bubble") and not str(entry.get("channel", "")) in ["global", "whisper"]:
 		place.chat_bubble(str(entry.get("user_id", "")), str(entry.get("username", "")), str(entry.get("text", "")))
 
@@ -412,6 +414,8 @@ func send(text: String, channel := "local") -> void:
 	var answer: Dictionary = await api.post("/v1/social/messages", payload)
 	if stopped: return
 	if answer.ok:
+		# The send sound once the server took the line (as the old social.gd send_message).
+		RpgUi.sfx("chat_out", -6.0)
 		echo["sent_id"] = int(answer.data.get("id", -2))
 		echo["text"] = str(answer.data.get("text", echo.text))
 		if answer.data.has("muted_until"): muted_until = float(answer.data.muted_until)
@@ -423,6 +427,7 @@ func send(text: String, channel := "local") -> void:
 		chat.redraw()
 		return
 	lines.erase(echo)
+	RpgUi.sfx("deny", -10.0)
 	system_line(send_error(str(answer.get("error", ""))))
 
 func send_error(code: String) -> String:
@@ -514,14 +519,22 @@ func request_friend(username := "", user_id := "") -> void:
 	var body := {"username":username} if not username.is_empty() else {"user_id":user_id}
 	var answer := await act("/v1/friends/requests", body)
 	if not answer.ok: return
+	# The outcome's own sound before its notice stands in for the toast's chime (RpgUi message kinds).
 	match str(answer.data.get("state", "")):
-		"accepted", "friends": notice(tr("친구가 되었어요!"), "success")
-		_: notice(tr("친구 신청을 보냈어요"), "success")
+		"accepted", "friends":
+			RpgUi.sfx("friend", -6.0)
+			notice(tr("친구가 되었어요!"), "success")
+		_:
+			RpgUi.sfx("chat_out", -6.0)
+			notice(tr("친구 신청을 보냈어요"), "success")
 	fetch_people()
 
 func answer_request(id: String, decision: String) -> void:
 	if (await act("/v1/friends/requests/%s/%s" % [id, decision])).ok:
-		if decision == "accept": notice(tr("친구가 되었어요!"), "success")
+		if decision == "accept":
+			RpgUi.sfx("friend", -6.0)
+			notice(tr("친구가 되었어요!"), "success")
+		else: RpgUi.sfx("cancel", -8.0)
 		fetch_people()
 
 func remove_friend(user_id: String) -> void:
@@ -565,6 +578,7 @@ func visit(user_id: String, username: String) -> void:
 
 func invite(username: String, kind := "village") -> void:
 	if (await act("/v1/social/invites", {"username":username, "kind":kind})).ok:
+		RpgUi.sfx("chat_out", -6.0)
 		notice(tr("마을 초대를 보냈어요") if kind == "village" else tr("파티 초대를 보냈어요"), "success")
 
 func answer_invite(invitation: Dictionary, decision: String) -> void:

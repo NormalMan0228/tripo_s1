@@ -567,6 +567,11 @@ imported and never run.
     sputter, and the loop `firepit_loop_1`.
 - `field/<name>_<n>`: more takes next to the bare original, which stays take 0. New kinds are
   hammock, flap, flag, peck, tweet, bucket, telescope, arrive, stand, seeds and settle.
+- `field/chest_<n>` and `field/chest_rattle_<n>` (treasure.gd, no bare original): the treasure
+  chest's opening, 6 takes at 32 kHz (catch hasp / snap / bolt × hinge long / two-stage / low /
+  airy × the lid's stop thunk / bounce × the gold's sparkle rise / fall / chord / dust / trill),
+  and its lid jiggled against the catch while the server answers, 6 takes (2 to 5 knocks in an
+  even, rushing, dragging or flam rhythm × metal jingle / last clack / none).
 - `interior/<kind>_<n>`: the 15 `Interiors.sfx` kinds, 6 takes each, plus `steps` (8 stair
   takes in place of 4 identical thuds).
 - `doors/<room>_<kind>_<n>`: 3 takes per room and kind, so with the original there are 4.
@@ -597,6 +602,7 @@ rhythm or the partial set changes. Re-timing alone is not enough.
   - arrive → whoosh
   - stand and seeds → paper
   - settle and hammock → wood_creak
+  - chest → box; chest_rattle → box - 4 dB (the anticipation sits under the open)
 - Doors match their own original file.
 - `relevel()` corrects short takes once `finish()` has trimmed them. Every take is within
   0.83 dB of its reference.

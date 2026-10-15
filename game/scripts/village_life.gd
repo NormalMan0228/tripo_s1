@@ -263,12 +263,14 @@ func open_plot(index: int) -> void:
 	if state.plots[index].get("crop"):
 		use_plot(index)
 		return
-	app.close_village_modal()
+	# A window still open goes quietly: this one's open is the sound.
+	app.close_village_modal(false)
 	seed_plot=index
 	seed_choices=[]
 	# The shared window (RpgUi.window), night glass over the world just above the hotbar, without a
 	# shade: the bed stays in view. It sits on the window stack (the chat box steps aside); Esc or
-	# the close key shuts it, and the keys 1-5 pick a seed (their caps sit on the slots).
+	# the close key shuts it, and the keys 1-5 pick a seed (their caps sit on the slots). A pick is
+	# a soft select, then the seed going in (plant: the picker closes without its own sound).
 	var w := RpgUi.window(app.ui,tr("어떤 씨앗을 심을까요?"),{"kind":"night","place":"bottom","width":780,"modal":false,"scroll":false,
 		"on_close":app.close_village_modal,"id":"seed_picker"})
 	var v: VBoxContainer=w.body
@@ -306,7 +308,7 @@ func open_plot(index: int) -> void:
 		if count<1: cap.modulate.a=0.5
 		var chosen: String=crop
 		b.pressed.connect(func():
-			app.sound.effect("click")
+			RpgUi.sfx("select",-8.0)
 			plant(index,chosen))
 		row.add_child(b)
 		seed_choices.append(crop)
@@ -319,7 +321,7 @@ func open_plot(index: int) -> void:
 	stall.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
 	if index>=int(state.get("catalog",{}).get("starter_plots",6)):
 		app.button(foot,tr("풀밭으로 되돌리기"),func():
-			app.close_village_modal()
+			app.close_village_modal(false)
 			Art.burst(app.world,bed_point(index),"leaf",14)
 			sfx.play("rustle")
 			await request("untill",{"plot":index}))
@@ -328,7 +330,7 @@ func open_plot(index: int) -> void:
 	mode="seeds"
 
 func plant(index: int, crop: String) -> void:
-	app.close_village_modal()
+	app.close_village_modal(false)
 	app.player.face_point(bed_point(index))
 	app.player.react("craft")
 	# The seed takes are soft (the old synth's level): +8 dB sits them with the hoe and the watering.
@@ -560,9 +562,11 @@ func open_log() -> void:
 		grid.add_child(card)
 	app.text(v,tr("지금은 %s이에요. 밤에만 나오는 물고기도 있어요.") % (tr("밤") if state.get("night",false) else tr("낮")),13)
 
-func open_shop() -> void:
+## again: the stall's window rebuilt after a purchase or a sale (swapped in place, without the
+## window's close and open sounds: the trade's own sound is the one heard).
+func open_shop(again := false) -> void:
 	if state.is_empty(): return
-	var v: VBoxContainer=app.modal_card(tr("씨앗 가게 · 잎전 %d")%state.coins)
+	var v: VBoxContainer=app.modal_card(tr("씨앗 가게 · 잎전 %d")%state.coins,"",again)
 	mode="shop"
 	app.text(v,tr("잎전으로 씨앗과 미끼를 사고, 직접 얻은 수확물을 팔아요."),14)
 	# Selling also pays starseeds up to a daily allowance (shop_sell.gd, server app.py sell_stars).
@@ -575,7 +579,7 @@ func open_shop() -> void:
 		var cost: int=int(shop[item])
 		var b: Button=app.button(row,tr("%s\n+1 · %d잎전")%[tr(state.catalog.names[item]),cost],func():
 			await action("buy",{"item":item})
-			if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
+			if mode=="shop" and is_instance_valid(app.village_modal): open_shop(true))
 		b.disabled=state.coins<cost
 		b.custom_minimum_size.x=112
 	app.text(v,tr("가진 물건 팔기 · 누르면 최대 20개씩"),16)
@@ -595,19 +599,25 @@ func open_shop() -> void:
 		var b: Button=app.button(grid,tr("%s %d개 → +%d잎전")%[tr(state.catalog.names[item]),amount,coins]+(tr(" · 별씨 +%d")%stars if stars>0 else ""),func():
 			var data: Dictionary=await request("sell",{"item":item,"quantity":amount})
 			if not data.is_empty():
+				# The coins' jingle is the sale's sound (a message kind: the toast stays quiet), so the
+				# leaf counter rolls up silently (its count restarted, RpgUi.count_to) instead of
+				# ending on a second jingle.
+				RpgUi.sfx("coin_gain",-5.0)
+				var leaves = app.frame.get("leaves") if app.get("frame") is Dictionary else null
+				if is_instance_valid(leaves) and leaves is Label and (leaves as Label).has_meta("count_target"): (leaves as Label).remove_meta("count_target")
 				app.message(data.message)
-				app.sound.effect("reward")
-				# Starseeds from the sale burst over the walker and fly into the counter.
+				# Starseeds from the sale burst over the walker and fly into the counter (their notes as
+				# they land; no request fanfare for a sale).
 				if int(data.get("stars",0))>0 and is_instance_valid(app.player):
-					Quests.reward_burst(app,app.player.position,int(data.stars))
+					Quests.reward_burst(app,app.player.position,int(data.stars),false)
 					Quests.reward_fly(app,app.player.position,int(data.stars),int(data.get("shards",0)))
-			if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
+			if mode=="shop" and is_instance_valid(app.village_modal): open_shop(true))
 		b.custom_minimum_size.x=228
 	if grid.get_child_count()==0: app.text(grid,tr("팔 물건이 없어요."),14)
 	app.text(v,tr("오늘의 마을 식탁: 순무 2개 + 강농어 1마리 → 20잎전\n매일 오전 9시(한국 시간)에 새 배달이 열려요."),14)
 	var order: Button=app.button(v,tr("식탁에 배달하기") if state.order_available else tr("오늘 배달 완료"),func():
 		await action("order")
-		if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
+		if mode=="shop" and is_instance_valid(app.village_modal): open_shop(true))
 	order.disabled=not state.order_available or state.bag.get("turnip",0)<2 or state.bag.get("perch",0)<1
 
 func open_map() -> void:
@@ -653,6 +663,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	var n: int=event.physical_keycode-KEY_1
 	if n>=0 and n<seed_choices.size() and int(state.bag.get(seed_choices[n]+"_seed",0))>0:
 		get_viewport().set_input_as_handled()
+		RpgUi.sfx("select",-8.0)
 		plant(seed_plot,seed_choices[n])
 
 func _process(delta: float) -> void:
