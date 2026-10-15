@@ -29,7 +29,8 @@ func run() -> void:
 	var table := Doors.table()
 	for door: Dictionary in Town.DOORS:
 		var entry: Dictionary = table.get(String(door.id), {})
-		if entry.is_empty() or not ResourceLoader.exists(String(entry.get("mesh", ""))) or not ResourceLoader.exists(String(entry.get("opening", ""))):
+		var leaf_path := String(entry.get("mesh", "")) if not entry.has("leaves") else String(entry.leaves[0].get("mesh", "")) if not (entry.leaves as Array).is_empty() else ""
+		if entry.is_empty() or not ResourceLoader.exists(leaf_path) or not ResourceLoader.exists(String(entry.get("opening", ""))):
 			failures.append("%s: no door in door_leaves.json (run tools/door_leaves.gd)" % door.id)
 	var enabled: Array = Town.DOORS.map(func(d): return String(d.id)).filter(func(id): return Doors.enabled(id))
 	report["enabled"] = enabled
@@ -84,6 +85,11 @@ func check_map(map: Node3D, label: String, enabled: Array, report: Dictionary) -
 		var leaf := hinge.get_node("Mesh") as MeshInstance3D
 		var box := leaf.mesh.get_aabb()
 		var size := Doors.leaf_size(id)
+		var leaves := Doors.leaf_entries(id)
+		if not leaves.is_empty(): size = Vector3(float(leaves[0].width), float(leaves[0].height), size.z)
+		var inward: bool = String(Doors.table()[id].get("opens", "out")) == "in"
+		# The leaf reaches from its hinge across the doorway: along -x when hung on its right edge.
+		var reach := size.x if not leaves.is_empty() and String(leaves[0].get("hinge", "right")) == "left" else -size.x
 		report[label+"_"+id] = {"leaf_aabb": [snappedf(box.size.x, .01), snappedf(box.size.y, .01), snappedf(box.size.z, .01)], "surfaces": leaf.mesh.get_surface_count()}
 		if box.size.z < size.z*0.9: failures.append("%s %s: the leaf is not solid (%.3f m deep)" % [label, id, box.size.z])
 		if absf(box.size.x-size.x) > 0.1 or absf(box.size.y-size.y) > 0.1: failures.append("%s %s: leaf size %s, door %s" % [label, id, box.size, size])
@@ -94,17 +100,17 @@ func check_map(map: Node3D, label: String, enabled: Array, report: Dictionary) -
 		if not restyled: failures.append("%s %s: the leaf is not drawn with the building's exterior material" % [label, id])
 		var at: Vector2 = door.at
 		var out: Vector2 = (at-Vector2(door.center)).normalized()
-		var middle := hinge.global_transform*Vector3(-size.x*0.5, 1.0, 0)
+		var middle := hinge.global_transform*Vector3(reach*0.5, 1.0, 0)
 		var facing := hinge.global_basis.z
 		if Vector2(middle.x, middle.z).distance_to(at) > 4.0: failures.append("%s %s: door %.1f m from the door point" % [label, id, Vector2(middle.x, middle.z).distance_to(at)])
 		if Vector2(facing.x, facing.z).normalized().dot(out) < 0.5: failures.append("%s %s: the door does not face out" % [label, id])
 		var material := opening.material_override as ShaderMaterial
 		if material == null or not material.shader.code.contains("inner_light"): failures.append("%s %s: opening without inner_light" % [label, id])
-		var closed_far := (hinge.global_transform*Vector3(-size.x, 1.0, 0))
+		var closed_far := (hinge.global_transform*Vector3(reach, 1.0, 0))
 		Doors.set_door_open(id, 1.0)
-		var open_far := (hinge.global_transform*Vector3(-size.x, 1.0, 0))
+		var open_far := (hinge.global_transform*Vector3(reach, 1.0, 0))
 		var swing := Vector2(open_far.x-closed_far.x, open_far.z-closed_far.z)
-		if absf(hinge.rotation_degrees.y-Doors.OPEN_DEGREES) > 0.01 or swing.dot(out) <= 0.0: failures.append("%s %s: did not open outward" % [label, id])
+		if absf(absf(hinge.rotation_degrees.y)-Doors.OPEN_DEGREES) > 0.01 or (swing.dot(out) <= 0.0) != inward: failures.append("%s %s: did not open %s" % [label, id, "inward" if inward else "outward"])
 		Doors.set_door_open(id, 0.5)
 		if absf(Doors.door_open(id)-0.5) > 0.001: failures.append("%s %s: amount not kept" % [label, id])
 		Doors.set_door_open(id, 0.0)
@@ -126,7 +132,7 @@ func check_interiors(enabled: Array, report: Dictionary) -> void:
 			failures.append("%s: no FrontDoor" % room)
 			holder.free()
 			continue
-		if absf(hinge.rotation_degrees.y-Interiors.FRONT_DOOR_OPEN_DEGREES) > 0.01: failures.append("%s: FrontDoor is not open 108 degrees by default" % room)
+		if absf(absf(hinge.rotation_degrees.y)-Interiors.FRONT_DOOR_OPEN_DEGREES) > 0.01: failures.append("%s: FrontDoor is not open 108 degrees by default" % room)
 		Interiors.set_front_door_open(holder, 0.0)
 		if absf(hinge.rotation.y) > 0.0001: failures.append("%s: FrontDoor did not close" % room)
 		Interiors.set_front_door_open(holder, 1.0)

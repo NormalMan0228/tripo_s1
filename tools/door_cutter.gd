@@ -34,6 +34,13 @@ const CELL := 0.02
 ## A piece belongs to what the camera sees when it lies this close to the front-most surface there.
 const SURFACE_BAND := 0.08
 const EDGE_STEP := 0.03
+## Hinge sides and opening directions as decided (or set by the user: "override": true).
+const HINGES := "res://maps/archipelago/door_hinges.json"
+## A single outline at least this wide (metres), or this wide for its height, is a pair of doors.
+const DOUBLE_WIDTH := 1.6
+const DOUBLE_ASPECT := 0.9
+var hinges := {}
+var overrides := {}
 var renders_dir := "res://../artifacts/outline_tool/renders/"
 var outlines_dir := "res://../artifacts/outline_tool/outlines/"
 
@@ -53,6 +60,10 @@ func run() -> void:
 	outlines_dir = absolute(outlines_dir)
 	if "--synthetic" in OS.get_cmdline_user_args(): write_synthetic()
 	var table: Dictionary = Doors.table().duplicate(true)
+	hinges = {}
+	if FileAccess.file_exists(HINGES):
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string(HINGES))
+		if parsed is Dictionary: overrides = parsed
 	var placements: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(PLACEMENTS))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(Doors.DOORS_DIR))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(WINDOWS_DIR))
@@ -74,24 +85,45 @@ func run() -> void:
 				if String(spec.model) == model: ids.append(String(spec.id))
 		var mesh_faces := load_model(model)
 		var windows := ArrayMesh.new()
+		var doors := []
 		for poly: Dictionary in outline.get("polys", []):
 			var pts: Array = poly.get("pts", [])
 			if pts.size() < 3: continue
-			var result := cut_outline(mesh_faces, meta, pts)
-			print("DOOR_CUT ", render_id, " ", poly.kind, " ", JSON.stringify(result.stats))
-			cut += 1
 			if String(poly.kind) == "door":
-				var entry := save_door(model, result, String(poly.get("hinge", "right")) if poly.get("hinge") != null else "right", mesh_faces)
-				entry["render_id"] = render_id
-				entry["outline_px"] = pts
-				for id in ids: table[id] = entry
-			else:
-				append_pieces(windows, result.inside, mesh_faces.materials)
+				var px := PackedVector2Array()
+				for p in pts: px.append(Vector2(float(p[0]), float(p[1])))
+				doors.append(px)
+				continue
+			var result := cut_outline(mesh_faces, meta, pts)
+			print("DOOR_CUT ", render_id, " window ", JSON.stringify(result.stats))
+			cut += 1
+			append_pieces(windows, result.inside, mesh_faces.materials)
+		# Doors: the user's outlines joined into one opening and split into leaves; the hinges and the
+		# opening direction are decided here (door_hinges.json overrides them).
+		var image: Image = Image.load_from_file(renders_dir+render_id+".png") if FileAccess.file_exists(renders_dir+render_id+".png") else null
+		var plan := plan_opening(doors, meta, image, ids)
+		if not plan.is_empty():
+			var union_pts := []
+			for p in plan.union: union_pts.append([p.x, p.y])
+			var result := cut_outline(mesh_faces, meta, union_pts)
+			print("DOOR_CUT ", render_id, " door ", JSON.stringify(result.stats), " leaves=", plan.leaves.map(func(l): return [l.hinge, l.reason]), " opens=", plan.opens)
+			cut += 1
+			var entry := save_opening(model, result, plan, mesh_faces, float(meta.mpp))
+			entry["render_id"] = render_id
+			for id in ids:
+				table[id] = entry
+				hinges[id] = {"leaves": plan.leaves.map(func(l): return {"hinge": l.hinge, "reason": l.reason}), "opens": plan.opens}
 		if windows.get_surface_count() > 0:
 			ResourceSaver.save(windows, WINDOWS_DIR+model.get_file().get_basename()+"_glass.res")
 	var file := FileAccess.open(Doors.RECTS, FileAccess.WRITE)
 	file.store_string(JSON.stringify(table, "\t", true))
 	file.close()
+	# The decisions, for the user to flip: an entry with "override": true is kept as it is next time.
+	for id in overrides:
+		if (overrides[id] as Dictionary).get("override", false): hinges[id] = overrides[id]
+	var saved := FileAccess.open(HINGES, FileAccess.WRITE)
+	saved.store_string(JSON.stringify(hinges, "\t", true))
+	saved.close()
 	print("DOOR_CUT_DONE outlines=", cut)
 	quit(0)
 
@@ -189,6 +221,7 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 	var inside := []
 	var outside := {}
 	var drop := {}
+	var taken := []
 	var stats := {"triangles_near": near.size(), "taken_whole": 0, "split": 0, "outline_m2": 0.0, "cut_m2": 0.0, "left_m2": 0.0}
 	stats.outline_m2 = absf(signed_area(poly))
 	for entry in near:
@@ -209,12 +242,22 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 		var pieces_out := Geometry2D.clip_polygons(tri2, poly)
 		var turns := pieces_out.map(func(p): return Geometry2D.is_polygon_clockwise(p))
 		if turns.has(true) and turns.has(false):
-			# The outline lies inside this one triangle (a hole in it): rare, left whole and counted.
+			# The outline lies inside this one triangle (it would leave a hole): cut the triangle in two
+			# down a line through the outline first, then each half has no hole.
 			stats["holes"] = int(stats.get("holes", 0))+1
-			continue
+			var x := centroid(poly).x
+			var span := 1000.0
+			pieces_in = []
+			pieces_out = []
+			for half in [PackedVector2Array([Vector2(x-span, -span), Vector2(x, -span), Vector2(x, span), Vector2(x-span, span)]),
+					PackedVector2Array([Vector2(x, -span), Vector2(x+span, -span), Vector2(x+span, span), Vector2(x, span)])]:
+				for part in Geometry2D.intersect_polygons(tri2, half):
+					pieces_in.append_array(Geometry2D.intersect_polygons(part, poly))
+					pieces_out.append_array(Geometry2D.clip_polygons(part, poly))
 		if not drop.has(tri.key): drop[tri.key] = []
 		drop[tri.key].append(int(tri.index))
-		var whole := absf(signed_area(tri2)) > 0.0 and is_equal_approx(area_sum(pieces_in), absf(signed_area(tri2)))
+		taken.append([tri, tri2])
+		var whole := absf(signed_area(tri2)) > 0.0 and is_equal_approx(area_sum(pieces_in), absf(signed_area(tri2))) and pieces_out.is_empty()
 		stats.taken_whole += 1 if whole else 0
 		stats.split += 0 if whole else 1
 		for piece in pieces_in:
@@ -232,7 +275,7 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 	var deepest := -INF
 	for cell in front:
 		if Geometry2D.is_point_in_polygon((Vector2(cell)+Vector2(.5, .5))*CELL, poly): deepest = maxf(deepest, float(front[cell][0]))
-	return {"inside": inside, "outside": outside, "drop": drop, "poly": poly, "front": front, "box": box, "front_z": deepest,
+	return {"inside": inside, "outside": outside, "drop": drop, "taken": taken, "poly": poly, "front": front, "box": box, "front_z": deepest,
 		"o": o, "u": u, "v": v, "into": into, "stats": stats}
 
 ## Visible building area left inside the outline: cells inside it whose front-most face is not dropped.
@@ -274,51 +317,223 @@ static func triangulate(piece: PackedVector2Array, tri: Dictionary, tri2: Packed
 				(tri.uv[0] as Vector2)*w.x+(tri.uv[1] as Vector2)*w.y+(tri.uv[2] as Vector2)*w.z])
 	return verts
 
-## Saves the door's leaf, opening and cut and returns its door_leaves.json entry.
-func save_door(model: String, result: Dictionary, hinge: String, mesh_faces: Dictionary) -> Dictionary:
-	var box: Rect2 = result.box
-	var poly: PackedVector2Array = result.poly
-	# The door frame (DoorFrame; DoorLeaf turns about its +Y, positive = outward): z = -view_dir (out),
-	# the leaf reaching along -x from the hinge corner (hinge side, bottom of the outline, front-most
-	# surface). A right-hand hinge: x = u (image right), y = -v (up). A left-hand one: x = -u, y = v
-	# (down): the same contract (closed 0, +Y, outward positive), the frame turned over.
+## The door plan of one render: the user's door outlines (pixels) joined where they touch into one
+## opening; leaves: the outlines as drawn when there are two or more, else the opening split down the
+## middle when it is a pair's width (DOUBLE_WIDTH, DOUBLE_ASPECT), else one leaf. Hinges: on the outer
+## edges of a pair; a single leaf hangs opposite its handle (dark or metal fittings near one side of
+## the leaf in the render), or without one on the side nearer the facade's end (the open door rests
+## against the wall). Doors open inward. door_hinges.json entries with "override": true win.
+## Returns {union: PackedVector2Array (px), leaves: [{poly (px), hinge, reason}], opens} or {}.
+func plan_opening(doors: Array, meta: Dictionary, image: Image, ids: Array) -> Dictionary:
+	if doors.is_empty(): return {}
+	var mpp := float(meta.mpp)
+	var union: PackedVector2Array = doors[0]
+	for i in range(1, doors.size()):
+		var grown := Geometry2D.offset_polygon(doors[i], 3.0)
+		var merged := Geometry2D.merge_polygons(union, grown[0] if not grown.is_empty() else doors[i])
+		var outer := merged.filter(func(p): return not Geometry2D.is_polygon_clockwise(p) or merged.size() == 1)
+		union = largest(outer if not outer.is_empty() else merged)
+	var box := bounds(union)
+	var leaves := []
+	if doors.size() >= 2:
+		# Two drawn leaves: each one as drawn, the later one without what the earlier ones already cover.
+		var sorted := doors.duplicate()
+		sorted.sort_custom(func(a, b): return bounds(a).get_center().x < bounds(b).get_center().x)
+		var covered: Array = []
+		for i in sorted.size():
+			var poly: PackedVector2Array = sorted[i]
+			for c in covered:
+				var rest := Geometry2D.clip_polygons(poly, c)
+				if not rest.is_empty(): poly = largest(rest)
+			covered.append(sorted[i])
+			leaves.append({"poly": poly, "hinge": "left" if i == 0 else "right", "reason": "double"})
+	elif box.size.x*mpp >= DOUBLE_WIDTH or box.size.x >= box.size.y*DOUBLE_ASPECT:
+		var mid := box.get_center().x
+		for side in ["left", "right"]:
+			var half := Rect2(box.position.x-10, box.position.y-10, mid-box.position.x+10, box.size.y+20) if side == "left" else Rect2(mid, box.position.y-10, box.end.x-mid+10, box.size.y+20)
+			var parts := Geometry2D.intersect_polygons(union, rect_poly(half))
+			if not parts.is_empty(): leaves.append({"poly": largest(parts), "hinge": side, "reason": "double"})
+	else:
+		var side := handle_side(image, union)
+		if not side.is_empty(): leaves.append({"poly": union, "hinge": "left" if side == "right" else "right", "reason": "handle"})
+		else: leaves.append({"poly": union, "hinge": wall_side(image, union), "reason": "wall"})
+	var plan := {"union": union, "leaves": leaves, "opens": "in"}
+	for id in ids:
+		var set: Dictionary = overrides.get(id, {})
+		if not set.get("override", false): continue
+		plan.opens = String(set.get("opens", plan.opens))
+		var given: Array = set.get("leaves", [])
+		for i in mini(given.size(), leaves.size()):
+			leaves[i].hinge = String(given[i].get("hinge", leaves[i].hinge))
+			leaves[i].reason = "user"
+	return plan
+
+static func largest(polys: Array) -> PackedVector2Array:
+	var best := PackedVector2Array()
+	for p in polys:
+		if absf(signed_area(p)) > absf(signed_area(best)): best = p
+	return best
+
+static func bounds(poly: PackedVector2Array) -> Rect2:
+	var box := Rect2(poly[0], Vector2.ZERO)
+	for p in poly: box = box.expand(p)
+	return box
+
+static func rect_poly(r: Rect2) -> PackedVector2Array:
+	return PackedVector2Array([r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)])
+
+## "left" / "right": the side of the leaf whose third holds clearly more handle-like texels (dark iron,
+## grey metal or brass) in its middle height; "" when neither does.
+static func handle_side(image: Image, poly: PackedVector2Array) -> String:
+	if image == null: return ""
+	var box := bounds(poly)
+	var counts := {"left": 0, "right": 0}
+	var step := 2
+	for y in range(int(box.position.y+box.size.y*0.3), int(box.position.y+box.size.y*0.75), step):
+		for x in range(int(box.position.x), int(box.end.x), step):
+			if x < 0 or y < 0 or x >= image.get_width() or y >= image.get_height(): continue
+			var at := Vector2(x, y)
+			if not Geometry2D.is_point_in_polygon(at, poly): continue
+			var t := (x-box.position.x)/maxf(box.size.x, 1.0)
+			if t > 0.3 and t < 0.7: continue
+			var c := image.get_pixel(x, y)
+			var metal := c.v < 0.2 or (c.s < 0.22 and c.v > 0.3 and c.v < 0.7) or (c.h > 0.1 and c.h < 0.17 and c.s > 0.45 and c.v > 0.65)
+			if metal: counts["left" if t <= 0.3 else "right"] += 1
+	if maxi(counts.left, counts.right) < 12: return ""
+	if counts.left >= counts.right*1.6: return "left"
+	if counts.right >= counts.left*1.6: return "right"
+	return ""
+
+## The side nearer the facade's end at the door's middle height (the render's background beyond it).
+static func wall_side(image: Image, poly: PackedVector2Array) -> String:
+	if image == null: return "right"
+	var box := bounds(poly)
+	var y := clampi(int(box.get_center().y), 0, image.get_height()-1)
+	var background := image.get_pixel(0, 0)
+	var reach := func(dir: int) -> int:
+		var x := int(box.get_center().x)
+		var n := 0
+		while x > 0 and x < image.get_width()-1:
+			x += dir
+			n += 1
+			var c := image.get_pixel(x, y)
+			if absf(c.r-background.r)+absf(c.g-background.g)+absf(c.b-background.b) < 0.03 or c.a < 0.1: break
+		return n
+	return "left" if int(reach.call(-1)) < int(reach.call(1)) else "right"
+
+## Saves an opening's leaves (one resource each), its doorway and the building's cut, and returns its
+## door_leaves.json entry. Frame: the wall's (x = u, image right; y up; z = -view_dir, out of the
+## wall) at the opening's bottom left on its front-most surface. A leaf's hinge sits on its outer edge
+## at the bottom; the leaf reaches from it across the opening, 6 cm deep into the wall; "sign" is the
+## rotation that opens it the planned way (+1 swings its far edge out of the wall for a right-hung
+## leaf, into it for a left-hung one).
+func save_opening(model: String, result: Dictionary, plan: Dictionary, mesh_faces: Dictionary, mpp: float) -> Dictionary:
 	var o: Vector3 = result.o
 	var u: Vector3 = result.u
 	var v: Vector3 = result.v
 	var out: Vector3 = -(result.into as Vector3)
-	var hinge_x: float = box.end.x if hinge == "right" else box.position.x
-	var corner: Vector3 = o+u*hinge_x+v*box.end.y+out*float(result.front_z)
-	var frame := Transform3D(Basis(u, -v, out) if hinge == "right" else Basis(-u, v, out), corner)
-	var to_leaf := frame.affine_inverse()
-	var leaf_parts := {}
-	var opening := SurfaceTool.new()
-	opening.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for piece: Dictionary in result.inside:
-		if not leaf_parts.has(piece.key): leaf_parts[piece.key] = []
-		var verts: Array = piece.verts
-		for t in range(0, verts.size(), 3):
-			var front_tri := []
-			for k in 3:
-				var vtx: Array = verts[t+k]
-				var p: Vector3 = to_leaf*(vtx[0] as Vector3)
-				var n: Vector3 = (to_leaf.basis*(vtx[1] as Vector3)).normalized()
-				var tg4: Vector4 = vtx[2]
-				var tg: Vector3 = to_leaf.basis*Vector3(tg4.x, tg4.y, tg4.z)
-				front_tri.append([p, vtx[3], n, Vector4(tg.x, tg.y, tg.z, tg4.w)])
-				opening.set_normal(Vector3.BACK)
-				var img := Vector2(((vtx[0] as Vector3)-o).dot(u), ((vtx[0] as Vector3)-o).dot(v))
-				opening.set_uv(Vector2((img.x-box.position.x)/maxf(box.size.x, .01), (img.y-box.position.y)/maxf(box.size.y, .01)))
-				opening.add_vertex(p)
-			leaf_parts[piece.key].append_array(front_tri)
-			for k in [0, 2, 1]:
-				var f: Array = front_tri[k]
-				leaf_parts[piece.key].append([(f[0] as Vector3)-Vector3(0, 0, THICKNESS), f[1], -(f[2] as Vector3), f[3]])
-	# Side faces round the outline, from the door's surface to THICKNESS behind it (image metres to the
-	# leaf frame through the model), coloured by the door just inside its edge.
+	var box: Rect2 = result.box
+	var front_z := float(result.front_z)
+	var origin: Vector3 = o+u*box.position.x+v*box.end.y+out*front_z
+	var frame := Transform3D(Basis(u, -v, out), origin)
+	var to_frame := frame.affine_inverse()
+	var name := model.get_file().get_basename()
+	var leaves := []
+	for i in plan.leaves.size():
+		var leaf: Dictionary = plan.leaves[i]
+		var poly := PackedVector2Array()
+		for p in leaf.poly: poly.append(p*mpp)
+		var lbox := bounds(poly)
+		var hinge_x: float = lbox.end.x if leaf.hinge == "right" else lbox.position.x
+		var pivot: Vector3 = to_frame*(o+u*hinge_x+v*lbox.end.y+out*front_z)
+		var to_leaf := Transform3D(Basis.IDENTITY, pivot).affine_inverse()*to_frame
+		var parts := {}
+		for t in result.taken:
+			for piece in Geometry2D.intersect_polygons(t[1], poly):
+				var verts := triangulate(piece, t[0], t[1])
+				if not parts.has(t[0].key): parts[t[0].key] = []
+				for k in range(0, verts.size(), 3):
+					var front_tri := []
+					for j in 3:
+						var vtx: Array = verts[k+j]
+						var n: Vector3 = (to_leaf.basis*(vtx[1] as Vector3)).normalized()
+						var tg4: Vector4 = vtx[2]
+						var tg: Vector3 = to_leaf.basis*Vector3(tg4.x, tg4.y, tg4.z)
+						front_tri.append([to_leaf*(vtx[0] as Vector3), vtx[3], n, Vector4(tg.x, tg.y, tg.z, tg4.w)])
+					parts[t[0].key].append_array(front_tri)
+					for j in [0, 2, 1]:
+						var f: Array = front_tri[j]
+						parts[t[0].key].append([(f[0] as Vector3)-Vector3(0, 0, THICKNESS), f[1], -(f[2] as Vector3), f[3]])
+		side_faces(parts, poly, result, to_leaf, o, u, v, out)
+		var mesh := ArrayMesh.new()
+		for key in parts: commit(mesh, "leaf|"+key, parts[key], mesh_faces.materials.get(key))
+		var path: String = Doors.DOORS_DIR+name+("" if i == 0 else str(i+1))+".res"
+		ResourceSaver.save(mesh, path)
+		var sign := (1.0 if leaf.hinge == "right" else -1.0)*(1.0 if plan.opens == "out" else -1.0)
+		leaves.append({"mesh": path, "hinge": leaf.hinge, "reason": leaf.reason, "pivot": [pivot.x, pivot.y, pivot.z], "sign": sign,
+			"width": snappedf(lbox.size.x, .001), "height": snappedf(lbox.size.y, .001)})
+	# The doorway: a doorway opening out shows the dark surface where the door was; one opening in is
+	# a dark recess as deep as the widest leaf, so the leaf can be seen swinging into it.
+	var depth := 0.0
+	for leaf in leaves: depth = maxf(depth, float(leaf.width))
+	var doorway := ArrayMesh.new()
+	var tool := SurfaceTool.new()
+	tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var w := box.size.x
+	var h := box.size.y
+	if plan.opens == "out":
+		for piece: Dictionary in result.inside:
+			for vtx in piece.verts:
+				var p: Vector3 = to_frame*(vtx[0] as Vector3)
+				tool.set_normal(Vector3.BACK)
+				tool.set_uv(Vector2(p.x/maxf(w, .01), 1.0-p.y/maxf(h, .01)))
+				tool.add_vertex(p)
+	else:
+		var d := depth+0.15
+		# Five inner faces of a box behind the opening (seen from outside: back, sides, top, floor).
+		var faces := [[Vector3(0, 0, -d), Vector3(w, 0, -d), Vector3(w, h, -d), Vector3(0, h, -d)],
+			[Vector3(0, 0, 0), Vector3(0, 0, -d), Vector3(0, h, -d), Vector3(0, h, 0)],
+			[Vector3(w, 0, -d), Vector3(w, 0, 0), Vector3(w, h, 0), Vector3(w, h, -d)],
+			[Vector3(0, h, -d), Vector3(w, h, -d), Vector3(w, h, 0), Vector3(0, h, 0)],
+			[Vector3(0, 0, 0), Vector3(w, 0, 0), Vector3(w, 0, -d), Vector3(0, 0, -d)]]
+		for quad in faces:
+			var centre: Vector3 = (quad[0]+quad[1]+quad[2]+quad[3])*0.25
+			var inward := (Vector3(w*0.5, h*0.5, -d*0.5)-centre).normalized()
+			var tris := [[quad[0], quad[1], quad[2]], [quad[0], quad[2], quad[3]]]
+			for tri in tris:
+				# Front faces wind clockwise seen from their side: facing into the box.
+				if ((tri[1]-tri[0]) as Vector3).cross(tri[2]-tri[0]).dot(inward) > 0.0: tri = [tri[0], tri[2], tri[1]]
+				for p in tri:
+					tool.set_normal(inward)
+					tool.set_uv(Vector2(clampf(p.x/maxf(w, .01), 0, 1), clampf(1.0-p.y/maxf(h, .01), 0, 1)))
+					tool.add_vertex(p)
+	tool.index()
+	tool.commit(doorway)
+	ResourceSaver.save(doorway, Doors.DOORS_DIR+name+"_opening.res")
+	var cut := ArrayMesh.new()
+	for key in result.outside:
+		var list := []
+		for piece: Dictionary in result.outside[key]: list.append_array(piece.verts.map(func(vtx): return [vtx[0], vtx[3], vtx[1], vtx[2]]))
+		if list.size() >= 3: commit(cut, "cut|"+key, list, mesh_faces.materials.get(key))
+	ResourceSaver.save(cut, Doors.DOORS_DIR+name+"_cut.res")
+	var drop := {}
+	for key in result.drop: drop[key] = result.drop[key]
+	var outline := []
+	for p in plan.union: outline.append([p.x, p.y])
+	return {"model": model, "leaves": leaves, "opens": plan.opens, "opening": Doors.DOORS_DIR+name+"_opening.res",
+		"cut": Doors.DOORS_DIR+name+"_cut.res", "drop": drop, "thickness": THICKNESS,
+		"frame": [frame.basis.x.x, frame.basis.x.y, frame.basis.x.z, frame.basis.y.x, frame.basis.y.y, frame.basis.y.z,
+			frame.basis.z.x, frame.basis.z.y, frame.basis.z.z, frame.origin.x, frame.origin.y, frame.origin.z],
+		"width": snappedf(w, .001), "height": snappedf(h, .001), "depth": snappedf(depth+0.15, .001), "outline_px": outline, "stats": result.stats}
+
+## Side faces round a leaf's outline (image metres), from the door's surface to THICKNESS behind it,
+## coloured by the door just inside the edge; added to the surface most of the leaf uses.
+func side_faces(parts: Dictionary, poly: PackedVector2Array, result: Dictionary, to_leaf: Transform3D, o: Vector3, u: Vector3, v: Vector3, out: Vector3) -> void:
 	var main := ""
-	for key in leaf_parts: if main.is_empty() or (leaf_parts[key] as Array).size() > (leaf_parts[main] as Array).size(): main = key
+	for key in parts: if main.is_empty() or (parts[key] as Array).size() > (parts[main] as Array).size(): main = key
+	if main.is_empty(): return
 	var centre := centroid(poly)
-	var to_leaf_point := func(img: Vector2, depth: float) -> Vector3: return to_leaf*(o+u*img.x+v*img.y+out*depth)
+	var front_z := float(result.front_z)
 	for i in poly.size():
 		var a := poly[i]
 		var b := poly[(i+1) % poly.size()]
@@ -331,35 +546,13 @@ func save_door(model: String, result: Dictionary, hinge: String, mesh_faces: Dic
 			var q2 := a.lerp(b, float(k+1)/steps)
 			var s1 := surface_at(result, q1, centre)
 			var s2 := surface_at(result, q2, centre)
-			var f1: Vector3 = to_leaf_point.call(q1, s1.z)
-			var f2: Vector3 = to_leaf_point.call(q2, s2.z)
+			var f1: Vector3 = to_leaf*(o+u*q1.x+v*q1.y+out*float(s1.z))
+			var f2: Vector3 = to_leaf*(o+u*q2.x+v*q2.y+out*float(s2.z))
 			var back := Vector3(0, 0, THICKNESS)
 			var quad := [[f1, s1.uv], [f2, s2.uv], [f2-back, s2.uv], [f1, s1.uv], [f2-back, s2.uv], [f1-back, s1.uv]]
 			if ((quad[1][0] as Vector3)-(quad[0][0] as Vector3)).cross((quad[2][0] as Vector3)-(quad[0][0] as Vector3)).dot(normal) > 0.0:
 				quad = [quad[0], quad[2], quad[1], quad[3], quad[5], quad[4]]
-			if not main.is_empty():
-				for q in quad: leaf_parts[main].append([q[0], q[1], normal, Vector4(0, 1, 0, 1)])
-	var name := model.get_file().get_basename()
-	var leaf := ArrayMesh.new()
-	for key in leaf_parts: commit(leaf, "leaf|"+key, leaf_parts[key], mesh_faces.materials.get(key))
-	ResourceSaver.save(leaf, Doors.DOORS_DIR+name+".res")
-	var doorway := ArrayMesh.new()
-	opening.index()
-	opening.commit(doorway)
-	ResourceSaver.save(doorway, Doors.DOORS_DIR+name+"_opening.res")
-	var cut := ArrayMesh.new()
-	for key in result.outside:
-		var list := []
-		for piece: Dictionary in result.outside[key]: list.append_array(piece.verts.map(func(vtx): return [vtx[0], vtx[3], vtx[1], vtx[2]]))
-		if list.size() >= 3: commit(cut, "cut|"+key, list, mesh_faces.materials.get(key))
-	ResourceSaver.save(cut, Doors.DOORS_DIR+name+"_cut.res")
-	var drop := {}
-	for key in result.drop: drop[key] = result.drop[key]
-	return {"model": model, "mesh": Doors.DOORS_DIR+name+".res", "opening": Doors.DOORS_DIR+name+"_opening.res",
-		"cut": Doors.DOORS_DIR+name+"_cut.res", "drop": drop, "hinge": hinge, "thickness": THICKNESS,
-		"frame": [frame.basis.x.x, frame.basis.x.y, frame.basis.x.z, frame.basis.y.x, frame.basis.y.y, frame.basis.y.z,
-			frame.basis.z.x, frame.basis.z.y, frame.basis.z.z, frame.origin.x, frame.origin.y, frame.origin.z],
-		"width": snappedf(box.size.x, .001), "height": snappedf(box.size.y, .001), "stats": result.stats}
+			for q in quad: parts[main].append([q[0], q[1], normal, Vector4(0, 1, 0, 1)])
 
 ## The door's surface at a point of the outline (image metres), looked up just inside it: {z, uv}
 ## (z: depth towards the camera from the render's origin plane).

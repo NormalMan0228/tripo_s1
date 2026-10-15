@@ -77,8 +77,16 @@ static func enabled(id: String) -> bool:
 	return not disabled and table().has(id) and (ALL_DOORS or ENABLED.has(id))
 
 ## The door leaf of a building (shared by every building with the same model), or null.
+## The leaves of a door cut along the user's outline (tools/door_cutter.gd): [{mesh, hinge, reason,
+## pivot (in the door frame), sign (+1/-1: the rotation that opens it), width, height}]; [] otherwise.
+static func leaf_entries(id: String) -> Array:
+	if not enabled(id): return []
+	return table()[id].get("leaves", [])
+
 static func leaf_mesh(id: String) -> ArrayMesh:
 	if not enabled(id): return null
+	var leaves := leaf_entries(id)
+	if not leaves.is_empty(): return load(String(leaves[0].mesh)) as ArrayMesh if ResourceLoader.exists(String(leaves[0].mesh)) else null
 	var path := String(table()[id].get("mesh", ""))
 	return load(path) as ArrayMesh if ResourceLoader.exists(path) else null
 
@@ -132,6 +140,29 @@ static func attach(building: Node3D, id: String) -> void:
 	holder.name = FRAME
 	holder.transform = frame
 	building.add_child(holder)
+	var leaves := leaf_entries(id)
+	if not leaves.is_empty():
+		# Cut along the user's outline: one hinge per leaf (DoorLeaf, DoorLeaf2) at its pivot in the
+		# frame, each turning by its own sign; the doorway sits right on the cut (nothing left to hide).
+		for i in leaves.size():
+			var entry: Dictionary = leaves[i]
+			var pivot := Node3D.new()
+			pivot.name = "DoorLeaf" if i == 0 else "DoorLeaf%d" % (i+1)
+			pivot.position = _vec(entry.pivot)
+			pivot.set_meta("sign", float(entry.get("sign", 1.0)))
+			holder.add_child(pivot)
+			var piece := MeshInstance3D.new()
+			piece.name = "Mesh"
+			piece.mesh = load(String(entry.mesh)) as ArrayMesh
+			piece.set_meta("door_local_lift", frame.origin.y+pivot.position.y)
+			pivot.add_child(piece)
+		var hole := MeshInstance3D.new()
+		hole.name = "DoorOpening"
+		hole.mesh = doorway
+		hole.material_override = _opening_material()
+		hole.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		holder.add_child(hole)
+		return
 	var hinge := Node3D.new()
 	hinge.name = "DoorLeaf"
 	hinge.position = Vector3(0, 0, LEAF_LIFT)
@@ -232,8 +263,11 @@ static func door_opening(id: String) -> MeshInstance3D:
 ## Opens a door by `amount` (0 closed .. 1 open), at once: tween this for an animation.
 static func set_door_open(id: String, amount: float) -> void:
 	var hinge := door_leaf(id)
-	if hinge: hinge.rotation.y = deg_to_rad(OPEN_DEGREES)*clampf(amount, 0.0, 1.0)
+	if hinge == null: return
+	# Every leaf of the door (a pair opens both), each the way it opens (its "sign": in or out).
+	for leaf in hinge.get_parent().get_children():
+		if String(leaf.name).begins_with("DoorLeaf"): (leaf as Node3D).rotation.y = deg_to_rad(OPEN_DEGREES)*clampf(amount, 0.0, 1.0)*float(leaf.get_meta("sign", 1.0))
 
 static func door_open(id: String) -> float:
 	var hinge := door_leaf(id)
-	return clampf(hinge.rotation.y/deg_to_rad(OPEN_DEGREES), 0.0, 1.0) if hinge else 0.0
+	return clampf(hinge.rotation.y*float(hinge.get_meta("sign", 1.0))/deg_to_rad(OPEN_DEGREES), 0.0, 1.0) if hinge else 0.0

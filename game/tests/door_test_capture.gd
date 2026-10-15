@@ -14,8 +14,8 @@ const Town = preload("res://scripts/town.gd")
 const Doors = preload("res://maps/archipelago/building_doors.gd")
 const Interiors = preload("res://scripts/interiors.gd")
 const Dressing = preload("res://scripts/building_dressing.gd")
-const EXTERIOR := ["10_red_house", "01_cafe", "11_purple_house"]
-const INTERIOR := ["home", "01_cafe", "11_purple_house"]
+var EXTERIOR := ["10_red_house", "01_cafe", "11_purple_house"]
+var INTERIOR := ["home", "01_cafe", "11_purple_house"]
 var app: Node
 var out_dir := "res://../artifacts/mapdoor/door_test/"
 var label := "cap"
@@ -25,6 +25,8 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="): out_dir = arg.trim_prefix("--out=").trim_suffix("/")+"/"
 		if arg.begins_with("--label="): label = arg.trim_prefix("--label=")
+		if arg.begins_with("--doors="): EXTERIOR = Array(arg.trim_prefix("--doors=").split(","))
+		if arg.begins_with("--rooms="): INTERIOR = Array(arg.trim_prefix("--rooms=").split(","))
 	call_deferred("run")
 
 func run() -> void:
@@ -121,6 +123,15 @@ func interiors() -> void:
 				Interiors.set_front_door_open(floor_root, 0.5)
 				aim(camera, hinge, Vector3(1.6, 1.5, 1.4))
 				await shot("%s_int_%s_thickness.png" % [label, room])
+				# The closed door between the camera and the walker fades (door_fade.gd).
+				if "hero" in studio and is_instance_valid(studio.hero):
+					Interiors.set_front_door_open(floor_root, 0.0)
+					aim(camera, hinge, Vector3(1.4, 2.4, 3.6))
+					studio.hero.visible = true
+					studio.hero.global_position = floor_root.to_global(hinge.position+Vector3(-Interiors.DOOR_HALF, 0.0, -1.3))
+					await create_timer(0.8).timeout
+					await shot("%s_int_%s_fade.png" % [label, room])
+					studio.hero.visible = false
 				Interiors.set_front_door_open(floor_root, 1.0)
 			else:
 				aim(camera, hinge, Vector3(1.4, 2.4, 3.6))

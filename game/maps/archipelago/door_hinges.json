@@ -1,0 +1,108 @@
+{
+	"01_cafe": {
+		"leaves": [
+			{
+				"hinge": "left",
+				"reason": "double"
+			},
+			{
+				"hinge": "right",
+				"reason": "double"
+			}
+		],
+		"opens": "in"
+	},
+	"02_timber_house": {
+		"leaves": [
+			{
+				"hinge": "right",
+				"reason": "handle"
+			}
+		],
+		"opens": "in"
+	},
+	"03_teal_cottage": {
+		"leaves": [
+			{
+				"hinge": "right",
+				"reason": "handle"
+			}
+		],
+		"opens": "in"
+	},
+	"04_windmill": {
+		"leaves": [
+			{
+				"hinge": "right",
+				"reason": "wall"
+			}
+		],
+		"opens": "in"
+	},
+	"05_observatory": {
+		"leaves": [
+			{
+				"hinge": "left",
+				"reason": "double"
+			},
+			{
+				"hinge": "right",
+				"reason": "double"
+			}
+		],
+		"opens": "in"
+	},
+	"06_orange_cottage": {
+		"leaves": [
+			{
+				"hinge": "right",
+				"reason": "wall"
+			}
+		],
+		"opens": "in"
+	},
+	"07_greenhouse": {
+		"leaves": [
+			{
+				"hinge": "left",
+				"reason": "double"
+			},
+			{
+				"hinge": "right",
+				"reason": "double"
+			}
+		],
+		"opens": "in"
+	},
+	"09_town_hall": {
+		"leaves": [
+			{
+				"hinge": "left",
+				"reason": "double"
+			},
+			{
+				"hinge": "right",
+				"reason": "double"
+			}
+		],
+		"opens": "in"
+	},
+	"10_red_house": {
+		"leaves": [
+			{
+				"hinge": "left",
+				"reason": "handle"
+			}
+		],
+		"opens": "in"
+	},
+	"13_shop": {
+		"leaves": [
+			{
+				"hinge": "right",
+				"reason": "handle"
+			}
+		],
+		"opens": "in"
+	}
+}
