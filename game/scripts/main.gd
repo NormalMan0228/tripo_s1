@@ -3024,8 +3024,11 @@ func _process(delta: float) -> void:
 			elif Input.is_action_pressed("interact"): intent("harvest")
 		var previous_position: Vector3=player.position
 		player.position=predict_walker(delta)
-		player.external_velocity=Vector2(player.position.x-previous_position.x,player.position.z-previous_position.z)/maxf(delta,.001)
-		player.external_motion=player.external_velocity.normalized() if world_movement_allowed() else Vector2.ZERO
+		# The walker faces where the player steers; a server correction folding in only slides it.
+		var steer := movement_input()
+		var moved := Vector2(player.position.x-previous_position.x,player.position.z-previous_position.z)/maxf(delta,.001)
+		player.external_velocity=moved if steer.length()>0.1 else Vector2.ZERO
+		player.external_motion=steer.normalized() if steer.length()>0.1 else Vector2.ZERO
 		if paused or results_shown or network_failures>0:player.external_velocity=Vector2.ZERO
 		tick_elapsed+=delta
 		if tick_elapsed>=(0.2 if coop_run else 0.1):
