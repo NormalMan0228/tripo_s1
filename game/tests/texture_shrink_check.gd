@@ -1,7 +1,9 @@
 extends SceneTree
-## Crafted models are shrunk on load: a Tripo-coloured GLB (three 2048 px maps) loaded through
-## model_loader.load_bytes comes out with maps of at most 1024 px, colour maps block-compressed when the
-## renderer allows it, and far less texture memory. Run rendered (textures need a real renderer).
+## Crafted models are shrunk on load: a Tripo-coloured GLB (three 2048 px maps) through
+## model_loader.shrink_textures (studio assembly parts, asset_assembly.gd) comes out with maps of at most
+## 1024 px, colour maps block-compressed when the renderer allows it, and far less texture memory;
+## model_loader.load_bytes (single crafts, always flat-painted) keeps no maps at all
+## (tests/craft_vram_probe.gd measures that). Run rendered (textures need a real renderer).
 const Loader = preload("res://scripts/model_loader.gd")
 
 func _initialize() -> void:
