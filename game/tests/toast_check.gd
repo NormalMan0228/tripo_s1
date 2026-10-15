@@ -59,6 +59,11 @@ func lane_rules() -> void:
 	var timer: Tween = first.get_meta("timer")
 	var again := RpgUi.toast(lane, "셋")
 	expect(again == first and texts(lane) == ["둘", "셋", "넷"] and first.get_meta("timer") != timer and not timer.is_valid(), "the same text refreshes its toast instead of stacking")
+	# Said again and again (a refresh loop): after the first 2 s it no longer keeps the toast up.
+	first.set_meta("born", Time.get_ticks_msec() * 0.001 - RpgUi.TOAST_REFRESH_WINDOW - 0.5)
+	var held: Tween = first.get_meta("timer")
+	RpgUi.toast(lane, "셋")
+	expect(first.get_meta("timer") == held and held.is_valid(), "a repeat after its first 2 s does not keep the toast up (it leaves on time)")
 	var kinds := []
 	for kind in ["success", "warn", "error", "social"]:
 		var item := RpgUi.toast(lane, kind, kind)

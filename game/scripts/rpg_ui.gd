@@ -1222,6 +1222,9 @@ static func show_slot(slot: Control, shown: bool) -> void:
 const TOAST_SECONDS := 4.5
 const TOAST_ACTION_SECONDS := 12.0
 const TOAST_MAX := 3
+## The same text again keeps its toast up longer only within this many seconds of its first showing:
+## a line repeated by a refresh loop (every reply says it again) still leaves on time.
+const TOAST_REFRESH_WINDOW := 2.0
 ## Chimes asked for so far (tests: the field's toasts stay silent).
 static var toast_chimes := 0
 ## Each kind its own glyph: error and warn are painted badges ("!" in lacquer red, an amber
@@ -1297,7 +1300,7 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 	if not is_instance_valid(lane) or text.is_empty(): return null
 	var same := find_toast(lane, text)
 	if same:
-		_toast_timer(same)
+		if Time.get_ticks_msec() * 0.001 - float(same.get_meta("born", 0.0)) < TOAST_REFRESH_WINDOW: _toast_timer(same)
 		if not calm():
 			same.pivot_offset = Vector2(same.size.x * 0.5, 0)
 			var pulse := same.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -1344,6 +1347,7 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 		key.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	lane.add_child(pill)
 	pill.set_meta("life", TOAST_ACTION_SECONDS if not actions.is_empty() else float(opts.get("seconds", TOAST_SECONDS)))
+	pill.set_meta("born", Time.get_ticks_msec() * 0.001)
 	_toast_timer(pill)
 	if not calm():
 		pill.modulate.a = 0.0
