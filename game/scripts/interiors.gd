@@ -48,9 +48,11 @@ const PLANS := {
 	"13_shop":[{"rooms":[["매장",0.6],["창고",0.4,"storeroom"]],"w":7.0,"d":6.0,"h":2.9,"door_z":0.2,"label":"1층"},{"rooms":[["주인 방",1.0]],"w":6.0,"d":5.0,"h":2.8,"theme":"owner_room","label":"다락"}],
 	"16_blue_cottage":[{"rooms":[["거실",0.58],["침실",0.42,"bedroom"]],"w":8.5,"d":7.5,"h":2.9,"door_z":0.3}],
 	"17_lighthouse":[{"rooms":[["창고",1.0]],"w":7.0,"d":6.0,"h":3.8,"shape":"round","label":"1층"},{"rooms":[["등대지기 방",1.0]],"w":7.0,"d":6.0,"h":3.4,"shape":"round","theme":"keeper","label":"2층"},{"rooms":[["등실",1.0]],"w":6.5,"d":6.0,"h":3.4,"shape":"round","theme":"lantern","label":"등실","balcony":true}],
+	"18_meadow_house":[{"rooms":[["거실 겸 부엌",1.0]],"w":7.6,"d":7.2,"h":2.9,"label":"1층"},{"rooms":[["다락 침실",1.0]],"w":7.0,"d":5.8,"h":2.8,"theme":"attic","label":"다락"}],
+	"danbi_house":[{"rooms":[["거실",0.58],["침실",0.42,"cottage_bedroom"]],"w":6.3,"d":6.0,"h":2.9,"door_z":0.2}],
 }
 ## What each building's windows look out on (its island's surroundings).
-const OUTLOOK := {"01_cafe":"meadow","02_timber_house":"meadow","03_teal_cottage":"meadow","04_windmill":"meadow","05_observatory":"garden","06_orange_cottage":"garden","07_greenhouse":"garden","09_town_hall":"town","10_red_house":"town","11_purple_house":"town","12_blue_house":"town","13_shop":"town","16_blue_cottage":"camp","17_lighthouse":"sea"}
+const OUTLOOK := {"01_cafe":"meadow","02_timber_house":"meadow","03_teal_cottage":"meadow","04_windmill":"meadow","05_observatory":"garden","06_orange_cottage":"garden","07_greenhouse":"garden","09_town_hall":"town","10_red_house":"town","11_purple_house":"town","12_blue_house":"town","13_shop":"town","16_blue_cottage":"camp","17_lighthouse":"sea","18_meadow_house":"meadow","danbi_house":"town"}
 const WINDOW_SHADER := """
 shader_type spatial;
 render_mode unshaded, cull_disabled, shadows_disabled;
@@ -86,6 +88,8 @@ const ROOMS := {
 	"13_shop":{"theme":"shop","name":"녹백색 줄무늬 차양 상점","kind":"마을 잡화점","flavour":"없는 게 없는 마을 잡화점이에요. 구경은 언제나 무료!","dims":[6.74,5.5,6.21]},
 	"16_blue_cottage":{"theme":"reading","name":"청색 지붕 크림색 주택","kind":"벽난로 오두막","flavour":"벽난로 옆 안락의자에서 책 읽기 좋은 오두막이에요.","dims":[9.11,6.8,9.1]},
 	"17_lighthouse":{"theme":"lighthouse","name":"빨간 등실 등대","kind":"바다를 지키는 등대","flavour":"둥근 벽을 따라 등실로 오르는 나선 계단이 있어요.","dims":[4.57,9.0,5.06],"height":3.8,"shape":"round"},
+	"18_meadow_house":{"theme":"kitchen","name":"풍차 언덕 하숙집","kind":"일꾼들의 하숙집","flavour":"방앗간과 카페, 씨앗 가게 일꾼들이 함께 사는 아늑한 집이에요.","dims":[8.05,6.26,8.09]},
+	"danbi_house":{"theme":"reading","name":"단비네 집","kind":"단비의 새 보금자리","flavour":"잡화점 주인 단비가 이사 온 아담한 집이에요.","dims":[6.89,5.58,6.98]},
 }
 
 ## floor: texture style; wall_tex: wall style; colours are hex strings.
@@ -471,8 +475,8 @@ static func link(entry: Dictionary, to: int, arrive: Vector2) -> Dictionary:
 	entry["link"]={"to":to,"arrive":Vector3(arrive.x,0,arrive.y)}
 	return entry
 
-## A shop or workplace owner's own room upstairs: bed, wardrobe, desk and a few
-## comforts, with the hatch back down beside the stairs.
+## A shop or workplace owner's own room upstairs: bed, wardrobe, an armchair and a
+## lamp, with the hatch back down beside the stairs.
 static func owner_room(l: Array, f: Dictionary, arrive_below: Vector2, hatch_depth := 1.8, hatch_width := 1.0) -> void:
 	var hw: float = f.size.x*0.5
 	var hd: float = f.size.y*0.5
@@ -480,13 +484,8 @@ static func owner_room(l: Array, f: Dictionary, arrive_below: Vector2, hatch_dep
 	l.append(back("bed",-hw+0.85,f))
 	l.append(back("side_table",-hw+2.05,f))
 	l.append(back("wardrobe_closet",0.45,f))
-	l.append(wall("desk",f,0,-1,hd-1.2))
-	l.append(it("wooden_chair",-hw+1.25,hd-1.2,-90.0))
 	l.append(it("armchair",0.5,hd-1.3,90.0))
 	l.append(it("floor_lamp",hw-0.45,hd-1.75))
-	l.append(it("potted_plant",hw-0.45,hd-0.55))
-	l.append(back("picture_frame",-hw+2.05,f,1.85))
-	l.append(it("rug",0.3,hd-1.4,0.0,{"size":Vector3(2.0,0.02,1.3)}))
 
 static func layout(id: String, floor_index: int, f: Dictionary) -> Array:
 	var w: float = f.size.x
@@ -499,335 +498,198 @@ static func layout(id: String, floor_index: int, f: Dictionary) -> Array:
 	var l: Array = []
 	match "%s/%d" % [id,floor_index]:
 		"10_red_house/0":
-			# Fixed pieces hug the walls so the central [-4,4] square stays free to decorate.
-			l.append(back("kitchen_counter",-3.55,f))
-			l.append(back("cooking_stove",-2.2,f))
-			l.append(wall("picture_frame",f,0,1,-0.7,1.95))
-			l.append(back("wall_shelf",-3.55,f,1.85))
-			l.append(back("wardrobe_closet",2.3,f))
-			l.append(back("wall_clock",2.3,f,2.62))
+			# Nearly bare: the player fills the home with their own pieces. Kept pieces hug the walls
+			# so the central [-4,4] square stays free to decorate.
 			l.append(link(it("staircase",hw-0.78,-hd+1.4,0.0,{"size":Vector3(1.4,h,2.7),"variant":"left"}),1,Vector2.ZERO))
 			l.append(it("floor_lamp",3.12,-hd+0.42))
-			l.append(wall("bookshelf",f,0,1,0.9))
+			l.append(back("wall_clock",2.3,f,2.62))
 			# A writing desk by the front door: the story chapter's welcome letter lies on it (story_home.gd).
 			l.append(wall("desk",f,0,1,2.85))
-			l.append(wall("sofa",f,0,-1,0.5))
-			l.append(wall("picture_frame",f,0,-1,2.6,1.95))
-			l.append(it("coat_rack",-hw+0.4,hd-0.75))
-			l.append(it("potted_plant",hw-0.42,hd-0.95))
-			l.append(it("potted_plant",-hw+0.42,-1.2))
-			l.append(it("rug",0,0.3,0.0,{"size":Vector3(3.6,0.02,2.6)}))
 		"10_red_house/1":
 			l.append(link(it("stair_hatch",hw-1.05,-hd+1.05,0.0,{"size":Vector3(1.5,0.95,1.8)}),0,Vector2.ZERO))
 			l.append(back("bed",-2.55,f))
 			l.append(back("side_table",-1.25,f))
-			l.append(it("chest",-2.55,-0.8))
-			l.append(back("bookshelf",0.75,f))
-			l.append(back("wall_clock",0.75,f,2.2))
-			l.append(wall("desk",f,0,-1,1.7))
-			l.append(it("wooden_chair",-hw+1.25,1.7,-90.0))
 			l.append(it("floor_lamp",hw-0.45,0.9))
-			l.append(it("potted_plant",-hw+0.45,hd-0.62))
-			l.append(it("rug",0.2,0.7,0.0,{"size":Vector3(2.6,0.02,1.8)}))
 		"09_town_hall/0":
 			# The fixed workbench keeps its old spot (placement already avoids it).
 			l.append(it("workbench",-3.7,-3.1))
 			l.append(back("tool_rack",-3.7,f,1.75))
-			l.append(it("crate_stack",-hw+0.55,-hd+0.5))
-			l.append(back("barrel",-1.95,f))
-			l.append(back("bookshelf",1.35,f))
-			l.append(back("wall_clock",1.35,f,2.62))
-			l.append(back("banner",0.1,f,2.2))
-			l.append(back("banner",2.6,f,2.2))
 			l.append(link(it("staircase",hw-0.78,-hd+1.4,0.0,{"size":Vector3(1.4,h,2.7),"variant":"left"}),1,Vector2.ZERO))
 			l.append(wall("notice_board",f,0,1,0.6,1.75))
-			l.append(wall("crate_stack",f,0,-1,1.2))
-			l.append(wall("barrel",f,0,-1,2.6))
-			l.append(it("potted_plant",-hw+0.42,hd-0.95))
-			l.append(it("potted_plant",hw-0.42,hd-0.95))
-			l.append(it("rug",0.6,0.2,0.0,{"size":Vector3(3.4,0.02,2.4)}))
 		"09_town_hall/1":
 			l.append(link(it("stair_hatch",r[1].y-0.95,-hd+1.05,0.0,{"size":Vector3(1.5,0.95,1.8)}),0,Vector2.ZERO))
-			for x in [r[0].x+0.75,r[0].x+2.05,r[0].x+3.35]: l.append(back("bookshelf",x,f))
+			for x in [r[0].x+0.75,r[0].x+2.05]: l.append(back("bookshelf",x,f))
 			l.append(it("map_table",(r[0].x+r[0].y)*0.5,0.6))
-			l.append(it("globe",r[0].x+0.55,2.3))
-			l.append(wall("crate_stack",f,0,-1,0.2))
-			l.append(it("chest",r[0].y-0.65,-hd+0.45))
-			l.append(it("floor_lamp",r[0].y-0.45,2.7))
 			l.append(back("desk",r[1].x+1.25,f))
 			l.append(it("wooden_chair",r[1].x+1.25,-hd+1.2,180.0))
-			l.append(wall("wall_clock",f,1,1,0.2,2.2))
-			l.append(wall("notice_board",f,1,1,2.1,1.7))
-			l.append(it("armchair",r[1].x+0.6,1.9,90.0))
-			l.append(wall("wardrobe_closet",f,1,-1,-hd+0.9))
-			l.append(it("potted_plant",r[1].y-0.45,hd-0.75))
 		"01_cafe/0":
 			var hall_x := (r[0].x+r[0].y)*0.5
 			l.append(back("piano",r[0].x+0.85,f))
 			l.append(back("cafe_counter",hall_x+0.45,f))
 			l.append(back("menu_board",hall_x+0.45,f,2.35))
-			for table in [Vector2(r[0].x+1.25,0.0),Vector2(hall_x+1.5,0.9),Vector2(r[0].x+1.25,2.35)]:
+			for table in [Vector2(r[0].x+1.25,0.0),Vector2(hall_x+1.5,0.9)]:
 				l.append(it("round_cafe_table",table.x,table.y))
 				l.append(it("wooden_chair",table.x-0.78,table.y,90.0,{"variant":"cafe","prop":"cafe_chair"}))
 				l.append(it("wooden_chair",table.x+0.78,table.y,-90.0,{"variant":"cafe","prop":"cafe_chair"}))
-			l.append(wall("wall_clock",f,0,-1,-1.9,2.25))
-			l.append(it("potted_plant",r[0].y-0.45,hd-0.62))
-			l.append(it("rug",hall_x,0.6,0.0,{"size":Vector3(1.6,0.02,1.2),"color":"b85a48"}))
 			l.append(back("kitchen_counter",r[1].x+0.9,f))
-			l.append(wall("cooking_stove",f,1,-1,-2.6))
 			l.append(link(it("staircase",r[1].y-0.78,-hd+1.4,0.0,{"size":Vector3(1.4,h,2.7),"variant":"left"}),1,Vector2.ZERO))
-			l.append(wall("display_shelf",f,1,1,0.35,0.0,{"variant":"jars"}))
-			l.append(wall("wall_shelf",f,1,1,2.85,1.8))
-			l.append(wall("flour_sacks",f,1,-1,2.3))
-			l.append(it("barrel",r[1].x+1.9,2.85))
-			l.append(it("basket",r[1].x+1.6,0.75))
 		"02_timber_house/0":
 			l.append(back("fireplace",0,f))
-			l.append(back("bookshelf",-3.25,f))
-			l.append(back("potted_plant",2.0,f))
-			l.append(it("rug",0,-2.0,0.0,{"size":Vector3(3.0,0.02,2.0)}))
 			l.append(it("sofa",0,-1.25,180.0))
-			l.append(it("floor_lamp",1.45,-1.25))
 			l.append(wall("kitchen_counter",f,0,-1,0.2))
-			l.append(wall("cooking_stove",f,0,-1,-1.55))
-			l.append(wall("wall_shelf",f,0,-1,0.2,1.75))
+			# Its top is the gift table slot (server/npc_homes.py SLOTS 02_timber_house "table").
 			l.append(it("dining_table",2.15,1.45,90.0))
-			for z in [0.95,1.95]:
-				l.append(it("wooden_chair",2.15-0.82,z,90.0))
-				l.append(it("wooden_chair",2.15+0.82,z,-90.0))
+			l.append(it("wooden_chair",2.15-0.82,1.45,90.0))
+			l.append(it("wooden_chair",2.15+0.82,1.45,-90.0))
 			l.append(link(it("staircase",hw-0.78,-hd+1.4,0.0,{"size":Vector3(1.4,h,2.7),"variant":"left"}),1,Vector2.ZERO))
-			l.append(wall("wall_clock",f,0,1,0.0,2.2))
-			l.append(it("coat_rack",-hw+0.4,hd-0.75))
-			l.append(it("potted_plant",hw-0.42,hd-0.95))
 			l.append(wall("chest",f,0,1,2.3,0.0,{"storage":true}))
 		"02_timber_house/1":
 			l.append(link(it("stair_hatch",hw-1.05,-hd+1.05,0.0,{"size":Vector3(1.5,0.95,1.8)}),0,Vector2.ZERO))
 			l.append(back("bed",-2.75,f))
 			l.append(back("side_table",-1.55,f))
 			l.append(back("bed",-0.35,f))
-			l.append(it("chest",-2.75,-0.55))
 			l.append(wall("wardrobe_closet",f,0,1,1.0))
-			l.append(wall("armchair",f,0,-1,1.5))
-			l.append(it("floor_lamp",-hw+0.42,hd-0.62))
-			l.append(it("potted_plant",hw-0.42,hd-0.62))
-			l.append(it("rug",-0.4,0.8,0.0,{"size":Vector3(2.4,0.02,1.6)}))
 		"03_teal_cottage/0":
 			var shop_x := (r[0].x+r[0].y)*0.5
 			l.append(back("shop_counter",shop_x+0.6,f))
 			l.append(back("shop_sign",shop_x+0.6,f,2.12))
-			l.append(back("barrel",r[0].x+0.45,f))
 			l.append(wall("display_shelf",f,0,-1,-1.25,0.0,{"variant":"seeds"}))
 			l.append(wall("seedling_bench",f,0,-1,1.0))
-			l.append(it("planter",shop_x+0.6,-0.4))
-			l.append(it("potted_plant",r[0].y-0.42,hd-0.62))
-			l.append(it("basket",r[0].x+1.35,2.4))
 			l.append(back("crate_stack",r[1].x+0.6,f))
-			l.append(back("barrel",r[1].y-0.45,f))
-			l.append(wall("flour_sacks",f,1,1,0.25))
 			l.append(link(wall("ladder",f,1,1,1.65,0.0,{"size":Vector3(0.6,h,0.3)}),1,Vector2.ZERO))
-			l.append(back("wall_shelf",r[1].x+0.6,f,1.95))
-			l.append(it("chest",r[1].x+0.85,2.55))
-			l.append(it("basket",r[1].y-0.45,2.65))
 		"04_windmill/0":
 			l.append(it("millstone",0,-0.75))
-			l.append(it("flour_sacks",-hw+0.85,-hd+0.6))
 			l.append(link(back("ladder",-1.85,f,0.0,{"size":Vector3(0.6,h,0.3)}),1,Vector2.ZERO))
-			l.append(it("crate_stack",hw-0.6,-hd+0.55))
-			l.append(it("barrel",hw-0.45,0.25))
 			l.append(wall("workbench",f,0,-1,0.9,0.0,{"variant":"mill"}))
-			l.append(wall("flour_sacks",f,0,1,1.5))
-			l.append(wall("wall_shelf",f,0,1,1.5,1.9))
 			l.append(it("wooden_chair",-hw+1.3,0.9,-90.0))
-			l.append(it("potted_plant",-hw+0.42,hd-0.62))
-			l.append(back("wall_clock",-0.85,f,2.6))
+			l.append(wall("flour_sacks",f,0,1,1.5))
 		"04_windmill/1":
 			l.append(link(it("stair_hatch",-2.75,-hd+0.75,0.0,{"size":Vector3(1.0,0.95,1.2)}),0,Vector2.ZERO))
 			l.append(it("gear_wheel",-0.4,-hd+0.75,0.0,{"size":Vector3(2.0,2.6,0.7)}))
 			l.append(wall("hoist",f,0,-1,0.9,0.0,{"size":Vector3(0.9,h,0.9)}))
-			l.append(it("flour_sacks",-1.6,1.65))
-			l.append(it("crate_stack",0.05,1.95))
-			l.append(it("chest",-1.25,0.15))
-			l.append(it("basket",-2.85,2.2))
 			l.append(back("bed",r[1].x+0.95,f))
 			l.append(back("side_table",r[1].y-0.4,f))
-			l.append(back("picture_frame",r[1].y-0.4,f,1.8))
-			l.append(it("chest",r[1].x+0.95,-0.3))
 			l.append(wall("wardrobe_closet",f,1,1,1.4))
-			l.append(wall("wall_clock",f,1,-1,2.0,2.0))
-			l.append(it("potted_plant",r[1].x+0.45,hd-0.55))
-			l.append(it("floor_lamp",r[1].y-0.45,2.35))
 		"05_observatory/0":
 			l.append(link(it("spiral_stair",r[0].x+1.15,-hd+1.25,0.0,{"size":Vector3(2.1,h,2.1)}),1,Vector2.ZERO))
 			l.append(back("bookshelf",-1.45,f))
 			l.append(back("desk",r[0].y-0.95,f))
 			l.append(it("wooden_chair",r[0].y-0.95,-hd+1.2,180.0))
-			l.append(it("globe",r[0].x+0.55,0.2))
 			l.append(wall("star_chart",f,0,-1,1.6,2.05))
-			l.append(wall("armchair",f,0,-1,1.6))
 			l.append(it("map_table",-1.2,1.0))
-			l.append(it("floor_lamp",r[0].x+0.45,hd-0.62))
-			l.append(wall("wall_clock",f,0,1,2.4,2.2))
-			l.append(it("potted_plant",r[0].y-0.45,hd-0.62))
-			l.append(it("rug",-1.2,0.9,0.0,{"size":Vector3(2.6,0.02,1.8),"color":"3c6a5a"}))
 			l.append(back("bed",r[1].x+0.95,f))
 			l.append(back("side_table",r[1].y-0.4,f))
-			l.append(back("picture_frame",r[1].y-0.4,f,1.9))
-			l.append(it("chest",r[1].x+0.95,-1.3))
 			l.append(wall("wardrobe_closet",f,1,1,1.6))
-			l.append(wall("star_chart",f,1,-1,2.3,2.0))
-			l.append(it("potted_plant",r[1].x+0.45,hd-0.62))
-			l.append(it("floor_lamp",r[1].y-0.45,0.3))
 		"05_observatory/1":
 			l.append(it("telescope",0,-0.9))
-			l.append(it("rug",0,-0.9,0.0,{"size":Vector3(3.2,0.02,3.2),"color":"2f3c6e","variant":"round"}))
 			l.append(link(it("stair_hatch",2.0,-1.6,0.0,{"size":Vector3(1.3,0.95,1.4)}),0,Vector2.ZERO))
 			l.append(wall("star_chart",f,0,-1,2.0,2.2))
-			l.append(wall("desk",f,0,1,2.2))
-			l.append(it("wooden_chair",hw-1.35,2.2,90.0))
-			l.append(it("globe",-hw+0.75,1.0))
 			l.append(it("armchair",-1.2,2.4,0.0))
-			l.append(it("floor_lamp",hw-0.5,0.9))
 		"06_orange_cottage/0":
 			var kitchen_x := (r[0].x+r[0].y)*0.5
 			l.append(back("kitchen_counter",r[0].x+1.0,f))
 			l.append(back("cooking_stove",r[0].x+2.45,f))
-			l.append(back("wall_shelf",r[0].x+2.45,f,1.95))
-			l.append(wall("display_shelf",f,0,-1,-0.6,0.0,{"variant":"bread"}))
+			# Its top is the gift table slot (server/npc_homes.py SLOTS 06_orange_cottage "table").
 			l.append(it("dining_table",kitchen_x+0.35,0.6))
-			for x in [kitchen_x-0.1,kitchen_x+0.8]:
-				l.append(it("wooden_chair",x,0.6-0.72))
-				l.append(it("wooden_chair",x,0.6+0.72,180.0))
-			l.append(wall("flour_sacks",f,0,-1,1.75))
+			l.append(it("wooden_chair",kitchen_x-0.1,0.6-0.72))
+			l.append(it("wooden_chair",kitchen_x+0.8,0.6+0.72,180.0))
 			l.append(back("bed",r[1].x+0.88,f))
 			l.append(back("bed",r[1].y-0.65,f,0.0,{"size":Vector3(1.1,0.9,1.7),"primitive":true}))
-			l.append(back("picture_frame",r[1].x+0.88,f,1.9))
-			l.append(it("chest",r[1].x+0.88,-0.75))
 			l.append(wall("wardrobe_closet",f,1,1,1.4))
-			l.append(wall("wall_clock",f,1,-1,1.9,2.0))
-			l.append(it("potted_plant",r[1].x+0.5,hd-0.62))
-			l.append(it("rug",(r[1].x+r[1].y)*0.5,0.7,0.0,{"size":Vector3(1.8,0.02,1.2)}))
 			l.append(wall("chest",f,1,-1,1.5,0.0,{"storage":true}))
 		"07_greenhouse/0":
 			l.append(back("seedling_bench",-3.0,f))
 			l.append(back("seedling_bench",0.2,f))
-			l.append(wall("seedling_bench",f,0,-1,0.0))
 			l.append(it("soil_bed",-1.4,-0.9))
 			l.append(it("bench",-3.2,2.3))
-			l.append(it("barrel",r[0].y-0.5,hd-0.95))
-			for p in [Vector2(-hw+0.45,-hd+0.45),Vector2(r[0].y-0.45,-hd+0.45),Vector2(-hw+0.45,hd-0.95)]:
-				l.append(it("potted_plant",p.x,p.y))
-			l.append(it("planter",r[0].y-0.5,-1.0))
-			l.append(it("basket",0.0,1.2))
 			l.append(it("window",(r[0].x+r[0].y)*0.5,-hd+0.02,0.0,{"at_y":1.9}))
 			l.append(back("bed",r[1].x+1.0,f))
 			l.append(back("side_table",r[1].y-0.4,f))
-			l.append(back("picture_frame",r[1].y-0.4,f,1.9))
-			l.append(it("chest",r[1].x+1.0,-1.75))
 			l.append(wall("wardrobe_closet",f,1,1,1.6))
-			l.append(wall("tool_rack",f,1,-1,2.6,1.6))
-			l.append(it("potted_plant",r[1].x+0.45,hd-0.62))
-			l.append(it("floor_lamp",r[1].y-0.45,0.4))
 		"11_purple_house/0":
 			l.append(back("piano",r[0].x+0.9,f))
-			l.append(back("wall_clock",r[0].x+0.9,f,2.2))
-			l.append(it("floor_lamp",r[0].x+2.0,-hd+0.42))
 			l.append(link(it("staircase",r[0].y-0.83,-hd+1.4,0.0,{"size":Vector3(1.4,h,2.7),"variant":"left"}),1,Vector2.ZERO))
 			l.append(wall("sofa",f,0,-1,0.8))
+			# Its top is the gift tea-table slot (server/npc_homes.py SLOTS 11_purple_house "tea_table").
 			l.append(it("round_cafe_table",r[0].x+1.95,0.8,0.0,{"variant":"tea"}))
 			l.append(it("armchair",r[0].x+3.2,0.8,-90.0))
-			l.append(it("rug",r[0].x+2.3,0.7,0.0,{"size":Vector3(2.8,0.02,2.0)}))
-			l.append(wall("picture_frame",f,0,-1,-1.9,1.95))
-			l.append(it("potted_plant",r[0].x+0.42,hd-0.95))
-			l.append(it("potted_plant",r[0].y-0.42,hd-0.95))
 			l.append(back("bookshelf",r[1].x+0.75,f))
-			l.append(back("bookshelf",r[1].x+2.0,f))
 			l.append(wall("desk",f,1,1,0.9))
 			l.append(it("wooden_chair",r[1].y-1.2,0.9,90.0))
-			l.append(it("globe",r[1].x+0.6,2.6))
-			l.append(it("floor_lamp",r[1].y-0.45,hd-0.62))
-			l.append(it("potted_plant",r[1].x+0.45,-0.6))
 			l.append(wall("chest",f,1,1,-3.0,0.0,{"storage":true}))
 		"12_blue_house/0":
 			l.append(back("bed",r[0].x+0.85,f))
 			l.append(back("bed",r[0].x+2.45,f))
-			l.append(wall("picture_frame",f,0,1,2.3,1.9))
 			l.append(wall("wardrobe_closet",f,0,-1,1.3))
-			l.append(wall("wall_clock",f,0,-1,2.45,2.0))
-			l.append(it("floor_lamp",r[0].y-0.38,-hd+0.42))
-			l.append(it("rug",(r[0].x+r[0].y)*0.5,0.4,0.0,{"size":Vector3(2.4,0.02,1.6)}))
+			# Its top is the gift table slot (server/npc_homes.py SLOTS 12_blue_house "table").
 			l.append(it("round_cafe_table",r[0].y-0.85,1.75))
 			l.append(it("wooden_chair",r[0].y-1.6,1.75,90.0))
-			l.append(it("potted_plant",r[0].x+0.42,hd-0.62))
 			l.append(back("bathtub",(r[1].x+r[1].y)*0.5+0.2,f))
-			l.append(back("wall_shelf",r[1].x+0.55,f,1.75))
 			l.append(wall("washstand",f,1,1,0.3))
-			l.append(wall("side_table",f,1,-1,2.3))
-			l.append(it("coat_rack",r[1].y-0.4,hd-0.65))
-			l.append(it("basket",r[1].x+1.35,2.6))
-			l.append(it("potted_plant",r[1].y-0.42,-0.75))
-			l.append(it("rug",(r[1].x+r[1].y)*0.5,0.9,0.0,{"size":Vector3(1.2,0.02,0.8),"color":"7fb0d0"}))
 			l.append(wall("chest",f,1,1,1.7,0.0,{"storage":true}))
 		"13_shop/0":
 			l.append(back("shop_counter",r[0].x+1.6,f))
 			l.append(back("shop_sign",r[0].x+1.6,f,2.08))
 			l.append(back("display_shelf",r[0].y-0.85,f,0.0,{"variant":"goods"}))
 			l.append(wall("display_shelf",f,0,-1,0.3,0.0,{"variant":"jars"}))
-			l.append(it("barrel",r[0].x+0.45,1.75))
-			l.append(it("crate_stack",r[0].x+0.55,2.75))
-			l.append(it("planter",r[0].y-0.45,hd-0.75))
-			l.append(it("basket",r[0].y-0.6,0.9))
 			l.append(back("crate_stack",r[1].x+0.7,f))
-			l.append(back("barrel",r[1].y-0.45,f))
-			l.append(wall("flour_sacks",f,1,1,0.5))
 			l.append(link(wall("ladder",f,1,1,1.75,0.0,{"size":Vector3(0.6,h,0.3)}),1,Vector2.ZERO))
-			l.append(wall("wall_shelf",f,1,-1,1.7,1.8))
-			l.append(it("chest",r[1].x+0.85,2.5))
-			l.append(it("basket",r[1].y-0.45,2.7))
 		"16_blue_cottage/0":
 			var living_x := (r[0].x+r[0].y)*0.5
 			l.append(back("fireplace",living_x,f))
 			l.append(back("bookshelf",r[0].x+0.6,f))
-			l.append(it("floor_lamp",r[0].y-0.45,-hd+0.42))
-			l.append(it("rug",living_x,-1.5,0.0,{"size":Vector3(2.4,0.02,1.6)}))
 			l.append(it("armchair",living_x-1.4,-1.15,90.0))
 			l.append(it("armchair",living_x+1.4,-1.15,-90.0))
-			l.append(wall("picture_frame",f,0,-1,2.4,1.9))
-			l.append(wall("wall_clock",f,0,1,2.1,2.05))
-			l.append(it("potted_plant",r[0].x+0.42,hd-0.95))
 			l.append(back("bed",r[1].x+0.85,f))
 			l.append(back("bed",r[1].y-0.8,f))
-			l.append(wall("picture_frame",f,1,-1,2.2,1.9))
+			# Its top is the gift slot (server/npc_homes.py SLOTS 16_blue_cottage "chest_top").
 			l.append(it("chest",r[1].x+0.85,-1.3))
-			l.append(wall("wardrobe_closet",f,1,1,1.35))
-			l.append(it("potted_plant",r[1].x+0.45,hd-0.62))
-			l.append(it("floor_lamp",r[1].y-0.45,hd-0.62))
 			l.append(wall("chest",f,1,-1,2.2,0.0,{"storage":true}))
 		"17_lighthouse/0":
 			l.append(link(it("spiral_stair",-1.55,-0.6,90.0,{"size":Vector3(2.1,h,2.1)}),1,Vector2.ZERO))
+			# Its top is the gift slot (server/npc_homes.py SLOTS 17_lighthouse "map_table").
 			l.append(it("map_table",1.95,0.85,-90.0))
 			l.append(it("wooden_chair",1.2,0.85,90.0))
-			l.append(it("barrel",2.1,-0.95))
 			l.append(it("chest",0.75,-1.95,0.0,{"storage":true}))
-			l.append(it("crate_stack",-hw+0.6,1.9))
 			l.append(wall("ship_wheel",f,0,1,2.2,1.7))
-			l.append(it("coat_rack",1.45,hd-0.6))
-			l.append(it("basket",hw-0.45,hd-0.55))
 		"17_lighthouse/1":
 			l.append(link(it("spiral_stair",-1.55,-0.6,90.0,{"size":Vector3(2.1,h,2.1)}),2,Vector2.ZERO))
 			l.append(link(it("stair_hatch",1.8,-1.05,0.0,{"size":Vector3(1.2,0.95,1.2)}),0,Vector2.ZERO))
 			l.append(wall("bed",f,0,1,1.75))
 			l.append(wall("bed",f,0,-1,1.75))
+			# Its top is the gift slot (server/npc_homes.py SLOTS 17_lighthouse "keeper_desk").
 			l.append(it("desk",0.75,-2.2))
-			l.append(it("wooden_chair",0.75,-1.45,180.0))
 			l.append(it("cooking_stove",-0.6,-2.25))
-			l.append(wall("wall_clock",f,0,1,0.6,2.3))
-			l.append(it("potted_plant",0.0,hd-0.5))
-			l.append(it("rug",0.0,1.4,0.0,{"size":Vector3(1.6,0.02,1.2)}))
 		"17_lighthouse/2":
 			l.append(it("lighthouse_lens",0,-0.55))
 			l.append(link(it("stair_hatch",-1.75,0.6,0.0,{"size":Vector3(1.2,0.95,1.2)}),1,Vector2.ZERO))
 			l.append(it("telescope",1.85,0.75,0.0,{"size":Vector3(0.9,1.6,0.9)}))
-			l.append(it("wooden_chair",0.9,1.75,180.0))
+		"18_meadow_house/0":
+			# The workplace owners' own house (residents.gd): a kitchen table, a seat, the stairs.
+			l.append(link(it("staircase",hw-0.78,-hd+1.4,0.0,{"size":Vector3(1.4,h,2.7),"variant":"left"}),1,Vector2.ZERO))
+			l.append(back("kitchen_counter",-hw+0.9,f))
+			l.append(back("cooking_stove",-hw+2.25,f))
+			l.append(it("dining_table",-1.0,0.9,90.0))
+			l.append(it("wooden_chair",-1.0-0.82,0.9,90.0))
+			l.append(it("wooden_chair",-1.0+0.82,0.9,-90.0))
+			l.append(wall("armchair",f,0,1,1.6))
+			l.append(it("floor_lamp",-hw+0.42,hd-0.95))
+		"18_meadow_house/1":
+			l.append(link(it("stair_hatch",hw-1.05,-hd+1.05,0.0,{"size":Vector3(1.5,0.95,1.8)}),0,Vector2.ZERO))
+			l.append(back("bed",-2.75,f))
+			l.append(back("side_table",-1.55,f))
+			l.append(back("bed",-0.35,f))
+			l.append(wall("bed",f,0,-1,1.4))
+			l.append(wall("wardrobe_closet",f,0,1,1.2))
+		"danbi_house/0":
+			# The plot house (maps/archipelago/plots.gd): bare like every home, the owner fills it.
+			l.append(back("kitchen_counter",r[0].x+0.9,f))
+			l.append(it("round_cafe_table",r[0].x+1.3,0.9))
+			l.append(it("wooden_chair",r[0].x+2.05,0.9,-90.0))
+			l.append(wall("armchair",f,0,-1,-0.6))
+			l.append(it("floor_lamp",r[0].y-0.45,-hd+0.42))
+			l.append(back("bed",r[1].x+0.85,f))
+			l.append(wall("wardrobe_closet",f,1,1,1.3))
 		"01_cafe/1":
 			owner_room(l,f,Vector2.ZERO,1.8,1.5)
 		"03_teal_cottage/1":
@@ -836,20 +698,9 @@ static func layout(id: String, floor_index: int, f: Dictionary) -> Array:
 			l.append(link(it("stair_hatch",r[0].y-0.88,-hd+1.05,0.0,{"size":Vector3(1.5,0.95,1.8)}),0,Vector2.ZERO))
 			l.append(back("bed",r[0].x+0.8,f))
 			l.append(back("bed",r[0].x+2.35,f))
-			l.append(it("chest",r[0].x+0.8,-0.6))
 			l.append(wall("wardrobe_closet",f,0,-1,1.4))
-			l.append(wall("wall_clock",f,0,1,2.2,2.0))
-			l.append(it("floor_lamp",r[0].y-0.5,2.6))
-			l.append(it("potted_plant",r[0].x+1.9,hd-0.55))
-			l.append(it("rug",(r[0].x+r[0].y)*0.5,0.7,0.0,{"size":Vector3(2.2,0.02,1.4)}))
 			l.append(back("bed",r[1].x+1.0,f,0.0,{"owner_hint":"sora"}))
 			l.append(back("side_table",r[1].y-0.45,f))
-			l.append(back("picture_frame",r[1].y-0.45,f,1.9))
-			l.append(wall("desk",f,1,1,1.2))
-			l.append(it("wooden_chair",r[1].y-1.15,1.2,90.0))
-			l.append(it("coat_rack",r[1].x+0.4,hd-0.5))
-			l.append(it("floor_lamp",r[1].y-0.45,-0.45))
-			l.append(it("potted_plant",r[1].x+1.6,hd-0.55))
 		"13_shop/1":
 			owner_room(l,f,Vector2(3.5-0.85,1.75),1.2)
 	return l
@@ -890,6 +741,9 @@ static func windows(id: String, floor_index: int, f: Dictionary) -> Array:
 		"17_lighthouse/0": list=[["arc",30.0],["arc",90.0],["arc",150.0]]
 		"17_lighthouse/1": list=[["arc",32.0]]
 		"17_lighthouse/2": list=[["arc",15.0],["arc",50.0],["arc",90.0],["arc",130.0],["arc",165.0]]
+		"18_meadow_house/0": list=[["back",-0.4,1.2],["left",1.4],["right",1.9,1.0]]
+		"18_meadow_house/1": list=[["back",0.9,0.8,"round"],["left",-0.5]]
+		"danbi_house/0": list=[["left",-0.8,1.0],["back",r[1].x+0.9,0.8],["right",0.3,0.9]]
 	var result: Array = []
 	for entry in list:
 		var width: float = entry[2] if entry.size()>2 else 1.4

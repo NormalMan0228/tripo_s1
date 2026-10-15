@@ -34,6 +34,8 @@ const ROADS := [
 	["nw_teal",2.2,[Vector2(-16,-29.5),Vector2(-23,-24.5),Vector2(-30,-23.3),Vector2(-35.2,-22.8)]],
 	["nw_timber",1.7,[Vector2(-28,-25),Vector2(-28.5,-33),Vector2(-36,-36),Vector2(-40.6,-44.6)]],
 	["nw_cafe",1.7,[Vector2(-36,-36),Vector2(-46,-33),Vector2(-55,-32),Vector2(-61.2,-32.4)]],
+	# 풍차 언덕 하숙집 (18_meadow_house): west round the windmill, clear of the vane at (-24, -38).
+	["nw_meadow",1.7,[Vector2(-28.5,-33),Vector2(-26.7,-38.8),Vector2(-25.4,-44.6),Vector2(-24.6,-49.2),Vector2(-23.2,-51.6)]],
 ]
 const HIDE_ON_ROAD := ["41_planter","42_white_flowers","43_yellow_flowers","44_pink_flowers","40_shrub","45_reeds"]
 ## Roads this wide or wider are cobbled main roads.

@@ -1080,6 +1080,70 @@
           ]
         }
       ]
+    },
+    {
+      "id": "18_meadow_house",
+      "name": "풍차 언덕 하숙집",
+      "island": "01_village_meadow",
+      "island_index": 1,
+      "model": "res://maps/archipelago/assets/buildings/blue_house.glb",
+      "position": [
+        -20.5,
+        2.12,
+        -54.5
+      ],
+      "yaw_degrees": 0,
+      "scale": 0.92,
+      "dimensions_m": [
+        8.0501,
+        6.256,
+        8.0928
+      ],
+      "pad_half_extents": [
+        4.1355,
+        4.1568
+      ],
+      "pad_blend_m": 1.1,
+      "source_ground_range_m": [
+        2.05,
+        2.15
+      ],
+      "coast_clearance_m": 4.5,
+      "map_texture_copies": [
+        {
+          "name": "NormalGL_e93e6ef4-fc89-40d5-a60f-10fc42ac6509",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        },
+        {
+          "name": "Color_e93e6ef4-fc89-40d5-a60f-10fc42ac6509",
+          "source": [
+            8192,
+            8192
+          ],
+          "map": [
+            4096,
+            4096
+          ]
+        },
+        {
+          "name": "ORM_e93e6ef4-fc89-40d5-a60f-10fc42ac6509",
+          "source": [
+            4096,
+            4096
+          ],
+          "map": [
+            2048,
+            2048
+          ]
+        }
+      ]
     }
   ],
   "reserved_sites": {

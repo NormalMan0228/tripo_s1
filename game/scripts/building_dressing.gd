@@ -32,6 +32,7 @@ const TUNING := {
 	"14_stage":{"glow_energy":0.0},
 	"15_picnic_shelter":{"glow_energy":0.0},
 	"16_blue_cottage":{"glass_max_luma":.33},
+	"18_meadow_house":{"glass_max_luma":.33},
 	"17_lighthouse":{"glow_band":Vector2(.6,9.5)},
 	"09_town_hall":{"glow_band":Vector2(.6,6.0)},
 }
