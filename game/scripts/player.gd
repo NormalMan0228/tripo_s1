@@ -60,6 +60,18 @@ const DECELERATION := 18.0
 const STEP_HEIGHT := 0.36
 var safe_position := Vector3.ZERO
 var has_safe_position := false
+## A step up or a drop off a ledge moves the body in one tick; the drawn body (and the camera,
+## through render_position()) catches up at CLIMB_SPEED instead of hopping. Metres below
+## (negative) or above the body, eased to 0; from/to are its last two tick values.
+const CLIMB_SPEED := 2.8
+var step_lag := 0.0
+var step_lag_from := 0.0
+## Boxed in on every side while walking (a placed object, props closing in): back to the
+## last spot it walked freely from. trapped_escapes counts them (tests).
+var trapped_time := 0.0
+var free_position := Vector3.INF
+var free_clock := 0.0
+var trapped_escapes := 0
 ## The interaction driver (ix/ix_driver.gd) while one is attached; inert when null or idle. While it
 ## runs it moves the body inside this tick: steer is the walking input of an approach, face_override
 ## the exact visual yaw (NAN: the usual facing lerp), clip_override a clip it plays (v1: none).
@@ -298,14 +310,23 @@ func _process(_delta: float) -> void:
 	if global_position.distance_squared_to(tick_to) > 0.000001:
 		tick_from = global_position
 		tick_to = global_position
+		step_lag = 0.0
+		step_lag_from = 0.0
+		# A new room or map: the last free spot belongs to the old one.
+		free_position = Vector3.INF
+		free_clock = 0.0
+		trapped_time = 0.0
 	var offset := render_position()-global_position
 	visual.position = Vector3(offset.x, visual_lift+offset.y, offset.z)
 
 func render_position() -> Vector3:
-	return tick_from.lerp(tick_to, clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0))
+	var fraction := clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0)
+	return tick_from.lerp(tick_to, fraction)+Vector3(0, lerpf(step_lag_from, step_lag, fraction), 0)
 
 func _physics_process(delta: float) -> void:
 	tick_from = global_position
+	step_lag_from = step_lag
+	var grounded := is_on_floor()
 	var driven: bool = ix != null and is_instance_valid(ix) and ix.busy()
 	if driven: ix.drive(self, delta)
 	var movement := Vector2.ZERO
@@ -335,6 +356,12 @@ func _physics_process(delta: float) -> void:
 		elif is_on_floor() and position.y >= min_ground_y:
 			safe_position = position
 			has_safe_position = true
+		watch_trapped(delta, movement.length() > 0.1 and controls_enabled and not driven)
+	# A ledge climbed or dropped from the ground (not a fall, not a jump back to safety).
+	var rise := global_position.y-tick_from.y
+	if grounded and absf(rise) > 0.06 and absf(rise) < 0.8: step_lag -= rise
+	elif absf(rise) >= 0.8: step_lag = 0.0
+	step_lag = move_toward(step_lag, 0.0, maxf(CLIMB_SPEED, absf(step_lag)*6.0)*delta)
 	locomotion_velocity=Vector2(get_real_velocity().x,get_real_velocity().z) if (controls_enabled or driven) and not visual_only else external_velocity
 	var look_motion := locomotion_velocity.normalized() if controls_enabled or driven else external_motion
 	if not is_nan(face_override):
@@ -386,6 +413,29 @@ func _physics_process(delta: float) -> void:
 		reveal_pending=false
 		visual.visible=true
 
+## Walking but not moving with every side blocked (overlapping something): after 0.8 s the body
+## goes back to where it last walked freely. Against a wall it can still turn away, so it stays.
+func watch_trapped(delta: float, wants: bool) -> void:
+	var speed_now := get_real_velocity().length()
+	if not wants or speed_now > 0.3:
+		trapped_time = 0.0
+		if speed_now > 0.5 and is_on_floor() and position.y >= min_ground_y:
+			free_clock += delta
+			if free_clock > 0.5:
+				free_clock = 0.0
+				free_position = global_position
+		return
+	trapped_time += delta
+	if trapped_time < 0.8: return
+	trapped_time = 0.0
+	for i in 8:
+		var angle := TAU*i/8.0
+		if not test_move(global_transform, Vector3(cos(angle), 0.0, sin(angle))*0.15): return
+	if free_position == Vector3.INF or free_position.distance_to(global_position) < 0.05: return
+	global_position = free_position
+	velocity = Vector3.ZERO
+	trapped_escapes += 1
+
 ## Lifts the walker onto a ledge up to STEP_HEIGHT when it walks into one.
 func step_up(delta: float) -> void:
 	if not controls_enabled or not is_on_floor() or not is_on_wall(): return
@@ -397,6 +447,11 @@ func step_up(delta: float) -> void:
 	if test_move(global_transform,lift): return
 	var raised := global_transform.translated(lift)
 	if test_move(raised,motion*2.0): return
+	# Only a real ledge: terrain or a building floor under the new spot, no higher than a step.
+	# Without it the walker hopped onto prop bases (a signboard) and slid off again.
+	var spot := global_position+lift+motion*2.0
+	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(spot+Vector3.UP*0.05, spot+Vector3.DOWN*(STEP_HEIGHT+0.2), 1|2))
+	if hit.is_empty() or hit.position.y < global_position.y+0.08 or hit.position.y > global_position.y+STEP_HEIGHT+0.02: return
 	global_position+=lift+motion*2.0
 	apply_floor_snap()
 
