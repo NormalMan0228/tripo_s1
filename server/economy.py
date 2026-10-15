@@ -91,6 +91,24 @@ def change_shards(conn, user_id, amount, reason, reference, now, *, sell_daily=N
             flag(conn, user_id, 'boundary_sell_burst', {'sales': len(recent), 'window_seconds': 600}, now)
 
 
+def apply_coins(state, amount):
+    """Change a homestead's leaf coins in memory after strict integer and balance checks
+    (codex/lifeauth): returns the new balance, raises CoinRejected and leaves state untouched.
+    The ledger writer below (change_coins) is what the routes use."""
+    if type(amount) is not int or not -(2**63) <= amount < 2**63:
+        raise CoinRejected('invalid_coin_amount')
+    balance = state.get('coins')
+    if type(balance) is not int or not 0 <= balance < 2**63:
+        raise CoinRejected('invalid_coin_balance')
+    result = balance + amount
+    if result < 0:
+        raise CoinRejected('life_not_enough_coins')
+    if result >= 2**63:
+        raise CoinRejected('coin_balance_overflow')
+    state['coins'] = result
+    return result
+
+
 def change_coins(conn, user_id, state, amount, reason, reference, now):
     """Persist balance and leaf ledger together. Callers save later inventory/version edits.
 

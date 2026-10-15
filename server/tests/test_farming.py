@@ -206,5 +206,5 @@ def test_legacy_watered_crop_keeps_deadline_across_midnight():
 @pytest.mark.parametrize('amount', [-13, 1.5, True])
 def test_leaf_coin_helper_rejects_invalid_changes_atomically(amount):
     state = {'coins':12}
-    with pytest.raises(ValueError): economy.change_coins(state, amount)
+    with pytest.raises(ValueError): economy.apply_coins(state, amount)
     assert state['coins'] == 12

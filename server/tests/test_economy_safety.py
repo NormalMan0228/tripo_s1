@@ -215,7 +215,7 @@ def test_admin_api_rejects_non_integer_or_out_of_range_grants(world, amount):
 def test_leaf_coin_helper_rejects_invalid_amount_without_mutating_state(amount):
     state = {'coins': 12, 'bag': {'turnip': 2}}
     with pytest.raises(economy.CoinRejected, match='invalid_coin_amount'):
-        economy.change_coins(state, amount)
+        economy.apply_coins(state, amount)
     assert state == {'coins': 12, 'bag': {'turnip': 2}}
 
 
@@ -224,22 +224,22 @@ def test_leaf_coin_helper_rejects_invalid_amount_without_mutating_state(amount):
 def test_leaf_coin_helper_rejects_invalid_balance_without_repairing_it(balance):
     state = {'coins': balance}
     with pytest.raises(economy.CoinRejected, match='invalid_coin_balance'):
-        economy.change_coins(state, 1)
+        economy.apply_coins(state, 1)
     assert state['coins'] is balance
 
 
 def test_leaf_coin_helper_checks_underflow_overflow_and_preserves_inventory():
     state = {'coins': 12, 'bag': {'turnip': 2}}
-    assert economy.change_coins(state, 3) == state['coins'] == 15
-    assert economy.change_coins(state, -15) == state['coins'] == 0
+    assert economy.apply_coins(state, 3) == state['coins'] == 15
+    assert economy.apply_coins(state, -15) == state['coins'] == 0
     with pytest.raises(economy.CoinRejected, match='life_not_enough_coins'):
-        economy.change_coins(state, -1)
+        economy.apply_coins(state, -1)
     assert state['coins'] == 0
-    assert economy.change_coins(state, 2**63-1) == 2**63-1
+    assert economy.apply_coins(state, 2**63-1) == 2**63-1
     with pytest.raises(economy.CoinRejected, match='coin_balance_overflow'):
-        economy.change_coins(state, 1)
+        economy.apply_coins(state, 1)
     assert state == {'coins': 2**63-1, 'bag': {'turnip': 2}}
-    assert economy.change_coins(state, -(2**63)+1) == 0
+    assert economy.apply_coins(state, -(2**63)+1) == 0
 
 
 @pytest.mark.parametrize('amount', [False, float('nan'), float('inf'), -float('inf')])

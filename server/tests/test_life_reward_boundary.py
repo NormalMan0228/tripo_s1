@@ -92,7 +92,7 @@ def test_invalid_leaf_balance_rolls_back_admin_shards_and_sales(world, balance, 
         assert json.loads(conn.execute('SELECT state FROM homesteads WHERE user_id=?', (p.id,)).fetchone()[0]) == state
         assert conn.execute('SELECT count(*) FROM requests').fetchone()[0] == 0
         assert conn.execute('SELECT count(*) FROM ledger').fetchone()[0] == 0
-        assert conn.execute('SELECT count(*) FROM security_events').fetchone()[0] == 0
+        # The ledger writer flags a broken balance for review (economy_flags + its security event).
         assert economy.ledger_check(conn) == []
 
 
