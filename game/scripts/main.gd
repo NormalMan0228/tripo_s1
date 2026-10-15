@@ -3106,6 +3106,8 @@ func _process(delta: float) -> void:
 				elif not nearest_furniture().is_empty(): prompt_text=key+{"sit":tr("앉기"),"lie":tr("눕기")}.get(str(loaded[nearest_furniture()].get("rest")),tr("가구 사용하기"))
 				if is_instance_valid(seat) and seat.resting(): prompt_text=key+tr("일어나기")
 				if is_instance_valid(village_modal): prompt_text=""
+				# Walking through a door (village_doors.gd): no prompt over it.
+				if VillageDoors.walking(self): prompt_text=""
 				if str(hint.get_meta("prompt",""))!=prompt_text:
 					# The chip ticks very softly as it appears (RpgUi.prompt, every place alike).
 					RpgUi.set_prompt(hint,prompt_text)

@@ -102,12 +102,14 @@ static func dress(host: Node3D) -> Node3D:
 		var floor_y: float = building.global_position.y if building else Town.height_at(entry.at.x, entry.at.y)
 		var fit := _fit(space, entry, floor_y)
 		var base: Vector3 = fit.base
-		doors[id] = {"id":id, "room":String(entry.room), "base":base, "normal":fit.normal, "ground":float(fit.ground),
+		doors[id] = {"id":id, "room":String(entry.room), "base":base, "at":Vector2(entry.at), "normal":fit.normal, "ground":float(fit.ground),
 			"sound":base+Vector3(0, 1.1, 0)+(fit.normal as Vector3)*.3, "open":0.0, "glow":-1.0, "tween":null}
 		if building == null: continue
 		if not leaves.has(id) or not is_instance_valid(leaves[id].node):
 			var cut := BuildingDoors.door_leaf(id)
-			if cut: register(id, cut, Vector3.UP, deg_to_rad(BuildingDoors.OPEN_DEGREES))
+			# The map's own door: its hinge side, one or two leaves and the way it opens are the map's
+			# (BuildingDoors.set_door_open); here only how far open.
+			if cut: leaves[id] = {"node":cut, "cut":true}
 			else:
 				var leaf := _child(building, ["Door", "door", "Door_"+id, "door_"+id])
 				if leaf: register(id, leaf)
@@ -208,6 +210,9 @@ static func _pose(door: Dictionary, value: float) -> void:
 	door.open = value
 	var leaf: Dictionary = leaves.get(door.id, {})
 	if leaf.is_empty() or not is_instance_valid(leaf.node): return
+	if leaf.get("cut", false):
+		BuildingDoors.set_door_open(String(door.id), value)
+		return
 	(leaf.node as Node3D).transform.basis = (leaf.rest as Basis)*Basis(leaf.axis, float(leaf.angle)*value)
 
 static func open(host: Node, key: String, seconds := SWING) -> void: turn(host, key, 1.0, seconds)
@@ -289,7 +294,9 @@ func _near_door(at: Vector3) -> void:
 	var doors: Dictionary = root.get_meta("doors", {})
 	for id in doors:
 		var base: Vector3 = doors[id].base
-		if Vector2(at.x-base.x, at.z-base.z).length() < 2.6:
+		# By the wall or on the doorstep (a recessed door, the café's, stands back from its step).
+		var step: Vector2 = doors[id].get("at", Vector2(base.x, base.z))
+		if minf(Vector2(at.x-base.x, at.z-base.z).length(), Vector2(at.x, at.z).distance_to(step)) < 2.6:
 			swing(app, id, 0.9)
 			return
 
@@ -346,7 +353,10 @@ static func walk_out(host: Node, room: String, veil: Node) -> bool:
 	var walk := DoorWalk.begin(host, player, path, door, true, 0.0)
 	walk.delay = .12
 	# The door shuts once the walker is a stride clear of it.
-	walk.at(.55+1.0, func(): turn(host, door.id, 0.0, SHUT))
+	var ref: WeakRef = weakref(host)
+	walk.at(.55+1.0, func():
+		var node = ref.get_ref()
+		if node != null and is_instance_valid(node) and node.is_inside_tree(): turn(node, door.id, 0.0, SHUT))
 	if host.has_method("follow_camera"): host.follow_camera(1)
 	veil.fade_in()
 	return true
@@ -471,8 +481,9 @@ class DoorWalk extends Node:
 				(event[1] as Callable).call()
 		if travelled >= length-.002: finish()
 
-	## Hands the walker back to its own physics where the walk left it.
-	func finish() -> void:
+	## Hands the walker back to its own physics where the walk left it. leaving: the walk goes with its
+	## scene (a scene change, quitting); what was due at the door is dropped, the door with it.
+	func finish(leaving := false) -> void:
 		if done: return
 		done = true
 		if is_instance_valid(body):
@@ -481,9 +492,10 @@ class DoorWalk extends Node:
 			body.velocity = Vector3.ZERO
 			body.external_velocity = Vector2.ZERO
 			body.external_motion = Vector2.ZERO
-		for event in events: (event[1] as Callable).call()
+		if not leaving:
+			for event in events: (event[1] as Callable).call()
 		events.clear()
 		queue_free()
 
 	func _exit_tree() -> void:
-		if not done: finish()
+		if not done: finish(true)

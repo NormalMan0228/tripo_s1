@@ -53,7 +53,7 @@ func run() -> void:
 	# room_door.gd counts a frame as at most 0.05 s: 2.3 m/s x 0.05 = 0.115 m is the most one frame moves.
 	check(max_step<0.13,"no jump walking in (max %.3f m/frame, %.2f m/s)"%[max_step,max_speed])
 	check(home.hero.position.distance_to(load("res://scripts/interiors.gd").spawn_point(home.room_spec))<0.1,"stands at the spawn spot")
-	check(not door.opened and absf(door.hinge.rotation.y)<0.02,"door shut behind (%.2f rad)"%door.hinge.rotation.y)
+	check(not door.opened and door.amount<0.02,"door shut behind (%.2f open)"%door.amount)
 	await capture("room_door_shut.png")
 	# The welcome letter is unread: the door stays shut (story_home.gd hold_at_door).
 	check(is_instance_valid(home.story_home) and home.story_home.keeps_door_shut(),"the unread letter keeps the door shut")
