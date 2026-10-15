@@ -36,7 +36,8 @@ func run() -> void:
 	var ocean := [chunks.get_node("Ocean")] if chunks and chunks.has_node("Ocean") else map.find_children("Ocean__central_surface", "MeshInstance3D", true, false)
 	report["ocean_lods"] = lods_of((ocean[0] as MeshInstance3D).mesh) if not ocean.is_empty() and (ocean[0] as MeshInstance3D).mesh else []
 	report["ground_meshes"] = grounds.size()
-	report["ground_tris"] = grounds.reduce(func(n, g): return n+tris_of((g as MeshInstance3D).mesh), 0)
+	report["ground_tris"] = grounds.filter(func(g): return not String(g.name).begins_with("Shade_")).reduce(func(n, g): return n+tris_of((g as MeshInstance3D).mesh), 0)
+	report["shade_tris"] = grounds.filter(func(g): return String(g.name).begins_with("Shade_")).reduce(func(n, g): return n+tris_of((g as MeshInstance3D).mesh), 0)
 	report["ground_chunks"] = chunks.get_child_count() if chunks else 0
 	report["vram_mb"] = vram()
 	# Nothing moves on its own meanwhile (time almost stopped; 0 makes the walker's physics divide by it).
@@ -132,7 +133,9 @@ static func lods_of(mesh: Mesh) -> Array:
 static func tris_of(mesh: Mesh) -> int:
 	if mesh == null: return 0
 	var n := 0
-	for s in mesh.get_surface_count(): n += RenderingServer.mesh_get_surface(mesh.get_rid(), s).index_count/3
+	for s in mesh.get_surface_count():
+		var d := RenderingServer.mesh_get_surface(mesh.get_rid(), s)
+		n += int(d.get("index_count", d.vertex_count))/3
 	return n
 
 ## Lights (visible omni and spot lights, in tree order) whose range box meets each ground mesh's box
