@@ -26,7 +26,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 import build_standees  # noqa: E402
 from build_brand_art import raw_dir  # noqa: E402
 
-PICKS = {"postman": 1, "fisher": 1, "farmer": 1, "sweeper": 1, "gentleman": 1, "stargazer": 1, "lamplighter": 1,
+PICKS = {"postman": 3, "fisher": 1, "farmer": 1, "sweeper": 1, "gentleman": 1, "stargazer": 1, "lamplighter": 1,
          "gardener": 1, "scout": 1, "regular": 1, "miller": 1, "shopkeeper": 1, "kid": 1, "stroller": 1, "poet": 1}
 UI = ROOT / "game" / "assets" / "ui"
 CARD = (600, 720)
