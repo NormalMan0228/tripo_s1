@@ -52,6 +52,10 @@ state="${VILLAGEN_STAGING_STATE:-/var/lib/villagen-staging}"
 envfile="$stage/ops/staging.env"
 updatelog="${VILLAGEN_STAGING_LOG:-/var/log/villagen-staging-update.log}"
 project=villagen-staging
+# The timer runs as root; the staging checkout may belong to the login user. Git refuses such a
+# repository ("dubious ownership") unless it is marked safe, and that refusal looked like "GitHub
+# unreachable" before, so the server silently never updated. Same fix as ops/auto_update.sh.
+export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=safe.directory GIT_CONFIG_VALUE_0="$stage"
 stamp() { date '+%Y-%m-%d %H:%M:%S'; }
 log() { echo "$(stamp) $*"; }
 if [ ! -f "$envfile" ] || [ ! -f "$stage/ops/compose.staging.yaml" ]; then
@@ -169,6 +173,7 @@ case "$command" in
     deployed="$(cut -c1-7 "$state/deployed" 2>/dev/null || echo 없음)"
     echo "배포된 커밋: $deployed / dev 최신(마지막 확인): $(git -C "$stage" rev-parse --short origin/dev 2>/dev/null || echo ?)"
     [ -f "$state/failed" ] && echo "실패한 커밋: $(cut -c1-7 "$state/failed") (dev 에 새 커밋이 오면 다시 시도)"
+    [ -s "$state/fetch-error" ] && echo "마지막 가져오기 오류: $(cat "$state/fetch-error")"
     [ -f "$state/stopped" ] && echo "멈춘 상태입니다. 다시 켜기: sudo bash ops/staging.sh start"
     "${compose[@]}" ps staging-api || true
     echo "--- 메모리 (학교 서버 포함)"
@@ -278,11 +283,18 @@ case "$command" in
       exit 0
     fi
     if [ -f "$state/stopped" ] && [ -z "$force" ]; then exit 0; fi
-    if ! git -C "$stage" fetch --quiet origin dev 2>/dev/null; then
-      # GitHub unreachable: try again next round, quietly.
-      [ -n "$force" ] && { echo "GitHub에서 dev 브랜치를 받지 못했어요." >&2; exit 1; }
+    if ! fetch_error=$(git -C "$stage" fetch --quiet origin dev 2>&1); then
+      # GitHub unreachable (or git refusing the checkout): try again next round. The reason is
+      # logged once and shown by `staging.sh status`, never swallowed.
+      if [ "$fetch_error" != "$(cat "$state/fetch-error" 2>/dev/null || true)" ]; then
+        printf '%s
+' "$fetch_error" > "$state/fetch-error"
+        log "fetch of dev failed: $fetch_error"
+      fi
+      [ -n "$force" ] && { echo "GitHub에서 dev 브랜치를 받지 못했어요: $fetch_error" >&2; exit 1; }
       exit 0
     fi
+    rm -f "$state/fetch-error"
     target="$(git -C "$stage" rev-parse origin/dev)"
     if [ -z "$force" ]; then
       [ "$target" = "$(cat "$state/failed" 2>/dev/null || true)" ] && exit 0
