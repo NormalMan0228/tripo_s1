@@ -31,6 +31,7 @@ func run() -> void:
 	I18n.setup()
 	check_tokens()
 	check_themes()
+	check_static()
 	await check_stack()
 	await check_village_windows()
 	print("UI_CONSISTENCY ", JSON.stringify({"checks":checks, "failures":failures}))
@@ -114,6 +115,42 @@ func check_themes() -> void:
 		and (probes.PopupMenu as PopupMenu).get_theme_color("font_color") == RpgUi.INK
 	expect(resolved, "controls under a night panel in a parchment root resolve night styles")
 	host.free()
+
+# ------------------------------------------------------------------ static lint
+
+## Colours that have a token (RpgUi): writing them as literals outside rpg_ui.gd and the painter fails.
+const TOKEN_HEXES := ["ffe08a","e9b552","fff2cf","c9d3c6","3b2a1c","2f2a1f","5d4a35","7a5a2c","8a5a1c","fff4d6","e9d29b",
+	"3c2e1e","7a6446","b0452f","d8e3d4","c9a46a","ffd9a0","c8ec9f"]
+## Files still waiting for their migration, with the most literals each may keep (the list only
+## shrinks). They are on the presentation's object-creation path or hot files other tracks edit now:
+## main.gd/studio.gd (U-WP-04/09/11), craft_panel.gd (U-WP-05, frozen before the talk),
+## interaction_panel.gd and shape_panel.gd (U-WP-06).
+const LITERAL_ALLOWLIST := {"main.gd":4, "studio.gd":12, "craft_panel.gd":2, "interaction_panel.gd":1, "shape_panel.gd":2}
+## Files already on the shared windows and tokens: no flat boxes or colour rects of their own.
+const MIGRATED := ["craft_window.gd", "village_life.gd", "life_icon.gd", "minimap.gd"]
+
+func check_static() -> void:
+	var literal := RegEx.new()
+	literal.compile(r'(?i)Color\("#?(' + "|".join(TOKEN_HEXES) + ')"')
+	var hotbar_key := RegEx.new()
+	hotbar_key.compile(r'"key"\s*:\s*"([A-Z]|Tab|F[0-9]+)"')
+	var over := []
+	var shrunk := []
+	var flat := []
+	var keys := []
+	for name in DirAccess.get_files_at("res://scripts"):
+		if not name.ends_with(".gd") or name == "rpg_ui.gd": continue
+		var code := FileAccess.get_file_as_string("res://scripts/" + name)
+		var count := literal.search_all(code).size()
+		var allowed: int = LITERAL_ALLOWLIST.get(name, 0)
+		if count > allowed: over.append("%s %d>%d" % [name, count, allowed])
+		elif count < allowed: shrunk.append("%s %d<%d" % [name, count, allowed])
+		if name in MIGRATED and (code.contains("StyleBoxFlat.new()") or code.contains("ColorRect.new()")): flat.append(name)
+		for found in hotbar_key.search_all(code): keys.append("%s %s" % [name, found.get_string()])
+	expect(over.is_empty(), "no token colours written as literals outside rpg_ui.gd, the painter and the allowlist %s" % [over])
+	if not shrunk.is_empty(): print("NOTE the literal allowlist can shrink: ", shrunk)
+	expect(flat.is_empty(), "migrated files build no StyleBoxFlat or ColorRect of their own %s" % [flat])
+	expect(keys.is_empty(), "hotbar specs name actions, not key letters %s" % [keys])
 
 # ------------------------------------------------------------------ window stack
 

@@ -172,7 +172,7 @@ func _draw_map() -> void:
 	var tip := Vector2(0,-9).rotated(facing-turn)
 	var left := Vector2(-6,6).rotated(facing-turn)
 	var right := Vector2(6,6).rotated(facing-turn)
-	disc.draw_colored_polygon(PackedVector2Array([frame.get_center()+tip, frame.get_center()+left, frame.get_center()+right]), Color("fff4d6"))
+	disc.draw_colored_polygon(PackedVector2Array([frame.get_center()+tip, frame.get_center()+left, frame.get_center()+right]), RpgUi.INK)
 	disc.draw_polyline(PackedVector2Array([frame.get_center()+tip, frame.get_center()+left, frame.get_center()+right, frame.get_center()+tip]), Color("3b2d1c"), 1.5)
 	# Inner shadow, then (without the painted Ring child) the code-drawn line and studs.
 	disc.draw_arc(frame.get_center(), radius-2.0, 0, TAU, 64, Color(0,0,0,.3), 4, true)
@@ -183,10 +183,10 @@ func _draw_map() -> void:
 			var at := frame.get_center()+Vector2(cos(a),sin(a))*97.8
 			var r := 6.5 if i==0 else 4.5
 			disc.draw_colored_polygon(PackedVector2Array([at+Vector2(0,-r),at+Vector2(r,0),at+Vector2(0,r),at+Vector2(-r,0)]), Color("3a2312"))
-			disc.draw_colored_polygon(PackedVector2Array([at+Vector2(0,-r+1.5),at+Vector2(r-1.5,0),at+Vector2(0,r-1.5),at+Vector2(-r+1.5,0)]), Color("ffe39a") if i==0 else Color("e9b552"))
+			disc.draw_colored_polygon(PackedVector2Array([at+Vector2(0,-r+1.5),at+Vector2(r-1.5,0),at+Vector2(0,r-1.5),at+Vector2(-r+1.5,0)]), Color("ffe39a") if i==0 else RpgUi.AMBER)
 	var north := frame.get_center()+Vector2(0,-(radius-11.0)).rotated(-turn)
 	disc.draw_string_outline(font, north+Vector2(-5*text_scale, 4*text_scale), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(13*text_scale), 4, Color("3a2312"))
-	disc.draw_string(font, north+Vector2(-5*text_scale, 4*text_scale), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(13*text_scale), Color("fff4d6"))
+	disc.draw_string(font, north+Vector2(-5*text_scale, 4*text_scale), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, roundi(13*text_scale), RpgUi.INK)
 
 ## Route guide: guide.gd hands over the route and the goal (Vector2.INF clears them).
 func show_guide(route: PackedVector2Array, goal: Vector2) -> void:
@@ -220,7 +220,7 @@ func _draw_guide(centre: Vector2, scale: float, turn: float, radius: float) -> v
 			var p := a.lerp(b, t/length)
 			if p.length() < limit and p.length() > 8.0:
 				disc.draw_circle(centre+p, 2.9, Color(0.23, 0.13, 0.03, 0.75))
-				disc.draw_circle(centre+p, 1.9, Color("ffe08a"))
+				disc.draw_circle(centre+p, 1.9, RpgUi.HOVER)
 			t += 7.0
 		carry = t-length
 	var goal: Vector2 = ((guide_target-player_at)*scale).rotated(-turn)
@@ -273,4 +273,4 @@ func _draw() -> void:
 	var chip := chip_rect()
 	draw_style_box(RpgUi.panel_style("pill"), chip)
 	draw_texture_rect(CLOCK, Rect2(chip.position.x+8, chip.position.y+3+(label_size-14)*0.5, 19, 19), false, Color.WHITE)
-	draw_string(font, Vector2(chip.position.x+34, chip.position.y+18+(label_size-14)*0.5), chip_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, label_size, Color("fff4d6"))
+	draw_string(font, Vector2(chip.position.x+34, chip.position.y+18+(label_size-14)*0.5), chip_text(), HORIZONTAL_ALIGNMENT_LEFT, -1, label_size, RpgUi.INK)

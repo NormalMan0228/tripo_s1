@@ -552,18 +552,18 @@ func build_card(reward: Dictionary) -> void:
 	if reward.get("first",false): ribbon=tr("새로운 물고기 발견!")
 	elif reward.get("record",false): ribbon=tr("최고 기록 갱신!")
 	if not ribbon.is_empty():
-		var r := RpgUi.label(v,ribbon,15,Color("b0452f"),false)
+		var r := RpgUi.label(v,ribbon,15,RpgUi.ACCENT,false)
 		r.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	var art := Icon.make(reward.item,150)
 	art.size_flags_horizontal=Control.SIZE_SHRINK_CENTER
 	art.custom_minimum_size=Vector2(260,130)
 	v.add_child(art)
-	var name := RpgUi.label(v,tr(str(data.get("name",reward.item))),26,Color("3b2a1c"),false)
+	var name := RpgUi.label(v,tr(str(data.get("name",reward.item))),26,RpgUi.PAPER_INK,false)
 	name.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	var stars := "★".repeat(int(data.get("rarity",1)))+"☆".repeat(3-int(data.get("rarity",1)))
-	var line1 := RpgUi.label(v,"%s   %.1f cm" % [stars,float(reward.size)],18,Color("8a5a1c"),false)
+	var line1 := RpgUi.label(v,"%s   %.1f cm" % [stars,float(reward.size)],18,RpgUi.PAPER_MUTED,false)
 	line1.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	var hint := RpgUi.label(v,tr("%s · 판매가 %d잎전") % [tr(SPOT_NAMES.get(str(reward.get("spot","sea")),"바다")),int(data.get("price",0))],14,Color("5d4a35"),false)
+	var hint := RpgUi.label(v,tr("%s · 판매가 %d잎전") % [tr(SPOT_NAMES.get(str(reward.get("spot","sea")),"바다")),int(data.get("price",0))],14,RpgUi.PAPER_MUTED,false)
 	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	if is_instance_valid(hud): hud.add_child(card)
 	card.pivot_offset=Vector2(165,160)

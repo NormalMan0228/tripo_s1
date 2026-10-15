@@ -29,6 +29,8 @@ const PAPER_LINE := Color("c9a46a")
 ## Presence dots.
 const ONLINE := Color("8fd16a")
 const AWAY := Color("e9b552")
+## The amber of meter fills, slider tracks and map markers (the same hue as AWAY).
+const AMBER := Color("e9b552")
 const OFFLINE := Color(1,1,1,.35)
 ## Chat channels other than the village (INK) and the party (TEAL).
 const CHAT_GLOBAL := Color("c9b8ff")
@@ -307,13 +309,13 @@ static func theme() -> Theme:
 	tooltip_theme(t)
 	# Meters, sliders and scroll bars.
 	t.set_stylebox("background", "ProgressBar", frame("bar_bg"))
-	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", Color("e9b552")))
+	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", AMBER))
 	t.set_color("font_color", "ProgressBar", INK)
 	var track := frame("bar_bg")
 	track.set_content_margin_all(3)
 	for type in ["HSlider","VSlider"]:
 		t.set_stylebox("slider", type, track)
-		t.set_stylebox("grabber_area", type, frame("bar_fill", Color("e9b552")))
+		t.set_stylebox("grabber_area", type, frame("bar_fill", AMBER))
 		t.set_stylebox("grabber_area_highlight", type, frame("bar_fill", Color("f3c96a")))
 		t.set_icon("grabber", type, half("slider_grabber"))
 		t.set_icon("grabber_highlight", type, half("slider_grabber_hover"))
@@ -1602,12 +1604,12 @@ static func _night_coverage(t: Theme) -> void:
 	track.set_content_margin_all(3)
 	for type in ["HSlider","VSlider"]:
 		t.set_stylebox("slider", type, track)
-		t.set_stylebox("grabber_area", type, frame("bar_fill", AWAY))
+		t.set_stylebox("grabber_area", type, frame("bar_fill", AMBER))
 		t.set_stylebox("grabber_area_highlight", type, frame("bar_fill", Color("f3c96a")))
 		t.set_icon("grabber", type, half("slider_grabber"))
 		t.set_icon("grabber_highlight", type, half("slider_grabber_hover"))
 	t.set_stylebox("background", "ProgressBar", frame("bar_bg"))
-	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", AWAY))
+	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", AMBER))
 	t.set_color("font_color", "ProgressBar", INK)
 	t.set_icon("checked", "CheckBox", half("check_on"))
 	t.set_icon("unchecked", "CheckBox", half("check_off"))
