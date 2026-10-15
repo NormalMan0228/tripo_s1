@@ -8,6 +8,7 @@ extends RefCounted
 ## floor (rooms) or above the ground at its support (village).
 const Roads = preload("res://scripts/roads.gd")
 const Town = preload("res://scripts/town.gd")
+const HousePlots = preload("res://scripts/house_plots.gd")
 
 ## Hangs on a wall: thin for its size (server: d <= 0.5 and 2d <= max(w, h)).
 const WALL_DEPTH := 0.5
@@ -118,6 +119,12 @@ static func nearest_wall(at: Vector3, room_size: Vector2) -> String:
 ## covers the point, or -INF when none does. Boxes are cached on the piece (CraftCollision).
 static func top_at(item: Node3D, world: Vector3) -> float:
 	if not is_instance_valid(item): return -INF
+	# The map session's fitted shapes answer this themselves (craft_collision.gd top_at, cached).
+	var Collision: Script=preload("res://scripts/craft_collision.gd")
+	if fitted_tops(Collision):
+		var at := item.global_transform.affine_inverse()*world
+		var top: float=Collision.call("top_at",item,Vector2(at.x,at.z))
+		return top if top==-INF else (item.global_transform*Vector3(at.x,top,at.z)).y
 	# Boxes follow the shown shape (they are fitted to the scaled frame): a shape edit refits them.
 	var shape_key := str(item.get_meta("shape",{}))
 	var boxes: Array
@@ -136,6 +143,14 @@ static func top_at(item: Node3D, world: Vector3) -> float:
 		if absf(local.x)<=span.x*0.5 and absf(local.z)<=span.z*0.5: best=span.y
 	return best if best==-INF else item.global_position.y+best*item.scale.y
 
+static var _fitted := -1
+static func fitted_tops(Collision: Script) -> bool:
+	if _fitted<0:
+		_fitted=0
+		for method in Collision.get_script_method_list():
+			if str(method.name)=="top_at": _fitted=1
+	return _fitted==1
+
 ## Whether the point (world xz) lies on the piece's turned footprint, shrunk by `inset`.
 static func on_footprint(item: Node3D, world: Vector3, inset := 0.05) -> bool:
 	var span: Vector3=item.get_meta("size",Vector3.ONE)
@@ -147,6 +162,8 @@ static func on_footprint(item: Node3D, world: Vector3, inset := 0.05) -> bool:
 static func village_problem(world: Vector3, size: Vector3, degrees: float) -> String:
 	var here := Vector2(world.x,world.z)
 	var reach := maxf(size.x,size.z)*0.5
+	# A plot waiting for a resident's house (house_plots.gd; server plot_reserved).
+	if not HousePlots.on_plot(here).is_empty(): return TranslationServer.translate("새 이웃의 집터예요. 다른 곳에 놓아 주세요.")
 	for door: Dictionary in Town.DOORS:
 		if here.distance_to(door.at)<DOOR_CLEAR+reach*0.6: return TranslationServer.translate("문 앞은 비워 두세요.")
 	for line in bridge_lines():
