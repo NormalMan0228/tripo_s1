@@ -17,9 +17,15 @@ const OUT := 0.35
 const IN := 0.45
 const COVER_ART := "res://assets/ui/loading_cover.jpg"
 const SEED_ICON := "res://assets/starseed.svg"
-## Painted backdrops for place cards (tools/build_brand_art.py), by the kind of place.
+## Painted backdrops for place cards (tools/build_brand_art.py), by the kind of place:
+## the village and each of its islands (field_objects.ISLANDS ids), rooms, expedition regions.
 const BACKDROPS := {
 	"village": "res://assets/ui/loading/village.jpg",
+	"square": "res://assets/ui/loading/village.jpg",
+	"fields": "res://assets/ui/loading/fields.jpg",
+	"garden": "res://assets/ui/loading/garden.jpg",
+	"camp": "res://assets/ui/loading/camp.jpg",
+	"lighthouse": "res://assets/ui/loading/lighthouse.jpg",
 	"room": "res://assets/ui/loading/room.jpg",
 	"forest": "res://assets/ui/loading/forest.jpg",
 	"quarry": "res://assets/ui/loading/quarry.jpg",

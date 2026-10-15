@@ -7,7 +7,8 @@ option, 4096x2272) on 2026-10-15 and live outside git in output/ui-art-20261015/
   vg_start_<n>.jpg         the island village from the sea at sunrise (first load)
   vg_morning|golden|evening_<n>.jpg   the three title key arts widened to 16:9
   vg_3d_<place>_<n>.jpg    loading backdrops: square (village), interior (rooms),
-                           forest, quarry, frost (expedition regions)
+                           forest, quarry, frost (expedition regions), fields, garden,
+                           camp, lighthouse (the other islands)
 
 PICKS names the chosen source for every game asset; change a line and re-run to swap one.
 Outputs (git-tracked, imported by Godot):
@@ -44,6 +45,10 @@ PICKS = {
     "forest": "vg_3d_forest_1.jpg",
     "quarry": "vg_3d_quarry_1.jpg",
     "frost": "vg_3d_frost_2.jpg",
+    "fields": "vg_3d_fields_1.jpg",
+    "garden": "vg_3d_garden_1.jpg",
+    "camp": "vg_3d_camp_2.jpg",
+    "lighthouse": "vg_3d_lighthouse_1.jpg",
 }
 LOGO_WIDTH = 900      # shown at up to ~430 logical px; the import makes mipmaps for the rest
 HERO_WIDTH = 2560     # title and cover: the first things the player sees, sharp at 1440p
@@ -120,7 +125,7 @@ def main() -> None:
     save_jpg(raw / PICKS["cover"], assets / "ui" / "loading_cover.jpg", HERO_WIDTH)
     for time in ("morning", "golden", "evening"):
         save_jpg(raw / PICKS["title_" + time], assets / f"title_{time}.jpg", HERO_WIDTH)
-    for place in ("village", "room", "forest", "quarry", "frost"):
+    for place in ("village", "room", "forest", "quarry", "frost", "fields", "garden", "camp", "lighthouse"):
         save_jpg(raw / PICKS[place], assets / "ui" / "loading" / f"{place}.jpg", BACKDROP_WIDTH)
 
 
