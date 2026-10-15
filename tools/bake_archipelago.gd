@@ -6,12 +6,16 @@ extends SceneTree
 ## then for every collider made from a render mesh writes simplified faces (meshoptimizer through
 ## SurfaceTool.generate_lod: positions only, at most IslandBake.EPSILON off in world metres, the
 ## ground GROUND_EPSILON) cut into chunks of at most CHUNK_TRIS triangles, keyed like the build asks
-## for them (IslandBake.collider_key). Then builds the map again with that collision, as the game does,
-## and saves it as the baked island (island.scn; see island_bake.gd). Prints BAKE_COLLISION lines per
-## group, BAKE_ISLAND and BAKE_DONE.
+## for them (IslandBake.collider_key), and cuts the levelled ground into chunks (ground.scn,
+## ground_chunks.gd: checked bit for bit against the ground it was cut from; a failed check leaves no
+## manifest, so nothing of this bake is used). Then builds the map again with that collision and those
+## chunks, as the game does, and saves it as the baked island (island.scn; see island_bake.gd). Prints
+## BAKE_COLLISION lines per group, BAKE_GROUND, BAKE_ISLAND and BAKE_DONE.
+## --no-ground-chunks: no ground.scn (the island then holds the levelled ground as before).
 ## --check: only says whether the generated data is fresh (exit 0) or not (exit 3).
 const Map = preload("res://maps/archipelago/archipelago.gd")
 const IslandBake = preload("res://maps/archipelago/island_bake.gd")
+const GroundChunks = preload("res://maps/archipelago/ground_chunks.gd")
 
 ## Experiments: --epsilon=M, --ground-epsilon=M (0 keeps the faces as they are, only cut in chunks).
 var epsilon := IslandBake.EPSILON
@@ -42,6 +46,8 @@ func run() -> void:
 	var started := Time.get_ticks_msec()
 	IslandBake.disabled = true
 	IslandBake.reset()
+	# The levelled ground keeps the floats it is built from, for the chunks.
+	GroundChunks.keep_arrays = true
 	var camera := Camera3D.new()
 	root.add_child(camera)
 	var map: Node3D = Map.new()
@@ -101,6 +107,20 @@ func run() -> void:
 		for piece: PackedVector3Array in pieces: group.largest_chunk = maxi(group.largest_chunk, piece.size()/3)
 		groups[entry.group] = group
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(IslandBake.DIR))
+	# No island and no chunks yet: the builds below must not load older ones.
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(IslandBake.ISLAND))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(IslandBake.GROUND))
+	var ground := {}
+	if not IslandBake.ground_disabled:
+		ground = bake_ground(map)
+		print("BAKE_GROUND %s" % JSON.stringify(ground))
+		if ground.saved != OK:
+			# Nothing of this bake counts: without a manifest the game builds the map as before.
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(IslandBake.MANIFEST))
+			print("BAKE_DONE the ground chunks failed their check: %s" % str(ground.get("failures", [])))
+			quit(1)
+			return
+	GroundChunks.keep_arrays = false
 	var library := Resource.new()
 	library.set_meta("chunks", chunks)
 	var saved := ResourceSaver.save(library, IslandBake.COLLISION, ResourceSaver.FLAG_COMPRESS)
@@ -108,8 +128,7 @@ func run() -> void:
 		"stamp": IslandBake.stamp(), "content_key": IslandBake.content_key(), "made": Time.get_datetime_string_from_system(true),
 		"epsilon_m": epsilon, "ground_epsilon_m": ground_epsilon, "walk_zone_m": zone, "walk_zone_epsilon_m": zone_epsilon, "chunk_tris": IslandBake.CHUNK_TRIS,
 		"collision": groups}
-	# No island yet: the build below must not load an older one.
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(IslandBake.ISLAND))
+	if not ground.is_empty(): manifest["ground"] = ground
 	write_manifest(manifest)
 	for group in groups: print("BAKE_COLLISION %-12s %s" % [group, JSON.stringify(groups[group])])
 	map.queue_free()
@@ -238,6 +257,29 @@ func bake_island() -> Dictionary:
 	await process_frame
 	return {"saved": saved, "nodes": nodes, "instances": instances, "colliders": colliders.size(), "concave_stripped": stripped,
 		"overrides": overrides.size(), "lost": lost.slice(0, 10), "bytes": bytes, "build_ms": build_ms, "ms": Time.get_ticks_msec()-t}
+
+## The levelled ground this build made cut into chunks, with the ocean surface as the LODs it is drawn
+## with (ground_chunks.gd), each checked against what it was cut from; saved as ground.scn when both pass.
+func bake_ground(map: Node3D) -> Dictionary:
+	var t := Time.get_ticks_msec()
+	var grounds := map.find_children("*__ground", "MeshInstance3D", true, false)
+	var ground := GroundChunks.build(grounds)
+	var check := GroundChunks.validate(ground, grounds)
+	var oceans := map.find_children("Ocean__central_surface", "MeshInstance3D", true, false)
+	var ocean := GroundChunks.add_ocean(ground, oceans[0]) if not oceans.is_empty() else {"ok": true, "failures": []}
+	for node in grounds: node.remove_meta(GroundChunks.ARRAYS_META)
+	var failures: Array = check.failures+ocean.get("failures", [])
+	var saved := ERR_INVALID_DATA
+	if failures.is_empty():
+		var packed := PackedScene.new()
+		saved = packed.pack(ground)
+		if saved == OK: saved = ResourceSaver.save(packed, IslandBake.GROUND, ResourceSaver.FLAG_COMPRESS)
+	var stats: Dictionary = ground.get_meta("stats", {})
+	ground.free()
+	var out := stats.duplicate()
+	out.merge({"saved": saved, "failures": failures.slice(0, 12), "vertices_checked": check.get("vertices_checked", 0),
+		"ocean": ocean, "bytes": FileAccess.get_file_as_bytes(IslandBake.GROUND).size() if saved == OK else 0, "ms": Time.get_ticks_msec()-t})
+	return out
 
 ## "<id>" for a mesh inside a placed prop ("Environment/<id>_<NNN>/..."), "" otherwise.
 static func prop_id(map: Node, mesh: Node) -> String:
