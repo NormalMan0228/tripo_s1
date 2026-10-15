@@ -70,7 +70,9 @@ const TIPS := ["Tab을 누르면 섬 지도가 열려요. 금빛 표식을 따�
 	"밤이 되면 가로등과 이정표 등불이 켜져요. 산책하기 좋은 시간이에요.","O를 누르면 옷장에서 차림을 바꿀 수 있어요.",
 	"망원경으로 먼 섬의 풍경을 살펴볼 수 있어요.","C를 누르면 새 물건 제작을 맡길 수 있어요."]
 
-static var sounds: Dictionary = {}
+const SfxBank := preload("res://scripts/sfx_bank.gd")
+## Sounds added with tools/sfx/gen_props.py: silent, not the fallback click, while not imported.
+const QUIET_IF_MISSING := ["hammock","flap","flag","peck","tweet","bucket","telescope","arrive","stand","seeds","settle"]
 var app: Node
 var space: PhysicsDirectSpaceState3D
 ## One entry per placed object: {spec, kind, id, root, at (Vector2), ground, front (Vector2), radius, ...}.
@@ -246,6 +248,7 @@ func closest(at: Vector3) -> Dictionary:
 func interact(entry: Dictionary) -> void:
 	var id := String(entry.get("id",""))
 	if id == "stand":
+		stand_sound()
 		stand_up()
 		return
 	if id == "look_away":
@@ -312,12 +315,12 @@ func apply_night(level: float) -> void:
 		glow.emission_energy_multiplier = 0.15+float(lamp.glow)*level
 
 # ------------------------------------------------------------------ sound
+## One take of the field/<name> family (SFX plus <name>_<n>.wav, tools/sfx/gen_props.py) from
+## sfx_bank.gd's shuffle bag, so a sound never repeats back to back; +-3 % pitch, +-1 dB.
 func play(sound_name: String, at := Vector3.INF, db := -9.0) -> void:
-	if not sounds.has(sound_name):
-		var path := SFX % sound_name
-		sounds[sound_name] = load(path) if ResourceLoader.exists(path) else null
-	var stream: AudioStream = sounds[sound_name]
+	var stream: AudioStream = SfxBank.pick(SFX % sound_name)
 	if stream == null:
+		if sound_name in QUIET_IF_MISSING: return
 		if app and "sound" in app and is_instance_valid(app.sound): app.sound.effect("click")
 		return
 	if at != Vector3.INF and app and is_instance_valid(app.player):
@@ -327,7 +330,7 @@ func play(sound_name: String, at := Vector3.INF, db := -9.0) -> void:
 	var voice := voices[voice_index]
 	voice_index = (voice_index+1)%voices.size()
 	voice.stream = stream
-	voice.volume_db = db
+	voice.volume_db = db+rng.randf_range(-1.0,1.0)
 	voice.pitch_scale = rng.randf_range(0.97,1.03)
 	voice.play()
 
@@ -953,6 +956,8 @@ func travel(destination: Dictionary) -> void:
 		app.player.has_safe_position = true
 	app.player.face_point(destination.root.global_position)
 	if app.has_method("follow_camera"): app.follow_camera(1.0)
+	# The walker lands on the path as the veil lifts.
+	play("arrive", Vector3.INF, -11.0)
 	await veil.fade_in()
 	if is_instance_valid(app) and is_instance_valid(app.player):
 		Fx.title(app, app.player.global_position, tr(ISLANDS[destination.spec.island]))
@@ -988,6 +993,7 @@ func use_mailbox(entry: Dictionary) -> void:
 	tween.tween_property(flap, "rotation:x", 1.35, 0.25).set_trans(Tween.TRANS_BACK)
 	tween.tween_interval(2.4)
 	tween.tween_property(flap, "rotation:x", 0.0, 0.3)
+	tween.tween_callback(func(): if is_instance_valid(entry.root): play("flap", entry.root.global_position, -11.0))
 	# Letters from residents (npc_gifts.gd) come first: the unread ones are read out and marked.
 	var letters: Array = []
 	var api = app.get("api") if app else null
@@ -1022,6 +1028,10 @@ func raise_flag(entry: Dictionary) -> void:
 	if not entry.has("flag") or not is_instance_valid(entry.flag): return
 	var unread := int(app.me.get("npc_letters_unread", 0)) if app and app.me is Dictionary else 0
 	var goal := -PI*0.5 if unread > 0 or mail_waiting() else 0.0
+	# The flag squeaks up (or down) when mail arrives or has been read, not when the village loads.
+	var up := goal != 0.0
+	if entry.has("flag_up") and bool(entry.flag_up) != up: play("flag", entry.root.global_position, -13.0)
+	entry.flag_up = up
 	entry.flag.rotation.x = move_toward(entry.flag.rotation.x, goal, get_process_delta_time()*4.0)
 
 ## What the mailbox says: invites, rewards waiting and recent notes (read-only).
@@ -1121,6 +1131,7 @@ func use_well(entry: Dictionary) -> void:
 	swing.tween_property(bucket, "rotation:z", 0.2, 0.3)
 	swing.tween_property(bucket, "rotation:z", -0.12, 0.4)
 	swing.tween_property(bucket, "rotation:z", 0.0, 0.4)
+	play("bucket", bucket.global_position, -14.0)
 	entry.tosses = int(entry.get("tosses", 0))+1
 	# The wish rises back out of the well as sparkles and a star.
 	get_tree().create_timer(0.75).timeout.connect(func():
@@ -1199,8 +1210,8 @@ func use_feeder(entry: Dictionary) -> void:
 	if app.player.has_method("react"): app.player.react("craft")
 	Fx.burst(self, seeds.global_position+Vector3(0,0.25,0), "seed", 12, Color(0,0,0,0), 0.12)
 	Fx.squash(seeds, 0.2, 0.3)
+	play("seeds", entry.root.global_position, -13.0)
 	if float(entry.away) > 0.0:
-		play("paper", entry.root.global_position, -16.0)
 		Fx.burst(self, seeds.global_position+Vector3(0,0.3,0), "sparkle", 4, Color(0,0,0,0), 0.2)
 		return
 	scatter_birds(entry)
@@ -1225,7 +1236,10 @@ func animate_birds(entry: Dictionary, delta: float) -> void:
 	if away > 0.0:
 		entry.away = away-delta
 		if float(entry.away) <= 0.0:
-			# They come back one by one and settle where they were.
+			# They come back one by one and settle where they were: wings, then a first call.
+			play("birds", entry.root.global_position, -15.0)
+			get_tree().create_timer(rng.randf_range(1.3, 1.9)).timeout.connect(func():
+				if is_instance_valid(entry.root) and float(entry.away) <= 0.0: play("tweet", entry.root.global_position, -14.0))
 			var i := 0
 			for bird in entry.birds:
 				var node: Node3D = bird.node
@@ -1244,6 +1258,12 @@ func animate_birds(entry: Dictionary, delta: float) -> void:
 		if walker_xz().distance_to(entry.at) < 2.2 and app.player.locomotion_velocity.length() > 3.4:
 			scatter_birds(entry)
 			return
+	# Settled birds peck at the tray and call now and then while someone is near.
+	entry.next_peep = float(entry.get("next_peep", rng.randf_range(1.0, 4.0)))-delta
+	if float(entry.next_peep) <= 0.0:
+		entry.next_peep = rng.randf_range(3.0, 8.0)
+		if walker_xz().distance_to(entry.at) < 14.0:
+			play("peck" if rng.randf() < 0.6 else "tweet", entry.root.global_position+Vector3(0,1.2,0), -17.0)
 	for bird in entry.birds:
 		var node: Node3D = bird.node
 		if node.get_tree() == null or not node.visible: continue
@@ -1389,6 +1409,15 @@ func hip_height(player: Node3D) -> float:
 		if hip >= 0: return (skeleton.global_transform*skeleton.get_bone_global_rest(hip).origin).y-player.global_position.y
 	return 0.85
 
+## The seat letting go of the walker's weight (E or walking off; travel stands up quietly).
+func stand_sound() -> void:
+	if not seat.is_empty() and is_instance_valid(seat.entry.get("root")):
+		play("stand", seat.entry.root.global_position, -15.0)
+
+## Creak takes per seat: the swing's chains and the rocker keep their sit() sets, the hammock's
+## rope has its own.
+const SEAT_CREAKS := {"hammock":"hammock"}
+
 func update_seat(delta: float) -> void:
 	var entry: Dictionary = seat.entry
 	var player: Node3D = app.player
@@ -1397,7 +1426,11 @@ func update_seat(delta: float) -> void:
 		return
 	seat.time = float(seat.time)+delta
 	var t: float = seat.time
+	if not seat.has("settled"):
+		seat.settled = true
+		play("settle", entry.root.global_position, -14.0)
 	if t > 0.35 and walker_moving():
+		stand_sound()
 		stand_up()
 		return
 	var pivot: Node3D = entry.pivot
@@ -1415,10 +1448,13 @@ func update_seat(delta: float) -> void:
 	player.global_position = seat_world+back-tilt*Vector3(0, float(seat.hip)-0.04, 0)
 	seat.next_creak = float(seat.next_creak)-delta
 	if float(seat.next_creak) <= 0.0:
-		seat.next_creak = {"swing":PI/2.2,"rocker":PI/1.9,"hammock":PI/1.1}[entry.kind]
-		play(String(seat.creak), entry.root.global_position, -17.0)
+		# Half a sway, +-10 % so the creaks never tick like a metronome.
+		seat.next_creak = {"swing":PI/2.2,"rocker":PI/1.9,"hammock":PI/1.1}[entry.kind]*rng.randf_range(0.9, 1.1)
+		var creak := String(SEAT_CREAKS.get(entry.kind, seat.creak))
+		if not SfxBank.has(SFX % creak): creak = String(seat.creak)
+		play(creak, entry.root.global_position, -17.0)
 
-func stand_up(quiet := false) -> void:
+func stand_up(_quiet := false) -> void:
 	if seat.is_empty(): return
 	var entry: Dictionary = seat.entry
 	var pose: SkeletonModifier3D = seat.pose
@@ -1439,7 +1475,8 @@ func stand_up(quiet := false) -> void:
 	player.visual_only = restore
 	player.velocity = Vector3.ZERO
 	player.global_position = Vector3(entry.stand)+Vector3(0,0.05,0)
-	if not quiet: play("paper", entry.root.global_position, -24.0)
+	# Getting up is heard through stand_sound() (field/stand) before this, from interact('stand')
+	# and from update_seat when the walker moves off; travel and leaving stand up quietly.
 
 # ------------------------------------------------------------------ telescope view
 func use_telescope(entry: Dictionary) -> void:
@@ -1460,7 +1497,9 @@ func use_telescope(entry: Dictionary) -> void:
 	var landmark := Vector3(focus.x, focus.y-Profile.CAMERA_FOCUS_OFFSET.y, focus.z)
 	var name_of: String = tr(targets[index][0])
 	get_tree().create_timer(0.8).timeout.connect(func():
-		if not view.is_empty() and is_instance_valid(app): Fx.title(app, landmark, name_of, Color("f5e5b7")))
+		if not view.is_empty() and is_instance_valid(app):
+			Fx.title(app, landmark, name_of, Color("f5e5b7"))
+			Fx.sound(app, "twinkle", Vector3.INF, 1.3, -13.0))
 
 func update_view(delta: float) -> void:
 	var camera: Camera3D = app.camera
@@ -1491,4 +1530,5 @@ func end_view(immediate := false) -> void:
 		if is_instance_valid(app) and is_instance_valid(app.player): app.player.visual_only = bool(view.was_visual_only)
 		view = {}
 		return
+	if not view.leaving and is_instance_valid(view.entry.get("root")): play("telescope", view.entry.root.global_position, -11.0)
 	view.leaving = true

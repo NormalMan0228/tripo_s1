@@ -105,6 +105,17 @@ var fishing_line: MeshInstance3D
 var last_plot_signature := ""
 var story_progress := 0
 var camera: Camera3D
+## The campfire crackles where it stands (fx/firepit_loop_1, tools/sfx/gen_props.py): one looping
+## player under the town whose level follows the walker's distance like Fx.sound (-0.8 dB per
+## metre past 3 m), stopped out of earshot; close by, a sputter now and then. The loop file is soft
+## (about -35 dBFS RMS): -4 dB puts it near the survival campfire (CombatAudio) at 3 m, about -39.
+const FIRE_DB := -4.0
+const FIRE_REACH := 26.0
+const SfxBank=preload("res://scripts/sfx_bank.gd")
+var fire_at := Vector3.INF
+var fire_loop: AudioStreamPlayer
+var fire_tick := 0.0
+var fire_sputter := 6.0
 ## Under the loading card the first map build is paced over frames (load_pace.gd); main.gd waits
 ## for `built` before it goes on. Uncovered, _ready finishes in one go and `finished` is true at once.
 signal built
@@ -262,6 +273,52 @@ func index_props() -> void:
 		trees.name="TreeFruit"
 		add_child(trees)
 	trees.build(layout.prop_nodes)
+	watch_fire()
+
+## Finds the campfire among the props for the crackle loop (none: the loop stays off).
+func watch_fire() -> void:
+	fire_at=Vector3.INF
+	for entry in props:
+		if entry.id=="24_firepit" and is_instance_valid(entry.node):
+			fire_at=(entry.node as Node3D).global_position+Vector3(0,0.4,0)
+			break
+
+func _process(delta: float) -> void:
+	if fire_at==Vector3.INF: return
+	fire_tick-=delta
+	if fire_tick>0.0: return
+	fire_tick=0.25
+	update_fire(0.25)
+
+## Starts, levels or stops the campfire loop for the walker of the current scene (main.gd).
+func update_fire(step: float) -> void:
+	var host: Node=get_tree().current_scene
+	var walker=host.get("player") if host!=null and host.is_ancestor_of(self) else null
+	var near: bool=is_instance_valid(walker) and walker is Node3D and (walker as Node3D).is_inside_tree() \
+		and not ("screen" in host and String(host.screen)!="village")
+	var distance: float=(walker as Node3D).global_position.distance_to(fire_at) if near else INF
+	if distance>FIRE_REACH:
+		if is_instance_valid(fire_loop) and fire_loop.playing: fire_loop.stop()
+		return
+	if not is_instance_valid(fire_loop):
+		var stream: AudioStream=SfxBank.pick("fx/firepit_loop")
+		if stream==null:
+			fire_at=Vector3.INF
+			return
+		fire_loop=AudioStreamPlayer.new()
+		fire_loop.name="FirepitLoop"
+		fire_loop.bus=&"SFX"
+		fire_loop.stream=stream
+		# Imported without loop points it still loops: start again when it ends.
+		var wav := stream as AudioStreamWAV
+		if wav==null or wav.loop_mode==AudioStreamWAV.LOOP_DISABLED: fire_loop.finished.connect(fire_loop.play)
+		add_child(fire_loop)
+	fire_loop.volume_db=FIRE_DB-clampf(distance-3.0,0.0,30.0)*0.8
+	if not fire_loop.playing: fire_loop.play(randf()*maxf(fire_loop.stream.get_length()-0.5,0.0))
+	fire_sputter-=step
+	if fire_sputter<=0.0:
+		fire_sputter=randf_range(5.0,12.0)
+		if distance<8.0: Fx.sound(host,"sputter",fire_at,1.0,-9.0)
 
 ## Fallen fruit within reach comes first, then the nearest usable prop.
 func nearest_prop(at: Vector2) -> Dictionary:
@@ -299,8 +356,8 @@ func use_prop(app: Node, entry: Dictionary) -> void:
 		var lying: bool=entry.id=="29_beach_lounger"
 		if app.village_seat().start({"node":node,"hint":"lie" if lying else "sit"}):
 			# The old contented cue, over the seat (the walker is on its way there): a hum or a doze.
+			# It is heard on contact instead: the driver's settle (a creak, or the lounger's cushion).
 			Fx.burst(self,base+Vector3(0,1.1,0),"zz" if lying else "note",3,Color(0,0,0,0),0.2)
-			Fx.sound(app,"pluck",base,0.9,-10.0)
 			return
 	var head: Vector3=player.global_position+Vector3(0,2.0,0)
 	var away: Vector3=Vector3.UP.cross(Vector3(base.x-player.global_position.x,0,base.z-player.global_position.z).normalized())
@@ -323,7 +380,9 @@ func use_prop(app: Node, entry: Dictionary) -> void:
 			Fx.burst(self,base+Vector3(0,0.9,0),"fluff",10,Color(0,0,0,0),0.4)
 			Fx.sound(app,"leaves",base,1.35,-3.0)
 			# Now and then something lives in there.
-			if randf()<0.75: Fx.dragonfly(self,base+Vector3(0,0.8,0),Vector3(base.x-player.global_position.x,0,base.z-player.global_position.z))
+			if randf()<0.75:
+				Fx.dragonfly(self,base+Vector3(0,0.8,0),Vector3(base.x-player.global_position.x,0,base.z-player.global_position.z))
+				Fx.sound(app,"dragonfly",base+Vector3(0,0.8,0),1.0,-7.0)
 		"41_planter":
 			water_planter(app,node)
 		"33_signboard":
@@ -341,6 +400,8 @@ func use_prop(app: Node, entry: Dictionary) -> void:
 				get_tree().create_timer(i*0.35).timeout.connect(func(): Fx.ring(self,water,2.2+i*0.6,Color(0.9,0.97,1.0,0.6),1.2))
 			Fx.burst(self,water+Vector3(0,0.2,0),"splash",10,Color(0,0,0,0),0.8)
 			Fx.sound(app,"splash",base,0.85,-4.0)
+			# The hull answers the rock with a creak and a knock.
+			get_tree().create_timer(0.18).timeout.connect(func(): Fx.sound(app,"hull",base,1.0,0.0))
 		"24_firepit":
 			player.react("craft")
 			var fire := base+Vector3(0,0.45,0)
@@ -349,12 +410,13 @@ func use_prop(app: Node, entry: Dictionary) -> void:
 			Fx.burst(self,fire+Vector3(0,0.5,0),"smoke",4,Color(0,0,0,0),0.2)
 			Fx.bubble(self,head,"flame")
 			Fx.sound(app,"crackle",base)
+			get_tree().create_timer(0.35).timeout.connect(func(): Fx.sound(app,"sputter",base,1.0,-2.0))
 			app.sound.effect("fire")
 		"22_tent_orange","23_tent_green":
 			Fx.wobble(node,0.025,away,4,0.6)
 			Fx.burst(self,base+Vector3(0,1.9,0.5),"zz",3,Color(0,0,0,0),0.2)
 			Fx.bubble(self,base+Vector3(0,2.6,0.4),"zz")
-			Fx.sound(app,"leaves",base,1.6,-8.0)
+			Fx.sound(app,"canvas",base,1.0,-7.0)
 		"36_speaker":
 			Fx.squash(node,0.08,0.3)
 			Fx.stream(self,base+Vector3(0,1.0,0),"note",3.0,4.0,Color(0,0,0,0),0.25)
@@ -362,7 +424,7 @@ func use_prop(app: Node, entry: Dictionary) -> void:
 				get_tree().create_timer(i*0.5).timeout.connect(func():
 					Fx.ring(self,base,1.8,Color(0.9,0.8,1.0,0.45),0.8)
 					if is_instance_valid(node): Fx.squash(node,0.06,0.25))
-			Fx.sound(app,"tune",base,1.0,-2.0)
+			Fx.sound(app,"speaker",base,1.0,-2.0)
 		"28_beach_umbrella","30_cafe_umbrella":
 			Fx.wobble(node,0.05,away,4,0.8)
 			player.react("eat")
@@ -373,17 +435,17 @@ func use_prop(app: Node, entry: Dictionary) -> void:
 			player.react("eat")
 			Fx.burst(self,player.global_position+Vector3(0,1.7,0),"zz",3,Color(0,0,0,0),0.15)
 			Fx.bubble(self,head,"sun")
-			Fx.sound(app,"pluck",base,0.7,-8.0)
+			Fx.sound(app,"cushion",base,1.0,-4.0)
 		"31_cafe_table":
 			Fx.burst(self,base+Vector3(0,0.9,0),"steam",4,Color(0,0,0,0),0.15)
 			Fx.bubble(self,head,"note")
-			Fx.sound(app,"pluck",base,1.2,-8.0)
+			Fx.sound(app,"interior/clink",base,1.0,-4.0)
 		_:
 			# Benches, picnic tables and chairs: a stretch and a contented hum.
 			player.react("eat")
 			Fx.burst(self,player.global_position+Vector3(0,1.8,0),"note",3,Color(0,0,0,0),0.2)
 			Fx.bubble(self,head,"heart")
-			Fx.sound(app,"pluck",base,0.9,-8.0)
+			Fx.sound(app,"seat",base,1.0,-8.0)
 
 ## A shrub rustles; when the shared herb patch is ripe the server gives herbs.
 func search_shrub(app: Node, node: Node3D, away: Vector3) -> void:

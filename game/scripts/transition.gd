@@ -12,6 +12,7 @@ extends CanvasLayer
 ## card keeps turning, and the ring around the star seed shows how far they are.
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const LoadPace = preload("res://scripts/load_pace.gd")
+const SfxBank = preload("res://scripts/sfx_bank.gd")
 const Brand = preload("res://scripts/brand.gd")
 const OUT := 0.35
 const IN := 0.45
@@ -85,7 +86,7 @@ func _init() -> void:
 	add_child(veil)
 	build_card()
 	door = AudioStreamPlayer.new()
-	door.volume_db = -9
+	door.volume_db = DOOR_DB
 	door.bus = &"SFX"
 	add_child(door)
 
@@ -408,12 +409,16 @@ static func gradient_rect(fill: int, from: Vector2, to: Vector2, colors: Array, 
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return rect
 
-## Each building's door has its own pair of sounds (tools/make_village_sfx.py):
-## bells over the cafe, bakery and shop doors, the seed shop's bamboo chimes, the
-## greenhouse's glass slider, the observatory hatch, the windmill's wind, the
-## lighthouse's iron door and echo... Unknown rooms use the generic latch/thud.
+## Each building's door has its own sounds (tools/make_village_sfx.py, more takes from
+## tools/sfx/gen_doors.py): bells over the cafe, bakery and shop doors, the seed shop's
+## bamboo chimes, the greenhouse's glass slider, the observatory hatch, the windmill's
+## wind, the lighthouse's iron door and echo... Every room and kind has several takes
+## (DOOR_SOUNDS plus <room>_<kind>_<n>.wav), each the same door worked another way.
+## Unknown rooms use the generic latch/thud.
 const DOOR_SOUNDS := "res://assets/sfx/doors/%s_%s.wav"
-## room+kind -> AudioStream, shared by every Transition instance.
+const DOOR_DB := -9.0
+## kind -> the generic synthesized door, shared by every Transition instance (room takes
+## are cached by sfx_bank.gd).
 static var door_cache: Dictionary = {}
 
 ## kind is "open" (entering) or "close" (stepping back outside); room is the
@@ -422,17 +427,20 @@ func play_door(kind: String, room := "") -> void:
 	# The node joins the root one idle step after a scene first asks for it.
 	if not door.is_inside_tree(): await ready
 	door.stream = door_stream(kind, room)
+	door.pitch_scale = SfxBank.pitch(0.03)
+	door.volume_db = DOOR_DB+SfxBank.db(1.0)
 	door.play()
 
-## The stream play_door uses: the room's own sound, else the generic synthesized one.
+## The stream play_door uses: the next of the room's takes from sfx_bank.gd's shuffle bag
+## (a door never plays the same take twice running; each take is loaded once and cached),
+## else the generic synthesized one.
 static func door_stream(kind: String, room := "") -> AudioStream:
 	if kind != "open": kind = "close"
-	var key := room+"/"+kind
-	if not door_cache.has(key):
-		var path := DOOR_SOUNDS % [room, kind]
-		var stream: AudioStream = load(path) if not room.is_empty() and ResourceLoader.exists(path) else null
-		door_cache[key] = stream if stream != null else door_sound(kind)
-	return door_cache[key]
+	if not room.is_empty():
+		var take := SfxBank.pick(DOOR_SOUNDS % [room, kind])
+		if take != null: return take
+	if not door_cache.has(kind): door_cache[kind] = door_sound(kind)
+	return door_cache[kind]
 
 static func door_sound(kind: String) -> AudioStreamWAV:
 	var rate := 22050

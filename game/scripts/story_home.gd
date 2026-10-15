@@ -196,8 +196,8 @@ func open_letter() -> void:
 		var unfold := paper.create_tween().set_parallel(true)
 		unfold.tween_property(paper, "scale", Vector2.ONE, 0.42).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		unfold.tween_property(paper, "modulate:a", 1.0, 0.2)
-	room.sfx_player.stream = Interiors.sfx("page")
-	room.sfx_player.play()
+	# The room's pooled interior voices: the page turn never cuts a sound still ringing.
+	Interiors.play(room, "page")
 	# The room's talk box is this card: E/Space/Enter/Esc close it (studio._unhandled_key_input).
 	room.talk_box = reading
 	room.talk_window = {}

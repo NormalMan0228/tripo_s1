@@ -1,45 +1,75 @@
 extends SceneTree
-## Door sounds: builds every room's open/close stream through Transition.door_stream
-## and reports length, peak and loudest 120 ms RMS next to the generic fallback.
-## Fails if a room falls back to the generic sound, a stream is empty or clips,
-## or its loudness strays more than 4 dB from the generic door's.
+## Door sounds: every room's open/close sounds are a family of takes (DOOR_SOUNDS plus
+## <room>_<kind>_<n>.wav, tools/sfx/gen_doors.py). For each one this measures every take
+## (length, peak, loudest 120 ms RMS next to the generic fallback) and asks
+## Transition.door_stream for two full rounds of the shuffle bag.
+## Fails if a room has fewer than MIN_TAKES takes (missing or not imported), a take is
+## empty or clips, a take's loudness strays more than 4 dB from the generic door's,
+## door_stream returns something that is not one of the room's takes (e.g. the generic
+## sound), leaves a take out of a round, plays one take twice in a row, or returns a
+## stream that is not the cached one for its path; and if an unknown room does not fall
+## back to the one cached generic stream.
 ##   godot --headless --path game --script res://tests/door_sounds_check.gd
 const Transition = preload("res://scripts/transition.gd")
 const Town = preload("res://scripts/town.gd")
+const SfxBank = preload("res://scripts/sfx_bank.gd")
+const MIN_TAKES := 4
 
 func _initialize() -> void: call_deferred("run")
 
 func run() -> void:
 	var rooms: Array[String] = []
-	for door in Town.DOORS: rooms.append(String(door.room))
+	for door in Town.DOORS:
+		if not String(door.room) in rooms: rooms.append(String(door.room))
 	var lines := PackedStringArray()
 	var failures := 0
 	var reference := {}
+	SfxBank.clear()
 	for kind in ["open","close"]:
 		var generic: AudioStreamWAV = Transition.door_sound(kind)
 		reference[kind] = measure(generic)
-		lines.append("%-26s %s" % ["generic/"+kind, describe(reference[kind])])
-	for room: String in rooms+["unknown_room"]:
+		lines.append("%-30s %s" % ["generic/"+kind, describe(reference[kind])])
+	var total_takes := 0
+	for room: String in rooms:
 		for kind in ["open","close"]:
-			var stream := Transition.door_stream(kind, room)
-			var fallback: bool = room == "unknown_room"
-			var path := Transition.DOOR_SOUNDS % [room, kind]
-			var own: bool = not fallback and stream.resource_path == path
-			var stats := measure(stream)
+			var takes := SfxBank.paths(Transition.DOOR_SOUNDS % [room, kind])
+			total_takes += takes.size()
 			var problems := PackedStringArray()
-			if fallback and stream.resource_path != "": problems.append("unknown room did not fall back")
-			if not fallback and not own: problems.append("uses the generic sound")
-			if stats.get("frames", 0) == 0: problems.append("empty")
-			if float(stats.get("peak", 0.0)) > 0.995: problems.append("clips")
-			if not fallback and stats.has("rms_db") and absf(float(stats.rms_db)-float(reference[kind].rms_db)) > 4.0:
-				problems.append("loudness %.1f dB off" % (float(stats.rms_db)-float(reference[kind].rms_db)))
+			if takes.size() < MIN_TAKES: problems.append("%d takes < %d" % [takes.size(), MIN_TAKES])
+			for path in takes:
+				var stats := measure(SfxBank.stream(path))
+				var issues := PackedStringArray()
+				if stats.get("frames", 0) == 0: issues.append("empty")
+				if float(stats.get("peak", 0.0)) > 0.995: issues.append("clips")
+				if stats.has("rms_db") and absf(float(stats.rms_db)-float(reference[kind].rms_db)) > 4.0:
+					issues.append("loudness %.1f dB off" % (float(stats.rms_db)-float(reference[kind].rms_db)))
+				failures += issues.size()
+				lines.append("%-30s %s%s" % [path.get_file().get_basename(), describe(stats), "" if issues.is_empty() else "  FAIL "+", ".join(issues)])
+			# Two rounds of the bag: only the room's own takes, each once per round, never twice in a
+			# row, and always the cached stream of that take.
+			var seen := {}
+			var last := ""
+			for i in takes.size()*2:
+				var stream := Transition.door_stream(kind, room)
+				var path: String = stream.resource_path if stream != null else ""
+				if not path in takes:
+					problems.append("door_stream returned %s, not one of the room's takes" % ("the generic sound" if path.is_empty() else path))
+					break
+				if stream != SfxBank.stream(path): problems.append("%s is not the cached stream" % path.get_file())
+				if path == last and takes.size() > 1: problems.append("%s twice in a row" % path.get_file())
+				last = path
+				seen[path] = true
+				if i == takes.size()-1 and seen.size() != takes.size(): problems.append("a round left out %d take(s)" % (takes.size()-seen.size()))
 			failures += problems.size()
-			lines.append("%-26s %s%s" % [room+"/"+kind, describe(stats), "" if problems.is_empty() else "  FAIL "+", ".join(problems)])
-	# Cached: asking again returns the very same stream.
-	if Transition.door_stream("open","01_cafe") != Transition.door_stream("open","01_cafe"):
-		failures += 1
-		lines.append("FAIL door streams are not cached")
-	lines.append("RESULT %s (%d problems, %d rooms)" % ["PASS" if failures == 0 else "FAIL", failures, rooms.size()])
+			lines.append("%-30s %d takes%s" % [room+"/"+kind, takes.size(), "" if problems.is_empty() else "  FAIL "+", ".join(problems)])
+	for kind in ["open","close"]:
+		var stream := Transition.door_stream(kind, "unknown_room")
+		var problems := PackedStringArray()
+		if stream == null or stream.resource_path != "": problems.append("unknown room did not fall back")
+		elif stream != Transition.door_stream(kind, "unknown_room"): problems.append("generic stream is not cached")
+		failures += problems.size()
+		lines.append("%-30s %s%s" % ["unknown_room/"+kind, describe(measure(stream)) if stream != null else "null", "" if problems.is_empty() else "  FAIL "+", ".join(problems)])
+	lines.append("RESULT %s (%d problems, %d rooms, %d takes)" % ["PASS" if failures == 0 else "FAIL", failures, rooms.size(), total_takes])
 	var text := "\n".join(lines)
 	print(text)
 	var out := FileAccess.open(ProjectSettings.globalize_path("res://../artifacts/door-sounds-check.txt"), FileAccess.WRITE)

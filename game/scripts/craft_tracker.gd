@@ -11,6 +11,7 @@ extends Node
 const Api = preload("res://scripts/api.gd")
 const CraftWords = preload("res://scripts/craft_words.gd")
 const Fx = preload("res://scripts/fx.gd")
+const RpgUi = preload("res://scripts/rpg_ui.gd")
 
 ## The craft's state changed (each poll's answer; {} when it is gone or was cleared).
 signal updated(job: Dictionary)
@@ -172,7 +173,8 @@ func take(value: Dictionary) -> void:
 		var id := str(value.get("id", ""))
 		if not told.has("ended:" + id):
 			told.append("ended:" + id)
-			if state == "ready": chime("tune")
+			if state == "ready": chime("craft_done")
+			elif state == "failed": chime("craft_fail")
 			var words := CraftWords.ended_words(value, not window_open())
 			if not words.is_empty(): say(words)
 			bag_changed()
@@ -206,10 +208,12 @@ static func poll_pause(failures: int) -> float:
 static func announce_key(value: Dictionary) -> String:
 	return str(value.get("id", "")) + ":" + str(value.get("concept", {}).get("draws", 0))
 
-## A short sound for a craft moment (the picture is ready, the object is done).
+## A short sound for a craft moment (the picture is ready, the object is done or failed): the
+## craft_* kinds are RpgUi take families (ui/craft_done ...), the rest Fx sounds.
 static func chime(kind: String) -> void:
 	if DisplayServer.get_name() == "headless": return
-	Fx.sound(null, kind, Vector3.INF, 1.0, 4.0)
+	if kind.begins_with("craft_"): RpgUi.sfx(kind, -4.0)
+	else: Fx.sound(null, kind, Vector3.INF, 1.0, 4.0)
 
 ## Says `words` in the open window (a note over the card) and as the place's toast; kept for the
 ## next place when the player is between the village and a room.

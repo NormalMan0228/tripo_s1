@@ -56,7 +56,8 @@ class StubApp extends Node3D:
 	var expedition_button: Button
 	var life: Node
 	var last_message := ""
-	func message(v: String) -> void:
+	# The same parameters as main.gd (a toast kind, a quiet close/rebuild), unused here.
+	func message(v: String, _kind := "info") -> void:
 		last_message=v
 		print("MESSAGE ",v)
 	func error_message(code: String) -> String: return code
@@ -73,11 +74,11 @@ class StubApp extends Node3D:
 		var l := Label.new(); l.text=value; l.add_theme_font_size_override("font_size",size); parent.add_child(l); return l
 	func button(parent: Node, value: String, callback: Callable, _variant := "default") -> Button:
 		var b := Button.new(); b.text=value; b.pressed.connect(callback); parent.add_child(b); return b
-	func close_village_modal() -> void:
+	func close_village_modal(_sound := true) -> void:
 		if is_instance_valid(life): life.closed()
 		if is_instance_valid(village_modal): village_modal.queue_free()
 		village_modal=null
-	func modal_card(title: String, _action := "") -> VBoxContainer:
+	func modal_card(title: String, _action := "", _quiet := false) -> VBoxContainer:
 		close_village_modal()
 		village_modal=Control.new()
 		village_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

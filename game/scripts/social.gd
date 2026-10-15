@@ -3,6 +3,8 @@ extends Node
 const AvatarLook = preload("res://scripts/avatar_look.gd")
 ## Other players' walk, drawn smoothly from the irregular replies (remote_motion.gd).
 const RemoteMotion = preload("res://scripts/remote_motion.gd")
+## RpgUi (rpg_ui.gd), for the arrival, refusal and invite-answer sounds.
+const UiSound = preload("res://scripts/rpg_ui.gd")
 ## The chat box and the 함께하기 drawer live in the social layer that outlives scenes.
 const SocialHud = preload("res://scripts/social_hud.gd")
 ## The village shares this player's spot four times a second. On an expedition the run carries the
@@ -25,6 +27,10 @@ var pending := false
 var changing := false
 var objects_pending := false
 var object_signature := ""
+## False until the first sync after a world change: the walkers already there arrive silently.
+var peer_baseline := false
+## When a join / leave chime last played (ms): a flickering connection chimes at most every 2 s.
+var peer_sound_ms := -100000
 var status_label: Label
 var last_failure := 0.0
 ## The spot also carries the walker's velocity and this game's clock (multiplayer.py Presence);
@@ -84,6 +90,7 @@ func update_status() -> void:
 
 func reset_world() -> void:
 	peers.clear()
+	peer_baseline = false
 	object_signature = ""
 
 func reset_session() -> void:
@@ -96,6 +103,18 @@ func _process(delta: float) -> void:
 		if not is_instance_valid(entry.node): continue
 		entry.motion.update(delta)
 		entry.motion.apply_to(entry.node)
+		# Other players' footsteps: positional, on the other walkers' own voices and take bag
+		# (world_audio.stride; about -8 dB under the hero's, fading with distance).
+		var audio = app.get("world_audio")
+		var place := str(app.get("screen"))
+		if place in ["village","survival"] and is_instance_valid(audio) and audio.has_method("stride") and (entry.node as Node3D).is_inside_tree():
+			var at: Vector3=(entry.node as Node3D).global_position
+			# The ground under them, looked up four times a second (the road test walks every segment).
+			if Time.get_ticks_msec()-int(entry.get("ground_at",-1000))>250:
+				entry["ground_at"]=Time.get_ticks_msec()
+				if place=="village": entry["ground"]="stone" if preload("res://scripts/roads.gd").on_road(Vector2(at.x,at.z)) else "grass"
+				else: entry["ground"]=app.region_surface() if app.has_method("region_surface") else "grass"
+			audio.stride("peer%d" % entry.node.get_instance_id(),at,delta,str(entry.get("ground","grass")))
 	if not enabled or app.api.token.is_empty(): return
 	var interval := 0.0
 	match app.screen:
@@ -178,7 +197,8 @@ func poll() -> void:
 	# The host's residents' home versions (npc_gifts.gd), so a cached house stays current.
 	preload("res://scripts/npc_gifts.gd").set_versions(data.get("npc_homes"), data.get("host_id", ""))
 	update_status()
-	# Chat lines go to the chat box, not the toast lane.
+	# Chat lines go to the chat box, not the toast lane (social_hud.gd sounds each live line; its
+	# invite and knock notices chime as social toasts).
 	if layer: layer.ingest(data)
 	if app.screen == "village":
 		if not old_host.is_empty() and old_host != str(data.host_id):
@@ -189,7 +209,9 @@ func poll() -> void:
 			return
 		announce_visit_end()
 		if data.get("village") is Dictionary:
+			var before := peers.keys()
 			sync_peers(data.village.players)
+			peer_sounds(before)
 			if visiting():
 				accept_crops()
 				await refresh_guest_objects()
@@ -198,6 +220,19 @@ func poll() -> void:
 			changing = true
 			await app.start_run("forest", "standard", "", str(party.run_id))
 			changing = false
+
+## A soft chime when another player arrives in this village or leaves it (one per poll, at most every
+## 2 s; the walkers already there when this player arrives come in silently).
+func peer_sounds(before: Array) -> void:
+	var settled := peer_baseline
+	peer_baseline = true
+	if not settled or Time.get_ticks_msec() - peer_sound_ms < 2000: return
+	var kind := ""
+	if peers.keys().any(func(id): return not before.has(id)): kind = "join"
+	elif before.any(func(id): return not peers.has(id)): kind = "leave"
+	if kind.is_empty(): return
+	peer_sound_ms = Time.get_ticks_msec()
+	UiSound.sfx(kind, -6.0)
 
 func accept_crops() -> void:
 	if not data.get("village") is Dictionary: return
@@ -273,7 +308,8 @@ func announce_visit_end() -> void:
 	var key := str(info.get("at", ""))
 	if str(Engine.get_meta("visit_notice_seen", "")) == key: return
 	Engine.set_meta("visit_notice_seen", key)
-	app.message(visit_end_text(info))
+	# A social toast: its own glyph and chime (ui/toast_social) instead of the generic info one.
+	app.message(visit_end_text(info), "social")
 	var layer := hub()
 	if layer: layer.system_line(visit_end_text(info))
 
@@ -296,6 +332,7 @@ func _notification(what: int) -> void:
 func perform(path: String, payload: Dictionary = {}) -> Dictionary:
 	var result: Dictionary = await app.api.post(path, app.api.mutation(payload))
 	if not result.ok:
+		UiSound.sfx("deny", -7.0)
 		var messages := {"host_offline":tr("초대한 친구가 지금 마을에 없어요."), "party_full":tr("파티는 최대 3명입니다."), "village_full":tr("마을은 주인을 포함해 최대 3명입니다."), "already_in_party":tr("이미 파티에 참여 중입니다."), "party_leader_required":tr("파티장만 할 수 있습니다."), "party_members_not_in_village":tr("모두 마을에 접속한 뒤 출발해 주세요."), "member_has_solo_expedition":tr("개인 생존 탐험을 마친 뒤 파티로 출발해 주세요."), "party_needs_two_players":tr("동료를 초대해 2명 이상 모여 주세요."), "party_expedition_active":tr("진행 중인 협동 탐험으로 돌아가 주세요."), "leave_expedition_first":tr("탐험에서 귀환한 뒤 파티를 나갈 수 있습니다."), "invite_target_unavailable":tr("가입한 사용자 이름을 확인해 주세요."), "invitation_expired":tr("만료되었거나 이미 처리된 초대입니다."), "message_rate_limited":tr("메시지는 1초 간격으로 보낼 수 있습니다.")}
 		app.message(messages.get(result.error, app.error_message(result.error)))
 	return result
@@ -325,6 +362,7 @@ func answer(invitation: Dictionary, decision: String) -> void:
 		return
 	data.merge(response.data, true)
 	changing = false
+	UiSound.sfx("friend" if decision == "accept" else "cancel", -4.0)
 	app.close_village_modal()
 	var layer := hub()
 	if layer: layer.ingest(data)
@@ -353,6 +391,8 @@ func send_message(value: String) -> void:
 	var layer := hub()
 	if layer: await layer.send(value)
 	elif not (await perform("/v1/social/messages", {"text":value})).ok: return
+	# Without the social layer: the send sound once the server took the line.
+	else: UiSound.sfx("chat_out", -4.0)
 	await poll()
 
 ## A chat line said by someone in this village (or this walker): a bubble over their head.

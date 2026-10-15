@@ -440,41 +440,134 @@ static func fold_tip(id: String, shut: bool) -> String:
 
 # ------------------------------------------------------------------ sound
 
-## Soft UI sounds on the "UI" bus (Master until that bus exists).
+## Soft UI sounds on the "UI" bus (Master until that bus exists). A kind is a take family,
+## ui/<kind>.wav plus ui/<kind>_<n>.wav (tools/sfx/gen_ui.py), played through a no-repeat shuffle
+## bag (sfx_bank.gd) with +-4 % pitch and +-1 dB jitter. A kind with no takes (not imported yet)
+## falls back to a related kind below; an unknown kind stays silent. A message kind (deny, chat_in,
+## toast_error ...) played right before a message also stands in for the generic toast chime that
+## message raises in the same moment (main.gd message()): that chime is deduped like a repeat.
+## Kinds: hover chip (the prompt chip tick; hover takes, its own gate) click open close toast confirm deny tab select slider drawer_open drawer_close
+## count coin_gain chat_in chat_out whisper friend join leave notify toast_success toast_warn
+## toast_error toast_social quest_accept quest_ready quest_complete star unlock rotate snap place
+## lift cancel valid invalid paint brush fill undo redo layer swatch key_capture save
+## craft_submit craft_step craft_done craft_fail page choice.
+## A fanfare kind (quest_accept, quest_ready, quest_complete, unlock, save, craft_done) likewise covers a
+## generic confirm raised in the same moment (the route guide's beacon set by a request taken).
+## Kinds that come in bursts keep a longer gap than the 60 ms every kind has (SFX_GAP_MS).
 static func sfx(kind: String, volume_db := -4.0) -> void:
+	if not _sfx_gate(kind, int(SFX_GAP_MS.get(kind, 60))): return
+	var family := sfx_family(kind)
+	if family.is_empty(): return
+	_sfx_play(SfxBank.pick_path("ui/" + family), volume_db, SfxBank.pitch(0.04))
+
+const SfxBank = preload("res://scripts/sfx_bank.gd")
+## A kind with no takes (not imported yet) plays this related kind instead (up to three hops).
+const SFX_FALLBACK := {"chip": "hover", "deny": "close", "tab": "click", "select": "click", "slider": "hover", "drawer_open": "open",
+	"drawer_close": "close", "count": "hover", "coin_gain": "toast", "chat_in": "toast", "chat_out": "click",
+	"whisper": "chat_in", "friend": "toast", "join": "open", "leave": "close", "notify": "toast",
+	"toast_success": "confirm", "toast_warn": "toast", "toast_error": "deny", "toast_social": "chat_in",
+	"quest_accept": "confirm", "quest_ready": "toast", "quest_complete": "confirm", "star": "toast",
+	"unlock": "confirm", "rotate": "slider", "snap": "slider", "place": "click", "lift": "click",
+	"cancel": "close", "valid": "hover", "invalid": "deny", "paint": "click", "fill": "click", "undo": "click",
+	"redo": "click", "layer": "click", "swatch": "hover", "key_capture": "click", "save": "confirm",
+	"craft_submit": "confirm", "craft_step": "toast", "craft_done": "confirm", "craft_fail": "deny",
+	"page": "click", "choice": "click"}
+## Message kinds: each stands in for the generic toast chime of a message raised in the same moment.
+const SFX_FOR_TOAST := ["deny", "coin_gain", "chat_in", "chat_out", "whisper", "friend", "join", "leave", "notify",
+	"toast_success", "toast_warn", "toast_error", "toast_social", "quest_accept", "quest_ready", "quest_complete",
+	"unlock", "save", "craft_submit", "craft_done", "craft_fail", "invalid", "cancel", "paint", "place", "lift"]
+## Fanfare kinds: each covers a generic confirm raised in the same moment.
+const SFX_FANFARE := ["quest_accept", "quest_ready", "quest_complete", "unlock", "save", "craft_done"]
+## Least time (ms) between two plays of a kind that can come in bursts: currency count ticks, notify
+## chimes (badges, "!" marks, invites), chat lines arriving poll after poll.
+const SFX_GAP_MS := {"count": 80, "notify": 400, "chat_in": 400, "whisper": 400}
+
+## The take family a kind plays ("" when neither it nor its fallbacks have takes yet).
+static func sfx_family(kind: String) -> String:
+	var family := kind
+	for _hop in 3:
+		if family.is_empty() or SfxBank.has("ui/" + family): break
+		family = str(SFX_FALLBACK.get(family, ""))
+	return family if not family.is_empty() and SfxBank.has("ui/" + family) else ""
+
+## One take of a kind (its path) for a ladder of notes (sfx_note); "" when the kind has none.
+static func sfx_take(kind: String) -> String:
+	var family := sfx_family(kind)
+	return SfxBank.pick_path("ui/" + family) if not family.is_empty() else ""
+
+## One note of a ladder: `take` (sfx_take, the same take for every note so the steps stay in tune)
+## raised by `semitones`, without the pitch jitter (star landings climb a scale). Notes keep their own
+## short gap (25 ms), so quick steps all sound.
+static func sfx_note(kind: String, take: String, semitones: float, volume_db := -4.0) -> void:
+	if take.is_empty() or not _sfx_gate(kind + "#note", 25): return
+	_sfx_play(take, volume_db, pow(2.0, semitones / 12.0))
+
+## The next toast chime in this moment stays silent (a replayed chat backlog, a line this player just
+## sent, a reward whose flying stars carry the sound): it is deduped like a repeat.
+static func hush_toast() -> void:
+	_last_played["toast"] = Time.get_ticks_msec()
+
+## Whether a kind may play now (and marks it played): never headless, hover at most every 45 ms, each
+## kind at most every `gap` ms. A message kind marks the toast chime as covered even when its own gap
+## holds it back; a fanfare kind marks the generic confirm.
+static func _sfx_gate(kind: String, gap: int) -> bool:
 	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null or tree.root == null: return
+	if tree == null or tree.root == null: return false
 	# Headless runs (tests, tools) have a dummy audio driver that never finishes a playback, so a
 	# sound played just before quitting stayed referenced at exit ("resources still in use").
-	if DisplayServer.get_name() == "headless": return
+	if DisplayServer.get_name() == "headless": return false
+	var now := Time.get_ticks_msec()
+	if kind in SFX_FOR_TOAST: _last_played["toast"] = now
+	if kind in SFX_FANFARE: _last_played["#fanfare"] = now
+	if kind == "confirm" and now - int(_last_played.get("#fanfare", -100000)) < 150: return false
 	if kind == "hover":
-		if Time.get_ticks_msec() - _last_hover < 45: return
-		_last_hover = Time.get_ticks_msec()
+		if now - _last_hover < 45: return false
+		_last_hover = now
 	# One press can reach both a button hook and an older sound.effect("click").
-	if Time.get_ticks_msec() - int(_last_played.get(kind, -1000)) < 60: return
-	_last_played[kind] = Time.get_ticks_msec()
+	if now - int(_last_played.get(kind, -100000)) < gap: return false
+	_last_played[kind] = now
+	return true
+
+## Plays one take on the shared UI players (made once, under the tree's root).
+static func _sfx_play(path: String, volume_db: float, pitch: float) -> void:
+	if path.is_empty(): return
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null: return
 	var host := tree.root.get_node_or_null("RpgUiSounds")
+	if host == null and tree.root.has_meta("rpg_ui_sounds"):
+		# A host made earlier this frame is still waiting for its deferred add: use it, not a second.
+		# (has_meta first: get_meta with a null default reports an error when the key is missing.)
+		var waiting = tree.root.get_meta("rpg_ui_sounds")
+		if is_instance_valid(waiting) and not (waiting as Node).is_queued_for_deletion(): host = waiting
 	var fresh := host == null
 	if fresh:
 		host = Node.new()
 		host.name = "RpgUiSounds"
 		host.process_mode = Node.PROCESS_MODE_ALWAYS
-		for i in 4: host.add_child(AudioStreamPlayer.new())
+		for i in 6: host.add_child(AudioStreamPlayer.new())
 		tree.root.add_child.call_deferred(host)
-	# Loaded sounds live on the host node, freed with the tree; a static cache kept them
-	# alive past exit ("resources still in use").
+		tree.root.set_meta("rpg_ui_sounds", host)
+	# Take paths come from sfx_bank (cached strings, cleared by CleanExit); the loaded streams live
+	# on the host node, freed with the tree; a static stream cache kept them alive past exit
+	# ("resources still in use").
 	var sounds: Dictionary = host.get_meta("sounds", {})
-	if not sounds.has(kind):
-		var path := "res://assets/sfx/ui/%s.wav" % kind
-		sounds[kind] = load(path) if ResourceLoader.exists(path) else null
+	if not sounds.has(path):
+		sounds[path] = load(path) if ResourceLoader.exists(path) else null
 		host.set_meta("sounds", sounds)
-	if sounds[kind] == null: return
-	var voice: AudioStreamPlayer = host.get_child(_voice % host.get_child_count())
+	if sounds[path] == null: return
+	# A free player first (a fanfare is not cut by the next hover tick), else the oldest in turn.
+	var count := host.get_child_count()
+	var voice: AudioStreamPlayer = host.get_child(_voice % count)
+	for k in count:
+		var free_one: AudioStreamPlayer = host.get_child((_voice + k) % count)
+		if not free_one.playing:
+			voice = free_one
+			break
 	_voice += 1
 	voice.bus = "UI" if AudioServer.get_bus_index("UI") != -1 else "Master"
-	voice.stream = sounds[kind]
-	voice.volume_db = volume_db
-	voice.pitch_scale = randf_range(0.97, 1.03)
+	voice.stream = sounds[path]
+	voice.volume_db = volume_db + SfxBank.db(1.0)
+	voice.pitch_scale = pitch
 	if fresh or not voice.is_inside_tree(): voice.play.call_deferred()
 	else: voice.play()
 
@@ -515,8 +608,10 @@ static func fade(c: CanvasItem, to := 0.0, duration := 0.18) -> Tween:
 	tw.tween_property(c, "modulate:a", to, duration).set_trans(Tween.TRANS_SINE)
 	return tw
 
-## Hover lift + brightness and the soft hover tick; click sound on press.
-static func hover_motion(c: Control, lift := 1.05, pivot := Vector2(0.5, 0.5), sounds := true) -> void:
+## Hover lift + brightness and the soft hover tick; a press sound on press (`press`, at `press_db`:
+## click, or a kind of its own: a dialogue choice, a swatch, a danger button's deny; "" for none,
+## when what the press opens has its own sound: a drawer's slide).
+static func hover_motion(c: Control, lift := 1.05, pivot := Vector2(0.5, 0.5), sounds := true, press := "click", press_db := -4.0) -> void:
 	var to := func(target: float, bright: float) -> void:
 		if not is_instance_valid(c) or calm(): return
 		c.pivot_offset = c.size * pivot
@@ -528,11 +623,15 @@ static func hover_motion(c: Control, lift := 1.05, pivot := Vector2(0.5, 0.5), s
 		to.call(lift, 1.08)
 		if sounds: sfx("hover"))
 	c.mouse_exited.connect(func(): to.call(1.0, 1.0))
-	if sounds and c is BaseButton: (c as BaseButton).button_down.connect(func(): sfx("click"))
+	if sounds and c is BaseButton and not press.is_empty(): (c as BaseButton).button_down.connect(func(): sfx(press, press_db))
 
-## Counts a number label up (or down) to value with a small pulse.
+## Counts a number label up (or down) to value with a small pulse. A change of a count already shown
+## ticks softly as the digits roll (at most ~12 a second) and a gain ends on a coin jingle; the first
+## fill of a label, and a count restarted by clearing its count_target (quests.gd reward_fly, whose
+## flying stars carry the sound), stay silent.
 static func count_to(l: Label, value: int, duration := -1.0) -> void:
 	if not is_instance_valid(l): return
+	var heard := l.has_meta("count_target")
 	var target_now: int = l.get_meta("count_target", -2147483648)
 	if target_now == value: return
 	l.set_meta("count_target", value)
@@ -545,7 +644,14 @@ static func count_to(l: Label, value: int, duration := -1.0) -> void:
 		if old and old.is_valid(): old.kill()
 	var seconds := duration if duration > 0.0 else clampf(absf(value - from) * 0.02, 0.3, 0.9)
 	var tw := l.create_tween()
-	tw.tween_method(func(v: float): l.text = str(int(round(v))), float(from), float(value), seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	var gain := value > from
+	var roll := func(v: float) -> void:
+		var shown := str(int(round(v)))
+		if heard and shown != l.text: sfx("count", -16.0 if gain else -19.0)
+		l.text = shown
+	tw.tween_method(roll, float(from), float(value), seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# A count cut short by a newer one (killed) never finishes: only the last gain jingles.
+	if heard and gain: tw.finished.connect(func(): sfx("coin_gain", -12.0))
 	l.set_meta("count_tween", tw)
 	l.pivot_offset = l.size * 0.5
 	var pulse := l.create_tween()
@@ -783,7 +889,9 @@ static func button(parent: Node, text: String, callback: Callable, variant := "n
 	b.add_theme_font_size_override("font_size", spec[1])
 	if size == "menu": b.add_theme_font_override("font", FONT_STRONG)
 	b.focus_mode = Control.FOCUS_ALL if menu else Control.FOCUS_NONE
-	hover_motion(b, 1.03)
+	# A danger button (delete, leave, discard) answers with the low deny note instead of the click.
+	if variant == "danger": hover_motion(b, 1.03, Vector2(0.5, 0.5), true, "deny", -6.0)
+	else: hover_motion(b, 1.03)
 	b.pressed.connect(func(): if callback.is_valid(): callback.call())
 	parent.add_child(b)
 	return b
@@ -869,8 +977,11 @@ static func tab_strip(parent: Node, entries: Array, on_select: Callable, kind :=
 		buttons[id] = b
 		b.toggled.connect(func(on: bool) -> void:
 			if not on: return
+			# A change of tab on a shown strip gives the tab tick; the strip's first pick (as its
+			# window is built, under that window's open sound) and a hidden strip stay silent.
+			var heard := strip.has_meta("selected") and strip.is_visible_in_tree()
 			strip.set_meta("selected", id)
-			sfx("click", -12.0)
+			if heard: sfx("tab", -8.0)
 			if on_select.is_valid(): on_select.call(id))
 	strip.set_meta("buttons", buttons)
 	return strip
@@ -974,15 +1085,17 @@ static func person_row(parent: Node, p: Dictionary, actions: Array) -> HBoxConta
 		name_tip(b, str(action.get("tip", "")))
 		var call: Callable = action.get("call", Callable())
 		if call.is_valid(): b.pressed.connect(call)
-		b.pressed.connect(func(): sfx("click", -10.0))
+		# hover_motion gives the press its click (button_down): no second click on release.
 		hover_motion(b, 1.1)
 		row.add_child(b)
 	return row
 
 ## A count pill (ACCENT) on the top-right corner of a slot or button; hidden at 0. Calling it
-## again on the same parent updates the same pill.
+## again on the same parent updates the same pill; a count that grows there (a new letter, invite or
+## request) gives a soft notify chime, the first fill does not.
 static func badge(parent: Control, count: int) -> Label:
 	var pill: Label = parent.get_node_or_null("Badge")
+	if pill != null and count > int(pill.get_meta("count", 0)) and parent.is_visible_in_tree(): sfx("notify", -12.0)
 	if pill == null:
 		pill = Label.new()
 		pill.name = "Badge"
@@ -1007,6 +1120,7 @@ static func badge(parent: Control, count: int) -> Label:
 		parent.add_child(pill)
 	pill.text = str(count) if count < 100 else "99+"
 	pill.visible = count > 0
+	pill.set_meta("count", count)
 	return pill
 
 ## A round paint swatch ("#d98477") that lifts on hover; a gold rim marks the chosen one. Named
@@ -1030,7 +1144,7 @@ static func swatch(parent: Node, hex: String, selected: bool, callback: Callable
 		dot.shadow_offset = Vector2(0,2)
 		b.add_theme_stylebox_override(state, dot)
 	name_tip(b, color_name(hex))
-	hover_motion(b, 1.15)
+	hover_motion(b, 1.15, Vector2(0.5, 0.5), true, "swatch")
 	b.pressed.connect(func(): if callback.is_valid(): callback.call())
 	parent.add_child(b)
 	return b
@@ -1147,8 +1261,10 @@ static func player_frame(ui: Control, portrait: String, fold_id := "") -> Dictio
 	return {"panel":shell, "name":name, "stars":stars, "leaves":leaves, "status":status, "column":column, "portrait":face}
 
 ## Square slots with an icon, a key cap and a caption on a glass tray. A slot spec is
-## {icon, label, call, action ("inventory" or a literal key like "F9"), primary}; an action's key cap
-## and its "name  ·  key" tooltip follow rebinding. With a
+## {icon, label, call, action ("inventory" or a literal key like "F9"), primary, press, press_db}; an
+## action's key cap and its "name  ·  key" tooltip follow rebinding. press: the slot's press sound
+## (hover_motion: "click" by default, "select" for a pick, "" when what it opens slides in with its
+## own sound, as the bag's drawer), at press_db (-4). With a
 ## fold_id a chevron key at the tray's right end slides it below the screen.
 static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxContainer:
 	var tray := PanelContainer.new()
@@ -1201,7 +1317,7 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 			var cap := keycap(b, key_id, 11)
 			cap.position = Vector2(-7,-9)
 		b.pressed.connect(slot.call)
-		hover_motion(b, 1.08, Vector2(0.5, 1.0))
+		hover_motion(b, 1.08, Vector2(0.5, 1.0), true, str(slot.get("press", "click")), float(slot.get("press_db", -4.0)))
 		bar.add_child(b)
 	bar.set_meta("tray", tray)
 	bar.set_meta("tray_top", y + 6)
@@ -1414,8 +1530,17 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 		start.call_deferred()
 		if bool(opts.get("sound", true)):
 			toast_chimes += 1
-			sfx("toast", -12.0)
+			_toast_chime(kind)
 	return pill
+
+## A new toast's chime by its kind: info the plain toast chime, success / warn / error / social their
+## own. A message kind played just before (SFX_FOR_TOAST: deny, chat_in, quest_accept ...) or
+## hush_toast() stands in for it, as it does for the plain chime.
+static func _toast_chime(kind: String) -> void:
+	const KINDS := {"success": "toast_success", "warn": "toast_warn", "error": "toast_error", "social": "toast_social"}
+	var sound := str(KINDS.get(kind, "toast"))
+	if sound != "toast" and Time.get_ticks_msec() - int(_last_played.get("toast", -100000)) < 60: return
+	sfx(sound, -12.0)
 
 ## (Re)starts a toast's stay, then fades it out and frees it.
 static func _toast_timer(pill: Control) -> void:
@@ -1464,6 +1589,9 @@ static func clear_toasts(lane: Control) -> void:
 		item.set_meta("leaving", true)
 		item.queue_free()
 
+## Least time (ms) between two of the prompt chip's appearance ticks.
+const PROMPT_TICK_MS := 800
+
 ## Floating interaction chip above the hotbar; hidden while empty. The leading
 ## "E  " of the text is drawn as a key cap.
 static func prompt(ui: Control, y: float) -> Label:
@@ -1488,11 +1616,19 @@ static func prompt(ui: Control, y: float) -> Label:
 	cap.name = "Key"
 	cap.position = Vector2(14, 9)
 	cap.visible = false
-	# Gentle breathing so the chip reads as "you can act here".
+	# Gentle breathing so the chip reads as "you can act here". When the place shows it (its own
+	# visible turning on, not the HUD around it coming back after a talk) a very soft hover tick, at
+	# most once in PROMPT_TICK_MS while walking past a row of props.
 	pill.visibility_changed.connect(func():
+		var toggled: bool = pill.visible != bool(pill.get_meta("own_shown", false))
+		pill.set_meta("own_shown", pill.visible)
 		if pill.visible and pill.is_inside_tree():
 			pill.modulate.a = 0.0
-			pill.create_tween().tween_property(pill, "modulate:a", 1.0, 0.15))
+			pill.create_tween().tween_property(pill, "modulate:a", 1.0, 0.15)
+			var now := Time.get_ticks_msec()
+			if toggled and pill.is_visible_in_tree() and now - int(pill.get_meta("tick_at", -100000)) > PROMPT_TICK_MS:
+				pill.set_meta("tick_at", now)
+				sfx("chip", -14.0))
 	ui.add_child(pill)
 	pin(pill, 0.5, 1.0)
 	# A new UI scale narrows the canvas and moves the chip: it keeps clear of the chat corner.
@@ -1968,7 +2104,9 @@ static func shade(parent: Control, dim := 0.0) -> TextureRect:
 ## GameSettings action that opens it: the close key is named with its key; "" names Esc); icon (a
 ## picture before the title); on_close (what the close key does; default close_window); scroll
 ## (true: the body scrolls once the card would pass the screen's foot); id; dim (shade opacity for a
-## darker shade); closable (false: no close key, and Esc routing leaves it open: a blocking screen).
+## darker shade); closable (false: no close key, and Esc routing leaves it open: a blocking screen);
+## sound (false: no open sound, for a page swapped in place or a window whose opening is heard in
+## the world: a chest's creak).
 ## Returns {root, shade, card, head, title, body, close, id, action, kind, modal}; free it with
 ## close_window(w). Opens with pop_in and the open sound and joins the window stack.
 static func window(host: Control, title: String, opts := {}) -> Dictionary:
@@ -2042,7 +2180,7 @@ static func window(host: Control, title: String, opts := {}) -> Dictionary:
 		w["body"] = body
 	_push_window(root, w)
 	pop_in(card)
-	sfx("open", -8.0)
+	if bool(opts.get("sound", true)): sfx("open", -8.0)
 	return w
 
 ## Card placement on the design canvas: top centre at WINDOW_TOP growing down, the screen's centre,
@@ -2126,11 +2264,12 @@ static func drawer(host: Control, title: String, opts := {}) -> Dictionary:
 		return w
 	_push_window(root, w)
 	slide_in(card, Vector2(-40.0 if left else 40.0, 0.0))
-	sfx("open", -10.0)
+	sfx("drawer_open", -10.0)
 	return w
 
 ## Opens or closes a kept drawer (drawer(opts.hidden)): shown, it joins the window stack on top and
-## slides in from its side with the open sound; hidden, it leaves the stack. No-op when unchanged.
+## slides in from its side with the drawer's open slide (drawer_open, as drawer()); hidden, it leaves
+## the stack with its close slide (drawer_close, as close_window). No-op when unchanged.
 static func show_drawer(w: Dictionary, shown: bool, animate := true) -> void:
 	var root: Control = w.get("root") if is_instance_valid(w.get("root")) else null
 	if root == null: return
@@ -2142,11 +2281,11 @@ static func show_drawer(w: Dictionary, shown: bool, animate := true) -> void:
 		if not id in _stack: _stack.append(id)
 		_windows_changed()
 		if card: _slide_card(card, (-40.0 if str(w.get("side", "right")) == "left" else 40.0) if animate else 0.0)
-		if animate: sfx("open", -10.0)
+		if animate: sfx("drawer_open", -10.0)
 	else:
 		if card: _slide_card(card, 0.0)
 		_forget_window(id)
-		if animate: sfx("close", -10.0)
+		if animate: sfx("drawer_close", -10.0)
 
 ## Slides a pinned card in by its offsets from `dx` away (0: straight to its place). A slide cut
 ## short by a quick close and reopen starts again from the card's resting offsets, so it never
@@ -2169,16 +2308,18 @@ static func _slide_card(card: Control, dx: float) -> void:
 	tw.tween_property(card, "modulate:a", 1.0, 0.22)
 	card.set_meta("slide", tw)
 
-## Closes a window or drawer: leaves the stack, plays the close sound and frees it (a short fade
-## first when animate; at once otherwise, so callers that test is_instance_valid see it gone).
-static func close_window(w: Dictionary, animate := true) -> void:
+## Closes a window or drawer: leaves the stack, plays the close sound (a drawer its own slide) and
+## frees it (a short fade first when animate; at once otherwise, so callers that test is_instance_valid
+## see it gone). sound false: a window swapped for the next page or refreshed in place (the new one's
+## open, or what replaced it, is the one sound), or one whose outcome has its own sound.
+static func close_window(w: Dictionary, animate := true, sound := true) -> void:
 	var root: Control = w.get("root") if w.has("root") and is_instance_valid(w.get("root")) else null
 	if root == null: return
 	if root.get_meta("rpg_closing", false): return
 	root.set_meta("rpg_closing", true)
 	_forget_window(root.get_instance_id())
 	_hand_over_shade(root, w)
-	sfx("close", -10.0)
+	if sound: sfx("drawer_close" if str(w.get("kind", "")) == "drawer" else "close", -10.0)
 	if animate and not calm() and root.is_inside_tree():
 		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		for child in root.get_children(): if child is Control: (child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2585,14 +2726,18 @@ static func dialogue_choices(d: Dictionary, entries: Array) -> Array:
 				b.accept_event()
 				# The last line still typing: the key shows it whole (and the guard starts again).
 				if dialogue_typing(d): dialogue_skip(d)
-				elif dialogue_ready(d): b.pressed.emit()
+				elif dialogue_ready(d):
+					# A key pick has no button_down (hover_motion's press note): the choice note here.
+					if not d.get("picked", false): sfx("choice")
+					b.pressed.emit()
 			elif event.keycode >= KEY_1 and event.keycode <= KEY_9:
 				var pick: int = event.keycode - KEY_1
 				if pick < made.size():
 					b.accept_event()
+					if not d.get("picked", false): sfx("choice")
 					(made[pick] as Button).pressed.emit())
 		b.focus_entered.connect(func(): sfx("hover"))
-		hover_motion(b, 1.03)
+		hover_motion(b, 1.03, Vector2(0.5, 0.5), true, "choice")
 		list.add_child(b)
 		made.append(b)
 		if not calm():
@@ -2616,10 +2761,13 @@ static func dialogue_type(d: Dictionary, seconds: float) -> void:
 static func dialogue_typing(d: Dictionary) -> bool:
 	return is_instance_valid(d.get("body")) and (d.body as Label).visible_ratio < 1.0
 
-## The whole line at once (a key while it types). Choices already up wait their guard again.
+## The whole line at once (a key while it types), with a very soft page flick (a page turn proper is
+## -8 dB). Choices already up wait their guard again.
 static func dialogue_skip(d: Dictionary) -> void:
 	if d.get("typing") is Tween and (d.typing as Tween).is_valid(): (d.typing as Tween).kill()
-	if is_instance_valid(d.get("body")): (d.body as Label).visible_ratio = 1.0
+	if is_instance_valid(d.get("body")):
+		if (d.body as Label).visible_ratio < 1.0: sfx("page", -15.0)
+		(d.body as Label).visible_ratio = 1.0
 	if d.has("choices_at"): d.choices_at = Time.get_ticks_msec()
 
 ## True once the choices have been up long enough for a key to mean "pick this" (not the
@@ -2639,6 +2787,8 @@ static func dialogue_pick(d: Dictionary) -> bool:
 	var chosen: Button = buttons[0]
 	for button in buttons:
 		if (button as Button).has_focus(): chosen = button
+	# Picked by key (no button_down): the choice note a click on it gives.
+	if not d.get("picked", false): sfx("choice")
 	chosen.pressed.emit()
 	return true
 

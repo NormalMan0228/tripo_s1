@@ -20,16 +20,26 @@ extends Node3D
 ## the stars fly into the starseed counter (quests.gd reward_fly in the village; in the home a
 ## small counter slides in under the room's name). Opened chests stay open (lid up, no glow, no
 ## prompt), also after signing in again.
+## Sound (tools/sfx/gen_props.py takes, sfx_bank.gd shuffle bags, three voices so the latch, the coins
+## and a shimmer never cut each other, quieter with the walker's distance from the chest): a faint
+## twinkle when the walker first comes within NEAR of a closed chest (again after leaving past FAR);
+## field/chest_rattle while the server answers; field/chest as the lid swings (catch, hinges, the
+## lid's stop, the gold's sparkle); the UI coin_gain for the starseeds and the star ladder as they
+## land (quests.gd reward_fly; the home's counter the same); the toast of the open stays quiet (the
+## chest's own sounds carry it). An already-opened chest: the plain wooden lid and a soft deny.
 const Fx := preload("res://scripts/fx.gd")
 const RpgUi := preload("res://scripts/rpg_ui.gd")
 const Quests := preload("res://scripts/quests.gd")
 const Daylight := preload("res://scripts/daylight.gd")
 const Fields := preload("res://scripts/field_objects.gd")
 const LoadPace := preload("res://scripts/load_pace.gd")
+const SfxBank := preload("res://scripts/sfx_bank.gd")
 const SELF := "res://scripts/treasure.gd"
 const STAR_ICON := "res://assets/starseed.svg"
-const SFX := "res://assets/sfx/field/%s.wav"
 const META := "treasure_opened"
+## The approach shimmer: heard on coming within NEAR (m) of a closed chest, re-armed past FAR.
+const NEAR := 6.0
+const FAR := 9.0
 
 ## The home's chest: against the back wall of the ground floor (interiors.gd 10_red_house/0), x
 ## tried in this order (a piece the player set down may stand at the first).
@@ -93,7 +103,11 @@ var poll := 0.0
 var sparkle_wait := 1.2
 var night := 0.0
 var night_wait := 0.0
-var voice: AudioStreamPlayer
+## The chests' voices (add_voice), the next approach check and whether checks may sound yet (the
+## first one after arriving marks the chests already near in silence).
+var voices: Array = []
+var near_wait := 1.5
+var near_armed := false
 
 # ------------------------------------------------------------------ shared state
 
@@ -579,7 +593,7 @@ func open_chest(chest: Dictionary) -> void:
 	if room != null and room.has_method("update_hint"): room.update_hint()
 	# The lid rattles while the server answers (at least a beat, for the anticipation).
 	var shake := rattle(chest)
-	play("box", -10.0)
+	play("chest_rattle", -8.0, chest.root.global_position)
 	var started := Time.get_ticks_msec()
 	var reply: Dictionary = await request_open(api, str(chest.id))
 	var waited := (Time.get_ticks_msec()-started)*0.001
@@ -600,9 +614,13 @@ func open_chest(chest: Dictionary) -> void:
 		swing(chest)
 		chest.state = "open"
 		finish(chest)
-	else:
-		chest.state = "closed"
-	say(refusal(code))
+		# Opened elsewhere: the plain wooden lid (no gold, no sparkle) and a soft deny for its line.
+		play("box", -14.0, chest.root.global_position)
+		RpgUi.sfx("deny", -10.0)
+		say(refusal(code))
+		return
+	chest.state = "closed"
+	say(refusal(code), true)
 
 func rattle(chest: Dictionary) -> Tween:
 	var lid: Node3D = chest.lid
@@ -631,26 +649,34 @@ func moment(chest: Dictionary, stars: int, total: int, summary: Dictionary) -> v
 	var stage: Node3D = root.get_parent()
 	swing(chest)
 	chest.halo.visible = false
-	play("lid", -5.0)
+	# The catch, the hinges, the lid's stop and the gold's sparkle in one take (it carries the
+	# moment's shimmer too).
+	play("chest", -5.0, root.global_position)
 	warm_light(chest)
 	beam(chest)
 	Fx.glow(stage, top, Color("ffd27a"), 2.2, 1.3)
 	Fx.burst(stage, top, "sparkle", 26, Color(0,0,0,0), 0.32)
 	Fx.ring(stage, root.global_position+Vector3(0, 0.03, 0), 1.6, Color(1.0, 0.88, 0.5, 0.8), 0.9)
-	if DisplayServer.get_name() != "headless": Fx.sound(room if room != null else app, "twinkle", Vector3.INF, 1.1, -2.0)
 	await get_tree().create_timer(0.16).timeout
-	play("coin", -7.0)
-	RpgUi.sfx("confirm", -4.0)
-	if stars > 0: badge(root.global_position+Vector3(0, 1.05, 0), stars)
+	# The starseeds: a coin jingle as they show, the star ladder as they land.
+	if stars > 0:
+		RpgUi.sfx("coin_gain", -7.0)
+		badge(root.global_position+Vector3(0, 1.05, 0), stars)
 	await get_tree().create_timer(0.45).timeout
 	if not is_inside_tree(): return
 	if room != null: room_stars(root.global_position+Vector3(0, 0.9, 0), stars, total)
 	elif is_instance_valid(app): Quests.reward_fly(app, root.global_position+Vector3(0, -1.0, 0), stars, total)
 	var words := t("보물상자 · 별씨 +%d") % stars if stars > 0 else t("보물상자를 열었어요")
+	# Heard already (the chest, the coins, the stars' notes): its toast stays quiet.
+	RpgUi.hush_toast()
 	say(words)
 	var opened: Array = summary.get("opened", [])
 	if not opened.is_empty() and opened.size() >= int(summary.get("total", 99)):
-		get_tree().create_timer(2.6).timeout.connect(func(): if is_inside_tree(): say(t("보물상자를 모두 찾았어요! %d/%d") % [opened.size(), opened.size()]))
+		get_tree().create_timer(2.6).timeout.connect(func():
+			if not is_inside_tree(): return
+			# The last one: a fanfare stands in for the line's chime.
+			RpgUi.sfx("quest_complete", -6.0)
+			say(t("보물상자를 모두 찾았어요! %d/%d") % [opened.size(), opened.size()]))
 	await get_tree().create_timer(0.25).timeout
 	if not is_inside_tree() or not is_instance_valid(root): return
 	var heap: Node3D = chest.heap
@@ -748,6 +774,13 @@ func badge(at: Vector3, stars: int) -> void:
 func room_stars(at: Vector3, stars: int, total: int) -> void:
 	if room.data is Dictionary: room.data["shards"] = total
 	if is_instance_valid(room.get("wallet")): room.wallet.text = tr("별씨 %d") % total
+	# The room's character frame (studio.gd show_stars) follows too, silently: its count restarted
+	# (RpgUi.count_to), so the stars' notes below are the one sound and no coin jingle ends its roll.
+	var frame = room.get("frame")
+	if frame is Dictionary and room.has_method("show_stars"):
+		var counter = frame.get("stars")
+		if is_instance_valid(counter) and counter is Label and (counter as Label).has_meta("count_target"): (counter as Label).remove_meta("count_target")
+		room.show_stars(total)
 	if stars <= 0: return
 	var pill := PanelContainer.new()
 	pill.name = "ChestCounter"
@@ -779,6 +812,8 @@ func room_stars(at: Vector3, stars: int, total: int) -> void:
 	var goal := counter.get_global_rect().get_center()
 	var flying := mini(stars, 8)
 	var landed := [0]
+	# Each landing rings the village's star ladder (quests.gd reward_fly): one take, a major scale.
+	var take := RpgUi.sfx_take("star")
 	for k in flying:
 		var star := RpgUi.icon(STAR_ICON, 30)
 		star.name = "ChestStar"
@@ -803,31 +838,75 @@ func room_stars(at: Vector3, stars: int, total: int) -> void:
 			var bump := counter.create_tween()
 			bump.tween_property(counter, "scale", Vector2.ONE*1.22, 0.06)
 			bump.tween_property(counter, "scale", Vector2.ONE, 0.12)
-			if DisplayServer.get_name() != "headless": Fx.sound(room, "pluck", Vector3.INF, 1.5+0.06*landed[0], -10.0))
+			RpgUi.sfx_note("star", take, Quests.STAR_STEPS[mini(landed[0], Quests.STAR_STEPS.size())-1], -7.0 if landed[0] == flying else -9.0))
 	var away := pill.create_tween()
 	away.tween_interval(3.2)
 	away.tween_property(pill, "modulate:a", 0.0, 0.4)
 	away.tween_callback(pill.queue_free)
 
-func say(text: String) -> void:
-	if room != null and is_instance_valid(room): room.message(text)
-	elif is_instance_valid(app) and app.has_method("message"): app.message(text)
+## A line in the place's toast lane; refused: the place's refuse() (its soft deny in place of the chime).
+func say(text: String, refused := false) -> void:
+	var host: Node = room if room != null and is_instance_valid(room) else (app if is_instance_valid(app) else null)
+	if host == null: return
+	if refused and host.has_method("refuse"): host.refuse(text)
+	elif host.has_method("message"): host.message(text)
 
 # ------------------------------------------------------------------ sound and the idle glow
 
 func add_voice() -> void:
-	voice = AudioStreamPlayer.new()
-	voice.bus = &"SFX"
-	add_child(voice)
+	for i in 3:
+		var player := AudioStreamPlayer.new()
+		player.bus = &"SFX"
+		add_child(player)
+		voices.append(player)
 
-func play(sound_name: String, db := -8.0) -> void:
-	if DisplayServer.get_name() == "headless" or not is_instance_valid(voice): return
-	var path := SFX % sound_name
-	if not ResourceLoader.exists(path): return
-	voice.stream = load(path)
-	voice.volume_db = db
-	voice.pitch_scale = randf_range(0.96, 1.04)
+## The walker the chests answer to: the room's hero in the home, the village's player.
+func walker_node() -> Node3D:
+	if room != null: return room.hero if is_instance_valid(room) and is_instance_valid(room.get("hero")) else null
+	return app.player if is_instance_valid(app) and is_instance_valid(app.get("player")) else null
+
+## The next take of `family` ("chest", or a full "fx/twinkle") from its shuffle bag on a free voice
+## (else the one furthest into its sound), +-4 % pitch and +-1 dB; at a chest (`at`), quieter with
+## the walker's distance from it (the village camera floats far above, as field_objects.gd play()).
+func play(family: String, db := -8.0, at := Vector3.INF) -> void:
+	if DisplayServer.get_name() == "headless" or voices.is_empty(): return
+	if at != Vector3.INF:
+		var walker := walker_node()
+		if walker != null: db -= clampf(walker.global_position.distance_to(at)-2.0, 0.0, 30.0)*0.8
+		if db < -42.0: return
+	var take := SfxBank.pick(family if family.contains("/") else "field/"+family)
+	if take == null: return
+	var voice: AudioStreamPlayer = null
+	for player in voices:
+		if not is_instance_valid(player): continue
+		if not (player as AudioStreamPlayer).playing:
+			voice = player
+			break
+		if voice == null or (player as AudioStreamPlayer).get_playback_position() > voice.get_playback_position(): voice = player
+	if voice == null: return
+	voice.stream = take
+	voice.volume_db = db+SfxBank.db(1.0)
+	voice.pitch_scale = SfxBank.pitch(0.04)
 	voice.play()
+
+## Four times a second: a faint twinkle (and a few sparkles) when the walker first comes within NEAR
+## of a closed chest; it sounds again only after walking off past FAR. The first check after
+## arriving only marks the chests already near (no shimmer over the arrival's own sounds).
+func approach() -> void:
+	var walker := walker_node()
+	if walker == null or (room != null and room.floor_index != 0): return
+	for chest in chests:
+		if chest.state != "closed" or not is_instance_valid(chest.root): continue
+		var root: Node3D = chest.root
+		var gap: float = walker.global_position.distance_to(root.global_position)
+		if gap > FAR: chest["near"] = false
+		elif gap < NEAR and not chest.get("near", false):
+			chest["near"] = true
+			if not near_armed: continue
+			var at := root.global_position+Vector3(0, 0.62, 0)
+			Fx.burst(root.get_parent(), at, "sparkle", 4, Color(0,0,0,0), 0.34)
+			play("fx/twinkle", -21.0, at)
+	near_armed = true
 
 func _process(delta: float) -> void:
 	poll -= delta
@@ -835,6 +914,10 @@ func _process(delta: float) -> void:
 		poll = 0.5
 		sync()
 	if not shown: return
+	near_wait -= delta
+	if near_wait <= 0.0:
+		near_wait = 0.25
+		approach()
 	night_wait -= delta
 	if night_wait <= 0.0:
 		night_wait = 1.0
@@ -851,8 +934,8 @@ func _process(delta: float) -> void:
 
 ## A few sparkles over the closed chests near the walker (two at most).
 func sparkle() -> void:
-	var walker: Node3D = room.hero if room != null else (app.player if is_instance_valid(app) else null)
-	if not is_instance_valid(walker): return
+	var walker := walker_node()
+	if walker == null: return
 	if room != null and room.floor_index != 0: return
 	var near: Array = []
 	for chest in chests:

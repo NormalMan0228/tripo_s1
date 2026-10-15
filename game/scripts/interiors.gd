@@ -16,6 +16,7 @@ const Daylight = preload("res://scripts/daylight.gd")
 const Residents = preload("res://scripts/residents.gd")
 const ControllerProfile = preload("res://scripts/controller_profile.gd")
 const DayFolk = preload("res://scripts/day_folk.gd")
+const SfxBank = preload("res://scripts/sfx_bank.gd")
 const BUILDINGS := "res://maps/archipelago/building_placements.json"
 const MANIFEST := "res://assets/interior/manifest.json"
 const INTERIOR_DIR := "res://assets/interior/"
@@ -215,7 +216,10 @@ const SOUNDS := {"lie":"cushion","sit":"cushion","open":"creak","wash":"splash",
 	"wind":"tick","ring":"ding","turn":"creak","switch":"click","knock":"knock","pat":"cushion","look_out":"whoosh","grind":"rumble",
 	"shine":"chime","sip":"clink","hammer":"knock","pull":"creak","travel":"steps","look":"pop"}
 const BOOKS := ["『등대지기의 여름 일기』","『별씨를 심는 법』","『바다를 건너는 고래』","『일곱 밤의 숲 이야기』","『빵 굽는 곰의 레시피』","『작은 섬의 큰 모험』"]
-const PIANO_TUNES := [[523.25,659.25,783.99,1046.5],[659.25,587.33,523.25,587.33,659.25,659.25,659.25],[392.0,523.25,659.25,783.99,659.25,523.25]]
+const PIANO_TUNES := [[523.25,659.25,783.99,1046.5],[659.25,587.33,523.25,587.33,659.25,659.25,659.25],[392.0,523.25,659.25,783.99,659.25,523.25],
+	[523.25,587.33,659.25,523.25,659.25,783.99],[783.99,698.46,659.25,587.33,523.25],[440.0,523.25,659.25,587.33,523.25,493.88,523.25]]
+## Players in the pool Interiors.play keeps under a room (a new effect does not cut one still ringing).
+const SFX_VOICES := 4
 
 static var manifest_cache: Dictionary = {}
 static var manifest_loaded := false
@@ -2332,26 +2336,30 @@ static func texture(kind: String, a: Color, b: Color) -> ImageTexture:
 
 # ---------------------------------------------------------------- interactions
 
-## A few soft piano notes, synthesised (no audio files needed).
+## A few soft piano notes, synthesised (no audio files needed). Played by hand: every call
+## places each note a few ms early or late and strikes it a little softer or harder, so the
+## same tune never sounds quite the same twice.
 static func piano_stream(tune_index: int) -> AudioStreamWAV:
 	var notes: Array = PIANO_TUNES[tune_index%PIANO_TUNES.size()]
 	var rate := 22050
-	var note_len := 0.26
-	var total := note_len*(notes.size()-1)+1.1
+	var note_len := 0.26*randf_range(0.94, 1.06)
+	var total := note_len*(notes.size()-1)+1.15
 	var frames := int(total*rate)
 	var samples := PackedFloat32Array()
 	samples.resize(frames)
 	for n in notes.size():
 		var frequency: float = notes[n]
-		var start := int(n*note_len*rate)
+		var start := maxi(0, int((n*note_len+(randf_range(-0.014, 0.014) if n > 0 else 0.0))*rate))
+		var velocity := randf_range(0.82, 1.08)*(1.08 if n == notes.size()-1 else 1.0)
+		var bright := randf_range(0.8, 1.2)
 		var length := int(1.1*rate)
 		for i in length:
 			var index := start+i
 			if index>=frames: break
 			var t := float(i)/rate
 			var envelope := minf(t*180.0,1.0)*exp(-t*3.2)
-			var wave := sin(TAU*frequency*t)*0.6+sin(TAU*frequency*2.0*t)*0.22*exp(-t*2.0)+sin(TAU*frequency*3.0*t)*0.08*exp(-t*4.0)
-			samples[index]+=wave*envelope*0.42
+			var wave := sin(TAU*frequency*t)*0.6+(sin(TAU*frequency*2.0*t)*0.22*exp(-t*2.0)+sin(TAU*frequency*3.0*t)*0.08*exp(-t*4.0))*bright
+			samples[index]+=wave*envelope*0.42*velocity
 	var data := PackedByteArray()
 	data.resize(frames*2)
 	for i in frames: data.encode_s16(i*2,int(clampf(samples[i],-1,1)*24000))
@@ -2550,8 +2558,53 @@ static func interact(record: Dictionary, count: int, hour := 12.0, outlook := "m
 	result["text"]=TranslationServer.translate(str(lines[count%lines.size()]))
 	return result
 
-## Little synthesised effect sounds, built once.
-static func sfx(kind: String) -> AudioStreamWAV:
+## An effect sound for a single player: the next baked take of `kind`
+## (assets/sfx/interior/<kind>_<n>.wav, tools/sfx/gen_props.py) from sfx_bank.gd's shuffle bag
+## (never the same take twice running), wrapped so every play gets +-4 % pitch and +-1 dB;
+## the synthesised sound while the kind has no takes. Prefer play(), which also pools players.
+static func sfx(kind: String) -> AudioStream:
+	var take := SfxBank.pick("interior/"+kind)
+	if take == null: return synth_sfx(kind)
+	var jitter := AudioStreamRandomizer.new()
+	jitter.playback_mode = AudioStreamRandomizer.PLAYBACK_RANDOM
+	jitter.add_stream(-1, take)
+	jitter.random_pitch = 1.04
+	jitter.random_volume_offset_db = 1.0
+	return jitter
+
+## Plays an effect through a pool of SFX_VOICES players under `host` (the room), so a new sound
+## does not cut one still ringing: a free player, else the one furthest into its sound. Picks
+## the next take with +-4 % pitch and +-1 dB; -8 dB matches the studio's single sfx_player.
+## False when host is not in the tree.
+static func play(host: Node, kind: String, db := -8.0) -> bool:
+	if host == null or not is_instance_valid(host) or not host.is_inside_tree(): return false
+	var pool := host.get_node_or_null("InteriorSfx")
+	if pool == null:
+		pool = Node.new()
+		pool.name = "InteriorSfx"
+		for i in SFX_VOICES:
+			var player := AudioStreamPlayer.new()
+			player.bus = &"SFX"
+			pool.add_child(player)
+		host.add_child(pool)
+	var voice: AudioStreamPlayer = null
+	for child in pool.get_children():
+		var player := child as AudioStreamPlayer
+		if player == null: continue
+		if not player.playing:
+			voice = player
+			break
+		if voice == null or player.get_playback_position() > voice.get_playback_position(): voice = player
+	if voice == null: return false
+	var take := SfxBank.pick("interior/"+kind)
+	voice.stream = take if take != null else synth_sfx(kind)
+	voice.pitch_scale = SfxBank.pitch(0.04 if take != null else 0.02)
+	voice.volume_db = db+SfxBank.db(1.0)
+	voice.play()
+	return true
+
+## The synthesised fallback effect sounds, built once.
+static func synth_sfx(kind: String) -> AudioStreamWAV:
 	if sound_cache.has(kind): return sound_cache[kind]
 	var rate := 22050
 	var length: float = {"click":0.08,"creak":0.55,"splash":0.6,"sizzle":0.9,"ding":1.3,"tick":0.95,"page":0.32,"knock":0.42,"crackle":0.9,"steps":1.0,"cushion":0.3,"whoosh":0.9,"chime":1.2,"rumble":1.1,"clink":0.45,"pop":0.16}.get(kind,0.2)

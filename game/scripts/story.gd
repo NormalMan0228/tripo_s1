@@ -34,6 +34,7 @@ const VoiceBabble := preload("res://scripts/voice_babble.gd")
 const Guide := preload("res://scripts/guide.gd")
 const IxSources := preload("res://scripts/ix/ix_sources.gd")
 const IxDriver := preload("res://scripts/ix/ix_driver.gd")
+const Roads := preload("res://scripts/roads.gd")
 
 ## 모카 · 카페 주인 (day_folk.gd, shadow_folk.gd 'regular').
 const MOKA := "regular"
@@ -47,6 +48,10 @@ const MOKA_AT := Vector2(-59.6, -29.9)
 const MOKA_LOOK := Vector2(0.6, 1.0)
 ## Where the first guest comes from (across the lawn, south-east of the terrace).
 const GUEST_FROM := Vector2(-55.6, -24.6)
+## The guest's footfalls walking in (as the room residents', studio.gd RESIDENT_STEP_DB), and the beat
+## between sitting down (the seat's contact) and the guest's ♪ with 모카's reply.
+const GUEST_STEP_DB := -11.0
+const GUEST_SETTLE := 0.4
 const STEPS := ["letter", "cafe", "craft", "done"]
 const ISLANDS := {"square":"물결빛 광장","fields":"풍차 들판","garden":"정원 언덕","camp":"캠프 초원","lighthouse":"등대섬"}
 ## Figures stand while the walker is this close to the terrace.
@@ -531,12 +536,17 @@ func open_craft() -> void:
 func accept(open_window: bool) -> void:
 	var result: Dictionary = await post_step("accept")
 	if not result.get("ok", false):
-		app.message(tr("지금은 부탁을 들을 수 없대요. 잠시 뒤 다시 말을 걸어 주세요."))
+		# A refusal: the soft deny in place of the toast chime (main.gd refuse()).
+		var busy_line := tr("지금은 부탁을 들을 수 없대요. 잠시 뒤 다시 말을 걸어 주세요.")
+		if app.has_method("refuse"): app.refuse(busy_line)
+		else: app.message(busy_line)
 		return
 	if is_instance_valid(moka):
 		moka.pop("♪", 1.8)
 		Fx.bubble(self, moka.global_position+Vector3(0, 2.3, 0), "heart")
-	RpgUi.sfx("confirm", -6.0)
+	# The chapter's new goal sounds like any resident's request taken (quests.gd): the quest_accept
+	# fanfare, which also stands in for the toast chime and the guide's confirm.
+	RpgUi.sfx("quest_accept", -6.0)
 	app.message(tr("새 목표 · 모카의 의자 만들기"))
 	if open_window: app.open_craft()
 
@@ -757,6 +767,8 @@ func seat_guest(walk_in: bool) -> void:
 		var seconds := maxf(1.0, Vector2(path.x, path.z).length()/1.25)
 		var walk: Tween = figure.create_tween()
 		walk.tween_property(figure, "position", stop, seconds)
+		# Its footfalls along the way, as every other walker's (world_audio.stride).
+		walk.parallel().tween_method(guest_step.bind(figure), 0.0, 1.0, seconds)
 		await walk.finished
 		if not is_instance_valid(figure) or not is_instance_valid(piece): return
 		figure.play_clip("idle")
@@ -768,12 +780,28 @@ func seat_guest(walk_in: bool) -> void:
 	figure.set_pose("sit")
 	guest_seated = true
 	if walk_in:
+		# The weight lands on the player's piece: its contact as any seat in the village (main.gd
+		# seat_sound, by the seat's material), then a beat later the guest's ♪ and 모카's reply.
+		if is_instance_valid(app) and app.has_method("seat_sound"):
+			var material := IxDriver.seat_material(socket) if not socket.is_empty() else "wood"
+			app.seat_sound("settle", {"at":figure.global_position, "material":material, "kind":"sit"})
+		await get_tree().create_timer(GUEST_SETTLE).timeout
+		if not is_instance_valid(figure): return
 		figure.pop("♪", 2.0)
 		figure.smile(4.0)
 		Fx.burst(self, seat_at+Vector3(0, 0.6, 0), "petal", 10, Color(0,0,0,0), 0.4)
 		if is_instance_valid(moka):
 			moka.pop("!", 1.4)
 			speech(moka, 2.35, tr("벌써 첫 손님이네!"), 3.0)
+
+## One frame of the guest walking in: its footfalls on the other walkers' voices (world_audio.stride),
+## soft, on the café road's stone or on the grass.
+func guest_step(_progress: float, figure: Node3D) -> void:
+	if not is_instance_valid(figure) or not is_instance_valid(app): return
+	var audio = app.get("world_audio")
+	if not is_instance_valid(audio) or not audio.has_method("stride"): return
+	var at := figure.global_position
+	audio.stride("story_guest", at, get_process_delta_time(), "stone" if Roads.on_road(Vector2(at.x, at.z)) else "grass", false, GUEST_STEP_DB)
 
 ## The terrace piece's best seat socket, or {} when it has none (the box formula is used then).
 func guest_socket() -> Dictionary:
@@ -832,6 +860,8 @@ func greet_nearby() -> void:
 	Fx.bubble(self, best.global_position+Vector3(0, 2.9, 0), "heart")
 	if DisplayServer.get_name() != "headless":
 		var voice := ("res://assets/ui/day_%s.png" if bool(best.get("day_target")) else "res://assets/ui/shadow_%s.png") % best_id if best.has_method("talk_to_player") else best_id
+		# A greeting bark first (once per voice per 30 s); the babble waits a moment for it.
+		VoiceBabble.greet(app, voice)
 		VoiceBabble.speak(app, voice, line)
 	post_step("greet", best_id)
 

@@ -385,7 +385,7 @@ func _build_update_pill(latest: String) -> void:
 			fetch.custom_minimum_size.y = 38
 			fetch.add_theme_font_size_override("font_size", 16)
 	_close_button(row, func(): dismissed = latest)
-	RpgUi.sfx("toast", -12.0)
+	RpgUi.sfx("notify", -12.0)
 
 func _build_note_pill(text: String) -> void:
 	var row := _pill()
@@ -433,7 +433,7 @@ func _tick_pill(left: float) -> void:
 	maintenance_time.add_theme_color_override("font_color", EMBER if urgent else RpgUi.INK)
 	maintenance_pill.self_modulate = Color(1.0, .78, .66) if urgent else Color.WHITE
 	if urgent:
-		RpgUi.sfx("toast", -6.0)
+		RpgUi.sfx("toast_warn", -6.0)
 		if not RpgUi.calm():
 			maintenance_pill.pivot_offset = maintenance_pill.size * 0.5
 			var pulse := maintenance_pill.create_tween().set_loops()
@@ -590,6 +590,7 @@ func _run_patch() -> void:
 	if screen != opened or not is_instance_valid(opened): return
 	if manifest.has("error"):
 		_patch_show("failed", tr("업데이트 정보를 받지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요."))
+		RpgUi.sfx("toast_error", -6.0)
 		return
 	var step := Patcher.plan(manifest, url, Patcher.base_version(), Api.client_version(), wanted_version())
 	match str(step.action):
@@ -615,9 +616,10 @@ func _run_patch() -> void:
 	if not problem.is_empty():
 		var text := tr("받은 파일이 손상되었어요. 다시 시도해 주세요.") if problem == "checksum" else tr("패치를 받다가 멈췄어요. 다시 시도하면 이어서 받아요.")
 		_patch_show("failed", text)
+		RpgUi.sfx("toast_error", -6.0)
 		return
 	_patch_show("restarting", tr("업데이트 완료! 게임을 다시 시작해요."), 1.0)
-	RpgUi.sfx("confirm")
+	RpgUi.sfx("unlock")
 	await get_tree().create_timer(1.2).timeout
 	if screen == opened: Patcher.restart(get_tree())
 
@@ -673,7 +675,8 @@ func retry() -> void:
 		retry_button.disabled = false
 		retry_button.text = tr("다시 시도")
 		if is_blocked():
-			# Still closed: a small shake says "not yet".
+			# Still closed: a small shake (and a soft refusal) says "not yet".
+			RpgUi.sfx("deny", -6.0)
 			var at := retry_button.position
 			var shake := retry_button.create_tween()
 			for dx in [-6.0, 5.0, -3.0, 0.0]: shake.tween_property(retry_button, "position:x", at.x + dx, 0.05)

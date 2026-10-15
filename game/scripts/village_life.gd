@@ -14,6 +14,8 @@ const RpgUi=preload("res://scripts/rpg_ui.gd")
 const ShopSell=preload("res://scripts/shop_sell.gd")
 const Quests=preload("res://scripts/quests.gd")
 const CROP_ORDER := ["turnip","carrot","pumpkin","strawberry","sunflower"]
+## Sound.effect kind per shop/server action (sound.gd core take families).
+const ACTION_SOUNDS := {"harvest":"reward","sell":"sell","buy":"buy","order":"errand","reel":"reward"}
 var app: Node3D
 var state: Dictionary={}
 var synced_at := 0.0
@@ -84,6 +86,7 @@ func refresh() -> void:
 ## One server action; returns the new state (with "reward") or {} after an error.
 func request(kind: String, extra: Dictionary={}) -> Dictionary:
 	if app.social.visiting():
+		deny()
 		app.message(tr("방문한 마을의 텃밭과 물건은 주인만 수정할 수 있습니다."))
 		return {}
 	if pending or state.is_empty() or app.screen!="village": return {}
@@ -93,20 +96,26 @@ func request(kind: String, extra: Dictionary={}) -> Dictionary:
 	pending=false
 	if epoch!=app.world_epoch: return {}
 	if not response.ok:
+		deny()
 		app.message(errors.get(response.error,app.error_message(response.error)))
-		sfx.play("escape",1.3,-4)
 		await refresh()
 		return {}
 	accept(response.data)
 	last_reward=response.data.get("reward",{})
 	return response.data
 
+## Refusals and server errors: the soft UI deny (RpgUi.sfx, UI bus), the one sound of a refusal.
+## Call it before the message: as a message kind it stands in for that toast's chime (main.refuse()
+## does the same), so a refusal is heard once, never chime plus blip.
+func deny() -> void:
+	RpgUi.sfx("deny",-6.0)
+
 ## Older call sites (shop, tree shaking, tests): message, sound and item feedback.
 func action(kind: String, extra: Dictionary={}) -> bool:
 	var data: Dictionary=await request(kind,extra)
 	if data.is_empty(): return false
 	app.message(data.message)
-	app.sound.effect("reward" if kind in ["harvest","sell","order","reel"] else "gather")
+	app.sound.effect(ACTION_SOUNDS.get(kind,"gather"))
 	if kind in ["plant","water","harvest","gather"]: app.player.react("gather")
 	if kind=="gather" and data.get("reward",{}).has("items"): fly_items(data.reward.items,app.player.position+Vector3(0,1.2,0))
 	return true
@@ -219,7 +228,7 @@ func interact() -> void:
 		"gather":
 			await action("gather",{"item":place.id})
 		"bell":
-			app.sound.effect("reward")
+			sfx.play("bell")
 			app.floating_feedback(tr("종소리가 마을에 퍼집니다"),app.player.position,Color("f4d58e"))
 			app.message(tr("등대 종소리를 들으며 잠시 쉬어 가세요. Tab으로 다음 목적지를 고를 수 있어요."))
 		"view":
@@ -228,10 +237,9 @@ func interact() -> void:
 			app.camera.size=34
 			app.text(v,tr("다섯 섬과 다리가 한눈에 보여요.\nEsc를 누르면 산책으로 돌아갑니다."),16)
 
-## A locked door: two soft knocks and the reason as a toast instead of entering.
+## A locked door: a few soft knocks on the wood and the reason as a toast instead of entering.
 func knock(place: Dictionary) -> void:
-	sfx.play("rock",0.55,-3)
-	get_tree().create_timer(0.17).timeout.connect(func(): if is_instance_valid(sfx): sfx.play("rock",0.6,-5))
+	sfx.play("knock",1.0,-3)
 	app.message(str(place.get("message","")) if not str(place.get("message","")).is_empty() else tr("불이 꺼져 있어요. 다들 곤히 자고 있나 봐요."))
 
 # ------------------------------------------------------------------ farming
@@ -255,12 +263,14 @@ func open_plot(index: int) -> void:
 	if state.plots[index].get("crop"):
 		use_plot(index)
 		return
-	app.close_village_modal()
+	# A window still open goes quietly: this one's open is the sound.
+	app.close_village_modal(false)
 	seed_plot=index
 	seed_choices=[]
 	# The shared window (RpgUi.window), night glass over the world just above the hotbar, without a
 	# shade: the bed stays in view. It sits on the window stack (the chat box steps aside); Esc or
-	# the close key shuts it, and the keys 1-5 pick a seed (their caps sit on the slots).
+	# the close key shuts it, and the keys 1-5 pick a seed (their caps sit on the slots). A pick is
+	# a soft select, then the seed going in (plant: the picker closes without its own sound).
 	var w := RpgUi.window(app.ui,tr("어떤 씨앗을 심을까요?"),{"kind":"night","place":"bottom","width":780,"modal":false,"scroll":false,
 		"on_close":app.close_village_modal,"id":"seed_picker"})
 	var v: VBoxContainer=w.body
@@ -298,7 +308,7 @@ func open_plot(index: int) -> void:
 		if count<1: cap.modulate.a=0.5
 		var chosen: String=crop
 		b.pressed.connect(func():
-			app.sound.effect("click")
+			RpgUi.sfx("select",-8.0)
 			plant(index,chosen))
 		row.add_child(b)
 		seed_choices.append(crop)
@@ -311,7 +321,7 @@ func open_plot(index: int) -> void:
 	stall.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
 	if index>=int(state.get("catalog",{}).get("starter_plots",6)):
 		app.button(foot,tr("풀밭으로 되돌리기"),func():
-			app.close_village_modal()
+			app.close_village_modal(false)
 			Art.burst(app.world,bed_point(index),"leaf",14)
 			sfx.play("rustle")
 			await request("untill",{"plot":index}))
@@ -320,10 +330,11 @@ func open_plot(index: int) -> void:
 	mode="seeds"
 
 func plant(index: int, crop: String) -> void:
-	app.close_village_modal()
+	app.close_village_modal(false)
 	app.player.face_point(bed_point(index))
 	app.player.react("craft")
-	sfx.play("seed")
+	# The seed takes are soft (the old synth's level): +8 dB sits them with the hoe and the watering.
+	sfx.play("seed",1.0,8.0)
 	Art.burst(app.world,bed_point(index),"seed",12)
 	var data := await request("plant",{"plot":index,"item":crop})
 	if data.is_empty(): return
@@ -391,6 +402,9 @@ func gather_spot(spot: Dictionary) -> void:
 	app.player.react("gather")
 	forage.anticipate(spot)
 	sfx.play(Forage.SOUNDS[spot.kind],randf_range(0.95,1.08))
+	if Forage.LAYERS.has(spot.kind):
+		var layer: Array=Forage.LAYERS[spot.kind]
+		get_tree().create_timer(float(layer[1])).timeout.connect(func(): if is_instance_valid(sfx): sfx.play(layer[0],1.0,float(layer[2])))
 	var data := await request("gather",{"node":spot.id})
 	forage.finish(spot,not data.is_empty())
 	if data.is_empty(): return
@@ -431,6 +445,7 @@ func fly_items(items: Dictionary, from: Vector3, delay := 0.0) -> void:
 			t.parallel().tween_property(icon,"scale",Vector2.ONE*0.55,0.5)
 			t.tween_callback(func():
 				icon.queue_free()
+				if is_instance_valid(sfx): sfx.pocket()
 				if is_instance_valid(slot):
 					slot.pivot_offset=slot.size*0.5
 					var bump := slot.create_tween()
@@ -547,9 +562,11 @@ func open_log() -> void:
 		grid.add_child(card)
 	app.text(v,tr("지금은 %s이에요. 밤에만 나오는 물고기도 있어요.") % (tr("밤") if state.get("night",false) else tr("낮")),13)
 
-func open_shop() -> void:
+## again: the stall's window rebuilt after a purchase or a sale (swapped in place, without the
+## window's close and open sounds: the trade's own sound is the one heard).
+func open_shop(again := false) -> void:
 	if state.is_empty(): return
-	var v: VBoxContainer=app.modal_card(tr("씨앗 가게 · 잎전 %d")%state.coins)
+	var v: VBoxContainer=app.modal_card(tr("씨앗 가게 · 잎전 %d")%state.coins,"",again)
 	mode="shop"
 	app.text(v,tr("잎전으로 씨앗과 미끼를 사고, 직접 얻은 수확물을 팔아요."),14)
 	# Selling also pays starseeds up to a daily allowance (shop_sell.gd, server app.py sell_stars).
@@ -562,7 +579,7 @@ func open_shop() -> void:
 		var cost: int=int(shop[item])
 		var b: Button=app.button(row,tr("%s\n+1 · %d잎전")%[tr(state.catalog.names[item]),cost],func():
 			await action("buy",{"item":item})
-			if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
+			if mode=="shop" and is_instance_valid(app.village_modal): open_shop(true))
 		b.disabled=state.coins<cost
 		b.custom_minimum_size.x=112
 	app.text(v,tr("가진 물건 팔기 · 누르면 최대 20개씩"),16)
@@ -582,19 +599,25 @@ func open_shop() -> void:
 		var b: Button=app.button(grid,tr("%s %d개 → +%d잎전")%[tr(state.catalog.names[item]),amount,coins]+(tr(" · 별씨 +%d")%stars if stars>0 else ""),func():
 			var data: Dictionary=await request("sell",{"item":item,"quantity":amount})
 			if not data.is_empty():
+				# The coins' jingle is the sale's sound (a message kind: the toast stays quiet), so the
+				# leaf counter rolls up silently (its count restarted, RpgUi.count_to) instead of
+				# ending on a second jingle.
+				RpgUi.sfx("coin_gain",-5.0)
+				var leaves = app.frame.get("leaves") if app.get("frame") is Dictionary else null
+				if is_instance_valid(leaves) and leaves is Label and (leaves as Label).has_meta("count_target"): (leaves as Label).remove_meta("count_target")
 				app.message(data.message)
-				app.sound.effect("reward")
-				# Starseeds from the sale burst over the walker and fly into the counter.
+				# Starseeds from the sale burst over the walker and fly into the counter (their notes as
+				# they land; no request fanfare for a sale).
 				if int(data.get("stars",0))>0 and is_instance_valid(app.player):
-					Quests.reward_burst(app,app.player.position,int(data.stars))
+					Quests.reward_burst(app,app.player.position,int(data.stars),false)
 					Quests.reward_fly(app,app.player.position,int(data.stars),int(data.get("shards",0)))
-			if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
+			if mode=="shop" and is_instance_valid(app.village_modal): open_shop(true))
 		b.custom_minimum_size.x=228
 	if grid.get_child_count()==0: app.text(grid,tr("팔 물건이 없어요."),14)
 	app.text(v,tr("오늘의 마을 식탁: 순무 2개 + 강농어 1마리 → 20잎전\n매일 오전 9시(한국 시간)에 새 배달이 열려요."),14)
 	var order: Button=app.button(v,tr("식탁에 배달하기") if state.order_available else tr("오늘 배달 완료"),func():
 		await action("order")
-		if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
+		if mode=="shop" and is_instance_valid(app.village_modal): open_shop(true))
 	order.disabled=not state.order_available or state.bag.get("turnip",0)<2 or state.bag.get("perch",0)<1
 
 func open_map() -> void:
@@ -640,6 +663,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	var n: int=event.physical_keycode-KEY_1
 	if n>=0 and n<seed_choices.size() and int(state.bag.get(seed_choices[n]+"_seed",0))>0:
 		get_viewport().set_input_as_handled()
+		RpgUi.sfx("select",-8.0)
 		plant(seed_plot,seed_choices[n])
 
 func _process(delta: float) -> void:
