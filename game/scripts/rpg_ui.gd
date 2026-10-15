@@ -715,6 +715,10 @@ static func close_key(parent: Node, callback: Callable, action := "") -> Button:
 	b.focus_mode = Control.FOCUS_NONE
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	b.set_meta("rpg_close", true)
+	# A flat button still keeps its theme box's content margins, which shrank the icon to ~18 px.
+	var bare := StyleBoxEmpty.new()
+	bare.set_content_margin_all(2)
+	for state in ["normal","hover","pressed","hover_pressed","disabled","focus"]: b.add_theme_stylebox_override(state, bare)
 	var named := TranslationServer.translate("닫기")
 	if is_action(action):
 		name_tip(b, named, key_text(action))
@@ -1609,6 +1613,272 @@ static func _night_coverage(t: Theme) -> void:
 	t.set_icon("unchecked", "CheckBox", half("check_off"))
 	t.set_icon("radio_checked", "CheckBox", half("radio_on"))
 	t.set_icon("radio_unchecked", "CheckBox", half("radio_off"))
+
+# ------------------------------------------------------------------ windows
+
+## The window stack: instance ids of open window and drawer roots, bottom to top. Each root holds
+## its description in meta "rpg_window". Only ids live here (no callables, no nodes), so nothing
+## stale outlives a scene; entries whose root is gone are pruned on every read.
+static var _stack: Array[int] = []
+## Called with (open_count, top_kind) whenever the stack changes ("" when empty). Plain methods
+## only (listen_windows), like GameSettings.listen: a lambda held in a static list can crash the
+## engine on exit.
+static var window_listeners: Array[Callable] = []
+
+## A shared screen shade: the radial fall from SHADE_IN to SHADE_OUT (dim > 0 darkens it evenly to
+## that opacity, the blocked-client look), full-rect under `parent`, fading in over 0.2 s.
+static func shade(parent: Control, dim := 0.0) -> TextureRect:
+	var veil := TextureRect.new()
+	veil.name = "Shade"
+	var fall := GradientTexture2D.new()
+	fall.fill = GradientTexture2D.FILL_RADIAL
+	fall.fill_from = Vector2(0.5, 0.45)
+	fall.fill_to = Vector2(1.1, 1.1)
+	fall.gradient = Gradient.new()
+	if dim > 0.0: fall.gradient.colors = PackedColorArray([Color(SHADE_IN, dim * 0.85), Color(SHADE_OUT, dim)])
+	else: fall.gradient.colors = PackedColorArray([SHADE_IN, SHADE_OUT])
+	veil.texture = fall
+	veil.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	parent.add_child(veil)
+	if not calm():
+		veil.modulate.a = 0.0
+		veil.create_tween().tween_property(veil, "modulate:a", 1.0, 0.2)
+	return veil
+
+## One window: title (T_WINDOW), optional head controls, the close key, a rule, then the body.
+## opts: kind "paper" | "night"; width (WINDOW_W.standard); place "top" (y WINDOW_TOP) | "centre" |
+## "bottom" (above the hotbar); modal (true: a shade, shared with a modal window already open on the
+## same host, and the world under it takes no clicks); action (the GameSettings action that opens
+## it: the close key is named with its key; "" names Esc); icon (a picture before the title);
+## on_close (what the close key does; default close_window); scroll (true: the body scrolls once the
+## card would pass the screen's foot); id; dim (shade opacity for a darker shade).
+## Returns {root, shade, card, head, title, body, close, id, action, kind, modal}; free it with
+## close_window(w). Opens with pop_in and the open sound and joins the window stack.
+static func window(host: Control, title: String, opts := {}) -> Dictionary:
+	var kind := str(opts.get("kind", "paper"))
+	var width := float(opts.get("width", WINDOW_W.standard))
+	var place := str(opts.get("place", "top"))
+	var modal := bool(opts.get("modal", true))
+	var action := str(opts.get("action", ""))
+	var id := str(opts.get("id", ""))
+	var root := Control.new()
+	root.name = id.to_pascal_case() if not id.is_empty() else "Window"
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_STOP if modal else Control.MOUSE_FILTER_IGNORE
+	# Paper windows look the same in every place (a room's own theme is night glass).
+	root.theme = theme()
+	host.add_child(root)
+	var veil: TextureRect = null
+	if modal:
+		var under := _modal_shade(host)
+		veil = under if under else shade(root, float(opts.get("dim", 0.0)))
+	var card := PanelContainer.new()
+	card.name = "Card"
+	card.custom_minimum_size.x = width
+	card.add_theme_stylebox_override("panel", panel_style("night" if kind == "night" else "paper"))
+	if kind == "night": card.theme = night_theme()
+	root.add_child(card)
+	_place_card(card, width, place)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", GAP_S)
+	card.add_child(column)
+	var head := HBoxContainer.new()
+	head.name = "Head"
+	head.add_theme_constant_override("separation", GAP)
+	column.add_child(head)
+	if not str(opts.get("icon", "")).is_empty():
+		var art := icon(str(opts.icon), 30)
+		art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(art)
+	var heading_label := Label.new()
+	heading_label.name = "Title"
+	heading_label.text = title
+	text_style(heading_label, "window", kind)
+	heading_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(heading_label)
+	var w := {"root":root, "shade":veil, "card":card, "head":head, "title":heading_label, "body":column, "close":null,
+		"id":id, "action":action, "kind":kind, "modal":modal}
+	var on_close: Callable = opts.get("on_close", Callable())
+	var shut := func() -> void:
+		if on_close.is_valid(): on_close.call()
+		else: close_window(w)
+	w["close"] = close_key(head, shut, action)
+	divider(column, PAPER_LINE if kind != "night" else Color(GOLD, .55))
+	if bool(opts.get("scroll", true)):
+		var scroll := ScrollContainer.new()
+		scroll.name = "Scroll"
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		column.add_child(scroll)
+		var body := VBoxContainer.new()
+		body.name = "Body"
+		body.add_theme_constant_override("separation", GAP_S)
+		body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(body)
+		var top: float = float(WINDOW_TOP) if place == "top" else 40.0
+		var fit := func() -> void:
+			if not is_instance_valid(body) or not body.is_inside_tree(): return
+			var room := maxf(200.0, body.get_viewport().get_visible_rect().size.y - top - 140.0)
+			scroll.custom_minimum_size.y = minf(body.get_combined_minimum_size().y, room)
+		body.minimum_size_changed.connect(fit)
+		w["body"] = body
+	_push_window(root, w)
+	pop_in(card)
+	sfx("open", -8.0)
+	return w
+
+## Card placement on the design canvas: top centre at WINDOW_TOP growing down, the screen's centre,
+## or bottom centre above the hotbar growing up.
+static func _place_card(card: Control, width: float, place: String) -> void:
+	match place:
+		"centre", "center":
+			card.anchor_left = 0.5; card.anchor_right = 0.5; card.anchor_top = 0.5; card.anchor_bottom = 0.5
+			card.offset_left = -width * 0.5; card.offset_right = width * 0.5
+			card.offset_top = 0; card.offset_bottom = 0
+			card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+			card.grow_vertical = Control.GROW_DIRECTION_BOTH
+		"bottom":
+			card.anchor_left = 0.5; card.anchor_right = 0.5; card.anchor_top = 1.0; card.anchor_bottom = 1.0
+			card.offset_left = -width * 0.5; card.offset_right = width * 0.5
+			card.offset_top = -(CANVAS.y - 690.0); card.offset_bottom = -(CANVAS.y - 690.0)
+			card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+			card.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		_:
+			card.position = Vector2(CANVAS.x * 0.5 - width * 0.5, WINDOW_TOP)
+			pin(card, 0.5, 0.0)
+
+## A non-modal side panel in the window family (the bag, the social drawer). opts: side "right" |
+## "left"; width (DRAWER_W); top (20); kind; action ("inventory"); on_close; id. It slides in from
+## its side; no shade, the world stays live. Returns the same keys as window().
+static func drawer(host: Control, title: String, opts := {}) -> Dictionary:
+	var side := str(opts.get("side", "right"))
+	var width := float(opts.get("width", DRAWER_W))
+	var top := float(opts.get("top", 20.0))
+	var kind := str(opts.get("kind", "paper"))
+	var action := str(opts.get("action", "inventory"))
+	var id := str(opts.get("id", ""))
+	var root := Control.new()
+	root.name = id.to_pascal_case() if not id.is_empty() else "Drawer"
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.theme = theme()
+	host.add_child(root)
+	var card := PanelContainer.new()
+	card.name = "Card"
+	card.custom_minimum_size.x = width
+	card.add_theme_stylebox_override("panel", panel_style("night" if kind == "night" else "paper"))
+	if kind == "night": card.theme = night_theme()
+	root.add_child(card)
+	var left := side == "left"
+	card.position = Vector2(14.0 if left else CANVAS.x - 24.0 - width, top)
+	pin(card, 0.0 if left else 1.0, 0.0)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", GAP_S)
+	card.add_child(column)
+	var head := HBoxContainer.new()
+	head.name = "Head"
+	head.add_theme_constant_override("separation", GAP_S)
+	column.add_child(head)
+	var heading_label := Label.new()
+	heading_label.name = "Title"
+	heading_label.text = title
+	text_style(heading_label, "window", kind)
+	heading_label.add_theme_font_size_override("font_size", 22)
+	heading_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(heading_label)
+	var w := {"root":root, "shade":null, "card":card, "head":head, "title":heading_label, "body":column, "close":null,
+		"id":id, "action":action, "kind":"drawer", "surface":kind, "modal":false}
+	var on_close: Callable = opts.get("on_close", Callable())
+	var shut := func() -> void:
+		if on_close.is_valid(): on_close.call()
+		else: close_window(w)
+	w["close"] = close_key(head, shut, action)
+	divider(column, PAPER_LINE if kind != "night" else Color(GOLD, .55))
+	_push_window(root, w)
+	slide_in(card, Vector2(-40.0 if left else 40.0, 0.0))
+	sfx("open", -10.0)
+	return w
+
+## Closes a window or drawer: leaves the stack, plays the close sound and frees it (a short fade
+## first when animate; at once otherwise, so callers that test is_instance_valid see it gone).
+static func close_window(w: Dictionary, animate := true) -> void:
+	var root: Control = w.get("root") if w.has("root") and is_instance_valid(w.get("root")) else null
+	if root == null: return
+	if root.get_meta("rpg_closing", false): return
+	root.set_meta("rpg_closing", true)
+	_forget_window(root.get_instance_id())
+	sfx("close", -10.0)
+	if animate and not calm() and root.is_inside_tree():
+		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for child in root.get_children(): if child is Control: (child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var tw := root.create_tween()
+		tw.tween_property(root, "modulate:a", 0.0, 0.12).set_trans(Tween.TRANS_SINE)
+		tw.tween_callback(root.queue_free)
+	else:
+		if root.get_parent(): root.get_parent().remove_child(root)
+		root.queue_free()
+
+## The open windows and drawers, bottom to top (their descriptions).
+static func windows() -> Array:
+	var out := []
+	var kept: Array[int] = []
+	for id in _stack:
+		var node := instance_from_id(id) as Control
+		if node == null or not is_instance_valid(node) or node.is_queued_for_deletion() or node.get_meta("rpg_closing", false): continue
+		kept.append(id)
+		out.append(node.get_meta("rpg_window", {}))
+	_stack = kept
+	return out
+
+## The topmost open window or drawer ({} when none): Esc routing and chat suppression read it.
+static func top_window() -> Dictionary:
+	var open := windows()
+	return open.back() if not open.is_empty() else {}
+
+## The open modal windows (not drawers) on the stack.
+static func modal_open() -> bool:
+	return windows().any(func(w): return bool(w.get("modal", false)))
+
+## Adds a listener (a plain method) for stack changes: callback(open_count, top_kind).
+static func listen_windows(callback: Callable) -> void:
+	if callback.is_custom():
+		push_error("RpgUi.listen_windows wants a plain method, not a lambda or bound callable: %s" % callback)
+		return
+	if not callback in window_listeners: window_listeners.append(callback)
+
+static func unlisten_windows(callback: Callable) -> void:
+	window_listeners.erase(callback)
+
+## Puts any root (a window, a drawer, later the dialogue) on the stack with its description.
+static func _push_window(root: Control, w: Dictionary) -> void:
+	root.set_meta("rpg_window", w)
+	var id := root.get_instance_id()
+	if not id in _stack: _stack.append(id)
+	root.tree_exiting.connect(func(): _forget_window(id))
+	_windows_changed()
+
+static func _forget_window(id: int) -> void:
+	if not id in _stack: return
+	_stack.erase(id)
+	_windows_changed()
+
+static func _windows_changed() -> void:
+	var open := windows()
+	var top_kind := str((open.back() as Dictionary).get("kind", "")) if not open.is_empty() else ""
+	for callback in window_listeners.duplicate():
+		if callback.is_valid(): callback.call(open.size(), top_kind)
+		else: window_listeners.erase(callback)
+
+## The shade of a modal window already open on this host, so a window opened from another reuses it.
+static func _modal_shade(host: Control) -> TextureRect:
+	for w in windows():
+		var root: Control = w.get("root")
+		var veil = w.get("shade")
+		if bool(w.get("modal", false)) and is_instance_valid(root) and root.get_parent() == host and veil is TextureRect and is_instance_valid(veil):
+			return veil
+	return null
 
 # ------------------------------------------------------------------ dialogue
 

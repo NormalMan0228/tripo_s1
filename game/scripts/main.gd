@@ -2906,65 +2906,30 @@ func close_village_modal() -> void:
 	if is_instance_valid(life): life.closed()
 	restore_hud()
 	if is_instance_valid(village_modal):
-		RpgUi.sfx("close",-10.0)
-		village_modal.get_parent().remove_child(village_modal)
-		village_modal.queue_free()
+		# A shared window (modal_card) leaves the window stack; dialogues and the craft window go as before.
+		if village_modal.has_meta("rpg_window"): RpgUi.close_window(village_modal.get_meta("rpg_window"),false)
+		else:
+			RpgUi.sfx("close",-10.0)
+			village_modal.get_parent().remove_child(village_modal)
+			village_modal.queue_free()
 	village_modal=null
 	if is_instance_valid(player) and screen=="village":player.controls_enabled=world_movement_allowed()
 
-## A centred parchment window over a soft shade: display-font title, a round close
-## key, an ornamented rule, then the caller's content. Opens with a fade + pop.
-func modal_card(title: String) -> VBoxContainer:
+## A centred parchment window over the shared shade (RpgUi.window): display-font title, the close
+## key, an ornamented rule, then the caller's content. `action` is the GameSettings action that
+## opens it (its key names the close key; "" names Esc). Opens with a fade + pop.
+func modal_card(title: String, action := "") -> VBoxContainer:
 	close_village_modal()
 	cancel_preview()
-	village_modal=Control.new()
 	player.controls_enabled=false
-	village_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ui.add_child(village_modal)
-	var shade := TextureRect.new()
-	var fall := GradientTexture2D.new()
-	fall.fill = GradientTexture2D.FILL_RADIAL
-	fall.fill_from = Vector2(0.5,0.45);fall.fill_to = Vector2(1.1,1.1)
-	fall.gradient = Gradient.new()
-	fall.gradient.colors = PackedColorArray([Color(0.03,0.05,0.06,.55),Color(0.02,0.03,0.04,.86)])
-	shade.texture=fall
-	shade.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	village_modal.add_child(shade)
-	shade.modulate.a=0.0
-	shade.create_tween().tween_property(shade,"modulate:a",1.0,0.2)
-	var v := panel(Vector2(260,92),760,"hero")
-	var card := v.get_parent()
-	ui.remove_child(card)
-	village_modal.add_child(card)
-	RpgUi.pin(card,0.5,0.0)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation",10)
-	v.add_child(row)
-	text(row,title,27).size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	var close := button(row,tr("닫기 · Esc"),close_village_modal)
-	close.custom_minimum_size=Vector2(0,36)
-	close.add_theme_font_size_override("font_size",13)
-	rule(v)
-	RpgUi.pop_in(card)
-	RpgUi.sfx("open",-8.0)
+	var w := RpgUi.window(ui,title,{"action":action,"scroll":false,"on_close":close_village_modal,"id":"village_modal"})
+	village_modal=w.root
 	player.controls_enabled=false
-	return v
+	return w.body
 
-## Round "×" key for drawers and side panels; named "닫기" (with the panel's key).
+## The round close key for drawers and side panels (RpgUi.close_key), named "닫기" with the panel's key.
 func close_button(parent: Node, callback: Callable, key := "") -> Button:
-	var b := Button.new()
-	b.icon=RpgUi.icon_texture("close")
-	b.expand_icon=true
-	b.custom_minimum_size=Vector2(34,34)
-	b.focus_mode=Control.FOCUS_NONE
-	b.flat=true
-	RpgUi.name_tip(b,tr("닫기"),key)
-	b.size_flags_vertical=Control.SIZE_SHRINK_CENTER
-	RpgUi.hover_motion(b,1.12)
-	b.pressed.connect(func(): callback.call())
-	parent.add_child(b)
-	return b
+	return RpgUi.close_key(parent,callback,key)
 
 ## A round paint swatch that lifts on hover.
 func swatch(parent: Node, color: Color, callback: Callable) -> Button:
@@ -3290,7 +3255,7 @@ func restore_hud() -> void:
 
 func open_wardrobe() -> void:
 	if screen!="village": return
-	var v := modal_card(tr("나의 여행자"))
+	var v := modal_card(tr("나의 여행자"),"wardrobe")
 	var editor := preload("res://scripts/wardrobe.gd").new()
 	editor.avatar=me.get("profile",{}).get("avatar",{}).duplicate(true)
 	v.add_child(editor)

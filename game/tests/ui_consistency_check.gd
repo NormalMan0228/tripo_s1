@@ -10,6 +10,9 @@ extends SceneTree
 ##            (U-WP-03)
 ##   godot --headless --path game --script res://tests/ui_consistency_check.gd -- --qa
 const RpgUi = preload("res://scripts/rpg_ui.gd")
+const Main = preload("res://scripts/main.gd")
+const I18n = preload("res://scripts/i18n.gd")
+const Stub = preload("res://tests/ui_stub_api.gd")
 var failures := 0
 var checks := 0
 
@@ -25,8 +28,11 @@ func expect(ok: bool, what: String) -> void:
 	if not ok: failures += 1
 
 func run() -> void:
+	I18n.setup()
 	check_tokens()
 	check_themes()
+	await check_stack()
+	await check_village_windows()
 	print("UI_CONSISTENCY ", JSON.stringify({"checks":checks, "failures":failures}))
 	quit(1 if failures else 0)
 
@@ -108,3 +114,82 @@ func check_themes() -> void:
 		and (probes.PopupMenu as PopupMenu).get_theme_color("font_color") == RpgUi.INK
 	expect(resolved, "controls under a night panel in a parchment root resolve night styles")
 	host.free()
+
+# ------------------------------------------------------------------ window stack
+
+var heard: Array = []
+
+func _on_windows(count: int, top_kind: String) -> void:
+	heard.append([count, top_kind])
+
+func shades_under(node: Node) -> int:
+	return node.find_children("Shade", "TextureRect", true, false).size()
+
+func check_stack() -> void:
+	var host := Control.new()
+	host.size = Vector2(1280, 800)
+	host.theme = RpgUi.theme()
+	root.add_child(host)
+	RpgUi.listen_windows(_on_windows)
+	expect(RpgUi.window_listeners.has(_on_windows), "a plain method listens to the window stack")
+	heard.clear()
+	var first := RpgUi.window(host, "첫 창", {"action":"craft", "id":"first"})
+	expect(RpgUi.top_window().get("id") == "first" and heard.back() == [1, "paper"], "a window joins the stack and listeners hear it")
+	expect(first.root.get_parent() == host and first.card.custom_minimum_size.x == 760.0 and first.title.get_theme_font_size("font_size") == RpgUi.T_WINDOW
+		and first.title.get_theme_color("font_color") == RpgUi.PAPER_INK, "a paper window: 760 wide, T_WINDOW title in paper ink")
+	expect(first.close.get_meta("rpg_close", false) and first.close.tooltip_text.ends_with("C") and first.close.get_parent() == first.head, "its close key sits in the head and names its key (C)")
+	var second := RpgUi.window(host, "둘째 창", {"kind":"night", "width":440, "place":"centre", "id":"second"})
+	expect(shades_under(host) == 1 and second.shade == first.shade, "a window opened over another reuses its shade (one shade on screen)")
+	expect(second.card.theme == RpgUi.night_theme() and second.title.get_theme_color("font_color") == RpgUi.GOLD, "a night window: night theme and a gold title")
+	var side := RpgUi.drawer(host, "가방", {"id":"bag"})
+	expect(RpgUi.top_window().get("kind") == "drawer" and side.shade == null and side.root.mouse_filter == Control.MOUSE_FILTER_IGNORE and RpgUi.windows().size() == 3, "a drawer joins the stack without a shade and lets the world take clicks")
+	second.close.pressed.emit()
+	await process_frame
+	expect(RpgUi.windows().map(func(w): return w.id) == ["first", "bag"], "the close key closes its own window: %s" % [RpgUi.windows().map(func(w): return w.id)])
+	var called := [0]
+	var custom := RpgUi.window(host, "셋째 창", {"modal":false, "on_close":func(): called[0] += 1, "id":"custom"})
+	custom.close.pressed.emit()
+	expect(called[0] == 1 and RpgUi.top_window().get("id") == "custom", "on_close replaces the default close (the owner closes it)")
+	RpgUi.close_window(custom, false)
+	expect(not is_instance_valid(custom.root) or custom.root.is_queued_for_deletion(), "close_window without animation frees at once")
+	first.root.queue_free()
+	await process_frame
+	expect(RpgUi.windows().map(func(w): return w.id) == ["bag"], "a window freed by its scene is pruned from the stack")
+	host.free()
+	await process_frame
+	expect(RpgUi.windows().is_empty() and RpgUi.top_window().is_empty() and heard.back() == [0, ""], "the stack is empty after the host left; listeners heard it")
+	RpgUi.unlisten_windows(_on_windows)
+
+# ------------------------------------------------------------------ village windows
+
+func check_village_windows() -> void:
+	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/ui_gallery.json"))
+	var app = Main.new()
+	root.add_child(app)
+	await create_timer(1.6).timeout
+	app.api.queue_free()
+	var stub := Stub.new()
+	stub.data = fixture
+	app.api = stub
+	app.add_child(stub)
+	app.social.enabled = false
+	await app.enter_village()
+	await create_timer(0.8).timeout
+	var openers := [["expedition", func(): await app.open_expedition(), "Esc"], ["story", func(): app.open_story(), "Esc"],
+		["wardrobe", func(): app.open_wardrobe(), "O"], ["map", func(): app.life.open_map(), "Tab"], ["storage", func(): app.life.open_storage(), "B"],
+		["shop", func(): app.life.open_shop(), "Esc"], ["log", func(): app.life.open_log(), "Esc"], ["admin", func(): app.open_admin(), "Esc"]]
+	for entry in openers:
+		await (entry[1] as Callable).call()
+		await process_frame
+		var modal: Control = app.village_modal
+		var ok := is_instance_valid(modal) and modal.has_meta("rpg_window")
+		var closes := modal.find_children("*", "Button", true, false).filter(func(b): return b.get_meta("rpg_close", false)) if ok else []
+		var shades := shades_under(app.ui)
+		ok = ok and closes.size() == 1 and str(closes[0].tooltip_text).ends_with(entry[2]) and shades == 1 and RpgUi.top_window().get("root") == modal
+		expect(ok, "%s: one shade (%d), one close key named '…%s' (%s), on the window stack" % [entry[0], shades, entry[2], closes.map(func(b): return b.tooltip_text)])
+		var w: Dictionary = modal.get_meta("rpg_window", {}) if is_instance_valid(modal) else {}
+		if w.has("close"): (w.close as Button).pressed.emit()
+		await process_frame
+		expect(not is_instance_valid(app.village_modal) and RpgUi.windows().is_empty() and shades_under(app.ui) == 0, "%s: its close key closes it and clears the shade" % entry[0])
+	app.queue_free()
+	await create_timer(0.5).timeout
