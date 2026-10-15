@@ -10,7 +10,8 @@ extends RefCounted
 ## --- particles --------------------------------------------------------------------
 ##   Fx.burst(parent, at: Vector3, kind: String, amount := 12, tint := Color(0,0,0,0), radius := 0.25)
 ##       One-shot puff. kind: "leaf", "petal", "sparkle", "drop", "splash", "note",
-##       "heart", "smoke", "steam", "dust", "spark", "seed", "fluff", "zz".
+##       "heart", "smoke", "steam", "dust", "spark", "seed", "fluff", "zz", and the under-foot kinds
+##       "scuff" (a small dust puff), "snow", "blade" (grass bits), "litter" (small dry leaves).
 ##       tint (alpha > 0) replaces the kind's own colour mix.
 ##   Fx.stream(parent, at: Vector3, kind: String, seconds := 2.0, rate := 5.0, tint := Color(0,0,0,0), radius := 0.2)
 ##       Same kinds, emitted steadily for a few seconds (speaker notes, campfire sparks).
@@ -109,6 +110,15 @@ const KINDS := {
 		"colors":["fffbea","f6f0d8","ffffff"]},
 	"zz":{"tex":"z","shade":"flat","size":[0.16,0.26],"life":2.0,"speed":[0.35,0.55],"gravity":0.15,"spread":20,"damp":0.3,"sway":true,
 		"colors":["d9e6ff","ffffff","c3d4f5"]},
+	# Under-foot kinds (foot_fx.gd): small, low and short so a step never reads as an explosion.
+	"scuff":{"tex":"soft","shade":"flat","size":[0.22,0.4],"life":0.75,"speed":[0.3,0.8],"gravity":-0.3,"spread":70,"damp":2.6,"grow":true,
+		"colors":["d8c8a8","c6b48f","e3d6bd"],"alpha":0.72},
+	"snow":{"tex":"soft","shade":"flat","size":[0.08,0.16],"life":0.8,"speed":[0.7,1.5],"gravity":-3.2,"spread":55,"damp":1.2,
+		"colors":["ffffff","eef4fb","dde8f5"],"alpha":0.95},
+	"blade":{"tex":"leaf","shade":"flat","size":[0.08,0.13],"life":0.6,"speed":[0.7,1.4],"gravity":-6.0,"spread":45,"damp":0.6,"spin":true,
+		"colors":["c8e27a","a6d36a","e0ec9a"]},
+	"litter":{"tex":"leaf","shade":"lit","size":[0.1,0.16],"life":0.9,"speed":[0.6,1.3],"gravity":-3.5,"spread":55,"damp":1.0,"spin":true,
+		"colors":["d9973f","b8702f","e8b452","9a7040"]},
 }
 
 # ------------------------------------------------------------------ particles
@@ -139,6 +149,23 @@ static func gust(parent: Node3D, at: Vector3, toward: Vector3, kind := "leaf", a
 	e.gravity = Vector3(0, -0.8, 0)
 	e.damping_min = 0.4
 	e.damping_max = 0.8
+	e.global_position = at
+	e.restart()
+
+## A low puff kicked back from a foot plant: the kind's look, leaning along the flat `toward`
+## (Vector3.ZERO: straight up), at `speed` x the kind's own speed.
+static func kick(parent: Node3D, at: Vector3, kind: String, amount := 4, toward := Vector3.ZERO, tint := Color(0,0,0,0), radius := 0.08, speed := 1.0) -> void:
+	if not _ok(parent) or not KINDS.has(kind): return
+	played += 1
+	var e := _emitter(parent, kind)
+	_configure(e, kind, tint, radius)
+	e.one_shot = true
+	e.explosiveness = 0.95
+	e.amount = maxi(1, roundi(amount*GameSettings.particle_scale()))
+	var flat := Vector3(toward.x, 0, toward.z)
+	e.direction = (flat.normalized()*0.9+Vector3.UP).normalized() if flat.length() > 0.01 else Vector3.UP
+	e.initial_velocity_min *= speed
+	e.initial_velocity_max *= speed
 	e.global_position = at
 	e.restart()
 
@@ -174,6 +201,8 @@ static func _emitter(parent: Node3D, kind: String) -> CPUParticles3D:
 		pick = CPUParticles3D.new()
 		pick.name = "Fx_"+kind
 		pick.emitting = false
+		# Puffs and sparks are too small and brief to need shadows (and the shadow pass costs frames).
+		pick.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		parent.add_child(pick)
 		if list.size() < POOL_MAX: list.append(pick)
 		else: pick.finished.connect(pick.queue_free)
