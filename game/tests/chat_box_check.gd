@@ -136,8 +136,8 @@ func run() -> void:
 	stub.data["/v1/social/messages"] = {"ok":true, "channel":"whisper", "state":"requested", "request":{"id":"w1", "to_id":"u-jun", "expires":0}}
 	hub.send("/w jun 같이 낚시해요")
 	await create_timer(0.3).timeout
-	expect(str(hub.lines.back().get("channel")) == "system" and chat.field.text == "같이 낚시해요" and not hub.lines.any(func(l): return l.get("pending", false)),
-		"a whisper not allowed yet becomes a request; the line waits in the field (%s)" % [hub.lines.back()])
+	expect(str(hub.lines.back().get("channel")) == "system" and chat.field.text == "같이 낚시해요" and not hub.lines.any(func(l): return str(l.get("text", "")) == "같이 낚시해요"),
+		"a whisper not allowed yet becomes a request; the line waits in the field (%s / field %s)" % [hub.lines.back().get("channel"), chat.field.text])
 	stub.data["/v1/social/messages"] = sent_reply
 	chat.field.clear()
 	stub.data["/v1/social/whispers/requests"] = {"requests":[{"id":"w2", "sender_id":"u-dan", "recipient_id":"me", "state":"pending", "from_name":"dan", "to_name":"haneul"}]}

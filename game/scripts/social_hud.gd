@@ -176,8 +176,8 @@ static func host_crown(actor: Node3D, on: bool, plate_height := 2.05) -> void:
 	crown.texture = texture
 	crown.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	crown.no_depth_test = true
-	crown.pixel_size = 0.2 / maxf(texture.get_height(), 1.0)
-	crown.position = Vector3(0, plate_height + 0.24, 0)
+	crown.pixel_size = 0.3 / maxf(texture.get_height(), 1.0)
+	crown.position = Vector3(0, plate_height + 0.28, 0)
 	crown.render_priority = 3
 	actor.add_child(crown)
 
@@ -185,7 +185,7 @@ static func bubble(actor: Node3D, text: String, height := 2.45) -> void:
 	if not is_instance_valid(actor) or text.strip_edges().is_empty(): return
 	var old := actor.get_node_or_null("ChatBubble")
 	if old: old.free()
-	if actor.get_node_or_null("HostCrown"): height += 0.24
+	if actor.get_node_or_null("HostCrown"): height += 0.34
 	var shown := text.strip_edges().left(40) + ("…" if text.strip_edges().length() > 40 else "")
 	var label := Label3D.new()
 	label.name = "Words"

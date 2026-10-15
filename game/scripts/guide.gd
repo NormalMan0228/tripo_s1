@@ -747,6 +747,9 @@ func make_row() -> Dictionary:
 	var text := RpgUi.label(line, "", 14, RpgUi.INK, false)
 	text.add_theme_constant_override("line_spacing", 4)
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# Two lines at most per row (a long goal is trimmed), so five requests keep the card short (12).
+	text.max_lines_visible = 2
+	text.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var far := RpgUi.numbers(RpgUi.label(line, "", 13, Color("ffe39a")), 13)
