@@ -30,8 +30,11 @@ func press(key: Key) -> void:
 	await process_frame
 
 func run() -> void:
-	var overlay = root.get_node_or_null("PerfOverlay")
-	expect(overlay != null, "autoload PerfOverlay present")
+	# Not an autoload (that would change project.binary and need the installer): ImeCaret makes it
+	# on first use (F2 or the setting).
+	expect(root.get_node_or_null("PerfOverlay") == null, "no overlay until it is first used")
+	var overlay = root.get_node("ImeCaret").perf_overlay()
+	expect(overlay != null and overlay == root.get_node_or_null("PerfOverlay"), "PerfOverlay made on first use")
 	if overlay == null:
 		quit(1)
 		return

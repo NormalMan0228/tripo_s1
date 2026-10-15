@@ -18,7 +18,6 @@ PatchBoot="*res://scripts/patch_boot.gd"
 CleanExit="*res://scripts/clean_exit.gd"
 ImeCaret="*res://scripts/ime_caret.gd"
 CloudPrefs="*res://scripts/cloud_prefs.gd"
-PerfOverlay="*res://scripts/perf_overlay.gd"
 
 [display]
 window/size/viewport_width=1280
