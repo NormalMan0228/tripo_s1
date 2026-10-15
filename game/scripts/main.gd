@@ -599,9 +599,8 @@ func login_ui(page := "menu") -> void:
 	title.add_theme_color_override("font_outline_color",Color("2a1a0c"))
 	title.add_theme_constant_override("shadow_offset_y",5)
 	title.add_theme_color_override("font_shadow_color",Color(0,0,0,.35))
+	# The name and the gold rule only: no tagline under it (the user found extra lines cheap).
 	RpgUi.divider(heading,RpgUi.GOLD,380).size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	var tagline := RpgUi.label(heading,tr("돌아올 마을이 있어, 숲으로 떠납니다."),19,Color("f1e8d2"))
-	tagline.add_theme_font_override("font",RpgUi.FONT_STRONG)
 	var body := VBoxContainer.new()
 	body.position = Vector2(92,300 if page=="menu" else 250)
 	body.add_theme_constant_override("separation",12)
@@ -685,7 +684,7 @@ func login_ui(page := "menu") -> void:
 			RpgUi.menu_button(body,tr("뒤로"),func(): login_ui("menu"))
 			if username.text.is_empty(): username.grab_focus.call_deferred()
 			else: password.grab_focus.call_deferred()
-	var footer := RpgUi.label(ui,"v"+str(ProjectSettings.get_setting("application/config/version","0.9"))+"  ·  "+tr("다섯 섬 마을"),13,Color(1,1,1,.7))
+	var footer := RpgUi.label(ui,"v"+str(ProjectSettings.get_setting("application/config/version","0.9")),13,Color(1,1,1,.7))
 	footer.position = Vector2(1060,762)
 	footer.size = Vector2(196,20)
 	footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

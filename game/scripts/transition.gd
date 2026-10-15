@@ -3,8 +3,8 @@ extends CanvasLayer
 ## One instance lives under the tree root; scenes call Transition.of(tree).
 ## Every change of place uses the same short fade: fade_out() (OUT seconds), build
 ## the new place, fade_in() (IN seconds). Call loading(title) before fade_out() and
-## the covered screen is a loading card instead of a black frame: the place's name,
-## a slowly turning star seed among drifting motes and one tip. loading("", "start")
+## the covered screen is a loading card instead of a black frame: the place's name and
+## a slowly turning star seed among drifting motes, no other lines. loading("", "start")
 ## is the game's first load, over the island cover art (assets/ui/loading_cover.jpg)
 ## with the wordmark. A plain fade_out() (stairs) stays a dark veil.
 ## While the veil covers the screen, builds pace themselves with LoadPace (load_pace.gd) so the
@@ -15,30 +15,10 @@ const OUT := 0.35
 const IN := 0.45
 const COVER_ART := "res://assets/ui/loading_cover.jpg"
 const SEED_ICON := "res://assets/starseed.svg"
-## One of these under the card (all in the i18n catalog); expeditions use RUN_TIPS.
-const TIPS := [
-	"Tab을 누르면 섬 지도가 열려요. 금빛 표식을 따라가 보세요.",
-	"C를 누르면 새 물건 제작을 맡길 수 있어요.",
-	"이정표에서 다른 섬으로 바로 이동할 수 있어요.",
-	"다섯 섬은 모두 다리로 이어져 있어요. 어디든 걸어서 갈 수 있답니다.",
-	"밤이 되면 가로등과 이정표 등불이 켜져요. 산책하기 좋은 시간이에요.",
-	"천문대 전망대에 오르면 다섯 섬과 다리가 한눈에 보여요.",
-	"장소나 지도 위를 누르면 빛나는 길이 이어져요.",
-	"마을 연못 낚시터는 물결빛 광장 남쪽, 나무 부두 끝이에요.",
-	"햇살 텃밭 · E로 땅을 일구고 씨앗을 심어요",
-	"별씨 공방에서는 숲에서 받은 별씨로 새 물건을 만들 수 있대요.",
-]
-const RUN_TIPS := [
-	"낮에는 채집하고 밤에는 모닥불 곁을 지키세요.",
-	"첫날엔 목재와 돌을 모아 도끼부터 만드세요. 밤에는 모닥불 곁을 지키고요.",
-	"붉은 원이 보이면 바로 피해요. 일곱 밤을 버티면 새 물건을 만들 별씨를 받아요.",
-	"제작 전에 밤에 쓸 목재 2개를 남겨 두세요.",
-]
 var veil: ColorRect
 var door: AudioStreamPlayer
 var tween: Tween
 static var instance: CanvasLayer
-static var tip_turn := -1
 ## The loading card under the veil and its parts.
 var card: Control
 var art: TextureRect
@@ -142,9 +122,9 @@ func loading(title := "", kind := "") -> void:
 	wordmark.visible = start
 	heading.text = title
 	place.visible = not start and not title.is_empty()
-	var pool: Array = RUN_TIPS if kind == "run" else TIPS
-	tip_turn = (randi() % pool.size()) if tip_turn < 0 else tip_turn+1
-	tip.text = "✦  "+TranslationServer.translate(pool[tip_turn % pool.size()])
+	# No tip line: the card shows the place and the turning star seed only.
+	tip.text = ""
+	tip.visible = false
 	card.visible = true
 	motes.emitting = true
 	LoadPace.reset()
@@ -275,8 +255,6 @@ func build_card() -> void:
 	title.add_theme_color_override("font_outline_color", Color("2a1a0c"))
 	title.add_theme_constant_override("shadow_offset_y", 4)
 	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.35))
-	var tagline := RpgUi.label(wordmark, TranslationServer.translate("돌아올 마을이 있어, 숲으로 떠납니다."), 18, Color("f1e8d2"))
-	tagline.add_theme_font_override("font", RpgUi.FONT_STRONG)
 	# A place being entered: its name in the middle with a gold rule under it.
 	place = VBoxContainer.new()
 	place.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -292,7 +270,7 @@ func build_card() -> void:
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.add_theme_constant_override("outline_size", 7)
 	RpgUi.divider(place, RpgUi.GOLD, 300).size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	# One tip along the bottom.
+	# The old tip line along the bottom, kept hidden: the card shows no extra sentences.
 	tip = RpgUi.label(card, "", 17, Color(1.0, 0.96, 0.86, 0.9))
 	tip.anchor_top = 1.0
 	tip.anchor_bottom = 1.0

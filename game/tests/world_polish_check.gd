@@ -205,7 +205,7 @@ func fade() -> void:
 	var out_ms := Time.get_ticks_msec()-started
 	check(absf(out_ms-Transition.OUT*1000.0) < 120.0, "fade: out takes %d ms (%.0f)" % [out_ms, Transition.OUT*1000.0])
 	check(is_equal_approx(veil.veil.modulate.a, 1.0) and veil.card.visible and veil.heading.text != "", "fade: covered by the loading card with the place name")
-	check(not veil.tip.text.is_empty(), "fade: the card carries a tip")
+	check(not veil.tip.visible, "fade: the card carries no extra line (place name and star seed only)")
 	# The new place builds in one long frame, then fades in.
 	veil.fade_in()
 	OS.delay_msec(700)
