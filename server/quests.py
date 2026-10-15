@@ -375,6 +375,33 @@ def describe(conn, user_id):
             'paid': [dict(r) for r in conn.execute("SELECT reference AS quest,amount,created FROM ledger WHERE user_id=? AND reason='quest_reward' ORDER BY created", (user_id,))]}
 
 
+def fulfill(conn, user_id, quest_id, row, now):
+    """Validate and hand over bag items inside the caller's transaction.
+
+    Shared by one-time requests and the daily board; client counts are never trusted.
+    """
+    quest = QUESTS[quest_id]
+    if quest['kind'] != 'bring':
+        if have(conn, user_id, quest_id, row) < quest['count']:
+            fail('quest_not_ready')
+        return {}
+    life = life_state(conn, user_id)
+    if have(conn, user_id, quest_id, row, life['bag']) < quest['count']:
+        fail('quest_not_ready')
+    left, taken = quest['count'], {}
+    for item in quest['items']:
+        n = min(left, int(life['bag'].get(item, 0)))
+        if n:
+            homestead.spend(life, item, n)
+            taken[item], left = n, left - n
+        if not left:
+            break
+    life['version'] = life.get('version', 0) + 1
+    conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
+                 (user_id, json.dumps(life)))
+    return {'taken': taken, 'homestead': homestead.public(life, now)}
+
+
 class Quests:
     def __init__(self, app, db, settings, clock, auth, mutate, money, host_for):
         self.settings = settings
@@ -473,26 +500,7 @@ class Quests:
                     fail('quests_locked')
                 row = active(conn, user, quest_id)
                 now = clock()
-                extra = {}
-                if quest['kind'] == 'bring':
-                    life = life_state(conn, user['id'])
-                    if have(conn, user['id'], quest_id, row, life['bag']) < quest['count']:
-                        fail('quest_not_ready')
-                    # The hand-over: from the bag, cheapest kinds first.
-                    left, taken = quest['count'], {}
-                    for item in quest['items']:
-                        n = min(left, int(life['bag'].get(item, 0)))
-                        if n:
-                            homestead.spend(life, item, n)
-                            taken[item], left = n, left - n
-                        if not left:
-                            break
-                    life['version'] = life.get('version', 0) + 1
-                    conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
-                                 (user['id'], json.dumps(life)))
-                    extra = {'taken': taken, 'homestead': homestead.public(life, now)}
-                elif have(conn, user['id'], quest_id, row) < quest['count']:
-                    fail('quest_not_ready')
+                extra = fulfill(conn, user['id'], quest_id, row, now)
                 # Once per account: the ledger has at most one reward per request.
                 if conn.execute("SELECT 1 FROM ledger WHERE user_id=? AND reason='quest_reward' AND reference=?", (user['id'], quest_id)).fetchone():
                     fail('quest_already_done')
