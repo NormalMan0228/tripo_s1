@@ -3,7 +3,7 @@ import math
 import random
 from copy import deepcopy
 from decimal import Decimal
-from . import navigation, catalog, campaign, stages, survival_maps
+from . import navigation, catalog, campaign, stages, survival_maps, campfire
 
 # The tutorial: health never drops below this; a cleared field refills after this many seconds.
 TUTORIAL_HP_FLOOR = 1.
@@ -103,7 +103,7 @@ def advance_enemy(s, enemy, dt, day, warm):
     now = s['elapsed']
     enemy.setdefault('phase', 'chase')
     enemy.setdefault('phase_until', 0.)
-    if warm:
+    if warm and campfire.mode(s) == 'barrier':
         enemy['phase'] = 'warded'
         distance = max(.01, math.hypot(enemy['x'], enemy['z']))
         if distance < 4.8:
@@ -126,7 +126,7 @@ def advance_enemy(s, enemy, dt, day, warm):
             if math.hypot(s['x']-enemy['target_x'], s['z']-enemy['target_z']) < enemy.get('impact',1.35) and clear_swing(s,enemy,s):
                 s['hp'] -= enemy.get('damage',8.)
             enemy['phase'] = 'recover'
-            enemy['phase_until'] = now + .85
+            enemy['phase_until'] = now + campfire.recovery_seconds(s, .85)
         return
     if enemy['phase'] == 'charge':
         advance_charge(s, enemy, dt, now)
@@ -158,7 +158,7 @@ def advance_charge(s, enemy, dt, now):
         enemy['_charge_hit'] = True
         s['hp'] -= enemy.get('damage', 12.)
     if enemy['_charge_left'] <= 1e-6 or moved < step*.35 or enemy['_charge_hit'] or now >= enemy['phase_until']:
-        enemy.update(phase='recover', phase_until=now+enemy.get('stun', 1.4))
+        enemy.update(phase='recover', phase_until=now+campfire.recovery_seconds(s, enemy.get('stun', 1.4)))
 
 
 def creature(s, kind, enemy_id, angle, day, radius=14., hp_scale=1.):
@@ -296,7 +296,7 @@ def new_run(seed, now, day_seconds, map_id='forest', difficulty='standard'):
             raise RuntimeError('forest_layout_exhausted')
         nodes.append({'id': f'n{i}', 'kind': kind, 'x': round(x, 2), 'z': round(z, 2),
                       'quantity': 6 if kind == 'tree' else 4, 'regrow_at': 0})
-    return {'map_id':map_id,'difficulty':difficulty,'obstacles':deepcopy(region['obstacles']),
+    return {'campfire_mode':campfire.configured_mode(), 'map_id':map_id,'difficulty':difficulty,'obstacles':deepcopy(region['obstacles']),
             'hazards':deepcopy(region['hazards']), 'layout_version':region.get('layout_version'), 'x': 0., 'z': 1.4, 'hp': 100., 'hunger': 100., 'stamina': 100., 'sprinting': False,
             'sprint_recover_at': 0., 'elapsed': 0., 'last_wall': now,
             'day_seconds': day_seconds, 'stage_base': day_seconds, 'stage_count': region['stages'],
@@ -319,6 +319,8 @@ def advance(s, now, dx=0., dz=0., sprint=False, solo=True):
         length=math.hypot(s['x'],s['z'])
         if length<.001: s['x'],s['z']=0.,1.06
         else: s['x'],s['z']=s['x']/length*1.06,s['z']/length*1.06
+    # Preserve warmth earned before movement, including another party member's new fire.
+    campfire.advance(s, 0.)
     s['elapsed'] += dt
     region,tuning=catalog.rules(s)
     on_ice=any(h['kind']=='ice' and math.hypot(s['x']-h['x'],s['z']-h['z'])<h['radius'] for h in s.get('hazards',[]))
@@ -336,7 +338,8 @@ def advance(s, now, dx=0., dz=0., sprint=False, solo=True):
         s['hp'] -= dt * 3
     clock = stages.clock(s)
     day = clock['stage']
-    warm = s['fire_until'] > s['elapsed'] and math.hypot(s['x'], s['z']) < 4.0
+    warm = campfire.in_radius(s)
+    campfire.advance(s, dt)
     if clock['night']:
         if solo: spawn_due(s, clock)
         if not warm:
@@ -425,7 +428,9 @@ def action(s, kind, target=''):
         inv['wood'] -= 2
         s['fire_until'] = min(max(now, s['fire_until']) + 30, now + 90)
         s['fires']=s.get('fires',0)+1
-        return '모닥불을 피웠습니다. 주변에서는 밤의 위협을 피할 수 있어요.'
+        campfire.advance(s, 0.)
+        return ('모닥불을 피웠습니다. 곁에서 체력과 기력을 회복하세요. 몬스터는 들어올 수 있어요.'
+                if campfire.mode(s) == 'buff' else '모닥불을 피웠습니다. 주변에서는 밤의 위협을 피할 수 있어요.')
     if kind == 'attack':
         if now-s['last_attack'] < 0.7:
             return '다음 공격을 준비 중입니다.'
@@ -435,7 +440,7 @@ def action(s, kind, target=''):
         enemy = min((e for e in s['enemies'] if clear_swing(s,s,e)), key=gap, default=None)
         if enemy is None or gap(enemy) > 2.6:
             return '가까운 적이 없습니다.'
-        enemy['hp'] -= 25 if inv['spear'] else 10
+        enemy['hp'] -= (25 if inv['spear'] else 10) * campfire.attack_multiplier(s)
         # Successful hits interrupt a telegraphed strike briefly (a boss only while it walks).
         if not enemy.get('boss') or enemy.get('phase') == 'chase':
             enemy.update(phase='recover',phase_until=now+.4)
@@ -450,7 +455,8 @@ def action(s, kind, target=''):
     return '허용되지 않은 행동입니다.'
 
 def public_state(s):
-    data = {k:v for k,v in s.items() if k not in ('last_wall','last_action','last_attack','refill_at')}
+    data = {k:v for k,v in s.items() if k not in ('last_wall','last_action','last_attack','refill_at',
+                                                'warmed_until','revive_progress','revive_rate')}
     # Every creature names its species and the stand-in drawn until that species has a model (runs
     # saved before stages: the species is its own art).
     data['enemies']=[{k:v for k,v in e.items() if not k.startswith('_')} for e in s['enemies']]
@@ -490,7 +496,8 @@ def public_state(s):
     data['fire_remaining'] = max(0., s['fire_until']-s['elapsed'])
     data['stamina'] = s.get('stamina',100.)
     data['sprinting'] = s.get('sprinting',False)
-    data['warm'] = data['fire_remaining']>0 and math.hypot(s['x'],s['z'])<4
+    data['campfire'] = campfire.public_fire(s)
+    data.update(campfire.public_actor(s))
     data['action_cooldown'] = max(0.,.35-(s['elapsed']-s['last_action']))
     data['attack_cooldown'] = max(0.,.7-(s['elapsed']-s['last_attack']))
     data['story']=campaign.progress(s)

@@ -208,6 +208,8 @@ class Settings:
     presence_budget: float = field(default_factory=lambda: float(os.getenv('VILLAGEN_PRESENCE_BUDGET', '60')))
 
     def validate(self):
+        from .campfire import configured_mode
+        configured_mode()
         if self.mode not in ('demo', 'live'):
             raise ValueError('TRIPOTHON_MODE must be demo or live')
         if self.studio_llm not in ('fixture','codex','openai','gemini'):
