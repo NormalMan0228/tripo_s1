@@ -126,6 +126,11 @@ func _show_tracked() -> void:
 	elif not tracker.done.is_empty():
 		job_id = ""
 		show_job(tracker.done)
+	elif not tracker.failed.is_empty():
+		# Failed while the window was closed (the slot's badge said so): why, once, on top of the form.
+		job_id = ""
+		show_job(tracker.failed)
+		tracker.failed = {}
 	else:
 		job_id = ""
 		_show_form()
@@ -321,21 +326,81 @@ static func read_photo(path: String) -> Dictionary:
 	if file.get_length() > PHOTO_FILE_BYTES: return {"error": "image_too_large"}
 	return decode_photo(file.get_buffer(file.get_length()))
 
-## By content, not the file name: a .png that is really a JPEG still loads.
+## By content, not the file name: a .png that is really a JPEG still loads. Godot's JPEG decoder ignores
+## the camera's EXIF rotation, so it is read here; a PNG or JPEG that already fits is sent as it is
+## (the server turns it upright and converts its colours), anything else is re-encoded upright.
 static func decode_photo(bytes: PackedByteArray) -> Dictionary:
 	var image := Image.new()
 	var loaded := ERR_FILE_UNRECOGNIZED
-	if bytes.size() >= 4 and bytes[0] == 0x89 and bytes[1] == 0x50: loaded = image.load_png_from_buffer(bytes)
-	elif bytes.size() >= 3 and bytes[0] == 0xFF and bytes[1] == 0xD8: loaded = image.load_jpg_from_buffer(bytes)
+	var orientation := 1
+	var kind := ""
+	if bytes.size() >= 4 and bytes[0] == 0x89 and bytes[1] == 0x50:
+		loaded = image.load_png_from_buffer(bytes)
+		kind = "png"
+	elif bytes.size() >= 3 and bytes[0] == 0xFF and bytes[1] == 0xD8:
+		loaded = image.load_jpg_from_buffer(bytes)
+		orientation = jpeg_orientation(bytes)
+		kind = "jpeg"
 	elif bytes.size() >= 12 and bytes.slice(0, 4).get_string_from_ascii() == "RIFF" and bytes.slice(8, 12).get_string_from_ascii() == "WEBP": loaded = image.load_webp_from_buffer(bytes)
 	elif bytes.size() >= 2 and bytes[0] == 0x42 and bytes[1] == 0x4D: loaded = image.load_bmp_from_buffer(bytes)
 	if loaded != OK or image.is_empty(): return {"error": "image_unreadable"}
 	if mini(image.get_width(), image.get_height()) < 16: return {"error": "image_too_small"}
-	return encode_photo(image)
+	if not kind.is_empty() and bytes.size() <= PHOTO_SEND_BYTES and maxi(image.get_width(), image.get_height()) <= PHOTO_SIDE:
+		upright(image, orientation)
+		return {"data": "data:image/%s;base64,%s" % [kind, Marshalls.raw_to_base64(bytes)], "image": image}
+	return encode_photo(image, orientation)
 
-static func encode_photo(image: Image) -> Dictionary:
+## A JPEG's EXIF Orientation (1..8), or 1 when it has none.
+static func jpeg_orientation(bytes: PackedByteArray) -> int:
+	var at := 2
+	while at + 4 <= bytes.size() and bytes[at] == 0xFF:
+		var marker: int = bytes[at + 1]
+		var length: int = (bytes[at + 2] << 8) | bytes[at + 3]
+		if marker == 0xDA or marker == 0xD9 or length < 2: break
+		var end := at + 2 + length
+		if marker == 0xE1 and length >= 16 and end <= bytes.size() and bytes.slice(at + 4, at + 8).get_string_from_ascii() == "Exif":
+			var tiff := at + 10
+			var little: bool = bytes[tiff] == 0x49
+			var ifd := tiff + _exif_int(bytes, tiff + 4, 4, little)
+			if ifd < tiff or ifd + 2 > end: return 1
+			for i in _exif_int(bytes, ifd, 2, little):
+				var entry := ifd + 2 + i * 12
+				if entry + 12 > end: break
+				if _exif_int(bytes, entry, 2, little) == 0x0112:
+					var value := _exif_int(bytes, entry + 8, 2, little)
+					return value if value >= 1 and value <= 8 else 1
+			return 1
+		at = end
+	return 1
+
+static func _exif_int(bytes: PackedByteArray, at: int, size: int, little: bool) -> int:
+	var value := 0
+	for i in size:
+		value = (value << 8) | bytes[at + (size - 1 - i if little else i)]
+	return value
+
+## Turns a decoded photo upright the way its EXIF Orientation says (as PIL's ImageOps.exif_transpose).
+static func upright(image: Image, orientation: int) -> void:
+	match orientation:
+		2: image.flip_x()
+		3: image.rotate_180()
+		4: image.flip_y()
+		5:
+			image.rotate_90(CLOCKWISE)
+			image.flip_x()
+		6: image.rotate_90(CLOCKWISE)
+		7:
+			image.rotate_90(COUNTERCLOCKWISE)
+			image.flip_x()
+		8: image.rotate_90(COUNTERCLOCKWISE)
+
+static func encode_photo(image: Image, orientation := 1) -> Dictionary:
 	if image.is_compressed(): image.decompress()
 	var alpha := image.detect_alpha() != Image.ALPHA_NONE
+	# Alpha that is 0 everywhere (some 32-bit BMPs) is unused: the picture is opaque.
+	if alpha and not image.get_used_rect().has_area():
+		image.convert(Image.FORMAT_RGB8)
+		alpha = false
 	var side := PHOTO_SIDE
 	while true:
 		var copy: Image = image.duplicate()
@@ -343,11 +408,18 @@ static func encode_photo(image: Image) -> Dictionary:
 		if longest > side:
 			var ratio := float(side) / float(longest)
 			copy.resize(maxi(1, roundi(copy.get_width() * ratio)), maxi(1, roundi(copy.get_height() * ratio)), Image.INTERPOLATE_LANCZOS)
+		# Turned after the resize: a quarter turn of a full-size photo is slow.
+		upright(copy, orientation)
 		var kind := "png" if alpha else "jpeg"
 		var data: PackedByteArray = copy.save_png_to_buffer() if alpha else copy.save_jpg_to_buffer(0.88)
 		if data.size() > PHOTO_SEND_BYTES and alpha:
-			# A large transparent picture: a JPEG of the same size.
-			copy.convert(Image.FORMAT_RGB8)
+			# A large transparent picture: a JPEG on white, as the server keeps one.
+			copy.convert(Image.FORMAT_RGBA8)
+			var flat := Image.create(copy.get_width(), copy.get_height(), false, Image.FORMAT_RGBA8)
+			flat.fill(Color.WHITE)
+			flat.blend_rect(copy, Rect2i(Vector2i.ZERO, copy.get_size()), Vector2i.ZERO)
+			flat.convert(Image.FORMAT_RGB8)
+			copy = flat
 			data = copy.save_jpg_to_buffer(0.85)
 			kind = "jpeg"
 		if data.size() <= PHOTO_SEND_BYTES or side <= 512:
@@ -557,9 +629,12 @@ func _show_failure(value: Dictionary) -> void:
 	_label(lines, str(words.title), 20, false, RpgUi.ACCENT)
 	_label(lines, str(words.why), 14)
 	if RpgUi.calm(): return
-	# A short shake says "no" without more words.
-	var shake := lines.create_tween()
-	for dx in [8.0, -6.0, 4.0, -2.0, 0.0]: shake.tween_property(lines, "position:x", dx, 0.05)
+	# A quick squeeze of the card says "no" without more words (scale is never re-sorted by the container).
+	await get_tree().process_frame
+	if not is_instance_valid(card): return
+	card.pivot_offset = card.size * 0.5
+	card.scale = Vector2(1.04, 1.04)
+	card.create_tween().tween_property(card, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _start_over() -> void:
 	job = {}
