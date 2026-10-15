@@ -109,11 +109,21 @@ var baked: Resource = null
 var bake_record := false
 var rim_record: Array = []
 var rng_after_rim := 0
-## The night's creatures (every species in this map's variant) read on worker threads once the card
-## is gone, so the first spawn of a species finds its model in the resource cache (monster.gd setup).
-var monster_wait := 1.0
-var monster_pending: Array[String] = []
+## The night's creatures: every species' model in this map's variant (the nights' rosters reach all
+## five by night 4-6, server/catalog.py), read under the card once the props are in, one at a time on
+## a worker thread, and held for the run: a species' first spawn finds its model in the resource cache
+## (monster.gd setup; read there, the spawn frame held 155 ms). Each read (~50 ms on its worker) puts
+## ~10 ms of work on the main thread in one frame (~28 ms for the first model in a process, more on a
+## busy machine): read together after the card they made 36-57 ms frames a second into play; two at a
+## time under the card, 52-64 ms frames there and 25-40 ms scatter steps. The build waits for the last
+## one before its batches: +0.1 s under the card in the forest, +0.2-0.25 s in the shorter quarry and
+## frost builds.
+## Off (--no-monster-prefetch, false before start_run, or a build without the card: tools, headless
+## tests), each loads at its first spawn.
+static var prefetch_monsters := not "--no-monster-prefetch" in OS.get_cmdline_user_args()
 var monster_scenes: Array[Resource] = []
+## The creature models still to come in, the first one loading.
+var monster_feed: Array[String] = []
 var stats := {"instances":0,"multimeshes":0,"props":0,"resource_visuals":0}
 
 static func layouts() -> Dictionary:
@@ -148,6 +158,14 @@ static func resource_paths(map: String) -> Array:
 		var path: String = prop_paths(id)[0]
 		if not path in paths: paths.append(path)
 	paths.append(CAMP)
+	return paths
+
+## The model of every creature species for this map's variant (the ones monster.gd setup loads).
+static func monster_paths(map: String) -> Array[String]:
+	var paths: Array[String] = []
+	for species in Monster.WALK_REF:
+		var path := Monster.resolved_path(species,map)
+		if path != "" and not path in paths: paths.append(path)
 	return paths
 
 ## The camp's hearth model (camp centre of every map).
@@ -194,6 +212,8 @@ func build(run: Dictionary) -> void:
 	LoadPace.done(0.45)
 	# The props read on a worker thread since the expedition began (main.gd start_run).
 	for path: String in resource_paths(map_id): if LoadPace.pending(path): await LoadPace.fetch(path)
+	# The props are in and the ground is down: the night's creatures load from here (monster_feed).
+	_start_monster_feed()
 	await LoadPace.step("survival features")
 	await _build_features()
 	# The resource models, prepared here under the card: main.gd dresses the run's nodes with them
@@ -208,11 +228,59 @@ func build(run: Dictionary) -> void:
 	LoadPace.span = span
 	await LoadPace.step("survival particles")
 	_build_particles()
+	# Before the batches: their buffers go to the GPU in the frame the build ends, as without the wait.
+	await _finish_monster_feed()
 	await LoadPace.step("survival batches")
 	_finish_batches()
 	_apply_grade(true)
 	set_process(true)
 	LoadPace.done(1.0)
+
+## Under the card, the night's creatures start loading (see prefetch_monsters).
+func _start_monster_feed() -> void:
+	monster_scenes.clear()
+	monster_feed.clear()
+	if not prefetch_monsters or not LoadPace.covered: return
+	monster_feed = monster_paths(map_id)
+	var tree := Engine.get_main_loop() as SceneTree
+	if not tree.process_frame.is_connected(_feed_monsters): tree.process_frame.connect(_feed_monsters)
+	_feed_monsters()
+
+## Every frame while models are to come: takes the one that came in and asks for the next.
+func _feed_monsters() -> void:
+	while not monster_feed.is_empty():
+		var path: String = monster_feed[0]
+		if LoadPace.pending(path): return
+		if LoadPace.held.has(path) or ResourceLoader.has_cached(path):
+			var scene := LoadPace.take(path)
+			if scene != null: monster_scenes.append(scene)
+			monster_feed.pop_front()
+			continue
+		LoadPace.want([path])
+		if LoadPace.pending(path): return
+		# Not readable: its first spawn tries again (monster.gd setup).
+		monster_feed.pop_front()
+	_stop_monster_feed()
+
+func _stop_monster_feed() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree.process_frame.is_connected(_feed_monsters): tree.process_frame.disconnect(_feed_monsters)
+
+## Before the batches: the card turns until the last creature model is in.
+func _finish_monster_feed() -> void:
+	while not monster_feed.is_empty() and LoadPace.covered and is_inside_tree():
+		var path: String = monster_feed[0]
+		if LoadPace.pending(path): await LoadPace.fetch(path)
+		else: await get_tree().process_frame
+	# Uncovered meanwhile: the rest load at their first spawn.
+	_stop_monster_feed()
+	monster_feed.clear()
+
+func _exit_tree() -> void:
+	# Leaving before they are in: the next place's loads go first.
+	_stop_monster_feed()
+	for path in monster_feed: LoadPace.queue.erase(path)
+	monster_feed.clear()
 
 # ------------------------------------------------------------------ terrain
 ## Distance beyond the flat play square (negative inside). A square measure keeps the walkable
@@ -1348,28 +1416,6 @@ func _process(delta: float) -> void:
 	if adopt_wait <= 0.0:
 		adopt_wait = 0.15
 		_adopt_resources()
-	_prefetch_monsters(delta)
-
-func _prefetch_monsters(delta: float) -> void:
-	if monster_wait > 0.0:
-		if LoadPace.covered: return
-		monster_wait -= delta
-		if monster_wait > 0.0: return
-		for species in Monster.WALK_REF:
-			var path := Monster.resolved_path(species,map_id)
-			if path != "" and not path in monster_pending: monster_pending.append(path)
-		LoadPace.want(monster_pending)
-	if monster_pending.is_empty(): return
-	LoadPace.pump()
-	for path in monster_pending.duplicate():
-		if LoadPace.pending(path): continue
-		monster_pending.erase(path)
-		var scene := LoadPace.take(path)
-		if scene != null: monster_scenes.append(scene)
-
-func _exit_tree() -> void:
-	# Leaving before they are in: the next place's loads go first.
-	for path in monster_pending: LoadPace.queue.erase(path)
 
 func _bind() -> void:
 	if is_instance_valid(app): return
