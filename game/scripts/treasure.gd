@@ -52,6 +52,8 @@ const FIELD := [
 	# 풍차 들판: past the bushes by 모카's terrace (the demo opens it while a craft runs); by the windmill.
 	{"id":"fields_cafe", "at":Vector2(-51.0, -29.5)},
 	{"id":"fields_windmill", "at":Vector2(-11.0, -42.5)},
+	# 풍차 들판 again: a second one by the café, across its road (the demo's wait is spent there).
+	{"id":"fields_terrace", "at":Vector2(-53.0, -36.0)},
 	# 정원 언덕: among the reeds on the observatory pond's far bank; beside the gazebo.
 	{"id":"garden_pond", "at":Vector2(50.0, -52.5)},
 	{"id":"garden_gazebo", "at":Vector2(65.5, -44.0)},

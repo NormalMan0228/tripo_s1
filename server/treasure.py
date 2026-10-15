@@ -34,6 +34,8 @@ STARS = {
     # 풍차 들판 (the café chest is a few steps from 모카's terrace: the demo opens it while a craft runs)
     'fields_cafe': 4,
     'fields_windmill': 3,
+    # a second one by the café, on the far side of its road (2026-10-16): the demo's wait there
+    'fields_terrace': 3,
     # 정원 언덕
     'garden_pond': 4,
     'garden_gazebo': 3,
@@ -57,7 +59,9 @@ def place_of(chest_id):
 
 
 assert all(place_of(c) in ISLANDS + ('home',) for c in STARS)
-assert all(sum(1 for c in STARS if place_of(c) == island) == 2 for island in ISLANDS)
+# Two chests per island; 풍차 들판 has a third by the café, where the demo waits for a craft.
+PER_ISLAND = {'square': 2, 'fields': 3, 'garden': 2, 'camp': 2, 'lighthouse': 2}
+assert all(sum(1 for c in STARS if place_of(c) == island) == PER_ISLAND[island] for island in ISLANDS)
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS chest_opened (

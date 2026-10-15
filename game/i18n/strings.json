@@ -1404,6 +1404,10 @@
    "en": "『A Big Adventure on a Small Island』",
    "zh": "《小岛上的大冒险》"
   },
+  "가 볼게요": {
+   "en": "I'll go",
+   "zh": "我去看看"
+  },
   "가게": {
    "en": "Shop",
    "zh": "店面"
@@ -3103,6 +3107,10 @@
   "다온 · 우편배달부": {
    "en": "Daon · Postman",
    "zh": "多温 · 邮递员"
+  },
+  "다온: 돌문 너머에서 이상한 소리가 나요": {
+   "en": "Daon: a strange sound beyond the stone gate",
+   "zh": "达温：石门那边有奇怪的声音"
   },
   "다온의 마음 배달": {
    "en": "Daon's Delivery of the Heart",
@@ -4880,6 +4888,10 @@
    "en": "It's tied firmly with rope",
    "zh": "用绳子牢牢系着"
   },
+  "방금 모카 씨를 도와준 제작자님이라면 뭔가 해낼 수 있을 거예요. 같이 가 봐 줄래요?": {
+   "en": "You just helped Moka, so I'm sure you can do something. Will you come and look with me?",
+   "zh": "你刚帮了摩卡，一定能做点什么。能和我一起去看看吗？"
+  },
   "방금 한 줄 떠올랐는데… 앗, 잊어버렸어요.": {
    "en": "A line just came to me… oh, I forgot it.",
    "zh": "刚想到一句……啊，忘了。"
@@ -5599,6 +5611,26 @@
   "숲에서 밤을 버티려면 따뜻한 수프가 최고야.": {
    "en": "Nothing beats a warm soup for getting through a night in the forest.",
    "zh": "想在森林里熬过夜晚，热汤最好不过了。"
+  },
+  "숲의 돌문": {
+   "en": "Forest stone gate",
+   "zh": "森林石门"
+  },
+  "숲의 돌문 · E로 탐험을 떠나요": {
+   "en": "Forest stone gate · E to set out on an expedition",
+   "zh": "森林石门 · 按 E 出发探险"
+  },
+  "숲의 돌문 너머에서 이상한 소리가 나요. 쿵… 쿵… 뭔가 커다란 게 움직이는 것 같아요!": {
+   "en": "There's a strange sound beyond the forest's stone gate. Thud… thud… something big seems to be moving!",
+   "zh": "森林石门那边传来奇怪的声音。咚……咚……好像有什么大家伙在动！"
+  },
+  "숲의 돌문으로 가기": {
+   "en": "Go to the forest's stone gate",
+   "zh": "前往森林石门"
+  },
+  "숲의 돌문으로! 금빛 길을 따라가요": {
+   "en": "To the forest's stone gate! Follow the golden path",
+   "zh": "去森林石门！跟着金色的路走"
   },
   "실례지만, 부탁 하나 드려도 되겠습니까?": {
    "en": "Pardon me, may I ask you a favour?",
@@ -8960,6 +8992,10 @@
    "en": "Get a little closer.",
    "zh": "再靠近一点。"
   },
+  "조금 이따가": {
+   "en": "A bit later",
+   "zh": "等一会儿"
+  },
   "조금 있다가요": {
    "en": "A little later",
    "zh": "等一下再说"
@@ -10623,6 +10659,10 @@
   "허용치": {
    "en": "Tolerance",
    "zh": "容差"
+  },
+  "헉, 헉… 제작자님! 모카 씨 편지를 전하고 오는 길이었는데요…": {
+   "en": "Huff, huff… Maker! I was just on my way back from delivering Moka's letter…",
+   "zh": "呼、呼……制作者！我刚送完摩卡的信回来……"
   },
   "헤헤": {
    "en": "hehe",

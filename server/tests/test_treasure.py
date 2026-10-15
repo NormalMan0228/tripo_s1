@@ -62,19 +62,19 @@ def test_a_chest_opens_once_and_pays_through_the_ledger(world):
     app, c, now = world
     h = account(c, 'finder')
     before = me(c, h)
-    assert before['chests'] == {'opened': [], 'total': 11}
+    assert before['chests'] == {'opened': [], 'total': 12}
     reply = open_chest(c, h, 'home')
     assert reply.status_code == 200, reply.text
     data = reply.json()
     assert data['stars'] == 10 and data['shards'] == before['shards'] + 10
     assert data['chest'] == {'id': 'home', 'place': 'home', 'open': True, 'stars': 10, 'opened': now[0]}
-    assert data['chests'] == {'opened': ['home'], 'total': 11}
+    assert data['chests'] == {'opened': ['home'], 'total': 12}
     after = me(c, h)
     assert after['shards'] == before['shards'] + 10 and after['chests']['opened'] == ['home']
     assert paid(app) == [('home', 10)]
     # The full list says which are open and what each pays.
     listing = c.get('/v1/chests', headers=h).json()['chests']
-    assert listing['found'] == 1 and listing['total'] == 11 and listing['opened'] == ['home']
+    assert listing['found'] == 1 and listing['total'] == 12 and listing['opened'] == ['home']
     assert {e['id']: e['open'] for e in listing['list']}['home'] is True
     assert next(e for e in listing['list'] if e['id'] == 'fields_cafe') == {'id': 'fields_cafe', 'place': 'fields', 'open': False, 'stars': 4}
     # A field chest pays its own amount.
@@ -166,12 +166,12 @@ def test_the_operator_scale_and_off_switch(tmp_path, monkeypatch):
 
 def test_the_reward_table_and_the_game_agree():
     total = sum(treasure.reward(c, 1.0) for c in treasure.STARS)
-    assert total == 45 and 40 <= total <= 50
+    assert total == 48 and 40 <= total <= 55
     assert treasure.STARS['home'] == 10
     field = [c for c in treasure.STARS if c != 'home']
-    assert len(field) == 10 and all(3 <= treasure.STARS[c] <= 5 for c in field)
+    assert len(field) == 11 and all(3 <= treasure.STARS[c] <= 5 for c in field)
     for island in treasure.ISLANDS:
-        assert sum(1 for c in field if treasure.place_of(c) == island) == 2
+        assert sum(1 for c in field if treasure.place_of(c) == island) == (3 if island == 'fields' else 2)
     # The game places the same chests (game/scripts/treasure.gd: HOME and FIELD ids).
     source = (ROOT / 'game' / 'scripts' / 'treasure.gd').read_text(encoding='utf-8')
     ids = re.findall(r'\{"id":"([a-z_]+)"', source)
@@ -196,7 +196,7 @@ def test_the_operator_can_see_a_players_chests(world, capsys):
     shown = json.loads(capsys.readouterr().out)
     assert [r['chest_id'] for r in shown['opened']] == ['garden_pond'] and shown['opened'][0]['stars'] == 4
     assert shown['paid'] == [{'chest': 'garden_pond', 'amount': 4, 'created': now[0]}]
-    assert 'home' in shown['left'] and 'garden_pond' not in shown['left'] and len(shown['left']) == 10
+    assert 'home' in shown['left'] and 'garden_pond' not in shown['left'] and len(shown['left']) == len(treasure.STARS)-1
     assert admin_cli.main(['chests', 'show', 'nobody', '--data-dir', data_dir]) == 1
     capsys.readouterr()
     assert admin_cli.main(['chests', 'show', 'shown', '--data-dir', str(Path(data_dir) / 'missing')]) == 1

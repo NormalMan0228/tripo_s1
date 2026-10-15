@@ -42,7 +42,14 @@ RETURN_GIFT = {'title': '카페 머그잔', 'category': 'mug', 'parts': [
     ('handle', 'ellipsoid', [0.07, 0.12, 0.04], [0.13, 0.14, 0], '#c86f58'),
     ('coffee', 'ellipsoid', [0.17, 0.03, 0.17], [0, 0.245, 0], '#6b4226')]}
 
+# The chapter's epilogue, once 모카 has her gift: 다온 (the postman) runs up with news from the forest
+# ('forest_told'), and the player reaches the forest's stone gate, where the expedition starts
+# ('forest_gate'). Recorded once each; a reset clears them.
+EVENTS = ('forest_told', 'forest_gate')
+
 SCHEMA = '''
+CREATE TABLE IF NOT EXISTS story_events (
+ user_id TEXT NOT NULL REFERENCES users(id), event TEXT NOT NULL, at REAL NOT NULL, PRIMARY KEY(user_id, event));
 CREATE TABLE IF NOT EXISTS story_progress (
  user_id TEXT PRIMARY KEY REFERENCES users(id), chapter TEXT NOT NULL,
  step TEXT NOT NULL CHECK(step IN ('letter','cafe','craft','done')), run INTEGER NOT NULL DEFAULT 1,
@@ -54,8 +61,9 @@ ENDED = ('ready', 'failed', 'cancelled', 'unknown')
 
 
 class StoryStep(Mutation):
-    action: Literal['read_letter', 'accept', 'greet']
+    action: Literal['read_letter', 'accept', 'greet', 'event']
     npc: str = Field(default='', max_length=24, pattern=r'^[a-z_]*$')
+    event: str = Field(default='', max_length=24, pattern=r'^[a-z_]*$')
 
 
 class StoryGift(Mutation):
@@ -95,7 +103,8 @@ def public(conn, user_id):
     if not row:
         return None
     out = {'chapter': row['chapter'], 'step': row['step'], 'run': row['run'], 'greeted': json.loads(row['greeted']),
-           'terrace': TERRACE, 'sender': SENDER}
+           'terrace': TERRACE, 'sender': SENDER,
+           'events': [r['event'] for r in conn.execute('SELECT event FROM story_events WHERE user_id=? ORDER BY at', (user_id,))]}
     if row['step'] == 'craft':
         # Pieces made since 모카 asked, newest first (in the bag or set down; listed and given ones are not).
         out['made'] = [{'id': r['id'], 'name': r['name'], 'version': r['version'], 'state': r['state']} for r in conn.execute(
@@ -113,7 +122,7 @@ def public(conn, user_id):
 
 def reset(conn, user_id, now):
     """Back to the first step for a rehearsal (or the first time, for an account made before the
-    chapter). Nothing is deleted but the terrace's placement: the piece on the café terrace goes
+    chapter). Nothing is deleted but the terrace's placement and the epilogue's events: the piece on the café terrace goes
     back to the player's bag; letters, return gifts and every other piece stay. The caller has the
     tables (npc_homes.SCHEMA, SCHEMA) and the transaction."""
     returned = []
@@ -122,6 +131,7 @@ def reset(conn, user_id, now):
                      (item['object_id'], user_id))
         returned.append(item['object_id'])
     conn.execute('DELETE FROM npc_items WHERE host_id=? AND home_id=?', (user_id, TERRACE))
+    conn.execute('DELETE FROM story_events WHERE user_id=?', (user_id,))
     conn.execute('UPDATE npc_homes SET version=version+1,updated=? WHERE host_id=? AND home_id=?', (now, user_id, TERRACE))
     row = conn.execute('SELECT run FROM story_progress WHERE user_id=?', (user_id,)).fetchone()
     if row:
@@ -137,7 +147,8 @@ def describe(conn, user_id):
     row = conn.execute('SELECT * FROM story_progress WHERE user_id=?', (user_id,)).fetchone()
     terrace = [dict(r) for r in conn.execute('SELECT i.object_id,o.name,i.state,i.slot FROM npc_items i JOIN objects o ON o.id=i.object_id '
                                              'WHERE i.host_id=? AND i.home_id=?', (user_id, TERRACE))]
-    return {'progress': dict(row) if row else None, 'terrace': terrace}
+    events = [dict(r) for r in conn.execute('SELECT event,at FROM story_events WHERE user_id=? ORDER BY at', (user_id,))]
+    return {'progress': dict(row) if row else None, 'terrace': terrace, 'events': events}
 
 
 class Story:
@@ -175,6 +186,15 @@ class Story:
                     if body.npc not in greeted:
                         greeted.append(body.npc)
                         conn.execute('UPDATE story_progress SET greeted=?,updated=? WHERE user_id=?', (json.dumps(greeted), now, user['id']))
+                elif body.action == 'event':
+                    # The epilogue after the gift, in order: 다온's news, then the forest gate.
+                    if body.event not in EVENTS:
+                        fail('unknown_story_event', 422)
+                    if row['step'] != 'done':
+                        fail('story_not_done')
+                    if body.event == 'forest_gate' and not conn.execute("SELECT 1 FROM story_events WHERE user_id=? AND event='forest_told'", (user['id'],)).fetchone():
+                        fail('story_event_order')
+                    conn.execute('INSERT OR IGNORE INTO story_events VALUES (?,?,?)', (user['id'], body.event, now))
                 return {'story': public(conn, user['id'])}
             return mutate(request, body, 'story_step', apply)
 
