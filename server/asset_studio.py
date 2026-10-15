@@ -23,7 +23,8 @@ from .asset_vm import AssetVM, ProgramError, exercise_extended as exercise
 from .design_provider import DesignProvider, DesignFailure, MODELS, EFFORTS, provider_name
 from .provider import ProviderError, validate_glb
 from .studio_pricing import mesh_credits,estimate
-from .account_limits import daily_counts, tester_credits, check_tester_budget, reserve_tester_credits, record_tester_bill
+from .account_limits import daily_counts, tester_credits, check_tester_budget, record_tester_bill
+from . import tripo_budget, llm_budget
 from . import room_budget
 from .stored_assets import read_glb
 from .object_paint import version_column as paint_version
@@ -189,15 +190,7 @@ def tripo_credits_committed(conn,exclude=''):
     """Tripo credits this server has spent or committed: the reported bill of finished jobs, and for
     builds still running (or with an incomplete bill) at least their confirmed quote.
     The server-wide budget (TRIPOTHON_TRIPO_CREDIT_BUDGET) is checked against this."""
-    total=0.0
-    for row in conn.execute("SELECT state,parts,provenance FROM studio_jobs WHERE id!=? AND state IN ('queued','planning','awaiting_confirmation','building','submitting','unknown','ready','failed','cancelled')",(exclude,)):
-        try:parts,quote=json.loads(row['parts'] or '{}'),float(json.loads(row['provenance'] or '{}').get('estimated_tripo_credits') or 0)
-        except (TypeError,ValueError):parts,quote={},0.0
-        bill=billing(parts)
-        if row['state'] in ('queued','planning','awaiting_confirmation'):total+=bill['known_tripo_credits']
-        elif row['state'] in ('building','submitting','unknown') or not bill['billing_complete']:total+=max(bill['known_tripo_credits'],quote)
-        else:total+=bill['known_tripo_credits']
-    return total
+    return tripo_budget.committed_credits(conn,exclude)
 
 def tripo_requests(conn,user_id,exclude=''):
     """Tripo submissions an account has made: every part sent to Tripo (mesh or image task),
@@ -276,6 +269,7 @@ class Studio:
                 conn.execute("UPDATE studio_jobs SET state='failed',error='planning_interrupted' WHERE id=?",(r['id'],))
                 self.refund(conn,r)
             conn.execute("UPDATE studio_jobs SET state='unknown',error='submission_interrupted' WHERE state='submitting' AND id NOT IN (SELECT job_id FROM studio_leases WHERE expires>?)",(clock(),))
+            conn.execute("UPDATE tripo_job_holds SET credits=0 WHERE job_id IN (SELECT id FROM studio_jobs WHERE state='unknown')")
 
         def manifest(conn,user_id,object_id):
             obj=own(conn,user_id,object_id)
@@ -382,6 +376,7 @@ class Studio:
                 money(conn,user['id'],-cost,'studio_charge',job_id)
                 conn.execute('INSERT INTO studio_jobs(id,owner_id,request,state,cost,created,updated) VALUES (?,?,?,?,?,?,?)',
                     (job_id,user['id'],body.model_dump_json(),'queued',cost,clock(),clock()))
+                tripo_budget.manage_job(conn,job_id,user['id'],limits.is_tester,clock())
                 return {'id':job_id,'state':'queued','cost':cost}
             return mutate(request,body,'studio_generate',create)
 
@@ -401,7 +396,8 @@ class Studio:
                         'parts':[{'id':str(p.get('id',''))[:40],'prompt':str(p.get('prompt',''))[:600]} for p in plan['parts'][:8]]}
                 parts=json.loads(value['parts'])
                 if value['provenance'].get('geometry')=='tripo':
-                    value['provenance'].update(billing(parts))
+                    managed=conn.execute('SELECT 1 FROM tripo_job_holds WHERE job_id=?',(job_id,)).fetchone()
+                    value['provenance'].update(tripo_budget.job_billing(conn,job_id) if managed else billing(parts))
                     if value['state'] in ('submitting','unknown'):value['provenance'].update(billing_complete=False,tripo_credits_consumed=None)
                 # The window's steps: design -> picture (text-only crafts that drew one) -> 3D parts -> done.
                 value['stage']=stage(value['state'],value['provenance'])
@@ -474,7 +470,7 @@ class Studio:
                 total=max(row['cost'],int(quote.get('quoted_game_cost',row['cost'])))
                 if total>limits.max_stars_per_craft:fail('craft_star_limit_exceeded',403)
                 if tripo_job:
-                    try:reserve_tester_credits(conn,limits,job_id+':build',self.build_credits(quote,parts))
+                    try:tripo_budget.hold_build(conn,limits,job_id,user['id'],0 if getattr(self.provider,'_in_process_fake',False) else self.remaining_build(row,parts),clock())
                     except ProviderError as error:fail(error.code,429)
                 if total>row['cost']:money(conn,user['id'],row['cost']-total,'studio_quote_charge',job_id)
                 conn.execute("UPDATE studio_jobs SET state='building',cost=?,provenance=?,parts=?,updated=? WHERE id=?",(total,json.dumps(quote),json.dumps(parts),clock(),job_id))
@@ -508,7 +504,7 @@ class Studio:
                 asked=json.loads(row['request'])
                 if asked.get('geometry')=='tripo':
                     parts=json.loads(row['parts'] or '{}')
-                    spent=sum(float(p.get('concept_credits_consumed') or 0) for p in parts.values())
+                    spent=tripo_budget.attempt_credits(conn,job_id)
                     model=settings.tripo_model if asked.get('mesh_model','configured')=='configured' else asked['mesh_model']
                     cap=limits.max_credits_per_craft
                     if cap and spent+CONCEPT_CREDITS+mesh_credits(model,asked.get('material')=='textured',True)>cap:fail('craft_over_trial_limit',403)
@@ -660,32 +656,45 @@ class Studio:
         with self.db.read() as conn:
             return self.settings.limits_for(conn.execute('SELECT * FROM users WHERE id=?',(job['owner_id'],)).fetchone())
 
-    @staticmethod
-    def build_credits(quote,parts):
-        concepts=sum(float(p.get('concept_credits_consumed') or 0) for p in parts.values())
-        return max(0,float(quote.get('estimated_tripo_credits') or 0)-concepts)
-
-    def reserve_build(self,job,parts,quote):
-        limits=self.limits_for_job(job)
-        if max(job['cost'],int(quote.get('quoted_game_cost',job['cost'])))>limits.max_stars_per_craft:
-            raise ProviderError('craft_star_limit_exceeded')
+    def remaining_build(self,job,parts):
+        """Estimates for the provider requests that have not yet been submitted."""
         body=StudioRequest.model_validate_json(job['request'])
         model=self.settings.tripo_model if body.mesh_model=='configured' else body.mesh_model
         needed=0
         for part in parts.values():
             if part.get('primitive'):continue
             image=bool(part.get('use_concept') or (body.image and (len(parts)==1 or body.image_mode=='refine')))
-            for key,predicted in (('credits_consumed',mesh_credits(model,body.material=='textured',image)),
-                                  ('image_credits_consumed',5 if body.image_mode=='refine' else 0)):
-                actual=part.get(key)
-                needed+=actual if type(actual) in (int,float) and math.isfinite(actual) and actual>=0 else predicted
+            if not part.get('task') and not part.get('mesh_attempt') and part.get('state')!='ready':
+                needed+=mesh_credits(model,body.material=='textured',image)
+            if body.image_mode=='refine' and not part.get('image_task') and not part.get('refine_attempt'):
+                needed+=CONCEPT_CREDITS
+        return needed
+
+    def reserve_build(self,job,parts,quote,part_id,kind,predicted,tripo):
+        limits=self.limits_for_job(job)
+        if max(job['cost'],int(quote.get('quoted_game_cost',job['cost'])))>limits.max_stars_per_craft:
+            raise ProviderError('craft_star_limit_exceeded')
+        remaining=max(0,self.remaining_build(job,parts)-predicted)
+        # Only the built-in in-process transport is provably free. Real providers
+        # reporting zero still retain their original reservations.
+        if getattr(self.provider,'_in_process_fake',False):predicted=remaining=0
         with self.db.transaction() as conn:
-            reserve_tester_credits(conn,limits,job['id']+':build',max(needed,self.build_credits(quote,parts)))
+            attempt=tripo_budget.reserve_attempt(conn,limits,job['id'],job['owner_id'],kind,part_id,
+                predicted,remaining,self.clock(),provider_key=getattr(tripo,'fingerprint',''))
+            # The marker and request reservation are committed before any POST.
+            parts[part_id][kind+'_attempt']=attempt
+            conn.execute("UPDATE studio_jobs SET state='submitting',parts=?,updated=? WHERE id=?",
+                (json.dumps(parts),self.clock(),job['id']))
+        return attempt
 
     def record_build_bill(self,job,parts):
         actual=sum(p.get(key) or 0 for p in parts.values() for key in ('credits_consumed','image_credits_consumed')
                    if type(p.get(key)) in (int,float) and math.isfinite(p[key]) and p[key]>=0)
         with self.db.transaction() as conn:record_tester_bill(conn,job['id']+':build',actual)
+
+    def record_attempt(self,attempt,result):
+        if attempt:
+            with self.db.transaction() as conn:tripo_budget.record_result(conn,attempt,result,self.clock())
 
     async def draw_concept(self,job,body,mesh_model,plan,parts,provenance):
         """Text-only crafts: a concept picture of the designed object (Tripo text-to-image, 5 credits) that
@@ -696,7 +705,7 @@ class Studio:
         part=plan['parts'][0];entry=parts[part['id']]
         concept=dict(provenance.get('concept') or {'draws':0})
         textured=body.material=='textured'
-        spent=float(entry.get('concept_credits_consumed') or 0)
+        with self.db.read() as conn:spent=tripo_budget.attempt_credits(conn,job['id'])
         if body.geometry=='tripo':
             cap=limits.max_credits_per_craft
             if cap and spent+CONCEPT_CREDITS+mesh_credits(mesh_model,textured,True)>cap:
@@ -714,15 +723,18 @@ class Studio:
             if body.geometry!='tripo':blob=fixture_concept(str(part.get('prompt','')))
             else:
                 tripo=self.provider_for(entry['key']) if entry.get('key') else await self.pick_provider(CONCEPT_CREDITS)
-                reference=job['id']+':concept:'+str(uuid.uuid4())
-                with self.db.transaction() as conn:reserve_tester_credits(conn,limits,reference,CONCEPT_CREDITS)
+                with self.db.transaction() as conn:
+                    attempt=tripo_budget.reserve_attempt(conn,limits,job['id'],job['owner_id'],'concept',part['id'],
+                        0 if getattr(self.provider,'_in_process_fake',False) else CONCEPT_CREDITS,
+                        0,self.clock(),provider_key=getattr(tripo,'fingerprint',''),
+                        craft_extra=mesh_credits(mesh_model,textured,True))
                 data=await tripo.request('POST','/generation/text-to-image',{'model':'seedream_v4','prompt':prompt})
                 task=data.get('task_id')
-                if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema')
-                entry.update(key=getattr(tripo,'fingerprint',''),concept_task=task)
+                if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)
+                with self.db.transaction() as conn:tripo_budget.record_task(conn,attempt,task,self.clock())
                 for _ in range(80):
                     result=await tripo.task(task)
-                    with self.db.transaction() as conn:record_tester_bill(conn,reference,result.get('credits_consumed'))
+                    self.record_attempt(attempt,result)
                     if result.get('status')=='success':break
                     if result.get('status') in ('failed','cancelled','banned','expired'):raise ProviderError('concept_failed')
                     await asyncio.sleep(self.poll_pause)
@@ -730,8 +742,11 @@ class Studio:
                 credits=result.get('credits_consumed')
                 entry['concept_credits_consumed']=spent+(credits if type(credits) in (int,float) else CONCEPT_CREDITS)
                 blob=await tripo.fetch_image(image_url(result.get('output') or {}))
+                entry.update(key=getattr(tripo,'fingerprint',''),concept_task=task,concept_attempt=attempt)
         except ProviderError as error:
-            if error.code=='tester_credit_budget_exhausted':raise
+            if 'attempt' in locals():
+                with self.db.transaction() as conn:tripo_budget.mark_unknown(conn,attempt,self.clock())
+            if error.code in ('tester_credit_budget_exhausted','tripo_budget_exhausted','craft_over_trial_limit'):raise
             provenance['concept_error']=error.code
             return
         name=job['id']+'-concept.jpg'
@@ -774,6 +789,7 @@ class Studio:
             if self.clock()-started>self.settings.studio_part_deadline:raise ProviderError('generation_timeout')
 
     def refund(self,conn,row):
+        tripo_budget.clear_hold(conn,row['id'])
         entries=conn.execute("SELECT reason,amount FROM ledger WHERE user_id=? AND reference=? AND reason IN ('studio_charge','studio_quote_charge','studio_refund','studio_resume_charge','studio_resume_refund')",(row['owner_id'],row['id'])).fetchall()
         outstanding=-sum(r['amount'] for r in entries)
         if outstanding<=0:return
@@ -786,6 +802,7 @@ class Studio:
             if not row or row['state'] in ('ready','failed','cancelled','unknown'):return
             state='unknown' if error.uncertain else 'failed'
             conn.execute('UPDATE studio_jobs SET state=?,error=?,updated=? WHERE id=?',(state,error.code,self.clock(),job_id))
+            tripo_budget.clear_hold(conn,job_id)
             if state=='failed':self.refund(conn,row)
 
     async def tick(self):
@@ -795,6 +812,7 @@ class Studio:
             for row in stale:
                 state='unknown' if row['state']=='submitting' else 'failed'
                 conn.execute('UPDATE studio_jobs SET state=?,error=? WHERE id=?',(state,'worker_lease_expired',row['id']))
+                tripo_budget.clear_hold(conn,row['id'])
                 if state=='failed':self.refund(conn,row)
             conn.execute('DELETE FROM studio_leases WHERE expires<=?',(self.clock(),))
             jobs=[r[0] for r in conn.execute("SELECT id FROM studio_jobs WHERE state IN ('queued','building') AND updated<? ORDER BY created LIMIT 3",(self.clock()-2,))]
@@ -865,7 +883,7 @@ class Studio:
                         with self.db.transaction() as conn:categories=[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')]
                         request_prompt+='\nExisting category names (reuse a matching kind, otherwise propose a short new kind): '+json.dumps(categories,ensure_ascii=False)
                         request_prompt+=archetypes.designer_hint(body.prompt,body.motion)
-                        plan,program,provenance=await self.designer.generate(request_prompt,body.model,body.effort,body.image,style_text)
+                        plan,program,provenance=await llm_budget.generate(self.db,self.settings,self.clock,job['owner_id'],'craft_design',job_id,self.designer,request_prompt,body.model,body.effort,body.image,style_text)
                 designed=(plan,program)
                 if body.motion=='static':
                     plan=static_plan(plan,body.prompt,look['prop'])
@@ -944,17 +962,18 @@ class Studio:
                         tripo=await self.pick_provider(5)
                         entry['key']=getattr(tripo,'fingerprint','')
                         reference=await tripo.upload_image(body.image)
-                        self.reserve_build(job,parts,provenance)
-                        self.update(job_id,state='submitting')
+                        attempt=self.reserve_build(job,parts,provenance,p['id'],'refine',CONCEPT_CREDITS,tripo)
                         data=await tripo.request('POST','/generation/image-to-image',{'model':'seedream_v5','input':reference,
                             'prompt':'Create a clean isolated product reference of ONLY this component: '+p['prompt']+'. Preserve the reference design and soft illustrated island style. Neutral background, no text, no other components.',
                             'size':'2K','output_format':'png'})
                         task=data.get('task_id')
                         if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)
+                        with self.db.transaction() as conn:tripo_budget.record_task(conn,attempt,task,self.clock())
                         entry.update(state='image_generating',image_task=task,submitted=self.clock())
                         self.update(job_id,state='building',parts=json.dumps(parts));return
                     if entry['state']=='image_generating':
                         result=await self.provider_for(entry.get('key')).task(entry['image_task'])
+                        self.record_attempt(entry.get('refine_attempt'),result)
                         if result.get('credits_consumed') is not None:
                             entry['image_credits_consumed']=result['credits_consumed']
                             self.record_build_bill(job,parts)
@@ -991,16 +1010,17 @@ class Studio:
                             payload.pop('prompt');payload['input']=token;route='/generation/image-to-model'
                             provenance['image_path']='original_reference_to_tripo'
                         elif body.image:provenance['image_path']='llm_interpreted_part_prompts'
-                        self.reserve_build(job,parts,provenance)
-                        self.update(job_id,state='submitting')
+                        attempt=self.reserve_build(job,parts,provenance,p['id'],'mesh',predicted,tripo)
                         data=await tripo.request('POST',route,payload)
                         task=data.get('task_id')
                         if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)
+                        with self.db.transaction() as conn:tripo_budget.record_task(conn,attempt,task,self.clock())
                         entry.update(state='generating',task=task,key=getattr(tripo,'fingerprint',''),submitted=self.clock())
                         self.update(job_id,state='building',parts=json.dumps(parts),provenance=json.dumps(provenance))
                         return
                     tripo=self.provider_for(entry.get('key'))
                     result=await tripo.task(entry['task'])
+                    self.record_attempt(entry.get('mesh_attempt'),result)
                     if result.get('credits_consumed') is not None:
                         entry['credits_consumed']=result['credits_consumed']
                         self.record_build_bill(job,parts)
@@ -1025,7 +1045,9 @@ class Studio:
             for p in plan['parts']:
                 p.update(file=parts[p['id']]['file'],sha256=parts[p['id']]['sha256'])
                 if parts[p['id']].get('color'):p['color']=parts[p['id']]['color']
-            provenance.update(billing(parts) if body.geometry=='tripo' else {'tripo_credits_consumed':0,'known_tripo_credits':0,'billing_complete':True})
+            with self.db.read() as conn:
+                managed=conn.execute('SELECT 1 FROM tripo_job_holds WHERE job_id=?',(job_id,)).fetchone()
+                provenance.update((tripo_budget.job_billing(conn,job_id) if managed else billing(parts)) if body.geometry=='tripo' else {'tripo_credits_consumed':0,'known_tripo_credits':0,'billing_complete':True})
             provenance['image_refinement_credits']=sum(p.get('image_credits_consumed') or 0 for p in parts.values())
             assigned=None
             if provenance.get('archetype'):
@@ -1050,6 +1072,7 @@ class Studio:
                 if provenance.get('library_key'):library.mark_ready(conn,provenance['library_key'])
                 conn.execute('INSERT OR IGNORE INTO asset_categories VALUES (?,?)',(plan['category'],self.clock()))
                 conn.execute("UPDATE studio_jobs SET state='ready',object_id=?,provenance=?,updated=?,error=NULL WHERE id=?",(obj,json.dumps(provenance),self.clock(),job_id))
+                tripo_budget.clear_hold(conn,job_id)
         except asyncio.CancelledError:raise
         except ProviderError as error:
             if isinstance(error,DesignFailure):

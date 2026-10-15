@@ -25,7 +25,8 @@ from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_tex
                        LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER)
 from .stored_assets import read_glb
 from .studio_pricing import mesh_credits
-from .account_limits import daily_counts, reserve_tester_credits, record_tester_bill
+from .account_limits import daily_counts, record_tester_bill
+from . import tripo_budget
 
 def uid(): return str(uuid.uuid4())
 def digest(s): return hashlib.sha256(s.encode()).hexdigest()
@@ -41,6 +42,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         # Development servers: every Tripo call is answered in-process (server/fake_tripo.py).
         from .fake_tripo import transport as fake_tripo
         provider = TripoProvider(settings, fake_tripo(settings.fake_tripo_seconds))
+        provider._in_process_fake = True
     provider = provider or TripoProvider(settings)
     hasher = PasswordHasher(time_cost=2,memory_cost=19456,parallelism=1)
     dummy = hasher.hash(secrets.token_urlsafe(32))
@@ -59,6 +61,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             raise ValueError('Stored starter asset integrity check failed')
         # A crash between submit and saving its task id must never cause a second paid call.
         conn.execute("UPDATE jobs SET state='unknown',error_code='submission_interrupted' WHERE state='submitting'")
+        conn.execute("UPDATE tripo_job_holds SET credits=0 WHERE job_id IN (SELECT id FROM jobs WHERE state='unknown')")
 
     def auth(conn, request):
         value = request.headers.get('authorization','')
@@ -140,6 +143,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             state = 'unknown' if error.uncertain else 'failed'
             conn.execute('UPDATE jobs SET state=?,error_code=?,updated=? WHERE id=?',
                          (state,error.code,clock(),job_id))
+            tripo_budget.clear_hold(conn,job_id)
             if state=='failed': money(conn,job['owner_id'],job['cost'],'generation_refund',job_id)
 
     async def process_job(job_id):
@@ -159,13 +163,20 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                     if available < settings.credit_reserve: raise ProviderError('insufficient_provider_credit')
                     with db.transaction() as conn:
                         limits=settings.limits_for(conn.execute('SELECT * FROM users WHERE id=?',(job['owner_id'],)).fetchone())
-                        reserve_tester_credits(conn,limits,job_id+':legacy',mesh_credits(settings.tripo_model,False,False))
+                        attempt=tripo_budget.reserve_attempt(conn,limits,job_id,job['owner_id'],'legacy','',
+                            0 if getattr(provider,'_in_process_fake',False) else mesh_credits(settings.tripo_model,False,False),
+                            0,clock(),provider_key=getattr(provider,'fingerprint',''))
                     task = await provider.submit(job['prompt'])
                     with db.transaction() as conn:
+                        tripo_budget.record_task(conn,attempt,task,clock())
                         conn.execute("UPDATE jobs SET state='generating',provider_task=?,updated=? WHERE id=?",(task,clock(),job_id))
                     job['provider_task'] = task
                 result = await provider.task(job['provider_task'])
-                with db.transaction() as conn:record_tester_bill(conn,job_id+':legacy',result.get('credits_consumed'))
+                with db.transaction() as conn:
+                    attempt_row=conn.execute('SELECT attempt_id FROM tripo_attempts WHERE job_id=? AND task_id=?',
+                        (job_id,job['provider_task'])).fetchone()
+                    if attempt_row:tripo_budget.record_result(conn,attempt_row['attempt_id'],result,clock())
+                    else:record_tester_bill(conn,job_id+':legacy',result.get('credits_consumed'))
                 if result.get('status') in ('queued','running'): return
                 if result.get('status') in ('failed','cancelled'): raise ProviderError('generation_failed')
                 if result.get('status') != 'success': raise ProviderError('upstream_schema',uncertain=True)
@@ -181,6 +192,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 object_id = new_object(conn,job['owner_id'],asset_id,('샘플 · ' if settings.mode=='demo' else '')+job['prompt'][:32])
                 conn.execute("UPDATE jobs SET state='ready',asset_id=?,object_id=?,updated=? WHERE id=?",
                              (asset_id,object_id,clock(),job_id))
+                tripo_budget.clear_hold(conn,job_id)
         except ProviderError as error:
             # Safe failures only; raw requests/responses (and keys) never escape this boundary.
             if settings.mode=='live' and job.get('provider_task') and error.code in (
@@ -640,7 +652,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             if settings.mode=='live' and conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone(): fail('provider_busy')
             job_id=uid()
             if settings.mode=='live':
-                try:reserve_tester_credits(conn,limits,job_id+':legacy',mesh_credits(settings.tripo_model,False,False))
+                try:tripo_budget.hold_build(conn,limits,job_id,user['id'],0 if getattr(provider,'_in_process_fake',False) else mesh_credits(settings.tripo_model,False,False),clock())
                 except ProviderError as error:fail(error.code,429)
             money(conn,user['id'],-25,'generation_charge',job_id)
             conn.execute('INSERT INTO jobs(id,owner_id,prompt,state,cost,provider_reserve,created,updated) VALUES (?,?,?,?,?,?,?,?)',

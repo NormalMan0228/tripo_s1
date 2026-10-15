@@ -9,6 +9,7 @@ import httpx
 from .asset_contract import prompt_for, parse_design
 from .asset_vm import exercise_extended,HOST_LIMITS
 from .provider import ProviderError
+from . import llm_budget
 from .structured_design import SCHEMA,prompt_for_structured,parse_structured
 
 MODELS=('gpt-6-luna','gpt-5.6-terra','gpt-6-sol','gpt-6-astra')
@@ -40,6 +41,8 @@ def provider_name(settings):
     return {'codex':'codex_subscription_development','gemini':'gemini'}.get(settings.studio_llm,'openai')
 
 class DesignProvider:
+    reserves_llm_calls = True
+
     def __init__(self,settings,transport=None):
         self.settings,self.transport=settings,transport
         # The Gemini model that last answered (the first one the key may use).
@@ -86,11 +89,12 @@ class DesignProvider:
         if image:content.append({'type':'input_image','image_url':image})
         try:
             async with httpx.AsyncClient(transport=self.transport,timeout=180,follow_redirects=False) as client:
-                response=await client.post('https://api.openai.com/v1/responses',
-                    headers={'Authorization':'Bearer '+self.settings.llm_key},json={
-                        'model':model,'reasoning':{'effort':effort},'store':False,
-                        'max_output_tokens':12000,'input':[{'role':'user','content':content}],
-                        'text':{'format':{'type':'json_schema','name':'furniture_design','strict':True,'schema':SCHEMA} if structured else {'type':'json_object'}}})
+                with llm_budget.call('openai',model):
+                    response=await client.post('https://api.openai.com/v1/responses',
+                        headers={'Authorization':'Bearer '+self.settings.llm_key},json={
+                            'model':model,'reasoning':{'effort':effort},'store':False,
+                            'max_output_tokens':12000,'input':[{'role':'user','content':content}],
+                            'text':{'format':{'type':'json_schema','name':'furniture_design','strict':True,'schema':SCHEMA} if structured else {'type':'json_object'}}})
             if response.status_code!=200 or len(response.content)>500000:raise ProviderError('llm_request_failed')
             body=response.json()
             if body.get('status')!='completed':raise ProviderError('llm_incomplete')
@@ -123,8 +127,9 @@ class DesignProvider:
                     if outcome=='llm_model_unavailable':break
                     await asyncio.sleep(self.retry_pause)
                 for name in models:
-                    response=await client.post(f'https://generativelanguage.googleapis.com/v1beta/models/{name}:generateContent',
-                        headers={'x-goog-api-key':self.settings.gemini_key},json=body)
+                    with llm_budget.call('gemini',name):
+                        response=await client.post(f'https://generativelanguage.googleapis.com/v1beta/models/{name}:generateContent',
+                            headers={'x-goog-api-key':self.settings.gemini_key},json=body)
                     if response.status_code==404:continue
                     if response.status_code==429:
                         outcome='llm_rate_limited';continue
@@ -166,13 +171,14 @@ class DesignProvider:
                 reference.write_bytes(base64.b64decode(image.split(',',1)[1],validate=True))
                 args+=['--image',str(reference)]
             args+=['-']
-            proc=await asyncio.create_subprocess_exec(*args,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
-                  stderr=asyncio.subprocess.DEVNULL,cwd=folder,creationflags=0x08000000 if os.name=='nt' else 0)
-            try:stdout,_=await asyncio.wait_for(proc.communicate((prompt_for_structured if structured else prompt_for)(prompt,feedback,style).encode()),timeout=480)
-            except asyncio.CancelledError:
-                await terminate_owned_process(proc);raise
-            except asyncio.TimeoutError:
-                await terminate_owned_process(proc);raise ProviderError('llm_timeout') from None
+            with llm_budget.call('codex',model):
+                proc=await asyncio.create_subprocess_exec(*args,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
+                      stderr=asyncio.subprocess.DEVNULL,cwd=folder,creationflags=0x08000000 if os.name=='nt' else 0)
+                try:stdout,_=await asyncio.wait_for(proc.communicate((prompt_for_structured if structured else prompt_for)(prompt,feedback,style).encode()),timeout=480)
+                except asyncio.CancelledError:
+                    await terminate_owned_process(proc);raise
+                except asyncio.TimeoutError:
+                    await terminate_owned_process(proc);raise ProviderError('llm_timeout') from None
             if proc.returncode or not output.exists():raise ProviderError('codex_request_failed')
             usage={}
             for line in stdout.decode('utf-8',errors='replace').splitlines():
