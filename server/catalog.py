@@ -36,8 +36,13 @@ TUTORIAL_REQUIREMENTS = (('harvested','자원 채집',6),('axe','도끼 제작',
 # stand_in: the species whose model the client shows until this species has its own
 # (res://assets/monsters/<species>_<variant>.glb); height: metres the stand-in is scaled to;
 # body: extra reach the player's swing gets against a large creature.
-# The first five are today's art (and the rosters of runs saved before stages); the rest belong to
+# The first five are the old art (and the rosters of runs saved before stages); the rest belong to
 # one map each (the tutorial borrows the forest's weak ones), by tier: weak, mid, strong, boss.
+# 2026-10-16: 18 species have their own Tripo P2 model (mon_v3, assets/monsters/<species>_<map>.glb).
+# The 9 regular species without one yet (winged / four-legged, still waiting for credits) keep their
+# stats but are out of the rosters below. The two bosses without a model of their own ship a P2 body
+# under their own name for now (chimera_quarry.glb: the minotaur at 3 m, dragon_frost.glb: the
+# glacier giant at 5 m), so stand_in stays today's art as the last fallback.
 ENEMIES = {
     'wolf': {'name':'그림자 늑대','hp':45.,'damage':8.,'speed':1.28,'windup':.65,'reach':1.8,'impact':1.35,'behavior':'melee'},
     'boar': {'name':'가시 멧돼지','hp':60.,'damage':12.,'speed':1.05,'windup':.9,'reach':6.,'impact':1.1,'behavior':'charge',
@@ -113,12 +118,14 @@ for _kind, _stats in ENEMIES.items():
     _stats.setdefault('tier', 'legacy')
 
 # Species per map and tier (each species belongs to one map; the tutorial borrows the forest's weak).
+# Only species with their own model are rostered; the quarry has no modelled mid species yet, so
+# its mummy king also fills the mid slot (it comes out from stage 2 there).
 ROSTERS = {
-    'tutorial': {'weak':('goblin','centipede')},
-    'forest': {'weak':('goblin','harpy','centipede'),'mid':('werewolf','troll'),'strong':('cyclops',)},
-    'quarry': {'weak':('skeleton','imp','lizardman','mimic'),'mid':('basilisk','naga','gargoyle'),'strong':('minotaur','mummy_king')},
-    'frost': {'weak':('ghoul','frost_wraith','ice_shardling','draugr'),'mid':('yeti','wendigo','frost_hag','frost_knight'),
-              'strong':('ice_golem','lich','glacier_giant')},
+    'tutorial': {'weak':('goblin',)},
+    'forest': {'weak':('goblin',),'mid':('werewolf','troll'),'strong':('cyclops',)},
+    'quarry': {'weak':('skeleton','lizardman'),'mid':('mummy_king',),'strong':('minotaur','mummy_king')},
+    'frost': {'weak':('ghoul','ice_shardling','draugr'),'mid':('yeti','wendigo','frost_hag','frost_knight'),
+              'strong':('ice_golem','glacier_giant')},
 }
 # The first stage each tier comes out at night.
 TIER_FROM = {
