@@ -1649,6 +1649,11 @@ func change_room(value: String) -> void:
 	clear_selection();room=value;await build_room()
 	update_capacity()
 	place_hero_at_door()
+	# The presence follows the room (as _ready sets it): the home shares the walk, the other rooms keep
+	# the player present as away. Sent at once, so a friend at the door hears the owner is in
+	# (server/home_access.py) and nobody walks into an empty home.
+	shared_presence=social_session and room=="home"
+	presence_time=ROOM_HEARTBEAT
 	show_story()
 	await reload_placed()
 
