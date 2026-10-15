@@ -7,6 +7,9 @@ func capture(path: String) -> void:
 	if "--capture" not in OS.get_cmdline_user_args():return
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png("res://../artifacts/"+path)
+func walked_out() -> void:
+	var deadline:=Time.get_ticks_msec()+6000
+	while Time.get_ticks_msec()<deadline and is_instance_valid(current_scene) and current_scene.get_node_or_null("DoorWalk")!=null:await process_frame
 func run() -> void:
 	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url=preload("res://tests/qa_server.gd").url()
 	for arg in OS.get_cmdline_user_args():
@@ -21,6 +24,8 @@ func run() -> void:
 	# In a window (--capture) the village is built under the loading card over frames: wait for it.
 	var deadline:=Time.get_ticks_msec()+60000
 	while Time.get_ticks_msec()<deadline and not (is_instance_valid(current_scene) and current_scene.get("screen")=="village" and is_zero_approx(load("res://scripts/transition.gd").instance.veil.modulate.a)):await process_frame
+	# The walker walks out of the home's open door (village_doors.gd); the doorstep is where it stops.
+	await walked_out()
 	var village=current_scene
 	check(village.screen=="village","village loaded")
 	check(village.player.position.distance_to(load("res://scripts/town.gd").point(load("res://scripts/town.gd").HOME_RETURN_AT,.3))<0.5,"home doorstep return position")
@@ -34,6 +39,7 @@ func run() -> void:
 	await capture("home-interior.png")
 	home.leave()
 	await create_timer(4).timeout
+	await walked_out()
 	check(current_scene.screen=="village","returned village")
 	check(current_scene.player.position.distance_to(load("res://scripts/town.gd").point(load("res://scripts/town.gd").HOME_RETURN_AT,.3))<0.5,"return to same door")
 	print("HOME_ROUNDTRIP ",JSON.stringify({"ok":failures.is_empty(),"failures":failures}))

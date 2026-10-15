@@ -55,6 +55,13 @@ const ROOM_HEARTBEAT := 3.0
 const RestSeat=preload("res://scripts/rest_seat.gd")
 ## The opening story chapter at home: the welcome letter on the desk (story_home.gd).
 const StoryHome=preload("res://scripts/story_home.gd")
+## A new session opens in the attic bed: the eyes open, the walker gets up (bed_wake.gd).
+const BedWake=preload("res://scripts/bed_wake.gd")
+## The front door swings for whoever walks through it (room_door.gd).
+const RoomDoor=preload("res://scripts/room_door.gd")
+var front_door: Node
+var wake_up := false
+var bed_wake: Node
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
 ## Build mode: the placed-object menu, 물건 통과 and the loading ring (scripts/build/).
@@ -322,10 +329,10 @@ func _ready() -> void:
 			session_version=int(session.profile.get("version",-1))
 		social_session=bool(session.get("multiplayer",false))
 		shared_presence=social_session and room=="home"
+		wake_up=bool(session.get("wake",false)) and room=="home" and visit_host.is_empty()
 		Engine.remove_meta("studio_session")
 	if not Interiors.has_interior(room): room="workshop"
 	public_room=Interiors.is_public(room)
-	veil.play_door("close",room)
 	tone_player=AudioStreamPlayer.new();tone_player.volume_db=-5;tone_player.bus=GameSettings.BUS_SFX;add_child(tone_player)
 	sfx_player=AudioStreamPlayer.new();sfx_player.volume_db=-8;sfx_player.bus=GameSettings.BUS_SFX;add_child(sfx_player)
 	# Indoor music (집 BGM) for the home and the other rooms: it swells in softly under the card.
@@ -349,6 +356,10 @@ func _ready() -> void:
 	set_process(true);set_process_unhandled_key_input(true)
 	LoadPace.done(1.0)
 	veil.fade_in()
+	if is_instance_valid(bed_wake) and not bed_wake.is_queued_for_deletion(): bed_wake.open_eyes()
+	# In through the front door as the card lifts; it shuts behind (no door for the wake-up in bed).
+	elif is_instance_valid(front_door) and is_instance_valid(front_door.hinge) and is_instance_valid(hero): front_door.walk_in(hero)
+	else: veil.play_door("close",room)
 	# The session's craft is told here now (any room: the home, the workshop, a friend's, a building).
 	if not api.token.is_empty(): craft_tracker()
 	show_story()
@@ -364,6 +375,8 @@ func _ready() -> void:
 		# Visitors only look around: no bag, room switching or editing (crafting goes on as anywhere).
 		set_dock_open(false);update_room_slots()
 		message(tr("%s님의 집에 놀러 왔어요. 가구는 구경만 할 수 있어요.") % visit_name)
+	# The owner's front door (lock, guests inside) in their own home while friends can visit.
+	preload("res://scripts/home_door_panel.gd").attach(self)
 	if api.token.is_empty():
 		message(tr("마을에서 로그인한 뒤 공방으로 들어오세요."))
 	else: await refresh()
@@ -794,6 +807,9 @@ func build_stage() -> void:
 			seat.walk_off=walk_allowed
 		seat.hero=hero
 		place_hero_at_door()
+		if wake_up:
+			bed_wake=BedWake.new();add_child(bed_wake)
+			if not await bed_wake.lie_down(self): bed_wake.queue_free()
 
 ## A furniture's words and the interact key's cap drawn over the room view, pinned to 3D points:
 ## the night pill of the toasts and prompt, and the key cap of the hotbar (key from the bindings).
@@ -866,6 +882,7 @@ func build_room() -> void:
 	apply_daylight(true)
 	if is_instance_valid(bubble): bubble.visible=false
 	if is_instance_valid(hint_label): hint_label.visible=false
+	front_door=RoomDoor.bind(self,front_door,floor_roots[0] if not floor_roots.is_empty() else null,room)
 	update_camera(0.0,true)
 
 ## Shows one floor; player-made furniture and visitors live on the ground floor.
@@ -1734,11 +1751,11 @@ func share_presence() -> void:
 	if not response.ok or not is_inside_tree(): return
 	# The room's chat arrives with the walk (social_hud.gd).
 	if hub and is_instance_valid(hub): hub.ingest(response.data)
+	preload("res://scripts/home_door_panel.gd").feed(self,response.data)
 	# The host walked out, locked us out or sent us out: back to the host's village (home_access).
 	var shut: String=preload("res://scripts/home_door.gd").refusal(response.data.get("home")) if not visit_host.is_empty() else ""
 	if not shut.is_empty():
-		message(shut)
-		leave()
+		preload("res://scripts/home_door_panel.gd").show_refusal(self,response.data.get("home"),visit_name)
 		return
 	var space = response.data.get("space")
 	if not space is Dictionary: return
@@ -1779,17 +1796,22 @@ func share_presence() -> void:
 			var plate := Art.label3d(body,str(record.username),Vector3(0,2.05,0),Color("f0dfba"))
 			Art.style_nameplate(plate)
 			peers[record.id]={"node":body,"motion":RemoteMotion.new()}
+			# Someone who just came in walks in through the front door (not those already here).
+			if peer_baseline and level==0 and is_instance_valid(front_door): front_door.arrive(peers[record.id])
 		AvatarLook.wear(peers[record.id].node,record.get("avatar",{}),version,true)
 		SocialHud.host_crown(peers[record.id].node,str(record.id)==str(space.get("host_id","")))
 		if int(peers[record.id].get("floor",-1))!=level:
 			# Changing floors is a jump, not a glide across the room.
 			peers[record.id].motion.reset()
 		peers[record.id].motion.push_record(record,Vector3(record.x,0,record.z),arrival)
+		peers[record.id]["goal"]=Vector3(record.x,0,record.z)
 		peers[record.id]["floor"]=level
 		peers[record.id].node.visible=level==floor_index
 	for id in peers.keys():
 		if not present.has(id):
-			if is_instance_valid(peers[id].node): peers[id].node.queue_free()
+			# Gone from the home: seen on this floor, they walk out through the door.
+			var out: bool=int(peers[id].get("floor",0))==0 and floor_index==0 and is_instance_valid(front_door) and front_door.depart(peers[id])
+			if is_instance_valid(peers[id].node) and not out: peers[id].node.queue_free()
 			peers.erase(id)
 	peer_sounds(before)
 
@@ -1812,7 +1834,7 @@ func update_peers(delta: float) -> void:
 	for entry in peers.values():
 		if not is_instance_valid(entry.node): continue
 		entry.motion.update(delta)
-		entry.motion.apply_to(entry.node)
+		if not (is_instance_valid(front_door) and front_door.walk_peer_in(entry,delta)): entry.motion.apply_to(entry.node)
 		# Visitors on this floor walk audibly: quieter, their own voices, falling off with distance.
 		if is_instance_valid(world_audio) and entry.node.visible and entry.node.is_inside_tree():
 			world_audio.stride("peer%d" % entry.node.get_instance_id(),entry.node.global_position,delta,floor_surface(entry.node.global_position),false,PEER_STEP_DB)
@@ -1855,12 +1877,17 @@ func logged_out(_reason: String) -> void:
 func leave() -> void:
 	var veil := Transition.of(get_tree())
 	if veil.veil.modulate.a > 0.5 or leaving: return
+	# The welcome letter first (story_home.gd): the door stays shut until it is read.
+	if visit_host.is_empty() and is_instance_valid(story_home) and story_home.keeps_door_shut():
+		story_home.hold_at_door()
+		return
 	leaving=true
 	stand_up(false)
 	# The walker keeps walking out through the doorway while the veil falls.
 	if floor_index==0 and is_instance_valid(hero):
 		walk_out=Vector3(float(room_spec.get("door_x",0.0)),0,float(room_spec.size.y)*0.5+1.6)
-	veil.play_door("open",room)
+	if floor_index==0 and is_instance_valid(front_door) and is_instance_valid(front_door.hinge): front_door.hold("walker",5.0)
+	else: veil.play_door("open",room)
 	veil.loading(tr("%s님의 마을") % visit_name if not visit_host.is_empty() else tr("다섯 섬 마을"),"","village")
 	# The room's sound goes with the light: the beds fade with the veil, the music fades across the
 	# scene change while the village's own track comes in (no hard cut).
@@ -2295,6 +2322,7 @@ func _process(delta: float) -> void:
 	if cue_time>3.5:cue_time=0;resident_cues()
 	if leaving:
 		walk_out_step(delta)
+	elif is_instance_valid(front_door) and front_door.guiding(delta): pass
 	elif not placement_mode and not travelling and not is_instance_valid(talk_box) and not is_instance_valid(craft_window) and not PauseMenu.is_open() and not VersionGate.is_blocked():
 		var focus := get_viewport().gui_get_focus_owner()
 		if not (focus is TextEdit or focus is LineEdit) and not is_instance_valid(painter) and not is_instance_valid(interaction_panel):walk(delta)

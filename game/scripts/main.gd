@@ -44,6 +44,8 @@ const SocialHud = preload("res://scripts/social_hud.gd")
 ## Build mode: placed-object menu, stacking, ways kept open, 물건 통과 (scripts/build/).
 const VillageBuild = preload("res://scripts/build/village_build.gd")
 const LoadRing = preload("res://scripts/build/load_ring.gd")
+## The building doors swing and the walker walks through them (entering and leaving rooms).
+const VillageDoors = preload("res://scripts/village_doors.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
@@ -243,7 +245,7 @@ var npcs: Array[Node3D]=[]
 ##   leave()                             the village is about to be torn down
 ## Missing scripts are skipped, so each add-on can land on its own.
 ## story.gd (the opening chapter) comes before shadow_folk.gd: it holds 모카's plan before her walker is placed.
-const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/story.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd","res://scripts/treasure.gd"]
+const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/village_doors.gd","res://scripts/field_objects.gd","res://scripts/story.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd","res://scripts/treasure.gd"]
 var modules: Array[Node]=[]
 var prompt_wait := 0.0
 var chosen_map := "forest"
@@ -357,10 +359,12 @@ func _ready() -> void:
 		if api.token.is_empty(): return
 		social.enabled = social.feature_enabled() and server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
 		await enter_village()
-		player.position=TownLayout.door_return(str(session.get("room","workshop")))
-		follow_camera(1)
-		veil.play_door("close",str(session.get("room","workshop")))
-		veil.fade_in()
+		# The walker steps out of the open door and it shuts behind (village_doors.gd); no door there: the doorstep.
+		if not VillageDoors.walk_out(self,str(session.get("room","workshop")),veil):
+			player.position=TownLayout.door_return(str(session.get("room","workshop")))
+			follow_camera(1)
+			veil.play_door("close",str(session.get("room","workshop")))
+			veil.fade_in()
 	else:
 		# The game opens on its title, which first asks the remembered world whether this version may
 		# play: an update (patch or installer) or the maintenance screen comes before the menu.
@@ -637,7 +641,7 @@ func login_ui(page := "menu") -> void:
 			# The UI kit 2 menu plates: gold for the way in, night glass for the others.
 			var entries := [RpgUi.menu_button(body,tr("게임 시작"),func(): login_ui("login"),300.0,"MenuGoldButton"),
 				RpgUi.menu_button(body,tr("설정"),func(): login_ui("settings"),300.0,"MenuNightButton"),
-				RpgUi.menu_button(body,tr("게임 종료"),func(): get_tree().quit(),300.0,"MenuNightButton")]
+				RpgUi.menu_button(body,tr("게임 종료"),func(): preload("res://scripts/clean_exit.gd").request_quit(get_tree()),300.0,"MenuNightButton")]
 			# Arrow keys / pad move between the entries; Enter starts.
 			for entry in entries:
 				entry.focus_mode = Control.FOCUS_ALL
@@ -785,19 +789,27 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		I18n.remember("server",host)
 		I18n.remember("username",username.strip_edges())
 	var veil := Transition.of(get_tree())
-	var at_home: bool = get_tree().current_scene==self
+	# Where the session picks up (server/last_spot.py): a first sign-in, a long time away or a game
+	# ended at home wakes up in the attic bed; otherwise back on the spot in the own village.
+	var resume = result.data.get("resume")
+	var wake: bool = not resume is Dictionary or bool(resume.get("wake",false))
+	var spot = resume.get("spot") if resume is Dictionary and not wake else null
+	var in_village: bool = spot is Dictionary and str(spot.get("scene",""))=="village"
+	var at_home: bool = get_tree().current_scene==self and not in_village
 	veil.loading(TownLayout.room_title("home") if at_home else tr("다섯 섬 마을"),"","room" if at_home else "village")
 	await veil.fade_out()
-	if get_tree().current_scene==self:
+	if at_home:
 		# A new session starts at home; walking out of the front door opens the village.
+		# Waking: the walker gets up from the attic bed (studio.gd, bed_wake.gd); else in at the door.
 		Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":"home","multiplayer":social.enabled,"profile":me.profile,
-			"username":username.strip_edges().to_lower()})
+			"username":username.strip_edges().to_lower(),"wake":wake})
 		# The title's village map waits outside the tree for the walk out of the home (as open_studio).
 		leave_modules()
 		if is_instance_valid(town): town.release_map()
 		get_tree().change_scene_to_packed(studio_scene())
 		return
 	await enter_village()
+	if in_village: preload("res://scripts/bed_wake.gd").resume_spot(self,spot)
 	veil.fade_in()
 
 ## Under the loading card (LoadPace.covered) the build is paced over frames so the card keeps
@@ -1554,7 +1566,8 @@ func poll_entitlements() -> void:
 	var story := chapter()
 	if story: story.adopt(result.data.get("story"))
 	if story: story.adopt_quests(result.data.get("quests"))
-	if objects_signature(result.data.objects)!=objects_signature(me.objects) or result.data.shards!=me.shards:
+	# Back from a room, `me` holds only the look until the first refresh answers.
+	if objects_signature(result.data.objects)!=objects_signature(me.get("objects",[])) or result.data.shards!=me.get("shards",-1):
 		cancel_preview()
 		await refresh_inventory()
 
@@ -3883,17 +3896,19 @@ func open_studio(destination: String="workshop") -> void:
 			# The host's home opens only while the host is inside (server/home_access.py).
 			var shut: String=preload("res://scripts/home_door.gd").refusal(social.data.get("home"))
 			if not shut.is_empty():
-				refuse(shut)
+				preload("res://scripts/home_door.gd").refuse_at_door(self,social.data)
 				return
 			session.visit_host=str(social.data.get("host_id",""))
 			session.visit_name=str(social.data.get("host_name",tr("친구")))
-	if busy or api.token.is_empty(): return
+	if busy or api.token.is_empty() or VillageDoors.walking(self): return
 	Engine.set_meta("studio_session",session)
 	var veil := Transition.of(get_tree())
-	veil.play_door("open",destination)
 	player.controls_enabled=false
 	veil.loading(tr("%s님의 집") % str(session.visit_name) if session.has("visit_name") else TownLayout.room_title(destination),"","room")
-	await veil.fade_out()
+	# Near the door the walker turns to it, the door swings open and it walks in under the fade (village_doors.gd).
+	if not await VillageDoors.walk_in(self,destination,veil):
+		veil.play_door("open",destination)
+		await veil.fade_out()
 	leave_modules()
 	if is_instance_valid(town): town.release_map()
 	get_tree().change_scene_to_packed(studio_scene())

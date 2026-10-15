@@ -255,6 +255,17 @@ func reset(reason := "") -> void:
 		pose.carrier = Basis.IDENTITY
 	if state != IDLE: go(IDLE)
 
+## A walker who starts the scene already in bed (the wake-up, bed_wake.gd): no walk up and no lying
+## down; the next tick writes the lying pose on the chosen socket and settles (HOLD). Lie only.
+func settle_now() -> void:
+	if state == IDLE or kind != "lie": return
+	_stop_steer()
+	hold_body()
+	enter_from = actor.global_position
+	go(ENTER)
+	lie_phase = 1
+	phase_t = float(IxMath.ENTER_SECONDS.lie)
+
 ## Called by player._physics_process right after tick_from, while busy().
 func drive(body: Node3D, delta: float) -> void:
 	if body != actor: return

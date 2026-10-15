@@ -1,5 +1,77 @@
 {
  "strings": {
+  "현관문": {
+   "en": "Front door",
+   "zh": "前门"
+  },
+  "열림": {
+   "en": "Open",
+   "zh": "开着"
+  },
+  "문 잠그기": {
+   "en": "Lock the door",
+   "zh": "锁门"
+  },
+  "잠금 풀기": {
+   "en": "Unlock",
+   "zh": "解锁"
+  },
+  "손님": {
+   "en": "Guests",
+   "zh": "访客"
+  },
+  "손님이 없어요": {
+   "en": "No guests",
+   "zh": "没有访客"
+  },
+  "내보내기": {
+   "en": "Send out",
+   "zh": "请出去"
+  },
+  "손님 내보내기": {
+   "en": "Send a guest out",
+   "zh": "请访客离开"
+  },
+  "%s님을 집 밖으로 안내할까요?": {
+   "en": "Show %s out of your home?",
+   "zh": "要请%s离开你的家吗？"
+  },
+  "10분 동안 다시 들어올 수 없어요.": {
+   "en": "They can't come back in for 10 minutes.",
+   "zh": "10分钟内无法再进来。"
+  },
+  "%s님이 집 밖으로 안내했어요": {
+   "en": "%s showed you out of the home",
+   "zh": "%s请你离开了家"
+  },
+  "%s님이 집을 나가서 함께 나왔어요": {
+   "en": "%s left home, so you came out too",
+   "zh": "%s出门了，你也一起出来了"
+  },
+  "%d분 뒤에 다시 들어갈 수 있어요.": {
+   "en": "You can go back in after %d min.",
+   "zh": "%d分钟后可以再进去。"
+  },
+  "%d분": {
+   "en": "%d min",
+   "zh": "%d分钟"
+  },
+  "부재중": {
+   "en": "Away",
+   "zh": "不在家"
+  },
+  "잠김": {
+   "en": "Locked",
+   "zh": "已上锁"
+  },
+  "안녕!": {
+   "en": "Hi!",
+   "zh": "你好！"
+  },
+  "먼저 책상 위 편지를 읽어 볼까요?": {
+   "en": "How about reading the letter on the desk first?",
+   "zh": "先读一读书桌上的信吧？"
+  },
   "카페 '빨간 지붕' 주인 모카예요. 풍차 언덕 하숙집에서 지내며 커피를 내려요.": {
    "en": "I'm Moka, owner of Café 'Red Roof'. I live at the Windmill Hill boarding house and brew coffee.",
    "zh": "我是“红屋顶”咖啡馆的老板摩卡。我住在风车山坡的寄宿屋，每天煮咖啡。"
