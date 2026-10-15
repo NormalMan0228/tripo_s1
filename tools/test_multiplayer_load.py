@@ -280,6 +280,7 @@ async def classroom(url, people, settings, worker):
             in_village = role in ('host', 'guest', 'guest_home', 'alone')
             interval = (1.0 if modern else 3.0) if role == 'workshop' else 2.0 if role == 'survival' else together_s
             cursor = 0
+            my_together, my_alone = together_s, alone_s
             await nap(rng.random()*interval)
             while time.time() < deadline:
                 tick = time.time()
@@ -291,6 +292,9 @@ async def classroom(url, people, settings, worker):
                 if response is not None and response.status_code == 200:
                     reply = response.json()
                     together = len((reply.get('space') or {}).get('players') or []) > 1
+                    advice = (reply.get('social') or {}).get('poll')
+                    if settings['follow'] and advice:
+                        my_together, my_alone = advice['together'], advice['alone']
                     block = reply.get('chat')
                     if block:
                         cursor = block['cursor']
@@ -299,7 +303,7 @@ async def classroom(url, people, settings, worker):
                                 found = TAG.match(line['text'])
                                 if found and line['user_id'] != p['id']:
                                     arrivals.append((time.time()-float(found.group(1)))*1000)
-                await nap(tick+((alone_s if adaptive and not together else together_s) if in_village else interval)-time.time())
+                await nap(tick+((my_alone if adaptive and not together else my_together) if in_village else interval)-time.time())
 
         async def chat_loop(p):
             modern = chat2 and not p['legacy']
@@ -384,7 +388,7 @@ def social_scenario(args):
         workers = max(1, min(args.workers, len(people)))
         settings = {'started': time.time()+3, 'seconds': args.seconds, 'chat2': 'chat2' in (health.get('social_features') or []),
                     'global_chat': bool(health.get('global_chat')), 'together': args.together, 'alone': args.alone,
-                    'adaptive': args.adaptive, 'chat_every': args.chat_every, 'people_every': args.people_every, 'seed': args.seed}
+                    'adaptive': args.adaptive, 'follow': args.follow_advice, 'chat_every': args.chat_every, 'people_every': args.people_every, 'seed': args.seed}
         queue = multiprocessing.Queue()
         procs = [multiprocessing.Process(target=worker_main, args=(url, people[w::workers], settings, w, queue)) for w in range(workers)]
         for proc in procs:
@@ -427,7 +431,7 @@ def social_scenario(args):
             'server': 'this checkout' if server_root == ROOT else str(server_root),
             'social_features': sorted(health.get('social_features') or []), 'global_chat': health.get('global_chat'),
             'users': args.users, 'roles': roles, 'legacy_clients': sum(p['legacy'] for p in people),
-            'adaptive_presence': args.adaptive, 'presence_together_s': args.together, 'presence_alone_s': args.alone,
+            'adaptive_presence': args.adaptive, 'follow_server_advice': args.follow_advice, 'presence_together_s': args.together, 'presence_alone_s': args.alone,
             'chat_every_s': args.chat_every, 'people_every_s': args.people_every, 'measured_seconds': round(measured, 1),
             'requests_per_second': round(total/args.seconds, 1),
             'server_cpu_percent_of_one_core': round((cpu_after-cpu_mark)/measured*100, 1),
@@ -534,6 +538,7 @@ def main():
     parser.add_argument('--adaptive', action='store_true', help='players alone poll at --alone seconds')
     parser.add_argument('--together', type=float, default=.25, help='presence interval with others around (s)')
     parser.add_argument('--alone', type=float, default=1.0, help='presence interval alone with --adaptive (s)')
+    parser.add_argument('--follow-advice', action='store_true', help="poll at the server's social.poll advice (backpressure)")
     parser.add_argument('--chat-every', type=float, default=20, help="mean seconds between one player's lines (0: no chat)")
     parser.add_argument('--people-every', type=float, default=5, help='social window refresh (s)')
     parser.add_argument('--friends', type=int, default=8, help='friendships seeded per player')

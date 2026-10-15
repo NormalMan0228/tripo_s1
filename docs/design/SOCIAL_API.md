@@ -21,7 +21,7 @@ with the same id and body returns the first answer; the same id with another bod
  "social_roster": "all",
  "interaction_sync": 1,
  "chat_max_length": 160,
- "social_poll": {"presence_together": 0.25, "presence_alone": 1.0, "people": 5.0}}
+ "social_poll": {"presence_together": 0.25, "presence_alone": 1.0, "people": 5.0, "presence_budget": 60.0}}
 ```
 
 | Flag | Client may then use |
@@ -90,7 +90,8 @@ village, space, npc_homes`. Changes:
                    {"id": 1233, "channel": "whisper", "user_id": "…", "username": "jun",
                     "to_id": "…", "to_name": "mina", "text": "…", "created": …}],
          "removed": [1201]},
-"social": {"v": 17, "requests": 1, "knocks": 0, "friends_online": 3, "muted_until": 1781234999.0}
+"social": {"v": 17, "requests": 1, "knocks": 0, "friends_online": 3,
+           "poll": {"together": 0.61, "alone": 2.45}, "muted_until": 1781234999.0}
 ```
 
 Chat block rules:
@@ -111,6 +112,9 @@ Social block: `v` changes on any friend/request/block/knock/privacy change touch
 refetch `/v1/social/people` only when `v` changes (or every 5 s while the window is open).
 `requests` = incoming friend requests, `knocks` = knocks waiting at your village,
 `friends_online` = friends online and visible, `muted_until` only while muted.
+`poll` = the presence intervals (seconds) the server wants now: `together` when another player is
+in your space (or a party run, an invite, a knock or anyone's interaction is under way), `alone`
+otherwise. Follow it on every reply (section 9).
 
 ### 2.4 Knocks in the overview (`GET /v1/social`, presence, invite answers)
 ```json
@@ -273,11 +277,77 @@ delete-accounts ...                  (now also removes social rows, blocked_id i
 Settings (environment): `VILLAGEN_GLOBAL_CHAT` (on|off, default on), `VILLAGEN_SOCIAL_ROSTER`
 (all|friends|off, default all), `VILLAGEN_CHAT_FILTER_EXTRA` (word file in the data directory),
 `VILLAGEN_CHAT_IP_PER_MINUTE` (600), `VILLAGEN_CHAT_RETENTION_HOURS` (24),
-`VILLAGEN_PRESENCE_TOGETHER` (0.25), `VILLAGEN_PRESENCE_ALONE` (1), `VILLAGEN_PEOPLE_SECONDS` (5).
+`VILLAGEN_PRESENCE_TOGETHER` (0.25), `VILLAGEN_PRESENCE_ALONE` (1), `VILLAGEN_PEOPLE_SECONDS` (5),
+`VILLAGEN_PRESENCE_BUDGET` (60 polls/s, section 9.2).
 
 ## 9. Polling guidance
 
-LOAD_TEST_SECTION
+### 9.1 What the client does
+| Poll | When | Interval |
+|---|---|---|
+| presence (village, home) | always while in those scenes | `social.poll.together` with another player in the space, a party run, a pending invite/knock or an `ix` phase other than hold; else `social.poll.alone`. Before the first chat2 reply: `/health social_poll` (0.25 / 1.0). Switch to `together` at once when a reply lists another player |
+| presence (workshop, other rooms) | heartbeat | `social.poll.alone` (1 s at rest); the reply carries chat, so the room chat works |
+| presence (survival) | as today | 2 s |
+| `/v1/social/people` | social window open, or `social.v` changed | `social_poll.people` (5 s); never in the background |
+| `/v1/social` | the old menu only | on open |
+| chat send | on Enter | the reply has the line id; drop the pending echo when that id arrives |
+
+`remote_motion.gd` adapts its delay between 0.12 and 0.5 s from the arrival spacing, so the
+advised `together` interval up to 0.5 s keeps walkers smooth; above that (a crowded server) peers
+step more coarsely but stay correct. Chat latency is about one poll interval.
+
+### 9.2 Backpressure
+The server counts presence polls. Every 2 s it moves a slow-down factor (1..4) towards
+`polls per second / VILLAGEN_PRESENCE_BUDGET` (square-root steps) and advises
+`social_poll × factor` in every chat2 reply. Default budget: **60 polls/s**. Small groups keep
+4 Hz; a full class is slowed until the server carries about 60 polls a second. Released clients
+ignore the advice (they poll at their fixed 4 Hz).
+
+### 9.3 Load test (tools/test_multiplayer_load.py)
+Isolated server on 127.0.0.1:8867 (production command line: one uvicorn worker, WAL SQLite, no
+access log), temporary data deleted afterwards, 8 load-generator processes (a single asyncio
+process topped out at ~55 req/s and was the bottleneck in a first attempt). PC: Ryzen 9 3900X,
+Windows 10. 60 players: 15 villages of three (host and one guest outdoors, one guest indoors),
+9 alone in their village, 3 in the workshop, 3 on survival expeditions (input 5 Hz); chat one
+line per player every 20 s on average (15 % everyone, 10 % whispers, 2 % swearing); 20 social
+windows open. 120 s measured after a 10 s warm-up. CPU = the server process, % of one core.
+
+| Run | Server | Clients | Presence together / alone (s) | Served req/s | CPU | CPU ms/req | Presence p50 / p95 ms | Chat delivery p50 / p95 ms |
+|---|---|---|---|---|---|---|---|---|
+| A | before (6028e2c) | 60 × 0.11.x | 0.25 / 0.25 | 168 of ~240 (saturated) | 146 % | 8.7 | 56 / 975 | – |
+| B | this branch | 60 × 0.11.x | 0.25 / 0.25 | 233 | 98 % | 4.2 | 13 / 79 | – |
+| C | this branch | 60 × chat2 | 0.25 / 0.25 | 242 | 90 % | 3.7 | 11 / 52 | 158 / 601 |
+| D | this branch | 60 × chat2 | 0.25 / 1 | 169 | 57 % | 3.4 | 10 / 34 | 216 / 956 |
+| F | this branch | 60 × chat2 | 0.5 / 1 | 110 | 34 % | 3.1 | 9 / 19 | 331 / 953 |
+| G | this branch | 60 × chat2 | 1 / 2 | 68 | 22 % | 3.2 | 8 / 14 | 627 / 1811 |
+| E | this branch | 120 × chat2 | 0.5 / 1 | 221 | 102 % | 4.6 | 16 / 94 | 361 / 993 |
+| H | this branch | 60 × chat2 following `social.poll` (budget 60) | advised (settled ≈ 0.6 / 2.4) | 83 (presence 60.3) | 25 % | 3.1 | 9 / 20 | 475 / 2275 |
+
+Other figures: memory 88–112 MB RSS (A: 94–97 MB); WAL peak 4–5.6 MB; database file growth
+about 93 KB per minute at ~3 chat lines/s (runs F, G, measured after full checkpoints), bounded by
+the 24 h chat retention; chat adds no `requests`/`audit` rows (run A: +449 of each in two minutes,
+kept forever before this branch). In-process profile of one village poll: 14.3 ms → 5.6 ms CPU;
+the handler alone 8.5 → 1.9 ms (connection pooling removed ~4 ms of schema re-parsing per poll,
+direct JSON ~2.9 ms). Remaining per-request floor: the middleware stack (a second session lookup
+in `boundary`, BaseHTTPMiddleware), about 2 ms on this PC; not changed here (app.py core).
+Per-request costs: `/v1/social` 13.7 → 2.7 ms, presence away 6.8 → 2.9 ms, presence in a
+village with 12 objects 9.2 → 4.4 ms.
+
+### 9.4 t4g.small estimate
+Two Graviton2 vCPUs; the API is one Python process (about one vCPU usable); the CPU-credit
+baseline is 20 % per vCPU = 0.4 vCPU sustained. Assume a request costs about 1.7× this PC
+(single-thread ratio, not measured on the VM):
+- C, everyone at 4 Hz: about 150 % of a vCPU, more than one process can give: it saturates like
+  run A did here. **Not viable for 60 players.**
+- D (4 Hz together, 1 Hz alone): about 100 %: at the limit.
+- F (2 Hz / 1 Hz): about 60 %: fine for lessons (burst credits or a few cents in unlimited mode).
+- G (1 Hz / 0.5 Hz): about 37 %: within the baseline.
+- H, the default budget of 60 polls/s with clients following the advice: the server settled at
+  60.3 presence polls/s, 25 % of a core here, about 43 % of a vCPU estimated, near the baseline,
+  while small groups keep 4 Hz. 120 players would be slowed further (up to 4×).
+Confirm on staging with this tool pointed at the VM-like box (it runs anywhere with the server
+venv) and watch CloudWatch CPUCreditBalance during a lesson; lower `VILLAGEN_PRESENCE_BUDGET`
+if the balance falls.
 
 ## 10. Storage, retention and load safety
 
