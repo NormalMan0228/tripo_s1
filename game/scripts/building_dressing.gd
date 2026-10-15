@@ -18,6 +18,8 @@ const Town = preload("res://scripts/town.gd")
 const Residents = preload("res://scripts/residents.gd")
 ## Door leaves that open (the 집·문·방문 session drives them: docs/coordination/DOOR_HOOKS_KO.md).
 const BuildingDoors = preload("res://maps/archipelago/building_doors.gd")
+## Window panes drawn whole, all of a building's together (item 9; off unless enabled).
+const WindowGlass = preload("res://scripts/window_glass.gd")
 const SHADER := "res://maps/archipelago/building_exterior.gdshader"
 const PLACEMENTS := "res://maps/archipelago/building_placements.json"
 const NODE_NAME := "BuildingDressing"
@@ -162,6 +164,7 @@ static func dress(host: Node3D) -> Node3D:
 	_mesh_node(root, "LanternWash", washes.commit(), lights.wash)
 	_mesh_node(root, "LanternPools", pools.commit(), lights.pool)
 	root.set_meta("materials", materials)
+	root.set_meta("panes", WindowGlass.install(buildings, manifest, TUNING))
 	root.set_meta("glass", glass)
 	root.set_meta("lights", lights)
 	root.set_meta("lanterns", spots.size())
@@ -175,6 +178,7 @@ static func update(host: Node3D, hour: float) -> void:
 	var night: float = values.night
 	var lamps := clampf(float(values.lamp_energy)/Daylight.LAMP_NIGHT_GAIN, 0.0, 1.0)
 	_update_rooms(host, root, hour, night)
+	WindowGlass.update(root.get_meta("panes", {}), values)
 	if is_equal_approx(float(root.get_meta("night", -1.0)), night) and is_equal_approx(float(root.get_meta("lamps", -1.0)), lamps): return
 	root.set_meta("night", night)
 	root.set_meta("lamps", lamps)
@@ -209,6 +213,8 @@ static func _update_rooms(host: Node3D, root: Node, hour: float, night: float) -
 		room.written = written
 		for material: ShaderMaterial in room.mats: material.set_shader_parameter("glow_energy", float(room.base)*float(room.lit))
 		for pane: StandardMaterial3D in room.glass: pane.emission_energy_multiplier = 1.4*night*float(room.lit)
+		var whole: ShaderMaterial = (root.get_meta("panes", {}) as Dictionary).get(id)
+		if whole: whole.set_shader_parameter("lit", float(room.lit))
 
 ## {building id: {mats, glass, base, lit, written}} for buildings with a door.
 static func _index_rooms(host: Node3D) -> Dictionary:

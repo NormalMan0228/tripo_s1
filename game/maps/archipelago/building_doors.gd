@@ -60,7 +60,8 @@ void fragment() {
 }
 """
 
-## --no-doors: every building and room keeps the painted door / box door it had (comparisons).
+## --no-doors: every building and room keeps the painted door / box door it had (comparisons);
+## --all-doors: every door in door_leaves.json is on (tests and captures before ALL_DOORS is).
 static var disabled := "--no-doors" in OS.get_cmdline_user_args()
 static var _table: Dictionary = {}
 static var _buildings: Dictionary = {}
@@ -74,7 +75,7 @@ static func table() -> Dictionary:
 	return _table
 
 static func enabled(id: String) -> bool:
-	return not disabled and table().has(id) and (ALL_DOORS or ENABLED.has(id))
+	return not disabled and table().has(id) and (ALL_DOORS or ENABLED.has(id) or "--all-doors" in OS.get_cmdline_user_args())
 
 ## The door leaf of a building (shared by every building with the same model), or null.
 ## The leaves of a door cut along the user's outline (tools/door_cutter.gd): [{mesh, hinge, reason,

@@ -40,6 +40,7 @@ const HINGES := "res://maps/archipelago/door_hinges.json"
 const DOUBLE_WIDTH := 1.6
 const DOUBLE_ASPECT := 0.9
 var hinges := {}
+var glass := {}
 var overrides := {}
 var renders_dir := "res://../artifacts/outline_tool/renders/"
 var outlines_dir := "res://../artifacts/outline_tool/outlines/"
@@ -84,7 +85,9 @@ func run() -> void:
 			for spec: Dictionary in placements.buildings:
 				if String(spec.model) == model: ids.append(String(spec.id))
 		var mesh_faces := load_model(model)
-		var windows := ArrayMesh.new()
+		# A model's panes from all its faces go into one glass mesh.
+		if not glass.has(model): glass[model] = ArrayMesh.new()
+		var windows: ArrayMesh = glass[model]
 		var doors := []
 		for poly: Dictionary in outline.get("polys", []):
 			var pts: Array = poly.get("pts", [])
@@ -113,8 +116,10 @@ func run() -> void:
 			for id in ids:
 				table[id] = entry
 				hinges[id] = {"leaves": plan.leaves.map(func(l): return {"hinge": l.hinge, "reason": l.reason}), "opens": plan.opens}
-		if windows.get_surface_count() > 0:
-			ResourceSaver.save(windows, WINDOWS_DIR+model.get_file().get_basename()+"_glass.res")
+		pass
+	for model in glass:
+		if (glass[model] as ArrayMesh).get_surface_count() > 0:
+			ResourceSaver.save(glass[model], WINDOWS_DIR+String(model).get_file().get_basename()+"_glass.res")
 	var file := FileAccess.open(Doors.RECTS, FileAccess.WRITE)
 	file.store_string(JSON.stringify(table, "\t", true))
 	file.close()
@@ -192,19 +197,24 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 	for p in poly: box = box.expand(p)
 	var project := func(p: Vector3) -> Vector3: return Vector3((p-o).dot(u), (p-o).dot(v), -(p-o).dot(into))
 	# Triangles facing the camera that reach into the outline's box, projected (x right, y down, z out).
+	# The model's triangles facing this render's camera, projected, once per render (many outlines).
+	if not meta.has("_facing"):
+		var facing := []
+		for tri: Dictionary in model.tris:
+			var outward: Vector3 = -((tri.p[1] as Vector3)-(tri.p[0] as Vector3)).cross((tri.p[2] as Vector3)-(tri.p[0] as Vector3))
+			# Facing the camera: the outward normal (Godot winds front faces clockwise) points to +z.
+			if outward.dot(-into) <= 0.0: continue
+			var a: Vector3 = project.call(tri.p[0])
+			var b: Vector3 = project.call(tri.p[1])
+			var c: Vector3 = project.call(tri.p[2])
+			if absf((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y)) < 1e-9: continue
+			facing.append([tri, [a, b, c], Rect2(Vector2(minf(a.x, minf(b.x, c.x)), minf(a.y, minf(b.y, c.y))), Vector2.ZERO).expand(Vector2(maxf(a.x, maxf(b.x, c.x)), maxf(a.y, maxf(b.y, c.y))))])
+		meta["_facing"] = facing
 	var near := []
-	for tri: Dictionary in model.tris:
-		var a: Vector3 = project.call(tri.p[0])
-		var b: Vector3 = project.call(tri.p[1])
-		var c: Vector3 = project.call(tri.p[2])
-		if maxf(a.x, maxf(b.x, c.x)) < box.position.x or minf(a.x, minf(b.x, c.x)) > box.end.x: continue
-		if maxf(a.y, maxf(b.y, c.y)) < box.position.y or minf(a.y, minf(b.y, c.y)) > box.end.y: continue
-		var area := (b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y)
-		if absf(area) < 1e-9: continue
-		# Facing the camera: the outward normal (Godot winds front faces clockwise) points to +z.
-		var outward: Vector3 = -((tri.p[1] as Vector3)-(tri.p[0] as Vector3)).cross((tri.p[2] as Vector3)-(tri.p[0] as Vector3))
-		if outward.dot(-into) <= 0.0: continue
-		near.append([tri, [a, b, c]])
+	for entry in meta._facing:
+		var r: Rect2 = entry[2]
+		if r.end.x < box.position.x or r.position.x > box.end.x or r.end.y < box.position.y or r.position.y > box.end.y: continue
+		near.append([entry[0], entry[1]])
 	# The front-most depth seen in each cell of the outline's box.
 	var front := {}
 	for entry in near:
