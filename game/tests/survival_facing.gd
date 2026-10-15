@@ -47,10 +47,12 @@ func drift(step: Vector2, count: int, gap: float, yaw: float) -> float:
 	return worst
 
 ## Frame by frame (the 77 continuity rule): the walker's largest one-frame move and turn.
-## Rates per second, so a slow frame on a busy PC is not taken for a jump.
+## Rates per second of the frame's own delta (the one the walker and its turn moved by), so a slow
+## frame on a busy PC is not taken for a jump. process_frame comes before the frame's _process: what
+## changed since the last signal moved by the last frame's delta.
 var last_pos := Vector3.INF
 var last_yaw := 0.0
-var last_at := 0
+var last_dt := 0.0
 var max_step := 0.0
 var max_turn := 0.0
 var max_speed := 0.0
@@ -59,18 +61,18 @@ func watch_frame() -> void:
 	if not is_instance_valid(app) or app.screen != "survival": return
 	var p: Vector3 = app.player.position
 	var y: float = app.player.visual.rotation.y
-	var now := Time.get_ticks_usec()
-	if last_pos != Vector3.INF and now > last_at:
-		var dt := (now-last_at)/1000000.0
+	var dt := last_dt
+	last_dt = root.get_process_delta_time()
+	if last_pos != Vector3.INF and dt > 0.0:
 		var step := Vector2(p.x-last_pos.x, p.z-last_pos.z).length()
 		var turn := absf(angle_difference(last_yaw, y))
 		max_step = maxf(max_step, step)
 		max_turn = maxf(max_turn, turn)
 		max_speed = maxf(max_speed, step/dt)
-		max_turn_rate = maxf(max_turn_rate, turn/dt)
+		# The turn eases in player.gd's _physics_process: at least one physics tick went by for it.
+		max_turn_rate = maxf(max_turn_rate, turn/maxf(dt, 1.0/Engine.physics_ticks_per_second))
 	last_pos = p
 	last_yaw = y
-	last_at = now
 
 func run() -> void:
 	var server := preload("res://tests/qa_server.gd").url()
