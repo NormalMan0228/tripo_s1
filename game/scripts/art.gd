@@ -2,6 +2,28 @@ extends RefCounted
 
 static var cedar_crown_mesh: Mesh
 
+## 3D text (name tags, place signs, chat bubbles) in multi-channel distance-field copies of the UI
+## fonts (assets/fonts/label_*.tres, msdf/): a tag drawn smaller or larger than its font size stays
+## sharp instead of the blurred, shimmering bitmap it was (85). Same faces and weights, so sizes
+## and line breaks do not move. Very thick outlines (big alerts) keep the bitmap font: a distance
+## field only carries an outline up to half its pixel range.
+const LABEL_FONTS := {"ui_body": "res://assets/fonts/label_body.tres", "ui_strong": "res://assets/fonts/label_strong.tres",
+	"ui_bold": "res://assets/fonts/label_bold.tres", "ui_numbers": "res://assets/fonts/label_bold.tres"}
+const LABEL_OUTLINE_MAX := 8
+static var label_watch: SceneTree
+
+static func crisp(l: Label3D) -> void:
+	if not is_instance_valid(l) or l.outline_size > LABEL_OUTLINE_MAX: return
+	var name := "ui_body" if l.font == null else str(l.font.resource_path).get_file().get_basename()
+	if LABEL_FONTS.has(name): l.font = load(LABEL_FONTS[name])
+
+## Every Label3D that enters the tree gets crisp() once its maker has set it up (next idle frame).
+static func watch_labels(tree: SceneTree) -> void:
+	if label_watch == tree: return
+	label_watch = tree
+	tree.node_added.connect(func(node: Node):
+		if node is Label3D: (func(): if is_instance_valid(node): crisp(node)).call_deferred())
+
 static func material(color: Color) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_color = color

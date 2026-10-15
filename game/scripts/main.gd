@@ -260,6 +260,7 @@ func _ready() -> void:
 	I18n.setup()
 	# Window, renderer, buses, key bindings, UI scale (game_settings.gd).
 	GameSettings.apply_all(get_tree())
+	Art.watch_labels(get_tree())
 	var veil := Transition.of(get_tree())
 	# The first load shows the island cover art; a walk out of a room keeps its card. At the game's
 	# start boot.gd (main.tscn's first node) has drawn it already: it stays as it is (same tip).
