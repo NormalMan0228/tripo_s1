@@ -663,5 +663,7 @@ class Friends:
         s = self.settings
         return {'social_features': list(FEATURES), 'global_chat': bool(s.global_chat), 'social_roster': s.social_roster,
                 'interaction_sync': 1, 'chat_max_length': 160,
+                # Owner-only homes (server/home_access.py) and the carried item in presence.
+                'home_access': 1, 'presence_held': 1,
                 'social_poll': {'presence_together': s.presence_together_seconds, 'presence_alone': s.presence_alone_seconds,
                                 'people': s.people_seconds, 'presence_budget': s.presence_budget}}

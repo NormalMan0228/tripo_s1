@@ -9,7 +9,7 @@ from starlette.background import BackgroundTask
 from pydantic import Field
 from .models import Strict, Mutation, Input, RunStart
 from .stored_assets import read_glb
-from . import coop, homestead, object_paint, object_shape, interactions, tutorial
+from . import coop, homestead, object_paint, object_shape, interactions, tutorial, home_access
 from . import friends as social_db
 from .chat import Chat
 
@@ -49,7 +49,10 @@ CREATE INDEX IF NOT EXISTS coop_members_user ON coop_members(user_id);
 PRESENCE_COLUMNS = (('y', 'REAL NOT NULL DEFAULT 0'), ('vx', 'REAL NOT NULL DEFAULT 0'), ('vz', 'REAL NOT NULL DEFAULT 0'), ('ct', 'REAL'),
                     ('place', 'TEXT'), ('floor', 'INTEGER'), ('ix', 'TEXT'),
                     # 1 once this sign-in has polled with since (a chat2 game, which can answer knocks).
-                    ('chat2', 'INTEGER'))
+                    ('chat2', 'INTEGER'),
+                    # What the player carries in hand (presence_held), and the owner's last poll from
+                    # inside their own home (server/home_access.py: guests follow the owner out).
+                    ('held', 'TEXT'), ('home_seen', 'REAL'))
 
 
 class Invite(Mutation):
@@ -108,6 +111,10 @@ class Presence(Strict):
     place: Literal['village', 'home', 'workshop', 'room', 'expedition'] | None = None
     floor: int | None = Field(default=None, ge=0, le=9)
     ix: IxState | None = None
+    # What the player carries in hand, sent when /health advertises presence_held: an item id from
+    # the client's carry list (docs/contracts/SERVER_CONTRACTS_KO.md), '' or none for empty hands.
+    # Stored and echoed to the others in the same space, never interpreted here.
+    held: str | None = Field(default=None, max_length=32, pattern=r'^[a-z0-9_]*$')
 
 
 class Message(Mutation):
@@ -293,6 +300,8 @@ class Multiplayer:
                 # The interaction state only when that player sent one (older replies are unchanged).
                 if row['ix']:
                     player['ix'] = json.loads(row['ix'])
+                if row['held']:
+                    player['held'] = row['held']
                 players.append(player)
             row = conn.execute('SELECT state FROM homesteads WHERE user_id=?', (host,)).fetchone()
             life = homestead.public(json.loads(row[0]) if row else homestead.initial(), clock())
@@ -321,16 +330,31 @@ class Multiplayer:
                 if host != user['id']:
                     conn.execute('UPDATE mp_visits SET expires=? WHERE user_id=?', (clock()+VISIT_SECONDS, user['id']))
                 ix = body.ix.model_dump_json() if body.ix else None
-                conn.execute('INSERT INTO mp_presence(user_id,host_id,scene,x,z,y,yaw,seen,vx,vz,ct,place,floor,ix,chat2) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,scene=excluded.scene,x=excluded.x,z=excluded.z,y=excluded.y,yaw=excluded.yaw,seen=excluded.seen,vx=excluded.vx,vz=excluded.vz,ct=excluded.ct,place=excluded.place,floor=excluded.floor,ix=excluded.ix,chat2=MAX(COALESCE(chat2,0),excluded.chat2)',
-                             (user['id'], host, body.scene, body.x, body.z, body.y, body.yaw, clock(), body.vx, body.vz, body.t, body.place, body.floor, ix, int(body.since is not None)))
+                # The home is the owner's (server/home_access.py): a guest is let in only while the
+                # owner is inside, not when locked out or sent out; one refused is drawn nowhere.
+                scene = body.scene
+                if host != user['id']:
+                    before = conn.execute('SELECT scene,host_id,seen FROM mp_presence WHERE user_id=?', (user['id'],)).fetchone()
+                    inside = bool(before and before['scene'] == 'home' and before['host_id'] == host and clock()-before['seen'] <= HOST_GONE_SECONDS)
+                    home = home_access.state(conn, user['id'], host, clock(), inside)
+                    if scene == 'home' and not home['open']:
+                        scene, ix = 'away', None
+                else:
+                    home = home_access.state(conn, user['id'], host, clock())
+                home_seen = clock() if scene == 'home' and host == user['id'] else None
+                conn.execute('INSERT INTO mp_presence(user_id,host_id,scene,x,z,y,yaw,seen,vx,vz,ct,place,floor,ix,chat2,held,home_seen) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,scene=excluded.scene,x=excluded.x,z=excluded.z,y=excluded.y,yaw=excluded.yaw,seen=excluded.seen,vx=excluded.vx,vz=excluded.vz,ct=excluded.ct,place=excluded.place,floor=excluded.floor,ix=excluded.ix,chat2=MAX(COALESCE(chat2,0),excluded.chat2),held=excluded.held,home_seen=COALESCE(excluded.home_seen,mp_presence.home_seen)',
+                             (user['id'], host, scene, body.x, body.z, body.y, body.yaw, clock(), body.vx, body.vz, body.t, body.place, body.floor, ix, int(body.since is not None), body.held or None, home_seen))
                 # The host's residents' home versions (npc_homes.py), so visitors follow their rooms too.
                 homes = app.state.npc_homes.versions_in(conn, host) if hasattr(app.state, 'npc_homes') else {}
                 # The rest is read after the commit: some 240 polls a second share SQLite's one writer slot.
                 phase.commit()
                 chat2 = body.since is not None
                 blocked = social_db.blocked_ids(conn, user['id'])
-                space = village(conn, user, body.scene, blocked) if body.scene in VISIBLE_SCENES else None
-                reply = {**overview(conn, user, messages=not chat2, blocked=blocked), 'village': space if body.scene == 'village' else None, 'space': space, 'npc_homes': homes}
+                space = village(conn, user, scene, blocked) if scene in VISIBLE_SCENES else None
+                reply = {**overview(conn, user, messages=not chat2, blocked=blocked), 'village': space if scene == 'village' else None, 'space': space, 'npc_homes': homes,
+                         # The home's door for this player (open, locked, why not) and the player's own
+                         # starseed balance, so the wallet follows every poll (contracts doc).
+                         'home': home, 'shards': user['shards']}
                 if chat2:
                     _, village_room, party_room = chat_rooms(conn, user['id'])
                     del reply['messages']
