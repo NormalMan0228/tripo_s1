@@ -71,6 +71,7 @@ func _ready() -> void:
 func open() -> void:
 	if panel.tracker == null: return
 	panel.tracker.window = self
+	panel.tracker.seen()
 	panel.tracker.attach(host)
 	await panel.open()
 

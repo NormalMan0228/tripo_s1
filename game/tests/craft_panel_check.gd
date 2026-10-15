@@ -6,6 +6,7 @@ const Main = preload("res://scripts/main.gd")
 const CraftPanel = preload("res://scripts/craft_panel.gd")
 const Assembly = preload("res://scripts/asset_assembly.gd")
 const Fx = preload("res://scripts/fx.gd")
+const CraftBadge = preload("res://scripts/craft_badge.gd")
 var failed := false
 var app: Node
 
@@ -87,9 +88,21 @@ func run() -> void:
 	expect(mine.size() == 1 and int(app.me.shards) < shards, "object in the bag and starseeds spent")
 	await capture("ready")
 	app.close_village_modal()
+	# While a craft waits for the player with the window closed, the HUD's craft slot (C) wears a badge (17).
+	var tracker: Node = app.craft_tracker()
+	tracker.badge(true)
+	await process_frame
+	var slots := CraftBadge.slots()
+	expect(not slots.is_empty() and slots.all(func(slot: Control) -> bool: return slot.get_node_or_null(CraftBadge.NAME) != null), "the HUD craft slot wears a badge while the craft waits")
+	await create_timer(0.8).timeout
+	await capture("badge")
 	# Photo crafts skip the picture; cancelling gives the starseeds back.
 	await app.open_craft()
 	panel = app.craft_box
+	await process_frame
+	expect(not tracker.needs_you and CraftBadge.slots().all(func(slot: Control) -> bool:
+		var dot := slot.get_node_or_null(CraftBadge.NAME)
+		return dot == null or dot.is_queued_for_deletion()), "opening the craft window clears the badge")
 	expect(labels(panel.status).contains(tr("여기에 놓기")), "reopening shows the finished craft")
 	panel.status.find_children("*", "Button", true, false).filter(func(b) -> bool: return b.text == tr("새로 만들기"))[0].pressed.emit()
 	await process_frame
@@ -135,6 +148,45 @@ func run() -> void:
 	expect(labels(panel.status).contains(tr("확인이 필요해요")) and panel.working.is_empty() and "unknown" in CraftPanel.TERMINAL, "a held craft ends in a clear state")
 	panel.show_job({"id": "steps", "state": "failed", "error": "generation_timeout"})
 	expect(panel.form.visible and labels(panel.status).contains(tr("오래")), "a craft stopped at its deadline says so")
+	# A refused (inappropriate) craft and every other failure say why, above the form.
+	panel.show_job({"id": "steps", "state": "failed", "error": "refused_person", "reason": "refused", "refusal": "person"})
+	text = labels(panel.status)
+	expect(panel.form.visible and text.contains(tr("만들 수 없는 의뢰예요")) and text.contains("실제 사람") and text.contains("돌려드렸어요"), "a refused craft says why and that the starseeds came back")
+	await capture("refused")
+	panel.show_job({"id": "steps", "state": "failed", "error": "llm_invalid_design", "reason": "design"})
+	expect(labels(panel.status).contains("설계도"), "a failed design says so")
+	panel.show_job({"id": "steps", "state": "failed", "error": "refused_hate"})
+	expect(labels(panel.status).contains("혐오"), "an older server's refusal code is worded too")
+	panel.show_job({})
+	panel.prompt.text = "나치 깃발 액자"
+	await panel.request()
+	expect(panel.job_id.is_empty() and app.craft_job.is_empty(), "a listed word is refused before anything is made")
+	expect(panel._explain("refused_drugs").contains("마약") and panel._explain("image_too_large").contains("20MB"), "refusals and photo problems are worded")
+	# The picture step can be skipped (69): the craft is built from the words.
+	panel.prompt.text = "a round lamp"
+	panel.picture_first.button_pressed = false
+	await capture("text-only")
+	expect(panel.picture_first.visible and panel._body().get("concept") == false and panel.concept_note.text.contains("그림 단계 없이"), "text-only craft skips the picture when asked")
+	panel.picture_first.button_pressed = true
+	expect(panel._body().get("concept") == true, "and draws it again when asked")
+	# Photos: any size up to 20 MB is scaled down and re-encoded under 1 MB; bad files say why.
+	var big := Image.create(3000, 2000, false, Image.FORMAT_RGB8)
+	big.fill(Color(0.8, 0.5, 0.2))
+	var big_path := OS.get_user_data_dir().path_join("craft_check_big.png")
+	big.save_png(big_path)
+	var photo := CraftPanel.read_photo(big_path)
+	expect(not photo.has("error") and maxi(photo.image.get_width(), photo.image.get_height()) == CraftPanel.PHOTO_SIDE and str(photo.data).begins_with("data:image/jpeg;base64,"), "a large photo is scaled to %d px" % CraftPanel.PHOTO_SIDE)
+	expect(Marshalls.base64_to_raw(str(photo.data).get_slice(",", 1)).size() <= CraftPanel.PHOTO_SEND_BYTES, "and sent under 1 MB")
+	var tiny := Image.create(8, 8, false, Image.FORMAT_RGB8)
+	var tiny_path := OS.get_user_data_dir().path_join("craft_check_tiny.png")
+	tiny.save_png(tiny_path)
+	var junk_path := OS.get_user_data_dir().path_join("craft_check_junk.png")
+	var junk := FileAccess.open(junk_path, FileAccess.WRITE)
+	junk.store_string("not a picture")
+	junk.close()
+	expect(CraftPanel.read_photo(tiny_path).get("error") == "image_too_small" and CraftPanel.read_photo(junk_path).get("error") == "image_unreadable", "tiny and broken pictures say why")
+	for path in [big_path, tiny_path, junk_path]: DirAccess.remove_absolute(path)
+	panel.prompt.text = ""
 	expect(CraftPanel.poll_pause(1) == 4.0 and CraftPanel.poll_pause(9) == 30.0, "failed polls back off up to 30 s")
 	panel.show_job({})
 	app.close_village_modal()
@@ -150,7 +202,14 @@ func run() -> void:
 	await create_timer(0.3).timeout
 	await capture("room-form")
 	# Named styles and sizes from the server, remembered for the next craft.
-	expect(panel.style_buttons.size() == 9 and panel.size_buttons.size() == 5 and panel.style_grid.visible, "style and size choices offered")
+	expect(panel.style_buttons.size() == 9 and panel.size_buttons.size() == 6 and panel.style_grid.visible, "style and size choices offered (5 sizes + 직접 정하기)")
+	# "직접 정하기" opens the drag box; a finished box goes out as dims, the size as auto.
+	panel.size_buttons["custom"].pressed.emit()
+	panel.size_box.set_dims(Vector3(1.2, 0.9, 0.6))
+	var boxed := panel._body()
+	expect(panel.size_box.visible and boxed.get("dims", []) == [1.2, 0.9, 0.6] and boxed.get("size") == "auto", "the dragged box is sent as dims")
+	await create_timer(0.6).timeout
+	await capture("size-box")
 	panel.style_buttons["anime"].pressed.emit()
 	panel.size_buttons["large"].pressed.emit()
 	expect(panel.style_id == "anime" and panel.size_id == "large" and panel.style_buttons["anime"].button_pressed and not panel.style_buttons["rpg"].button_pressed, "picking a style and a size")

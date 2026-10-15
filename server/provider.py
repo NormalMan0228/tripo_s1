@@ -248,6 +248,8 @@ class TripoProvider:
         except ValueError: raise ProviderError('upstream_invalid_json', uncertain=method=='POST') from None
         if not isinstance(data,dict): raise ProviderError('upstream_schema',uncertain=method=='POST')
         if response.status_code >= 500: raise ProviderError('upstream_unavailable', uncertain=method=='POST')
+        # 2008: Tripo's content policy refused the prompt or picture (no task was made).
+        if data.get('code') == 2008: raise ProviderError('refused_other')
         if response.status_code >= 400 or data.get('code') != 0:
             raise ProviderError('upstream_rejected')
         if not isinstance(data.get('data'),dict): raise ProviderError('upstream_schema', uncertain=method=='POST')

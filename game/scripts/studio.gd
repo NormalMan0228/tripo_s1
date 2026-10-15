@@ -1186,7 +1186,8 @@ func select_item(index: int) -> void:
 	if not item:refuse(tr("에셋을 읽을 수 없습니다"));return
 	inspected=item;preview_stage.add_child(item);item.position=Vector3.ZERO
 	var preview_size: Vector3=item.get_meta("size",Vector3.ONE)
-	preview_camera.size=maxf(1.5,preview_size.y*1.5)
+	# The whole object in view, however wide or tall (preview_frame.gd); a lid swings open above it.
+	preload("res://scripts/preview_frame.gd").fit(preview_camera,preview_size)
 	if item.get_meta("studio",false) and item.pivots.has("lid"):preview_camera.size=maxf(1.9,preview_camera.size)
 	detail.text=selected.name+"\n"+(tr("배치됨 · ")+{"home":tr("내 집"),"workshop":tr("공방"),"village":tr("마을")}.get(selected.room,tr("다른 공간")) if selected.state=="placed" else tr("보관 중"))
 	part_choice.clear();part_choice.add_item(tr("전체 색칠"))
@@ -1570,8 +1571,8 @@ func preview_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and event.button_mask&MOUSE_BUTTON_MASK_LEFT and is_instance_valid(inspected):
 		inspected.rotation.y+=event.relative.x*.012
 	if event is InputEventMouseButton and event.pressed:
-		if event.button_index==MOUSE_BUTTON_WHEEL_UP:preview_camera.size=maxf(1.5,preview_camera.size-.2)
-		if event.button_index==MOUSE_BUTTON_WHEEL_DOWN:preview_camera.size=minf(4.0,preview_camera.size+.2)
+		if event.button_index==MOUSE_BUTTON_WHEEL_UP:preview_camera.size=maxf(0.6,preview_camera.size-.2)
+		if event.button_index==MOUSE_BUTTON_WHEEL_DOWN:preview_camera.size=minf(8.0,preview_camera.size+.2)
 
 func commit_place() -> void:
 	if pending or selected.is_empty():return

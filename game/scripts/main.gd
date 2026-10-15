@@ -1189,6 +1189,8 @@ func inspect_object(obj: Dictionary) -> void:
 		model.set_meta("object_key",object_key(obj))
 		if not model.get_meta("studio",false):Loader.paint(model,Color(selected.color))
 		inspect_stage.add_child(model)
+		# The whole object in view, however wide or tall (preview_frame.gd).
+		preload("res://scripts/preview_frame.gd").fit(preload("res://scripts/preview_frame.gd").camera_in(inspect_stage),model.get_meta("size",Vector3.ZERO))
 		update_paint_entry(model)
 		# A reload while the shape window is open keeps showing its unsaved draft.
 		if is_instance_valid(shape_panel): shape_panel.refresh()
