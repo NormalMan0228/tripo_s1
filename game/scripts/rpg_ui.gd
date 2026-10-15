@@ -18,6 +18,49 @@ const ACCENT := Color("b0452f")
 const LEAF := Color("4a7536")
 const SOFT := Color("d8e3d4")
 const OUTLINE := Color(0.07,0.05,0.03,0.92)
+## Design tokens (docs/design/UI_UNIFICATION.md 1.1). Every other script takes its colours,
+## type sizes and spacing from here; tests/ui_consistency_check.gd lints literal colours.
+## Hover / focus text on night glass and the star-seed count.
+const HOVER := Color("ffe08a")
+## Party, whisper and the teal ribbon.
+const TEAL := Color("70afa3")
+## Ornamented dividers on parchment.
+const PAPER_LINE := Color("c9a46a")
+## Presence dots.
+const ONLINE := Color("8fd16a")
+const AWAY := Color("e9b552")
+const OFFLINE := Color(1,1,1,.35)
+## Chat channels other than the village (INK) and the party (TEAL).
+const CHAT_GLOBAL := Color("c9b8ff")
+const CHAT_WHISPER := Color("f0a8c8")
+## The window shade: a radial fall from SHADE_IN at the centre to SHADE_OUT at the corners.
+const SHADE_IN := Color(0.03,0.05,0.06,.55)
+const SHADE_OUT := Color(0.02,0.03,0.04,.86)
+## Leaf-coin count and warm alert text on night glass.
+const LEAF_LIGHT := Color("c8ec9f")
+const WARM := Color("ffd9a0")
+## Type scale (sizes; fonts and colours per role in TYPE and text_style()). Paper titles are
+## PAPER_INK without an outline; night titles GOLD with one.
+const T_WINDOW := 26
+const T_SECTION := 17
+const T_BODY := 15
+const T_CAPTION := 13
+const T_SMALL := 12
+## Sizes on the 1280x800 design canvas.
+const BTN_SM := 32
+const BTN_MD := 40
+const BTN_LG := 44
+const BTN_MENU := 52
+const SLOT := 70
+const KEY := 22
+const CLOSE := 34
+const PAD := 16
+const GAP_S := 8
+const GAP := 10
+const GAP_L := 12
+const WINDOW_TOP := 92
+const WINDOW_W := {"small":560, "standard":760, "wide":1040}
+const DRAWER_W := 308
 
 const GameSettings = preload("res://scripts/game_settings.gd")
 const FONT_BODY: Font = preload("res://assets/fonts/ui_body.tres")
@@ -523,6 +566,27 @@ static func numbers(l: Label, size := 16) -> Label:
 	l.add_theme_font_size_override("font_size", size)
 	return l
 
+## Type roles: [font, size]. Colours depend on the surface (text_style()).
+const TYPE := {"window":[FONT_DISPLAY, T_WINDOW], "section":[FONT_STRONG, T_SECTION], "body":[FONT_BODY, T_BODY],
+	"caption":[FONT_BODY, T_CAPTION], "small":[FONT_BODY, T_SMALL]}
+
+## Gives a label one of the type roles on parchment ("paper") or night glass ("night"):
+## window titles are PAPER_INK on paper and GOLD with an outline on night; captions are
+## PAPER_MUTED / SOFT; the rest PAPER_INK / INK. Returns l.
+static func text_style(l: Label, role := "body", kind := "paper") -> Label:
+	var spec: Array = TYPE.get(role, TYPE.body)
+	var night := kind != "paper"
+	l.add_theme_font_override("font", spec[0])
+	l.add_theme_font_size_override("font_size", spec[1])
+	var color := PAPER_INK
+	if role == "caption": color = SOFT if night else PAPER_MUTED
+	elif night: color = GOLD if role == "window" else INK
+	l.add_theme_color_override("font_color", color)
+	if night and role == "window":
+		l.add_theme_color_override("font_outline_color", OUTLINE)
+		l.add_theme_constant_override("outline_size", 5)
+	return l
+
 ## A ribbon banner carrying a title (modal headers, results).
 static func ribbon(parent: Node, value: String, teal := false, size := 22) -> PanelContainer:
 	var band := PanelContainer.new()
@@ -541,7 +605,7 @@ static func ribbon(parent: Node, value: String, teal := false, size := 22) -> Pa
 	return band
 
 ## Thin ornamented rule with a centred diamond.
-static func divider(parent: Node, color := Color("c9a46a"), width := 0.0) -> Control:
+static func divider(parent: Node, color := PAPER_LINE, width := 0.0) -> Control:
 	var line := Control.new()
 	line.custom_minimum_size = Vector2(width, 12)
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -663,12 +727,12 @@ static func player_frame(ui: Control, portrait: String, fold_id := "") -> Dictio
 	var star_name := TranslationServer.translate("별씨")
 	var leaf_name := TranslationServer.translate("잎전")
 	coins.add_child(name_tip(icon("res://assets/starseed.svg", 24), star_name))
-	var stars := numbers(label(coins, "0", 17, Color("ffe08a")), 17)
+	var stars := numbers(label(coins, "0", 17, HOVER), 17)
 	stars.custom_minimum_size.x = 34
 	name_tip(stars, star_name)
 	var gap := Control.new(); gap.custom_minimum_size.x = 6; gap.mouse_filter = Control.MOUSE_FILTER_IGNORE; coins.add_child(gap)
 	coins.add_child(name_tip(icon("res://assets/ui/leaf.svg", 22), leaf_name))
-	var leaves := numbers(label(coins, "0", 17, Color("c8ec9f")), 17)
+	var leaves := numbers(label(coins, "0", 17, LEAF_LIGHT), 17)
 	leaves.custom_minimum_size.x = 34
 	name_tip(leaves, leaf_name)
 	var status := label(column, "", 12, SOFT)
@@ -687,8 +751,6 @@ static func player_frame(ui: Control, portrait: String, fold_id := "") -> Dictio
 ## Square slots with an icon, a key cap and a caption on a glass tray. With a
 ## fold_id a chevron key at the tray's right end slides it below the screen.
 static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxContainer:
-	const SLOT := 70.0
-	const GAP := 10.0
 	var tray := PanelContainer.new()
 	var tray_style := panel_style("pill")
 	tray_style.set_content_margin_all(0)
@@ -1100,12 +1162,12 @@ static func night_theme() -> Theme:
 	for state in ["normal","hover","pressed","disabled"]: t.set_stylebox(state,"Button",frame("btn_night_"+state))
 	t.set_stylebox("hover_pressed","Button",frame("btn_night_pressed"))
 	for item in ["font_color","font_pressed_color","font_hover_pressed_color","font_focus_color"]: t.set_color(item,"Button",INK)
-	t.set_color("font_hover_color","Button",Color("ffe08a"))
+	t.set_color("font_hover_color","Button",HOVER)
 	t.set_color("font_disabled_color","Button",Color(INK,.45))
 	for spec in [["GoldButton","btn_gold",PAPER_INK,false],["PrimaryButton","btn_green",INK,true],["NightButton","btn_night",INK,true]]:
 		t.set_type_variation(spec[0],"Button")
 		_buttons(t,spec[0],spec[1],spec[2],spec[3])
-	t.set_color("font_hover_color","NightButton",Color("ffe08a"))
+	t.set_color("font_hover_color","NightButton",HOVER)
 	t.set_type_variation("HudSlot","Button")
 	for state in ["normal","hover","pressed","hover_pressed","disabled"]:
 		t.set_stylebox(state,"HudSlot",frame({"normal":"slot_night","hover":"slot_night_hover","pressed":"slot_night_pressed","hover_pressed":"slot_night_pressed","disabled":"slot_night"}[state]))
@@ -1122,9 +1184,81 @@ static func night_theme() -> Theme:
 		t.set_color("font_color",type,INK)
 		t.set_color("caret_color",type,GOLD)
 		t.set_color("font_placeholder_color",type,Color(1,1,1,.42))
+	_night_coverage(t)
 	tooltip_theme(t)
 	_night_theme=t
 	return t
+
+## The control types the parchment theme styles, in night glass, so a night panel inside a
+## paper root (or the reverse) never shows the other surface's lists, tabs, menus or scroll
+## wells (tests/ui_consistency_check.gd keeps both themes covering NIGHT_TYPES).
+const THEMED_TYPES := ["Label","Button","LineEdit","TextEdit","CheckBox","CheckButton","ItemList","TabBar","TabContainer",
+	"OptionButton","PopupMenu","ScrollContainer","VScrollBar","HScrollBar","HSlider","VSlider","ProgressBar","TooltipPanel","TooltipLabel"]
+
+static func _night_coverage(t: Theme) -> void:
+	# Lists: a night well; the picked row glows gold, the hovered one lifts a little.
+	var well := frame("field_night")
+	well.set_content_margin_all(8)
+	t.set_stylebox("panel", "ItemList", well)
+	t.set_stylebox("focus", "ItemList", StyleBoxEmpty.new())
+	var picked := StyleBoxFlat.new()
+	picked.bg_color = Color(GOLD, .28)
+	picked.set_corner_radius_all(8)
+	picked.border_color = Color(GOLD, .7)
+	picked.set_border_width_all(1)
+	var hovered := StyleBoxFlat.new()
+	hovered.bg_color = Color(1,1,1,.1)
+	hovered.set_corner_radius_all(8)
+	for item in ["selected","selected_focus"]: t.set_stylebox(item, "ItemList", picked)
+	t.set_stylebox("hovered", "ItemList", hovered)
+	t.set_stylebox("cursor", "ItemList", StyleBoxEmpty.new())
+	t.set_stylebox("cursor_unfocused", "ItemList", StyleBoxEmpty.new())
+	for item in ["font_color","font_hovered_color"]: t.set_color(item, "ItemList", INK)
+	t.set_color("font_selected_color", "ItemList", HOVER)
+	t.set_constant("v_separation", "ItemList", 6)
+	# Drop-down menus: plain night glass.
+	var menu := frame("panel_night_plain")
+	menu.set_content_margin_all(10)
+	t.set_stylebox("panel", "PopupMenu", menu)
+	t.set_stylebox("hover", "PopupMenu", picked)
+	for item in ["font_color","font_accelerator_color"]: t.set_color(item, "PopupMenu", INK)
+	t.set_color("font_hover_color", "PopupMenu", HOVER)
+	t.set_color("font_disabled_color", "PopupMenu", Color(INK,.45))
+	t.set_constant("v_separation", "PopupMenu", 8)
+	t.set_icon("arrow", "OptionButton", half("arrow_down_light"))
+	t.set_constant("arrow_margin", "OptionButton", 12)
+	# Tabs: night keys, the chosen one gold.
+	for type in ["TabBar","TabContainer"]:
+		t.set_stylebox("tab_selected", type, frame("btn_gold_normal"))
+		t.set_stylebox("tab_hovered", type, frame("btn_night_hover"))
+		t.set_stylebox("tab_unselected", type, frame("btn_night_normal"))
+		t.set_color("font_selected_color", type, PAPER_INK)
+		t.set_color("font_unselected_color", type, INK)
+		t.set_color("font_hovered_color", type, HOVER)
+	t.set_stylebox("panel", "TabContainer", frame("panel_night_plain"))
+	# Scrolling, sliders and meters share the parchment pieces (they read on both surfaces).
+	t.set_stylebox("panel", "ScrollContainer", StyleBoxEmpty.new())
+	for type in ["VScrollBar","HScrollBar"]:
+		t.set_stylebox("scroll", type, frame("scroll_track"))
+		t.set_stylebox("scroll_focus", type, frame("scroll_track"))
+		t.set_stylebox("grabber", type, frame("scroll_grabber"))
+		t.set_stylebox("grabber_highlight", type, frame("scroll_grabber_hover"))
+		t.set_stylebox("grabber_pressed", type, frame("scroll_grabber_hover"))
+	var track := frame("bar_bg")
+	track.set_content_margin_all(3)
+	for type in ["HSlider","VSlider"]:
+		t.set_stylebox("slider", type, track)
+		t.set_stylebox("grabber_area", type, frame("bar_fill", AWAY))
+		t.set_stylebox("grabber_area_highlight", type, frame("bar_fill", Color("f3c96a")))
+		t.set_icon("grabber", type, half("slider_grabber"))
+		t.set_icon("grabber_highlight", type, half("slider_grabber_hover"))
+	t.set_stylebox("background", "ProgressBar", frame("bar_bg"))
+	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", AWAY))
+	t.set_color("font_color", "ProgressBar", INK)
+	t.set_icon("checked", "CheckBox", half("check_on"))
+	t.set_icon("unchecked", "CheckBox", half("check_off"))
+	t.set_icon("radio_checked", "CheckBox", half("radio_on"))
+	t.set_icon("radio_unchecked", "CheckBox", half("radio_off"))
 
 # ------------------------------------------------------------------ dialogue
 
@@ -1389,8 +1523,8 @@ static func dialogue_choices(d: Dictionary, entries: Array) -> Array:
 		b.theme_type_variation = "NightButton"
 		b.add_theme_font_override("font", FONT_STRONG)
 		b.add_theme_font_size_override("font_size", 17)
-		b.add_theme_color_override("font_hover_color", Color("ffe08a"))
-		b.add_theme_color_override("font_focus_color", Color("ffe08a"))
+		b.add_theme_color_override("font_hover_color", HOVER)
+		b.add_theme_color_override("font_focus_color", HOVER)
 		for state in ["normal","hover","pressed","disabled"]:
 			var box := frame("btn_night_" + state)
 			box.content_margin_left = 50
@@ -1433,8 +1567,8 @@ static func menu_button(parent: Node, value: String, callback: Callable, width :
 	b.theme_type_variation = "NightButton"
 	b.add_theme_font_override("font", FONT_STRONG)
 	b.add_theme_font_size_override("font_size", 19)
-	b.add_theme_color_override("font_hover_color", Color("ffe08a"))
-	b.add_theme_color_override("font_focus_color", Color("ffe08a"))
+	b.add_theme_color_override("font_hover_color", HOVER)
+	b.add_theme_color_override("font_focus_color", HOVER)
 	b.pressed.connect(callback)
 	hover_motion(b, 1.03)
 	parent.add_child(b)
