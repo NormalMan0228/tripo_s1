@@ -124,9 +124,10 @@ func _ready() -> void:
 	refresh_channels()
 	place_for("village")
 
-## Bottom-left spot per place: above the room's way-out row, above the expedition's tool bar.
+## The same bottom-left spot in every place (village, rooms and expeditions keep their hotbars at the
+## bottom centre, U-WP-10/11); `kind` stays for a place that needs its own.
 func place_for(kind: String) -> void:
-	bottom = {"room":786.0, "survival":786.0}.get(kind, 786.0)
+	bottom = {}.get(kind, 786.0)
 	position = Vector2(14, bottom - HEIGHT)
 	size = Vector2(WIDTH, HEIGHT)
 	RpgUi.pin(self, 0.0, 1.0)

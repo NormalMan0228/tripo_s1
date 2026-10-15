@@ -49,40 +49,27 @@ func install_hud(survival: bool) -> void:
 	# The HUD's toast lane is laid after this (a freed one from the last HUD would not pass): the
 	# layer finds the place's current lane when it speaks.
 	if layer: layer.bind(app, "survival" if survival else "village", app.toast_lane if is_instance_valid(app.toast_lane) else null)
-	# The village's chip became the chat box's header (the 함께하기 key, K). On an expedition a
-	# compact chip keeps the party's health line under the day counter, with the same two keys.
-	if not survival: return
+	# The old social chip became the chat box's header (the 함께하기 key, K) everywhere. A shared
+	# expedition keeps one small line under the day counter: who is along and their health.
+	if not survival or not bool(app.run.get("coop", false)): return
 	var RpgUi = preload("res://scripts/rpg_ui.gd")
 	var plate := PanelContainer.new()
-	plate.name = "SocialChip"
+	plate.name = "CoopLine"
 	var style: StyleBox = RpgUi.panel_style("pill")
-	style.content_margin_left = 10
-	style.content_margin_right = 16
-	style.content_margin_top = 6
-	style.content_margin_bottom = 6
+	style.content_margin_left = 14
+	style.content_margin_right = 14
+	style.content_margin_top = 3
+	style.content_margin_bottom = 3
 	plate.add_theme_stylebox_override("panel", style)
-	plate.position = Vector2(470, 74) if survival else Vector2(14, 108)
+	plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	plate.position = Vector2(500, 64)
+	plate.custom_minimum_size = Vector2(280, 0)
 	app.ui.add_child(plate)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	plate.add_child(row)
-	for spec in [["people", tr("함께하기"), open_menu], ["chat", tr("대화"), func(): if layer: layer.chat.focus()]]:
-		var key := Button.new()
-		key.custom_minimum_size = Vector2(42, 42)
-		key.focus_mode = Control.FOCUS_NONE
-		key.theme_type_variation = "HudSlot"
-		key.icon = RpgUi.icon_texture(spec[0])
-		key.expand_icon = true
-		key.tooltip_text = spec[1]
-		var action: Callable = spec[2]
-		key.pressed.connect(func(): action.call())
-		RpgUi.hover_motion(key, 1.1)
-		row.add_child(key)
-	status_label = RpgUi.label(row, tr("연결 상태 확인 중…"), 12, RpgUi.SOFT)
-	status_label.custom_minimum_size.x = 150 if not survival else 220
-	status_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	if survival: RpgUi.pin(plate, 0.5, 0.0)
+	status_label = RpgUi.label(plate, "", 12, RpgUi.SOFT)
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	plate.size = Vector2(280, 24)
+	RpgUi.pin(plate, 0.5, 0.0)
 	update_status()
 
 func update_status() -> void:

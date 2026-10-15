@@ -1160,9 +1160,6 @@ func build_village_hud() -> void:
 	RpgUi.fold_card(tracker,head,body,"objective")
 	# A folded minimap is just its chip: the tracker rises to sit under it.
 	RpgUi.fold_shift(tracker,"minimap",Vector2(0,-Minimap.FOLD_LIFT),"move")
-	# The social chip under the character frame folds away with it.
-	var social_chip := ui.get_node_or_null("SocialChip")
-	if social_chip is Control: RpgUi.fold_shift(social_chip,"profile",Vector2(-36,0))
 	var slots := []
 	# Action ids: the key caps and "name  ·  key" tooltips follow rebinding (RpgUi.key_text).
 	for spec in [["bag.svg","inventory",tr("가방"),toggle_drawer],["craft.svg","craft",tr("제작"),open_craft],["map.svg","map",tr("지도"),life.open_map],
