@@ -10331,6 +10331,34 @@
   "%s·Space·클릭을 누르고 있으면 칸이 오른쪽으로, 떼면 왼쪽으로": {
    "en": "Hold %s, Space or click to move the zone right; release to move it left",
    "zh": "按住 %s、空格或鼠标，区域向右移动；松开则向左"
+  },
+  "스테이지 %d/%d": {
+   "en": "Stage %d/%d",
+   "zh": "第 %d/%d 关"
+  },
+  "스테이지 %d": {
+   "en": "%d stages",
+   "zh": "%d 关"
+  },
+  "어디로 떠날까요?": {
+   "en": "Where to?",
+   "zh": "要去哪里？"
+  },
+  "준비 완료 · 출발하기": {
+   "en": "Ready · Set out",
+   "zh": "准备完毕 · 出发"
+  },
+  "처음": {
+   "en": "First",
+   "zh": "入门"
+  },
+  "마지막 밤에 우두머리": {
+   "en": "A boss on the last night",
+   "zh": "最后一夜有首领"
+  },
+  "우두머리": {
+   "en": "Boss",
+   "zh": "首领"
   }
  },
  "templates": []
