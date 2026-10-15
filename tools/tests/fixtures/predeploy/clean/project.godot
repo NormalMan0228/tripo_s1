@@ -1,0 +1,10 @@
+config_version=5
+
+[autoload]
+Existing="*res://main.gd"
+
+[input]
+jump={
+"deadzone": 0.5,
+"events": []
+}

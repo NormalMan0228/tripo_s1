@@ -1,0 +1,1 @@
+A hash inside a quoted path is part of the filename.

@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+; path="res://comment-only-scene.txt"
+[ext_resource type="Texture2D" path="res://missing-scene.png" id="1"]
+
+[node name="Main" type="Node"]
