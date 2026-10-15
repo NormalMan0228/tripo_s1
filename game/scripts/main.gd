@@ -1395,7 +1395,8 @@ func refresh_inventory() -> void:
 	# Also while the village is still loading (screen "loading"): the walker built before /v1/me
 	# answered wears the saved look now.
 	wear_profile()
-	reward_button.visible=me.get("pending_reward")!=null
+	# The HUD may have been rebuilt while /v1/me was on its way (a busy PC, a window run).
+	if is_instance_valid(reward_button): reward_button.visible=me.get("pending_reward")!=null
 	if is_instance_valid(expedition_button):
 		var saved = me.get("active_run_summary")
 		expedition_button.tooltip_text=(tr("탐험 이어하기 · %d일") % saved.day) if saved is Dictionary else tr("탐험")
