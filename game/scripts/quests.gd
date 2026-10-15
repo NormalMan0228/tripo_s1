@@ -226,10 +226,10 @@ static func hand_over(api: Node, id: String, say: Callable, done: Callable) -> v
 		say.call([error_line(code)], [])
 		return
 	adopt_data(result.data.get("quests"), str(api.token))
-	if done.is_valid(): done.call("completed", result.data)
 	var entry: Dictionary = result.data.get("quest", {})
-	var lines := lines_of(entry, "thanks")
-	say.call(lines, [[t("천만에요"), Callable()]])
+	say.call(lines_of(entry, "thanks"), [[t("천만에요"), Callable()]])
+	# The thanks are open: the effects start over them and finish once they close.
+	if done.is_valid(): done.call("completed", result.data)
 
 static func error_line(code: String) -> String:
 	match code:
@@ -264,13 +264,20 @@ static func village_done(app: Node, anchor: Node3D, kind: String, reply: Diction
 				if anchor.has_method("pop"): anchor.pop("♥", 2.0)
 				if anchor.has_method("smile"): anchor.smile(4.0)
 			var stars := int(reply.get("stars", 0))
-			reward_effect(app, at, stars, int(reply.get("shards", app.me.get("shards", 0))))
-			app.message(t("부탁 완료 · %s · %s") % [title_of(entry), stars_text(stars)] if stars > 0 else t("부탁 완료 · %s") % title_of(entry))
+			var total := int(reply.get("shards", app.me.get("shards", 0)))
+			# Known now, so the village's polls see no change to refresh for.
+			if app.me is Dictionary: app.me["shards"] = total
+			reward_burst(app, at, stars)
 			# The bag's items went to the resident: the village life takes the server's new state.
 			if reply.get("homestead") is Dictionary and is_instance_valid(app.get("life")) and app.life.has_method("accept"): app.life.accept(reply.homestead)
+			if here: here.completed(entry)
+			# Conversations hide the HUD: the stars fly into the counter once the thanks close.
+			await after_dialogue(app)
+			if not is_instance_valid(app): return
+			reward_fly(app, at, stars, total)
+			app.message(t("부탁 완료 · %s · %s") % [title_of(entry), stars_text(stars)] if stars > 0 else t("부탁 완료 · %s") % title_of(entry))
 			var note := NpcGifts.letters_note(reply)
 			if not note.is_empty(): app.get_tree().create_timer(3.2).timeout.connect(func(): if is_instance_valid(app): app.message(note))
-			if here: here.completed(entry)
 
 ## Inside a building: the room's own pop, sparkles over the resident and its wallet line.
 static func room_done(room: Node, id: String, kind: String, reply: Dictionary) -> void:
@@ -291,30 +298,23 @@ static func room_done(room: Node, id: String, kind: String, reply: Dictionary) -
 		var note := NpcGifts.letters_note(reply)
 		if not note.is_empty(): room.create_tween().tween_callback(func(): room.message(note)).set_delay(3.0)
 
-## Sparkles and a "+N" star over the resident; stars fly into the HUD counter, which ticks up as
-## they land.
-static func reward_effect(app: Node, at: Vector3, stars: int, total: int) -> void:
+## The moment of the hand-over, over the thanks: sparkles, a glow and a ring at the resident and
+## a "+N" starseed rising over them.
+static func reward_burst(app: Node, at: Vector3, stars: int) -> void:
 	var world: Node3D = app.world
 	Fx.burst(world, at+Vector3(0, 1.6, 0), "sparkle", 24, Color(0,0,0,0), 0.55)
 	Fx.glow(world, at+Vector3(0, 1.4, 0), Color("ffd27a"), 2.4, 1.3)
 	Fx.ring(world, at+Vector3(0, 0.05, 0), 1.8, Color(1.0, 0.88, 0.5, 0.8), 0.9)
 	RpgUi.sfx("confirm", -2.0)
 	if DisplayServer.get_name() != "headless": Fx.sound(app, "twinkle", at, 1.2, -1.0)
-	if app.me is Dictionary: app.me["shards"] = total
-	var counter: Label = app.frame.get("stars") if app.get("frame") is Dictionary else null
-	if stars <= 0 or not is_instance_valid(app.get("camera")) or not is_instance_valid(app.get("ui")):
-		if is_instance_valid(counter): RpgUi.count_to(counter, total)
-		return
-	var camera: Camera3D = app.camera
-	var from := camera.unproject_position(at+Vector3(0, 1.9, 0))
-	# "+N" with the starseed over the resident.
+	if stars <= 0 or not is_instance_valid(app.get("camera")) or not is_instance_valid(app.get("ui")): return
+	var from: Vector2 = app.camera.unproject_position(at+Vector3(0, 1.9, 0))
 	var badge := HBoxContainer.new()
 	badge.name = "QuestStars"
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badge.add_theme_constant_override("separation", 3)
 	badge.add_child(RpgUi.icon(STAR_ICON, 38))
-	var plus := RpgUi.label(badge, "+%d" % stars, 28, Color("ffe08a"))
-	RpgUi.numbers(plus, 28)
+	RpgUi.numbers(RpgUi.label(badge, "+%d" % stars, 28, Color("ffe08a")), 28)
 	app.ui.add_child(badge)
 	badge.size = badge.get_combined_minimum_size()
 	badge.position = from-badge.size*0.5
@@ -323,10 +323,29 @@ static func reward_effect(app: Node, at: Vector3, stars: int, total: int) -> voi
 	var pop := badge.create_tween()
 	pop.tween_property(badge, "scale", Vector2.ONE*1.15, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	pop.parallel().tween_property(badge, "position:y", badge.position.y-46, 1.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	pop.tween_interval(0.5)
+	pop.tween_interval(1.2)
 	pop.tween_property(badge, "modulate:a", 0.0, 0.35)
 	pop.tween_callback(badge.queue_free)
-	var goal: Vector2 = counter.get_global_rect().get_center() if is_instance_valid(counter) and counter.is_visible_in_tree() else Vector2(120, 60)
+
+## Until the open conversation closes (conversations hide the HUD, the counter with it).
+static func after_dialogue(app: Node) -> void:
+	for i in 1200:
+		if not is_instance_valid(app) or not is_instance_valid(app.get("village_modal")): return
+		await app.get_tree().create_timer(0.1).timeout
+
+## Stars fly from the resident into the HUD counter, which ticks up from the old count as they land.
+static func reward_fly(app: Node, at: Vector3, stars: int, total: int) -> void:
+	if app.me is Dictionary: app.me["shards"] = total
+	var counter: Label = app.frame.get("stars") if app.get("frame") is Dictionary else null
+	if stars <= 0 or not is_instance_valid(counter) or not is_instance_valid(app.get("camera")) or not is_instance_valid(app.get("ui")):
+		if is_instance_valid(counter): RpgUi.count_to(counter, total)
+		return
+	# A refresh may have shown the new count already: the stars bring it.
+	if counter.has_meta("count_tween") and counter.get_meta("count_tween") is Tween and (counter.get_meta("count_tween") as Tween).is_valid(): (counter.get_meta("count_tween") as Tween).kill()
+	if counter.has_meta("count_target"): counter.remove_meta("count_target")
+	counter.text = str(total-stars)
+	var from: Vector2 = app.camera.unproject_position(at+Vector3(0, 1.9, 0))
+	var goal: Vector2 = counter.get_global_rect().get_center() if counter.is_visible_in_tree() else Vector2(120, 60)
 	var flying := mini(stars, 8)
 	var landed := [0]
 	for k in flying:
@@ -339,7 +358,7 @@ static func reward_effect(app: Node, at: Vector3, stars: int, total: int) -> voi
 		app.ui.add_child(star)
 		var rise := from-Vector2(15, 15)+Vector2(randf_range(-60, 60), -60-randf_range(0, 40))
 		var t := star.create_tween()
-		t.tween_interval(0.35+k*0.07)
+		t.tween_interval(0.1+k*0.07)
 		t.tween_property(star, "scale", Vector2.ONE*1.2, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		t.parallel().tween_property(star, "position", rise, 0.3).set_ease(Tween.EASE_OUT)
 		t.tween_property(star, "position", goal-Vector2(15, 15), 0.55).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
