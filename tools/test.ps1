@@ -70,6 +70,18 @@ if (Get-NetTCPConnection -LocalPort $taskPort -State Listen -ErrorAction Silentl
     throw "Port $taskPort already has a server (another QA run?). Set TRIPOTHON_QA_PORT to a free port."
 }
 $taskServerUrl = 'http://127.0.0.1:' + $taskPort
+# A Godot run that hangs is killed (with its child process) after TRIPOTHON_TEST_TIMEOUT seconds
+# (default 45 minutes) instead of holding the whole batch: one stuck test once waited ten hours.
+function Wait-TaskGodot($process, [string]$what) {
+    $null = $process.Handle  # keeps the exit code readable after the process ends
+    $limit = 2700
+    if ($env:TRIPOTHON_TEST_TIMEOUT) { $limit = [int]$env:TRIPOTHON_TEST_TIMEOUT }
+    if (-not $process.WaitForExit($limit * 1000)) {
+        & taskkill.exe /T /F /PID $process.Id | Out-Null
+        throw "$what did not finish within $limit s and was stopped (see its log above)."
+    }
+    $process.WaitForExit()
+}
 try {
     $taskServerExecutable = $taskPython
     $taskServerArguments = @('-m','uvicorn','server.app:create_app','--factory','--host','127.0.0.1','--port',[string]$taskPort,'--workers','1','--no-access-log','--no-proxy-headers')
@@ -94,7 +106,8 @@ try {
         if ($Developer) { $taskArguments += '--developer' }
         if ($Hour) { $taskArguments += ('--hour=' + $Hour) }
         if ($env:TRIPOTHON_TEST_ARGS) { $taskArguments += $env:TRIPOTHON_TEST_ARGS.Split(' ') }
-        $taskProcess = Start-Process -FilePath $taskGodot -ArgumentList $taskArguments -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput 'artifacts\integration-render.log' -RedirectStandardError 'artifacts\integration-render-error.log'
+        $taskProcess = Start-Process -FilePath $taskGodot -ArgumentList $taskArguments -WindowStyle Hidden -PassThru -RedirectStandardOutput 'artifacts\integration-render.log' -RedirectStandardError 'artifacts\integration-render-error.log'
+        Wait-TaskGodot $taskProcess 'Rendered integration'
         Get-Content artifacts\integration-render.log
         Get-Content artifacts\integration-render-error.log
         if ($taskProcess.ExitCode -ne 0) { throw "Rendered integration failed (exit $('0x{0:X8}' -f $taskProcess.ExitCode))" }
@@ -106,7 +119,8 @@ try {
         if ($Developer) { $taskArguments += '--developer' }
         if ($Hour) { $taskArguments += ('--hour=' + $Hour) }
         if ($env:TRIPOTHON_TEST_ARGS) { $taskArguments += $env:TRIPOTHON_TEST_ARGS.Split(' ') }
-        $taskProcess = Start-Process -FilePath $taskGodot -ArgumentList $taskArguments -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput 'artifacts\integration-headless.log' -RedirectStandardError 'artifacts\integration-headless-error.log'
+        $taskProcess = Start-Process -FilePath $taskGodot -ArgumentList $taskArguments -WindowStyle Hidden -PassThru -RedirectStandardOutput 'artifacts\integration-headless.log' -RedirectStandardError 'artifacts\integration-headless-error.log'
+        Wait-TaskGodot $taskProcess 'Godot integration'
         Get-Content artifacts\integration-headless.log
         Get-Content artifacts\integration-headless-error.log
         if ($taskProcess.ExitCode -ne 0) { throw "Godot integration failed (exit $('0x{0:X8}' -f $taskProcess.ExitCode))" }
