@@ -25,6 +25,8 @@ services:
       TRIPOTHON_STARS_PER_CREDIT: ${TRIPOTHON_STARS_PER_CREDIT:-1}
       TRIPO_USER_TOTAL_REQUEST_LIMIT: ${TRIPO_USER_TOTAL_REQUEST_LIMIT:-0}
       TRIPOTHON_WELCOME_STARS: ${TRIPOTHON_WELCOME_STARS:-0}
+      # Residents' requests: their starseed rewards times this (server/quests.py STARS; 0 = off).
+      TRIPOTHON_QUEST_STARS_SCALE: ${TRIPOTHON_QUEST_STARS_SCALE:-1.0}
       # The trial game has no invitation field: sign-up is open by default (limited per address/day).
       TRIPOTHON_OPEN_REGISTRATION: ${TRIPOTHON_OPEN_REGISTRATION:-true}
       # Trial cap on Tripo credits per craft: 10 = one untextured H3 mesh from text.
@@ -36,6 +38,17 @@ services:
       # ops/compose.usage.yaml once ops/usage_key.sh has made ops/secrets/usage-key.
       # The commit /health reports next to the version (ops/update_online_server.sh sets it).
       VILLAGEN_SERVER_COMMIT: ${VILLAGEN_SERVER_COMMIT:-}
+      # Social layer (docs/design/SOCIAL_API.md, section 8); defaults as in server/config.py.
+      # Set them in the env file (ops/production.env); compose passes only the variables listed here.
+      VILLAGEN_GLOBAL_CHAT: ${VILLAGEN_GLOBAL_CHAT:-on}
+      VILLAGEN_SOCIAL_ROSTER: ${VILLAGEN_SOCIAL_ROSTER:-all}
+      VILLAGEN_CHAT_FILTER_EXTRA: ${VILLAGEN_CHAT_FILTER_EXTRA:-}
+      VILLAGEN_CHAT_IP_PER_MINUTE: ${VILLAGEN_CHAT_IP_PER_MINUTE:-600}
+      VILLAGEN_CHAT_RETENTION_HOURS: ${VILLAGEN_CHAT_RETENTION_HOURS:-24}
+      VILLAGEN_PRESENCE_TOGETHER: ${VILLAGEN_PRESENCE_TOGETHER:-0.25}
+      VILLAGEN_PRESENCE_ALONE: ${VILLAGEN_PRESENCE_ALONE:-1}
+      VILLAGEN_PEOPLE_SECONDS: ${VILLAGEN_PEOPLE_SECONDS:-5}
+      VILLAGEN_PRESENCE_BUDGET: ${VILLAGEN_PRESENCE_BUDGET:-60}
     secrets: [registration_code]
     volumes:
       - game_data:/data

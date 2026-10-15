@@ -20,3 +20,7 @@ func post(path: String, payload: Dictionary) -> Dictionary:
 
 func mutation(extra: Dictionary = {}) -> Dictionary:
 	return extra.merged({"request_id": "00000000-0000-4000-8000-000000000000"})
+
+## The kept-alive POST (presence polls, survival input) answers like any other post.
+func post_kept(path: String, payload: Dictionary, _timeout := 12.0) -> Dictionary:
+	return await request(path, payload, HTTPClient.METHOD_POST)

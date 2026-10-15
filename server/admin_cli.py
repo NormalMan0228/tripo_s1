@@ -29,6 +29,27 @@ piece, letter and return gift stays. Ask the player to sign in again afterwards.
 
     ... python -m server.admin_cli story show USERNAME
     ... python -m server.admin_cli story reset USERNAME
+
+chat and reports are the operator's moderation tools for the social layer (server/chat.py,
+server/friends.py). Deleted lines also vanish from the screens that show them (chat 'removed');
+a mute refuses that player's lines until it ends (0 minutes lifts it).
+
+    ... python -m server.admin_cli chat list [--username NAME] [--grep TEXT] [--limit 50]
+    ... python -m server.admin_cli chat delete MESSAGE_ID [MESSAGE_ID ...]
+    ... python -m server.admin_cli chat mute USERNAME MINUTES
+    ... python -m server.admin_cli reports list [--all] [--limit 50]
+    ... python -m server.admin_cli reports close REPORT_ID [REPORT_ID ...]
+
+knocks expire ends every open knock (visit requests, kind 'knock'). Run it right before rolling the
+server back to a version before the social layer (6028e2c and older): those list every pending
+invitation, so a 0.11.x host would see a knock as a party invitation, and accepting it would move
+the host into the knocker's village.
+
+    ... python -m server.admin_cli knocks expire
+quests shows one player's residents' requests (server/quests.py): which are under way or done,
+when, and the starseeds each paid (the ledger's quest_reward rows). Read-only.
+
+    ... python -m server.admin_cli quests show USERNAME
 """
 from __future__ import annotations
 
@@ -47,7 +68,7 @@ from . import behaviour_library
 # out on purpose: an object one of these accounts made may now belong to someone else.
 USER_COLUMNS = {'user_id', 'owner_id', 'seller_id', 'buyer_id', 'author_id', 'host_id', 'guest_id',
                 'sender_id', 'recipient_id', 'member_id', 'visitor_id', 'actor_id', 'leader_id',
-                'friend_id', 'from_id', 'to_id', 'inviter_id', 'invitee_id'}
+                'friend_id', 'from_id', 'to_id', 'inviter_id', 'invitee_id', 'blocked_id'}
 
 
 def tables(conn):
@@ -217,6 +238,121 @@ def story(args):
     return 0
 
 
+def social_db(args):
+    """The world database with the social tables (an older world gets them empty first)."""
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return None
+    from .friends import SCHEMA
+    conn = sqlite3.connect(database, timeout=30, isolation_level=None)
+    conn.row_factory = sqlite3.Row
+    conn.executescript(SCHEMA + 'CREATE TABLE IF NOT EXISTS mp_message_removals (id INTEGER PRIMARY KEY, created REAL NOT NULL);')
+    return conn
+
+
+def chat(args):
+    conn = social_db(args)
+    if conn is None:
+        return 1
+    try:
+        columns = [r[1] for r in conn.execute('PRAGMA table_info(mp_messages)')]
+        if not columns:
+            print('No chat yet.')
+            return 0
+        if args.command == 'list':
+            where, values = [], []
+            if args.target:
+                where.append('u.username=?')
+                values.append(args.target.lower())
+            if args.grep:
+                where.append('e.text LIKE ?')
+                values.append('%' + args.grep + '%')
+            channel = 'e.channel' if 'channel' in columns else 'NULL'
+            rows = conn.execute(f'SELECT e.id,e.room,{channel} AS channel,u.username,e.text,e.created FROM mp_messages e LEFT JOIN users u ON u.id=e.user_id '
+                                + ('WHERE ' + ' AND '.join(where) if where else '') + ' ORDER BY e.id DESC LIMIT ?', (*values, args.limit)).fetchall()
+            print(json.dumps([{'id': r['id'], 'channel': r['channel'] or ('party' if r['room'].startswith('party:') else 'local'),
+                               'room': r['room'].split(':')[0], 'username': r['username'], 'text': r['text'],
+                               'time': time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(r['created']))} for r in rows[::-1]], ensure_ascii=False, indent=1))
+            return 0
+        if args.command == 'delete':
+            ids = [int(v) for v in args.values]
+            conn.execute('BEGIN IMMEDIATE')
+            removed = 0
+            for message_id in ids:
+                removed += conn.execute('DELETE FROM mp_messages WHERE id=?', (message_id,)).rowcount
+                conn.execute('INSERT INTO mp_message_removals VALUES (?,?) ON CONFLICT(id) DO UPDATE SET created=excluded.created', (message_id, time.time()))
+            conn.execute('COMMIT')
+            print(json.dumps({'ok': True, 'removed': removed}))
+            return 0
+        if len(args.values) != 2 or not args.values[1].isdigit():
+            print('chat mute USERNAME MINUTES')
+            return 1
+        user = conn.execute('SELECT id FROM users WHERE username=?', (args.values[0].lower(),)).fetchone()
+        if not user:
+            print('No such account.')
+            return 1
+        minutes = int(args.values[1])
+        until = time.time() + minutes * 60 if minutes else None
+        conn.execute('INSERT INTO social_prefs(user_id,chat_muted_until) VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET chat_muted_until=excluded.chat_muted_until', (user['id'], until))
+        print(json.dumps({'ok': True, 'username': args.values[0].lower(), 'muted_until': until}))
+        return 0
+    finally:
+        conn.close()
+
+
+def reports(args):
+    conn = social_db(args)
+    if conn is None:
+        return 1
+    try:
+        if args.command == 'list':
+            rows = conn.execute('SELECT r.*,a.username AS reporter,b.username AS reported FROM social_reports r LEFT JOIN users a ON a.id=r.user_id '
+                                'LEFT JOIN users b ON b.id=r.to_id ' + ('' if args.all else "WHERE r.state='open' ") + 'ORDER BY r.id DESC LIMIT ?', (args.limit,)).fetchall()
+            print(json.dumps([{'id': r['id'], 'reporter': r['reporter'], 'reported': r['reported'], 'reason': r['reason'], 'note': r['note'],
+                               'message': r['text'], 'context': json.loads(r['context'] or '[]'), 'state': r['state'],
+                               'time': time.strftime('%Y-%m-%d %H:%M', time.gmtime(r['created']))} for r in rows], ensure_ascii=False, indent=1))
+            return 0
+        closed = sum(conn.execute("UPDATE social_reports SET state='closed',updated=? WHERE id=?", (time.time(), int(v))).rowcount for v in args.values)
+        print(json.dumps({'ok': True, 'closed': closed}))
+        return 0
+    finally:
+        conn.close()
+
+
+def knocks(args):
+    conn = social_db(args)
+    if conn is None:
+        return 1
+    try:
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='mp_invites'").fetchone():
+            print(json.dumps({'ok': True, 'expired': 0}))
+            return 0
+        conn.execute('BEGIN IMMEDIATE')
+        expired = conn.execute("UPDATE mp_invites SET state='revoked' WHERE kind='knock' AND state IN ('pending','suppressed')").rowcount
+        conn.execute('COMMIT')
+        print(json.dumps({'ok': True, 'expired': expired}))
+        return 0
+    finally:
+        conn.close()
+def quests(args):
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    from . import quests as requests
+    with sqlite3.connect(database, timeout=30) as conn:
+        conn.row_factory = sqlite3.Row
+        user = conn.execute('SELECT id FROM users WHERE username=?', (args.username.lower(),)).fetchone()
+        if not user:
+            print('No such account.')
+            return 1
+        # A world from before the requests has no progress table yet (it starts empty).
+        conn.executescript(requests.SCHEMA)
+        print(json.dumps(requests.describe(conn, user['id']), ensure_ascii=False, indent=1))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     actions = parser.add_subparsers(dest='action', required=True)
@@ -239,9 +375,37 @@ def main(argv=None):
     chapter.add_argument('command', choices=('show', 'reset'))
     chapter.add_argument('username')
     chapter.add_argument('--data-dir', default='/data')
+    talk = actions.add_parser('chat', help='list, delete or mute chat lines (moderation)')
+    talk.add_argument('command', choices=('list', 'delete', 'mute'))
+    talk.add_argument('values', nargs='*', help='delete: message ids; mute: USERNAME MINUTES')
+    talk.add_argument('--username', dest='target', help='list: only this player')
+    talk.add_argument('--grep', help='list: lines containing this text')
+    talk.add_argument('--limit', type=int, default=50)
+    talk.add_argument('--data-dir', default='/data')
+    reported = actions.add_parser('reports', help="list or close players' reports")
+    reported.add_argument('command', choices=('list', 'close'))
+    reported.add_argument('values', nargs='*', help='close: report ids')
+    reported.add_argument('--all', action='store_true', help='list: closed reports too')
+    reported.add_argument('--limit', type=int, default=50)
+    reported.add_argument('--data-dir', default='/data')
+    knocked = actions.add_parser('knocks', help='end every open knock (before rolling the server back)')
+    knocked.add_argument('command', choices=('expire',))
+    knocked.add_argument('--data-dir', default='/data')
+    asked = actions.add_parser('quests', help="show one player's residents' requests and their rewards")
+    asked.add_argument('command', choices=('show',))
+    asked.add_argument('username')
+    asked.add_argument('--data-dir', default='/data')
     args = parser.parse_args(argv)
+    if args.action == 'knocks':
+        return knocks(args)
+    if args.action == 'chat':
+        return chat(args)
+    if args.action == 'reports':
+        return reports(args)
     if args.action == 'story':
         return story(args)
+    if args.action == 'quests':
+        return quests(args)
     if args.action == 'npc-homes':
         return npc_homes(args)
     if args.action == 'library':

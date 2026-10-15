@@ -149,7 +149,7 @@ func show_main() -> void:
 	elif context == "village":
 		note = tr("마을의 하루는 메뉴를 여는 동안에도 흘러가요.")
 	if not note.is_empty():
-		var l := RpgUi.label(list, note, 14, Color("c9d3c6"), false)
+		var l := RpgUi.label(list, note, 14, RpgUi.SOFT, false)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size.x = 360
 	var gap := Control.new(); gap.custom_minimum_size.y = 6; list.add_child(gap)
@@ -183,7 +183,7 @@ func _item(parent: Node, text: String, callback: Callable) -> Button:
 	var b := RpgUi.menu_button(parent, text, callback, 360.0)
 	b.focus_mode = Control.FOCUS_ALL
 	b.add_theme_stylebox_override("focus", RpgUi.frame("focus"))
-	b.add_theme_color_override("font_focus_color", Color("ffe08a"))
+	b.add_theme_color_override("font_focus_color", RpgUi.HOVER)
 	return b
 
 func show_settings() -> void:
@@ -220,12 +220,12 @@ func show_controls() -> void:
 			for actions in group[1]:
 				var keys := []
 				for action in actions: keys.append(GameSettings.key_label(action))
-				var cap := RpgUi.label(grid, " / ".join(keys), 15, Color("ffe08a"))
+				var cap := RpgUi.label(grid, " / ".join(keys), 15, RpgUi.HOVER)
 				cap.custom_minimum_size.x = 120
 				var what: String = tr("이동") if actions.size() > 1 else tr(GameSettings.action_label(actions[0]))
 				if actions[0] == "run" and str(GameSettings.get_value("run_mode")) == "toggle": what += tr(" (눌러서 전환)")
 				RpgUi.label(grid, what, 15)
-	var extra := RpgUi.label(list, tr("마우스 휠 · 확대/축소     Esc · 메뉴     %s · 대화 넘기기") % GameSettings.key_label("interact"), 13, Color("c9d3c6"), false)
+	var extra := RpgUi.label(list, tr("마우스 휠 · 확대/축소     Esc · 메뉴     %s · 대화 넘기기") % GameSettings.key_label("interact"), 13, RpgUi.SOFT, false)
 	extra.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var back := _item(list, tr("돌아가기"), show_main)
 	_focus.call_deferred(back)

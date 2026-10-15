@@ -128,15 +128,28 @@ func _process(delta: float) -> void:
 	if app.screen == "loading": heartbeat()
 	else: poll()
 
+## The village seat's standing spot while this walker rests (rest_seat.stand_spot), else null.
+func resting_spot():
+	if not "seat" in app: return null
+	var seat = app.get("seat")
+	if not is_instance_valid(seat) or not seat.has_method("stand_spot"): return null
+	return seat.stand_spot()
+
 ## This player's spot, its velocity and the moment (this game's clock) it was taken.
 func spot(scene: String) -> Dictionary:
 	var body := {"scene":scene}
 	var walker = app.player
 	if is_instance_valid(walker) and walker.is_inside_tree():
-		body.merge({"x":clampf(walker.position.x, -100, 100), "z":clampf(walker.position.z, -100, 100), "y":clampf(walker.position.y, -20, 40),
+		var at: Vector3 = walker.position
+		# Seated or lying, the body is lowered into the seat and presence carries no pose: others see
+		# the walker standing where it stood before it sat down, not sunk into the bench.
+		var resting = resting_spot()
+		if resting is Vector3:
+			at = (walker.get_parent() as Node3D).to_local(resting) if walker.get_parent() is Node3D else resting
+		body.merge({"x":clampf(at.x, -100, 100), "z":clampf(at.z, -100, 100), "y":clampf(at.y, -20, 40),
 			"yaw":wrapf(walker.visual.rotation.y if is_instance_valid(walker.visual) else 0.0, -PI, PI)})
 		if rich_presence:
-			var velocity: Vector3 = walker.get_real_velocity()
+			var velocity: Vector3 = walker.get_real_velocity() if not resting is Vector3 else Vector3.ZERO
 			body.merge({"vx":clampf(velocity.x, -30, 30), "vz":clampf(velocity.z, -30, 30)})
 	if rich_presence: body.t = RemoteMotion.now()
 	return body

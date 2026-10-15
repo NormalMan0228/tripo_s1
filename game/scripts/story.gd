@@ -32,6 +32,8 @@ const I18n := preload("res://scripts/i18n.gd")
 const Loader := preload("res://scripts/model_loader.gd")
 const VoiceBabble := preload("res://scripts/voice_babble.gd")
 const Guide := preload("res://scripts/guide.gd")
+const IxSources := preload("res://scripts/ix/ix_sources.gd")
+const IxDriver := preload("res://scripts/ix/ix_driver.gd")
 
 ## 모카 · 카페 주인 (day_folk.gd, shadow_folk.gd 'regular').
 const MOKA := "regular"
@@ -69,8 +71,12 @@ const GREETINGS := {"naru":"새로 온 제작자구나! 반가워!", "sora":"어
 
 ## The live module (tests and tools).
 static var current: Node
+## The residents' requests once the chapter is over (quests.gd, a child of this module): their
+## tracker lines and guide goals go through this module's ("story_quest:*", "story_quest_book").
+const Quests := preload("res://scripts/quests.gd")
 
 var app: Node
+var quests: Node
 ## server/story.py public() for this account ({} without the chapter or while visiting).
 var story: Dictionary = {}
 var busy := false
@@ -116,8 +122,16 @@ func setup(main: Node) -> void:
 	# Signed out (the title's village): no chapter.
 	if str(app.api.token).is_empty(): known = null
 	adopt(known)
+	quests = Quests.new()
+	add_child(quests)
+	quests.setup(main, self)
+
+## The residents' requests from the server (main.gd, with /v1/me).
+func adopt_quests(data) -> void:
+	if is_instance_valid(quests): quests.adopt(data)
 
 func leave() -> void:
+	if is_instance_valid(quests): quests.leave()
 	for entry in bubbles:
 		if is_instance_valid(entry.panel): entry.panel.queue_free()
 	bubbles.clear()
@@ -163,7 +177,9 @@ func hold_moka() -> void:
 # ------------------------------------------------------------------ objective and route guide
 
 ## The tracker's text with the chapter's lines ("▸ " lines are goals; the guide turns them into rows).
+## The residents' requests (quests.gd) sit above the base once the chapter is over.
 func objective(base: String) -> String:
+	if is_instance_valid(quests): base = quests.objective(base)
 	if story.is_empty(): return base
 	match step():
 		"letter": return "▸ "+tr("나의 집 · 책상 위 편지 읽기")+"\n"+tr("이삿날 아침, 편지가 와 있어요")
@@ -217,6 +233,8 @@ func stalled() -> bool:
 
 ## guide.gd: the goal key of a tracker line, "" when it is not the chapter's.
 func story_line_key(line: String) -> String:
+	var request: String = quests.line_key(line) if is_instance_valid(quests) else ""
+	if not request.is_empty(): return request
 	for entry in [["나의 집 · 책상 위 편지 읽기", "story_home"], ["카페 '빨간 지붕'에 인사하러 가기", "story_cafe"],
 			["완성! 모카에게 가져가기", "story_cafe"], ["C · 모카의 의자 만들기", "story_craft"],
 			["제작이 멈췄어요 · C로 다시 만들기", "story_craft"], ["그림이 나왔어요 · C로 확인하기", "story_craft"],
@@ -228,7 +246,12 @@ func story_line_key(line: String) -> String:
 ## at this island's signpost.
 func story_goal(key: String) -> Dictionary:
 	var goal := {}
+	if key.begins_with(Quests.KEY) or key == Quests.BOOK_KEY:
+		goal = quests.raw_goal(key) if is_instance_valid(quests) else {}
+		if goal.is_empty(): return {}
+		key = "quest"
 	match key:
+		"quest": pass
 		"story_home": goal = {"at":Town.HOME_DOOR, "name":tr("나의 집 · 책상 위 편지"), "key":key}
 		"story_cafe": goal = {"at":MOKA_AT+Vector2(1.3, 0.3), "name":tr("카페 '빨간 지붕' · 모카"), "key":key}
 		"story_mailbox":
@@ -240,11 +263,12 @@ func story_goal(key: String) -> Dictionary:
 	if here != there:
 		var sign := signpost(here)
 		if not sign.is_empty():
-			return {"at":sign.at, "name":tr("이정표 · %s(으)로") % tr(ISLANDS[there]), "key":key}
+			return {"at":sign.at, "name":tr("이정표 · %s(으)로") % tr(ISLANDS[there]), "key":str(goal.key)}
 	return goal
 
 ## guide.gd: a click on a chapter row that is not a place (the craft line opens the craft window).
 func story_row(key: String) -> bool:
+	if (key.begins_with(Quests.KEY) or key == Quests.BOOK_KEY) and is_instance_valid(quests): return quests.row(key)
 	if key != "story_craft" or not is_instance_valid(app): return false
 	app.open_craft()
 	return true
@@ -294,8 +318,9 @@ func steer_guide() -> void:
 		guide.arrived.connect(arrived)
 	var key := current_key()
 	var guided := str(guide.target.get("key", "")) if guide.active() else ""
-	# A goal the chapter no longer has (it moved on, or it is done) stops being guided.
-	if guided.begins_with("story_") and guided != key: guide.stop(false)
+	# A goal the chapter no longer has (it moved on, or it is done) stops being guided (the
+	# residents' requests guide their own, quests.gd).
+	if guided.begins_with("story_") and not guided.begins_with(Quests.KEY) and guided != key: guide.stop(false)
 	# The mailbox line is guided only when the player asks (a click): the gift scene stays calm.
 	if key == "story_mailbox":
 		guided_key = key
@@ -325,6 +350,9 @@ func arrived(key: String) -> void:
 	if not key.begins_with("story_") or not is_instance_valid(app) or is_instance_valid(app.get("village_modal")): return
 	var goal: Vector2 = {"story_home":Town.HOME_DOOR, "story_cafe":MOKA_AT}.get(key, Vector2.INF)
 	if key == "story_mailbox": goal = field_entry("mailbox").get("at", Vector2(-51.3, 22.6))
+	if key.begins_with(Quests.KEY) and is_instance_valid(quests):
+		quests.arrived(key)
+		goal = quests.raw_goal(key).get("at", Vector2.INF)
 	if goal == Vector2.INF: return
 	var here := island_of(walker_at())
 	var sign := signpost(here)
@@ -707,9 +735,17 @@ func seat_guest(walk_in: bool) -> void:
 	var front := Vector3(0, 0, 1).rotated(Vector3.UP, piece.rotation.y)
 	var seat_at := piece.global_position+front*0.05+Vector3(0, clampf(size.y*0.5, 0.38, 0.62), 0)
 	var yaw := piece.rotation.y
+	var stop := piece.global_position+front*0.62
+	# The chair's own seat socket (ISS-1, derived from its real shape): where the hips go, which way
+	# the guest faces and where it stands before sitting. The old box formula stays the fallback.
+	var socket := guest_socket()
+	if not socket.is_empty():
+		seat_at = socket.origin
+		yaw = float(socket.yaw)
+		if not (socket.approach as Array).is_empty(): stop = socket.approach[0].pos
+		IxDriver.claims[IxDriver.key_of(piece, socket)] = figure.get_instance_id()
 	if walk_in:
 		var from := Town.point(GUEST_FROM, 0.0)
-		var stop := piece.global_position+front*0.62
 		stop.y = Town.height_at(stop.x, stop.z)
 		figure.position = from
 		var path := stop-from
@@ -736,7 +772,17 @@ func seat_guest(walk_in: bool) -> void:
 			moka.pop("!", 1.4)
 			speech(moka, 2.35, tr("벌써 첫 손님이네!"), 3.0)
 
+## The terrace piece's best seat socket, or {} when it has none (the box formula is used then).
+func guest_socket() -> Dictionary:
+	if not is_instance_valid(piece): return {}
+	for resolved in IxSources.resolve_all(IxSources.for_node(piece, "sit"), ["sit", "perch"]):
+		if resolved.valid: return resolved
+	return {}
+
 func release_guest() -> void:
+	if is_instance_valid(guest):
+		for key in IxDriver.claims.keys():
+			if int(IxDriver.claims[key]) == guest.get_instance_id(): IxDriver.claims.erase(key)
 	if is_instance_valid(guest): guest.queue_free()
 	guest = null
 	guest_seated = false

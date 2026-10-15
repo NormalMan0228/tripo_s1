@@ -60,6 +60,14 @@ const DECELERATION := 18.0
 const STEP_HEIGHT := 0.36
 var safe_position := Vector3.ZERO
 var has_safe_position := false
+## The interaction driver (ix/ix_driver.gd) while one is attached; inert when null or idle. While it
+## runs it moves the body inside this tick: steer is the walking input of an approach, face_override
+## the exact visual yaw (NAN: the usual facing lerp), clip_override a clip it plays (v1: none).
+var ix: Node
+var steer := Vector2.ZERO
+var face_override := NAN
+var clip_override := ""
+var clip_blend := -1.0
 const Art = preload("res://scripts/art.gd")
 
 func _ready() -> void:
@@ -298,10 +306,13 @@ func render_position() -> Vector3:
 
 func _physics_process(delta: float) -> void:
 	tick_from = global_position
+	var driven: bool = ix != null and is_instance_valid(ix) and ix.busy()
+	if driven: ix.drive(self, delta)
 	var movement := Vector2.ZERO
-	if controls_enabled:
+	if driven: movement = steer
+	elif controls_enabled:
 		movement = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var speed := Profile.VILLAGE_RUN if sprinting else SPEED
+	var speed := Profile.VILLAGE_RUN if sprinting and not driven else SPEED
 	var wanted := Vector2(movement.x,movement.y)*speed
 	var current := Vector2(velocity.x,velocity.z)
 	# Turning sharply sheds a little speed so direction changes read as weight.
@@ -324,14 +335,18 @@ func _physics_process(delta: float) -> void:
 		elif is_on_floor() and position.y >= min_ground_y:
 			safe_position = position
 			has_safe_position = true
-	locomotion_velocity=Vector2(get_real_velocity().x,get_real_velocity().z) if controls_enabled and not visual_only else external_velocity
-	var look_motion := locomotion_velocity.normalized() if controls_enabled else external_motion
-	if Time.get_ticks_msec()*0.001<facing_until:
+	locomotion_velocity=Vector2(get_real_velocity().x,get_real_velocity().z) if (controls_enabled or driven) and not visual_only else external_velocity
+	var look_motion := locomotion_velocity.normalized() if controls_enabled or driven else external_motion
+	if not is_nan(face_override):
+		visual.rotation.y = face_override
+	elif Time.get_ticks_msec()*0.001<facing_until:
 		facing=action_facing
 	elif look_motion.length_squared() > 0.01:
 		facing = Vector3(look_motion.x, 0.0, look_motion.y)
-	if facing.length_squared()>0.01:
-		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(-facing.x, -facing.z), Profile.damping(Profile.TURN_RESPONSE,delta))
+	if is_nan(face_override) and facing.length_squared()>0.01:
+		var turned := lerp_angle(visual.rotation.y, atan2(-facing.x, -facing.z), Profile.damping(Profile.TURN_RESPONSE,delta))
+		# Walking up to a seat turns at most 0.3 rad a tick (the ISS-1 continuity bound).
+		visual.rotation.y = rotate_toward(visual.rotation.y, turned, 0.3) if driven else turned
 	lean_body(delta)
 	if is_instance_valid(action_pose): action_pose.body_basis=visual.global_basis.orthonormalized()
 	var moving := minf(1.0,locomotion_velocity.length()/SPEED)
@@ -341,6 +356,7 @@ func _physics_process(delta: float) -> void:
 		if avatar.get("character")=="haeru" and moving<=.1:
 			desired="greet" if Time.get_ticks_msec()*.001<greeting_until else ambient_clip
 		if Time.get_ticks_msec()*0.001<action_until: desired="slash"
+		if not clip_override.is_empty() and animation_player.has_animation(clip_override): desired=clip_override
 		if current_clip!=desired:
 			var preserve_gait: bool=desired in ["walk","run"] and is_instance_valid(locomotion_pose)
 			current_clip=desired
@@ -373,6 +389,8 @@ func _physics_process(delta: float) -> void:
 ## Lifts the walker onto a ledge up to STEP_HEIGHT when it walks into one.
 func step_up(delta: float) -> void:
 	if not controls_enabled or not is_on_floor() or not is_on_wall(): return
+	# Walking up to a seat never climbs the furniture it walks along.
+	if ix != null and is_instance_valid(ix) and ix.busy(): return
 	var motion := Vector3(velocity.x,0,velocity.z)*delta
 	if motion.length()<0.001: return
 	var lift := Vector3(0,STEP_HEIGHT,0)
@@ -391,6 +409,8 @@ func react(kind: String) -> void:
 	elif is_instance_valid(action_pose): action_pose.trigger(kind)
 	if reaction_tween and reaction_tween.is_valid(): reaction_tween.kill()
 	visual.scale=Vector3.ONE
+	# Seated or lying, the whole-body squash would bob the seat contact: the gesture alone plays.
+	if is_instance_valid(ix) and ix.seated(): return
 	reaction_tween=create_tween()
 	reaction_tween.tween_property(visual,"scale",Vector3(1.06,0.91,1.06) if kind=="hurt" else Vector3(0.97,1.035,0.97),0.07)
 	reaction_tween.tween_property(visual,"scale",Vector3.ONE,0.17).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)

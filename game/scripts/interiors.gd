@@ -2844,37 +2844,7 @@ static func paint_outlook(kind: String, night: bool) -> Image:
 				image.fill_rect(Rect2i(0,int(tall*0.6),wide,2),shade.call(Color("5f9ac0")))
 	return image
 
-## Sitting or lying: bends the hips and knees of the walker's skeleton on top of
-## whatever the animation is doing (the body itself is moved by the studio).
-class RestPose extends SkeletonModifier3D:
-	var mode := ""
-	var body: Node3D
-	var amount := 0.0
-
-	func rotate_bone(skeleton: Skeleton3D, bone: String, angles: Vector3, basis: Basis) -> void:
-		var index := skeleton.find_bone(bone)
-		if index<0: return
-		for component in 3:
-			if absf(angles[component])<0.0001: continue
-			var axis := Vector3.ZERO
-			axis[component]=1
-			var world_axis := basis*axis
-			var bone_world := skeleton.global_basis*skeleton.get_bone_global_pose(index).basis
-			var local_axis := (bone_world.inverse()*world_axis).normalized()
-			var pose := skeleton.get_bone_pose_rotation(index)
-			skeleton.set_bone_pose_rotation(index,pose*Quaternion(local_axis,angles[component]))
-
-	func _process_modification_with_delta(delta: float) -> void:
-		amount=move_toward(amount,1.0 if mode=="sit" else 0.0,delta*5.0)
-		if amount<=0.0 or not is_instance_valid(body): return
-		var skeleton := get_skeleton()
-		if not skeleton: return
-		var basis := body.global_basis.orthonormalized()
-		for side in ["L","R"]:
-			rotate_bone(skeleton,side+"_Thigh",Vector3(1.5*amount,0,0),basis)
-			rotate_bone(skeleton,side+"_Calf",Vector3(-1.55*amount,0,0),basis)
-			rotate_bone(skeleton,side+"_Upperarm",Vector3(0.35*amount,0,0),basis)
-			rotate_bone(skeleton,side+"_Forearm",Vector3(0.7*amount,0,0),basis)
+## (The sitting/lying pose moved to ix/ix_pose.gd, shared by every walker.)
 
 # ---------------------------------------------------------------- residents
 

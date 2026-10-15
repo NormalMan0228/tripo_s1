@@ -199,8 +199,7 @@ var walk_out := Vector3.ZERO
 ## RPG-style HUD over the full-screen room view.
 var name_panel: PanelContainer
 var name_tween: Tween
-var toast_panel: PanelContainer
-var toast_tween: Tween
+var toast_lane: VBoxContainer
 var hint_chip: PanelContainer
 var hint_key: Label
 ## The hotbar slots, as in the village: 가방 (I) opens the dock, 제작 (C) the craft window.
@@ -443,15 +442,10 @@ func build_ui() -> void:
 	subtitle_label=RpgUi.label(head,tr("상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요"),13,Color("d8e3d4"),false)
 	subtitle_label.custom_minimum_size.x=0;subtitle_label.autowrap_mode=TextServer.AUTOWRAP_OFF
 	if BuildMode.developer(): RpgUi.label(head,tr("개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다"),11,Color("e3b07a"),false)
-	# Top centre: what just happened (server replies, furniture lines).
-	toast_panel=PanelContainer.new();toast_panel.name="StatusToast";toast_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	toast_panel.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
-	toast_panel.set_anchors_preset(Control.PRESET_CENTER_TOP);toast_panel.grow_horizontal=Control.GROW_DIRECTION_BOTH
-	toast_panel.offset_top=92;toast_panel.offset_bottom=92
-	add_child(toast_panel)
-	status_label=RpgUi.label(toast_panel,tr("서버에 연결하고 있어요"),15,RpgUi.INK,false)
-	status_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	toast_panel.visible=false
+	# Top centre: what just happened (server replies, furniture lines), on the shared toast lane;
+	# status_label keeps the last line.
+	toast_lane=RpgUi.toast_lane(self,94)
+	status_label=Label.new();status_label.name="StatusText";status_label.visible=false;status_label.text=tr("서버에 연결하고 있어요");add_child(status_label)
 	# Bottom centre: a key chip for what E (or walking) does right here.
 	hint_chip=PanelContainer.new();hint_chip.name="HintChip";hint_chip.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	hint_chip.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
@@ -497,8 +491,8 @@ func build_ui() -> void:
 	# Bottom centre: the village's hotbar slots for what rooms have, with the same icons and keys.
 	var hud := Control.new();hud.name="Hotbar";hud.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);hud.theme=RpgUi.theme();add_child(hud)
-	var bar := RpgUi.hotbar(hud,[{"icon":"res://assets/ui/bag.svg","key":"I","label":tr("가방"),"call":func(): set_dock_open(not dock_panel.visible)},
-		{"icon":"res://assets/ui/craft.svg","key":"C","label":tr("제작"),"call":func(): open_craft()}],700)
+	var bar := RpgUi.hotbar(hud,[{"icon":"res://assets/ui/bag.svg","action":"inventory","label":tr("가방"),"call":func(): set_dock_open(not dock_panel.visible)},
+		{"icon":"res://assets/ui/craft.svg","action":"craft","label":tr("제작"),"call":func(): open_craft()}],700)
 	dock_toggle=bar.get_child(0);dock_toggle.name="DockToggle"
 	craft_slot=bar.get_child(1);craft_slot.name="CraftSlot"
 	var box := VBoxContainer.new();dock.add_child(box)
@@ -619,19 +613,9 @@ func message(value: String, toast := true) -> void:
 			var code: String=match_value.get_string()
 			if words.has(code): value=value.replace(code,words[code])
 	status_label.text=value
-	if is_instance_valid(toast_panel) and is_inside_tree():
-		if not toast:
-			toast_panel.visible=false
-			return
-		toast_panel.visible=not value.is_empty()
-		toast_panel.modulate.a=1.0
-		toast_panel.reset_size()
-		var toast_width: float=toast_panel.get_combined_minimum_size().x
-		toast_panel.offset_left=-toast_width*0.5;toast_panel.offset_right=toast_width*0.5
-		if toast_tween and toast_tween.is_valid(): toast_tween.kill()
-		toast_tween=create_tween()
-		toast_tween.tween_interval(4.5)
-		toast_tween.tween_property(toast_panel,"modulate:a",0.0,0.6)
+	if is_instance_valid(toast_lane) and is_inside_tree():
+		if not toast or value.is_empty(): RpgUi.clear_toasts(toast_lane)
+		else: RpgUi.toast(toast_lane,value)
 
 func build_stage() -> void:
 	stage=Node3D.new();viewport.add_child(stage)
@@ -674,6 +658,10 @@ func build_stage() -> void:
 		stage.add_child(hero)
 		if not is_instance_valid(seat):
 			seat=RestSeat.new();add_child(seat)
+			# The walk up to a seat uses the room's own walking (no doors or stairs on the way).
+			seat.mover=func(direction: Vector3, step: float): move_hero(direction,step,false)
+			seat.free_check=func(point: Vector3) -> bool: return can_stand(point)
+			seat.walk_off=walk_allowed
 		seat.hero=hero
 		place_hero_at_door()
 
@@ -1521,6 +1509,8 @@ func change_room(value: String) -> void:
 func show_story() -> void:
 	if is_instance_valid(story_home): story_home.queue_free()
 	story_home=null
+	# A resident's request to come to this room (quests.gd: 하늘's observatory at night).
+	preload("res://scripts/quests.gd").entered_room(self,room)
 	if room!="home" or public_room or not visit_host.is_empty() or visiting or api.token.is_empty(): return
 	story_home=StoryHome.new()
 	add_child(story_home)
@@ -1643,7 +1633,7 @@ func leave() -> void:
 	if floor_index==0 and is_instance_valid(hero):
 		walk_out=Vector3(float(room_spec.get("door_x",0.0)),0,float(room_spec.size.y)*0.5+1.6)
 	veil.play_door("open",room)
-	veil.loading(tr("다섯 섬 마을"))
+	veil.loading(tr("다섯 섬 마을"),"","village")
 	await veil.fade_out()
 	if is_instance_valid(hero):
 		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
@@ -2025,6 +2015,12 @@ func walk_out_step(delta: float) -> void:
 	hero.position=hero.position.move_toward(walk_out,ControllerProfile.ROOM_WALK*delta)
 	report_motion(before,delta)
 
+## Whether the walker's own movement keys count now (the room's walking gate; the seat driver asks too).
+func walk_allowed() -> bool:
+	if placement_mode or travelling or leaving or is_instance_valid(talk_box) or is_instance_valid(craft_window) or PauseMenu.is_open() or VersionGate.is_blocked(): return false
+	var focus := get_viewport().gui_get_focus_owner()
+	return not (focus is TextEdit or focus is LineEdit) and not is_instance_valid(painter) and not is_instance_valid(interaction_panel)
+
 ## WASD walking inside the room.
 func walk(delta: float) -> void:
 	var input_direction := Input.get_vector("move_left","move_right","move_forward","move_back")
@@ -2037,18 +2033,20 @@ func walk(delta: float) -> void:
 
 ## One step of walking: stays on the floor, slides along furniture, eases into
 ## doorways, climbs stairs it walks into and leaves through the front door.
-func move_hero(direction: Vector3, delta: float) -> void:
+## side_effects false (walking up to a seat): no doorway easing, stairs or leaving, and the
+## direction's length is the pace (the walk slows into the seat).
+func move_hero(direction: Vector3, delta: float, side_effects := true) -> void:
 	if not is_instance_valid(hero) or direction.length()<=0.0: return
 	var before: Vector3=hero.position
-	var step := direction.normalized()*delta*ControllerProfile.ROOM_WALK
+	var step := (direction.normalized() if side_effects else direction.limit_length(1.0))*delta*ControllerProfile.ROOM_WALK
 	var limits := Interiors.walk_limits(room_spec)
 	var door_x: float=limits.door_x
 	# Heading for the front door from a little to the side: ease into the doorway.
-	if room_spec.get("has_door",false) and step.z>0 and hero.position.z>float(limits.front)-0.25 and absf(hero.position.x-door_x)<Interiors.DOOR_HALF+0.4:
+	if side_effects and room_spec.get("has_door",false) and step.z>0 and hero.position.z>float(limits.front)-0.25 and absf(hero.position.x-door_x)<Interiors.DOOR_HALF+0.4:
 		var eased := Vector3(move_toward(hero.position.x,door_x,delta*1.6),0,hero.position.z)
 		if can_stand(eased): hero.position=eased
 	# ...and the same for doorways between rooms.
-	for door in room_spec.get("doorways",[]):
+	for door in room_spec.get("doorways",[]) if side_effects else []:
 		var middle: float=(float(door.z0)+float(door.z1))*0.5
 		if absf(step.x)>0.001 and absf(hero.position.x-float(door.x))<0.9 and absf(hero.position.z-middle)<Interiors.DOORWAY*0.5+0.45:
 			var eased := Vector3(hero.position.x,0,move_toward(hero.position.z,middle,delta*1.6))
@@ -2056,12 +2054,12 @@ func move_hero(direction: Vector3, delta: float) -> void:
 	var stuck := movement_blocked(hero.position)
 	var candidate: Vector3=hero.position+Vector3(step.x,0,0)
 	if can_stand(candidate,stuck):hero.position=candidate
-	else: try_stairs(candidate,direction)
+	elif side_effects: try_stairs(candidate,direction)
 	candidate=hero.position+Vector3(0,0,step.z)
 	if can_stand(candidate,stuck):hero.position=candidate
-	else: try_stairs(candidate,direction)
+	elif side_effects: try_stairs(candidate,direction)
 	report_motion(before,delta)
-	if room_spec.get("has_door",false) and step.z>0 and direction.normalized().z>0.5 and Interiors.at_door(room_spec,hero.position+Vector3(0,0,step.z)):leave()
+	if side_effects and room_spec.get("has_door",false) and step.z>0 and direction.normalized().z>0.5 and Interiors.at_door(room_spec,hero.position+Vector3(0,0,step.z)):leave()
 
 ## The walk clip and contact IK follow where the walker really went: a blocked or
 ## clamped step reads as standing still instead of marching in place.
@@ -2602,6 +2600,11 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	# Residents of a house take gifts from their own village's player.
 	if lines.is_empty() and NpcGifts.can_receive(id) and not visiting and not api.token.is_empty():
 		talk.choices.insert(maxi(0,talk.choices.size()-1),["선물하기","gift"])
+	# The resident's request (quests.gd) comes first, as in the village.
+	if lines.is_empty() and not visiting:
+		var request: Array=preload("res://scripts/quests.gd").room_choice(self,id)
+		# Marked: reading on with E or Space never takes or hands over a request (advance_talk).
+		if not request.is_empty(): talk.choices.insert(0,request+["request"])
 	talk_id=id;talk_lines=talk.lines;talk_choices=talk.choices;talk_page=0
 	if entry.pose=="stand" and is_instance_valid(hero):
 		var look: Vector3=hero.global_position-entry.holder.global_position
@@ -2661,7 +2664,11 @@ func advance_talk() -> void:
 		sfx_player.stream=Interiors.sfx("click");sfx_player.play()
 		show_talk_page()
 	elif not talk_choices.is_empty():
-		pick_talk(talk_choices[0])
+		# The resident's own first choice; a request (quests.gd, marked in open_talk) only by a click.
+		for choice in talk_choices:
+			if (choice as Array).size()<3 or str(choice[2])!="request":
+				pick_talk(choice)
+				return
 
 func close_talk() -> void:
 	if is_instance_valid(talk_box): talk_box.queue_free()

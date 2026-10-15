@@ -4,18 +4,36 @@ extends CanvasLayer
 ## Every change of place uses the same short fade: fade_out() (OUT seconds), build
 ## the new place, fade_in() (IN seconds). Call loading(title) before fade_out() and
 ## the covered screen is a loading card instead of a black frame: the place's name and
-## a slowly turning star seed among drifting motes, no other lines. loading("", "start")
+## a slowly turning star seed among drifting motes, no other lines, over a dimmed painting
+## of that kind of place when the caller names one (BACKDROPS). loading("", "start")
 ## is the game's first load, over the island cover art (assets/ui/loading_cover.jpg)
-## with the wordmark. A plain fade_out() (stairs) stays a dark veil.
+## with the painted logo. A plain fade_out() (stairs) stays a dark veil.
 ## While the veil covers the screen, builds pace themselves with LoadPace (load_pace.gd) so the
 ## card keeps turning, and the ring around the star seed shows how far they are.
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const LoadPace = preload("res://scripts/load_pace.gd")
 const SfxBank = preload("res://scripts/sfx_bank.gd")
+const Brand = preload("res://scripts/brand.gd")
 const OUT := 0.35
 const IN := 0.45
 const COVER_ART := "res://assets/ui/loading_cover.jpg"
 const SEED_ICON := "res://assets/starseed.svg"
+## Painted backdrops for place cards (tools/build_brand_art.py), by the kind of place:
+## the village and each of its islands (field_objects.ISLANDS ids), rooms, expedition regions.
+const BACKDROPS := {
+	"village": "res://assets/ui/loading/village.jpg",
+	"square": "res://assets/ui/loading/village.jpg",
+	"fields": "res://assets/ui/loading/fields.jpg",
+	"garden": "res://assets/ui/loading/garden.jpg",
+	"camp": "res://assets/ui/loading/camp.jpg",
+	"lighthouse": "res://assets/ui/loading/lighthouse.jpg",
+	"room": "res://assets/ui/loading/room.jpg",
+	"forest": "res://assets/ui/loading/forest.jpg",
+	"quarry": "res://assets/ui/loading/quarry.jpg",
+	"frost": "res://assets/ui/loading/frost.jpg",
+}
+## How dark a backdrop sits under the place name.
+const BACKDROP_TINT := Color(0.52, 0.52, 0.56)
 var veil: ColorRect
 var door: AudioStreamPlayer
 var tween: Tween
@@ -23,6 +41,13 @@ static var instance: CanvasLayer
 ## The loading card under the veil and its parts.
 var card: Control
 var art: TextureRect
+## The place card's painting; read on a worker thread and faded in once it is there.
+var backdrop: TextureRect
+var backdrop_path := ""
+## A soft dark pool behind the place name, so it reads over a bright painting.
+var name_shade: TextureRect
+## The last two backdrops shown stay loaded (village <-> room is the common walk).
+static var backdrop_cache: Dictionary = {}
 var glow: TextureRect
 var floor_shade: TextureRect
 var wordmark: VBoxContainer
@@ -79,6 +104,7 @@ func _frame_began() -> void:
 
 ## The ring eases toward the reported progress (never past it).
 func _process(delta: float) -> void:
+	if card.visible and not backdrop_path.is_empty() and backdrop.texture == null: _poll_backdrop()
 	if not card.visible or LoadPace.shown < 0.0:
 		ring.visible = false
 		return
@@ -111,15 +137,18 @@ func cover() -> void:
 	veil.mouse_filter = Control.MOUSE_FILTER_STOP
 
 ## Dresses the next covered screen as a loading card: `title` is the place being
-## loaded ("" for none), kind "start" (cover art and wordmark), "run" (expedition
-## tips) or "" (village and rooms). Cleared again when the veil has faded in.
-func loading(title := "", kind := "") -> void:
+## loaded ("" for none), kind "start" (cover art and logo), "run" (an expedition) or ""
+## (village and rooms), and `place_art` a BACKDROPS key for the painting behind the name
+## ("" for the plain dark card). Cleared again when the veil has faded in.
+func loading(title := "", kind := "", place_art := "") -> void:
 	style = "start" if kind == "start" else "place"
 	var start := style == "start"
 	if start and art.texture == null and ResourceLoader.exists(COVER_ART): art.texture = load(COVER_ART)
 	art.visible = start
 	floor_shade.visible = start
-	glow.visible = not start
+	show_backdrop("" if start else str(BACKDROPS.get(place_art, "")))
+	glow.visible = not start and backdrop_path.is_empty()
+	name_shade.visible = not start and not backdrop_path.is_empty()
 	wordmark.visible = start
 	heading.text = title
 	place.visible = not start and not title.is_empty()
@@ -141,9 +170,49 @@ func loading(title := "", kind := "") -> void:
 		spin.tween_property(seed, "rotation", TAU, 6.0).from(0.0)
 		spin.parallel().tween_property(halo, "modulate:a", 1.0, 3.0).from(0.45).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
+## Puts the place's painting behind the card: at once when it is loaded already, otherwise
+## read on a worker thread (the fade keeps its frames) and faded in when it arrives.
+func show_backdrop(path: String) -> void:
+	backdrop_path = path
+	backdrop.texture = null
+	backdrop.visible = not path.is_empty()
+	if path.is_empty() or not ResourceLoader.exists(path):
+		backdrop_path = ""
+		backdrop.visible = false
+		return
+	if backdrop_cache.has(path):
+		backdrop.texture = backdrop_cache[path]
+		backdrop.modulate.a = 1.0
+		return
+	backdrop.modulate.a = 0.0
+	if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		ResourceLoader.load_threaded_request(path)
+	set_process(true)
+
+func _poll_backdrop() -> void:
+	var status := ResourceLoader.load_threaded_get_status(backdrop_path)
+	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS: return
+	var texture: Texture2D = ResourceLoader.load_threaded_get(backdrop_path) if status == ResourceLoader.THREAD_LOAD_LOADED else null
+	if texture == null:
+		backdrop_path = ""
+		backdrop.visible = false
+		name_shade.visible = false
+		glow.visible = style == "place"
+		return
+	for path in backdrop_cache.keys():
+		if backdrop_cache.size() >= 2: backdrop_cache.erase(path)
+	backdrop_cache[backdrop_path] = texture
+	backdrop.texture = texture
+	if RpgUi.calm() or veil.modulate.a < 0.05:
+		backdrop.modulate.a = 1.0
+	else:
+		card.create_tween().tween_property(backdrop, "modulate:a", 1.0, 0.25).set_trans(Tween.TRANS_SINE)
+
 func clear_card() -> void:
 	style = ""
 	card.visible = false
+	backdrop.texture = null
+	backdrop_path = ""
 	motes.emitting = false
 	if spin and spin.is_valid(): spin.kill()
 	ring.visible = false
@@ -191,8 +260,27 @@ func build_card() -> void:
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(art)
+	backdrop = TextureRect.new()
+	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	backdrop.self_modulate = BACKDROP_TINT
+	backdrop.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	backdrop.visible = false
+	card.add_child(backdrop)
+	name_shade = gradient_rect(GradientTexture2D.FILL_RADIAL, Vector2(0.5, 0.5), Vector2(0.5, 0.0),
+		[Color(0.02, 0.02, 0.03, 0.62), Color(0.02, 0.02, 0.03, 0.3), Color(0, 0, 0, 0)], [0.0, 0.5, 1.0])
+	name_shade.set_anchors_preset(Control.PRESET_CENTER)
+	name_shade.offset_left = -380
+	name_shade.offset_right = 380
+	name_shade.offset_top = -150
+	name_shade.offset_bottom = 110
+	name_shade.visible = false
+	card.add_child(name_shade)
 	# Rooms and areas: a warm glow in the middle of the dark, like a lantern behind a door.
 	glow = gradient_rect(GradientTexture2D.FILL_RADIAL, Vector2(0.5, 0.46), Vector2(1.05, 0.46),
 		[Color(0.42, 0.3, 0.16, 0.42), Color(0.12, 0.1, 0.08, 0.12), Color(0, 0, 0, 0)], [0.0, 0.45, 1.0])
@@ -234,28 +322,18 @@ func build_card() -> void:
 	card.resized.connect(func():
 		motes.position = Vector2(card.size.x*0.5, card.size.y+30)
 		motes.emission_rect_extents = Vector2(card.size.x*0.55, 30))
-	# The game's wordmark, bottom left, as on the title screen.
+	# The game's painted logo, bottom left, as on the title screen.
 	wordmark = VBoxContainer.new()
-	wordmark.add_theme_constant_override("separation", 0)
+	wordmark.alignment = BoxContainer.ALIGNMENT_END
 	wordmark.anchor_top = 1.0
 	wordmark.anchor_bottom = 1.0
-	wordmark.offset_left = 64
-	wordmark.offset_top = -196
-	wordmark.offset_right = 640
-	wordmark.offset_bottom = -76
+	wordmark.offset_left = 48
+	wordmark.offset_top = -220
+	wordmark.offset_right = 420
+	wordmark.offset_bottom = -40
 	wordmark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(wordmark)
-	var name_row := HBoxContainer.new()
-	name_row.add_theme_constant_override("separation", 12)
-	wordmark.add_child(name_row)
-	var mark := RpgUi.icon(SEED_ICON, 46)
-	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	name_row.add_child(mark)
-	var title := RpgUi.label(name_row, "Villagen", 60)
-	title.add_theme_constant_override("outline_size", 9)
-	title.add_theme_color_override("font_outline_color", Color("2a1a0c"))
-	title.add_theme_constant_override("shadow_offset_y", 4)
-	title.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.35))
+	wordmark.add_child(Brand.logo(340))
 	# A place being entered: its name in the middle with a gold rule under it.
 	place = VBoxContainer.new()
 	place.alignment = BoxContainer.ALIGNMENT_CENTER

@@ -104,8 +104,9 @@ static func update_available() -> bool:
 
 ## Must this game update before it may go on? Too old for the server, or (an installed game at the
 ## title) any newer release: the update happens right away, never as an option.
+## A game started with "--no-patch" (support: run as installed) is not updated by itself at the title.
 static func must_update(at_title: bool) -> bool:
-	return needs_update() or (at_title and update_available() and Patcher.installed_game())
+	return needs_update() or (at_title and update_available() and Patcher.installed_game() and not Patcher.started_without_patches())
 
 ## The version the server wants: the latest, or the minimum when that is higher.
 static func wanted_version() -> String:

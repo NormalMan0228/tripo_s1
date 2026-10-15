@@ -149,6 +149,7 @@ def assets_zip(tag: str, name: str, folders: list[str]) -> Path:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     tag = "v" + version()
+    setup = None
     if "--installer" in sys.argv:
         # Windows installer (Inno Setup, tools/installer/villagen.iss): pick a folder, desktop and Start
         # menu shortcuts, uninstaller. Writes Villagen_School_Setup.exe or Villagen_Setup.exe.
@@ -164,7 +165,9 @@ def main() -> None:
     # --game-only: just the player ZIP (the DevAssets archives change rarely; reuse the last ones).
     files = [game_zip(tag)] if "--game-only" in sys.argv else [game_zip(tag), assets_zip(tag, "Map", MAP_ASSETS), assets_zip(tag, "Art", ART_ASSETS)]
     sums = OUT / ("SHA256SUMS_School.txt" if "--school" in sys.argv else "SHA256SUMS.txt")
-    sums.write_text("".join(f"{sha256(f)}  {f.name}\n" for f in files), encoding="utf-8")
+    # The installer built in the same run is listed too (publish_school_build.py checks both against the sums).
+    listed = files + ([setup] if setup else [])
+    sums.write_text("".join(f"{sha256(f)}  {f.name}\n" for f in listed), encoding="utf-8")
     for item in files + [sums]:
         print(f"{item.name}  {item.stat().st_size / 1024 ** 2:.0f} MB")
 

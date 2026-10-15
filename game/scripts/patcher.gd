@@ -221,16 +221,22 @@ func _fetch(url: String, part: String, size: int) -> String:
 	return "" if have == size else "cut"
 
 ## Restarts the game so patch_boot.gd loads the new pack before anything else.
+## Started with "--no-patch" (support: run the game as installed, downloaded patches ignored).
+static func started_without_patches() -> bool:
+	return "--no-patch" in OS.get_cmdline_args() or "--no-patch" in OS.get_cmdline_user_args()
+
 static func restart(tree: SceneTree) -> void:
 	if restart_hook.is_valid():
 		restart_hook.call()
 		return
-	var args := OS.get_cmdline_args()
+	# The player just took the update: the restarted game must load it, so "--no-patch" (start as
+	# installed) is not carried over; it would download and restart again forever.
+	var args := Array(OS.get_cmdline_args()).filter(func(a): return a != "--no-patch")
 	# Engine options are not among the arguments: a headless QA run restarts headless.
 	if DisplayServer.get_name() == "headless" and not args.has("--headless"): args.insert(0, "--headless")
-	var extra := OS.get_cmdline_user_args()
+	var extra := Array(OS.get_cmdline_user_args()).filter(func(a): return a != "--no-patch")
 	if not extra.is_empty():
 		args.append("--")
 		args.append_array(extra)
-	OS.set_restart_on_exit(true, args)
+	OS.set_restart_on_exit(true, PackedStringArray(args))
 	tree.quit()

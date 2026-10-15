@@ -38,6 +38,7 @@ const VersionGate = preload("res://scripts/version_gate.gd")
 ## Loaded first of all as an autoload (project.godot): this is that same, cached copy.
 const PatchBoot = preload("res://scripts/patch_boot.gd")
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
+const Brand = preload("res://scripts/brand.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
@@ -153,8 +154,7 @@ var step_distance := 0.0
 var last_step_at := Vector3.ZERO
 var ambience_elapsed := 10.0
 var day_track: Label
-var toast_panel: PanelContainer
-var toast_time := 0.0
+var toast_lane: VBoxContainer
 var last_notice := ""
 var ambience: CPUParticles3D
 var sun_defaults: Dictionary
@@ -402,74 +402,18 @@ func message(value: String) -> void:
 	# Server messages arrive in Korean; already translated client text passes through.
 	value = I18n.server(value)
 	if is_instance_valid(notice): notice.text = value
-	if is_instance_valid(toast_panel): toast_panel.reset_size.call_deferred()
-	if is_instance_valid(toast_panel) and value!=last_notice and not value.is_empty():
+	# The shared toast lane (RpgUi.toast): a line still on screen refreshes, a new one stacks (max 3).
+	if is_instance_valid(toast_lane) and not value.is_empty() and (value!=last_notice or RpgUi.find_toast(toast_lane,value)):
 		last_notice=value
-		toast_time=4.5
-		show_toast()
+		RpgUi.toast(toast_lane,value,"info",{"sound":screen!="survival"})
 
-## Toasts slide down from their resting spot with a soft chime; a toast already on
-## screen just swaps its text.
-func show_toast() -> void:
-	if toast_panel.has_meta("fade"):
-		var old: Tween = toast_panel.get_meta("fade")
-		if old and old.is_valid(): old.kill()
-	var showing: bool=toast_panel.visible and toast_panel.modulate.a>0.6
-	toast_panel.visible=true
-	if showing or RpgUi.calm():
-		toast_panel.modulate.a=1.0
-		toast_panel.scale=Vector2.ONE
-		return
-	toast_panel.pivot_offset=Vector2(toast_panel.size.x*0.5,0)
-	toast_panel.scale=Vector2(0.92,0.92)
-	toast_panel.modulate.a=0.0
-	var tw := toast_panel.create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(toast_panel,"scale",Vector2.ONE,0.3)
-	tw.tween_property(toast_panel,"modulate:a",1.0,0.2)
-	toast_panel.set_meta("fade",tw)
-	if screen!="survival": RpgUi.sfx("toast",-12.0)
-
-func hide_toast() -> void:
-	if not is_instance_valid(toast_panel) or not toast_panel.visible: return
-	var tw := toast_panel.create_tween()
-	tw.tween_property(toast_panel,"modulate:a",0.0,0.3).set_trans(Tween.TRANS_SINE)
-	tw.tween_callback(func():
-		if toast_time<=0: toast_panel.visible=false)
-	toast_panel.set_meta("fade",tw)
-
-## The HUD toast: a glass pill with a starseed glint and wrapped text.
-func make_toast(at: Vector2, width: float) -> void:
-	# The toast lane: a full-screen column that keeps the toast centred at the top
-	# (village) or just above the toolbar (field) at any interface scale.
-	var lane := VBoxContainer.new()
-	lane.name = "ToastLane"
-	lane.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	lane.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var top: bool = at.y<400
-	lane.alignment = BoxContainer.ALIGNMENT_BEGIN if top else BoxContainer.ALIGNMENT_END
-	if top: lane.offset_top = at.y
-	else: lane.offset_bottom = -(RpgUi.CANVAS.y-at.y-44.0)
-	ui.add_child(lane)
-	toast_panel = PanelContainer.new()
-	toast_panel.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
-	toast_panel.custom_minimum_size.x = width
-	toast_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	lane.add_child(toast_panel)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation",10)
-	toast_panel.add_child(row)
-	var glint := RpgUi.icon("res://assets/starseed.svg",24)
-	glint.size_flags_vertical=Control.SIZE_SHRINK_CENTER
-	row.add_child(glint)
-	notice = RpgUi.label(row,"",15,RpgUi.INK)
-	notice.add_theme_font_override("font",RpgUi.FONT_STRONG)
-	notice.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	notice.custom_minimum_size.x=width-96
-	notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	notice.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	toast_panel.visible = false
+## The HUD's toast lane at design y (520 px pills) and a hidden copy of the last line (notice).
+func lay_toasts(y: float) -> void:
+	toast_lane = RpgUi.toast_lane(ui,y,520)
+	notice = Label.new()
+	notice.name = "NoticeText"
+	notice.visible = false
+	ui.add_child(notice)
 	last_notice = ""
 
 func error_message(code: String) -> String:
@@ -550,6 +494,8 @@ func login_ui(page := "menu") -> void:
 	var art := TextureRect.new()
 	var hour: float = daylight.current_hour() if is_instance_valid(daylight) else Daylight.clock_hour()
 	art.texture = load(title_art_for(hour))
+	# 2560 px art shown smaller: mipmaps keep it smooth at any window size.
+	art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -583,24 +529,12 @@ func login_ui(page := "menu") -> void:
 	ui.add_child(vignette)
 	ui.add_child(title_motes())
 	var heading := VBoxContainer.new()
-	heading.position = Vector2(84,64)
+	heading.position = Vector2(56,34)
 	heading.add_theme_constant_override("separation",0)
 	ui.add_child(heading)
-	# Villagen = village + generate: the name is the title, with the star seed beside it.
-	var name_row := HBoxContainer.new()
-	name_row.add_theme_constant_override("separation",14)
-	heading.add_child(name_row)
-	var seed := RpgUi.icon("res://assets/starseed.svg",58)
-	seed.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	name_row.add_child(seed)
-	var title := RpgUi.label(name_row,"Villagen",76)
-	title.add_theme_font_override("font",RpgUi.FONT_DISPLAY)
-	title.add_theme_constant_override("outline_size",10)
-	title.add_theme_color_override("font_outline_color",Color("2a1a0c"))
-	title.add_theme_constant_override("shadow_offset_y",5)
-	title.add_theme_color_override("font_shadow_color",Color(0,0,0,.35))
-	# The name and the gold rule only: no tagline under it (the user found extra lines cheap).
-	RpgUi.divider(heading,RpgUi.GOLD,380).size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	# Villagen = village + generate: the painted logo (a sprout and the star seed on the name),
+	# no tagline under it (the user found extra lines cheap).
+	heading.add_child(Brand.logo(420))
 	var body := VBoxContainer.new()
 	body.position = Vector2(92,300 if page=="menu" else 250)
 	body.add_theme_constant_override("separation",12)
@@ -771,7 +705,8 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		I18n.remember("server",host)
 		I18n.remember("username",username.strip_edges())
 	var veil := Transition.of(get_tree())
-	veil.loading(TownLayout.room_title("home") if get_tree().current_scene==self else tr("다섯 섬 마을"))
+	var at_home: bool = get_tree().current_scene==self
+	veil.loading(TownLayout.room_title("home") if at_home else tr("다섯 섬 마을"),"","room" if at_home else "village")
 	await veil.fade_out()
 	if get_tree().current_scene==self:
 		# A new session starts at home; walking out of the front door opens the village.
@@ -802,6 +737,12 @@ func build_world(survival: bool) -> bool:
 	sound.play_music(region_track() if survival else village_track())
 	leave_modules()
 	if is_instance_valid(town): town.release_map()
+	# The village seat (and its interaction driver) belongs to the walker that goes with this world:
+	# let go of it first, and the next village_seat() makes a fresh one for the new walker.
+	if is_instance_valid(seat):
+		seat.reset()
+		seat.queue_free()
+	seat=null
 	if is_instance_valid(world):
 		remove_child(world)
 		world.queue_free()
@@ -1214,21 +1155,46 @@ func build_village_hud() -> void:
 	var social_chip := ui.get_node_or_null("SocialChip")
 	if social_chip is Control: RpgUi.fold_shift(social_chip,"profile",Vector2(-36,0))
 	var slots := []
-	for spec in [["bag.svg","I",tr("가방"),toggle_drawer],["craft.svg","C",tr("제작"),open_craft],["map.svg","Tab",tr("지도"),life.open_map],
-			["chest.svg","B",tr("창고"),life.open_storage],["wardrobe.svg","O",tr("옷장"),open_wardrobe],["expedition.svg","",tr("탐험"),open_expedition]]+(
+	# Action ids: the key caps and "name  ·  key" tooltips follow rebinding (RpgUi.key_text).
+	for spec in [["bag.svg","inventory",tr("가방"),toggle_drawer],["craft.svg","craft",tr("제작"),open_craft],["map.svg","map",tr("지도"),life.open_map],
+			["chest.svg","storage",tr("창고"),life.open_storage],["wardrobe.svg","wardrobe",tr("옷장"),open_wardrobe],["expedition.svg","",tr("탐험"),open_expedition]]+(
 			[["admin.svg","F9",tr("관리"),open_admin]] if preload("res://scripts/build_mode.gd").admin else []):
 		var action: Callable = spec[3]
-		slots.append({"icon":"res://assets/ui/"+spec[0],"key":spec[1],"label":tr(spec[2]),"primary":spec[0]=="expedition.svg",
+		slots.append({"icon":"res://assets/ui/"+spec[0],"action":spec[1],"label":tr(spec[2]),"primary":spec[0]=="expedition.svg",
 			"call":func(): action.call()})
 	var bar := RpgUi.hotbar(ui,slots,700,"hotbar")
 	expedition_button = bar.get_child(5)
-	make_toast(Vector2(380,94),520)
+	lay_toasts(94)
 	if preload("res://scripts/build_mode.gd").developer():
 		var debug_box := panel(Vector2(20,520),252,"night")
 		developer_panel=debug_box.get_parent()
 		developer_panel.visible=false
 		developer_label=text(debug_box,"F3",12)
 		developer_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		# ISS-1 socket gizmo (ix/ix_debug.gd): off by default, nothing exists while it is off.
+		var sockets := CheckBox.new()
+		sockets.text=tr("소켓 보기 (ISS-1)")
+		sockets.focus_mode=Control.FOCUS_NONE
+		sockets.add_theme_font_size_override("font_size",12)
+		sockets.toggled.connect(func(on: bool): show_ix_debug(on))
+		debug_box.add_child(sockets)
+	if "--ix-debug" in OS.get_cmdline_user_args(): show_ix_debug(true)
+
+## The socket gizmo over the village (crafted pieces and map props near the walker).
+func show_ix_debug(on: bool) -> void:
+	var current: Node = world.get_node_or_null("IxDebug") if is_instance_valid(world) else null
+	if not on:
+		if is_instance_valid(current): current.queue_free()
+		return
+	if is_instance_valid(current) or not is_instance_valid(world): return
+	var gizmo: Node3D = preload("res://scripts/ix/ix_debug.gd").new()
+	gizmo.player=player
+	gizmo.nodes=func() -> Array:
+		var out: Array=loaded.values()
+		if is_instance_valid(town):
+			for entry in town.props: out.append(entry.node)
+		return out
+	world.add_child(gizmo)
 
 func build_play_hud(survival: bool) -> void:
 	social.install_hud(survival)
@@ -1288,7 +1254,7 @@ func build_play_hud(survival: bool) -> void:
 	RpgUi.pin(bar_panel,0.5,1.0,Vector2(300,800-22-bar_height))
 	# Folds to a handle tab like the village hotbar; the keys keep working.
 	RpgUi.fold_dock(ui,"toolbar",[bar_panel],980,800-22-bar_height*0.5)
-	make_toast(Vector2(380,520 if survival else 548),520)
+	lay_toasts(520 if survival else 548)
 	if survival:
 		var tracker := PanelContainer.new()
 		tracker.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
@@ -1376,6 +1342,7 @@ func refresh_inventory() -> void:
 	# The opening story chapter (story.gd) follows the server's progress.
 	var story := chapter()
 	if story: story.adopt(me.get("story"))
+	if story: story.adopt_quests(me.get("quests"))
 	# A newer look adopted while this answer was on its way stays.
 	if int(newer.get("version",-1))>int(me.get("profile",{}).get("version",-1)): me.profile=newer
 	# Also while the village is still loading (screen "loading"): the walker built before /v1/me
@@ -1411,8 +1378,11 @@ func refresh_inventory() -> void:
 			if me.objects[i].id==old_selection: index=i
 		objects_list.select(index)
 		# A placement the player started while this refresh was on its way stays: selecting again
-		# would cancel its ghost (select_object -> cancel_preview).
+		# would cancel its ghost (select_object -> cancel_preview). Its piece stays the selection,
+		# fresh from /v1/me: a craft ending meanwhile (craft_tracker -> craft_bag_changed) refreshed
+		# the bag mid-placement and left nothing selected, so the ghost could not be put down.
 		if not is_instance_valid(preview): select_object(index)
+		elif str(me.objects[index].id)==old_selection: selected = me.objects[index]
 	if is_instance_valid(shape_panel): shape_panel.refresh()
 	refreshing=false
 
@@ -1529,6 +1499,7 @@ func poll_entitlements() -> void:
 	NpcGifts.set_versions(result.data.get("npc_homes"),result.data.get("npc_homes_host",""))
 	var story := chapter()
 	if story: story.adopt(result.data.get("story"))
+	if story: story.adopt_quests(result.data.get("quests"))
 	if objects_signature(result.data.objects)!=objects_signature(me.objects) or result.data.shards!=me.shards:
 		cancel_preview()
 		await refresh_inventory()
@@ -1835,6 +1806,9 @@ func place_preview() -> void:
 			await refresh_inventory()
 			message(tr("자리와 방향을 바꿨어요."))
 		return
+	if selected.is_empty():
+		cancel_preview()
+		return
 	var placing_id := str(selected.id)
 	var placing_key := object_key(selected)
 	if await edit_object({"action":"place","x":p.x,"z":p.y,"rotation":preview_rotation}):
@@ -1966,7 +1940,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	run=snapshot.data
 	# Into the expedition under the same loading card as every other change of place.
 	var veil := Transition.of(get_tree())
-	veil.loading(region_name(str(run.get("map_id",map_id))),"run")
+	veil.loading(region_name(str(run.get("map_id",map_id))),"run",str(run.get("map_id",map_id)))
 	await veil.fade_out()
 	# The village's own per-frame work stops while the expedition is built under the card.
 	screen="loading"
@@ -2443,7 +2417,7 @@ func retry_run() -> void:
 	var difficulty: String=run.get("difficulty","standard")
 	# One fade for the whole retry: the village is rebuilt under the card, not shown.
 	var veil := Transition.of(get_tree())
-	veil.loading(region_name(region),"run")
+	veil.loading(region_name(region),"run",region)
 	await veil.fade_out()
 	await leave_run(false)
 	if screen=="village": await start_run(region,difficulty)
@@ -2553,7 +2527,7 @@ func show_results() -> void:
 func back_to_village(fade := true) -> void:
 	var veil := Transition.of(get_tree())
 	if fade:
-		veil.loading(tr("다섯 섬 마을"))
+		veil.loading(tr("다섯 섬 마을"),"","village")
 		await veil.fade_out()
 	await enter_village()
 	if fade: veil.fade_in()
@@ -2782,9 +2756,6 @@ func _process(delta: float) -> void:
 		update_canopy_visibility()
 	if is_instance_valid(inspect_model) and is_instance_valid(inspect_panel) and inspect_panel.visible:
 		inspect_model.rotation.y+=delta*0.35
-	if toast_time>0:
-		toast_time-=delta
-		if toast_time<=0: hide_toast()
 	if is_instance_valid(flame) and flame.visible:
 		flame.scale=Vector3(1.0+sin(Time.get_ticks_msec()*0.011)*0.07,1.0+sin(Time.get_ticks_msec()*0.015)*0.12,1.0)
 	if screen=="survival":
@@ -2991,7 +2962,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if key==KEY_F9 and preload("res://scripts/build_mode.gd").admin: open_admin()
 			if key==KEY_O and not is_instance_valid(village_modal): open_wardrobe()
 			if key==KEY_E and not life.closest().is_empty(): life.interact()
-			elif key==KEY_E and nearest_npc(): talk_to(nearest_npc())
+			elif key==KEY_E and nearest_npc(): talk_after_turn(nearest_npc())
 			elif key==KEY_E and not module_closest().is_empty(): use_module(module_closest())
 			elif key==KEY_E and is_instance_valid(town) and not town.nearest_prop(Vector2(player.position.x,player.position.z)).is_empty(): town.use_prop(self,town.nearest_prop(Vector2(player.position.x,player.position.z)))
 			elif key==KEY_E and near(TownLayout.GATE,3): open_expedition()
@@ -3012,65 +2983,31 @@ func close_village_modal() -> void:
 	if is_instance_valid(life): life.closed()
 	restore_hud()
 	if is_instance_valid(village_modal):
-		RpgUi.sfx("close",-10.0)
-		village_modal.get_parent().remove_child(village_modal)
-		village_modal.queue_free()
+		# A shared window (modal_card) leaves the window stack; dialogues and the craft window go as before.
+		if village_modal.has_meta("rpg_window"): RpgUi.close_window(village_modal.get_meta("rpg_window"),false)
+		else:
+			RpgUi.sfx("close",-10.0)
+			village_modal.get_parent().remove_child(village_modal)
+			village_modal.queue_free()
 	village_modal=null
 	if is_instance_valid(player) and screen=="village":player.controls_enabled=world_movement_allowed()
 
-## A centred parchment window over a soft shade: display-font title, a round close
-## key, an ornamented rule, then the caller's content. Opens with a fade + pop.
-func modal_card(title: String) -> VBoxContainer:
+## A centred parchment window over the shared shade (RpgUi.window): display-font title, the close
+## key, an ornamented rule, then the caller's content. `action` is the GameSettings action that
+## opens it (its key names the close key; "" names Esc). Opens with a fade + pop.
+## Callers pass "" until U-WP-04 routes the opening key to close the window: only Esc closes it now.
+func modal_card(title: String, action := "") -> VBoxContainer:
 	close_village_modal()
 	cancel_preview()
-	village_modal=Control.new()
 	player.controls_enabled=false
-	village_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	ui.add_child(village_modal)
-	var shade := TextureRect.new()
-	var fall := GradientTexture2D.new()
-	fall.fill = GradientTexture2D.FILL_RADIAL
-	fall.fill_from = Vector2(0.5,0.45);fall.fill_to = Vector2(1.1,1.1)
-	fall.gradient = Gradient.new()
-	fall.gradient.colors = PackedColorArray([Color(0.03,0.05,0.06,.55),Color(0.02,0.03,0.04,.86)])
-	shade.texture=fall
-	shade.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	village_modal.add_child(shade)
-	shade.modulate.a=0.0
-	shade.create_tween().tween_property(shade,"modulate:a",1.0,0.2)
-	var v := panel(Vector2(260,92),760,"hero")
-	var card := v.get_parent()
-	ui.remove_child(card)
-	village_modal.add_child(card)
-	RpgUi.pin(card,0.5,0.0)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation",10)
-	v.add_child(row)
-	text(row,title,27).size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	var close := button(row,tr("닫기 · Esc"),close_village_modal)
-	close.custom_minimum_size=Vector2(0,36)
-	close.add_theme_font_size_override("font_size",13)
-	rule(v)
-	RpgUi.pop_in(card)
-	RpgUi.sfx("open",-8.0)
+	var w := RpgUi.window(ui,title,{"action":action,"scroll":false,"on_close":close_village_modal,"id":"village_modal"})
+	village_modal=w.root
 	player.controls_enabled=false
-	return v
+	return w.body
 
-## Round "×" key for drawers and side panels; named "닫기" (with the panel's key).
+## The round close key for drawers and side panels (RpgUi.close_key), named "닫기" with the panel's key.
 func close_button(parent: Node, callback: Callable, key := "") -> Button:
-	var b := Button.new()
-	b.icon=RpgUi.icon_texture("close")
-	b.expand_icon=true
-	b.custom_minimum_size=Vector2(34,34)
-	b.focus_mode=Control.FOCUS_NONE
-	b.flat=true
-	RpgUi.name_tip(b,tr("닫기"),key)
-	b.size_flags_vertical=Control.SIZE_SHRINK_CENTER
-	RpgUi.hover_motion(b,1.12)
-	b.pressed.connect(func(): callback.call())
-	parent.add_child(b)
-	return b
+	return RpgUi.close_key(parent,callback,key)
 
 ## A round paint swatch that lifts on hover.
 func swatch(parent: Node, color: Color, callback: Callable) -> Button:
@@ -3305,6 +3242,27 @@ func npc_script(role: String) -> Dictionary:
 	if not opener.is_empty(): plan.lines.insert(0,opener)
 	return plan
 
+## E on a villager (ISS-1 talk): both turn toward each other first; the dialogue opens once the
+## villager faces the walker within 20 degrees, or after 0.4 s at most. talk_to() itself stays
+## immediate for scripted calls.
+var talk_turning := false
+func talk_after_turn(npc: Node3D) -> void:
+	if talk_turning or not is_instance_valid(npc): return
+	talk_turning=true
+	npc.face_point(player.position)
+	player.face_point(npc.position)
+	if "talk_rate" in npc: npc.talk_rate=9.0
+	var waited := 0.0
+	while waited<0.4 and is_instance_valid(npc) and is_instance_valid(player):
+		var to: Vector3=player.global_position-npc.global_position
+		if absf(angle_difference(npc.rotation.y,atan2(to.x,to.z)))<deg_to_rad(20.0): break
+		await get_tree().process_frame
+		waited+=get_process_delta_time()
+	talk_turning=false
+	if not is_instance_valid(npc): return
+	if "talk_rate" in npc: npc.talk_rate=5.0
+	if screen=="village" and not is_instance_valid(village_modal): talk_to(npc)
+
 func talk_to(npc: Node3D) -> void:
 	npc.face_point(player.position)
 	player.face_point(npc.position)
@@ -3313,6 +3271,9 @@ func talk_to(npc: Node3D) -> void:
 	# Residents of a house take gifts from their own village's player (npc_gifts.gd).
 	if NpcGifts.can_receive(cast) and can_gift():
 		plan.choices.insert(maxi(0,plan.choices.size()-1),[tr("선물하기"),func(): open_gift(cast,str(npc.get_meta("title")),cast,npc)])
+	# The resident's request (quests.gd) comes first.
+	var request: Array=preload("res://scripts/quests.gd").choice(self,cast,str(npc.get_meta("title")),cast,npc)
+	if not request.is_empty(): plan.choices.insert(0,request)
 	open_dialogue(str(npc.get_meta("title")),cast,plan.lines,plan.choices)
 
 ## Gifts go to the residents of your own village only.
@@ -3432,7 +3393,7 @@ func open_studio(destination: String="workshop") -> void:
 	var veil := Transition.of(get_tree())
 	veil.play_door("open",destination)
 	player.controls_enabled=false
-	veil.loading(tr("%s님의 집") % str(session.visit_name) if session.has("visit_name") else TownLayout.room_title(destination))
+	veil.loading(tr("%s님의 집") % str(session.visit_name) if session.has("visit_name") else TownLayout.room_title(destination),"","room")
 	await veil.fade_out()
 	leave_modules()
 	if is_instance_valid(town): town.release_map()
