@@ -44,7 +44,9 @@ const CATALOG := {
 	"bindle": {"socket": "back", "name": "보따리", "needs": [], "fingers": [true, false],
 		"off": Vector3(0.1, -0.38, 0.5), "r": [Vector3.ZERO, Vector3(1.0, 0.0, 0.2), Vector3(0.0, -0.75, -1.0), Vector3(-0.4, -1.0, 0.1)]},
 }
-const ORDER := ["umbrella", "lantern", "fan", "balloon", "bouquet", "basket", "fish", "bindle"]
+## The storage strip's order. The bindle is left out until its back pose reads right (the bundle
+## sat over the head in the 2026-10-16 capture); a peer holding one still draws it.
+const ORDER := ["umbrella", "lantern", "fan", "balloon", "bouquet", "basket", "fish"]
 
 ## The hero's choice this session (kept across worlds and rooms) and the last thing it held.
 static var hero_choice := ""
