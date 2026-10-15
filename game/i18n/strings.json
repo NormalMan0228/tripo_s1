@@ -1,5 +1,37 @@
 {
  "strings": {
+  "자기 위에 있는 물건 위로는 올릴 수 없어요.": {
+   "en": "You can't put it on something that sits on top of it.",
+   "zh": "不能放到压在它上面的物品上。"
+  },
+  "벽에 걸기에는 너무 높아요. 조금 아래로 내려 주세요.": {
+   "en": "Too high to hang on the wall. Move it down a little.",
+   "zh": "挂在墙上太高了，请稍微往下放。"
+  },
+  "여기서는 벽이나 천장에 걸 수 없어요.": {
+   "en": "You can't hang things on the wall or ceiling here.",
+   "zh": "这里不能挂在墙上或天花板上。"
+  },
+  "걸 벽을 골라 주세요.": {
+   "en": "Choose a wall to hang it on.",
+   "zh": "请选择要挂的墙。"
+  },
+  "이 방에는 더 놓을 수 없어요. 일부를 가방에 넣어 주세요.": {
+   "en": "This room is full. Put some pieces back in your bag.",
+   "zh": "这个房间放不下了，请把一些物品收回背包。"
+  },
+  "마을에는 더 놓을 수 없어요. 일부를 가방에 넣어 주세요.": {
+   "en": "The village is full. Put some pieces back in your bag.",
+   "zh": "村子里放不下了，请把一些物品收回背包。"
+  },
+  "성능 표시": {
+   "en": "Performance display",
+   "zh": "性能显示"
+  },
+  "화면 구석에 프레임과 메모리 사용량을 보여 줘요. F2로도 켜고 꺼요.": {
+   "en": "Shows frame rate and memory use in a corner of the screen. F2 also turns it on and off.",
+   "zh": "在屏幕角落显示帧率和内存用量。也可以按 F2 开关。"
+  },
   "현관문": {
    "en": "Front door",
    "zh": "前门"

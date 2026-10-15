@@ -486,6 +486,8 @@ func my_name() -> String:
 func send(text: String, channel := "local") -> void:
 	text = text.strip_edges()
 	if text.is_empty(): return
+	# As typed: a whisper request puts it back whole (/w 이름 …), so Enter cannot send it to the village.
+	var raw_line := text
 	var to := ""
 	if text.begins_with("/"):
 		var parts := text.split(" ", false, 2)
@@ -528,7 +530,7 @@ func send(text: String, channel := "local") -> void:
 		if not str(request.get("id", "")).is_empty(): whisper_states[str(request.id)] = "pending"
 		RpgUi.sfx("chat_out", -10.0)
 		system_line(tr("%s님에게 귓속말 요청을 보냈어요. 받아 주면 다시 보내 주세요.") % to)
-		if is_instance_valid(chat) and chat.field.text.is_empty(): chat.field.text = body.text
+		if is_instance_valid(chat) and chat.field.text.is_empty(): chat.field.text = raw_line if raw_line.begins_with("/") else body.text
 		return
 	if answer.ok:
 		# The send sound once the server took the line (as the old social.gd send_message).
