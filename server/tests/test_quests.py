@@ -129,8 +129,37 @@ def test_requests_wait_for_the_opening_chapter_and_its_letter(world):
     c.post('/v1/letters/read', headers=h, json=mutation(ids=[done['letters'][0]['id']]))
     open_ = listing(c, h)
     assert open_['unlocked'] is True and {q['state'] for q in open_['list']} == {'available'}
-    assert [q['npc'] for q in open_['list']] == ['regular', 'naru', 'sora', 'moru', 'haeru', 'postman', 'farmer', 'lamplighter']
+    # Every resident of the village asks one thing (residents.gd RESIDENTS, the same nineteen).
+    assert [q['npc'] for q in open_['list']] == ['regular', 'naru', 'sora', 'moru', 'haeru', 'postman', 'farmer', 'lamplighter', 'fisher',
+                                                'sweeper', 'gentleman', 'stargazer', 'gardener', 'scout', 'miller', 'shopkeeper', 'kid',
+                                                'stroller', 'poet']
     assert accept(c, h, 'moka_pie').status_code == 200
+
+
+def local(h, now, hour):
+    """The headers of a player whose own clock shows this hour now (the time zone header)."""
+    utc = (now[0] % 86400) / 3600
+    shift = (hour - utc) % 24
+    if shift > 14:
+        shift -= 24
+    return {**h, 'X-Villagen-UTC-Offset': str(int(round(shift * 60)))}
+
+
+def mine(c, h, name=None, ident=None):
+    return next(o for o in c.get('/v1/me', headers=h).json()['objects'] if (name and o['name'] == name) or (ident and o['id'] == ident))
+
+
+def catch(app, c, h, *kinds):
+    """The fish book counts these kinds once more (as a catch does)."""
+    c.get('/v1/homestead', headers=h)
+    me = c.get('/v1/me', headers=h).json()
+    with db(app) as conn:
+        user = conn.execute('SELECT id FROM users WHERE username=?', (me['username'],)).fetchone()['id']
+        row = conn.execute('SELECT state FROM homesteads WHERE user_id=?', (user,)).fetchone()
+        state = json.loads(row['state']) if row else homestead.initial()
+        for kind in kinds:
+            state['collection'][kind] = state['collection'].get(kind, 0) + 1
+        conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state', (user, json.dumps(state)))
 
 
 def test_every_request_runs_from_offer_to_one_reward(world):
@@ -138,11 +167,11 @@ def test_every_request_runs_from_offer_to_one_reward(world):
     app, c, now = world
     h = account(c, 'helper')
     free(app)
-    start = shards(c, h)
     total = 0
     lamp = craft(app, c, h, '등불', now)
+    toy = craft(app, c, h, '곰인형', now)
     start = shards(c, h)
-    for quest_id in quests.QUESTS:
+    for quest_id, rule in quests.QUESTS.items():
         before = quest(c, h, quest_id)
         assert before['state'] == 'available' and before['stars'] == quests.STARS[quest_id], before
         now[0] += 10
@@ -150,22 +179,34 @@ def test_every_request_runs_from_offer_to_one_reward(world):
         assert taken.status_code == 200, taken.text
         assert taken.json()['quest']['state'] == 'active' and taken.json()['quest']['have'] == 0
         assert complete(c, h, quest_id).json()['detail'] == 'quest_not_ready'
-        kind = quests.QUESTS[quest_id]['kind']
+        kind = rule['kind']
         now[0] += 10
         if kind == 'bring':
-            need = quests.QUESTS[quest_id]['count']
-            bag(app, c, h, **{quests.QUESTS[quest_id]['items'][0]: need})
-        elif kind == 'visit':
-            for island in ('square', 'fields', 'camp'):
+            bag(app, c, h, **{rule['items'][0]: rule['count']})
+        elif kind in ('visit', 'talk'):
+            for spot in rule['places'][:rule['count']]:
                 now[0] += 5
-                assert visit(c, h, island).status_code == 200
+                # Night errands are reported by a player whose clock says 21:00.
+                r = c.post('/v1/quests/%s/progress' % quest_id, headers=local(h, now, 21) if rule.get('night') else h, json=mutation(place=spot))
+                assert r.status_code == 200, r.text
         elif kind == 'outfit':
             look = c.get('/v1/me', headers=h).json()['profile']
             avatar = {**look['avatar'], 'coat': '#336699'}
             assert c.post('/v1/profile', headers=h, json=mutation(version=look['version'], avatar=avatar)).status_code == 200
+        elif kind == 'catch':
+            catch(app, c, h, 'perch', 'mackerel')
+        elif kind == 'gift' and rule.get('to'):
+            piece = mine(c, h, ident=toy['id'])
+            assert c.post('/v1/objects/%s/placement' % toy['id'], headers=h, json=mutation(version=piece['version'], action='retrieve')).status_code == 200
+            piece = mine(c, h, ident=toy['id'])
+            assert c.post('/v1/npcs/kid/gift', headers=h, json=mutation(object_id=toy['id'], version=piece['version'])).status_code == 200
         elif kind == 'gift':
-            chair = next(o for o in c.get('/v1/me', headers=h).json()['objects'] if o['name'] == '환영의 나무 의자')
+            chair = mine(c, h, name='환영의 나무 의자')
             assert c.post('/v1/npcs/postman/gift', headers=h, json=mutation(object_id=chair['id'], version=chair['version'])).status_code == 200
+        elif kind == 'arrange':
+            piece = mine(c, h, ident=toy['id'])
+            r = c.post('/v1/objects/%s/placement' % toy['id'], headers=h, json=mutation(version=piece['version'], room='home', x=1, z=-1))
+            assert r.status_code == 200, r.text
         else:
             place(c, h, lamp, 20, 20)
         ready = quest(c, h, quest_id)
@@ -183,10 +224,67 @@ def test_every_request_runs_from_offer_to_one_reward(world):
         assert accept(c, h, quest_id).json()['detail'] == 'quest_already_done'
         assert paid(app, quest_id) == [(quest_id, quests.STARS[quest_id])]
     assert shards(c, h) == start + total == start + sum(quests.STARS.values())
-    # About one craft in all.
-    assert 35 <= sum(quests.STARS.values()) <= 60 and all(5 <= v <= 15 for v in quests.STARS.values())
+    # About two cheap crafts in all; small errands pay a little, the two letter requests the most.
+    assert len(quests.QUESTS) == 19 and 75 <= sum(quests.STARS.values()) <= 85
+    assert all(3 <= v <= 8 for v in quests.STARS.values())
+    assert {q for q, v in quests.STARS.items() if v == 8} == {q for q, r in quests.QUESTS.items() if r.get('letter')}
+    assert sum(1 for r in quests.QUESTS.values() if r.get('craft')) == 2
     assert {q['state'] for q in listing(c, h)['list']} == {'done'}
 
+
+def test_new_kinds_count_only_what_happens_after_the_request(world):
+    """A catch, a piece at home and a toy for 콩이 count from the request on; other gifts do not."""
+    app, c, now = world
+    h = account(c, 'kinds')
+    free(app)
+    catch(app, c, h, 'perch')
+    accept(c, h, 'boram_catch')
+    # The same kind again counts (one kind), a second kind makes two; the fish may then be sold.
+    catch(app, c, h, 'perch', 'perch')
+    assert quest(c, h, 'boram_catch')['have'] == 1
+    catch(app, c, h, 'crucian')
+    assert quest(c, h, 'boram_catch')['state'] == 'ready'
+    # A piece already at home does not count; one moved there afterwards does.
+    lamp = craft(app, c, h, '등불', now)
+    piece = mine(c, h, ident=lamp['id'])
+    c.post('/v1/objects/%s/placement' % lamp['id'], headers=h, json=mutation(version=piece['version'], room='home', x=1, z=-1))
+    accept(c, h, 'danbi_home')
+    assert quest(c, h, 'danbi_home')['have'] == 0
+    piece = mine(c, h, ident=lamp['id'])
+    c.post('/v1/objects/%s/placement' % lamp['id'], headers=h, json=mutation(version=piece['version'], room='home', x=-1, z=-1))
+    assert quest(c, h, 'danbi_home')['state'] == 'ready'
+    # 콩이 wants a toy (or an animal), given to her: a chair for her or a toy for someone else is not it.
+    accept(c, h, 'kongi_toy')
+    chair = mine(c, h, name='환영의 나무 의자')
+    c.post('/v1/npcs/kid/gift', headers=h, json=mutation(object_id=chair['id'], version=chair['version']))
+    toy = craft(app, c, h, '나무 팽이', now)
+    c.post('/v1/npcs/naru/gift', headers=h, json=mutation(object_id=toy['id'], version=toy['version']))
+    assert quest(c, h, 'kongi_toy')['have'] == 0
+    cat = craft(app, c, h, '고양이 인형', now)
+    c.post('/v1/npcs/kid/gift', headers=h, json=mutation(object_id=cat['id'], version=cat['version']))
+    assert quest(c, h, 'kongi_toy')['state'] == 'ready'
+    # The craft requests never pay more than the cheapest craft.
+    assert quests.reward('kongi_toy', 5.0) == quests.CRAFT_FLOOR
+
+
+def test_night_errands_and_messages(world):
+    app, c, now = world
+    h = account(c, 'nightowl')
+    free(app)
+    # The player's own clock decides (the time zone header): 13:00 is day, 21:00 and 03:00 are night.
+    accept(c, h, 'saebyeok_walk')
+    walk = lambda hour: c.post('/v1/quests/saebyeok_walk/progress', headers=local(h, now, hour), json=mutation(place='lighthouse_pier'))
+    assert walk(13).json()['detail'] == 'quest_not_night'
+    assert walk(21).json()['quest']['state'] == 'ready'
+    accept(c, h, 'haneul_stars')
+    stars = lambda hour: c.post('/v1/quests/haneul_stars/progress', headers=local(h, now, hour), json=mutation(place='observatory'))
+    assert stars(7).json()['detail'] == 'quest_not_night'
+    assert stars(3).json()['quest']['state'] == 'ready'
+    # 윤재's regards go to 가람 only.
+    accept(c, h, 'yunjae_regards')
+    assert visit(c, h, 'sora', 'yunjae_regards').status_code == 422
+    assert visit(c, h, 'poet', 'yunjae_regards').json()['quest']['state'] == 'ready'
+    assert quest(c, h, 'yunjae_regards')['visited'] == ['poet']
 
 def test_bring_takes_the_items_from_the_bag_cheapest_first(world):
     app, c, now = world
@@ -318,7 +416,7 @@ def test_the_operator_scale_and_off_switch(tmp_path):
         free(double)
         accept(c, h, 'hangyeol_turnips')
         bag(double, c, h, turnip=2)
-        assert complete(c, h, 'hangyeol_turnips').json()['stars'] == 10
+        assert complete(c, h, 'hangyeol_turnips').json()['stars'] == 8
     # A request that may need a craft never pays more than the cheapest craft.
     assert quests.reward('noeul_light', 5.0) == quests.CRAFT_FLOOR and quests.reward('moka_pie', 5.0) == 40
     assert quests.reward('moka_pie', 0.5) == 4 and quests.reward('daon_gift', 0) == 0
@@ -363,5 +461,5 @@ def test_the_operator_can_see_a_players_requests(world, capsys):
     assert admin_cli.main(['quests', 'show', 'shown', '--data-dir', str(app.state.settings.data_dir)]) == 0
     shown = json.loads(capsys.readouterr().out)
     assert shown['progress'][0]['quest_id'] == 'hangyeol_turnips' and shown['progress'][0]['state'] == 'done'
-    assert shown['paid'][0]['quest'] == 'hangyeol_turnips' and shown['paid'][0]['amount'] == 5
+    assert shown['paid'][0]['quest'] == 'hangyeol_turnips' and shown['paid'][0]['amount'] == 4
     assert admin_cli.main(['quests', 'show', 'nobody', '--data-dir', str(app.state.settings.data_dir)]) == 1

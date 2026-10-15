@@ -1521,6 +1521,8 @@ func change_room(value: String) -> void:
 func show_story() -> void:
 	if is_instance_valid(story_home): story_home.queue_free()
 	story_home=null
+	# A resident's request to come to this room (quests.gd: 하늘's observatory at night).
+	preload("res://scripts/quests.gd").entered_room(self,room)
 	if room!="home" or public_room or not visit_host.is_empty() or visiting or api.token.is_empty(): return
 	story_home=StoryHome.new()
 	add_child(story_home)

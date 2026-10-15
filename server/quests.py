@@ -1,23 +1,27 @@
-"""Residents' requests (부탁): one per resident the player knows, each paying a few starseeds once.
+"""Residents' requests (부탁): one per village resident, each paying a few starseeds once.
 
 After the opening story chapter (server/story.py) is over and 모카's letter is read, or right away
-for an account that never had the chapter, each of these residents has one small request. The
-player hears it in the resident's usual conversation ("부탁 들어주기"), does it, and tells the
-resident; the starseeds come once per account, through the ledger like every other star
-(reason 'quest_reward', the quest id as reference), and 모카 and 노을 also send a thank-you letter
-to the village mailbox.
+for an account that never had the chapter, every resident (the four cast villagers, 모카 and the
+fourteen day villagers / shadow folk) has one small request. The player hears it in the
+resident's usual conversation ("부탁 들어주기"), does it, and tells the resident; the starseeds
+come once per account, through the ledger like every other star (reason 'quest_reward', the quest
+id as reference), and 모카 and 노을 also send a thank-you letter to the village mailbox.
 
 The server checks every condition it can see from its own data:
-  bring   items in the player's homestead bag (server/homestead.py), taken from it at the hand-over
-  outfit  the saved look (profiles.version) changed after the request was accepted
-  gift    a gift to any village resident (npc_gifts) after the request was accepted
-  light   a piece that glows (its interaction, its library family, or a lamp by its name) is set
-          down in the village
+  bring    items in the player's homestead bag (server/homestead.py), taken from it at the hand-over
+  catch    fish of different kinds caught after the request was accepted (the bag's fish book)
+  outfit   the saved look (profiles.version) changed after the request was accepted
+  gift     a gift (to anyone, or to one resident and of a kind by its tags) after the request
+  light    a piece that glows (its interaction, its library family, or a lamp by its name) set down
+           in the village
+  arrange  a piece set down (or moved) in the player's own home after the request was accepted
 and trusts the game only for what it cannot see, with limits:
-  visit   standing at the signposts of different islands; one report per island, at least
-          VISIT_GAP seconds apart.
+  visit    standing at a place (a signpost, the lookout, a pier) or entering a room: one report per
+           place, from a fixed list, at least VISIT_GAP seconds apart; night requests only while it
+           is night by the player's clock (homestead.night, the time zone header)
+  talk     passing a message on to another resident (that resident only, once).
 
-Rewards: STARS below (5-15 per request, about one craft in all). TRIPOTHON_QUEST_STARS_SCALE
+Rewards: STARS below (3-8 per request, 82 in all: about two cheap crafts). TRIPOTHON_QUEST_STARS_SCALE
 (server/config.py, default 1.0) multiplies them; 0 turns the rewards off (the requests still run and
 pay nothing). A request that may need a new craft never pays more than the cheapest craft costs.
 """
@@ -32,13 +36,24 @@ from . import homestead, npc_homes, archetypes
 # Starseeds per request (before TRIPOTHON_QUEST_STARS_SCALE). Change the amounts here.
 STARS = {
     'moka_pie': 8,
-    'naru_islands': 6,
-    'sora_outfit': 5,
-    'moru_soup': 6,
-    'haeru_fish': 6,
-    'daon_gift': 5,
-    'hangyeol_turnips': 5,
+    'naru_islands': 5,
+    'sora_outfit': 3,
+    'moru_soup': 4,
+    'haeru_fish': 5,
+    'daon_gift': 3,
+    'hangyeol_turnips': 4,
     'noeul_light': 8,
+    'boram_catch': 5,
+    'miso_flowers': 3,
+    'yunjae_regards': 3,
+    'haneul_stars': 4,
+    'chorok_herbs': 3,
+    'bau_pinecones': 4,
+    'dure_carrots': 4,
+    'danbi_home': 3,
+    'kongi_toy': 6,
+    'saebyeok_walk': 4,
+    'garam_lookout': 3,
 }
 
 # Island keys (game/scripts/guide.gd island_key, field_objects.gd signposts).
@@ -47,7 +62,7 @@ ISLANDS = ('square', 'fields', 'garden', 'camp', 'lighthouse')
 SEA_FISH = tuple(fish for fish, data in sorted(homestead.FISH.items(), key=lambda kv: (kv[1]['price'], kv[0])) if 'sea' in data['spots'])
 # The cheapest craft in starseeds (asset_studio.price: a still one-mesh piece).
 CRAFT_FLOOR = 20
-# Seconds between two counted signpost reports.
+# Seconds between two counted place reports of one request.
 VISIT_GAP = 3.0
 # Interaction kinds that make a piece glow (server/interactions.py KINDS).
 GLOW_KINDS = ('glow', 'flicker', 'pulse', 'hue')
@@ -71,6 +86,28 @@ QUESTS = {
     'hangyeol_turnips': {'npc': 'farmer', 'kind': 'bring', 'items': ('turnip',), 'count': 2},
     # 노을 · 등불지기: something that glows set down in the village (may need a craft).
     'noeul_light': {'npc': 'lamplighter', 'kind': 'light', 'count': 1, 'craft': True, 'letter': True},
+    # 보람 · 낚시꾼 (the quiet one): two kinds of fish for the fish book (pond and sea differ).
+    'boram_catch': {'npc': 'fisher', 'kind': 'catch', 'count': 2},
+    # 미소 · 청소부: wildflowers by the square's benches.
+    'miso_flowers': {'npc': 'sweeper', 'kind': 'bring', 'items': ('flower',), 'count': 3},
+    # 윤재 · 산책하는 신사: his regards to the poet 가람.
+    'yunjae_regards': {'npc': 'gentleman', 'kind': 'talk', 'places': ('poet',), 'count': 1},
+    # 하늘 · 별지기 (out at night only): come up to the observatory after dark.
+    'haneul_stars': {'npc': 'stargazer', 'kind': 'visit', 'places': ('observatory',), 'count': 1, 'night': True},
+    # 초록 · 정원사: herbs for a scent pouch.
+    'chorok_herbs': {'npc': 'gardener', 'kind': 'bring', 'items': ('herb',), 'count': 3},
+    # 바우 · 탐험가: pinecones to kindle the camp fire.
+    'bau_pinecones': {'npc': 'scout', 'kind': 'bring', 'items': ('pinecone',), 'count': 3},
+    # 두레 · 방앗간지기: carrots for a carrot cake.
+    'dure_carrots': {'npc': 'miller', 'kind': 'bring', 'items': ('carrot',), 'count': 2},
+    # 단비 · 잡화점 주인: a housewarming look; something set out at home.
+    'danbi_home': {'npc': 'shopkeeper', 'kind': 'arrange', 'count': 1},
+    # 콩이 · 꼬마: a toy (or an animal-shaped piece) for the treasure box (may need a craft).
+    'kongi_toy': {'npc': 'kid', 'kind': 'gift', 'to': 'kid', 'tags': ('toy', 'animal'), 'count': 1, 'craft': True},
+    # 새벽 · 산책자 (out at night only): walk to the end of the lighthouse pier after dark.
+    'saebyeok_walk': {'npc': 'stroller', 'kind': 'visit', 'places': ('lighthouse_pier',), 'count': 1, 'night': True},
+    # 가람 · 시인: look out over the five islands from the observatory's lookout.
+    'garam_lookout': {'npc': 'poet', 'kind': 'visit', 'places': ('lookout',), 'count': 1},
 }
 assert set(QUESTS) == set(STARS)
 
@@ -145,34 +182,81 @@ def lights_set_out(conn, user_id):
     return [r['id'] for r in rows if glows(conn, r)]
 
 
-def have(conn, user_id, quest_id, row, bag=None):
+def home_pieces(conn, user_id):
+    """{object id: version} of the pieces standing in the player's own home."""
+    return {r['id']: r['version'] for r in conn.execute(
+        "SELECT o.id,o.version FROM objects o JOIN furniture_locations f ON f.object_id=o.id "
+        "WHERE o.owner_id=? AND o.state='placed' AND f.room='home'", (user_id,))}
+
+
+def gift_kinds(conn, object_id, tags):
+    """A gift's kinds: its item tags (npc_homes.item_tags) and 'toy' for a piece of the library's
+    toys and hobbies room (a "장난감 로봇" may be designed as any of them)."""
+    kinds = set(json.loads(tags or '[]'))
+    studio = conn.execute('SELECT s.manifest FROM objects o JOIN studio_assets s ON s.asset_id=o.asset_id WHERE o.id=?', (object_id,)).fetchone()
+    if studio:
+        kind = archetypes.BY_ID.get(str(json.loads(studio['manifest']).get('provenance', {}).get('archetype', '')))
+        if kind and kind.get('room') == 'toys':
+            kinds.add('toy')
+    return kinds
+
+
+def baseline_for(conn, user_id, quest):
+    """What a request's condition is measured from, taken when it is accepted."""
+    if quest['kind'] == 'outfit':
+        return {'profile': profile_version(conn, user_id)}
+    if quest['kind'] == 'catch':
+        return {'caught': dict(life_state(conn, user_id).get('collection', {}))}
+    if quest['kind'] == 'arrange':
+        return {'home': home_pieces(conn, user_id)}
+    return {}
+
+
+def have(conn, user_id, quest_id, row, bag=None, life=None):
     """How much of the condition is met now (0..count)."""
     quest = QUESTS[quest_id]
     kind, need = quest['kind'], quest['count']
+    base = json.loads(row['baseline'])
     if kind == 'bring':
-        bag = bag if bag is not None else life_state(conn, user_id)['bag']
+        bag = bag if bag is not None else (life or life_state(conn, user_id))['bag']
         count = sum(int(bag.get(item, 0)) for item in quest['items'])
-    elif kind == 'visit':
+    elif kind in ('visit', 'talk'):
         count = len(json.loads(row['progress']).get('places', []))
     elif kind == 'outfit':
-        count = int(profile_version(conn, user_id) > int(json.loads(row['baseline']).get('profile', 0)))
+        count = int(profile_version(conn, user_id) > int(base.get('profile', 0)))
+    elif kind == 'catch':
+        # Kinds whose fish-book count went up since the request (eating or selling them later
+        # does not undo a catch).
+        caught = (life or life_state(conn, user_id)).get('collection', {})
+        before = base.get('caught', {})
+        count = sum(1 for fish, n in caught.items() if int(n) > int(before.get(fish, 0)))
     elif kind == 'gift':
-        count = conn.execute('SELECT count(*) FROM npc_gifts WHERE host_id=? AND created>=? AND npc_id IN (%s)' % ','.join('?' * len(npc_homes.NPCS)),
-                             (user_id, row['accepted'], *npc_homes.NPCS)).fetchone()[0]
+        to = (quest['to'],) if quest.get('to') else tuple(npc_homes.NPCS)
+        rows = conn.execute('SELECT g.object_id,i.tags FROM npc_gifts g LEFT JOIN npc_items i ON i.object_id=g.object_id '
+                            'WHERE g.host_id=? AND g.created>=? AND g.npc_id IN (%s)' % ','.join('?' * len(to)),
+                            (user_id, row['accepted'], *to)).fetchall()
+        wanted = set(quest.get('tags', ()))
+        count = sum(1 for r in rows if not wanted or wanted & gift_kinds(conn, r['object_id'], r['tags']))
+    elif kind == 'arrange':
+        before = base.get('home', {})
+        count = sum(1 for piece, version in home_pieces(conn, user_id).items() if piece not in before or version > before[piece])
     else:
         count = len(lights_set_out(conn, user_id))
     return min(need, count)
 
 
-def entry(conn, user_id, quest_id, row, scale, open_, bag=None):
+def entry(conn, user_id, quest_id, row, scale, open_, bag=None, life=None):
     quest = QUESTS[quest_id]
     out = {'id': quest_id, 'npc': quest['npc'], 'kind': quest['kind'], 'need': quest['count'], 'have': 0,
-           'stars': reward(quest_id, scale), 'letter': bool(quest.get('letter')), 'craft': bool(quest.get('craft'))}
+           'stars': reward(quest_id, scale), 'letter': bool(quest.get('letter')), 'craft': bool(quest.get('craft')),
+           'night': bool(quest.get('night'))}
     if quest['kind'] == 'bring':
         out['items'] = list(quest['items'])
-    if quest['kind'] == 'visit':
+    if quest['kind'] in ('visit', 'talk'):
         out['places'] = list(quest['places'])
         out['visited'] = json.loads(row['progress']).get('places', []) if row else []
+    if quest.get('to'):
+        out['to'] = quest['to']
     if row is None:
         out['state'] = 'available' if open_ else 'locked'
         return out
@@ -180,9 +264,13 @@ def entry(conn, user_id, quest_id, row, scale, open_, bag=None):
     if row['state'] == 'done':
         out.update(state='done', have=quest['count'], stars=row['stars'] or 0, completed=row['completed'])
         return out
+    base = json.loads(row['baseline'])
     if quest['kind'] == 'outfit':
-        out['since'] = int(json.loads(row['baseline']).get('profile', 0))
-    out['have'] = have(conn, user_id, quest_id, row, bag)
+        out['since'] = int(base.get('profile', 0))
+    if quest['kind'] == 'catch':
+        # The game counts new kinds from its own fish book as the catches come in.
+        out['since'] = base.get('caught', {})
+    out['have'] = have(conn, user_id, quest_id, row, bag, life)
     out['state'] = 'ready' if out['have'] >= quest['count'] else 'active'
     return out
 
@@ -191,10 +279,10 @@ def public(conn, user_id, settings):
     """Every request as the game shows it: {unlocked, scale, list}."""
     rows = {r['quest_id']: r for r in conn.execute('SELECT * FROM quest_progress WHERE user_id=?', (user_id,))}
     open_ = unlocked(conn, user_id)
-    bag = life_state(conn, user_id)['bag'] if any(QUESTS[q]['kind'] == 'bring' and r['state'] == 'active' for q, r in rows.items() if q in QUESTS) else None
+    life = life_state(conn, user_id) if any(QUESTS[q]['kind'] in ('bring', 'catch') and r['state'] == 'active' for q, r in rows.items() if q in QUESTS) else None
     return {'unlocked': open_, 'scale': settings.quest_stars_scale,
-            'list': [entry(conn, user_id, quest_id, rows.get(quest_id), settings.quest_stars_scale, open_, bag) for quest_id in QUESTS]}
-
+            'list': [entry(conn, user_id, quest_id, rows.get(quest_id), settings.quest_stars_scale, open_, life['bag'] if life else None, life)
+                     for quest_id in QUESTS]}
 
 def describe(conn, user_id):
     """Operator view (admin_cli quests show)."""
@@ -247,8 +335,8 @@ class Quests:
                 if row and row['state'] == 'done':
                     fail('quest_already_done')
                 if not row:
-                    # What the condition is measured from (a new look counts from now on).
-                    baseline = {'profile': profile_version(conn, user['id'])} if quest['kind'] == 'outfit' else {}
+                    # What the condition is measured from (a new look, a catch, a piece at home count from now on).
+                    baseline = baseline_for(conn, user['id'], quest)
                     conn.execute('INSERT INTO quest_progress(user_id,quest_id,state,accepted,baseline) VALUES (?,?,?,?,?)',
                                  (user['id'], quest_id, 'active', clock(), json.dumps(baseline)))
                 return reply(conn, user, quest_id)
@@ -261,13 +349,17 @@ class Quests:
             def apply(conn, user):
                 own_village(conn, user)
                 row = active(conn, user, quest_id)
-                if quest['kind'] != 'visit':
+                if quest['kind'] not in ('visit', 'talk'):
                     fail('quest_wrong_kind')
                 if body.place not in quest['places']:
                     fail('quest_bad_place', 422)
                 state = json.loads(row['progress'])
                 places = state.get('places', [])
                 now = clock()
+                # A night errand counts only while it is night by the player's clock (the time zone
+                # header, as for night fish).
+                if quest.get('night') and body.place not in places and not homestead.night(now):
+                    fail('quest_not_night')
                 if body.place not in places and len(places) < quest['count']:
                     if now - float(state.get('last', 0)) < VISIT_GAP:
                         fail('quest_too_fast', 429)

@@ -33,7 +33,9 @@ const MOKA_AT := Vector2(-59.6, -29.9)
 ## The words of each request (Korean source; translated where shown).
 ##   ask: the request; accepted: the answer to "맡겨 줘요"; remind: how far it is (%d/%d when it
 ##   counts); thanks: the hand-over; goal: the tracker line (%d/%d when it counts); place: where
-##   the guide leads before it is done ("" for the resident, "-" for nowhere).
+##   the guide leads before it is done ("" for the resident, "-" for nowhere, a Town place id,
+##   "farm", "forage:<kind>", "tree:<kind>", "signpost", "home", "npc:<id>", "visit" for the
+##   request's places); deliver/reply: a message passed to another resident (talk requests).
 const BOOK := {
 	"moka_pie":{"title":"모카의 사과 파이", "place":"apple",
 		"ask":["테라스에 오는 손님들께 갓 구운 사과 파이를 대접하고 싶어.", "풍차 들판 서쪽 과수원에서 사과 세 개만 따다 줄래? 둥근 나무를 살살 흔들어도 떨어져."],
@@ -53,7 +55,7 @@ const BOOK := {
 		"remind":"옷장에서 새 차림을 골라 저장해 보세요. 저한테 말하면 옷장을 열어 드려요.",
 		"thanks":["정말 잘 어울려요! 섬 바람이랑 색이 딱 맞네요.", "제 옷을 입어 준 첫 손님이에요. 고마워요!"],
 		"goal":"옷장에서 새 차림 갈아입기"},
-	"moru_soup":{"title":"모루의 야영 수프", "place":"mushroom",
+	"moru_soup":{"title":"모루의 야영 수프", "place":"forage:mushroom",
 		"ask":["숲에서 밤을 버티려면 따뜻한 수프가 최고야.", "숲 그늘에서 버섯 두 개만 모아 와 줄래? 나무 밑 그늘진 곳에 잘 자라."],
 		"accepted":"고마워. 냄비는 내가 올려 둘게.",
 		"remind":"버섯은 숲 그늘에 숨어 있어. 지금 %d/%d개.",
@@ -83,7 +85,77 @@ const BOOK := {
 		"remind":"가방(I)에서 빛나는 물건을 꺼내 마을에 놓아 보세요. 없다면 공방(C)에서 만들 수 있어요.",
 		"thanks":["어젯밤 그 불빛 덕분에 골목이 환했어요. 그림자들도 길을 잃지 않았대요.", "등불지기가 드리는 작은 답례예요. 고마워요."],
 		"goal":"빛나는 물건 마을에 놓기"},
+	"boram_catch":{"title":"보람의 낚시 도감", "place":"pond",
+		"ask":["…쉿. 물고기가 놀라요.", "낚시꾼이라면 도감부터 채워야죠. 서로 다른 물고기 두 종류를 낚아 볼래요? 연못이든 바다든 좋아요."],
+		"accepted":"좋아요. 찌가 쏙 들어가면 망설이지 말고 당겨요.",
+		"remind":"다른 종류를 %d/%d가지 낚았네요. 연못과 바다는 사는 물고기가 달라요.",
+		"thanks":["두 종류나! 도감이 금방 두꺼워지겠어요.", "낚시꾼끼리 주고받는 작은 선물이에요."],
+		"goal":"서로 다른 물고기 %d/%d종 낚기"},
+	"miso_flowers":{"title":"미소의 광장 꽃장식", "place":"forage:flower",
+		"ask":["쓱싹쓱싹… 광장은 깨끗한데, 뭔가 허전하지 않아요?", "길가에 핀 들꽃 세 송이만 꺾어다 줄래요? 벤치 옆에 꽂아 두면 다들 웃을 거예요."],
+		"accepted":"고마워요! 꽃병은 제가 찾아 둘게요.",
+		"remind":"들꽃은 섬 곳곳 풀숲에 피어 있어요. 지금 %d/%d송이.",
+		"thanks":["와, 향기 좋다! 광장이 반짝반짝해졌어요.", "청소부의 작은 답례예요. 고마워요!"],
+		"goal":"들꽃 %d/%d송이 모으기"},
+	"yunjae_regards":{"title":"윤재의 안부 전하기", "place":"npc:poet",
+		"ask":["실례지만, 부탁 하나 드려도 되겠습니까?", "정원 언덕의 시인 가람 씨에게 제 안부를 전해 주시겠습니까? 지난번 시가 무척 좋았다고요."],
+		"accepted":"감사합니다. 가람 씨는 낮에 정원 언덕 정자에 자주 앉아 있지요.",
+		"remind":"가람 씨를 만나면 제 안부를 전해 주십시오. 낮에는 정원 언덕 정자에 자주 계십니다.",
+		"thanks":["가람 씨가 그렇게 말했습니까? 허허, 오늘 산책은 유난히 즐겁겠군요.", "작은 답례입니다. 받아 주십시오."],
+		"goal":"가람에게 윤재의 안부 전하기",
+		"deliver":"✦ 윤재의 안부 전하기",
+		"reply":["윤재 씨가요? 그 시를 기억해 주셨다니… 고맙다고 꼭 전해 주세요."]},
+	"haneul_stars":{"title":"하늘의 밤하늘 관측", "place":"visit",
+		"ask":["하암… 낮에는 졸려도, 밤이 되면 눈이 반짝 떠져요.", "해가 진 뒤에 별빛 천문대로 놀러 와요. 망원경으로 보는 별은 정말 달라요."],
+		"accepted":"기다릴게요. 저녁 일곱 시가 지나면 천문대 불이 켜져요.",
+		"remind":"해가 진 뒤(저녁 7시~새벽 6시)에 별빛 천문대 안으로 들어와 봐요.",
+		"thanks":["와 줬군요! 오늘 밤 고래자리가 유난히 또렷해요.", "별지기의 작은 선물이에요. 좋은 꿈 꿔요."],
+		"goal":"밤에 별빛 천문대 들어가 보기"},
+	"chorok_herbs":{"title":"초록의 향초 주머니", "place":"herb",
+		"ask":["향초 냄새 좋죠? 말린 향초로 주머니를 만들고 있어요.", "향초 세 줌만 모아 줄래요? 정원 향초밭이나 길가 덤불에서 찾을 수 있어요."],
+		"accepted":"고마워요! 주머니 끈은 제가 묶어 둘게요.",
+		"remind":"향초는 정원 향초밭이나 덤불 속에 있어요. 지금 %d/%d줌.",
+		"thanks":["음, 향이 진하다! 향초 주머니가 금방 완성되겠어요.", "정원사의 답례예요. 고마워요!"],
+		"goal":"향초 %d/%d줌 모으기"},
+	"bau_pinecones":{"title":"바우의 캠프 불쏘시개", "place":"tree:pine",
+		"ask":["돌문 너머 숲은 밤이 길어요. 불을 빨리 붙이려면 불쏘시개가 필요하죠.", "뾰족한 나무를 흔들면 솔방울이 떨어져요. 세 개만 주워 와 줄래요?"],
+		"accepted":"고마워요! 마른 솔방울일수록 잘 타요.",
+		"remind":"뾰족한 나무를 흔들어 보세요. 솔방울 %d/%d개.",
+		"thanks":["좋아요, 바싹 말랐네요! 다음 탐험은 든든하겠어요.", "탐험가의 답례예요. 숲에서 조심해요!"],
+		"goal":"솔방울 %d/%d개 줍기"},
+	"dure_carrots":{"title":"두레의 당근 케이크", "place":"farm",
+		"ask":["풍차가 돌면 밀가루가 눈처럼 날려요. 오늘은 그 밀가루로 케이크를 구울 거예요.", "텃밭에서 당근 두 개만 길러 줄래요? 당근 씨앗은 가방에 있을 거예요."],
+		"accepted":"고마워요! 반죽은 미리 해 둘게요.",
+		"remind":"당근 씨앗을 심고 물을 주면 돼요. 지금 %d/%d개.",
+		"thanks":["와, 주황빛이 예쁘다! 케이크가 폭신하게 나오겠어요.", "방앗간의 답례예요. 고소한 냄새 맡으러 또 와요."],
+		"goal":"당근 %d/%d개 수확하기"},
+	"danbi_home":{"title":"단비의 집들이 점검", "place":"home",
+		"ask":["이사 오고 나서 집은 좀 꾸몄어요? 잡화점 주인은 그게 제일 궁금하답니다.", "가방에 있는 물건 하나를 집 안에 놓아 보세요. 놓을 자리를 고르는 게 꾸미기의 시작이에요."],
+		"accepted":"좋아요! 집에 들어가서 가방(I)을 열면 돼요.",
+		"remind":"나의 집에 들어가 가방(I)에서 물건 하나를 골라 놓아 보세요.",
+		"thanks":["어머, 벌써 집다운 집이 됐네요! 안목이 좋은데요.", "단골 손님께 드리는 작은 선물이에요."],
+		"goal":"나의 집에 물건 하나 놓기"},
+	"kongi_toy":{"title":"콩이의 보물 상자", "place":"",
+		"ask":["헤헤, 내 보물 상자 보여 줄까? …아직 텅 비었어.", "장난감이나 동물 모양 물건을 하나 선물해 줄래? 만들어 줘도 좋아!"],
+		"accepted":"약속이다! 손가락 걸었어!",
+		"remind":"장난감이나 동물 모양 물건을 선물해 줘! 공방(C)에서 만들어도 돼.",
+		"thanks":["우와아! 이거 내 보물 1호야!", "고마워! 이건 내가 아끼던 별씨야. 나눠 줄게!"],
+		"goal":"콩이에게 장난감 선물하기"},
+	"saebyeok_walk":{"title":"새벽의 밤바다 산책", "place":"visit",
+		"ask":["밤 산책 중이에요. 이 시간엔 바다가 별을 비춰요.", "해가 진 뒤에 등대 부두 끝까지 걸어가 봐요. 물에 비친 별이 길처럼 이어져요."],
+		"accepted":"좋아요. 밤바람이 차니까 따뜻하게 입어요.",
+		"remind":"해가 진 뒤(저녁 7시~새벽 6시)에 등대 부두 끝까지 걸어가 봐요.",
+		"thanks":["봤어요? 물 위의 별길. 우리만 아는 비밀 산책로예요.", "밤 산책 친구에게 주는 작은 선물이에요."],
+		"goal":"밤에 등대 부두 끝까지 걷기"},
+	"garam_lookout":{"title":"가람의 첫 줄", "place":"visit",
+		"ask":["정자에 앉아 시를 짓던 참이에요. 그런데 오늘은 첫 줄이 안 떠오르네요.", "천문대 전망대에 올라 다섯 섬을 내려다보고 와 줄래요? 당신이 본 풍경이 제 첫 줄이 될 거예요."],
+		"accepted":"고마워요. 전망대는 별빛 천문대 바로 옆이에요.",
+		"remind":"천문대 전망대에 올라 다섯 섬을 내려다봐 주세요.",
+		"thanks":["\"다리 넷이 다섯 섬을 꿰어 놓은 실 같았다\"… 첫 줄이 생겼어요!", "고마워요. 시인의 작은 답례예요."],
+		"goal":"천문대 전망대에서 다섯 섬 내려다보기"},
 }
+## Where a visit request's places are: a Town place, or a room (entered, studio.gd).
+const VISIT_SPOTS := {"lookout":"place:lookout", "lighthouse_pier":"place:sea", "observatory":"room:05_observatory"}
 
 static func t(text: String) -> String:
 	return TranslationServer.translate(text)
@@ -167,6 +239,13 @@ static func room_choice(room: Node, id: String) -> Array:
 ## say(lines, choices) opens the caller's dialogue box; done(kind, reply) plays its effects
 ## ("accepted", "completed", "guide", "wardrobe").
 static func choice_for(api: Node, npc: String, say: Callable, done: Callable, village: bool, judge := Callable()) -> Array:
+	# A message another resident asked to pass on to this one comes first (윤재's regards to 가람).
+	if open_for(str(api.token)):
+		for item in listed(str(api.token)):
+			var book: Dictionary = BOOK.get(str(item.get("id", "")), {})
+			if str(item.get("kind", "")) == "talk" and str(item.get("state", "")) == "active" and npc in item.get("places", []) \
+					and not npc in item.get("visited", []) and book.has("deliver"):
+				return [t(str(book.deliver)), func(): deliver(api, item, npc, say, done)]
 	var entry := entry_for(str(api.token), npc)
 	if entry.is_empty(): return []
 	match str(judge.call(entry) if judge.is_valid() else entry.get("state", "")):
@@ -174,6 +253,17 @@ static func choice_for(api: Node, npc: String, say: Callable, done: Callable, vi
 		"active": return [t("부탁 이야기"), func(): remind(api, str(entry.id), say, done, village)]
 		"ready": return [t("✦ 부탁한 것 건네기") if str(entry.kind) == "bring" else t("✦ 부탁을 마쳤어요"), func(): hand_over(api, str(entry.id), say, done)]
 	return []
+
+## The message passed on: the server counts it, the resident answers.
+static func deliver(api: Node, item: Dictionary, npc: String, say: Callable, done: Callable) -> void:
+	var id := str(item.id)
+	var result: Dictionary = await api.post("/v1/quests/%s/progress" % id, api.mutation({"place":npc}))
+	if not result.ok:
+		say.call([error_line(str(result.get("error", "")))], [])
+		return
+	adopt_data(result.data.get("quests"), str(api.token))
+	say.call(lines_of(item, "reply"), [[t("전해 드릴게요"), Callable()]])
+	if done.is_valid(): done.call("progress", result.data)
 
 static func lines_of(entry: Dictionary, key: String) -> Array:
 	var out: Array = []
@@ -258,6 +348,10 @@ static func village_done(app: Node, anchor: Node3D, kind: String, reply: Diction
 			if here: here.guide_to(str(entry.get("id", "")), false)
 		"wardrobe":
 			if app.has_method("open_wardrobe"): app.open_wardrobe()
+		"progress":
+			# A message passed on: the request is done (its moment and the way back follow).
+			if is_instance_valid(anchor) and anchor.has_method("pop"): anchor.pop("♪", 1.6)
+			if here: here.adopt(reply.get("quests"))
 		"completed":
 			var at: Vector3 = anchor.global_position if is_instance_valid(anchor) else app.player.global_position
 			if is_instance_valid(anchor):
@@ -279,6 +373,32 @@ static func village_done(app: Node, anchor: Node3D, kind: String, reply: Diction
 			var note := NpcGifts.letters_note(reply)
 			if not note.is_empty(): app.get_tree().create_timer(3.2).timeout.connect(func(): if is_instance_valid(app): app.message(note))
 
+## "다 모았어요! 모카에게 가져가 보세요" / "다 됐어요! 윤재에게 알려 주세요".
+static func done_word(entry: Dictionary) -> String:
+	return (t("다 모았어요! %s에게 가져가 보세요") if str(entry.get("kind", "")) == "bring" else t("다 됐어요! %s에게 알려 주세요")) % npc_name(str(entry.get("npc", "")))
+
+## A room was entered (studio.gd show_story): a visit request whose place is this room counts
+## (night requests only while it is night by the player's clock, as the server checks).
+static func entered_room(room: Node, room_id: String) -> void:
+	if not is_instance_valid(room) or str(room.api.token).is_empty() or bool(room.get("visiting")): return
+	var api: Node = room.api
+	for item in listed(str(api.token)):
+		if str(item.get("kind", "")) != "visit" or str(item.get("state", "")) != "active": continue
+		for place in item.get("places", []):
+			if str(VISIT_SPOTS.get(str(place), "")) != "room:"+room_id or str(place) in item.get("visited", []): continue
+			if bool(item.get("night", false)) and not night_now(): continue
+			var result: Dictionary = await api.post("/v1/quests/%s/progress" % str(item.id), api.mutation({"place":str(place)}))
+			if not result.ok or not is_instance_valid(room): return
+			adopt_data(result.data.get("quests"), str(api.token))
+			var now: Dictionary = result.data.get("quest", {})
+			if str(now.get("state", "")) == "ready" and room.has_method("message"): room.message(done_word(now))
+			return
+
+## Night by the player's own clock (server/homestead.py night: before 6 or from 19).
+static func night_now() -> bool:
+	var hour := int(Time.get_datetime_dict_from_system().hour)
+	return hour < 6 or hour >= 19
+
 ## Inside a building: the room's own pop, sparkles over the resident and its wallet line.
 static func room_done(room: Node, id: String, kind: String, reply: Dictionary) -> void:
 	if not is_instance_valid(room) or not room.npcs.has(id): return
@@ -287,6 +407,9 @@ static func room_done(room: Node, id: String, kind: String, reply: Dictionary) -
 	if kind == "accepted":
 		room.pop_over(resident, "!")
 		room.message(t("새 부탁 · %s") % title_of(entry))
+	elif kind == "progress":
+		room.pop_over(resident, "♪")
+		if str(entry.get("state", "")) == "ready": room.message(done_word(entry))
 	elif kind == "completed":
 		var stars := int(reply.get("stars", 0))
 		var at: Vector3 = resident.holder.global_position
@@ -455,6 +578,14 @@ func have_of(item: Dictionary) -> int:
 		have = count
 	if str(item.get("kind", "")) == "outfit" and app.get("me") is Dictionary and int(app.me.get("profile", {}).get("version", 0)) > int(item.get("since", 1 << 30)):
 		have = 1
+	# New kinds in the fish book since the request (the server's baseline comes with it).
+	if str(item.get("kind", "")) == "catch" and item.get("since") is Dictionary and is_instance_valid(app.get("life")) and app.life.get("state") is Dictionary:
+		var book: Dictionary = app.life.state.get("collection", {})
+		var before: Dictionary = item.since
+		var kinds := 0
+		for fish in book:
+			if int(book[fish]) > int(before.get(fish, 0)): kinds += 1
+		have = maxi(have, kinds)
 	return mini(have, int(item.get("need", 1)))
 
 func state_of(item: Dictionary) -> String:
@@ -515,11 +646,28 @@ func raw_goal(key: String) -> Dictionary:
 	if item.is_empty() or not BOOK.has(id) or not state_of(item) in ["active", "ready", "available"]: return {}
 	var place := str(BOOK[id].place)
 	# Not taken yet (the book's "찾아가기"), done, or done by talking: the resident.
-	if state_of(item) != "active" or place.is_empty() or str(item.kind) == "gift": return npc_goal(str(item.npc), key)
+	if state_of(item) != "active" or place.is_empty() or (str(item.kind) == "gift" and not item.has("to")): return npc_goal(str(item.npc), key)
+	if str(item.kind) == "gift": return npc_goal(str(item.to), key)
+	if place.begins_with("npc:"): return npc_goal(place.trim_prefix("npc:"), key)
+	if place.begins_with("forage:"): return forage_goal(place.trim_prefix("forage:"), key)
+	if place.begins_with("tree:"): return tree_goal(place.trim_prefix("tree:"), key)
 	match place:
-		"apple", "sea":
+		"apple", "sea", "pond", "herb", "lookout":
 			var spot := Guide.place(place)
 			return {"at":spot.at, "name":tr(spot.title), "key":key} if not spot.is_empty() else {}
+		"home":
+			return {"at":Town.HOME_DOOR, "name":tr("나의 집"), "key":key}
+		"visit":
+			for spot in item.get("places", []):
+				if str(spot) in item.get("visited", []): continue
+				var where := str(VISIT_SPOTS.get(str(spot), ""))
+				if where.begins_with("place:"):
+					var known_place := Guide.place(where.trim_prefix("place:"))
+					if not known_place.is_empty(): return {"at":known_place.at, "name":tr(known_place.title), "key":key}
+				elif where.begins_with("room:"):
+					var door := Town.door_for(where.trim_prefix("room:"))
+					if not door.is_empty(): return {"at":door.at, "name":tr(door.title), "key":key}
+			return {}
 		"farm":
 			var farm := Guide.place("farm")
 			var best: Vector2 = farm.at
@@ -533,18 +681,7 @@ func raw_goal(key: String) -> Dictionary:
 						gap = p.distance_to(story.walker_at())
 						best = p
 			return {"at":best, "name":tr(farm.title), "key":key}
-		"mushroom":
-			var life = app.get("life")
-			if not is_instance_valid(life) or not is_instance_valid(life.get("forage")): return {}
-			var best := {}
-			var gap := INF
-			for spot in life.forage.spots:
-				if not spot.ready or spot.kind != "mushroom": continue
-				var d: float = Vector2(spot.at).distance_to(story.walker_at())
-				if d < gap:
-					gap = d
-					best = spot
-			return {"at":best.at, "name":tr("숲 그늘 버섯"), "key":key} if not best.is_empty() else {}
+
 		"signpost":
 			var visited: Array = item.get("visited", [])
 			var here: String = story.island_of(story.walker_at())
@@ -561,6 +698,36 @@ func raw_goal(key: String) -> Dictionary:
 				if Vector2(sign.at).distance_to(story.walker_at()) < Vector2(best.at).distance_to(story.walker_at()): best = sign
 			return {"at":best.at, "name":tr("이정표 · %s") % tr(ISLANDS.get(str(best.spec.get("island", "")), "")), "key":key}
 	return {}
+
+## The nearest ready forage spot of a kind (forage.gd: mushroom, flower, herb, shell...).
+func forage_goal(kind: String, key: String) -> Dictionary:
+	var life = app.get("life")
+	if not is_instance_valid(life) or not is_instance_valid(life.get("forage")): return {}
+	var best := {}
+	var gap := INF
+	for spot in life.forage.spots:
+		if not spot.ready or spot.kind != kind: continue
+		var d: float = Vector2(spot.at).distance_to(story.walker_at())
+		if d < gap:
+			gap = d
+			best = spot
+	var names := {"mushroom":"숲 그늘 버섯", "flower":"길가 들꽃"}
+	return {"at":best.at, "name":tr(str(names.get(kind, "채집"))), "key":key} if not best.is_empty() else {}
+
+## The nearest field tree of a kind with fruit to shake (tree_fruit.gd via town.gd).
+func tree_goal(kind: String, key: String) -> Dictionary:
+	var town = app.get("town")
+	var trees = town.get("trees") if is_instance_valid(town) else null
+	if not is_instance_valid(trees): return {}
+	var best := {}
+	var gap := INF
+	for tree in trees.trees:
+		if str(tree.kind) != kind or (trees.has_method("server_ready") and not trees.server_ready(tree)): continue
+		var d: float = Vector2(tree.at).distance_to(story.walker_at())
+		if d < gap:
+			gap = d
+			best = tree
+	return {"at":best.at, "name":tr("뾰족한 나무 · 솔방울"), "key":key} if not best.is_empty() else {}
 
 ## Where a resident is now: their walker or cast villager in view, their spot outside, or the door
 ## of the building they are in.
@@ -689,30 +856,44 @@ func _process(delta: float) -> void:
 
 ## 나루's request: standing at a signpost of an island not counted yet tells the server.
 func report_signposts() -> void:
-	var item := entry("naru_islands")
-	if item.is_empty() or str(item.get("state", "")) != "active" or reporting or Time.get_ticks_msec()*0.001 < report_after: return
-	var field: Node = story.field_module()
-	if field == null: return
+	if reporting or Time.get_ticks_msec()*0.001 < report_after: return
 	var here: Vector2 = story.walker_at()
-	for sign in field.objects:
-		if sign.kind != "signpost": continue
-		var island := str(sign.spec.get("island", ""))
-		if island in item.get("visited", []) or here.distance_to(sign.at) > 6.0: continue
-		reporting = true
-		var result: Dictionary = await app.api.post("/v1/quests/naru_islands/progress", app.api.mutation({"place":island}))
-		reporting = false
-		report_after = Time.get_ticks_msec()*0.001+(1.0 if result.ok else 4.0)
-		if not result.ok or not is_instance_valid(app): return
-		adopt(result.data.get("quests"))
-		var now: Dictionary = result.data.get("quest", {})
-		if is_instance_valid(sign.root):
-			Fx.burst(self, sign.root.global_position+Vector3(0, 1.6, 0), "sparkle", 14, Color(0,0,0,0), 0.4)
-			Fx.glow(self, sign.root.global_position+Vector3(0, 1.4, 0), Color("ffe08a"), 1.8, 1.0)
-		RpgUi.sfx("confirm", -8.0)
-		if str(now.get("state", "")) != "ready":
-			app.message(tr("이정표 %d/%d · %s") % [int(now.get("have", 0)), int(now.get("need", 3)), tr(ISLANDS.get(island, ""))])
-		return
+	for item in entries():
+		if str(item.get("kind", "")) != "visit" or str(item.get("state", "")) != "active": continue
+		# Night errands count only at night by the player's clock (the server checks the same).
+		if bool(item.get("night", false)) and not night_now(): continue
+		for spot in spots_of(item):
+			if str(spot.place) in item.get("visited", []) or here.distance_to(spot.at) > float(spot.reach): continue
+			reporting = true
+			var result: Dictionary = await app.api.post("/v1/quests/%s/progress" % str(item.id), app.api.mutation({"place":str(spot.place)}))
+			reporting = false
+			report_after = Time.get_ticks_msec()*0.001+(1.0 if result.ok else 4.0)
+			if not result.ok or not is_instance_valid(app): return
+			adopt(result.data.get("quests"))
+			var now: Dictionary = result.data.get("quest", {})
+			var lift: Vector3 = spot.root.global_position if spot.get("root") is Node3D and is_instance_valid(spot.root) else Town.point(spot.at, 0.0)
+			Fx.burst(self, lift+Vector3(0, 1.6, 0), "sparkle", 14, Color(0,0,0,0), 0.4)
+			Fx.glow(self, lift+Vector3(0, 1.4, 0), Color("ffe08a"), 1.8, 1.0)
+			RpgUi.sfx("confirm", -8.0)
+			if str(now.get("state", "")) != "ready":
+				app.message(tr("이정표 %d/%d · %s") % [int(now.get("have", 0)), int(now.get("need", 3)), str(spot.name)])
+			return
 
+## Where a visit request's places stand in the village: the islands' signposts (나루), the lookout,
+## the lighthouse pier (rooms are counted on entry, entered_room).
+func spots_of(item: Dictionary) -> Array:
+	var out: Array = []
+	var field: Node = story.field_module()
+	for place in item.get("places", []):
+		if str(place) in ISLANDS:
+			var sign: Dictionary = story.signpost(str(place)) if field != null else {}
+			if not sign.is_empty(): out.append({"place":place, "at":sign.at, "reach":6.0, "root":sign.root, "name":tr(ISLANDS[str(place)])})
+			continue
+		var where := str(VISIT_SPOTS.get(str(place), ""))
+		if where.begins_with("place:"):
+			var known_place := Guide.place(where.trim_prefix("place:"))
+			if not known_place.is_empty(): out.append({"place":place, "at":known_place.at, "reach":5.0, "name":tr(known_place.title)})
+	return out
 ## "!" over a resident with a request to give, "?" over one waiting for the result.
 func update_marks() -> void:
 	var want := {}
@@ -776,19 +957,29 @@ func open_book() -> void:
 	if not is_instance_valid(app) or not app.has_method("modal_card"): return
 	var v: VBoxContainer = app.modal_card(tr("부탁 수첩"))
 	RpgUi.caption(v, tr("마을 주민들의 작은 부탁이에요. 들어주면 별씨를 받아요."), 13)
+	# Nineteen rows: the list scrolls inside the window (the wheel or the bar).
+	var scroll := ScrollContainer.new()
+	scroll.name = "QuestBookScroll"
+	scroll.custom_minimum_size = Vector2(680, 470)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	v.add_child(scroll)
 	var list := VBoxContainer.new()
-	list.add_theme_constant_override("separation", 6)
-	v.add_child(list)
+	list.add_theme_constant_override("separation", 4)
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(list)
+	# Done first, then under way, new, finished; the residents' order within each.
 	var order := {"ready":0, "active":1, "available":2, "done":3, "locked":4}
-	var items := entries().duplicate()
-	items.sort_custom(func(a, b): return int(order.get(state_of(a), 5)) < int(order.get(state_of(b), 5)))
+	var items: Array = []
+	for index in entries().size(): items.append([int(order.get(state_of(entries()[index]), 5)), index, entries()[index]])
+	items.sort_custom(func(a, b): return int(a[0]) < int(b[0]) or (int(a[0]) == int(b[0]) and int(a[1]) < int(b[1])))
+	items = items.map(func(entry): return entry[2])
 	for item in items:
 		if not BOOK.has(str(item.get("id", ""))): continue
 		var state := state_of(item)
 		var line := HBoxContainer.new()
 		line.name = "Quest_"+str(item.id)
 		line.add_theme_constant_override("separation", 12)
-		line.custom_minimum_size = Vector2(620, 50)
+		line.custom_minimum_size = Vector2(650, 46)
 		list.add_child(line)
 		var mark := RpgUi.label(line, {"ready":"?", "active":"▸", "available":"!", "done":"✓"}.get(state, "·"), 22,
 			{"ready":Color("9fe3ff"), "available":Color("ffd84a"), "done":Color("a6d98a")}.get(state, RpgUi.GOLD))

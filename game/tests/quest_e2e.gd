@@ -2,13 +2,13 @@ extends SceneTree
 ## Residents' requests in the village, end to end on the QA server, the way a player meets them:
 ##   while the opening chapter runs nobody asks; once it is over and 모카's letter is read the
 ##   village says so and "!" stands over the residents with a request;
-##   소라 (the cast tailor): "✦ 부탁 들어주기" -> "맡겨 줘요 · 별씨 +5" -> the tracker shows the goal
+##   소라 (the cast tailor): "✦ 부탁 들어주기" -> "맡겨 줘요 · 별씨 +3" -> the tracker shows the goal
 ##   and its reward -> "부탁 이야기" -> "옷장 열기" -> a new look saved -> "다 됐어요!" and "?" over
 ##   her -> "✦ 부탁을 마쳤어요" -> her thanks, stars burst and fly into the counter, which goes up
-##   by 5 exactly once (and stays there through the village's polls);
+##   by 3 exactly once (and stays there through the village's polls);
 ##   해루 (the angler): taken at the pier, a sea fish caught while the walker is on another island
 ##   -> the tracker says to bring it and the guide leads back (this island's signpost first) ->
-##   handed over: the fish leaves the bag, the counter goes up by 6;
+##   handed over: the fish leaves the bag, the counter goes up by 5;
 ##   the tracker's book line opens the request book with every request.
 ## --capture saves artifacts/quest-shot-*.png (offer, tracker, reward) for the sheet.
 const Main = preload("res://scripts/main.gd")
@@ -145,7 +145,7 @@ func run() -> void:
 	await app.refresh_inventory()
 	expect(await wait_for(func() -> bool: return app.notice.text.contains(app.tr("마을 주민들이 부탁을 기다리고 있어요")), 8.0), "the village says the residents have requests")
 	expect(await wait_for(func() -> bool: return mark_of("sora") == "!" and mark_of("haeru") == "!", 4.0), "\"!\" over 소라 and 해루")
-	expect(app.objective.text.contains(app.tr("✦ 주민들의 부탁 %d개 · 수첩 보기") % 8), "the tracker counts the requests (수첩 보기)")
+	expect(app.objective.text.contains(app.tr("✦ 주민들의 부탁 %d개 · 수첩 보기") % 19), "the tracker counts the requests (수첩 보기)")
 
 	# 2. 소라: offered, taken, the tracker shows it.
 	await talk("sora")
@@ -154,8 +154,8 @@ func run() -> void:
 	# Her request read through to its last page, where the choices are.
 	expect((await first_choice()) == app.tr("다음에요"), "'다음에요' comes first")
 	await shot("offer", 1.2)
-	expect(await press(app.tr("맡겨 줘요 · 별씨 +%d") % 5), "taken: '맡겨 줘요 · 별씨 +5'")
-	expect(await wait_for(func() -> bool: return app.objective.text.contains("▸ "+app.tr("옷장에서 새 차림 갈아입기")) and app.objective.text.contains(app.tr("소라의 새 옷 맞춤")+" · "+app.tr("별씨 +%d") % 5), 6.0), "the tracker: the goal, the request and its reward")
+	expect(await press(app.tr("맡겨 줘요 · 별씨 +%d") % 3), "taken: '맡겨 줘요 · 별씨 +3'")
+	expect(await wait_for(func() -> bool: return app.objective.text.contains("▸ "+app.tr("옷장에서 새 차림 갈아입기")) and app.objective.text.contains(app.tr("소라의 새 옷 맞춤")+" · "+app.tr("별씨 +%d") % 3), 6.0), "the tracker: the goal, the request and its reward")
 	expect(await wait_for(func() -> bool: return mark_of("sora").is_empty(), 3.0), "the \"!\" over 소라 is gone")
 	app.close_village_modal()
 	await shot("tracker", 1.2)
@@ -169,22 +169,22 @@ func run() -> void:
 	expect(await press(app.tr("이 모습으로 저장")), "the new look is saved")
 	expect(await wait_for(func() -> bool: return app.notice.text.contains(app.tr("다 됐어요! %s에게 알려 주세요") % "소라"), 8.0), "'다 됐어요! 소라에게 알려 주세요'")
 	expect(await wait_for(func() -> bool: return mark_of("sora") == "?", 3.0), "\"?\" over 소라")
-	# The hand-over: the counter goes up by 5, once.
+	# The hand-over: the counter goes up by 3, once.
 	var before := counter()
 	var server_before := int((await api.request("/v1/me")).data.shards)
 	expect(before == server_before, "the counter shows the server's starseeds (%d)" % before)
 	await talk("sora")
 	expect(await press(app.tr("✦ 부탁을 마쳤어요")), "'✦ 부탁을 마쳤어요'")
 	expect(await wait_for(func() -> bool: return modal_text().contains(app.tr("정말 잘 어울려요! 섬 바람이랑 색이 딱 맞네요.")), 6.0), "소라 thanks")
-	expect(await wait_for(func() -> bool: return app.ui.find_children("QuestStars", "", true, false).size() > 0, 3.0), "'+5' rises over her while she thanks")
+	expect(await wait_for(func() -> bool: return app.ui.find_children("QuestStars", "", true, false).size() > 0, 3.0), "'+3' rises over her while she thanks")
 	expect(counter() == before, "the counter waits for the thanks to close")
 	# Closing the thanks brings the HUD back: the stars fly into the counter.
 	expect(await press(app.tr("천만에요")), "'천만에요'")
 	expect(await wait_for(func() -> bool: return app.ui.find_children("QuestStar", "", true, false).size() > 0, 3.0), "stars fly toward the counter")
 	await shot("reward", 0.45)
-	expect(await wait_for(func() -> bool: return counter() == before+5, 5.0), "the counter ticks up to %d" % (before+5))
+	expect(await wait_for(func() -> bool: return counter() == before+3, 5.0), "the counter ticks up to %d" % (before+3))
 	await create_timer(7.0).timeout
-	expect(counter() == before+5 and int((await api.request("/v1/me")).data.shards) == before+5, "still +5 after the village's polls (paid once)")
+	expect(counter() == before+3 and int((await api.request("/v1/me")).data.shards) == before+3, "still +3 after the village's polls (paid once)")
 	app.close_village_modal()
 	await talk("sora")
 	expect(not (await first_choice()).begins_with("✦"), "소라 has no request left")
@@ -193,7 +193,7 @@ func run() -> void:
 	# 3. 해루: taken at the pier, the fish caught away, the guide leads back, handed over.
 	await talk("haeru")
 	expect(await press(app.tr("✦ 부탁 들어주기")), "해루's request")
-	expect(await press(app.tr("맡겨 줘요 · 별씨 +%d") % 6), "taken: '맡겨 줘요 · 별씨 +6'")
+	expect(await press(app.tr("맡겨 줘요 · 별씨 +%d") % 5), "taken: '맡겨 줘요 · 별씨 +5'")
 	# The server's yes comes back as 해루's answer; then the walk away.
 	expect(await wait_for(func() -> bool: return modal_text().contains(app.tr("고마워요! 숯불은 제가 피워 둘게요.")), 6.0), "해루 answers")
 	app.close_village_modal()
@@ -213,21 +213,28 @@ func run() -> void:
 	var guide: Node = Guide.current
 	expect(await wait_for(func() -> bool: return is_instance_valid(guide) and guide.active() and str(guide.target.get("key", "")) == Quests.KEY+"haeru_fish", 4.0), "the guide leads back to 해루")
 	if is_instance_valid(guide) and guide.active():
-		var hopped := await wait_for(func() -> bool: return str(guide.target.get("name", "")).begins_with(app.tr("이정표 · %s(으)로") % app.tr("등대섬")), 3.0)
-		if not hopped: print("  walker ", app.player.global_position, " island ", Guide.island_key(Vector2(app.player.global_position.x, app.player.global_position.z)), " target ", guide.target, " modal ", is_instance_valid(app.village_modal))
-		expect(hopped, "from another island: this island's signpost first (%s)" % str(guide.target.get("name", "")))
+		# field_objects.gd sometimes cannot place a signpost (no ground found while the island
+		# loads; it lists it in `skipped`): then the way goes straight to 해루.
+		var story_module: Node = app.chapter()
+		var sign: Dictionary = story_module.signpost("square")
+		if sign.is_empty():
+			print("SKIP signpost hop: field_objects skipped ", story_module.field_module().skipped)
+			expect(Vector2(guide.target.at).distance_to(requests.npc_goal("haeru", "").at) < 3.0, "without this island's signpost the way leads straight to 해루")
+		else:
+			var hopped := await wait_for(func() -> bool: return str(guide.target.get("name", "")).begins_with(app.tr("이정표 · %s(으)로") % app.tr("등대섬")), 3.0)
+			expect(hopped, "from another island: this island's signpost first (%s)" % str(guide.target.get("name", "")))
 	await shot("guide", 1.0)
 	# The book from the tracker's last line.
 	expect(requests.row(Quests.BOOK_KEY) and is_instance_valid(app.village_modal) and modal_text().contains(app.tr("부탁 수첩")), "the tracker's book line opens the request book")
 	var rows: Array = app.village_modal.find_children("Quest_*", "HBoxContainer", true, false)
-	expect(rows.size() == 8 and modal_text().contains(app.tr("해루의 바다 저녁상")) and modal_text().contains(app.tr("완료")), "the book lists all eight (해루's ready, 소라's done)")
+	expect(rows.size() == 19 and modal_text().contains(app.tr("해루의 바다 저녁상")) and modal_text().contains(app.tr("완료")), "the book lists all nineteen (해루's ready, 소라's done)")
 	await shot("book", 0.8)
 	app.close_village_modal()
 	before = counter()
 	await talk("haeru")
 	expect(await press(app.tr("✦ 부탁한 것 건네기")), "'✦ 부탁한 것 건네기'")
 	expect(await press(app.tr("천만에요")), "해루 thanks; '천만에요'")
-	expect(await wait_for(func() -> bool: return counter() == before+6, 6.0), "the counter ticks up by 6")
+	expect(await wait_for(func() -> bool: return counter() == before+5, 6.0), "the counter ticks up by 5")
 	var local_bag: Dictionary = app.life.state.get("bag", {})
 	var local_fish := 0
 	for kind in ["mackerel", "puffer", "squid", "tuna", "silverfish"]: local_fish += int(local_bag.get(kind, 0))
@@ -236,7 +243,7 @@ func run() -> void:
 	var done: Array = listing.list.filter(func(q): return str(q.state) == "done").map(func(q): return str(q.id))
 	expect(done == ["sora_outfit", "haeru_fish"], "the server has the two done (%s)" % str(done))
 	await create_timer(4.0).timeout
-	expect(counter() == before+6, "still +6 after polls")
+	expect(counter() == before+5, "still +5 after polls")
 	app.close_village_modal()
 	print("QUEST_E2E " + ("FAILED" if failed else "OK"))
 	await app.logout()

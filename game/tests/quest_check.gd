@@ -1,10 +1,11 @@
 extends SceneTree
-## Every resident's request (quests.gd words, server/quests.py rules) on the QA server, through the
+## Every resident's request, all nineteen (quests.gd words, server/quests.py rules) on the QA server, through the
 ## same conversation code the village and the rooms use (Quests.choice_for with a recording
 ## dialogue box): a new account finishes the opening chapter (the requests stay closed until
 ## 모카's letter is read), then each request is offered, taken, done the way a player does it
-## (apples from trees, mushrooms, a sea fish, turnips grown, signposts, a new outfit, a gift, a
-## lamp set out in the village) and handed over: the starseeds come once, the choice goes away,
+## (apples, mushrooms, flowers, herbs, pinecones, sea and pond fish, turnips and carrots grown,
+## signposts, the lookout, night errands by the player's clock, a new outfit, a gift, a message
+## passed on, a teddy bear at home and then for 콩이, a lamp set out in the village) and handed over: the starseeds come once, the choice goes away,
 ## and 모카 and 노을 write their letters.
 const Quests = preload("res://scripts/quests.gd")
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
@@ -18,8 +19,8 @@ var effects: Array = []
 
 func _initialize() -> void:
 	call_deferred("run")
-	create_timer(600).timeout.connect(func():
-		push_error("Quest check exceeded 600 seconds")
+	create_timer(900).timeout.connect(func():
+		push_error("Quest check exceeded 900 seconds")
 		quit(2))
 
 func expect(value: bool, description: String) -> void:
@@ -87,6 +88,46 @@ func bag_count(items: Array) -> int:
 	for item in items: n += int(bag.get(item, 0))
 	return n
 
+func craft(prompt: String) -> String:
+	var queued: Dictionary = await api.post("/v1/studio/jobs", api.mutation({"prompt":prompt, "geometry":"proxy", "designer":"fixture"}))
+	for i in 120:
+		var job: Dictionary = await api.request("/v1/studio/jobs/"+str(queued.get("data", {}).get("id", "")))
+		if job.ok and job.data.state == "awaiting_confirmation": await api.post("/v1/studio/jobs/%s/confirm" % job.data.id, api.mutation({"use_concept":false}))
+		if job.ok and job.data.state == "ready": return str(job.data.object_id)
+		await create_timer(0.5).timeout
+	return ""
+
+## One fish from this water (casts until one lands; buys bait when it runs out).
+func catch_one(spot: String) -> bool:
+	for attempt in 8:
+		if int((await life()).get("bag", {}).get("bait", 0)) <= 0: await act("buy", {"item":"bait", "quantity":5})
+		var before := int((await life()).get("caught", 0))
+		var thrown := await act("cast", {"spot":spot})
+		await create_timer(maxf(0.1, float(thrown.get("fishing", {}).get("bite_at", 0))-float(thrown.get("server_time", 0))+0.3)).timeout
+		var hooked := await act("reel")
+		if hooked.get("reward", {}).get("kind", "") != "hooked": continue
+		await create_timer(float(hooked.get("fishing", {}).get("fight_min", 3.5))+0.4).timeout
+		await act("reel", {"outcome":"landed"})
+		if int((await life()).get("caught", 0)) > before: return true
+	return false
+
+## A request from a player whose own clock shows this hour now (the time zone header; the
+## game's api always sends the real one).
+func local_post(path: String, payload: Dictionary, hour: int) -> Dictionary:
+	var utc := Time.get_datetime_dict_from_system(true)
+	var shift := fposmod(float(hour)-(float(utc.hour)+float(utc.minute)/60.0), 24.0)
+	if shift > 14.0: shift -= 24.0
+	var http := HTTPRequest.new()
+	root.add_child(http)
+	var headers := PackedStringArray(["Content-Type: application/json", "Authorization: Bearer "+str(api.token),
+		"X-Villagen-UTC-Offset: %d" % int(round(shift*60.0)), load("res://scripts/api.gd").version_header()])
+	http.request(url+path, headers, HTTPClient.METHOD_POST, JSON.stringify(api.mutation(payload)))
+	var response: Array = await http.request_completed
+	http.queue_free()
+	var data = JSON.parse_string((response[3] as PackedByteArray).get_string_from_utf8())
+	var ok: bool = int(response[1]) < 400 and data is Dictionary
+	return {"ok":ok, "data":data if data is Dictionary else {}, "error":"" if ok or not data is Dictionary else str(data.get("detail", ""))}
+
 func shards() -> int:
 	var me: Dictionary = await api.request("/v1/me")
 	return int(me.data.shards) if me.ok else -1
@@ -106,20 +147,20 @@ func run() -> void:
 	# The definitions: the server's list and the client's words agree, every line is translated.
 	var first := await refresh()
 	var ids: Array = first.get("list", []).map(func(q): return str(q.id))
-	expect(ids.size() == 8 and ids == Quests.BOOK.keys(), "the server's requests and the client's words are the same eight (%s)" % ", ".join(ids))
+	expect(ids.size() == 19 and ids == Quests.BOOK.keys(), "the server's requests and the client's words are the same nineteen (%s)" % ", ".join(ids))
 	var catalog = JSON.parse_string(FileAccess.get_file_as_string("res://i18n/strings.json"))
 	var untranslated: Array = []
 	for id in Quests.BOOK:
 		var book: Dictionary = Quests.BOOK[id]
 		for key in ["title", "accepted", "remind", "goal"]:
 			if not catalog.strings.has(str(book[key])): untranslated.append(book[key])
-		for key in ["ask", "thanks"]:
-			for line in book[key]:
+		for key in ["ask", "thanks", "reply"]:
+			for line in book.get(key, []):
 				if not catalog.strings.has(str(line)): untranslated.append(line)
 	expect(untranslated.is_empty(), "every request's words have English and Chinese (%s)" % str(untranslated))
 	var total := 0
 	for q in first.get("list", []): total += int(q.stars)
-	expect(total >= 35 and total <= 60 and first.list.all(func(q): return int(q.stars) >= 5 and int(q.stars) <= 15), "rewards are 5-15 each, %d in all (about one craft)" % total)
+	expect(total >= 75 and total <= 85 and first.list.all(func(q): return int(q.stars) >= 3 and int(q.stars) <= 8), "rewards are 3-8 each, %d in all (about two cheap crafts)" % total)
 
 	# Closed while the opening chapter runs, and after it until 모카's letter is read.
 	expect(not first.get("unlocked", true) and (await talk("regular")).is_empty(), "no request while the chapter runs")
@@ -134,18 +175,14 @@ func run() -> void:
 	var opened := await refresh()
 	expect(opened.get("unlocked", false) and opened.list.all(func(q): return str(q.state) == "available"), "the letter read, every request is offered")
 
-	# A lamp for 노을 (the offline demo craft) and the turnips' seeds go in first (they take 90 s).
-	var queued: Dictionary = await api.post("/v1/studio/jobs", api.mutation({"prompt":"등불", "geometry":"proxy", "designer":"fixture"}))
-	var lamp_id := ""
-	for i in 120:
-		var job: Dictionary = await api.request("/v1/studio/jobs/"+str(queued.get("data", {}).get("id", "")))
-		if job.ok and job.data.state == "awaiting_confirmation": await api.post("/v1/studio/jobs/%s/confirm" % job.data.id, api.mutation({"use_concept":false}))
-		if job.ok and job.data.state == "ready":
-			lamp_id = str(job.data.object_id)
-			break
-		await create_timer(0.5).timeout
+	# A lamp for 노을 and a teddy bear for 콩이 (the offline demo crafts), and the turnips' and the
+	# carrots' seeds go in first (they take 90 and 120 s).
+	var lamp_id := await craft("등불")
 	expect(not lamp_id.is_empty(), "a lamp was made")
+	var toy_id := await craft("곰인형")
+	expect(not toy_id.is_empty(), "a teddy bear was made")
 	expect(not (await act("plant", {"plot":0, "item":"turnip"})).is_empty() and not (await act("water", {"plot":0})).is_empty(), "turnip seeds planted and watered")
+	expect(not (await act("plant", {"plot":1, "item":"carrot"})).is_empty() and not (await act("water", {"plot":1})).is_empty(), "carrot seeds planted and watered")
 	var sown := Time.get_ticks_msec()
 	var start := await shards()
 
@@ -200,16 +237,60 @@ func run() -> void:
 					await create_timer(float(hooked.get("fishing", {}).get("fight_min", 3.5))+0.4).timeout
 					await act("reel", {"outcome":"landed"})
 			"daon_gift":
-				var bag: Array = (await api.request("/v1/me")).data.objects.filter(func(o): return str(o.state) == "inventory" and str(o.id) != lamp_id)
+				var bag: Array = (await api.request("/v1/me")).data.objects.filter(func(o): return str(o.state) == "inventory" and not str(o.id) in [lamp_id, toy_id])
 				var gift: Dictionary = await api.post("/v1/npcs/postman/gift", api.mutation({"object_id":bag[0].id, "version":bag[0].version}))
 				expect(gift.ok, "daon_gift: a gift for 다온 (%s)" % str(bag[0].name))
-			"hangyeol_turnips":
-				# Sown before the first request; ripe 90 s after watering.
-				var left := 92.0-(Time.get_ticks_msec()-sown)*0.001
+			"hangyeol_turnips", "dure_carrots":
+				# Sown before the first request; ripe 90 s (turnips) or 120 s (carrots) after watering.
+				var plot := 0 if id == "hangyeol_turnips" else 1
+				var left := (92.0 if plot == 0 else 122.0)-(Time.get_ticks_msec()-sown)*0.001
 				if left > 0.0:
-					print("  turnips grow (%.0f s more)" % left)
+					print("  %s grow (%.0f s more)" % ["turnips" if plot == 0 else "carrots", left])
 					await create_timer(left).timeout
-				expect(not (await act("harvest", {"plot":0})).is_empty(), "hangyeol_turnips: turnips harvested")
+				expect(not (await act("harvest", {"plot":plot})).is_empty(), "%s: harvested" % id)
+			"boram_catch":
+				# A pond fish and a sea fish are always two kinds.
+				expect(await catch_one("pond") and await catch_one("sea"), "boram_catch: a pond fish and a sea fish caught")
+			"miso_flowers":
+				for node in ["flower_01", "flower_02", "flower_03", "flower_04"]:
+					if await bag_count(["flower"]) >= 3: break
+					await act("gather", {"node":node})
+					await create_timer(0.7).timeout
+			"yunjae_regards":
+				# 가람's own talk offers to pass the regards on (before his own request).
+				expect(await open("poet", "✦ 윤재의 안부 전하기"), "yunjae_regards: 가람 is offered 윤재's regards")
+				expect(box.lines == Quests.lines_of(entry, "reply") and effects.back()[0] == "progress", "yunjae_regards: 가람 answers")
+			"haneul_stars", "saebyeok_walk":
+				var place := "observatory" if id == "haneul_stars" else "lighthouse_pier"
+				var by_day := await local_post("/v1/quests/%s/progress" % id, {"place":place}, 13)
+				expect(not by_day.ok and str(by_day.error) == "quest_not_night", "%s: by day it does not count" % id)
+				var by_night := await local_post("/v1/quests/%s/progress" % id, {"place":place}, 22)
+				expect(by_night.ok, "%s: at night it counts (%s)" % [id, str(by_night.error)])
+			"chorok_herbs":
+				await act("gather", {"item":"herb"})
+				await create_timer(0.7).timeout
+				for node in ["herb_01", "herb_02"]:
+					if await bag_count(["herb"]) >= 3: break
+					await act("gather", {"node":node})
+					await create_timer(0.7).timeout
+			"bau_pinecones":
+				for tree in ["pine_tree_01", "pine_tree_02"]:
+					var shaken := await act("shake", {"node":tree})
+					for fruit in shaken.get("reward", {}).get("drops", []):
+						if str(fruit) != "pinecone" or await bag_count(["pinecone"]) >= 3: continue
+						await act("pickup", {"node":tree, "item":fruit})
+					await create_timer(0.7).timeout
+			"danbi_home":
+				var bear: Dictionary = (await api.request("/v1/me")).data.objects.filter(func(o): return str(o.id) == toy_id)[0]
+				var home: Dictionary = await api.post("/v1/objects/%s/placement" % toy_id, api.mutation({"version":bear.version, "room":"home", "x":1.0, "z":-1.0}))
+				expect(home.ok, "danbi_home: the teddy bear is set down at home (%s)" % str(home.get("error", "")))
+			"kongi_toy":
+				var bear: Dictionary = (await api.request("/v1/me")).data.objects.filter(func(o): return str(o.id) == toy_id)[0]
+				var back: Dictionary = await api.post("/v1/objects/%s/placement" % toy_id, api.mutation({"version":bear.version, "action":"retrieve"}))
+				var given: Dictionary = await api.post("/v1/npcs/kid/gift", api.mutation({"object_id":toy_id, "version":int(back.get("data", {}).get("version", 0))}))
+				expect(given.ok, "kongi_toy: the teddy bear for 콩이 (%s)" % str(given.get("error", "")))
+			"garam_lookout":
+				expect((await api.post("/v1/quests/garam_lookout/progress", api.mutation({"place":"lookout"}))).ok, "garam_lookout: the lookout counted")
 			"noeul_light":
 				var lamp: Dictionary = (await api.request("/v1/me")).data.objects.filter(func(o): return str(o.id) == lamp_id)[0]
 				var placed: Dictionary = await api.post("/v1/objects/"+lamp_id, api.mutation({"version":lamp.version, "action":"place", "x":24.0, "z":18.0}))
@@ -235,7 +316,7 @@ func run() -> void:
 		if wants_letter and not letters.is_empty():
 			var page: Array = NpcGifts.letter_lines(letters[0])
 			expect(str(page[0]).contains(Quests.npc_name(npc)) and str(page[0]).contains(str(NpcGifts.QUEST_LETTERS[npc][0])), "%s: the letter reads in the mailbox" % id)
-	expect(await shards() == start+paid and paid == total, "all eight paid %d starseeds in all" % paid)
+	expect(await shards() == start+paid and paid == total, "all nineteen paid %d starseeds in all" % paid)
 	var ledger: Dictionary = await refresh()
 	expect(ledger.list.all(func(q): return str(q.state) == "done"), "every request is done")
 	print("QUEST_CHECK " + ("FAILED" if failed else "OK"))
