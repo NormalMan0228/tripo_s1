@@ -57,6 +57,9 @@ const RestSeat=preload("res://scripts/rest_seat.gd")
 const StoryHome=preload("res://scripts/story_home.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
+## Build mode: the placed-object menu, 물건 통과 and the loading ring (scripts/build/).
+const RoomBuild=preload("res://scripts/build/room_build.gd")
+const LoadRing=preload("res://scripts/build/load_ring.gd")
 ## On ladder rungs the walker climbs with this clip (the explorer's crouched step) instead of the
 ## walk clip, which would march in place: the rise is straight up, nothing moves across.
 const LADDER_CLIP := "Legs_Crouch_Step"
@@ -1464,7 +1467,9 @@ func begin_place() -> void:
 	ObjectTransform.show_angle(turn_readout,placement_rotation)
 	if is_instance_valid(ghost):ghost.queue_free()
 	ghost=null
+	var ring := LoadRing.start(self)
 	var loaded := await load_item(selected.duplicate(true))
+	LoadRing.finish(ring)
 	if placement_request!=placement_epoch or not placement_mode or selected.get("id")!=object_id:
 		if loaded:loaded.queue_free()
 		return
@@ -1526,6 +1531,7 @@ func view_input(event: InputEvent) -> void:
 			if is_instance_valid(ghost):ghost.position=place_at
 	if placement_mode and event is InputEventMouseButton and event.pressed and ObjectTransform.wheel_turn(event)!=0:
 		rotate_placement(ObjectTransform.wheel_turn(event));view_container.accept_event();return
+	if not placement_mode and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_RIGHT:RoomBuild.right_click(self,event.position)
 	if placement_mode and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:await commit_place()
 	# A click on a player-made piece within reach uses it, like E.
 	elif not placement_mode and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT and resting.is_empty() and not pending:
@@ -1904,6 +1910,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	# HUD key (U): fold every HUD panel at once (or open them all again), as in the village.
 	if key==KEY_U:
 		RpgUi.toggle_all_folds()
+		return
+	if key==KEY_V:
+		RoomBuild.toggle_pass(self)
 		return
 	# The village's keys: C the craft window, I the bag (here the drawer with the bag).
 	if key==KEY_C:
@@ -2456,6 +2465,9 @@ func can_stand(at: Vector3, stuck := false) -> bool:
 func movement_blocked(at: Vector3) -> bool:
 	if not blocking_record(at).is_empty(): return true
 	if floor_index!=0: return false
+	# 물건 통과 (V): the walker passes through placed pieces.
+	RoomBuild.PassThrough.load_pref()
+	if RoomBuild.PassThrough.on: return false
 	for id in placed:
 		var item: Node3D=placed[id]
 		var size: Vector3=item.get_meta("size",Vector3(1.6,1.6,1.6))
@@ -2485,9 +2497,6 @@ func placement_problem(at: Vector3) -> String:
 		var half: Vector2=record.world_half
 		if absf(record.center.x-at.x)<half.x+0.75 and absf(record.center.z-at.z)<half.y+0.75:return tr("방에 원래 있던 가구와 겹쳐요.")
 	if is_instance_valid(hero) and absf(hero.position.x-at.x)<1.15 and absf(hero.position.z-at.z)<1.15:return tr("캐릭터가 서 있는 곳은 비워 주세요.")
-	for obj in data.get("objects",[]):
-		if obj.id==selected.get("id") or obj.state!="placed" or obj.room!=room:continue
-		if absf(obj.x-at.x)<2 and absf(obj.z-at.z)<2:return tr("다른 가구에서 두 칸 이상 떨어뜨려 주세요.")
 	# The ghost's real footprint at its angle and shape: inside the walls, clear of the furniture.
 	if placement_mode and is_instance_valid(ghost):
 		var size: Vector3=ghost.get_meta("size",Vector3.ONE)

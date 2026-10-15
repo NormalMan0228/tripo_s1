@@ -119,10 +119,11 @@ const ACTIONS := [
 	["toggle_sound","소리 켜기/끄기",[KEY_M,KEY_NONE]],
 	["toggle_hud","HUD 접기/펼치기",[KEY_U,KEY_NONE]],
 	["social","함께하기 · 친구",[KEY_K,KEY_NONE]],
+	["pass_through","물건 통과 켜기/끄기",[KEY_V,KEY_NONE]],
 ]
 ## Actions that project.godot does not declare (a PCK patch cannot change it): apply_input adds
 ## them to the InputMap at start-up.
-const RUNTIME_ACTIONS := ["social"]
+const RUNTIME_ACTIONS := ["social","pass_through"]
 ## Keys that cannot be bound (Esc opens the pause menu and cancels a rebind; F3/F9 are tools).
 const RESERVED_KEYS := [KEY_ESCAPE,KEY_F3,KEY_F9,KEY_ENTER,KEY_KP_ENTER]
 

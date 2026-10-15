@@ -24,7 +24,7 @@ from typing import Literal
 from fastapi import HTTPException, Request
 from pydantic import Field
 from .models import Mutation
-from . import npc_homes, archetypes
+from . import npc_homes, archetypes, build_rules
 
 CHAPTER = 'first_gift'
 STEPS = ('letter', 'cafe', 'craft', 'done')
@@ -214,6 +214,8 @@ class Story:
                                 "AND state IN ('inventory','placed') AND version=?", (obj['id'], user['id'], body.version)).rowcount != 1:
                     fail('stale_object_version')
                 conn.execute('DELETE FROM furniture_locations WHERE object_id=?', (obj['id'],))
+                # Pieces that stood on it go back to the bag (server/build_rules.py).
+                build_rules.retrieve(conn, obj['id'])
                 # Out on the terrace at once (an earlier piece, if any, goes into 모카's storage).
                 conn.execute("UPDATE npc_items SET state='stored',slot=NULL WHERE host_id=? AND home_id=? AND state='placed'", (user['id'], TERRACE))
                 conn.execute('INSERT INTO npc_items(object_id,host_id,npc_id,home_id,state,slot,yaw,fresh,size,tags,gifted,placed_at) '
