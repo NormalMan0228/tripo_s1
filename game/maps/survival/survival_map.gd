@@ -162,7 +162,13 @@ const MAP_PROPS := {
 	"frost":["ice_crystal","log_bench","firewood_pile","sled_empty","tent_orange","signpost","snow_boulder","frost_shrine",
 		"snow_pine","snowman","frost_shrub","snow_fence"]}
 
-static func resource_paths(map: String) -> Array:
+## The map whose look, layout and bake a run's map is built with: the tutorial is the forest basin
+## (server/survival_maps.py ALIASES), an unknown map the forest.
+static func basin(map: String) -> String:
+	return map if LOOK.has(map) else "forest"
+
+static func resource_paths(run_map: String) -> Array:
+	var map := basin(run_map)
 	# The baked data first: the build needs it before anything else.
 	var paths := [SurvivalBake.path(map)]
 	var placed: Array = MAP_PROPS.get(map, MAP_PROPS.forest)
@@ -179,11 +185,13 @@ static func resource_paths(map: String) -> Array:
 	return paths
 
 ## The model of each creature species (every one when `species` is empty) for this map's variant
-## (the ones monster.gd setup loads).
-static func monster_paths(map: String, species: Array = []) -> Array[String]:
+## (the ones monster.gd setup loads): the species' own, else its stand-in's (`stand_ins`, the run's
+## night_stand_ins: server/catalog.py ENEMIES stand_in, today's art until a species has a model).
+static func monster_paths(map: String, species: Array = [], stand_ins: Dictionary = {}) -> Array[String]:
 	var paths: Array[String] = []
 	for kind in (species if not species.is_empty() else Monster.WALK_REF.keys()):
-		var path := Monster.resolved_path(str(kind),map)
+		var art := Monster.art_species(str(kind),str(stand_ins.get(kind,"")),map)
+		var path := Monster.resolved_path(art,map)
 		if path != "" and not path in paths: paths.append(path)
 	return paths
 
@@ -276,7 +284,7 @@ func _start_monster_feed() -> void:
 	monster_done.clear()
 	monster_follow = prefetch_monsters and LoadPace.covered
 	if not monster_follow: return
-	monster_feed = monster_paths(map_id,night_species(state))
+	monster_feed = monster_paths(map_id,night_species(state),state.get("night_stand_ins",{}))
 	var tree := Engine.get_main_loop() as SceneTree
 	if not tree.process_frame.is_connected(_feed_monsters): tree.process_frame.connect(_feed_monsters)
 	_feed_monsters()
@@ -291,7 +299,7 @@ func _want_night_species(run: Dictionary, delta: float) -> void:
 	monster_check = 0.5
 	if bool(run.get("night",false)) or float(run.get("day_progress",0.0)) < MONSTER_DAY_FROM: return
 	var added := false
-	for path in monster_paths(map_id,night_species(run)):
+	for path in monster_paths(map_id,night_species(run),run.get("night_stand_ins",{})):
 		if monster_done.has(path) or path in monster_feed: continue
 		monster_feed.append(path)
 		added = true
