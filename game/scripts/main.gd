@@ -737,6 +737,12 @@ func build_world(survival: bool) -> bool:
 	sound.play_music(region_track() if survival else village_track())
 	leave_modules()
 	if is_instance_valid(town): town.release_map()
+	# The village seat (and its interaction driver) belongs to the walker that goes with this world:
+	# let go of it first, and the next village_seat() makes a fresh one for the new walker.
+	if is_instance_valid(seat):
+		seat.reset()
+		seat.queue_free()
+	seat=null
 	if is_instance_valid(world):
 		remove_child(world)
 		world.queue_free()
@@ -1165,6 +1171,30 @@ func build_village_hud() -> void:
 		developer_panel.visible=false
 		developer_label=text(debug_box,"F3",12)
 		developer_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		# ISS-1 socket gizmo (ix/ix_debug.gd): off by default, nothing exists while it is off.
+		var sockets := CheckBox.new()
+		sockets.text=tr("소켓 보기 (ISS-1)")
+		sockets.focus_mode=Control.FOCUS_NONE
+		sockets.add_theme_font_size_override("font_size",12)
+		sockets.toggled.connect(func(on: bool): show_ix_debug(on))
+		debug_box.add_child(sockets)
+	if "--ix-debug" in OS.get_cmdline_user_args(): show_ix_debug(true)
+
+## The socket gizmo over the village (crafted pieces and map props near the walker).
+func show_ix_debug(on: bool) -> void:
+	var current: Node = world.get_node_or_null("IxDebug") if is_instance_valid(world) else null
+	if not on:
+		if is_instance_valid(current): current.queue_free()
+		return
+	if is_instance_valid(current) or not is_instance_valid(world): return
+	var gizmo: Node3D = preload("res://scripts/ix/ix_debug.gd").new()
+	gizmo.player=player
+	gizmo.nodes=func() -> Array:
+		var out: Array=loaded.values()
+		if is_instance_valid(town):
+			for entry in town.props: out.append(entry.node)
+		return out
+	world.add_child(gizmo)
 
 func build_play_hud(survival: bool) -> void:
 	social.install_hud(survival)
@@ -2877,7 +2907,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if key==KEY_F9 and preload("res://scripts/build_mode.gd").admin: open_admin()
 			if key==KEY_O and not is_instance_valid(village_modal): open_wardrobe()
 			if key==KEY_E and not life.closest().is_empty(): life.interact()
-			elif key==KEY_E and nearest_npc(): talk_to(nearest_npc())
+			elif key==KEY_E and nearest_npc(): talk_after_turn(nearest_npc())
 			elif key==KEY_E and not module_closest().is_empty(): use_module(module_closest())
 			elif key==KEY_E and is_instance_valid(town) and not town.nearest_prop(Vector2(player.position.x,player.position.z)).is_empty(): town.use_prop(self,town.nearest_prop(Vector2(player.position.x,player.position.z)))
 			elif key==KEY_E and near(TownLayout.GATE,3): open_expedition()
@@ -3156,6 +3186,27 @@ func npc_script(role: String) -> Dictionary:
 			"choices":[[tr("낚시 도감 보기"),life.open_storage],[tr("고마워요"),Callable()]]}
 	if not opener.is_empty(): plan.lines.insert(0,opener)
 	return plan
+
+## E on a villager (ISS-1 talk): both turn toward each other first; the dialogue opens once the
+## villager faces the walker within 20 degrees, or after 0.4 s at most. talk_to() itself stays
+## immediate for scripted calls.
+var talk_turning := false
+func talk_after_turn(npc: Node3D) -> void:
+	if talk_turning or not is_instance_valid(npc): return
+	talk_turning=true
+	npc.face_point(player.position)
+	player.face_point(npc.position)
+	if "talk_rate" in npc: npc.talk_rate=9.0
+	var waited := 0.0
+	while waited<0.4 and is_instance_valid(npc) and is_instance_valid(player):
+		var to: Vector3=player.global_position-npc.global_position
+		if absf(angle_difference(npc.rotation.y,atan2(to.x,to.z)))<deg_to_rad(20.0): break
+		await get_tree().process_frame
+		waited+=get_process_delta_time()
+	talk_turning=false
+	if not is_instance_valid(npc): return
+	if "talk_rate" in npc: npc.talk_rate=5.0
+	if screen=="village" and not is_instance_valid(village_modal): talk_to(npc)
 
 func talk_to(npc: Node3D) -> void:
 	npc.face_point(player.position)

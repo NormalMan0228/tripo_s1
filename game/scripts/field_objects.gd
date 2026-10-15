@@ -20,9 +20,12 @@ const Profile := preload("res://scripts/controller_profile.gd")
 const Transition := preload("res://scripts/transition.gd")
 const LoadPace := preload("res://scripts/load_pace.gd")
 const Fx := preload("res://scripts/fx.gd")
-const SFX := "res://assets/sfx/field/%s.wav"
+const IxPose := preload("res://scripts/ix/ix_pose.gd")
+const SFX :="res://assets/sfx/field/%s.wav"
 ## Solid parts sit on the props layer (8) like the map's benches and trees.
 const PROP_LAYER := 8
+## Seconds the seat pose takes to let go after getting up from a swing, rocker or hammock.
+const STAND_FADE := 0.08
 const BLOCK_MASK := 2|8|16
 const ISLANDS := {"square":"물결빛 광장","fields":"풍차 들판","garden":"정원 언덕","camp":"캠프 초원","lighthouse":"등대섬"}
 const SPECS := [
@@ -1358,12 +1361,12 @@ func use_hammock(entry: Dictionary) -> void: sit(entry, "wood_creak")
 func sit(entry: Dictionary, creak: String) -> void:
 	if not seat.is_empty() or not view.is_empty(): return
 	var player: Node3D = app.player
-	var pose: SeatPose = null
-	if "hand_skeleton" in player and is_instance_valid(player.hand_skeleton):
-		pose = SeatPose.new()
-		pose.player = player
-		pose.lying = entry.kind == "hammock"
-		player.hand_skeleton.add_child(pose)
+	# The walker's one pose layer (ix/ix_pose.gd), the same one rooms and crafted seats use.
+	var pose: SkeletonModifier3D = IxPose.attach(player)
+	if is_instance_valid(pose):
+		pose.driven = false
+		pose.fade_time = 0.33
+		pose.mode = "hammock" if entry.kind == "hammock" else "seat_field"
 	seat = {"entry":entry,"creak":creak,"time":0.0,"pose":pose,"hip":hip_height(player),"next_creak":0.6,
 		"was_visual_only":player.visual_only}
 	player.visual_only = true
@@ -1416,10 +1419,15 @@ func update_seat(delta: float) -> void:
 func stand_up(quiet := false) -> void:
 	if seat.is_empty(): return
 	var entry: Dictionary = seat.entry
-	var pose: SeatPose = seat.pose
+	var pose: SkeletonModifier3D = seat.pose
 	var restore: bool = seat.was_visual_only
 	seat = {}
-	if is_instance_valid(pose): pose.queue_free()
+	# The pose fades out (it is never freed mid-pose: that snapped the legs straight in one frame),
+	# quickly: the body already stands on the ground, so bent legs must not linger (about the old
+	# 24 rad/s leg limiter's time).
+	if is_instance_valid(pose) and not pose.driven:
+		pose.fade_time = STAND_FADE
+		pose.mode = ""
 	if is_instance_valid(entry.get("pivot")):
 		var pivot: Node3D = entry.pivot
 		pivot.create_tween().tween_property(pivot, "rotation:x", 0.0, 0.8).set_trans(Tween.TRANS_SINE)
@@ -1430,36 +1438,6 @@ func stand_up(quiet := false) -> void:
 	player.velocity = Vector3.ZERO
 	player.global_position = Vector3(entry.stand)+Vector3(0,0.05,0)
 	if not quiet: play("paper", entry.root.global_position, -24.0)
-
-## Bends the legs into a seated pose on top of the walker's own animation.
-class SeatPose extends SkeletonModifier3D:
-	var player: Node3D
-	var lying := false
-	var amount := 0.0
-
-	func turn(skeleton: Skeleton3D, bone: String, angles: Vector3, body: Basis) -> void:
-		var index := skeleton.find_bone(bone)
-		if index < 0: return
-		for component in 3:
-			if absf(angles[component]) < 0.0001: continue
-			var axis := Vector3.ZERO
-			axis[component] = 1.0
-			var world_axis := body*axis
-			var bone_world := skeleton.global_basis*skeleton.get_bone_global_pose(index).basis
-			var local_axis := (bone_world.inverse()*world_axis).normalized()
-			skeleton.set_bone_pose_rotation(index, skeleton.get_bone_pose_rotation(index)*Quaternion(local_axis, angles[component]))
-
-	func _process_modification_with_delta(delta: float) -> void:
-		amount = minf(1.0, amount+delta*3.0)
-		var skeleton := get_skeleton()
-		if skeleton == null or not is_instance_valid(player): return
-		var body: Basis = player.visual.global_basis.orthonormalized()
-		var hip := (1.2 if lying else 1.45)*amount
-		var knee := (-1.0 if lying else -1.45)*amount
-		for side in ["L","R"]:
-			turn(skeleton, side+"_Thigh", Vector3(hip,0,0), body)
-			turn(skeleton, side+"_Calf", Vector3(knee,0,0), body)
-		turn(skeleton, "Spine02", Vector3((-0.25 if lying else -0.06)*amount,0,0), body)
 
 # ------------------------------------------------------------------ telescope view
 func use_telescope(entry: Dictionary) -> void:

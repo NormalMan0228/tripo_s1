@@ -44,6 +44,7 @@ extends CharacterBody3D
 const SILHOUETTE := preload("res://shaders/shadow_silhouette.gdshader")
 const VILLAGER := preload("res://shaders/villager_look.gdshader")
 const DayFolk = preload("res://scripts/day_folk.gd")
+const IxPose = preload("res://scripts/ix/ix_pose.gd")
 const DAY_SECONDS := 2.5
 const EYE_SHADER := """
 shader_type spatial;
@@ -868,25 +869,11 @@ func apply_layout() -> void:
 		nameplate.position.y = (0.75 if pose == "lie" else (1.3 if pose.begins_with("sit") else 1.88))*height_scale+0.22
 		bubble.position.y = nameplate.position.y+0.4
 
-## Bends the legs after each animation step (the clip rewrites them every advance).
+## Bends the legs after each animation step (the clip rewrites them every advance), with the walker's
+## own pose layer math (ix/ix_pose.gd; this visual faces +Z).
 func apply_bone_pose() -> void:
 	if not is_instance_valid(skeleton) or not pose.begins_with("sit"): return
-	var body: Basis = visual.global_basis.orthonormalized()
-	var hip := -1.45 if pose == "sit" else -1.5
-	var knee := 1.45 if pose == "sit" else 0.12
-	for side in ["L", "R"]:
-		bend(side+"_Thigh", hip, body)
-		bend(side+"_Calf", knee, body)
-	bend("Spine02", 0.05, body)
-
-## Rotates a bone about the body's sideways axis, in world space (field_objects SeatPose).
-func bend(bone: String, angle: float, body: Basis) -> void:
-	var index := skeleton.find_bone(bone)
-	if index < 0: return
-	var world_axis := body*Vector3.RIGHT
-	var bone_world := skeleton.global_basis*skeleton.get_bone_global_pose(index).basis
-	var local_axis := (bone_world.inverse()*world_axis).normalized()
-	skeleton.set_bone_pose_rotation(index, skeleton.get_bone_pose_rotation(index)*Quaternion(local_axis, angle))
+	IxPose.pose_now(skeleton, visual, "figure_sit" if pose == "sit" else "figure_sit_ground", 1.0, 1.0)
 
 ## ------------------------------------------------------------------ work props
 

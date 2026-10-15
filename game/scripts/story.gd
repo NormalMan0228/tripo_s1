@@ -32,6 +32,8 @@ const I18n := preload("res://scripts/i18n.gd")
 const Loader := preload("res://scripts/model_loader.gd")
 const VoiceBabble := preload("res://scripts/voice_babble.gd")
 const Guide := preload("res://scripts/guide.gd")
+const IxSources := preload("res://scripts/ix/ix_sources.gd")
+const IxDriver := preload("res://scripts/ix/ix_driver.gd")
 
 ## 모카 · 카페 주인 (day_folk.gd, shadow_folk.gd 'regular').
 const MOKA := "regular"
@@ -707,9 +709,17 @@ func seat_guest(walk_in: bool) -> void:
 	var front := Vector3(0, 0, 1).rotated(Vector3.UP, piece.rotation.y)
 	var seat_at := piece.global_position+front*0.05+Vector3(0, clampf(size.y*0.5, 0.38, 0.62), 0)
 	var yaw := piece.rotation.y
+	var stop := piece.global_position+front*0.62
+	# The chair's own seat socket (ISS-1, derived from its real shape): where the hips go, which way
+	# the guest faces and where it stands before sitting. The old box formula stays the fallback.
+	var socket := guest_socket()
+	if not socket.is_empty():
+		seat_at = socket.origin
+		yaw = float(socket.yaw)
+		if not (socket.approach as Array).is_empty(): stop = socket.approach[0].pos
+		IxDriver.claims[IxDriver.key_of(piece, socket)] = figure.get_instance_id()
 	if walk_in:
 		var from := Town.point(GUEST_FROM, 0.0)
-		var stop := piece.global_position+front*0.62
 		stop.y = Town.height_at(stop.x, stop.z)
 		figure.position = from
 		var path := stop-from
@@ -736,7 +746,17 @@ func seat_guest(walk_in: bool) -> void:
 			moka.pop("!", 1.4)
 			speech(moka, 2.35, tr("벌써 첫 손님이네!"), 3.0)
 
+## The terrace piece's best seat socket, or {} when it has none (the box formula is used then).
+func guest_socket() -> Dictionary:
+	if not is_instance_valid(piece): return {}
+	for resolved in IxSources.resolve_all(IxSources.for_node(piece, "sit"), ["sit", "perch"]):
+		if resolved.valid: return resolved
+	return {}
+
 func release_guest() -> void:
+	if is_instance_valid(guest):
+		for key in IxDriver.claims.keys():
+			if int(IxDriver.claims[key]) == guest.get_instance_id(): IxDriver.claims.erase(key)
 	if is_instance_valid(guest): guest.queue_free()
 	guest = null
 	guest_seated = false

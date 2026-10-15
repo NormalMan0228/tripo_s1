@@ -1,0 +1,1733 @@
+{
+ "version": 1,
+ "archetypes": [
+  {
+   "id": "rocking_chair",
+   "rest": "sit",
+   "family": "rocker",
+   "title": "흔들의자",
+   "parts": [
+    {
+     "id": "rockers",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      0.6,
+      0.06,
+      0.8
+     ],
+     "position": [
+      0,
+      0.03,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "legs",
+     "parent": "rockers",
+     "shape": "box",
+     "size": [
+      0.46,
+      0.36,
+      0.46
+     ],
+     "position": [
+      0,
+      0.21,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "seat",
+     "parent": "legs",
+     "shape": "box",
+     "size": [
+      0.58,
+      0.07,
+      0.56
+     ],
+     "position": [
+      0,
+      0.215,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "back",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.58,
+      0.62,
+      0.06
+     ],
+     "position": [
+      0,
+      0.34,
+      -0.25
+     ],
+     "rotation": [
+      -8,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bed",
+   "rest": "lie",
+   "family": "rest",
+   "title": "나무 침대",
+   "parts": [
+    {
+     "id": "frame",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      1.0,
+      0.3,
+      1.8
+     ],
+     "position": [
+      0,
+      0.15,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "mattress",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      0.92,
+      0.16,
+      1.7
+     ],
+     "position": [
+      0,
+      0.23,
+      0.03
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "pillow",
+     "parent": "mattress",
+     "shape": "box",
+     "size": [
+      0.6,
+      0.08,
+      0.3
+     ],
+     "position": [
+      0,
+      0.12,
+      -0.66
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "headboard",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      1.0,
+      0.7,
+      0.08
+     ],
+     "position": [
+      0,
+      0.2,
+      -0.86
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "seat",
+   "rest": "sit",
+   "family": "rest",
+   "title": "나무 의자",
+   "parts": [
+    {
+     "id": "seat",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      0.46,
+      0.06,
+      0.46
+     ],
+     "position": [
+      0,
+      0.45,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "leg_front_left",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.05,
+      0.42,
+      0.05
+     ],
+     "position": [
+      -0.19,
+      -0.24,
+      0.19
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "leg_front_right",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.05,
+      0.42,
+      0.05
+     ],
+     "position": [
+      0.19,
+      -0.24,
+      0.19
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "leg_back_left",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.05,
+      0.42,
+      0.05
+     ],
+     "position": [
+      -0.19,
+      -0.24,
+      -0.19
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "leg_back_right",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.05,
+      0.42,
+      0.05
+     ],
+     "position": [
+      0.19,
+      -0.24,
+      -0.19
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "back",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.46,
+      0.46,
+      0.05
+     ],
+     "position": [
+      0,
+      0.26,
+      -0.205
+     ],
+     "rotation": [
+      -6,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sofa",
+   "rest": "sit",
+   "family": "rest",
+   "title": "소파",
+   "parts": [
+    {
+     "id": "base",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      1.6,
+      0.45,
+      0.8
+     ],
+     "position": [
+      0,
+      0.225,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "back",
+     "parent": "base",
+     "shape": "box",
+     "size": [
+      1.6,
+      0.5,
+      0.2
+     ],
+     "position": [
+      0,
+      0.475,
+      -0.3
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "arm_left",
+     "parent": "base",
+     "shape": "box",
+     "size": [
+      0.2,
+      0.25,
+      0.8
+     ],
+     "position": [
+      -0.7,
+      0.35,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "arm_right",
+     "parent": "base",
+     "shape": "box",
+     "size": [
+      0.2,
+      0.25,
+      0.8
+     ],
+     "position": [
+      0.7,
+      0.35,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "cushion",
+     "parent": "base",
+     "shape": "ellipsoid",
+     "size": [
+      0.4,
+      0.32,
+      0.14
+     ],
+     "position": [
+      -0.35,
+      0.38,
+      -0.12
+     ],
+     "rotation": [
+      -15,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bench",
+   "rest": "sit",
+   "family": "rest",
+   "title": "공원 벤치",
+   "parts": [
+    {
+     "id": "seat",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      1.5,
+      0.08,
+      0.45
+     ],
+     "position": [
+      0,
+      0.42,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "leg_left",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.08,
+      0.38,
+      0.4
+     ],
+     "position": [
+      -0.6,
+      -0.23,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "leg_right",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.08,
+      0.38,
+      0.4
+     ],
+     "position": [
+      0.6,
+      -0.23,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "back",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      1.5,
+      0.4,
+      0.06
+     ],
+     "position": [
+      0,
+      0.27,
+      -0.2
+     ],
+     "rotation": [
+      -10,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "armchair",
+   "rest": "sit",
+   "family": "rest",
+   "title": "안락의자",
+   "parts": [
+    {
+     "id": "base",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      0.9,
+      0.45,
+      0.85
+     ],
+     "position": [
+      0,
+      0.225,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "back",
+     "parent": "base",
+     "shape": "box",
+     "size": [
+      0.9,
+      0.6,
+      0.2
+     ],
+     "position": [
+      0,
+      0.525,
+      -0.33
+     ],
+     "rotation": [
+      -6,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "arm_left",
+     "parent": "base",
+     "shape": "box",
+     "size": [
+      0.15,
+      0.25,
+      0.85
+     ],
+     "position": [
+      -0.375,
+      0.35,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "arm_right",
+     "parent": "base",
+     "shape": "box",
+     "size": [
+      0.15,
+      0.25,
+      0.85
+     ],
+     "position": [
+      0.375,
+      0.35,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "footrest",
+     "parent": "base",
+     "shape": "box",
+     "size": [
+      0.6,
+      0.3,
+      0.06
+     ],
+     "position": [
+      0,
+      0.2,
+      0.455
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0.5,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "throne",
+   "rest": "sit",
+   "family": "rest",
+   "title": "왕좌",
+   "parts": [
+    {
+     "id": "seat",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      0.9,
+      0.5,
+      0.8
+     ],
+     "position": [
+      0,
+      0.25,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "back",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.9,
+      1.3,
+      0.15
+     ],
+     "position": [
+      0,
+      0.9,
+      -0.33
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "arm_left",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.12,
+      0.3,
+      0.7
+     ],
+     "position": [
+      -0.45,
+      0.4,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "arm_right",
+     "parent": "seat",
+     "shape": "box",
+     "size": [
+      0.12,
+      0.3,
+      0.7
+     ],
+     "position": [
+      0.45,
+      0.4,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "gem",
+     "parent": "back",
+     "shape": "ellipsoid",
+     "size": [
+      0.18,
+      0.18,
+      0.08
+     ],
+     "position": [
+      0,
+      0.45,
+      0.1
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "beanbag",
+   "rest": "sit",
+   "family": "rocker",
+   "title": "빈백",
+   "parts": [
+    {
+     "id": "whole",
+     "parent": "",
+     "shape": "ellipsoid",
+     "size": [
+      0.9,
+      0.6,
+      0.9
+     ],
+     "position": [
+      0,
+      0.3,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "swing",
+   "rest": "sit",
+   "family": "rocker",
+   "title": "그네",
+   "parts": [
+    {
+     "id": "frame",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      1.7,
+      0.1,
+      0.12
+     ],
+     "position": [
+      0,
+      1.85,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "post_left",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      0.1,
+      1.85,
+      0.1
+     ],
+     "position": [
+      -0.8,
+      -0.925,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "post_right",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      0.1,
+      1.85,
+      0.1
+     ],
+     "position": [
+      0.8,
+      -0.925,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "ropes",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      0.03,
+      1.25,
+      0.03
+     ],
+     "position": [
+      -0.27,
+      -0.05,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0.5,
+      0
+     ]
+    },
+    {
+     "id": "rope_right",
+     "parent": "ropes",
+     "shape": "box",
+     "size": [
+      0.03,
+      1.25,
+      0.03
+     ],
+     "position": [
+      0.54,
+      0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0.5,
+      0
+     ]
+    },
+    {
+     "id": "plank",
+     "parent": "ropes",
+     "shape": "box",
+     "size": [
+      0.62,
+      0.06,
+      0.3
+     ],
+     "position": [
+      0.27,
+      -1.25,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hammock",
+   "rest": "lie",
+   "family": "rocker",
+   "title": "해먹",
+   "parts": [
+    {
+     "id": "frame",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      2.2,
+      0.08,
+      0.5
+     ],
+     "position": [
+      0,
+      0.04,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "post_left",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      0.08,
+      1.1,
+      0.08
+     ],
+     "position": [
+      -1.05,
+      0.59,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "post_right",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      0.08,
+      1.1,
+      0.08
+     ],
+     "position": [
+      1.05,
+      0.59,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "net",
+     "parent": "frame",
+     "shape": "ellipsoid",
+     "size": [
+      1.8,
+      0.3,
+      0.6
+     ],
+     "position": [
+      0,
+      1.0,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0.5,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "sunbed",
+   "rest": "lie",
+   "family": "rest",
+   "title": "선베드",
+   "parts": [
+    {
+     "id": "frame",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      0.65,
+      0.3,
+      1.5
+     ],
+     "position": [
+      0,
+      0.15,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "pad",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      0.6,
+      0.05,
+      1.0
+     ],
+     "position": [
+      0,
+      0.175,
+      0.25
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "backrest",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      0.6,
+      0.7,
+      0.06
+     ],
+     "position": [
+      0,
+      0.15,
+      -0.25
+     ],
+     "rotation": [
+      -50,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      -0.5,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "bathtub",
+   "rest": "lie",
+   "family": "rest",
+   "title": "욕조",
+   "parts": [
+    {
+     "id": "tub",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      1.6,
+      0.55,
+      0.75
+     ],
+     "position": [
+      0,
+      0.275,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "water",
+     "parent": "tub",
+     "shape": "box",
+     "size": [
+      1.4,
+      0.04,
+      0.6
+     ],
+     "position": [
+      0,
+      0.26,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "faucet",
+     "parent": "tub",
+     "shape": "box",
+     "size": [
+      0.06,
+      0.2,
+      0.06
+     ],
+     "position": [
+      -0.72,
+      0.36,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "toilet",
+   "rest": "sit",
+   "family": "hinged",
+   "title": "변기",
+   "parts": [
+    {
+     "id": "body",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      0.4,
+      0.42,
+      0.6
+     ],
+     "position": [
+      0,
+      0.21,
+      0.05
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "tank",
+     "parent": "body",
+     "shape": "box",
+     "size": [
+      0.45,
+      0.45,
+      0.2
+     ],
+     "position": [
+      0,
+      0.2,
+      -0.35
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "lid",
+     "parent": "body",
+     "shape": "box",
+     "size": [
+      0.4,
+      0.04,
+      0.5
+     ],
+     "position": [
+      0,
+      0.23,
+      -0.24
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      -0.5
+     ]
+    }
+   ]
+  },
+  {
+   "id": "rug",
+   "rest": "sit",
+   "family": "rest",
+   "title": "러그",
+   "parts": [
+    {
+     "id": "rug",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      1.6,
+      0.02,
+      1.0
+     ],
+     "position": [
+      0,
+      0.01,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "pattern",
+     "parent": "rug",
+     "shape": "ellipsoid",
+     "size": [
+      0.9,
+      0.02,
+      0.5
+     ],
+     "position": [
+      0,
+      0.004,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "seesaw",
+   "rest": "sit",
+   "family": "rocker",
+   "title": "시소",
+   "parts": [
+    {
+     "id": "base",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      0.3,
+      0.4,
+      0.3
+     ],
+     "position": [
+      0,
+      0.2,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "plank",
+     "parent": "base",
+     "shape": "box",
+     "size": [
+      2.4,
+      0.08,
+      0.35
+     ],
+     "position": [
+      0,
+      0.24,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "handle_left",
+     "parent": "plank",
+     "shape": "box",
+     "size": [
+      0.05,
+      0.25,
+      0.3
+     ],
+     "position": [
+      -0.95,
+      0.16,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "handle_right",
+     "parent": "plank",
+     "shape": "box",
+     "size": [
+      0.05,
+      0.25,
+      0.3
+     ],
+     "position": [
+      0.95,
+      0.16,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "id": "rocking_horse",
+   "rest": "sit",
+   "family": "rocker",
+   "title": "흔들목마",
+   "parts": [
+    {
+     "id": "rockers",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      0.3,
+      0.06,
+      1.1
+     ],
+     "position": [
+      0,
+      0.03,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "legs",
+     "parent": "rockers",
+     "shape": "box",
+     "size": [
+      0.25,
+      0.35,
+      0.7
+     ],
+     "position": [
+      0,
+      0.2,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "horse",
+     "parent": "legs",
+     "shape": "box",
+     "size": [
+      0.25,
+      0.3,
+      0.8
+     ],
+     "position": [
+      0,
+      0.3,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "head",
+     "parent": "horse",
+     "shape": "box",
+     "size": [
+      0.2,
+      0.45,
+      0.25
+     ],
+     "position": [
+      0,
+      0.3,
+      0.38
+     ],
+     "rotation": [
+      20,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "saddle",
+     "parent": "horse",
+     "shape": "box",
+     "size": [
+      0.3,
+      0.05,
+      0.3
+     ],
+     "position": [
+      0,
+      0.17,
+      -0.05
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  }
+ ]
+}

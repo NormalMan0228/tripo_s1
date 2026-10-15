@@ -434,7 +434,14 @@ ARCHETYPES = [
     {'id': 'bed', 'names': {'ko': '침대', 'en': 'Bed'}, 'family': 'rest', 'room': 'beds',
      'words': ['침대', '이층침대', '싱글침대', '더블침대', 'bed', 'bunk bed', 'futon'],
      'roles': [{'id': 'whole', 'words': ['frame', 'bed', 'body'], 'root': True, 'hint': 'the bed'}],
-     'behaviours': [], 'single': [], 'rest': 'lie'},
+     'behaviours': [], 'single': [], 'rest': 'lie',
+     # The offline designer's bed (demo servers and tests: a mattress long enough to lie on, a
+     # headboard at the back for the head; the client derives its lie sockets from these boxes).
+     'fixture': {'title': '나무 침대', 'parts': [
+         box('frame', [1.0, .3, 1.8], [0, .15, 0], DARK_WOOD),
+         box('mattress', [.92, .16, 1.7], [0, .23, .03], IVORY, 'frame'),
+         box('pillow', [.6, .08, .3], [0, .12, -.66], WHITE, 'mattress'),
+         box('headboard', [1.0, .7, .08], [0, .2, -.86], DARK_WOOD, 'frame')]}},
 
     {'id': 'seat', 'names': {'ko': '의자', 'en': 'Seat'}, 'family': 'rest', 'room': 'seating',
      'words': ['의자', '스툴', '걸상', '좌식의자', 'chair', 'stool', 'seat'],

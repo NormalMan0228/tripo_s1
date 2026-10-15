@@ -8,6 +8,7 @@ const Archipelago=preload("res://maps/archipelago/archipelago.gd")
 const LoadPace=preload("res://scripts/load_pace.gd")
 const Fx=preload("res://scripts/fx.gd")
 const TreeFruit=preload("res://scripts/tree_fruit.gd")
+const IxData=preload("res://scripts/ix/ix_data.gd")
 ## Sea level guard for walkers: below this the body returns to its last ground.
 const SHORE_MIN_Y := 0.45
 ## Town green on the south-west island. Players start here.
@@ -291,6 +292,16 @@ func use_prop(app: Node, entry: Dictionary) -> void:
 	if not is_instance_valid(node): return
 	var base: Vector3=node.global_position
 	var player: Node3D=app.player
+	# Benches, café chairs, picnic tables and loungers really seat (or lay) the walker now, through
+	# the ISS-1 driver on their measured sockets (ix_data.gd PROP_MODELS); a model without data, or
+	# no free seat, keeps the old effect below.
+	if IxData.PROP_MODELS.has(entry.id) and app.has_method("village_seat"):
+		var lying: bool=entry.id=="29_beach_lounger"
+		if app.village_seat().start({"node":node,"hint":"lie" if lying else "sit"}):
+			# The old contented cue, over the seat (the walker is on its way there): a hum or a doze.
+			Fx.burst(self,base+Vector3(0,1.1,0),"zz" if lying else "note",3,Color(0,0,0,0),0.2)
+			Fx.sound(app,"pluck",base,0.9,-10.0)
+			return
 	var head: Vector3=player.global_position+Vector3(0,2.0,0)
 	var away: Vector3=Vector3.UP.cross(Vector3(base.x-player.global_position.x,0,base.z-player.global_position.z).normalized())
 	player.face_point(base)
