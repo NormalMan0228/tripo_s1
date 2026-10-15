@@ -5,6 +5,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import posixpath
 import re
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .asset_policy import AssetPolicy
 
 
 @dataclass(frozen=True)
@@ -142,6 +146,9 @@ class Finding:
     file: str
     line: int
     message: str
+    resource: str | None = None
+    status: str | None = None
+    evidence: str | None = None
 
 
 @dataclass
@@ -151,6 +158,7 @@ class Context:
     files: set[str]
     findings: list[Finding] = field(default_factory=list)
     directories: set[str] = field(default_factory=set)
+    asset_policy: AssetPolicy | None = None
 
     def resource_relative(self, path: str) -> str | None:
         if not path.startswith("res://"):
@@ -189,8 +197,16 @@ class Context:
             name.startswith(relative.rstrip("/") + "/") for name in self.files
         )
 
-    def emit(self, severity: str, code: str, source: Source | str, line: int, message: str) -> None:
+    def is_file(self, path: str) -> bool:
+        relative = self.resource_relative(path)
+        if relative is not None:
+            return relative in self.files
+        return self.exists(path) and (self.root / path[6:].split("::", 1)[0]).is_file()
+
+    def emit(self, severity: str, code: str, source: Source | str, line: int, message: str,
+             *, resource: str | None = None, status: str | None = None,
+             evidence: str | None = None) -> None:
         finding = Finding(severity, code, source.relative if isinstance(source, Source) else source,
-                          line, message)
+                          line, message, resource, status, evidence)
         if finding not in self.findings:
             self.findings.append(finding)

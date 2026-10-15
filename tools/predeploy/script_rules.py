@@ -406,7 +406,8 @@ def check_scripts(ctx: Context) -> None:
                                  f"UID preload 스크립트 해석 생략: {value.value}")
                     elif not _script_file_exists(ctx, info.source, value.value):
                         ctx.emit("blocker", "missing-preload", info.source, value.line,
-                                 f"preload 파일 없음: {value.value}")
+                                 f"preload 파일 없음: {value.value}",
+                                 resource="res://" + path if path is not None else value.value)
             if token.value == "extends" and index + 1 < len(tokens):
                 target = tokens[index + 1]
                 if target.kind == "STRING":

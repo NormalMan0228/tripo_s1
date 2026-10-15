@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import fnmatch
+from pathlib import PurePosixPath
 import re
 
+from .asset_policy import excluded_source
 from .common import Context, Source, Token, arguments, significant
 
 
@@ -101,7 +103,11 @@ def _uid_references(ctx: Context, source: Source, sidecars: set[str]) -> None:
                 declarations.add(uid.start)
             elif "path" in attrs:
                 path = attrs["path"].value
-                if ctx.exists(path) and (ctx.root / path[6:].split("::", 1)[0]).is_file():
+                if ctx.is_file(path) or (
+                    ctx.asset_policy is not None and ctx.asset_policy.group(path) is not None
+                    and not path.endswith("/") and PurePosixPath(path).suffix
+                    and not any(marker in path for marker in "*?[")
+                ):
                     fallback.add(uid.value)
     for token in tokens:
         if token.kind == "STRING" and token.value.startswith("uid://") and token.start not in declarations:
@@ -113,7 +119,7 @@ def _uid_references(ctx: Context, source: Source, sidecars: set[str]) -> None:
 def check_resources(ctx: Context) -> None:
     sidecars: set[str] = set()
     for name in sorted(ctx.files):
-        if not name.endswith(".uid") or name[:-4] not in ctx.files:
+        if excluded_source(name) or not name.endswith(".uid") or name[:-4] not in ctx.files:
             continue
         try:
             value = (ctx.root / name).read_text(encoding="utf-8-sig").strip()
@@ -139,6 +145,8 @@ def check_resources(ctx: Context) -> None:
             if alias and i > 0 and tokens[i - 1].value == ".":
                 continue
             pattern, end, dynamic = _expression(tokens, i, constants)
+            handled = (ctx.asset_policy is not None
+                       and ctx.asset_policy.inspect(ctx, source, token.line, pattern, dynamic, token.start))
             if dynamic:
                 # Only the operands forming this path are consumed. A nested
                 # call may itself contain another independent res:// reference.
@@ -151,8 +159,13 @@ def check_resources(ctx: Context) -> None:
                         depth -= 1
                     elif depth == 0:
                         consumed.add(cursor)
-                ctx.emit("warning", "dynamic-resource", source, token.line, _dynamic_message(ctx, pattern))
-            elif literal and not ctx.exists(token.value):
+                if not handled:
+                    ctx.emit("warning", "dynamic-resource", source, token.line,
+                             _dynamic_message(ctx, pattern), resource=pattern)
+            elif literal and not handled and not (
+                ctx.is_file(token.value) if PurePosixPath(token.value.split("::", 1)[0]).suffix
+                and not token.value.endswith("/") else ctx.exists(token.value)
+            ):
                 # The script-specific diagnostics give missing preload/extends a better label.
                 prior = tokens[max(0, i - 2):i]
                 if source.path.suffix == ".gd" and (
@@ -161,6 +174,6 @@ def check_resources(ctx: Context) -> None:
                 ):
                     continue
                 ctx.emit("blocker", "missing-resource", source, token.line,
-                         f"Resource path does not exist in the tree: {token.value}")
+                         f"Resource path does not exist in the tree: {token.value}", resource=token.value)
         if source.path.suffix in (".tscn", ".tres"):
             _uid_references(ctx, source, sidecars)
