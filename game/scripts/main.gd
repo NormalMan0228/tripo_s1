@@ -161,6 +161,8 @@ var sun_defaults: Dictionary
 var results_shown := false
 var prior_day := 1
 var prior_night := false
+## The expedition guidance line last shown: it is said once per change, not on every state update.
+var last_run_line := ""
 var inspect_panel: PanelContainer
 var inspect_view: SubViewport
 var inspect_stage: Node3D
@@ -734,6 +736,7 @@ func build_world(survival: bool) -> bool:
 	results_shown=false
 	prior_day=1
 	prior_night=false
+	last_run_line=""
 	sound.play_music(region_track() if survival else village_track())
 	leave_modules()
 	if is_instance_valid(town): town.release_map()
@@ -2246,8 +2249,13 @@ func update_run() -> void:
 		craft_buttons[recipe].disabled=not can_make
 	if Time.get_ticks_msec()*0.001>=player.action_until and (not is_instance_valid(player.action_pose) or player.action_pose.elapsed>=player.action_pose.duration):
 		player.equip("spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else "")
-	message(run.message)
-	if run.status=="won": message(tr("생존 성공! 마을로 돌아가 %d 별씨를 받으세요.") % run.reward)
+	# The run's guidance line comes with every state update: say it when it changes, not on every
+	# update (the shared toast lane would keep refreshing it, so it never left the screen).
+	var run_line := str(run.message)
+	if run.status=="won": run_line = tr("생존 성공! 마을로 돌아가 %d 별씨를 받으세요.") % run.reward
+	if run_line!=last_run_line:
+		last_run_line=run_line
+		message(run_line)
 	if int(run.day)!=prior_day:
 		prior_day=int(run.day)
 		message(tr("%d일째 아침이에요. 숲을 둘러보고 다음 밤을 준비하세요.") % run.day)
