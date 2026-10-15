@@ -9,7 +9,7 @@ from starlette.background import BackgroundTask
 from pydantic import Field
 from .models import Strict, Mutation, Input, RunStart
 from .stored_assets import read_glb
-from . import coop, homestead, object_paint, object_shape, interactions
+from . import coop, homestead, object_paint, object_shape, interactions, tutorial
 from . import friends as social_db
 from .chat import Chat
 
@@ -508,6 +508,11 @@ class Multiplayer:
 
         def save(conn, run_id, state):
             conn.execute('UPDATE coop_runs SET state=?,status=? WHERE id=?', (json.dumps(state), state['world']['status'], run_id))
+            # A party that clears the tutorial clears it for everyone still on the expedition.
+            if state['world']['status'] == 'won' and state['world'].get('tutorial'):
+                for user_id, actor in state['players'].items():
+                    if not actor['withdrawn']:
+                        tutorial.mark(conn, user_id, run_id, clock())
 
         @app.get('/v1/coop/runs/{run_id}')
         def snapshot(run_id: str, request: Request):

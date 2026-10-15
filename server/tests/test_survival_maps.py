@@ -54,7 +54,7 @@ def test_every_resource_and_hazard_is_reachable_from_camp(map_id):
 def test_trails_are_open_and_obstacles_solid(map_id):
     s = simulation.new_run(4, 0, 60, map_id)
     limit = simulation.map_bounds(s)
-    for path in survival_maps.PATHS[map_id]:
+    for path in survival_maps.PATHS[survival_maps.basin(map_id)]:
         for a, b in zip(path['points'], path['points'][1:]):
             for k in range(21):
                 x, z = a[0] + (b[0] - a[0]) * k / 20, a[1] + (b[1] - a[1]) * k / 20
@@ -81,9 +81,12 @@ def test_larger_bounds_hold_walkers_and_creatures():
 @pytest.mark.parametrize('map_id', catalog.MAPS)
 def test_night_spawns_land_on_open_ground(map_id):
     s = simulation.new_run(2, 0, 60, map_id)
-    for day in range(1, 8):
+    for day in range(1, s['stage_count'] + 1):
         for enemy in simulation.night_enemies(s, day):
             assert simulation.clear_position(s, enemy['x'], enemy['z']), (map_id, day, enemy['id'])
+    if s['boss']:
+        boss = simulation.boss_enemy(s, 3)
+        assert simulation.clear_position(s, boss['x'], boss['z'])
 
 
 def test_saved_runs_adopt_the_new_layout():
