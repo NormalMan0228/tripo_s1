@@ -312,6 +312,10 @@ func _process(_delta: float) -> void:
 		tick_to = global_position
 		step_lag = 0.0
 		step_lag_from = 0.0
+		# A new room or map: the last free spot belongs to the old one.
+		free_position = Vector3.INF
+		free_clock = 0.0
+		trapped_time = 0.0
 	var offset := render_position()-global_position
 	visual.position = Vector3(offset.x, visual_lift+offset.y, offset.z)
 
