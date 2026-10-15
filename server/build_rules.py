@@ -78,6 +78,10 @@ def listed(row):
     return row
 
 
+# One-mesh models are normalised to this longest side in the game (model_loader.gd).
+GAME_LEGACY_LONGEST = 1.6
+
+
 def measure(conn, assets, obj):
     """(box [w,h,d] in metres, texts) of a piece, measured the way a resident's gift is (npc_homes.py)."""
     studio = conn.execute('SELECT manifest FROM studio_assets WHERE asset_id=?', (obj['asset_id'],)).fetchone()
@@ -88,9 +92,26 @@ def measure(conn, assets, obj):
         runtime = conn.execute('SELECT bindings FROM studio_runtime WHERE object_id=?', (obj['id'],)).fetchone()
         plan = manifest.get('plan', {})
         texts = (obj['name'], plan.get('title'), plan.get('category'))
-        return npc_homes.measured_size(manifest, json.loads(runtime['bindings']) if runtime else {}, shape), texts
+        made = npc_homes.measured_size(manifest, json.loads(runtime['bindings']) if runtime else {}, None)
+        # As the game shows it (game/scripts/asset_assembly.gd): the player's chosen size sets the
+        # longest side (provenance.size_m), otherwise the designer's own size at most 1.8 m.
+        longest = max(made) or 1.0
+        chosen = float(manifest.get('provenance', {}).get('size_m') or 0)
+        factor = min(max(chosen, 0.2), 3.0) / longest if chosen > 0 else min(1.0, 1.8 / longest)
+        return reshaped([v * factor for v in made], shape), texts
     texts = (obj['name'],)
-    return npc_homes.legacy_size(conn, assets, obj, npc_homes.item_tags(*texts), shape), texts
+    # Older one-mesh models show with their longest side GAME_LEGACY_LONGEST (model_loader.gd).
+    made = npc_homes.legacy_size(conn, assets, obj, npc_homes.item_tags(*texts), None)
+    longest = max(made) or 1.0
+    return reshaped([v * GAME_LEGACY_LONGEST / longest for v in made], shape), texts
+
+
+def reshaped(size, shape):
+    """The owner's shape edit (object_shape: width/height/depth and overall size in percent)."""
+    if shape:
+        scale = shape['scale'] / 100
+        size = [size[0] * shape['width'] / 100 * scale, size[1] * shape['height'] / 100 * scale, size[2] * shape['depth'] / 100 * scale]
+    return [round(v, 3) for v in size]
 
 
 def object_size(conn, assets, obj, memo=None):

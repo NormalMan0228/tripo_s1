@@ -37,6 +37,8 @@ func setup(view_camera: Camera3D, target: Node3D, title: String, on_pick: Callab
 	camera=view_camera;item=target;pick=on_pick
 	walker=opts.get("walker")
 	name="PlacedMenu"
+	# Above the toast lane and the HUD: the menu is what the player is looking at right now.
+	z_index=20
 	theme=RpgUi.night_theme()
 	mouse_filter=Control.MOUSE_FILTER_STOP
 	var chip := RpgUi.panel_style("pill")

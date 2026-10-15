@@ -39,7 +39,10 @@ static func for_walker(body: CharacterBody3D) -> Node:
 	load_pref()
 	if not is_instance_valid(body): return null
 	var found := body.get_node_or_null("PassThrough")
-	if found: return found
+	if found:
+		# The choice may have changed meanwhile (V in a room): the walker follows it.
+		found.apply(false)
+		return found
 	var helper = load("res://scripts/build/pass_through.gd").new()
 	helper.name="PassThrough"
 	helper.walker=body
@@ -64,7 +67,7 @@ func apply(animate: bool) -> void:
 	walker.collision_mask=(walker.collision_mask&~LAYER) if on else (walker.collision_mask|LAYER)
 	_show_ring(on)
 	if animate:
-		RpgUi.sfx("twinkle" if on else "click",-8.0)
+		RpgUi.sfx("unlock" if on else "cancel",-8.0)
 		_pulse(Color(0.7,0.88,1.0,0.85) if on else Color(1,1,1,0.5))
 
 ## Whether the walker stands inside a player-made object right now.

@@ -483,6 +483,7 @@ func error_message(code: String) -> String:
 		"registration_closed_today":tr("오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요."),
 		"client_update_required":tr("새 버전을 받아야 계속할 수 있어요."),
 		"server_maintenance":tr("서버 점검 중이에요. 잠시 뒤 다시 들어와 주세요.")}
+	messages.merge(VillageBuild.BuildRules.server_words())
 	if not preload("res://scripts/build_mode.gd").developer():
 		messages.server_update_required=tr("마을을 업데이트하고 있어요. 잠시 뒤 다시 접속해 주세요.")
 	return str(messages.get(code,tr("요청을 완료하지 못했습니다: ")+code if preload("res://scripts/build_mode.gd").developer() else tr("지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.")))
@@ -1753,6 +1754,7 @@ func begin_place() -> void:
 		preview_mouse=get_viewport().get_mouse_position()
 		if moving:
 			preview.position=VillageBuild.spot(selected,me.objects)
+			VillageBuild.resume_stack(self)
 			if is_instance_valid(loaded.get(preview_moving)): loaded[preview_moving].visible=false
 		preview.rotation_degrees.y=preview_rotation
 		# A ground disc shows whether the spot is free: green to place, red when blocked.

@@ -169,7 +169,11 @@ static func follow(app, hit: Dictionary) -> bool:
 	if hit.is_empty() or not (hit.collider is CollisionObject3D) or not (hit.collider.collision_layer&CRAFTED):
 		clear_stack(preview)
 		return false
-	if hit.normal.y<0.6 or app.social.visiting(): return true
+	if hit.normal.y<0.6 or app.social.visiting():
+		# A piece's side: the ghost goes to the ground behind it instead of sticking where it was.
+		clear_stack(preview)
+		ground(app)
+		return true
 	var id := ""
 	for key in app.loaded:
 		var node = app.loaded[key]
@@ -191,8 +195,24 @@ static func follow(app, hit: Dictionary) -> bool:
 	preview.set_meta("stack_parent",id)
 	return true
 
+## A stacked piece picked up to move or turn keeps its support until the pointer takes it elsewhere.
+static func resume_stack(app) -> void:
+	var obj: Dictionary=app.selected
+	if str(obj.get("surface","floor"))=="top" and obj.get("parent")!=null and is_instance_valid(app.loaded.get(str(obj.parent))):
+		app.preview.set_meta("stack_parent",str(obj.parent))
+
 static func clear_stack(preview: Node3D) -> void:
 	if is_instance_valid(preview) and preview.has_meta("stack_parent"): preview.remove_meta("stack_parent")
+
+## The ghost on the open ground under the pointer, past any crafted piece (as main.gd places it).
+static func ground(app) -> void:
+	var mouse: Vector2=app.get_viewport().get_mouse_position()
+	var origin: Vector3=app.camera.project_ray_origin(mouse)
+	var hit: Dictionary=app.get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+app.camera.project_ray_normal(mouse)*400,1|2|8))
+	if hit.is_empty() or not (hit.collider is CollisionObject3D) or not (hit.collider.collision_layer&1): return
+	var local := Town.furniture_local(hit.position).snapped(Vector2(0.5,0.5))
+	app.preview.position=Town.furniture_point(local.x,local.y)
+	app.preview.set_meta("ghost_spot",true)
 
 static func stacking(app) -> bool:
 	return is_instance_valid(app.preview) and app.preview.has_meta("stack_parent")

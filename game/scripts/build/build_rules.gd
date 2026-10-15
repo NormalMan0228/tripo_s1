@@ -29,6 +29,18 @@ const BIG_HEIGHT := 1.3
 const DOOR_CLEAR := 1.8
 const BRIDGE_CLEAR := 1.3
 
+## The server's build-mode refusals (server/build_rules.py) in the player's words.
+static func server_words() -> Dictionary:
+	var t := func(text: String) -> String: return TranslationServer.translate(text)
+	return {"not_on_parent":t.call("아래 물건 위에 올려 주세요."),"stack_too_high":t.call("더 높이 쌓을 수 없어요."),
+		"too_big_to_stack":t.call("아래 물건보다 커서 올릴 수 없어요."),"stack_cycle":t.call("자기 위에 있는 물건 위로는 올릴 수 없어요."),
+		"not_wall_piece":t.call("얇고 납작한 물건만 벽에 걸 수 있어요."),"wall_too_tall":t.call("벽에 걸기에는 너무 높아요. 조금 아래로 내려 주세요."),
+		"not_ceiling_piece":t.call("조명·모빌처럼 매다는 물건만 천장에 달 수 있어요."),"surface_not_here":t.call("여기서는 벽이나 천장에 걸 수 없어요."),
+		"parent_only_on_top":t.call("아래 물건 위에 올려 주세요."),"wall_required":t.call("걸 벽을 골라 주세요."),
+		"outside_room":t.call("벽에서 한 칸 안쪽에 놓아 주세요."),"room_full":t.call("이 방에는 더 놓을 수 없어요. 일부를 가방에 넣어 주세요."),
+		"village_full":t.call("마을에는 더 놓을 수 없어요. 일부를 가방에 넣어 주세요."),"door_area_reserved":t.call("출입문 앞은 비워 주세요."),
+		"workbench_area_reserved":t.call("고정 작업대와 겹쳐요.")}
+
 static func surface_name(surface: String) -> String:
 	return {"floor":TranslationServer.translate("바닥"),"top":TranslationServer.translate("물건 위"),"wall":TranslationServer.translate("벽"),"ceiling":TranslationServer.translate("천장")}.get(surface,surface)
 

@@ -6,6 +6,7 @@ const PassThrough = preload("res://scripts/build/pass_through.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const Fx = preload("res://scripts/fx.gd")
 const ObjectTransform = preload("res://scripts/object_transform.gd")
+const BuildRules = preload("res://scripts/build/build_rules.gd")
 
 static func find(studio, id: String) -> Dictionary:
 	for obj in studio.data.get("objects",[]):
@@ -92,8 +93,7 @@ static func turn(studio, id: String) -> void:
 	studio.pending=false
 	if not reply.ok:
 		if is_instance_valid(item): item.rotation_degrees.y=before
-		RpgUi.sfx("deny",-6.0)
-		studio.message(TranslationServer.translate("여기서는 돌릴 수 없어요 · ")+str(reply.error))
+		studio.refuse(str(reply.error))
 	elif is_instance_valid(item): Fx.arrive(studio.furniture,item,null,false)
 	await studio.refresh()
 
@@ -102,6 +102,6 @@ static func toggle_pass(studio) -> void:
 	PassThrough.load_pref()
 	PassThrough.on=not PassThrough.on
 	PassThrough.save_pref()
-	RpgUi.sfx("twinkle" if PassThrough.on else "click",-8.0)
+	RpgUi.sfx("unlock" if PassThrough.on else "cancel",-8.0)
 	if is_instance_valid(studio.hero) and is_instance_valid(studio.furniture):
 		Fx.ring(studio.furniture,studio.hero.global_position+Vector3(0,0.06,0),1.1,Color(0.7,0.88,1.0,0.85) if PassThrough.on else Color(1,1,1,0.5),0.7)
