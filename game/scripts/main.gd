@@ -1378,8 +1378,11 @@ func refresh_inventory() -> void:
 			if me.objects[i].id==old_selection: index=i
 		objects_list.select(index)
 		# A placement the player started while this refresh was on its way stays: selecting again
-		# would cancel its ghost (select_object -> cancel_preview).
+		# would cancel its ghost (select_object -> cancel_preview). Its piece stays the selection,
+		# fresh from /v1/me: a craft ending meanwhile (craft_tracker -> craft_bag_changed) refreshed
+		# the bag mid-placement and left nothing selected, so the ghost could not be put down.
 		if not is_instance_valid(preview): select_object(index)
+		elif str(me.objects[index].id)==old_selection: selected = me.objects[index]
 	if is_instance_valid(shape_panel): shape_panel.refresh()
 	refreshing=false
 
@@ -1802,6 +1805,9 @@ func place_preview() -> void:
 			cancel_preview()
 			await refresh_inventory()
 			message(tr("자리와 방향을 바꿨어요."))
+		return
+	if selected.is_empty():
+		cancel_preview()
 		return
 	var placing_id := str(selected.id)
 	var placing_key := object_key(selected)
