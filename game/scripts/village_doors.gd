@@ -21,6 +21,9 @@ const Town = preload("res://scripts/town.gd")
 const Residents = preload("res://scripts/residents.gd")
 const DoorAudio = preload("res://scripts/door_audio.gd")
 const Daylight = preload("res://scripts/daylight.gd")
+## The map's doors cut out of the buildings themselves (Buildings/<id>/DoorFrame/DoorLeaf, hinge +Y
+## at its origin, outward OPEN_DEGREES; DoorOpening with `inner_light`): used first when a building has one.
+const BuildingDoors = preload("res://maps/archipelago/building_doors.gd")
 const NODE_NAME := "VillageDoors"
 ## Swing times (s) and the leaf's default opening.
 const SWING := 0.6
@@ -103,10 +106,14 @@ static func dress(host: Node3D) -> Node3D:
 			"sound":base+Vector3(0, 1.1, 0)+(fit.normal as Vector3)*.3, "open":0.0, "glow":-1.0, "tween":null}
 		if building == null: continue
 		if not leaves.has(id) or not is_instance_valid(leaves[id].node):
-			var leaf := _child(building, ["Door", "door", "Door_"+id, "door_"+id])
-			if leaf: register(id, leaf)
+			var cut := BuildingDoors.door_leaf(id)
+			if cut: register(id, cut, Vector3.UP, deg_to_rad(BuildingDoors.OPEN_DEGREES))
+			else:
+				var leaf := _child(building, ["Door", "door", "Door_"+id, "door_"+id])
+				if leaf: register(id, leaf)
 		if not glows.has(id) or not is_instance_valid(glows[id]):
-			var backing := _child(building, ["DoorBacking", "door_backing", "DoorBacking_"+id, "door_backing_"+id]) as GeometryInstance3D
+			var backing: GeometryInstance3D = BuildingDoors.door_opening(id)
+			if backing == null: backing = _child(building, ["DoorBacking", "door_backing", "DoorBacking_"+id, "door_backing_"+id]) as GeometryInstance3D
 			if backing: attach_glow(id, backing)
 	root.set_meta("doors", doors)
 	return root
@@ -253,6 +260,8 @@ static func update_glow(host: Node3D, hour: float, now := false) -> void:
 		if material is ShaderMaterial:
 			(material as ShaderMaterial).set_shader_parameter("glow", glow)
 			(material as ShaderMaterial).set_shader_parameter("night", night)
+			# The map's doorway (building_doors.gd DoorOpening): one light level, 0..1.
+			(material as ShaderMaterial).set_shader_parameter("inner_light", clampf(glow*lerpf(.75, 1.0, night), 0.0, 1.0))
 		elif material is StandardMaterial3D:
 			var lit := material as StandardMaterial3D
 			lit.emission_enabled = true
