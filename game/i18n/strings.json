@@ -11216,10 +11216,85 @@
    "en": "The AI couldn't finish the design. Describe it more specifically and try again.",
    "zh": "AI 未能完成设计图。请写得更具体一些后再试。"
   },
-<<<<<<< HEAD
-  "오늘 판매로 받을 별씨를 다 받았어요. 내일 다시 팔아 주세요.": {
-   "en": "You have received today's star-seeds from selling. Sell again tomorrow.",
-   "zh": "今天出售可获得的星种已领完。明天再来卖吧。"
+  "AI 공방이 지금 붐벼요. 잠시 뒤 다시 맡겨 주세요.": {
+   "en": "The AI workshop is busy right now. Please try again shortly.",
+   "zh": "AI 工坊现在很忙，请稍后再试。"
+  },
+  "3D 모양을 빚다가 실패했어요. 표현을 바꿔 다시 맡겨 보세요.": {
+   "en": "Shaping the 3D model failed. Try different wording.",
+   "zh": "塑造 3D 模型失败了。请换个说法再试。"
+  },
+  "만든 모델이 너무 복잡해 마을에 놓을 수 없었어요. 더 단순한 물건으로 해 보세요.": {
+   "en": "The model was too complex to place in the village. Try a simpler object.",
+   "zh": "模型太复杂，无法放进村庄。请尝试更简单的物品。"
+  },
+  "참고 그림을 처리하지 못했어요. 다른 그림으로 해 보세요.": {
+   "en": "Couldn't process the reference picture. Try another one.",
+   "zh": "无法处理参考图片，请换一张试试。"
+  },
+  "공방 서버가 다시 시작되어 제작이 멈췄어요. 다시 맡겨 주세요.": {
+   "en": "The workshop server restarted and the craft stopped. Please request it again.",
+   "zh": "工坊服务器重启，制作已停止。请重新委托。"
+  },
+  "공방 설정 문제로 만들지 못했어요. 운영자에게 알려 주세요.": {
+   "en": "A workshop setup problem stopped the craft. Please tell an operator.",
+   "zh": "因工坊设置问题未能制作，请告知管理员。"
+  },
+  "공방 재료가 떨어졌어요. 운영자에게 알려 주세요.": {
+   "en": "The workshop ran out of materials. Please tell an operator.",
+   "zh": "工坊材料用完了，请告知管理员。"
+  },
+  "제작 한도를 넘어 멈췄어요.": {
+   "en": "Stopped for going over the crafting limit.",
+   "zh": "超出制作上限，已停止。"
+  },
+  "제작을 마치지 못했어요.": {
+   "en": "Couldn't finish the craft.",
+   "zh": "未能完成制作。"
+  },
+  "AI 그림을 먼저 보고 만들기": {
+   "en": "See the AI picture first",
+   "zh": "先看 AI 画的图再制作"
+  },
+  "끄면 그림 단계 없이 글로 바로 3D를 만들어요. (그림 1장 5크레딧 절약)": {
+   "en": "Off: build the 3D straight from your words, no picture step (saves 5 credits).",
+   "zh": "关闭后将跳过图片步骤，直接用文字制作 3D。（节省每张 5 积分）"
+  },
+  "그림 단계 없이 글로 바로 3D를 만들어요.": {
+   "en": "Builds the 3D straight from your words, no picture step.",
+   "zh": "跳过图片步骤，直接用文字制作 3D。"
+  },
+  "이 계정의 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요.": {
+   "en": "This account's crafting budget is used up. Please contact an operator.",
+   "zh": "此账号的制作预算已用完，请联系管理员。"
+  },
+  "이 제작은 별씨 한도를 넘어요. 옵션을 줄여 다시 맡겨 주세요.": {
+   "en": "This craft is over the starseed limit. Choose fewer options and try again.",
+   "zh": "此次制作超出星籽上限。请减少选项后再试。"
+  },
+  "%s·Space·클릭을 누르고 있으면 초록 호가 시계 방향으로, 떼면 반대로": {
+   "en": "Hold %s, Space or click to turn the green arc clockwise; release to let it drift back",
+   "zh": "按住 %s、空格或鼠标，绿色弧线顺时针转动；松开则往回漂"
+  },
+  "%s·Space·클릭을 누르고 있으면 칸이 위로, 떼면 아래로": {
+   "en": "Hold %s, Space or click to lift the zone; release to let it sink",
+   "zh": "按住 %s、空格或鼠标，区域向上；松开则下沉"
+  },
+  "창문을 가려요. 옆으로 옮겨 주세요.": {
+   "en": "It covers a window. Move it aside.",
+   "zh": "挡住窗户了，请移到旁边。"
+  },
+  "벽에 걸린 다른 물건과 겹쳐요.": {
+   "en": "It overlaps something already on the wall.",
+   "zh": "与墙上的其他物品重叠。"
+  },
+  "새 이웃의 집터예요. 다른 곳에 놓아 주세요.": {
+   "en": "This lot is for a new neighbour. Put it somewhere else.",
+   "zh": "这是新邻居的宅基地，请放到别处。"
+  },
+  "다른 물건과 겹쳐요.": {
+   "en": "It overlaps another piece.",
+   "zh": "与其他物品重叠。"
   },
   "%d개": {
    "en": "%d items",
@@ -11228,10 +11303,6 @@
   "가방 정리 · 서버에서 다시 받아요": {
    "en": "Tidy the bag · fetch it again",
    "zh": "整理背包 · 重新获取"
-  },
-  "색칠": {
-   "en": "Paint",
-   "zh": "上色"
   },
   "모양": {
    "en": "Shape",
@@ -11328,87 +11399,6 @@
   "밀짚모자": {
    "en": "Straw hat",
    "zh": "草帽"
-=======
-  "AI 공방이 지금 붐벼요. 잠시 뒤 다시 맡겨 주세요.": {
-   "en": "The AI workshop is busy right now. Please try again shortly.",
-   "zh": "AI 工坊现在很忙，请稍后再试。"
-  },
-  "3D 모양을 빚다가 실패했어요. 표현을 바꿔 다시 맡겨 보세요.": {
-   "en": "Shaping the 3D model failed. Try different wording.",
-   "zh": "塑造 3D 模型失败了。请换个说法再试。"
-  },
-  "만든 모델이 너무 복잡해 마을에 놓을 수 없었어요. 더 단순한 물건으로 해 보세요.": {
-   "en": "The model was too complex to place in the village. Try a simpler object.",
-   "zh": "模型太复杂，无法放进村庄。请尝试更简单的物品。"
-  },
-  "참고 그림을 처리하지 못했어요. 다른 그림으로 해 보세요.": {
-   "en": "Couldn't process the reference picture. Try another one.",
-   "zh": "无法处理参考图片，请换一张试试。"
-  },
-  "공방 서버가 다시 시작되어 제작이 멈췄어요. 다시 맡겨 주세요.": {
-   "en": "The workshop server restarted and the craft stopped. Please request it again.",
-   "zh": "工坊服务器重启，制作已停止。请重新委托。"
-  },
-  "공방 설정 문제로 만들지 못했어요. 운영자에게 알려 주세요.": {
-   "en": "A workshop setup problem stopped the craft. Please tell an operator.",
-   "zh": "因工坊设置问题未能制作，请告知管理员。"
-  },
-  "공방 재료가 떨어졌어요. 운영자에게 알려 주세요.": {
-   "en": "The workshop ran out of materials. Please tell an operator.",
-   "zh": "工坊材料用完了，请告知管理员。"
-  },
-  "제작 한도를 넘어 멈췄어요.": {
-   "en": "Stopped for going over the crafting limit.",
-   "zh": "超出制作上限，已停止。"
-  },
-  "제작을 마치지 못했어요.": {
-   "en": "Couldn't finish the craft.",
-   "zh": "未能完成制作。"
-  },
-  "AI 그림을 먼저 보고 만들기": {
-   "en": "See the AI picture first",
-   "zh": "先看 AI 画的图再制作"
-  },
-  "끄면 그림 단계 없이 글로 바로 3D를 만들어요. (그림 1장 5크레딧 절약)": {
-   "en": "Off: build the 3D straight from your words, no picture step (saves 5 credits).",
-   "zh": "关闭后将跳过图片步骤，直接用文字制作 3D。（节省每张 5 积分）"
-  },
-  "그림 단계 없이 글로 바로 3D를 만들어요.": {
-   "en": "Builds the 3D straight from your words, no picture step.",
-   "zh": "跳过图片步骤，直接用文字制作 3D。"
-  },
-  "이 계정의 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요.": {
-   "en": "This account's crafting budget is used up. Please contact an operator.",
-   "zh": "此账号的制作预算已用完，请联系管理员。"
-  },
-  "이 제작은 별씨 한도를 넘어요. 옵션을 줄여 다시 맡겨 주세요.": {
-   "en": "This craft is over the starseed limit. Choose fewer options and try again.",
-   "zh": "此次制作超出星籽上限。请减少选项后再试。"
-  },
-  "%s·Space·클릭을 누르고 있으면 초록 호가 시계 방향으로, 떼면 반대로": {
-   "en": "Hold %s, Space or click to turn the green arc clockwise; release to let it drift back",
-   "zh": "按住 %s、空格或鼠标，绿色弧线顺时针转动；松开则往回漂"
-  },
-  "%s·Space·클릭을 누르고 있으면 칸이 위로, 떼면 아래로": {
-   "en": "Hold %s, Space or click to lift the zone; release to let it sink",
-   "zh": "按住 %s、空格或鼠标，区域向上；松开则下沉"
-  },
-  "창문을 가려요. 옆으로 옮겨 주세요.": {
-   "en": "It covers a window. Move it aside.",
-   "zh": "挡住窗户了，请移到旁边。"
-  },
-  "벽에 걸린 다른 물건과 겹쳐요.": {
-   "en": "It overlaps something already on the wall.",
-   "zh": "与墙上的其他物品重叠。"
-  },
-  "새 이웃의 집터예요. 다른 곳에 놓아 주세요.": {
-   "en": "This lot is for a new neighbour. Put it somewhere else.",
-   "zh": "这是新邻居的宅基地，请放到别处。"
-  },
-  "다른 물건과 겹쳐요.": {
-   "en": "It overlaps another piece.",
-   "zh": "与其他物品重叠。"
->>>>>>> merge-version-gate
   }
  },
  "templates": [],
