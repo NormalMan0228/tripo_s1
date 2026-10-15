@@ -271,10 +271,11 @@ func tour(fixture: Dictionary) -> void:
 	app.queue_free()
 	await settle(0.5)
 	if wanted("studio") or wanted("studio-talk") or wanted("studio-craft") or wanted("storage-chest"): await studio_tour()
+	if wanted("studio-bag") or wanted("studio-hud"): await workshop_tour(fixture)
 
 ## A public room (the café) with its resident: the studio HUD and its dialogue.
 func studio_tour() -> void:
-	Engine.set_meta("studio_session", {"token":"", "url":"http://gallery.invalid", "room":"01_cafe"})
+	Engine.set_meta("studio_session", {"token":"", "url":"http://gallery.invalid", "room":"01_cafe", "username":"haneul", "coins":12})
 	var studio: Node = load("res://scenes/studio.tscn").instantiate()
 	root.add_child(studio)
 	await settle(2.5)
@@ -315,5 +316,33 @@ func studio_tour() -> void:
 		await capture("studio-craft")
 		studio.close_craft()
 		studio.api.token = ""
+	studio.queue_free()
+	await settle(0.5)
+
+## The player's workshop on the recorded replies: the 가방 drawer open (studio-bag), then the room's
+## HUD alone (studio-hud: character frame, location card, hotbar).
+func workshop_tour(fixture: Dictionary) -> void:
+	Engine.set_meta("studio_session", {"token":"gallery", "url":"http://gallery.invalid", "room":"workshop", "username":"haneul", "coins":12,
+		"profile":fixture["/v1/me"].get("profile", {})})
+	var studio: Node = load("res://scenes/studio.tscn").instantiate()
+	root.add_child(studio)
+	# The room made its own connection while entering the tree; the recorded replies answer instead.
+	studio.api.queue_free()
+	var stub := Stub.new()
+	stub.data = fixture
+	studio.api = stub
+	studio.add_child(stub)
+	await settle(3.0)
+	if wanted("studio-bag"):
+		studio.set_dock_open(true)
+		if studio.inventory.item_count > 0:
+			studio.inventory.select(0)
+			studio.inventory.item_selected.emit(0)
+		await settle(1.5)
+		await capture("studio-bag")
+	if wanted("studio-hud"):
+		studio.set_dock_open(false)
+		await settle(0.8)
+		await capture("studio-hud")
 	studio.queue_free()
 	await settle(0.5)

@@ -9,12 +9,12 @@ func run_review() -> void:
 	root.add_child(room)
 	await create_timer(1.2).timeout
 	var mode := "developer" if BuildMode.developer() else "player"
-	var tabs: TabContainer=room.find_children("*","TabContainer",true,false)[0]
-	print("STUDIO_MODE ",mode," visible_tabs=",tabs.get_tab_count()-int(tabs.is_tab_hidden(1))-int(tabs.is_tab_hidden(2))-int(tabs.is_tab_hidden(3)))
+	var tabs: Dictionary=room.bag_strip.get_meta("buttons")
+	print("STUDIO_MODE ",mode," visible_tabs=",tabs.size())
 	var passed := true
-	# 0 보관함 for everyone; 1 동작 코드, 2 부품 맞춤, 3 제작 기록 for developer builds only.
-	for index in [1,2,3]:
-		passed=passed and tabs.is_tab_hidden(index)==not BuildMode.developer()
+	# 보관함 for everyone; 동작 코드, 부품 맞춤, 제작 기록 tabs for developer builds only.
+	for id in ["source","fit","history"]:
+		passed=passed and tabs.has(id)==BuildMode.developer()
 	# The player export must stay a player even if a launch flag asks for tools.
 	if OS.has_feature("tripothon_player"):passed=passed and not BuildMode.developer()
 	if OS.has_feature("tripothon_dev"):passed=passed and BuildMode.developer()

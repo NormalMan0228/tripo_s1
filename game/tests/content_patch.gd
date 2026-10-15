@@ -56,8 +56,8 @@ func run() -> void:
 	Engine.set_meta("studio_session",{"token":token,"url":preload("res://tests/qa_server.gd").url(),"room":"home"})
 	app=load("res://scenes/studio.tscn").instantiate();root.add_child(app);await create_timer(1.2).timeout
 	expect(not app.room_root.find_children("InteriorShell","Node3D",true,false).is_empty(),"authored home interior loads")
-	var tabs: TabContainer=app.find_children("*","TabContainer",true,false)[0]
-	expect(tabs.is_tab_hidden(1) and tabs.is_tab_hidden(2) and tabs.is_tab_hidden(3),"player cannot see code/model/fitting tabs")
+	var bag_tabs: Dictionary=app.bag_strip.get_meta("buttons")
+	expect(bag_tabs.keys()==["own"] and not app.bag_strip.visible and not app.bag_pages.source.visible and not app.bag_pages.fit.visible and not app.bag_pages.history.visible,"player cannot see code/model/fitting tabs")
 	app.message("model_download_failed")
 	expect(not app.status_label.text.contains("model_download_failed"),"player failure text hides implementation codes")
 	var queued: Dictionary=await app.api.post("/v1/studio/jobs",app.api.mutation({"prompt":"wooden chest"}))
@@ -79,7 +79,7 @@ func run() -> void:
 	await app.paint("#edbc63")
 	expect(app.inspected.colors.get("lid")=="#edbc63" and app.inspected.colors.get("body")!="#edbc63","painting one translated part leaves the other part unchanged")
 	app.part_choice.select(0)
-	tabs.current_tab=0 # 보관함
+	app.select_bag_page("own") # 보관함
 	await app.begin_place();app.place_at=Vector3(0,.08,4);await process_frame
 	expect(app.place_button.disabled and not app.placement_problem(app.place_at).is_empty(),"door obstruction disables place button")
 	app.place_at=Vector3(-2,.08,-1);app.ghost.position=app.place_at

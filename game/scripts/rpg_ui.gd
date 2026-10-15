@@ -389,6 +389,9 @@ static func theme() -> Theme:
 
 # ------------------------------------------------------------------ names on hover
 
+## The quick paint palette of the bag, the same in the village and in rooms (swatch()).
+const PALETTE := ["#f6eee0","#edbc63","#d98477","#70afa3","#7c9ec6"]
+
 ## Paint swatches' names (translated where shown).
 const COLOR_NAMES := {"#f6eee0":"상아색","#edbc63":"꿀색","#d98477":"산호색","#70afa3":"청록색","#7c9ec6":"하늘색",
 	"#f1dfb8":"크림색","#dfa958":"황토색","#789887":"세이지색","#bd7f75":"장밋빛 갈색","#7d9ca3":"안개 파랑",
@@ -1200,24 +1203,56 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 		bar.add_child(b)
 	bar.set_meta("tray", tray)
 	bar.set_meta("tray_top", y + 6)
-	if not fold_id.is_empty(): fold_dock(ui, fold_id, [tray, bar], 640.0 + width * 0.5, y + 6 + (SLOT + 8) * 0.5)
+	if not fold_id.is_empty(): bar.set_meta("fold_key", fold_dock(ui, fold_id, [tray, bar], 640.0 + width * 0.5, y + 6 + (SLOT + 8) * 0.5))
+	# The strip spans the canvas: a new UI scale resizes it, and the dock is laid out again.
+	bar.resized.connect(func(): _lay_dock(bar))
+	_lay_dock(bar)
 	return bar
 
 ## Shows or hides one hotbar slot (a room a visitor only looks around has no bag); the tray fits
 ## the slots left.
 static func show_slot(slot: Control, shown: bool) -> void:
 	slot.visible = shown
-	var bar := slot.get_parent()
-	if bar == null or not bar.has_meta("tray"): return
+	var bar := slot.get_parent() as Control
+	if bar and bar.has_meta("tray"): _lay_dock(bar)
+
+## The bottom-left corner is the chat box's (chat_box.gd: x 14 to 342 on the design canvas, at the
+## foot of every place). Pieces centred at the screen's foot (the hotbar, the prompt chip) move right
+## just enough to clear it when the canvas narrows (UI scale above 100 %), never past the right edge.
+const CHAT_CORNER := 350.0
+
+## How far a piece `width` wide, centred at the foot of a canvas `canvas_width` wide, moves right to
+## clear the chat corner, keeping `right_room` free at the right edge.
+static func corner_shift(width: float, canvas_width: float, right_room := 14.0) -> float:
+	var left := (canvas_width - width) * 0.5
+	return clampf(CHAT_CORNER - left, 0.0, maxf(0.0, canvas_width - right_room - left - width))
+
+## Lays a hotbar out for its shown slots and the canvas: the tray fits the visible slots, centred at
+## the screen's foot (moved right only to clear the chat corner), and the fold key sits at its right
+## end. Only x is set here, so a folded dock stays folded.
+static func _lay_dock(bar: Control) -> void:
+	if not is_instance_valid(bar) or not bar.has_meta("tray") or bar.get_meta("laying", false): return
 	var tray: Control = bar.get_meta("tray")
-	if not is_instance_valid(tray): return
+	var host := bar.get_parent() as Control
+	if not is_instance_valid(tray) or host == null: return
+	bar.set_meta("laying", true)
 	var count := 0
 	for child in bar.get_children():
 		if child is Control and (child as Control).visible: count += 1
-	var fitted := maxf(count, 1) * 80.0 - 10.0 + 36.0
-	tray.custom_minimum_size = Vector2(fitted, tray.custom_minimum_size.y)
-	tray.size = tray.custom_minimum_size
-	pin(tray, 0.5, 1.0, Vector2(640.0 - fitted * 0.5, float(bar.get_meta("tray_top"))))
+	var width := maxf(count, 1) * (SLOT + GAP) - GAP + 36.0
+	var canvas_width := host.size.x if host.size.x > 0.0 else CANVAS.x
+	var key: Control = bar.get_meta("fold_key") if bar.has_meta("fold_key") and is_instance_valid(bar.get_meta("fold_key")) else null
+	var shift := corner_shift(width, canvas_width, 14.0 + (36.0 if key else 0.0))
+	tray.custom_minimum_size.x = width
+	tray.offset_left = -width * 0.5 + shift
+	tray.offset_right = width * 0.5 + shift
+	bar.offset_left = shift
+	bar.offset_right = shift
+	if key:
+		var side := maxf(key.custom_minimum_size.x, 28.0)
+		key.offset_left = width * 0.5 + shift + 8.0
+		key.offset_right = key.offset_left + side
+	bar.set_meta("laying", false)
 
 # ------------------------------------------------------------------ toasts
 
@@ -1236,6 +1271,9 @@ const TOAST_ICONS := {"info":"res://assets/starseed.svg", "success":"res://asset
 	"error":"res://assets/ui/icons/alert.png", "social":"res://assets/ui/people.svg"}
 ## How long an evicted toast (the oldest, when a 4th arrives) takes to fade, and a slot to close.
 const TOAST_EVICT_SECONDS := 0.15
+## The side columns a top toast keeps clear of on a narrow canvas (frame or status card on the left,
+## minimap, map or location card on the right: each about 290 px from its edge).
+const TOAST_SIDE := 300.0
 const TOAST_COLLAPSE_SECONDS := 0.15
 
 ## The shared toast lane: a full-width column whose toasts stack centred from `y` on the design
@@ -1268,6 +1306,8 @@ static func toast_lane(host: Control, y := 94.0, width := 0.0, max_width := 640.
 				dismiss_toast(oldest, TOAST_EVICT_SECONDS))
 	else:
 		var top := y < CANVAS.y * 0.5
+		# A top lane shares its band with the side columns (frame, minimap, map and status cards).
+		if top: lane.set_meta("clear_sides", true)
 		lane.alignment = BoxContainer.ALIGNMENT_BEGIN if top else BoxContainer.ALIGNMENT_END
 		if top: lane.offset_top = y
 		else: lane.offset_bottom = -(CANVAS.y - y - 44.0)
@@ -1322,7 +1362,12 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 	var actions: Array = opts.get("actions", [])
 	pill.mouse_filter = Control.MOUSE_FILTER_STOP if not actions.is_empty() else Control.MOUSE_FILTER_IGNORE
 	var width: float = float(lane.get_meta("width", 0.0))
-	if width > 0.0: pill.custom_minimum_size.x = width
+	var widest := width if width > 0.0 else float(lane.get_meta("max_width", 640.0))
+	# On a narrowed canvas (UI scale above 100 %) a top toast stays between the side columns.
+	if lane.get_meta("clear_sides", false) and lane.size.x > 0.0: widest = minf(widest, maxf(lane.size.x - 2.0 * TOAST_SIDE, 260.0))
+	if width > 0.0:
+		width = widest
+		pill.custom_minimum_size.x = width
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1337,7 +1382,7 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	words.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var room := (width if width > 0.0 else float(lane.get_meta("max_width", 640.0))) - 96.0
+	var room := widest - 96.0
 	if width > 0.0: words.custom_minimum_size.x = room
 	else: words.custom_minimum_size.x = minf(room, FONT_STRONG.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, T_BODY).x + 4.0)
 	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1421,7 +1466,9 @@ static func clear_toasts(lane: Control) -> void:
 ## "E  " of the text is drawn as a key cap.
 static func prompt(ui: Control, y: float) -> Label:
 	var pill := Label.new()
-	pill.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pill.name = "Prompt"
+	# Left: the words start after the key cap (fit_prompt makes the chip exactly as wide as both).
+	pill.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	pill.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	pill.add_theme_font_override("font", FONT_STRONG)
 	pill.add_theme_font_size_override("font_size", 16)
@@ -1446,6 +1493,8 @@ static func prompt(ui: Control, y: float) -> Label:
 			pill.create_tween().tween_property(pill, "modulate:a", 1.0, 0.15))
 	ui.add_child(pill)
 	pin(pill, 0.5, 1.0)
+	# A new UI scale narrows the canvas and moves the chip: it keeps clear of the chat corner.
+	pill.item_rect_changed.connect(fit_prompt.bind(pill))
 	return pill
 
 ## Sets a prompt chip's text. A leading key label ("E", "F", "Space", "LMB"…)
@@ -1466,8 +1515,25 @@ static func set_prompt(chip: Label, value: String) -> void:
 		cap.text = key
 		cap.size = Vector2.ZERO
 		var cap_width: float = maxf(cap.get_combined_minimum_size().x, 22.0)
-		if box: box.content_margin_left = 22.0 + (cap_width + 10.0 if cap.visible else 0.0)
+		if box: box.content_margin_left = 16.0 + cap_width + 8.0 if cap.visible else 22.0
 		cap.position = Vector2(16, (chip.size.y - 24.0) * 0.5)
+	fit_prompt(chip)
+
+## Fits a prompt chip to its key cap and words, centred where it is pinned (a Label centres its
+## text on its whole width, not after the cap, so the chip is made exactly as wide as it needs).
+static func fit_prompt(chip: Label) -> void:
+	if not is_instance_valid(chip) or chip.get_meta("fitting", false): return
+	chip.set_meta("fitting", true)
+	var width := chip.get_combined_minimum_size().x
+	if is_equal_approx(chip.anchor_left, 0.5):
+		var parent := chip.get_parent() as Control
+		var shift := corner_shift(width, parent.size.x) if parent and parent.size.x > 0.0 else 0.0
+		chip.offset_left = -width * 0.5 + shift
+		chip.offset_right = width * 0.5 + shift
+	else:
+		chip.size = Vector2(width, chip.size.y)
+		chip.position.x = CANVAS.x * 0.5 - width * 0.5
+	chip.set_meta("fitting", false)
 
 ## Pins a control laid out on the 1280x800 design canvas to an edge or centre
 ## (h/v: 0 = left/top, 0.5 = centre, 1 = right/bottom) so it stays put at any UI scale.
@@ -2029,6 +2095,10 @@ static func drawer(host: Control, title: String, opts := {}) -> Dictionary:
 	head.name = "Head"
 	head.add_theme_constant_override("separation", GAP_S)
 	column.add_child(head)
+	if not str(opts.get("icon", "")).is_empty():
+		var art := icon(str(opts.icon), 30)
+		art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(art)
 	var heading_label := Label.new()
 	heading_label.name = "Title"
 	heading_label.text = title
@@ -2038,17 +2108,64 @@ static func drawer(host: Control, title: String, opts := {}) -> Dictionary:
 	heading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	head.add_child(heading_label)
 	var w := {"root":root, "shade":null, "card":card, "head":head, "title":heading_label, "body":column, "close":null,
-		"id":id, "action":action, "kind":"drawer", "surface":kind, "modal":false}
+		"id":id, "action":action, "kind":"drawer", "surface":kind, "modal":false, "side":side}
 	var on_close: Callable = opts.get("on_close", Callable())
 	var shut := func() -> void:
 		if on_close.is_valid(): on_close.call()
 		else: close_window(w)
 	w["close"] = close_key(head, shut, action)
 	divider(column, PAPER_LINE if kind != "night" else Color(GOLD, .55))
+	if bool(opts.get("hidden", false)):
+		# Kept: closed until show_drawer opens it; it leaves the stack whenever it is hidden.
+		root.visible = false
+		root.set_meta("rpg_window", w)
+		var kept := root.get_instance_id()
+		root.tree_exiting.connect(func(): _forget_window(kept))
+		return w
 	_push_window(root, w)
 	slide_in(card, Vector2(-40.0 if left else 40.0, 0.0))
 	sfx("open", -10.0)
 	return w
+
+## Opens or closes a kept drawer (drawer(opts.hidden)): shown, it joins the window stack on top and
+## slides in from its side with the open sound; hidden, it leaves the stack. No-op when unchanged.
+static func show_drawer(w: Dictionary, shown: bool, animate := true) -> void:
+	var root: Control = w.get("root") if is_instance_valid(w.get("root")) else null
+	if root == null: return
+	var id := root.get_instance_id()
+	if root.visible == shown and (id in _stack) == shown: return
+	root.visible = shown
+	var card: Control = w.get("card") if is_instance_valid(w.get("card")) else null
+	if shown:
+		if not id in _stack: _stack.append(id)
+		_windows_changed()
+		if card: _slide_card(card, (-40.0 if str(w.get("side", "right")) == "left" else 40.0) if animate else 0.0)
+		if animate: sfx("open", -10.0)
+	else:
+		if card: _slide_card(card, 0.0)
+		_forget_window(id)
+		if animate: sfx("close", -10.0)
+
+## Slides a pinned card in by its offsets from `dx` away (0: straight to its place). A slide cut
+## short by a quick close and reopen starts again from the card's resting offsets, so it never
+## drifts.
+static func _slide_card(card: Control, dx: float) -> void:
+	var rest: Vector2 = card.get_meta("rest_x", Vector2(card.offset_left, card.offset_right))
+	card.set_meta("rest_x", rest)
+	var old = card.get_meta("slide") if card.has_meta("slide") else null
+	if old is Tween and (old as Tween).is_valid(): (old as Tween).kill()
+	card.offset_left = rest.x
+	card.offset_right = rest.y
+	card.modulate.a = 1.0
+	if is_zero_approx(dx) or calm() or not card.is_inside_tree(): return
+	card.offset_left = rest.x + dx
+	card.offset_right = rest.y + dx
+	card.modulate.a = 0.0
+	var tw := card.create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(card, "offset_left", rest.x, 0.28)
+	tw.tween_property(card, "offset_right", rest.y, 0.28)
+	tw.tween_property(card, "modulate:a", 1.0, 0.22)
+	card.set_meta("slide", tw)
 
 ## Closes a window or drawer: leaves the stack, plays the close sound and frees it (a short fade
 ## first when animate; at once otherwise, so callers that test is_instance_valid see it gone).

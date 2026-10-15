@@ -132,10 +132,12 @@ const TOKEN_HEXES := ["ffe08a","e9b552","fff2cf","c9d3c6","3b2a1c","2f2a1f","5d4
 	"3c2e1e","7a6446","b0452f","d8e3d4","c9a46a","ffd9a0","c8ec9f"]
 ## Files still waiting for their migration, with the most literals each may keep (the list only
 ## shrinks). They are on the presentation's object-creation path or hot files other tracks edit now:
-## main.gd/studio.gd (U-WP-04/09/11), craft_panel.gd (the finished-craft accent 8a5a1c, kept for the talk).
-const LITERAL_ALLOWLIST := {"main.gd":4, "studio.gd":12, "craft_panel.gd":1}
+## main.gd (U-WP-04/09), craft_panel.gd (the finished-craft accent 8a5a1c, kept for the talk).
+const LITERAL_ALLOWLIST := {"main.gd":4, "craft_panel.gd":1}
 ## Files already on the shared windows and tokens: no flat boxes or colour rects of their own.
 const MIGRATED := ["craft_window.gd", "village_life.gd", "life_icon.gd", "minimap.gd", "interaction_panel.gd", "shape_panel.gd"]
+## Files whose HUD and drawers are on the shared frames (U-WP-11): no flat boxes of their own.
+const FLAT_FREE := ["studio.gd"]
 
 func check_static() -> void:
 	var literal := RegEx.new()
@@ -154,6 +156,7 @@ func check_static() -> void:
 		if count > allowed: over.append("%s %d>%d" % [name, count, allowed])
 		elif count < allowed: shrunk.append("%s %d<%d" % [name, count, allowed])
 		if name in MIGRATED and (code.contains("StyleBoxFlat.new()") or code.contains("ColorRect.new()")): flat.append(name)
+		if name in FLAT_FREE and (code.contains("StyleBoxFlat.new()") or code.contains("RpgUi.style(")): flat.append(name)
 		for found in hotbar_key.search_all(code): keys.append("%s %s" % [name, found.get_string()])
 	expect(over.is_empty(), "no token colours written as literals outside rpg_ui.gd, the painter and the allowlist %s" % [over])
 	if not shrunk.is_empty(): print("NOTE the literal allowlist can shrink: ", shrunk)
