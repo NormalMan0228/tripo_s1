@@ -114,9 +114,12 @@ def reference_image(value):
             alpha=picture.mode in ('RGBA','LA') or (picture.mode=='P' and 'transparency' in picture.info)
             mode='RGBA' if alpha else 'RGB'
             if picture.mode!=mode:picture=picture.convert(mode)
-    except ValueError:raise
+    except ValueError as error:
+        if str(error) in IMAGE_CODES:raise
+        raise ValueError('image_unreadable') from None
     except Exception:raise ValueError('image_unreadable') from None
     if max(picture.size)>IMAGE_KEPT_SIDE:picture.thumbnail((IMAGE_KEPT_SIDE,IMAGE_KEPT_SIDE),Image.LANCZOS)
+    if min(picture.size)<IMAGE_MIN_SIDE:raise ValueError('image_too_small')
     copy,quality=picture,90
     while True:
         out=io.BytesIO()
@@ -403,11 +406,17 @@ class Studio:
         def queue(body:StudioRequest,request:Request):
             # The photo is scaled and re-encoded here, once: after sign-in, in this worker thread (queue is
             # a plain def), one at a time. The stored request keeps the result (the worker reuses it).
+            # Cheap refusals first: a refused description is never decoded or charged (server/craft_moderation.py).
+            refused=craft_moderation.check_text(body.prompt)
+            if refused:fail(craft_moderation.refusal_detail(refused,request.headers.get('x-villagen-version','')[:40]),422)
             if body.image:
+                if body.designer!='llm':fail('image_requires_llm')
                 with db.read() as conn:auth(conn,request)
-                with IMAGE_GATE:
-                    try:image=reference_image(body.image)
-                    except ValueError as error:fail(str(error),422)
+                # One photo at a time; a pool thread waits a moment at most, then the window says the workshop is busy.
+                if not IMAGE_GATE.acquire(timeout=3):fail('provider_busy')
+                try:image=reference_image(body.image)
+                except ValueError as error:fail(str(error),422)
+                finally:IMAGE_GATE.release()
                 body=body.model_copy(update={'image':image})
             # A clock is always built with its hands, even when asked for a still piece: the game makes
             # them (no credits, so it fits wherever the still piece fits). The price stays what was asked.
@@ -418,10 +427,7 @@ class Studio:
             # Moving furniture keeps separate parts: at least two Tripo meshes, or one when the game
             # makes every moving part.
             meshes=archetypes.least_meshes(kind,body.motion)
-            # An inappropriate description is refused with its reason before anything is charged
-            # (server/craft_moderation.py); the photo and subtler requests are judged by the designer.
-            refused=craft_moderation.check_text(body.prompt)
-            if refused:fail(craft_moderation.refusal_detail(refused,request.headers.get('x-villagen-version','')[:40]),422)
+            # The photo and subtler requests are judged by the designer (asset_contract.py SAFETY).
             def create(conn,user):
                 if body.designer=='llm' and settings.studio_llm=='fixture':fail('llm_not_configured',503)
                 if body.geometry=='tripo' and not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
@@ -903,6 +909,10 @@ class Studio:
                         learned=None
                     else:
                         request_prompt=body.prompt+('\nOutput ONE complete static part and an empty program.' if body.motion=='static' else '')
+                        if body.image and body.image_mode=='original':
+                            # A one-part craft sends this photo itself to Tripo image-to-model, which rebuilds
+                            # everything in front of the background, people included (refine drops them).
+                            request_prompt+='\nThis photo may be rebuilt in 3D exactly as it is, so if any real person (or part of one) appears in it, return {"refused":"person"}.'
                         with self.db.transaction() as conn:categories=[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')]
                         request_prompt+='\nExisting category names (reuse a matching kind, otherwise propose a short new kind): '+json.dumps(categories,ensure_ascii=False)
                         request_prompt+=archetypes.designer_hint(body.prompt,body.motion)

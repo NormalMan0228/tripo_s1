@@ -258,7 +258,7 @@ class ChatFilter:
         return joined
 
     # --- checking ---------------------------------------------------------------------------
-    def check(self, text):
+    def check(self, text, info=True):
         out = list(text)
         result = Checked(text)
         # (first, last) original index -> the match was split by a space; one entry per place.
@@ -304,7 +304,7 @@ class ChatFilter:
         result.masked = len(spans['mask'])
         result.split = sum(1 for split in spans['mask'].values() if split)
         masked = ''.join(out)
-        for rule in (PHONE, LINK):
+        for rule in ((PHONE, LINK) if info else ()):
             def hide(m):
                 result.info_masked += 1
                 return ''.join(c if c in '-. ' and rule is PHONE else '*' for c in m.group(0))

@@ -14,9 +14,14 @@ static func camera_in(stage: Node) -> Camera3D:
 static func fit(camera: Camera3D, size: Vector3, margin := 1.18) -> void:
 	if camera == null or size.length() < 0.01: return
 	var target := Vector3(0, size.y * 0.5, 0)
-	var direction := camera.position - target
-	if direction.length() < 0.01: direction = Vector3(2, 1.1, 3)
-	direction = direction.normalized()
+	# One viewing direction per camera, taken once from where it was set up: the angle never depends on
+	# which object was framed before.
+	var direction: Vector3 = camera.get_meta("preview_dir", Vector3.ZERO)
+	if direction.length() < 0.01:
+		direction = camera.position - target
+		if direction.length() < 0.01: direction = Vector3(2, 1.1, 3)
+		direction = direction.normalized()
+		camera.set_meta("preview_dir", direction)
 	var place := target + direction * maxf(6.0, size.length() * 3.0)
 	var basis := Basis.looking_at(target - place, Vector3.UP)
 	camera.transform = Transform3D(basis, place)

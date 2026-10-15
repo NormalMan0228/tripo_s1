@@ -35,6 +35,8 @@ var job_id := ""
 var job: Dictionary = {}
 ## The finished craft ("ready") until the player places it or starts a new one.
 var done: Dictionary = {}
+## A craft that failed while the window was closed, until a window shows why (craft_panel.gd).
+var failed: Dictionary = {}
 ## The picture (or quote) already announced (announce_key), so it is said once.
 var announced := ""
 ## Every announcement made, as "picture:<job>:<draws>" and "ended:<job>" (tests count them).
@@ -159,6 +161,7 @@ func follow(id := "") -> void:
 ## A new craft the server just accepted: followed from its first answer.
 func start(value: Dictionary) -> void:
 	done = {}
+	failed = {}
 	job_id = str(value.get("id", ""))
 	job = value
 	updated.emit(value)
@@ -175,6 +178,8 @@ func cancelled(id: String) -> void:
 
 ## The finished craft was placed or cleared ("새로 만들기").
 func clear_done() -> void:
+	# Placed (or cleared): nothing waits for the player any more.
+	badge(false)
 	if done.is_empty(): return
 	done = {}
 	if job_id.is_empty():
@@ -205,6 +210,7 @@ func take(value: Dictionary) -> void:
 			if not words.is_empty(): say(words)
 			# Finished or failed with the window closed: the slot says so until it is opened.
 			if state in ["ready", "failed"]: badge(true)
+			if state == "failed" and not window_open(): failed = value
 			bag_changed()
 	updated.emit(value)
 

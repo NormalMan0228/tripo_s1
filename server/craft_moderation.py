@@ -3,7 +3,8 @@
 Three gates, each ending the craft as refused_<category> (sexual, violence, hate, drugs, person,
 words, other) with the starseeds kept or refunded:
 1. The description, before anything is charged: server/data/craft_words.txt per category (Hangul
-   at the start of a word, Latin whole words), plus the chat swear list's Korean words as `words`.
+   at the start of a word, Latin whole words read the chat way), plus Korean chat swears and a short
+   English swear list as `words`.
 2. The LLM designer, in the same call that designs the object (no extra cost): the contract
    (server/asset_contract.py SAFETY) makes it answer {"refused": category} for the description or
    the reference photo; a provider's own safety block counts as `other`.
@@ -61,14 +62,36 @@ def _swears():
     return ChatFilter()
 
 
+# English swears and slurs that never name an ordinary thing (the chat list's other English words do:
+# cock, balls, ass, dick...). Read the chat way, so "f u c k" and "motherfucker" count too.
+ENGLISH_SWEARS = ('fuck*', 'shit*', 'bitch*', 'asshole*', 'cunt', 'dickhead', 'slut*', 'whore*', 'nigger*', 'nigga*',
+                  'faggot*', 'retard', 'retarded', 'rape', 'kys', 'stfu', 'kill yourself')
+
+
+@lru_cache(maxsize=1)
+def _english_swears():
+    return ChatFilter(lines=ENGLISH_SWEARS)
+
+
 def _korean_hit(words, term, allowed):
-    """A listed Hangul term at the start of a word (it may run on over the next words)."""
+    """A listed Hangul term at the start of a word. It may run on over the next words only when it ends
+    where one of them ends (every part a whole word): "잘린 머리" and "나 체" match, "야 동물", "음 부엌",
+    "나 체스판" do not. `*term` also matches inside a word (long, unambiguous names only)."""
     key = hangul_key(term)
     if not key:
         return False
+    if term.startswith('*') and any(key in w for w in words):
+        return True
     for i in range(len(words)):
-        run = ''.join(words[i:i + 4])
-        if run.startswith(key) and not any(run.startswith(hangul_key(a)) for a in allowed):
+        run, ends = '', set()
+        for w in words[i:i + 4]:
+            run += w
+            ends.add(len(run))
+        if not run.startswith(key):
+            continue
+        if len(key) > len(words[i]) and len(key) not in ends:
+            continue
+        if not any(run.startswith(hangul_key(a)) for a in allowed if hangul_key(a)):
             return True
     return False
 
@@ -79,7 +102,7 @@ def _latin_hit(tokens, term):
         return any(t.startswith(stem) for t in tokens)
     parts = term.split()
     if len(parts) > 1:
-        return ' '.join(parts) in ' '.join(tokens)
+        return ' '.join(parts) in ' '.join(tokens) or ''.join(parts) in tokens
     return any(t in (term, term + 's', term + 'es') for t in tokens)
 
 
@@ -87,7 +110,8 @@ def check_text(text):
     """The category the description is refused for, or '' when it may be crafted."""
     plain = unicodedata.normalize('NFKC', text).lower()
     words = [w for w in (hangul_key(w) for w in plain.split()) if w]
-    tokens = re.findall(r'[a-z0-9]+', plain)
+    # Latin read the chat way: stand-ins (s3x, p0rn) as letters, spaced letters ("s e x") joined.
+    tokens = [w for w, _ in ChatFilter.latin_tokens(plain)]
     for name, (terms, allowed) in _lists().items():
         for term in terms:
             if latin_key(term):
@@ -95,9 +119,11 @@ def check_text(text):
                     return name
             elif _korean_hit(words, term, allowed):
                 return name
-    # Korean swearing from the chat list (its English words name ordinary things too: cock, balls...).
-    masked = _swears().check(text)
-    if masked.blocked or any(a != b and is_hangul(a) for a, b in zip(text, masked.text)):
+    # Korean swearing from the chat list (its English words name ordinary things too: cock, balls...) and
+    # the English swears above. Only word masks count: the link pass would hide a particle after a URL.
+    masked = _swears().check(text, info=False)
+    if (masked.blocked or any(a != b and is_hangul(a) for a, b in zip(text, masked.text))
+            or _english_swears().check(text, info=False).masked):
         return 'words'
     return ''
 

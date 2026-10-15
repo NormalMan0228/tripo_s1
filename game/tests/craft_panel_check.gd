@@ -30,6 +30,15 @@ func wait_state(panel: CraftPanel, states: Array, seconds := 30.0) -> Dictionary
 		await create_timer(0.25).timeout
 	return panel.job
 
+## A JPEG with an EXIF APP1 segment whose Orientation is `value` (as phones write portrait photos).
+func with_orientation(jpg: PackedByteArray, value: int) -> PackedByteArray:
+	var app := PackedByteArray([0xFF, 0xE1, 0, 34, 0x45, 0x78, 0x69, 0x66, 0, 0, 0x49, 0x49, 0x2A, 0, 8, 0, 0, 0, 1, 0,
+		0x12, 0x01, 3, 0, 1, 0, 0, 0, value, 0, 0, 0, 0, 0, 0, 0])
+	var out := jpg.slice(0, 2)
+	out.append_array(app)
+	out.append_array(jpg.slice(2))
+	return out
+
 func labels(node: Node) -> String:
 	var out := []
 	for l in node.find_children("*", "Label", true, false): out.append(l.text)
@@ -186,6 +195,15 @@ func run() -> void:
 	junk.close()
 	expect(CraftPanel.read_photo(tiny_path).get("error") == "image_too_small" and CraftPanel.read_photo(junk_path).get("error") == "image_unreadable", "tiny and broken pictures say why")
 	for path in [big_path, tiny_path, junk_path]: DirAccess.remove_absolute(path)
+	# A phone photo stored sideways with an EXIF rotation comes out upright (small: sent as it is; large: re-encoded).
+	var sideways := Image.create(40, 20, false, Image.FORMAT_RGB8)
+	sideways.fill(Color(0.3, 0.6, 0.9))
+	var turned := CraftPanel.decode_photo(with_orientation(sideways.save_jpg_to_buffer(0.9), 6))
+	expect(not turned.has("error") and turned.image.get_size() == Vector2i(20, 40) and str(turned.data).begins_with("data:image/jpeg"), "a phone photo's EXIF rotation turns the preview upright")
+	var wide := Image.create(2000, 1000, false, Image.FORMAT_RGB8)
+	wide.fill(Color(0.3, 0.6, 0.9))
+	turned = CraftPanel.decode_photo(with_orientation(wide.save_jpg_to_buffer(0.9), 6))
+	expect(not turned.has("error") and turned.image.get_size() == Vector2i(800, 1600), "and a large one is re-encoded upright (%s)" % [turned.get("image", Image.new()).get_size()])
 	panel.prompt.text = ""
 	expect(CraftPanel.poll_pause(1) == 4.0 and CraftPanel.poll_pause(9) == 30.0, "failed polls back off up to 30 s")
 	panel.show_job({})
