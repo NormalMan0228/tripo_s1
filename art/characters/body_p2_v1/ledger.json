@@ -1,0 +1,775 @@
+{
+ "approval": "2026-10-15 user: NPC group cap 3,000 (18 NPC P2 approved, 1,800); confirm every 3 models",
+ "balance_before": 21115,
+ "runs": [
+  {
+   "id": "npc02",
+   "name": "대장장이",
+   "task": "a23bfb20-e842-45eb-b464-8155872fd705",
+   "tool": "Smart Mesh P2 multiview, quad 10000, 1 generation",
+   "credits": 100
+  },
+  {
+   "id": "npc10",
+   "name": "견습생 꼬마",
+   "task": "137e8ef6-18cc-46ed-b4aa-bbfb9cc47e8f",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc01",
+   "name": "촌장 할머니",
+   "task": "1fe1566d-b546-4e4a-a026-6205bb4146ac",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc02",
+   "name": "대장장이 리깅",
+   "task": "a23bfb20 (rig)",
+   "tool": "Studio Rig humanoid, Mixamo preset",
+   "credits": 20
+  },
+  {
+   "id": "npc10",
+   "name": "견습생 꼬마 리깅",
+   "task": "137e8ef6 (rig)",
+   "tool": "Studio Rig humanoid, Mixamo preset",
+   "credits": 20
+  },
+  {
+   "id": "npc11",
+   "name": "카페 주인",
+   "task": "f6ec73ed-caea-4e4e-ae77-334225faa4cb",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc12",
+   "name": "방앗간지기",
+   "task": "d3055eb5-dd52-4750-aa89-405738ec3e82",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc17",
+   "name": "무대 가수",
+   "task": "c8246711-06e2-4882-9ae3-27e57133f409",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc16",
+   "name": "잡화점 주인",
+   "task": "7130c7ee-0f41-43bf-8914-41e41f76fa97",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc13",
+   "name": "천문학자",
+   "task": "a086a1db-e570-4544-a3ee-3dc4d9b273f5",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc14",
+   "name": "정원사",
+   "task": "4001cc44-8a49-468f-af55-d5b1c4198843",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc15",
+   "name": "이야기꾼 할아버지",
+   "task": "274a9e84-8de8-4f19-8d0d-168161e8a663",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc18",
+   "name": "피크닉 요리사",
+   "task": "9fba4eae-a063-4434-84d9-85e5b84d6415",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc07",
+   "name": "기록관 (사서)",
+   "task": "4883361d-be25-4b5f-b098-cfc514bd0884",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100
+  },
+  {
+   "id": "npc03",
+   "name": "제빵사",
+   "task": "9d52cd38-14f2-4e49-a37c-cd4eb81deed7",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100,
+   "note": ""
+  },
+  {
+   "id": "npc04",
+   "name": "목수",
+   "task": "7dfe27d4-7eee-45f3-9218-636294e40895",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100,
+   "note": ""
+  },
+  {
+   "id": "npc05",
+   "name": "약초꾼",
+   "task": "883fb6b7-035e-4f35-8b3c-1ce5650d2eff",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100,
+   "note": "mv c8336045"
+  },
+  {
+   "id": "npc06",
+   "name": "늙은 선장",
+   "task": "fcad06da-f826-4184-9b50-4b4c65addb09",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100,
+   "note": "mv 3095fee4"
+  },
+  {
+   "id": "npc08",
+   "name": "떠돌이 상인",
+   "task": "a4f68464-b6d2-49a9-a9e8-8ee283255559",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100,
+   "note": "mv eb679090"
+  },
+  {
+   "id": "npc09",
+   "name": "음악가",
+   "task": "b29e12c2-7ebf-4cbd-adfd-d37297177d28",
+   "tool": "Smart Mesh P2 multiview, quad 10000",
+   "credits": 100,
+   "note": "mv 7bf525ec"
+  },
+  {
+   "id": "npc19",
+   "name": "커버 목수 여자 (하늘색 머리)",
+   "task": "0c805f8c-3bfe-48f4-82ae-12b0e261f9d5",
+   "tool": "cover ref -> Nano Banana Pro -> multiview -> P2 quad 10000",
+   "credits": 100,
+   "note": "mv 183edd33"
+  },
+  {
+   "id": "npc20",
+   "name": "커버 정원사 소녀 (노란 머리)",
+   "task": "dd015750-14cd-4db9-b712-a1e80f1509e3",
+   "tool": "cover ref -> Nano Banana Pro -> multiview -> P2 quad 10000",
+   "credits": 100,
+   "note": "mv a9dc1f56"
+  }
+ ],
+ "note": "Studio does NOT keep the polycount: reset to 5000 each visit; set 10000 before every Generate.",
+ "residents": [
+  {
+   "id": "r02",
+   "task": "cb49efd5-cb83-4020-8d9e-5c41a618e1be",
+   "mv": "103dbd9c",
+   "credits": 100
+  },
+  {
+   "id": "r20",
+   "task": "8ca1778e-f410-4d74-b133-7030e69ef6b6",
+   "mv": "8c9c0de5",
+   "credits": 100
+  },
+  {
+   "id": "r19",
+   "task": "80838ab4-1a1c-43b7-97a5-144c23d91d14",
+   "mv": "bfc316eb",
+   "credits": 100
+  },
+  {
+   "id": "r18",
+   "task": "bf25c698-4e5f-4450-a3f0-adbff6841f53",
+   "mv": "1c9f20fb",
+   "credits": 100
+  },
+  {
+   "id": "r17",
+   "task": "aec319c4-9208-4a88-8b23-37c86b04cd8d",
+   "mv": "333ef8f7",
+   "credits": 100
+  },
+  {
+   "id": "r16",
+   "task": "5129fc0c-78a8-4071-bb52-c43291c4a665",
+   "mv": "bf538951",
+   "credits": 100
+  },
+  {
+   "id": "r15",
+   "task": "4371b64d-daf9-4b7b-b03d-7e9e00954bac",
+   "mv": "32262a05",
+   "credits": 100
+  },
+  {
+   "id": "r14",
+   "task": "1346abe5-ad9f-4e3a-b4d8-fe7c15e51bde",
+   "mv": "88489b6a",
+   "credits": 100
+  },
+  {
+   "id": "r13",
+   "task": "d315abab-c860-4c15-b7e7-1fa5464e2b5c",
+   "mv": "04d38a27",
+   "credits": 100
+  },
+  {
+   "id": "r12",
+   "task": "1ddfa842-f611-419c-9fa1-760482f1b79a",
+   "mv": "7f824f9b",
+   "credits": 100
+  },
+  {
+   "id": "r11",
+   "task": "417c5b40-e36a-473b-bdcd-ed67d62666a8",
+   "mv": "b2738436",
+   "credits": 100
+  },
+  {
+   "id": "r10",
+   "task": "d418618c-09c0-440e-9e6e-b206054a1e4f",
+   "mv": "0d065e5e",
+   "credits": 100
+  },
+  {
+   "id": "r09",
+   "task": "bc20829f-35b5-4081-ace7-561823c3cc6a",
+   "mv": "437eee95",
+   "credits": 100
+  },
+  {
+   "id": "r08",
+   "task": "3d006473-f053-476c-a9b2-e1c5629736f1",
+   "mv": "d0cf2e87",
+   "credits": 100
+  },
+  {
+   "id": "r07",
+   "task": "c2648349-31cd-434e-af0f-eec34abcca78",
+   "mv": "81412cae",
+   "credits": 100
+  },
+  {
+   "id": "r06",
+   "task": "f2fab6f4-d1d7-4397-acda-c6c7da3c39a4",
+   "mv": "15acbd45",
+   "credits": 100
+  },
+  {
+   "id": "r05",
+   "task": "7dfb39c8-1629-4a38-82ca-6e5b409cde18",
+   "mv": "022ff7a2",
+   "credits": 100
+  }
+ ],
+ "residents_todo_mv": {
+  "d8b86acc": "r04",
+  "2f1004d0": "r03",
+  "e43aa784": "r01"
+ },
+ "monsters": [
+  {
+   "id": "m15",
+   "task": "b4af5bb9-0292-494a-8b73-a15281bcc65b",
+   "credits": 100
+  },
+  {
+   "id": "m14",
+   "task": "bc61e968-da60-4282-b24a-cbf0f57a58d4",
+   "credits": 100
+  },
+  {
+   "id": "m13",
+   "task": "005f0727-caa0-45c0-b57e-0e922fb3872b",
+   "credits": 100
+  },
+  {
+   "id": "m12",
+   "task": "ef2d2d91-5d85-4e47-8396-d25d13df2f81",
+   "credits": 100
+  },
+  {
+   "id": "m11",
+   "task": "b259033f-d2b8-4623-9288-7a5072e0604c",
+   "credits": 100
+  },
+  {
+   "id": "m10",
+   "task": "a8e1f7ca-cd7a-4f36-9b97-504ef6b484c9",
+   "credits": 100
+  },
+  {
+   "id": "m09",
+   "task": "a7479b2a-2e12-4820-b9f5-087d27a1b328",
+   "credits": 100
+  },
+  {
+   "id": "m08",
+   "task": "5369b305-f9f3-4528-bda4-363a2e836db8",
+   "credits": 100
+  },
+  {
+   "id": "m07",
+   "task": "489e6008-4b01-404d-a8e4-09d2262e4313",
+   "credits": 100
+  },
+  {
+   "id": "m06",
+   "task": "3f11818c-db5c-457c-a9ec-0f1c36abc1d2",
+   "credits": 100
+  },
+  {
+   "id": "m05",
+   "task": "94aa96a4-2385-448f-889d-2958cbeb0ad9",
+   "credits": 100
+  },
+  {
+   "id": "m04",
+   "task": "49aca9af-2a7e-4d88-98f4-7a7fa16d8639",
+   "credits": 100
+  },
+  {
+   "id": "m03",
+   "task": "8203be69-5c74-4c15-ba38-f7b35907c8d0",
+   "credits": 100
+  },
+  {
+   "id": "m02",
+   "task": "008de9ba-fb29-49aa-88b8-20b5bc0e2bb6",
+   "credits": 100
+  },
+  {
+   "id": "m01",
+   "task": "030cbc79-828e-44ae-bbe3-9b4084bc4b66",
+   "credits": 100
+  }
+ ],
+ "monster_mv": {
+  "f8395169": "m15",
+  "70590c8e": "m14",
+  "d6afaa0a": "m13",
+  "47696a1e": "m12",
+  "f25e05d3": "m11",
+  "a513d49b": "m10",
+  "f8627d78": "m09",
+  "29bf5bb9": "m08",
+  "4349ebfc": "m07",
+  "c6c85be5": "m06",
+  "e69e4ded": "m05",
+  "c184b59c": "m04",
+  "cd8d9a06": "m03",
+  "b8b59209": "m02",
+  "4d399598": "m01"
+ },
+ "monsters_v3_test": {
+  "note": "2026-10-15 aligned 2x2 4K turnaround -> tools/body_gen/normalize_views.py (bgmask, side mirror) -> Smart Mesh multiview upload, P2 quad 10000, 100 each; user approved 300",
+  "runs": [
+   {
+    "id": "mon_cyclops",
+    "task": "3246ec10-37fe-44fe-87fb-2546efad4250",
+    "sheet": "G_cyclops2_b.png",
+    "sides": "tr,br"
+   },
+   {
+    "id": "mon_basilisk",
+    "task": "bb5878f9-ffe0-49a2-ad2f-b18c526f8b2b",
+    "sheet": "G_basilisk_b.png",
+    "sides": "right=br~,left=br"
+   },
+   {
+    "id": "mon_dragon",
+    "task": "640d2416-5863-4827-9448-e772670f2f35",
+    "sheet": "G_dragon2_b.png",
+    "sides": "right=br~,left=br"
+   }
+  ],
+  "balance_after": 15575
+ },
+ "monsters_v3": {
+  "note": "2026-10-15 18-monster roster (tiers low8/mid5/high3/boss2). P2 quad 10000 from aligned refs mon_v3/refs/<name>_{front,left,right,back}.jpg; user approved 1,500 credits. dragon/cyclops/basilisk from monsters_v3_test.",
+  "tiers": {
+   "boss": [
+    "dragon",
+    "chimera"
+   ],
+   "high": [
+    "cyclops",
+    "minotaur",
+    "lich"
+   ],
+   "mid": [
+    "basilisk",
+    "troll",
+    "werewolf",
+    "gargoyle",
+    "naga"
+   ],
+   "low": [
+    "skeleton",
+    "ghoul",
+    "goblin",
+    "imp",
+    "lizardman",
+    "harpy",
+    "centipede",
+    "mimic"
+   ]
+  },
+  "tasks": {
+   "chimera": "eb6007a4-1ecf-4ff9-a89b-ab7e824ccd22",
+   "lich": "c5ba96fc-af75-4534-99f2-823b5432975a",
+   "werewolf": "ae505b63-3c49-42fb-8ffd-a75c84b50a59",
+   "gargoyle": "cd39284d-9f78-4fde-8e84-d76cbb6bd77e",
+   "naga": "90687ff7-b1e8-47f7-9a80-fe446682010e",
+   "skeleton": "e6f14d78-b825-454d-a322-c946466043fa",
+   "ghoul": "cf8b46c0-41e3-4f01-a51c-5cc1869996a4",
+   "goblin": "29151d3f-bcd0-4571-8d7f-64eb1026e91f",
+   "imp": "806a361e-b7b3-498f-94d9-ce7ee6ed3ddf",
+   "lizardman": "ab9bb0d5-faa7-41b8-9c19-a0705fef0057",
+   "harpy": "c7aa15d0-acfc-4e47-8588-0a5babb797f5",
+   "centipede": "8d3fcca1-365e-46f5-b5d8-c63800d283e3",
+   "mimic": "7708b839-9744-440f-a968-bed2775a9b2c",
+   "troll": "7d9dfe1c-4684-4f0e-bea0-90943a3d6317",
+   "minotaur": "a9228193-a0a3-4149-898d-18ab5ba3109b"
+  },
+  "pending": [],
+  "pending_reason": "",
+  "three_view": {
+   "minotaur": "back view rejected by Tripo content filter (bare body) -> P2 from front/left/right only",
+   "troll": "same"
+  },
+  "balance_after": 14075
+ },
+ "monsters_v3_maps": {
+  "note": "2026-10-15 v2 map roster approved by user with 1,100 credits for 11 new monsters. P2 quad 10000 from aligned refs mon_v3/refs/<id>_*.jpg; cleaned meshes in mon_v3/clean/.",
+  "maps": {
+   "tutorial": {
+    "stages": 1,
+    "boss": null,
+    "low": [
+     "goblin",
+     "centipede"
+    ]
+   },
+   "forest": {
+    "stages": 3,
+    "mid_from": 2,
+    "high_from": 3,
+    "low": [
+     "goblin",
+     "harpy",
+     "centipede"
+    ],
+    "mid": [
+     "werewolf",
+     "troll"
+    ],
+    "high": [
+     "cyclops"
+    ],
+    "boss": "treant"
+   },
+   "desert": {
+    "stages": 5,
+    "mid_from": 2,
+    "high_from": 4,
+    "low": [
+     "skeleton",
+     "imp",
+     "lizardman",
+     "mimic"
+    ],
+    "mid": [
+     "basilisk",
+     "naga",
+     "gargoyle"
+    ],
+    "high": [
+     "minotaur",
+     "mummy_king"
+    ],
+    "boss": "chimera"
+   },
+   "frost": {
+    "stages": 7,
+    "mid_from": 2,
+    "high_from": 4,
+    "low": [
+     "ghoul",
+     "frost_wraith",
+     "ice_shardling",
+     "draugr"
+    ],
+    "mid": [
+     "yeti",
+     "wendigo",
+     "frost_hag",
+     "frost_knight"
+    ],
+    "high": [
+     "ice_golem",
+     "lich",
+     "glacier_giant"
+    ],
+    "boss": "dragon"
+   }
+  },
+  "new_tasks": {
+   "ice_shardling": "abef5dad-f051-4ee9-818f-68d9f384273b",
+   "ice_golem": "14e2b3d8-b10e-4936-879f-413886cdbc0e",
+   "yeti": "459d60c6-410b-4af4-89d5-94d5215ee127",
+   "wendigo": "fe88a817-9e58-42a9-9227-5b8feb44f316",
+   "frost_wraith": "99dd73a0-53c8-4022-a39f-1c8342a1ea20",
+   "treant": "23c87040-75a2-4f57-b5f4-d8607acd6070",
+   "mummy_king": "dd5acbb2-f00b-4653-af81-d4a9eb0a3b8b",
+   "draugr": "86b48343-263a-4408-a102-587416b3417b",
+   "glacier_giant": "11fa5e3d-9c60-4b04-a105-566735b7ca41",
+   "frost_hag": "fc8d3926-eada-48b9-9a44-5e92ded5635b",
+   "frost_knight": "d3a90bca-a609-4dba-b0ea-83c990f7c761"
+  },
+  "three_view": [
+   "yeti",
+   "wendigo",
+   "minotaur",
+   "troll"
+  ],
+  "balance_after": 12975
+ },
+ "monsters_v3_anim": {
+  "cap_category1": 3000,
+  "spent": 2740,
+  "monsters": {
+   "goblin": {
+    "task": "29151d3f-bcd0-4571-8d7f-64eb1026e91f",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "presets_free": [
+     "run",
+     "hit_to_body_01"
+    ],
+    "fbx": "mon_v3/anim/src/goblin/",
+    "glb": "mon_v3/anim/game/goblin.glb",
+    "credits": 170,
+    "date": "2026-10-16",
+    "note": "110 pilot (4 AI + 2 presets) + 20 multi-stage test (rejected) + 40 AI run/hurt; presets no longer used"
+   },
+   "werewolf": {
+    "task": "ae505b63-3c49-42fb-8ffd-a75c84b50a59",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/werewolf.glb",
+    "fbx": "mon_v3/anim/src/werewolf/",
+    "date": "2026-10-16"
+   },
+   "troll": {
+    "task": "7d9dfe1c-4684-4f0e-bea0-90943a3d6317",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/troll.glb",
+    "fbx": "mon_v3/anim/src/troll/",
+    "date": "2026-10-16"
+   },
+   "cyclops": {
+    "task": "3246ec10-37fe-44fe-87fb-2546efad4250",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/cyclops.glb",
+    "fbx": "mon_v3/anim/src/cyclops/",
+    "date": "2026-10-16"
+   },
+   "treant": {
+    "task": "23c87040-75a2-4f57-b5f4-d8607acd6070",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/treant.glb",
+    "fbx": "mon_v3/anim/src/treant/",
+    "date": "2026-10-16"
+   },
+   "skeleton": {
+    "task": "e6f14d78-b825-454d-a322-c946466043fa",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/skeleton.glb",
+    "fbx": "mon_v3/anim/src/skeleton/",
+    "date": "2026-10-16"
+   },
+   "lizardman": {
+    "task": "ab9bb0d5-faa7-41b8-9c19-a0705fef0057",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/lizardman.glb",
+    "fbx": "mon_v3/anim/src/lizardman/",
+    "date": "2026-10-16"
+   },
+   "minotaur": {
+    "task": "a9228193-a0a3-4149-898d-18ab5ba3109b",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/minotaur.glb",
+    "fbx": "mon_v3/anim/src/minotaur/",
+    "date": "2026-10-16"
+   },
+   "mummy_king": {
+    "task": "dd5acbb2-f00b-4653-af81-d4a9eb0a3b8b",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/mummy_king.glb",
+    "fbx": "mon_v3/anim/src/mummy_king/",
+    "date": "2026-10-16"
+   },
+   "ghoul": {
+    "task": "cf8b46c0-41e3-4f01-a51c-5cc1869996a4",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 170,
+    "glb": "mon_v3/anim/game/ghoul.glb",
+    "fbx": "mon_v3/anim/src/ghoul/",
+    "date": "2026-10-16",
+    "note": "walk generated twice by an overlapping queue (+20)"
+   },
+   "ice_shardling": {
+    "task": "abef5dad-f051-4ee9-818f-68d9f384273b",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/ice_shardling.glb",
+    "fbx": "mon_v3/anim/src/ice_shardling/",
+    "date": "2026-10-16",
+    "note": "attack prompt rejected twice by the content filter (no charge), reworded"
+   },
+   "draugr": {
+    "task": "86b48343-263a-4408-a102-587416b3417b",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/draugr.glb",
+    "fbx": "mon_v3/anim/src/draugr/",
+    "date": "2026-10-16"
+   },
+   "yeti": {
+    "task": "459d60c6-410b-4af4-89d5-94d5215ee127",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/yeti.glb",
+    "fbx": "mon_v3/anim/src/yeti/",
+    "date": "2026-10-16"
+   },
+   "wendigo": {
+    "task": "fe88a817-9e58-42a9-9227-5b8feb44f316",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/wendigo.glb",
+    "fbx": "mon_v3/anim/src/wendigo/",
+    "date": "2026-10-16"
+   },
+   "frost_hag": {
+    "task": "fc8d3926-eada-48b9-9a44-5e92ded5635b",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/frost_hag.glb",
+    "fbx": "mon_v3/anim/src/frost_hag/",
+    "date": "2026-10-16"
+   },
+   "frost_knight": {
+    "task": "d3a90bca-a609-4dba-b0ea-83c990f7c761",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/frost_knight.glb",
+    "fbx": "mon_v3/anim/src/frost_knight/",
+    "date": "2026-10-16"
+   },
+   "ice_golem": {
+    "task": "14e2b3d8-b10e-4936-879f-413886cdbc0e",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/ice_golem.glb",
+    "fbx": "mon_v3/anim/src/ice_golem/",
+    "date": "2026-10-16"
+   },
+   "glacier_giant": {
+    "task": "11fa5e3d-9c60-4b04-a105-566735b7ca41",
+    "texture_2k": 10,
+    "rig_humanoid": 20,
+    "ai_motions": 6,
+    "credits": 150,
+    "glb": "mon_v3/anim/game/glacier_giant.glb",
+    "fbx": "mon_v3/anim/src/glacier_giant/",
+    "date": "2026-10-16"
+   }
+  },
+  "balance_after": 10055,
+  "cap_history": [
+   "2026-10-15 user: 2,600 (texture included)",
+   "2026-10-16 user via 총괄: 3,000 (all 6 motions AI per monster)"
+  ],
+  "experiments": {
+   "multistage_goblin_run_hurt": {
+    "credits": 20,
+    "result": "rejected: low-amplitude run, weak hurt"
+   }
+  },
+  "npc_cover": {
+   "cap": 180,
+   "approved": "2026-10-16 user via 총괄 (option A: texture + rig + 3 AI motions each)",
+   "boni": {
+    "src": "npc19",
+    "task": "0c805f8c-3bfe-48f4-82ae-12b0e261f9d5",
+    "credits": 90,
+    "clips": [
+     "idle",
+     "walk",
+     "work (hammer, saw)"
+    ],
+    "hair": "texture already matches portrait 1 (lavender sky blue), no recolour"
+   },
+   "sol": {
+    "src": "npc20",
+    "task": "dd015750-14cd-4db9-b712-a1e80f1509e3",
+    "credits": 90,
+    "clips": [
+     "idle",
+     "walk",
+     "work (watering, planting)"
+    ]
+   }
+  }
+ }
+}

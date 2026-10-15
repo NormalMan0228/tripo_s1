@@ -3,12 +3,12 @@ extends SceneTree
 ## (demo mode, TRIPOTHON_STAGE_SECONDS, e.g. 12: stages of 12, 16, 20 s). A new account:
 ##  1. asks for the forest and gets the tutorial (its first expedition, /v1/me tutorial_done false);
 ##     the night comes and outlasts its stage (stage_remaining -1, no boss), the creatures are the
-##     tutorial's species drawn with their stand-ins, and nobody falls there;
+##     tutorial's species (the goblin) drawn with its own Tripo model, and nobody falls there;
 ##  2. its goals (gather 6, an axe, a fire, 2 kills) are met by a bot playing through the public run
 ##     API while the game's own ticks are paused; the run is won and claimed, and back in the village
 ##     tutorial_done is true;
-##  3. the forest starts (3 stages); its last night is the boss night: the treant comes as a brute
-##     scaled to 5 m, the night holds (day_progress 0.82, the map stays dark) and the run goes on.
+##  3. the forest starts (3 stages); its last night is the boss night: the treant comes as its own
+##     5 m model, the night holds (day_progress 0.82, the map stays dark) and the run goes on.
 ## Prints STAGE_SMOKE PASS/FAIL lines and STAGE_SMOKE_RESULT {json}; with --out=DIR captures
 ## tutorial_night.png and forest_boss.png there.
 ## Usage: Godot --path game --position X,Y --script res://tests/stage_smoke.gd -- --qa
@@ -115,7 +115,7 @@ func tutorial() -> void:
 	var art := []
 	for node in app().enemy_nodes.values():
 		if is_instance_valid(node) and node.get("monster"): art.append(str(node.monster.species))
-	check(not art.is_empty() and art.all(func(k): return k in ["wolf", "boar"]), "drawn with their stand-ins (goblin: wolf, centipede: boar): %s" % [art])
+	check(not art.is_empty() and art.all(func(k): return k == "goblin"), "drawn with the goblin's own model: %s" % [art])
 	var lowest := 100.0
 	var stage_end := float(s.get("stage_seconds", 12.0))
 	while float(run_state().get("elapsed", 0.0)) < stage_end+3.0:
@@ -235,10 +235,10 @@ func forest() -> void:
 	var boss_node: Node = null
 	for enemy in run_state().get("enemies", []):
 		if (enemy.get("boss", false) == true): boss_node = app().enemy_nodes.get(enemy.id)
-	var scale := -1.0
-	if is_instance_valid(boss_node) and boss_node.get("monster"): scale = float(boss_node.monster.scale.x)
-	check(is_instance_valid(boss_node) and boss_node.get("monster") and str(boss_node.monster.species) == "brute" and scale > 1.5,
-		"the treant is drawn as a brute scaled to 5 m (scale %.2f, art %s)" % [scale, str(boss_node.monster.species) if is_instance_valid(boss_node) and boss_node.get("monster") else "-"])
+	var tall := -1.0
+	if is_instance_valid(boss_node) and boss_node.get("monster"): tall = float(boss_node.monster.height)*float(boss_node.monster.scale.x)
+	check(is_instance_valid(boss_node) and boss_node.get("monster") and str(boss_node.monster.species) == "treant" and tall > 4.0,
+		"the treant is drawn with its own 5 m model (height %.2f, art %s)" % [tall, str(boss_node.monster.species) if is_instance_valid(boss_node) and boss_node.get("monster") else "-"])
 	# The night holds past the end of the last stage.
 	var past := float(run_state().get("elapsed", 0.0))+6.0
 	await wait_until(func(): return float(run_state().get("elapsed", 0.0)) >= past or run_state().get("status") != "active", 20.0)

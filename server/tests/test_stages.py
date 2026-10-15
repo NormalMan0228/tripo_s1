@@ -16,13 +16,14 @@ from server.tests.legacy_saves import legacy_run, legacy_world, strip
 
 STAGES = {'tutorial': 1, 'forest': 3, 'quarry': 5, 'frost': 7}
 ROSTER = {
-    'tutorial': {'weak': ('goblin', 'centipede')},
-    'forest': {'weak': ('goblin', 'harpy', 'centipede'), 'mid': ('werewolf', 'troll'), 'strong': ('cyclops',)},
-    'quarry': {'weak': ('skeleton', 'imp', 'lizardman', 'mimic'), 'mid': ('basilisk', 'naga', 'gargoyle'),
-               'strong': ('minotaur', 'mummy_king')},
-    'frost': {'weak': ('ghoul', 'frost_wraith', 'ice_shardling', 'draugr'),
-              'mid': ('yeti', 'wendigo', 'frost_hag', 'frost_knight'), 'strong': ('ice_golem', 'lich', 'glacier_giant')},
+    'tutorial': {'weak': ('goblin',)},
+    'forest': {'weak': ('goblin',), 'mid': ('werewolf', 'troll'), 'strong': ('cyclops',)},
+    'quarry': {'weak': ('skeleton', 'lizardman'), 'mid': ('mummy_king',), 'strong': ('minotaur', 'mummy_king')},
+    'frost': {'weak': ('ghoul', 'ice_shardling', 'draugr'),
+              'mid': ('yeti', 'wendigo', 'frost_hag', 'frost_knight'), 'strong': ('ice_golem', 'glacier_giant')},
 }
+# Rostered outside their own tier (no modelled species of that tier on that map yet).
+FILLERS = {('mummy_king', 'mid')}
 BOSSES = {'forest': 'treant', 'quarry': 'chimera', 'frost': 'dragon'}
 TIERS_FROM = {'tutorial': {'weak': 1}, 'forest': {'weak': 1, 'mid': 2, 'strong': 3},
               'quarry': {'weak': 1, 'mid': 2, 'strong': 4}, 'frost': {'weak': 1, 'mid': 2, 'strong': 4}}
@@ -113,7 +114,8 @@ def test_roster_is_the_confirmed_one_with_todays_art_standing_in():
         for tier, kinds in tiers.items():
             for kind in kinds:
                 stats = catalog.ENEMIES[kind]
-                assert stats['tier'] == tier and stats['stand_in'] in catalog.LEGACY_SPECIES
+                # the quarry's mummy king (strong) also fills the mid slot until a mid species has a model
+                assert (stats['tier'] == tier or (kind, tier) in FILLERS) and stats['stand_in'] in catalog.LEGACY_SPECIES
                 owners.setdefault(kind, set()).add(map_id)
     # One map each; the tutorial borrows the forest's weak ones.
     for kind, maps in owners.items():
@@ -137,7 +139,11 @@ def test_tiers_come_out_on_their_stage(map_id, difficulty):
     first = {}
     for stage in range(1, s['stage_count'] + 1):
         for enemy in simulation.night_enemies(s, stage):
-            first.setdefault(catalog.ENEMIES[enemy['species']]['tier'], stage)
+            kind = enemy['species']
+            tier = catalog.ENEMIES[kind]['tier']
+            if (kind, 'mid') in FILLERS and stage < TIERS_FROM[map_id].get('strong', 99):
+                tier = 'mid'  # a filler counts as the tier whose slot it fills before its own comes out
+            first.setdefault(tier, stage)
     assert first == TIERS_FROM[map_id]
 
 
@@ -254,7 +260,7 @@ def test_tutorial_night_refills_its_creatures_until_the_kills_are_done():
     s = open_field(simulation.new_run(4, 0, 90, 'tutorial'))
     s.update(elapsed=60., last_wall=0., fire_until=10. ** 6)
     simulation.advance(s, .1)
-    assert [e['species'] for e in s['enemies']] == ['goblin', 'centipede']
+    assert [e['species'] for e in s['enemies']] == ['goblin', 'goblin']
     assert all(math.hypot(e['x'], e['z']) <= 11.5 for e in s['enemies'])
     s['enemies'] = []
     simulation.advance(s, .2)
