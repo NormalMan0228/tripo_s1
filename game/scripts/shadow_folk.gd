@@ -641,6 +641,9 @@ func talk(walker: Node) -> void:
 	# Residents of a house take gifts (npc_gifts.gd, main.gd open_gift).
 	if preload("res://scripts/npc_gifts.gd").can_receive(id) and app.has_method("can_gift") and app.can_gift():
 		choices.append([tr("선물하기"), func(): app.open_gift(id, str(walker.title), portrait(walker), walker)])
+	# The resident's request (quests.gd) comes first.
+	var request: Array = preload("res://scripts/quests.gd").choice(app, id, str(walker.title), portrait(walker), walker)
+	if not request.is_empty(): choices.insert(0, request)
 	choices.append([tr("안녕"), Callable()])
 	say(walker, opening, choices)
 

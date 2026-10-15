@@ -129,8 +129,19 @@ const STORY_LETTERS := {
 	"decor":["제작자님에게. 테라스에 놓아 준 %s, 지나가는 사람마다 걸음을 멈추고 구경해.","네가 상상한 모습 그대로 우리 마을의 일부가 되었어. 앞으로도 잘 부탁해!"],
 }
 
+## Thank-you letters for a finished request (server/quests.py, quests.gd), by resident.
+const QUEST_LETTERS := {
+	"regular":["제작자님에게. 네가 따 온 사과로 구운 파이, 손님들이 한 조각씩 더 달라고 해서 금방 동났어.","다음엔 너도 꼭 한 조각 먹으러 와. 제일 큰 걸로 남겨 둘게!"],
+	"lamplighter":["제작자님에게. 네가 놓아 준 불빛이 밤마다 골목을 지켜 주고 있어요.","등불을 밝히다 그 앞을 지날 때면 꼭 인사해요. 고마워요!"],
+}
+
 ## One letter as dialogue pages: who and how close, the words, and the present if any.
 static func letter_lines(letter: Dictionary) -> Array:
+	if letter.get("quest") is Dictionary:
+		var words: Array = QUEST_LETTERS.get(str(letter.quest.get("npc", "")), ["고마워요! 덕분에 큰 힘이 됐어요."])
+		var page := [t("✉ %s의 편지 · 부탁을 들어줘서") % t(str(letter.get("name","")))+"\n"+t(str(words[0]))]
+		for line in words.slice(1): page.append(t(str(line)))
+		return page
 	if letter.get("story") is Dictionary:
 		var about: Dictionary = letter.story
 		var words: Array = STORY_LETTERS.seat if bool(about.get("sittable",false)) else STORY_LETTERS.decor

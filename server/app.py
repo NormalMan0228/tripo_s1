@@ -451,7 +451,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 # Unread letters from residents (the village mailbox raises its flag).
                 'npc_letters_unread':app.state.npc_homes.unread_for(user['id']),
                 # The opening story chapter (server/story.py), None for accounts without it.
-                'story':app.state.story.public_for(conn,user['id'])}
+                'story':app.state.story.public_for(conn,user['id']),
+                # Residents' requests (server/quests.py).
+                'quests':app.state.quests.public_for(conn,user['id'])}
 
     @app.post('/v1/objects/{object_id}')
     def edit_object(object_id:str,body:ObjectEdit,request:Request):
@@ -641,6 +643,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.npc_homes=NpcHomes(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
     from .story import Story
     app.state.story=Story(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
+    from .quests import Quests
+    app.state.quests=Quests(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
     from .interactions import Interactions
     app.state.interactions=Interactions(app,db,settings,clock,auth,mutate,own,money,studio)
     from .usage_report import UsageReport; app.state.usage_report=UsageReport(app,db,settings,clock)

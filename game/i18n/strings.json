@@ -760,6 +760,10 @@
    "en": "✉ A letter from %s · The Village's First Gift",
    "zh": "✉ %s的来信 · 村庄的第一份礼物"
   },
+  "✉ %s의 편지 · 부탁을 들어줘서": {
+   "en": "✉ A letter from %s · for your help",
+   "zh": "✉ %s的来信 · 谢谢你的帮忙"
+  },
   "✓ 준비됨": {
    "en": "✓ Ready",
    "zh": "✓ 已就绪"
@@ -771,6 +775,34 @@
   "✦  일곱 밤의 목표": {
    "en": "✦  Seven Nights Goals",
    "zh": "✦  七夜的目标"
+  },
+  "✦ 다른 부탁 %d개 · 수첩 보기": {
+   "en": "✦ %d more requests · open the book",
+   "zh": "✦ 还有 %d 个委托 · 查看手册"
+  },
+  "✦ 부탁 들어주기": {
+   "en": "✦ Hear the request",
+   "zh": "✦ 听听委托"
+  },
+  "✦ 부탁을 마쳤어요": {
+   "en": "✦ I've done it",
+   "zh": "✦ 委托完成了"
+  },
+  "✦ 부탁한 것 건네기": {
+   "en": "✦ Hand it over",
+   "zh": "✦ 交出委托的东西"
+  },
+  "✦ 새 부탁 %d개 · 수첩 보기": {
+   "en": "✦ %d new requests · open the book",
+   "zh": "✦ %d 个新委托 · 查看手册"
+  },
+  "✦ 주민들의 부탁 %d개 · 수첩 보기": {
+   "en": "✦ %d residents' requests · open the book",
+   "zh": "✦ 居民的委托 %d 个 · 查看手册"
+  },
+  "✦ 지금 건네기": {
+   "en": "✦ Hand it over now",
+   "zh": "✦ 现在交给你"
   },
   "✧  기력": {
    "en": "✧  Stamina",
@@ -979,6 +1011,10 @@
   "가방 정리": {
    "en": "Tidy Bag",
    "zh": "整理背包"
+  },
+  "가방(I)에서 빛나는 물건을 꺼내 마을에 놓아 보세요. 없다면 공방(C)에서 만들 수 있어요.": {
+   "en": "Take something that glows from your bag (I) and set it in the village. No such thing? Make one in the workshop (C).",
+   "zh": "从背包（I）里拿出会发光的东西放到村里。如果没有，可以在工坊（C）里做一个。"
   },
   "가방에 들어왔어요. 마을이든 집이든 비어 있는 곳에 놓을 수 있어요.": {
    "en": "It's in your Bag. Place it in any open spot, in the village or at home.",
@@ -1224,13 +1260,49 @@
    "en": "Thank you! It's exactly the chair I wanted. I'll put it on the terrace right away.",
    "zh": "谢谢！正是我想要的椅子。我马上把它放到露台上。"
   },
+  "고마워! 오븐은 미리 데워 둘게.": {
+   "en": "Thanks! I'll warm up the oven.",
+   "zh": "谢谢！我先把烤箱预热好。"
+  },
+  "고마워. 냄비는 내가 올려 둘게.": {
+   "en": "Thanks. I'll put the pot on.",
+   "zh": "谢谢。我先把锅架上。"
+  },
   "고마워. 마음 써 줘서 기뻐.": {
    "en": "Thank you. I'm glad you thought of me.",
    "zh": "谢谢。你这么用心，我很高兴。"
   },
+  "고마워. 작은 보답이야, 받아 줘!": {
+   "en": "Thank you. A little something in return!",
+   "zh": "谢谢你。这是一点小小的回礼，收下吧！"
+  },
   "고마워요": {
    "en": "Thank you",
    "zh": "谢谢"
+  },
+  "고마워요! 덕분에 큰 힘이 됐어요.": {
+   "en": "Thank you! You were a great help.",
+   "zh": "谢谢！真是帮了大忙。"
+  },
+  "고마워요! 숯불은 제가 피워 둘게요.": {
+   "en": "Thanks! I'll light the charcoal.",
+   "zh": "谢谢！炭火我来生。"
+  },
+  "고마워요! 씨앗은 가방에 있을 거예요.": {
+   "en": "Thanks! The seeds should be in your bag.",
+   "zh": "谢谢！种子应该就在你的包里。"
+  },
+  "고마워요. 농부의 감사 인사예요.": {
+   "en": "Thank you. A farmer's thanks.",
+   "zh": "谢谢。这是农夫的谢意。"
+  },
+  "고마워요. 다음엔 같이 낚시해요!": {
+   "en": "Thank you. Let's go fishing together next time!",
+   "zh": "谢谢你。下次一起钓鱼吧！"
+  },
+  "고마워요. 밤에 그 불빛을 보러 갈게요.": {
+   "en": "Thank you. I'll come and see that light tonight.",
+   "zh": "谢谢。晚上我会去看那盏灯。"
   },
   "고마워요. 이런 선물은 언제나 반갑답니다.": {
    "en": "Thank you. Gifts like this are always welcome.",
@@ -1239,6 +1311,10 @@
   "고마워요. 창가에 두면 햇빛이 머물다 갈 것 같아요.": {
    "en": "Thank you. By the window, sunlight would linger on it.",
    "zh": "谢谢。放在窗边，阳光也会在上面停留吧。"
+  },
+  "고맙다. 숲에 갈 때 든든할 거야.": {
+   "en": "Thanks. It'll keep you going in the forest.",
+   "zh": "谢了。去森林的时候会很顶用。"
   },
   "고양이": {
    "en": "Cat",
@@ -1428,6 +1504,10 @@
    "en": "That plot is gone now.",
    "zh": "那块田已经没有了。"
   },
+  "그 부탁은 벌써 들어줬어요. 정말 고마워요!": {
+   "en": "You already helped with that. Thank you so much!",
+   "zh": "那个委托你已经完成了。真的谢谢你！"
+  },
   "그네 타기": {
    "en": "Ride the swing",
    "zh": "荡秋千"
@@ -1616,6 +1696,10 @@
    "en": "Tension",
    "zh": "张力"
   },
+  "길 안내": {
+   "en": "Guide",
+   "zh": "带路"
+  },
   "길 안내 끄기": {
    "en": "Stop guiding",
    "zh": "关闭导航"
@@ -1635,6 +1719,14 @@
   "길과 입구 앞은 비워 주세요.": {
    "en": "Please keep paths and entrances clear.",
    "zh": "请让道路和入口前保持空旷。"
+  },
+  "길잡이 수업 통과! 이건 수업료… 가 아니라 장학금이야.": {
+   "en": "Guide lesson passed! This isn't a fee… it's a scholarship.",
+   "zh": "向导课程通过！这不是学费……是奖学金。"
+  },
+  "길잡이의 첫 수업! 이 마을은 다섯 섬이 다리로 이어져 있어.": {
+   "en": "A guide's first lesson! Five islands make up this village, linked by bridges.",
+   "zh": "向导的第一课！这个村子由五座岛组成，岛与岛之间有桥相连。"
   },
   "깊은 밤이에요. 달빛이 바다에 비쳐요.": {
    "en": "It's late at night. Moonlight shimmers on the sea.",
@@ -1731,6 +1823,10 @@
   "나루 · 길잡이": {
    "en": "Naru · Guide",
    "zh": "娜露 · 向导"
+  },
+  "나루의 섬 한 바퀴": {
+   "en": "Naru's Island Round",
+   "zh": "纳鲁的环岛一圈"
   },
   "나만의 자리 찾기\n바닥을 클릭하면 배치돼요.\nR · 회전    Esc · 취소": {
    "en": "Find the Perfect Spot\nClick the ground to place it.\nR · Rotate    Esc · Cancel",
@@ -2072,6 +2168,10 @@
    "en": "Sunset-coloured fabric just came in today.",
    "zh": "晚霞色的布料今天刚到。"
   },
+  "노을의 골목 불빛": {
+   "en": "Noeul's Alley Light",
+   "zh": "诺乌尔的小巷灯光"
+  },
   "녹백색 줄무늬 차양 상점": {
    "en": "Shop with a green-and-white striped awning",
    "zh": "绿白条纹遮阳篷商店"
@@ -2159,6 +2259,22 @@
   "님의 마을": {
    "en": "'s Village",
    "zh": "的村庄"
+  },
+  "다 됐어요! %s에게 알려 주세요": {
+   "en": "Done! Go and tell %s",
+   "zh": "完成了！去告诉%s吧"
+  },
+  "다 됐어요! %s에게 알리기": {
+   "en": "Done! Tell %s",
+   "zh": "完成了！告诉%s"
+  },
+  "다 모았어요! %s에게 가져가 보세요": {
+   "en": "All gathered! Bring them to %s",
+   "zh": "收集齐了！拿去给%s吧"
+  },
+  "다 모았어요! %s에게 가져가기": {
+   "en": "All gathered! Bring them to %s",
+   "zh": "收集齐了！拿去给%s"
   },
   "다 자란 작물 %d칸 수확하기": {
    "en": "Harvest %d ripe plot(s)",
@@ -2324,6 +2440,10 @@
    "en": "Daon · Postman",
    "zh": "多温 · 邮递员"
   },
+  "다온의 마음 배달": {
+   "en": "Daon's Delivery of the Heart",
+   "zh": "达温的心意快递"
+  },
   "다음 공격을 준비 중입니다.": {
    "en": "Getting ready for the next attack.",
    "zh": "正在准备下一次攻击。"
@@ -2351,6 +2471,14 @@
   "다음에 줄게요": {
    "en": "Maybe next time",
    "zh": "下次再给吧"
+  },
+  "다음에요": {
+   "en": "Maybe later",
+   "zh": "下次吧"
+  },
+  "다음엔 너도 꼭 한 조각 먹으러 와. 제일 큰 걸로 남겨 둘게!": {
+   "en": "Come and have a slice next time. I'll save you the biggest one!",
+   "zh": "下次你一定要来吃一块。我给你留最大的！"
   },
   "다행이에요": {
    "en": "I'm glad",
@@ -2664,6 +2792,10 @@
    "en": "You got a wildflower. It smells lovely.",
    "zh": "收到了一朵野花，很香。"
   },
+  "들었어요! 선물 받은 주민이 하루 종일 웃고 다니던데요.": {
+   "en": "I heard! The one who got your gift has been smiling all day.",
+   "zh": "我听说了！收到礼物的居民一整天都笑眯眯的。"
+  },
   "등대": {
    "en": "Lighthouse",
    "zh": "灯塔"
@@ -2676,6 +2808,10 @@
    "en": "Lighthouse Pier Fishing Spot",
    "zh": "灯塔码头钓场"
   },
+  "등대 부두 낚시터에서 바다 쪽으로 찌를 던져 봐요. 지금 %d/%d마리예요.": {
+   "en": "Cast toward the sea at the lighthouse pier. %d/%d so far.",
+   "zh": "在灯塔码头钓场朝大海抛竿试试。现在 %d/%d 条。"
+  },
   "등대 부두나 마을 연못에서 찌를 던져 봐요. 금빛 입질이 오면 바로!": {
    "en": "Cast a float off the lighthouse pier or the village pond. Pull as soon as you see a golden bite!",
    "zh": "去灯塔码头或村庄池塘抛竿吧。看到金色咬钩就马上拉！"
@@ -2683,6 +2819,10 @@
   "등대 부두는 새벽이 제일 좋아요.": {
    "en": "The lighthouse pier is best at dawn.",
    "zh": "灯塔码头黎明时最好。"
+  },
+  "등대 부두에서 바다 물고기 한 마리만 낚아 와 줄래요? 어떤 물고기든 좋아요!": {
+   "en": "Could you catch one sea fish at the lighthouse pier? Any fish will do!",
+   "zh": "能在灯塔码头钓一条海鱼回来吗？什么鱼都行！"
   },
   "등대 아래층": {
    "en": "Lighthouse Ground Floor",
@@ -2712,9 +2852,17 @@
    "en": "Keeper's Room",
    "zh": "守塔人房间"
   },
+  "등불을 밝히다 그 앞을 지날 때면 꼭 인사해요. 고마워요!": {
+   "en": "When I pass it on my lamp round, I always say hello. Thank you!",
+   "zh": "点灯路过它的时候，我总会打个招呼。谢谢你！"
+  },
   "등불지기 노을이에요. 해 질 녘이면 바빠져요.": {
    "en": "I'm Noeul, the lamplighter. I get busy around sunset.",
    "zh": "我是点灯人晚霞。一到黄昏就忙起来了。"
+  },
+  "등불지기가 드리는 작은 답례예요. 고마워요.": {
+   "en": "A little thank-you from the lamplighter.",
+   "zh": "这是守灯人的一点小回礼。谢谢你。"
   },
   "등불지기예요. 길이 어두워지면 제가 먼저 걸어요.": {
    "en": "I'm the lamplighter. When the path gets dark, I walk it first.",
@@ -2964,6 +3112,18 @@
    "en": "General Store",
    "zh": "杂货店"
   },
+  "마을 주민 누구에게든 선물을 하나 건네 볼래요? 저한테 줘도 좋고요!": {
+   "en": "Would you give a gift to anyone in the village? Even to me!",
+   "zh": "要不要送村里任何一位居民一件礼物？送给我也可以哦！"
+  },
+  "마을 주민들의 작은 부탁이에요. 들어주면 별씨를 받아요.": {
+   "en": "Small requests from the residents. Help out and earn starseeds.",
+   "zh": "村里居民的小委托。帮忙就能得到星籽。"
+  },
+  "마을 주민들이 부탁을 기다리고 있어요 · 머리 위 ! 를 찾아보세요": {
+   "en": "Residents have requests for you · look for the ! above their heads",
+   "zh": "居民们有委托在等你 · 找找头上的 ！"
+  },
   "마을 초대를 보냈습니다.": {
    "en": "Village invite sent.",
    "zh": "已发送村庄邀请。"
@@ -3039,6 +3199,10 @@
   "마을의 하루는 메뉴를 여는 동안에도 흘러가요.": {
    "en": "The village day keeps passing while the menu is open.",
    "zh": "打开菜单时，村庄的时间仍在流逝。"
+  },
+  "마음 배달 성공! 우편배달부가 드리는 작은 답례예요.": {
+   "en": "Delivered with heart! A little thank-you from your postman.",
+   "zh": "心意送达成功！这是邮差的一点小回礼。"
   },
   "마음에 드는 바닥을 클릭하세요. R로 돌리고 Esc로 취소할 수 있어요.": {
    "en": "Click a spot you like. Press R to rotate, Esc to cancel.",
@@ -3163,6 +3327,10 @@
   "맡겨 줘요": {
    "en": "Leave it to me",
    "zh": "交给我吧"
+  },
+  "맡겨 줘요 · 별씨 +%d": {
+   "en": "Leave it to me · Starseeds +%d",
+   "zh": "交给我吧 · 星籽 +%d"
   },
   "매장": {
    "en": "Shop Floor",
@@ -3336,6 +3504,10 @@
    "en": "I'm Moru. Leave surviving the forest nights to me.",
    "zh": "我叫莫鲁。在森林里熬过夜晚的方法，交给我吧。"
   },
+  "모루의 야영 수프": {
+   "en": "Moru's Camp Soup",
+   "zh": "莫鲁的露营汤"
+  },
   "모습 미리보기": {
    "en": "Preview Look",
    "zh": "预览外观"
@@ -3375,6 +3547,10 @@
   "모카가 기다리고 있어요": {
    "en": "Moka is waiting for you",
    "zh": "摩卡在等你"
+  },
+  "모카의 사과 파이": {
+   "en": "Moka's Apple Pie",
+   "zh": "摩卡的苹果派"
   },
   "모험가 로그인": {
    "en": "Adventurer Login",
@@ -3708,6 +3884,10 @@
    "en": "Sea",
    "zh": "海"
   },
+  "바다 물고기 %d/%d마리 낚기": {
+   "en": "Catch sea fish %d/%d",
+   "zh": "钓海鱼 %d/%d 条"
+  },
   "바다 지도 위에 항로가 그려져 있어요.": {
    "en": "Sea routes are drawn on the nautical chart.",
    "zh": "海图上画着航线。"
@@ -3887,6 +4067,10 @@
   "밤낚시는 찌가 안 보여서… 대신 그림자는 눈이 밝답니다.": {
    "en": "You can't see the float when fishing at night… but shadows have sharp eyes.",
    "zh": "夜钓看不见浮漂……不过影子的眼睛很亮哦。"
+  },
+  "밤마다 등불을 밝히지만, 등불이 닿지 않는 어두운 골목이 있어요.": {
+   "en": "I light the lamps every night, but some alleys stay dark where no lamp reaches.",
+   "zh": "我每晚都点灯，但有些小巷灯光照不到，还是黑漆漆的。"
   },
   "밤마다 바다에 길을 그려 주지만, 정작 자신은 한 발짝도 움직이지 않는 것은?": {
    "en": "Every night it draws a path across the sea, yet never takes a single step. What is it?",
@@ -4088,9 +4272,17 @@
    "en": "Mushroom Wraith",
    "zh": "蘑菇幽灵"
   },
+  "버섯은 숲 그늘에 숨어 있어. 지금 %d/%d개.": {
+   "en": "Mushrooms hide in the forest shade. %d/%d so far.",
+   "zh": "蘑菇藏在森林的树荫里。现在 %d/%d 朵。"
+  },
   "벌써 만드는 중이구나! 완성되면 들고 와 줘.": {
    "en": "You're already making it! Bring it over when it's done.",
    "zh": "已经在做了啊！做好了就拿过来吧。"
+  },
+  "벌써 세 섬이나! 이제 어디든 혼자 다닐 수 있겠다.": {
+   "en": "Three islands already! You can go anywhere on your own now.",
+   "zh": "已经三座岛了！现在你哪里都能自己去了。"
   },
   "벌써 첫 손님이네!": {
    "en": "Our first guest already!",
@@ -4171,6 +4363,10 @@
   "별씨 %d · Tripo 약 %d크레딧": {
    "en": "%d starseeds · about %d Tripo credits",
    "zh": "星种 %d · Tripo 约 %d 积分"
+  },
+  "별씨 +%d": {
+   "en": "Starseeds +%d",
+   "zh": "星籽 +%d"
   },
   "별씨 +1000": {
    "en": "Starseeds +1000",
@@ -4352,6 +4548,26 @@
    "en": "Part",
    "zh": "部位"
   },
+  "부탁 수첩": {
+   "en": "Request Book",
+   "zh": "委托手册"
+  },
+  "부탁 완료 · %s": {
+   "en": "Request done · %s",
+   "zh": "委托完成 · %s"
+  },
+  "부탁 완료 · %s · %s": {
+   "en": "Request done · %s · %s",
+   "zh": "委托完成 · %s · %s"
+  },
+  "부탁 이야기": {
+   "en": "About the request",
+   "zh": "委托的事"
+  },
+  "부탁은 내 마을 주민의 것만 들어줄 수 있어요.": {
+   "en": "You can only take requests from residents of your own village.",
+   "zh": "只能接受自己村子居民的委托。"
+  },
   "부탁이 하나 있어. 산책하다 쉬어 갈 손님을 위해 의자 하나가 필요해.": {
    "en": "I have a favor to ask. I need a chair for strollers who stop by to rest.",
    "zh": "想拜托你一件事。我需要一把椅子，给散步途中来歇脚的客人坐。"
@@ -4528,9 +4744,197 @@
    "en": "Password · 10+ chars, A–Z and a symbol",
    "zh": "密码 · 至少10位，含大写字母和特殊字符"
   },
+  "빛나는 물건 마을에 놓기": {
+   "en": "Set something that glows in the village",
+   "zh": "在村里放一件会发光的东西"
+  },
+  "빛나는 물건 하나를 마을에 놓아 줄래요? 램프든 촛불이든, 직접 만든 거라면 더 좋고요.": {
+   "en": "Would you set something that glows in the village? A lamp or a candle, even better if you made it.",
+   "zh": "能在村里放一件会发光的东西吗？灯或蜡烛都行，亲手做的就更好了。"
+  },
+  "빛나는 물건을 마을에 놓아 주세요 · I 가방 또는 C 공방": {
+   "en": "Set something that glows in the village · I bag or C workshop",
+   "zh": "请在村里放一件会发光的东西 · I 背包或 C 工坊"
+  },
+  "사과 %d/%d개 모으기": {
+   "en": "Gather apples %d/%d",
+   "zh": "收集苹果 %d/%d 个"
+  },
+  "사과는 과수원 상자나 둥근 나무에서 얻을 수 있어. 지금 %d/%d개야.": {
+   "en": "You can get apples from the orchard crate or the round trees. %d/%d so far.",
+   "zh": "苹果可以从果园的箱子或圆圆的树上得到。现在 %d/%d 个。"
+  },
+  "새 부탁 · %s": {
+   "en": "New request · %s",
+   "zh": "新委托 · %s"
+  },
+  "새 부탁 · 이야기를 걸어 보세요": {
+   "en": "New request · talk to them",
+   "zh": "新委托 · 去和他们说说话"
+  },
+  "서로 다른 섬 세 곳의 이정표를 찾아가 봐. 이정표에서는 다른 섬으로 바로 갈 수도 있어!": {
+   "en": "Visit the signposts on three different islands. From a signpost you can travel straight to another island!",
+   "zh": "去三座不同岛上的路标看看吧。在路标那里还能直接去别的岛！"
+  },
+  "선물은 말 없는 편지 같아요. 받는 사람 얼굴이 환해지거든요.": {
+   "en": "A gift is a letter without words. It lights up the face of whoever gets it.",
+   "zh": "礼物就像一封无声的信。收到的人脸上会亮起来。"
+  },
+  "소라의 새 옷 맞춤": {
+   "en": "Sora's New Outfit",
+   "zh": "索拉的新衣定制"
+  },
+  "순무 %d/%d개 수확하기": {
+   "en": "Harvest turnips %d/%d",
+   "zh": "收获萝卜 %d/%d 个"
+  },
+  "순무 씨앗을 심고 물 한 번만 주면 금방 자라요. 순무 두 개만 나눠 줄래요? 새 흙 맛을 보고 싶거든요.": {
+   "en": "Plant turnip seeds and water them once, and they grow in no time. Could you share two turnips? I want to taste the new soil.",
+   "zh": "种下萝卜种子浇一次水，很快就长大了。能分我两个萝卜吗？我想尝尝新土的味道。"
+  },
+  "숲 그늘 버섯": {
+   "en": "Mushrooms in the forest shade",
+   "zh": "森林树荫下的蘑菇"
+  },
+  "숲 그늘에서 버섯 두 개만 모아 와 줄래? 나무 밑 그늘진 곳에 잘 자라.": {
+   "en": "Could you gather two mushrooms in the forest shade? They grow well in the shadow under trees.",
+   "zh": "能去森林的树荫下采两朵蘑菇吗？它们喜欢长在树下阴凉的地方。"
+  },
+  "숲 버섯 %d/%d개 모으기": {
+   "en": "Gather forest mushrooms %d/%d",
+   "zh": "收集森林蘑菇 %d/%d 朵"
+  },
+  "숲에서 밤을 버티려면 따뜻한 수프가 최고야.": {
+   "en": "Nothing beats a warm soup for getting through a night in the forest.",
+   "zh": "想在森林里熬过夜晚，热汤最好不过了。"
+  },
+  "씨앗을 심고 물을 주면 돼요. 지금 순무 %d/%d개예요.": {
+   "en": "Plant the seeds and water them. Turnips %d/%d so far.",
+   "zh": "种下种子再浇水就行。现在萝卜 %d/%d 个。"
+  },
+  "앗, 아직 다 되지 않았나 봐요. 조금만 더 부탁해요!": {
+   "en": "Oh, it isn't quite done yet. Just a little more, please!",
+   "zh": "哎，好像还没完成。再加把劲吧！"
+  },
+  "어머, 벌써 준비가 됐네?": {
+   "en": "Oh, you already have it?",
+   "zh": "哎呀，已经准备好了？"
+  },
+  "어머, 이사 오느라 옷이 먼지투성이네요.": {
+   "en": "Oh my, moving has left your clothes all dusty.",
+   "zh": "哎呀，搬家把衣服弄得满是灰尘呢。"
+  },
+  "어젯밤 그 불빛 덕분에 골목이 환했어요. 그림자들도 길을 잃지 않았대요.": {
+   "en": "Thanks to that light the alley was bright last night. Even the shadows didn't lose their way.",
+   "zh": "多亏那盏灯，昨晚小巷亮堂堂的。听说影子们也没迷路。"
+  },
+  "오, 알이 꽉 찼네요! 첫 수확 솜씨가 보통이 아닌데요.": {
+   "en": "Oh, nice and plump! Quite a first harvest.",
+   "zh": "哦，个个饱满！第一次收获就这么厉害。"
+  },
+  "오늘 저녁은 바다 생선구이를 하고 싶은데, 제 낚싯대가 영 시원찮네요.": {
+   "en": "I want grilled sea fish tonight, but my rod just isn't biting.",
+   "zh": "今晚想吃烤海鱼，可我的鱼竿一直不给力。"
+  },
+  "옷장에서 새 차림 갈아입기": {
+   "en": "Change into a new outfit",
+   "zh": "在衣柜换上新衣服"
+  },
+  "옷장에서 새 차림을 골라 저장해 보세요. 저한테 말하면 옷장을 열어 드려요.": {
+   "en": "Pick a new outfit in the wardrobe and save it. Talk to me and I'll open it for you.",
+   "zh": "在衣柜里挑一身新衣服并保存吧。跟我说一声，我就帮你打开衣柜。"
+  },
+  "완료": {
+   "en": "Done",
+   "zh": "完成"
+  },
+  "우와, 빨갛게 잘 익었다! 오늘 오후엔 테라스에 파이 냄새가 퍼지겠어.": {
+   "en": "Wow, nice and ripe! The terrace will smell of pie this afternoon.",
+   "zh": "哇，红得正好！今天下午露台上会飘满派的香味。"
+  },
+  "우와, 싱싱하다! 오늘 저녁은 잔치예요.": {
+   "en": "Wow, so fresh! Tonight's a feast.",
+   "zh": "哇，好新鲜！今晚要开宴啦。"
+  },
+  "이정표 %d/%d · %s": {
+   "en": "Signpost %d/%d · %s",
+   "zh": "路标 %d/%d · %s"
+  },
+  "이정표 %d/%d곳 찾아가기": {
+   "en": "Visit signposts %d/%d",
+   "zh": "寻访路标 %d/%d 个"
+  },
+  "이정표 · %s": {
+   "en": "Signpost · %s",
+   "zh": "路标 · %s"
+  },
+  "이정표를 %d/%d곳 찾았네. 금빛 길을 따라가 봐!": {
+   "en": "You've found %d/%d signposts. Follow the golden trail!",
+   "zh": "已经找到 %d/%d 个路标了。跟着金色的路走吧！"
+  },
+  "정말 잘 어울려요! 섬 바람이랑 색이 딱 맞네요.": {
+   "en": "It really suits you! The colours match the island breeze.",
+   "zh": "真适合你！颜色和岛上的风正相配。"
+  },
+  "제 옷을 입어 준 첫 손님이에요. 고마워요!": {
+   "en": "You're the first to wear my clothes. Thank you!",
+   "zh": "你是第一位穿上我做的衣服的客人。谢谢！"
+  },
+  "제 옷장에서 마음에 드는 새 차림으로 갈아입어 볼래요? 색 하나만 바꿔도 기분이 달라져요.": {
+   "en": "Would you like to change into a new outfit from my wardrobe? Even one new colour lifts the mood.",
+   "zh": "要不要从我的衣柜里换一身喜欢的新衣服？哪怕只换一个颜色，心情也会不一样。"
+  },
+  "제작자님에게. 네가 놓아 준 불빛이 밤마다 골목을 지켜 주고 있어요.": {
+   "en": "Dear maker, the light you set out watches over the alley every night.",
+   "zh": "亲爱的制作者：你放的那盏灯，每晚都守护着小巷。"
+  },
+  "제작자님에게. 네가 따 온 사과로 구운 파이, 손님들이 한 조각씩 더 달라고 해서 금방 동났어.": {
+   "en": "Dear maker, the pie I baked with your apples sold out fast: every guest asked for another slice.",
+   "zh": "亲爱的制作者：用你摘来的苹果烤的派，客人们都要再来一块，很快就卖光了。"
+  },
+  "좋아, 출발! 이정표는 섬마다 길가에 서 있어.": {
+   "en": "Off you go! Every island has a signpost by the road.",
+   "zh": "好，出发！每座岛的路边都立着路标。"
+  },
+  "좋아요! 옷장은 언제든 열어 드릴게요.": {
+   "en": "Lovely! I'll open the wardrobe for you any time.",
+   "zh": "好呀！衣柜随时为你打开。"
+  },
+  "좋아요! 이야기하다 '선물하기'를 고르면 돼요.": {
+   "en": "Great! Just choose 'Give a gift' while you chat.",
+   "zh": "好！聊天时选择「送礼物」就行。"
+  },
+  "좋은 버섯이네. 오늘 밤 수프는 특별하겠어.": {
+   "en": "Good mushrooms. Tonight's soup will be special.",
+   "zh": "好蘑菇。今晚的汤一定很特别。"
+  },
+  "주민과 이야기하다 '선물하기'를 골라 보세요. 가방의 물건을 건넬 수 있어요.": {
+   "en": "Talk to a resident and choose 'Give a gift'. You can hand over something from your bag.",
+   "zh": "和居民聊天时选择「送礼物」。可以送出包里的物品。"
+  },
+  "주민에게 선물 %d/%d번 하기": {
+   "en": "Give residents gifts %d/%d",
+   "zh": "给居民送礼 %d/%d 次"
+  },
+  "지금은 부탁할 게 없대요. 마을 일을 먼저 마쳐 보세요.": {
+   "en": "No requests for now. Finish what the village needs first.",
+   "zh": "现在没有委托。先把村里的事办完吧。"
+  },
+  "찾아가기": {
+   "en": "Find them",
+   "zh": "去找他们"
+  },
+  "테라스에 오는 손님들께 갓 구운 사과 파이를 대접하고 싶어.": {
+   "en": "I'd love to treat the terrace guests to a fresh apple pie.",
+   "zh": "我想请露台上的客人吃刚出炉的苹果派。"
+  },
+  "풍차 들판 서쪽 과수원에서 사과 세 개만 따다 줄래? 둥근 나무를 살살 흔들어도 떨어져.": {
+   "en": "Could you pick three apples in the orchard west of Windmill Fields? Shake a round tree gently and they fall.",
+   "zh": "能帮我去风车田野西边的果园摘三个苹果吗？轻轻摇一摇圆圆的树也会掉下来。"
+  },
   "한/영 키가 한글이었어요 · 누른 자판대로 영문으로 넣었어요.": {
-    "en": "Your keyboard was in Hangul mode · the keys you pressed went in as English letters.",
-    "zh": "键盘处于韩文模式 · 已按所按的键改为英文字母输入。"
+   "en": "Your keyboard was in Hangul mode · the keys you pressed went in as English letters.",
+   "zh": "键盘处于韩文模式 · 已按所按的键改为英文字母输入。"
   },
   "비밀번호는 영문으로 입력해요 · 한/영 키로 바꿔 주세요.": {
    "en": "Passwords use Latin letters · switch with the Han/Eng key.",
@@ -9008,6 +9412,10 @@
    "en": "Hangyeol · Farmer",
    "zh": "韩洁 · 农夫"
   },
+  "한결의 첫 수확": {
+   "en": "Hangyeol's First Harvest",
+   "zh": "韩洁的第一次收获"
+  },
   "한국어": {
    "en": "English",
    "zh": "한국어"
@@ -9096,6 +9504,10 @@
    "en": "Haeru · Angler",
    "zh": "海璐 · 渔夫"
   },
+  "해루의 바다 저녁상": {
+   "en": "Haeru's Seaside Supper",
+   "zh": "海鲁的海味晚餐"
+  },
   "해먹에 누워 쉬기": {
    "en": "Rest in the hammock",
    "zh": "躺在吊床上休息"
@@ -9147,6 +9559,10 @@
   "햇살 텃밭 소식 · 수확 %d칸, 물 줄 곳 %d칸, 빈 밭 %d칸": {
    "en": "Sunny garden news · %d ready to harvest, %d need water, %d empty",
    "zh": "阳光菜园消息 · 可收获 %d 格，需浇水 %d 格，空地 %d 格"
+  },
+  "햇살 텃밭 흙이 올해 유난히 좋아요.": {
+   "en": "The soil in the sunny field is especially good this year.",
+   "zh": "今年阳光菜园的土特别好。"
   },
   "햇살 텃밭은 바로 이 풍차 들판에 있어요. 씨앗을 심고 물을 한 번만 주면 돼요.": {
    "en": "The Sunny Garden is right here in the Windmill Meadow. Plant seeds and water them once.",

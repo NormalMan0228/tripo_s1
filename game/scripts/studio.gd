@@ -2602,6 +2602,10 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	# Residents of a house take gifts from their own village's player.
 	if lines.is_empty() and NpcGifts.can_receive(id) and not visiting and not api.token.is_empty():
 		talk.choices.insert(maxi(0,talk.choices.size()-1),["선물하기","gift"])
+	# The resident's request (quests.gd) comes first, as in the village.
+	if lines.is_empty() and not visiting:
+		var request: Array=preload("res://scripts/quests.gd").room_choice(self,id)
+		if not request.is_empty(): talk.choices.insert(0,request)
 	talk_id=id;talk_lines=talk.lines;talk_choices=talk.choices;talk_page=0
 	if entry.pose=="stand" and is_instance_valid(hero):
 		var look: Vector3=hero.global_position-entry.holder.global_position

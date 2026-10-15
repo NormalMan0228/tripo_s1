@@ -1377,6 +1377,7 @@ func refresh_inventory() -> void:
 	# The opening story chapter (story.gd) follows the server's progress.
 	var story := chapter()
 	if story: story.adopt(me.get("story"))
+	if story: story.adopt_quests(me.get("quests"))
 	# A newer look adopted while this answer was on its way stays.
 	if int(newer.get("version",-1))>int(me.get("profile",{}).get("version",-1)): me.profile=newer
 	# Also while the village is still loading (screen "loading"): the walker built before /v1/me
@@ -1530,6 +1531,7 @@ func poll_entitlements() -> void:
 	NpcGifts.set_versions(result.data.get("npc_homes"),result.data.get("npc_homes_host",""))
 	var story := chapter()
 	if story: story.adopt(result.data.get("story"))
+	if story: story.adopt_quests(result.data.get("quests"))
 	if objects_signature(result.data.objects)!=objects_signature(me.objects) or result.data.shards!=me.shards:
 		cancel_preview()
 		await refresh_inventory()
@@ -3267,6 +3269,9 @@ func talk_to(npc: Node3D) -> void:
 	# Residents of a house take gifts from their own village's player (npc_gifts.gd).
 	if NpcGifts.can_receive(cast) and can_gift():
 		plan.choices.insert(maxi(0,plan.choices.size()-1),[tr("선물하기"),func(): open_gift(cast,str(npc.get_meta("title")),cast,npc)])
+	# The resident's request (quests.gd) comes first.
+	var request: Array=preload("res://scripts/quests.gd").choice(self,cast,str(npc.get_meta("title")),cast,npc)
+	if not request.is_empty(): plan.choices.insert(0,request)
 	open_dialogue(str(npc.get_meta("title")),cast,plan.lines,plan.choices)
 
 ## Gifts go to the residents of your own village only.
