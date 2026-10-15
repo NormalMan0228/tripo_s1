@@ -706,8 +706,12 @@ func focused() -> Dictionary:
 
 # ------------------------------------------------------------------ tracker and guide
 
+## Requests the tracker lists at once (the shown one and four more); the rest wait in the book.
+const TRACKED := 5
+
 ## The tracker's text with the requests on top: the shown request's goal ("▸ ", a guide row), its
-## title and reward, and a line for the others (the book).
+## title and reward, then the goal of up to four more under way (ready ones first, then the newest),
+## each its own guide row, and a line for the rest (the book).
 func objective(base: String) -> String:
 	line_keys.clear()
 	if not shown(): return base
@@ -722,8 +726,18 @@ func objective(base: String) -> String:
 		out.append("▸ "+goal)
 		var stars := int(item.get("stars", 0))
 		out.append(title_of(item)+(" · "+stars_text(stars) if stars > 0 else ""))
+		var others := open.filter(func(other): return str(other.id) != str(item.id))
+		others.sort_custom(func(a, b):
+			var a_ready := state_of(a) == "ready"
+			if a_ready != (state_of(b) == "ready"): return a_ready
+			return float(a.get("accepted", 0)) > float(b.get("accepted", 0)))
+		for other in others.slice(0, TRACKED - 1):
+			var line := goal_text(other, have_of(other), state_of(other) == "ready", story.hour())
+			if line_keys.has(line): continue
+			line_keys[line] = KEY+str(other.id)
+			out.append("▸ "+line)
 	var book := ""
-	if open.size() > 1: book = tr("✦ 다른 부탁 %d개 · 수첩 보기") % (open.size()-1)
+	if open.size() > TRACKED: book = tr("✦ 다른 부탁 %d개 · 수첩 보기") % (open.size()-TRACKED)
 	elif waiting > 0: book = (tr("✦ 새 부탁 %d개 · 수첩 보기") if not open.is_empty() else tr("✦ 주민들의 부탁 %d개 · 수첩 보기")) % waiting
 	if not book.is_empty():
 		line_keys[book] = BOOK_KEY
@@ -1081,54 +1095,70 @@ func open_book() -> void:
 	list.add_theme_constant_override("separation", 4)
 	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(list)
-	# Done first, then under way, new, finished; the residents' order within each.
+	# Three pages like an adventurer's journal: under way (done ones first), new, finished; the
+	# residents' order within each. The page that has something opens first.
 	var order := {"ready":0, "active":1, "available":2, "done":3, "locked":4}
 	var items: Array = []
 	for index in entries().size(): items.append([int(order.get(state_of(entries()[index]), 5)), index, entries()[index]])
 	items.sort_custom(func(a, b): return int(a[0]) < int(b[0]) or (int(a[0]) == int(b[0]) and int(a[1]) < int(b[1])))
-	items = items.map(func(entry): return entry[2])
-	for item in items:
-		if not BOOK.has(str(item.get("id", ""))): continue
-		var state := state_of(item)
-		var line := HBoxContainer.new()
-		line.name = "Quest_"+str(item.id)
-		line.add_theme_constant_override("separation", 12)
-		line.custom_minimum_size = Vector2(650, 46)
-		list.add_child(line)
-		var mark := RpgUi.label(line, {"ready":"?", "active":"▸", "available":"!", "done":"✓"}.get(state, "·"), 22,
-			{"ready":Color("9fe3ff"), "available":Color("ffd84a"), "done":Color("a6d98a")}.get(state, RpgUi.GOLD))
-		mark.custom_minimum_size.x = 22
-		mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		var words := VBoxContainer.new()
-		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		words.add_theme_constant_override("separation", 0)
-		line.add_child(words)
-		var head := RpgUi.label(words, title_of(item), 17, RpgUi.PAPER_INK, false)
-		head.add_theme_font_override("font", RpgUi.FONT_STRONG)
-		var detail := npc_name(str(item.npc), story.hour())+" · "
-		match state:
-			"ready": detail += goal_text(item, have_of(item), true, story.hour())
-			"active": detail += goal_text(item, have_of(item), false, story.hour())
-			"available": detail += tr("새 부탁 · 이야기를 걸어 보세요")
-			"done": detail += tr("완료")
-		RpgUi.caption(words, detail, 13)
-		var stars := int(item.get("stars", 0))
-		var reward := HBoxContainer.new()
-		reward.add_theme_constant_override("separation", 3)
-		line.add_child(reward)
-		reward.add_child(RpgUi.icon(STAR_ICON, 20))
-		var amount := RpgUi.numbers(RpgUi.label(reward, ("+%d" % stars) if state != "done" else "✓ %d" % stars, 16, Color("8a5a12"), false), 16)
-		amount.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		var id := str(item.id)
-		if state in ["active", "ready"]:
-			app.button(line, tr("길 안내"), func():
-				app.close_village_modal()
-				guide_to(id, false), "gold" if state == "ready" else "default").custom_minimum_size.x = 96
-		elif state == "available":
-			app.button(line, tr("찾아가기"), func():
-				app.close_village_modal()
-				guide_to(id, false)).custom_minimum_size.x = 96
-		else:
-			var gap := Control.new()
-			gap.custom_minimum_size.x = 96
-			line.add_child(gap)
+	items = items.map(func(entry): return entry[2]).filter(func(item): return BOOK.has(str(item.get("id", ""))))
+	var pages := {"open":["ready", "active"], "new":["available"], "done":["done"]}
+	var count := func(page: String) -> int: return items.filter(func(item): return state_of(item) in pages[page]).size()
+	var fill := func(page: String) -> void:
+		for child in list.get_children():
+			list.remove_child(child)
+			child.queue_free()
+		scroll.scroll_vertical = 0
+		var shown_items: Array = items.filter(func(item): return state_of(item) in pages[page])
+		if shown_items.is_empty():
+			RpgUi.caption(list, {"open":tr("지금 들어주고 있는 부탁이 없어요."), "new":tr("새 부탁이 없어요. 주민들과 이야기해 보세요."), "done":tr("아직 끝낸 부탁이 없어요.")}[page], 14)
+		for item in shown_items:
+			if not BOOK.has(str(item.get("id", ""))): continue
+			var state := state_of(item)
+			var line := HBoxContainer.new()
+			line.name = "Quest_"+str(item.id)
+			line.add_theme_constant_override("separation", 12)
+			line.custom_minimum_size = Vector2(650, 46)
+			list.add_child(line)
+			var mark := RpgUi.label(line, {"ready":"?", "active":"▸", "available":"!", "done":"✓"}.get(state, "·"), 22,
+				{"ready":Color("9fe3ff"), "available":Color("ffd84a"), "done":Color("a6d98a")}.get(state, RpgUi.GOLD))
+			mark.custom_minimum_size.x = 22
+			mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			var words := VBoxContainer.new()
+			words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			words.add_theme_constant_override("separation", 0)
+			line.add_child(words)
+			var head := RpgUi.label(words, title_of(item), 17, RpgUi.PAPER_INK, false)
+			head.add_theme_font_override("font", RpgUi.FONT_STRONG)
+			var detail := npc_name(str(item.npc), story.hour())+" · "
+			match state:
+				"ready": detail += goal_text(item, have_of(item), true, story.hour())
+				"active": detail += goal_text(item, have_of(item), false, story.hour())
+				"available": detail += tr("새 부탁 · 이야기를 걸어 보세요")
+				"done": detail += tr("완료")
+			RpgUi.caption(words, detail, 13)
+			var stars := int(item.get("stars", 0))
+			var reward := HBoxContainer.new()
+			reward.add_theme_constant_override("separation", 3)
+			line.add_child(reward)
+			reward.add_child(RpgUi.icon(STAR_ICON, 20))
+			var amount := RpgUi.numbers(RpgUi.label(reward, ("+%d" % stars) if state != "done" else "✓ %d" % stars, 16, Color("8a5a12"), false), 16)
+			amount.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			var id := str(item.id)
+			if state in ["active", "ready"]:
+				app.button(line, tr("길 안내"), func():
+					app.close_village_modal()
+					guide_to(id, false), "gold" if state == "ready" else "default").custom_minimum_size.x = 96
+			elif state == "available":
+				app.button(line, tr("찾아가기"), func():
+					app.close_village_modal()
+					guide_to(id, false)).custom_minimum_size.x = 96
+			else:
+				var gap := Control.new()
+				gap.custom_minimum_size.x = 96
+				line.add_child(gap)
+	var tabs := RpgUi.tab_strip(v, [{"id":"open", "label":tr("진행 중 %d") % count.call("open")}, {"id":"new", "label":tr("새 부탁 %d") % count.call("new")},
+		{"id":"done", "label":tr("완료 %d") % count.call("done")}], fill)
+	tabs.name = "QuestBookTabs"
+	v.move_child(tabs, scroll.get_index())
+	RpgUi.select_tab(tabs, "open" if count.call("open") > 0 else ("new" if count.call("new") > 0 else "done"))

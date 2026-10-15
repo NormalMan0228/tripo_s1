@@ -226,8 +226,16 @@ func run() -> void:
 	await shot("guide", 1.0)
 	# The book from the tracker's last line.
 	expect(requests.row(Quests.BOOK_KEY) and is_instance_valid(app.village_modal) and modal_text().contains(app.tr("부탁 수첩")), "the tracker's book line opens the request book")
-	var rows: Array = app.village_modal.find_children("Quest_*", "HBoxContainer", true, false)
-	expect(rows.size() == 19 and modal_text().contains(app.tr("해루의 바다 저녁상")) and modal_text().contains(app.tr("완료")), "the book lists all nineteen (해루's ready, 소라's done)")
+	# Three pages (under way, new, finished): every request on exactly one of them.
+	var tabs: Control = app.village_modal.find_child("QuestBookTabs", true, false)
+	var pages := {}
+	for page in ["open", "new", "done"]:
+		preload("res://scripts/rpg_ui.gd").select_tab(tabs, page)
+		await process_frame
+		for row in app.village_modal.find_children("Quest_*", "HBoxContainer", true, false): pages[str(row.name)] = page
+	expect(tabs != null and pages.size() == 19 and pages.get("Quest_haeru_fish") == "open" and pages.get("Quest_sora_outfit") == "done", "the book's pages hold all nineteen (해루's on 진행 중, 소라's on 완료: %s)" % [pages.size()])
+	preload("res://scripts/rpg_ui.gd").select_tab(tabs, "open")
+	await process_frame
 	await shot("book", 0.8)
 	app.close_village_modal()
 	before = counter()

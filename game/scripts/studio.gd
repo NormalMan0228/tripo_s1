@@ -543,6 +543,11 @@ func show_coins(coins: int) -> void:
 	if gap and not gap is Label: gap.visible=known
 	if known: RpgUi.count_to(frame.leaves,coins)
 
+## The star-seed balance from a presence reply (social_hud.gd ingest).
+func live_shards(shards: int) -> void:
+	if is_instance_valid(wallet): wallet.text=tr("별씨 %d") % shards
+	show_stars(shards)
+
 ## The frame's star-seeds (별씨) after /v1/studio or a resident's reward.
 func show_stars(shards: int) -> void:
 	if frame.has("stars") and is_instance_valid(frame.stars): RpgUi.count_to(frame.stars,shards)

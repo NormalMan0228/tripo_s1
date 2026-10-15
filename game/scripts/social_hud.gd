@@ -60,6 +60,14 @@ var chat: Control
 var drawer: Dictionary = {}
 var window: RefCounted
 var hidden_by_window := false
+## Whisper requests (48, server/chat.py): a whisper to someone who has not allowed it yet comes back
+## as a request; the other side answers it on a toast. whisper_api: -1 not asked yet, 0 the server
+## has none (404: whispers stay friends-only), 1 on. whisper_states: request id -> state last seen.
+var whisper_api := -1
+var whisper_time := -100.0
+var whisper_pending := false
+var whisper_states: Dictionary = {}
+const WHISPER_POLL := 4.0
 
 ## The hub of the session `network` (an api.gd) is signed in to; null before signing in.
 static func of(network: Node) -> Node:
@@ -347,6 +355,10 @@ func _refuse(group: String) -> bool:
 func ingest(reply: Dictionary) -> void:
 	if stopped or reply.is_empty(): return
 	overview = reply
+	# The player's star-seed balance comes with every poll (SERVER_CONTRACTS_KO.md 2): the wallet
+	# follows it at once, whoever changed it (a sale, an admin grant, a gift).
+	if reply.get("shards") != null and is_instance_valid(place) and place.has_method("live_shards"):
+		place.live_shards(int(reply.shards))
 	if reply.get("chat") is Dictionary: _ingest_chat(reply.chat)
 	elif reply.get("messages") is Array: _ingest_legacy(reply.messages)
 	if reply.get("social") is Dictionary: _ingest_social(reply.social)
@@ -507,6 +519,17 @@ func send(text: String, channel := "local") -> void:
 	chat.redraw()
 	var answer: Dictionary = await api.post("/v1/social/messages", payload)
 	if stopped: return
+	if answer.ok and str(answer.data.get("state", "")) == "requested":
+		# Not allowed yet: the server made a whisper request instead (no text is kept). The line goes
+		# back into an empty field to send again once they accept.
+		lines.erase(echo)
+		whisper_api = 1
+		var request: Dictionary = answer.data.get("request", {}) if answer.data.get("request") is Dictionary else {}
+		if not str(request.get("id", "")).is_empty(): whisper_states[str(request.id)] = "pending"
+		RpgUi.sfx("chat_out", -10.0)
+		system_line(tr("%s님에게 귓속말 요청을 보냈어요. 받아 주면 다시 보내 주세요.") % to)
+		if is_instance_valid(chat) and chat.field.text.is_empty(): chat.field.text = body.text
+		return
 	if answer.ok:
 		# The send sound once the server took the line (as the old social.gd send_message).
 		RpgUi.sfx("chat_out", -6.0)
@@ -534,7 +557,9 @@ func send_error(code: String) -> String:
 		"chat_muted":tr("잠시 대화를 쉬어야 해요."),
 		"message_blocked":tr("보낼 수 없는 말이 들어 있어요."),
 		"not_in_party":tr("파티에 들어가 있지 않아요."),
-		"whisper_target_unavailable":tr("귓속말을 받을 수 없는 상대예요. 접속 중인 친구에게만 보낼 수 있어요."),
+		"whisper_target_unavailable":tr("귓속말을 받을 수 없는 상대예요. 같은 곳 8m 안에 있거나 접속 중인 친구에게 보낼 수 있어요.") if whisper_api == 1 else tr("귓속말을 받을 수 없는 상대예요. 접속 중인 친구에게만 보낼 수 있어요."),
+		"whisper_request_limited":tr("같은 사람에게는 잠시 뒤에 다시 청할 수 있어요."),
+		"whisper_pending_limit":tr("답을 기다리는 귓속말 요청이 너무 많아요."),
 		"chat_ip_limited":tr("지금은 보낼 수 없어요. 잠시 뒤에 다시 해 주세요."),
 		"message_empty":tr("보낼 내용이 없어요."),
 		"connection_failed":tr("연결이 끊겨서 보내지 못했어요."),
@@ -560,7 +585,9 @@ func toggle_window() -> void:
 	else: open_window()
 
 func _process(_delta: float) -> void:
-	if stopped or not window.is_open(): return
+	if stopped: return
+	if whisper_api != 0 and chat2() and Time.get_ticks_msec() * 0.001 - whisper_time > WHISPER_POLL: fetch_whispers()
+	if not window.is_open(): return
 	var every := float((health.get("social_poll", {}) as Dictionary).get("people", 5.0)) if health.get("social_poll") is Dictionary else 5.0
 	if Time.get_ticks_msec() * 0.001 - people_time > every: fetch_people()
 
@@ -573,6 +600,48 @@ func fetch_people() -> void:
 	if stopped or not answer.ok: return
 	people = answer.data
 	window.refresh()
+
+## Whisper requests to and from this player: a new one to me gets a toast with 수락 / 거절; mine that
+## got an answer get a line in the chat.
+func fetch_whispers() -> void:
+	if whisper_pending or api == null or str(api.token).is_empty(): return
+	whisper_pending = true
+	whisper_time = Time.get_ticks_msec() * 0.001
+	var answer: Dictionary = await api.request("/v1/social/whispers/requests")
+	whisper_pending = false
+	if stopped: return
+	if not answer.ok:
+		if int(answer.get("status", 0)) == 404: whisper_api = 0
+		return
+	whisper_api = 1
+	var me := str(overview.get("self_id", ""))
+	var listed: Array = answer.data.get("requests", []) if answer.data.get("requests") is Array else []
+	for entry in listed:
+		if not entry is Dictionary: continue
+		var id := str(entry.get("id", ""))
+		var state := str(entry.get("state", ""))
+		var before := str(whisper_states.get(id, ""))
+		whisper_states[id] = state
+		if id.is_empty() or before == state: continue
+		var mine := str(entry.get("sender_id", "")) == me if not me.is_empty() else str(entry.get("from_name", "")) == my_name()
+		if not mine and state == "pending":
+			var who := str(entry.get("from_name", ""))
+			notice(tr("%s님이 귓속말을 나누고 싶어 해요") % who, "social", [{"label":tr("수락"), "call":func(): answer_whisper(id, who, true)},
+				{"label":tr("거절"), "call":func(): answer_whisper(id, who, false)}])
+			system_line(tr("%s님이 귓속말을 청했어요.") % who)
+		elif mine and before == "pending" and state == "accepted":
+			system_line(tr("%s님이 귓속말 요청을 받아 주었어요. 이제 귓속말을 보낼 수 있어요.") % str(entry.get("to_name", "")))
+		elif mine and before == "pending" and state == "declined":
+			system_line(tr("%s님이 지금은 귓속말을 받지 않아요.") % str(entry.get("to_name", "")))
+
+func answer_whisper(id: String, who: String, accept: bool) -> void:
+	var answer := await act("/v1/social/whispers/requests/%s/%s" % [id.uri_encode(), "accept" if accept else "decline"])
+	if stopped or not answer.ok: return
+	whisper_states[id] = "accepted" if accept else "declined"
+	if accept:
+		system_line(tr("%s님과 귓속말을 나눌 수 있어요.") % who)
+		chat.whisper_to = who
+		chat.refresh_channels()
 
 ## A mutation with the shared refusal texts; returns the answer.
 func act(path: String, body := {}) -> Dictionary:
@@ -607,6 +676,8 @@ func act_error(code: String) -> String:
 		"return_home_before_inviting":tr("내 마을로 돌아간 뒤 초대해 주세요."),
 		"people_rate_limited":tr("잠시 뒤에 다시 해 주세요."),
 		"connection_failed":tr("연결이 끊겼어요."),
+		"whisper_request_unavailable":tr("만료되었거나 이미 처리된 귓속말 요청이에요."),
+		"whisper_request_closed":tr("이미 답한 귓속말 요청이에요."),
 	}.get(code, tr("지금은 할 수 없어요."))
 
 func request_friend(username := "", user_id := "") -> void:

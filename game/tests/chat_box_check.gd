@@ -130,6 +130,29 @@ func run() -> void:
 	await create_timer(0.3).timeout
 	posted = stub.posts.filter(func(p): return p[0] == "/v1/social/messages")
 	expect(posted.size() == 1 and posted[0][1].channel == "whisper" and posted[0][1].to == "sora" and posted[0][1].text == "몰래 할 말", "/w sends a whisper (%s)" % [posted])
+	# Whisper requests (48): a whisper not allowed yet comes back as a request and the line goes
+	# back into the field; a request to me is a toast with 수락 / 거절, and 수락 answers it.
+	var sent_reply: Dictionary = stub.data["/v1/social/messages"]
+	stub.data["/v1/social/messages"] = {"ok":true, "channel":"whisper", "state":"requested", "request":{"id":"w1", "to_id":"u-jun", "expires":0}}
+	hub.send("/w jun 같이 낚시해요")
+	await create_timer(0.3).timeout
+	expect(str(hub.lines.back().get("channel")) == "system" and chat.field.text == "같이 낚시해요" and not hub.lines.any(func(l): return l.get("pending", false)),
+		"a whisper not allowed yet becomes a request; the line waits in the field (%s)" % [hub.lines.back()])
+	stub.data["/v1/social/messages"] = sent_reply
+	chat.field.clear()
+	stub.data["/v1/social/whispers/requests"] = {"requests":[{"id":"w2", "sender_id":"u-dan", "recipient_id":"me", "state":"pending", "from_name":"dan", "to_name":"haneul"}]}
+	stub.data["/v1/social/whispers/requests/w2/accept"] = {"ok":true, "state":"accepted", "expires":0}
+	await hub.fetch_whispers()
+	var asked := RpgUi.find_toast(app.toast_lane, app.tr("%s님이 귓속말을 나누고 싶어 해요") % "dan")
+	expect(hub.whisper_api == 1 and asked != null, "a whisper request to me shows a toast with its answers")
+	await hub.fetch_whispers()
+	expect(RpgUi.toasts(app.toast_lane).filter(func(t): return str(t.get_meta("toast")).contains("dan")).size() == 1, "the same request is not shown twice")
+	stub.posts.clear()
+	await hub.answer_whisper("w2", "dan", true)
+	expect(stub.posts.any(func(p): return p[0] == "/v1/social/whispers/requests/w2/accept") and chat.whisper_to == "dan", "수락 answers the request and turns the channel to them")
+	chat.whisper_to = ""
+	chat.refresh_channels()
+	await capture("whisper")
 	# A modal window hides the chat; closing it brings it back.
 	app.life.open_map()
 	await create_timer(0.3).timeout

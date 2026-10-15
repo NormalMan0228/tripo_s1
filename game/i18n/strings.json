@@ -10703,6 +10703,74 @@
   "새 대화 %d": {
    "en": "%d new",
    "zh": "新消息 %d"
+  },
+  "진행 중 %d": {
+   "en": "In progress %d",
+   "zh": "进行中 %d"
+  },
+  "새 부탁 %d": {
+   "en": "New %d",
+   "zh": "新委托 %d"
+  },
+  "완료 %d": {
+   "en": "Done %d",
+   "zh": "已完成 %d"
+  },
+  "지금 들어주고 있는 부탁이 없어요.": {
+   "en": "You are not helping anyone right now.",
+   "zh": "目前没有进行中的委托。"
+  },
+  "새 부탁이 없어요. 주민들과 이야기해 보세요.": {
+   "en": "No new requests. Try talking to the villagers.",
+   "zh": "没有新委托。和村民们聊聊吧。"
+  },
+  "아직 끝낸 부탁이 없어요.": {
+   "en": "No requests finished yet.",
+   "zh": "还没有完成的委托。"
+  },
+  "%s님이 귓속말을 나누고 싶어 해요": {
+   "en": "%s would like to whisper with you",
+   "zh": "%s想和你悄悄话"
+  },
+  "%s님이 귓속말을 청했어요.": {
+   "en": "%s asked to whisper.",
+   "zh": "%s请求悄悄话。"
+  },
+  "%s님이 귓속말 요청을 받아 주었어요. 이제 귓속말을 보낼 수 있어요.": {
+   "en": "%s accepted your whisper request. You can whisper now.",
+   "zh": "%s接受了悄悄话请求，现在可以发送了。"
+  },
+  "%s님이 지금은 귓속말을 받지 않아요.": {
+   "en": "%s is not taking whispers right now.",
+   "zh": "%s现在不接受悄悄话。"
+  },
+  "%s님과 귓속말을 나눌 수 있어요.": {
+   "en": "You can whisper with %s.",
+   "zh": "可以和%s悄悄话了。"
+  },
+  "%s님에게 귓속말 요청을 보냈어요. 받아 주면 다시 보내 주세요.": {
+   "en": "Whisper request sent to %s. Send again once they accept.",
+   "zh": "已向%s发送悄悄话请求。对方接受后请再发送。"
+  },
+  "귓속말을 받을 수 없는 상대예요. 같은 곳 8m 안에 있거나 접속 중인 친구에게 보낼 수 있어요.": {
+   "en": "They cannot receive whispers. Whisper to someone within 8 m here, or an online friend.",
+   "zh": "对方无法接收悄悄话。可以发给同一地点8米内的人或在线好友。"
+  },
+  "같은 사람에게는 잠시 뒤에 다시 청할 수 있어요.": {
+   "en": "You can ask the same person again a little later.",
+   "zh": "稍后才能再次向同一人请求。"
+  },
+  "답을 기다리는 귓속말 요청이 너무 많아요.": {
+   "en": "Too many whisper requests are waiting for an answer.",
+   "zh": "等待回复的悄悄话请求太多了。"
+  },
+  "만료되었거나 이미 처리된 귓속말 요청이에요.": {
+   "en": "That whisper request expired or was already answered.",
+   "zh": "该悄悄话请求已过期或已处理。"
+  },
+  "이미 답한 귓속말 요청이에요.": {
+   "en": "You already answered that whisper request.",
+   "zh": "已经回复过该悄悄话请求。"
   }
  },
  "templates": []

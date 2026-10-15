@@ -3378,6 +3378,13 @@ func answer_social_invite(invitation: Dictionary, decision: String) -> void:
 func follow_visit() -> void:
 	social.poll()
 
+## The star-seed balance from a presence reply (social_hud.gd ingest): the frame's counter rolls
+## to it with the "+N" pop, so a sale or a grant shows without reloading the village.
+func live_shards(shards: int) -> void:
+	if me.is_empty() or int(me.get("shards",-1))==shards: return
+	me.shards = shards
+	if frame.has("stars") and is_instance_valid(frame.stars): RpgUi.count_to(frame.stars,shards)
+
 ## The house's signs (the sign over the door, the mailbox) say whose house it is: 나의 집 at home,
 ## "<owner>님의 집" while visiting.
 func home_signs() -> void:

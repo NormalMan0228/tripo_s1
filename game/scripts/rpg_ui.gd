@@ -629,6 +629,22 @@ static func hover_motion(c: Control, lift := 1.05, pivot := Vector2(0.5, 0.5), s
 ## ticks softly as the digits roll (at most ~12 a second) and a gain ends on a coin jingle; the first
 ## fill of a label, and a count restarted by clearing its count_target (quests.gd reward_fly, whose
 ## flying stars carry the sound), stay silent.
+## "+N" rising off a counter that grew (the wallet's one gain effect, whatever paid it: a quest, a
+## sale, a gift, the server's balance in a presence reply), in the counter's own colour.
+static func gain_pop(l: Label, amount: int) -> void:
+	if amount <= 0 or calm() or not l.is_inside_tree(): return
+	var colour: Color = l.get_theme_color("font_color") if l.has_theme_color_override("font_color") else HOVER
+	var pop := label(l, "+%d" % amount, 15, colour)
+	pop.name = "GainPop"
+	pop.top_level = true
+	pop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pop.z_index = 5
+	pop.global_position = l.global_position + Vector2(l.size.x + 4.0, -4.0)
+	var tween := pop.create_tween()
+	tween.tween_property(pop, "global_position:y", pop.global_position.y - 20.0, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(pop, "modulate:a", 0.0, 0.45).set_delay(0.35)
+	tween.tween_callback(pop.queue_free)
+
 static func count_to(l: Label, value: int, duration := -1.0) -> void:
 	if not is_instance_valid(l): return
 	var heard := l.has_meta("count_target")
@@ -652,6 +668,7 @@ static func count_to(l: Label, value: int, duration := -1.0) -> void:
 	tw.tween_method(roll, float(from), float(value), seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	# A count cut short by a newer one (killed) never finishes: only the last gain jingles.
 	if heard and gain: tw.finished.connect(func(): sfx("coin_gain", -12.0))
+	if heard and gain: gain_pop(l, value - from)
 	l.set_meta("count_tween", tw)
 	l.pivot_offset = l.size * 0.5
 	var pulse := l.create_tween()
