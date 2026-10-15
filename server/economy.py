@@ -1,4 +1,4 @@
-"""The only writer of starseed balances. Callers own the surrounding transaction."""
+"""Currency balance helpers. Callers own the surrounding transaction."""
 import json
 import logging
 import uuid
@@ -6,6 +6,16 @@ from fastapi import HTTPException
 from .security import ADMIN_DAILY_SHARD_LIMIT, record_event
 
 log = logging.getLogger(__name__)
+
+
+def change_coins(state, amount):
+    """Change a homestead's leaf coins; the caller atomically saves its JSON state."""
+    balance = state.get('coins', 0)
+    if type(amount) is not int or type(balance) is not int or balance < 0:
+        raise ValueError('invalid_coin_amount_or_balance')
+    if balance + amount < 0:
+        raise ValueError('insufficient_coins')
+    state['coins'] = balance + amount
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS economy_flags (

@@ -5,16 +5,16 @@ def get(c,a): return c.get('/v1/homestead',headers=a).json()
 def do(c,a,action,**kw):
     return c.post('/v1/homestead',headers=a,json=mutation(version=get(c,a)['version'],action=action,**kw))
 
-def test_crops_require_seed_water_and_server_growth_then_persist(world):
+def test_crops_require_seed_and_server_growth_then_persist(world):
     app,c,t=world; a=account(c,'farmer')
     assert get(c,a)['version']==0
     assert do(c,a,'plant',item='turnip',plot=0).status_code==200
     assert get(c,a)['bag']['turnip_seed']==2
-    t[0]+=1000
+    t[0]+=40  # Dry growth earns 20 of the 90 effective seconds.
     assert do(c,a,'harvest',plot=0).status_code==409
     assert do(c,a,'water',plot=0).status_code==200
     assert do(c,a,'water',plot=0).status_code==409
-    t[0]+=89.9
+    t[0]+=69.9
     assert do(c,a,'harvest',plot=0).status_code==409
     t[0]+=.1
     assert do(c,a,'harvest',plot=0).json()['bag']['turnip']==2
