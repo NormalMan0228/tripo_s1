@@ -8,6 +8,8 @@ import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
+from . import quest_content
+
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS npc_letter_events (
@@ -32,6 +34,22 @@ RESIDENT_DAYS = {
     'postman': '10-09', 'sweeper': '10-25', 'fisher': '11-13',
     'kid': '12-18',
 }
+
+
+def content_for(letter):
+    """Describe existing event/legacy mail without changing delivery or rewards."""
+    event = letter.get('event', {})
+    if 'move' in letter:
+        occasion = {'in': 'move_in', 'out': 'move_out', 'back': 'came_back'}.get(letter['move']['kind'])
+    elif event:
+        occasion = event['type']
+    elif 'quest' in letter:
+        occasion = 'request_done'
+    elif 1 <= letter['level'] <= 4:
+        occasion = 'small_talk'
+    else:
+        return None
+    return quest_content.letter_template(letter['npc'], occasion, event.get('key', letter['id']))
 
 
 def server_date(now):
