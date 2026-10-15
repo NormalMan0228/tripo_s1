@@ -2243,7 +2243,7 @@ func tick_run() -> void:
 					player.face_point(Vector3(n.x,0,n.z))
 					resource_response(n)
 					CombatAudio.harvest(self,n.kind,Vector3(n.x,0,n.z),"axe" if run.inventory.axe>0 else "")
-					preload("res://scripts/combat_fx.gd").harvest(self,n.kind,Vector3(n.x,0,n.z))
+					preload("res://scripts/combat_fx.gd").harvest_on_contact(self,n.kind,Vector3(n.x,0,n.z))
 			player.react("gather")
 			if not HeroVoice.play(self,"harvest"): HeroVoice.play(self,"pickup")
 			floating_feedback(feedback,player.position,Color("ece1b4"))

@@ -354,8 +354,9 @@ func water(index: int) -> void:
 	sfx.play("water")
 	# The can pours: drops rain on the bed, then it splashes, a wet ring spreads and the soil
 	# soaks dark (farm.gd keeps it damp while the server's water lasts, to the player's midnight).
-	for i in 3:
-		get_tree().create_timer(i*0.18).timeout.connect(func(): if is_instance_valid(app.world): Art.burst(app.world,at+Vector3(0,0.9,0),"drop",14))
+	# From the spout while the can is tipped toward the bed (tool_contact.gd follows the pose).
+	preload("res://scripts/tool_contact.gd").pour(app.player,at+Vector3(0,0.15,0),func(from: Vector3, to: Vector3):
+		if is_instance_valid(app.world): preload("res://scripts/fx.gd").pour(app.world,from,to,3))
 	var data := await request("water",{"plot":index})
 	get_tree().create_timer(0.9).timeout.connect(func(): if is_instance_valid(app.player) and app.player.equipped=="watering_can" and mode!="fish": app.player.equip(""))
 	if data.is_empty(): return
@@ -400,10 +401,12 @@ func till(cell: Vector2) -> void:
 	app.player.equip("hoe")
 	dress_hoe()
 	app.player.react("attack")
-	await get_tree().create_timer(0.16).timeout
-	sfx.play("hoe")
-	Art.burst(app.world,at,"dirt",16)
-	Art.burst(app.world,at,"dust",8)
+	# The soil flies when the hoe's blade reaches the ground (tool_contact.gd), not on a fixed delay.
+	preload("res://scripts/tool_contact.gd").strike(app.player,at,func(hit: Vector3):
+		if not is_instance_valid(app.world): return
+		sfx.play("hoe")
+		Art.burst(app.world,hit,"dirt",16)
+		Art.burst(app.world,hit,"dust",8))
 	var data := await request("till",{"x":cell.x,"z":cell.y})
 	get_tree().create_timer(0.5).timeout.connect(func(): if is_instance_valid(app.player) and app.player.equipped=="hoe": app.player.equip(""))
 	if data.is_empty(): return

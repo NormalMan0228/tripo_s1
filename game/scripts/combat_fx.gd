@@ -7,6 +7,7 @@ extends RefCounted
 ##   CombatFx.strike(app, at, kill := false, parried := false)   a blow lands on an enemy at `at`
 ##   CombatFx.hurt(app)                            the hero takes a hit (sparks + a red edge flash)
 ##   CombatFx.harvest(app, kind, at)               tree / stone / fiber / berry gathered at `at`
+##   CombatFx.harvest_on_contact(app, kind, at)    the same, when the axe/pick actually reaches it
 ##   CombatFx.crafted(app)                         an expedition recipe is made
 ##   CombatFx.fuel(app)                            fuel on the campfire (sparks, flare, a puff of smoke)
 ##   CombatFx.heal(app) / CombatFx.eat(app)        a bandage / a meal
@@ -235,3 +236,12 @@ static func ended(app, won: bool) -> void:
 	else:
 		Fx.burst(world, feet+Vector3(0, 0.6, 0), "smoke", 8, Color("7d7a80"), 0.5)
 		Fx.burst(world, feet+Vector3(0, 1.4, 0), "zz", 3, Color(0,0,0,0), 0.2)
+
+## Gathering chips on the frame the tool in hand reaches the node (tool_contact.gd): a trunk is met
+## about chest-high, stone, fibre and berries lower down. Bare hands: at once.
+static func harvest_on_contact(app, kind: String, at: Vector3) -> void:
+	if app == null or not is_instance_valid(app) or not is_instance_valid(app.get("player")): return
+	var ground := _ground(app, at)
+	var aim := ground+Vector3(0, 0.9 if kind == "tree" else 0.35, 0)
+	preload("res://scripts/tool_contact.gd").strike(app.player, aim, func(hit: Vector3):
+		if is_instance_valid(app): harvest(app, kind, Vector3(hit.x, ground.y, hit.z)), 0.6)

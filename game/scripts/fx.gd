@@ -169,6 +169,26 @@ static func kick(parent: Node3D, at: Vector3, kind: String, amount := 4, toward 
 	e.global_position = at
 	e.restart()
 
+## Drops poured from a spout toward a point: thrown out along the way and falling onto it.
+static func pour(parent: Node3D, from: Vector3, to: Vector3, amount := 3) -> void:
+	if not _ok(parent): return
+	played += 1
+	var e := _emitter(parent, "drop")
+	_configure(e, "drop", Color(0,0,0,0), 0.03)
+	e.one_shot = true
+	e.explosiveness = 0.6
+	e.amount = maxi(1, roundi(amount*GameSettings.particle_scale()))
+	var d := to-from
+	var flat := Vector3(d.x, 0, d.z)
+	e.direction = (flat.normalized()*0.8+Vector3.DOWN*0.6).normalized() if flat.length() > 0.01 else Vector3.DOWN
+	e.spread = 8.0
+	var speed := clampf(flat.length()*2.0, 0.8, 2.4)
+	e.initial_velocity_min = speed*0.85
+	e.initial_velocity_max = speed*1.1
+	e.gravity = Vector3(0, -9.0, 0)
+	e.global_position = from
+	e.restart()
+
 static func stream(parent: Node3D, at: Vector3, kind: String, seconds := 2.0, rate := 5.0, tint := Color(0,0,0,0), radius := 0.2) -> void:
 	if not _ok(parent) or not KINDS.has(kind): return
 	played += 1
