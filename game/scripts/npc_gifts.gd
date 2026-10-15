@@ -137,6 +137,8 @@ const QUEST_LETTERS := {
 
 ## One letter as dialogue pages: who and how close, the words, and the present if any.
 static func letter_lines(letter: Dictionary) -> Array:
+	# A resident's move news (move_in.gd; marked by "move", its level is only for show).
+	if letter.get("move") is Dictionary: return load("res://scripts/move_in.gd").letter_lines(letter)
 	if letter.get("quest") is Dictionary:
 		var words: Array = QUEST_LETTERS.get(str(letter.quest.get("npc", "")), ["고마워요! 덕분에 큰 힘이 됐어요."])
 		var page := [t("✉ %s의 편지 · 부탁을 들어줘서") % t(str(letter.get("name","")))+"\n"+t(str(words[0]))]
