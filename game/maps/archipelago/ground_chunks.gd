@@ -5,7 +5,8 @@ extends RefCounted
 ## The five island ground meshes (pads levelled by building_layout.gd) are drawn whole today: every
 ## view draws 200-330 k triangles of ground, most of them off screen or under the sea. Here:
 ##  - triangles entirely below DROP_BELOW go: the ocean is opaque (its shader writes no ALPHA), so
-##    nothing under it is ever seen;
+##    nothing under it is ever seen (but see KEEP_UNDER and SHADE_FROM: the splash's depth fade and
+##    the shadows at the water line still use some of it);
 ##  - the rest is cut by triangle centroid into CELL metre cells from ORIGIN, one MeshInstance3D per
 ##    (cell, island): "Chunk_<cx>_<cz>_<island number>". Whole triangles, so no T-junctions; the
 ##    vertices are copies of the levelled ground's (same floats, same encoding: no compression, no

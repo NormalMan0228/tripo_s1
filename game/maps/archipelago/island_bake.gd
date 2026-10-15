@@ -12,8 +12,9 @@ extends RefCounted
 ##                read on a worker thread, a scene's shapes would all reach the physics server in one
 ##                frame; they are made a chunk a frame after it is in (Archipelago.build).
 ## ground.scn     the levelled ground cut into chunks on a 32 m grid without the triangles under the
-##                sea, and the ocean surface as the LODs it is drawn with (ground_chunks.gd): the
-##                island references it (an instance), the map's own ground and ocean meshes are emptied.
+##                sea (those near the shore kept as shadow casters only), and the ocean surface as the
+##                LODs it is drawn with (ground_chunks.gd): the island references it (an instance), the
+##                map's own ground and ocean meshes are emptied.
 ## manifest.json  {"format", "engine", "key", "stamp", "content_key", ...}: `key` hashes the inputs
 ##                that decide the build (KEY_FILES: layouts and the scripts that build; the engine
 ##                version); `stamp` lists every map asset's modification time, so a source run
