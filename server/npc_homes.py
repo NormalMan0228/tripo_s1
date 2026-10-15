@@ -73,7 +73,9 @@ CREATE TABLE IF NOT EXISTS asset_bounds (asset_id TEXT PRIMARY KEY REFERENCES as
 '''
 
 # Who takes gifts: every resident whose bed is in a house (game/scripts/residents.gd, same homes).
-# Shop and workplace owners sleep in back rooms of working buildings and are left out for now.
+# Shop and workplace owners are left out for now: the café, seed-shop and mill owners (regular, farmer,
+# miller) moved to 18_meadow_house, which has no gift slots yet; the others sleep in back rooms of
+# their working buildings.
 # personality picks the client's reaction lines; taste weights the item tags below.
 NPCS = {
     'naru': {'name': '나루', 'home': '02_timber_house', 'personality': 'cheerful', 'taste': {'travel': 3, 'light': 2, 'nature': 1}},
