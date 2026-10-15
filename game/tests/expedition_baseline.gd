@@ -301,6 +301,11 @@ func run() -> void:
 				s["day_progress"] = float(current_scene.run.get("day_progress", -1.0))
 				s["night"] = snappedf(float(map.get("night")), 0.001) if map else -1.0
 				s["dusk"] = snappedf(float(map.get("dusk")), 0.001) if map else -1.0
+				# The server's side of the run (the pin only holds the client's grade): past 39 s of run time
+				# the first night's creatures are on the map and in the captures.
+				s["run_elapsed"] = snappedf(float(current_scene.run.get("elapsed", -1.0)), 0.1)
+				s["run_day"] = int(current_scene.run.get("day", 0))
+				s["enemies"] = (current_scene.run.get("enemies", []) as Array).size()
 				check(s.night < 0.01 and s.dusk < 0.01, "%s %s: day grade (night %.3f, dusk %.3f)" % [map_id, spot[0], s.night, s.dusk])
 				if not out_dir.is_empty():
 					DirAccess.make_dir_recursive_absolute(out_dir)
