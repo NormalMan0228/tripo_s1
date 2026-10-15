@@ -1923,6 +1923,13 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	if not await build_world(true):
 		busy=false
 		return
+	# The HUD over the next frames under the card, a piece where a frame has room (LoadPace.step),
+	# main's own per-frame work and input still held as in the build: built in the build's last frame
+	# with the run's first nodes, the village HUD's teardown and their layout and first draws, it held
+	# that one frame 55-80 ms (tests/expedition_baseline.gd).
+	var paced := LoadPace.covered
+	if paced: hold(true)
+	await LoadPace.step("expedition hud")
 	clear_ui()
 	screen="survival"
 	player.controls_enabled=false
@@ -1969,6 +1976,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		RpgUi.name_tip(chip,tr(ITEM_NAMES[item]))
 		chip.add_child(RpgUi.name_tip(RpgUi.icon("res://assets/items/"+item+".svg",24),tr(ITEM_NAMES[item])))
 		quick_counts[item]=RpgUi.numbers(RpgUi.label(chip,"0",16),16)
+	await LoadPace.step("expedition field map")
 	# Top right, where the village's minimap sits: the field map and the way back to camp.
 	var navigation := panel(Vector2(1000,20),256,"night")
 	field_panel=navigation.get_parent()
@@ -1983,6 +1991,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	# Two lines (distance and fire, warmth); the ground's line on ice or embers makes a third.
 	camp_status.max_lines_visible=3
 	camp_status.custom_minimum_size.y=camp_status.get_line_height()*2+camp_status.get_theme_constant("line_spacing")
+	await LoadPace.step("expedition bag")
 	right=panel(Vector2(948,20),308,"hero")
 	RpgUi.pin(right.get_parent(),1.0,0.0)
 	var drawer_title := HBoxContainer.new()
@@ -2022,6 +2031,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		RpgUi.numbers(count,14)
 		slot.add_child(count)
 		inventory_slots[item]={"count":count,"icon":icon,"button":slot}
+	await LoadPace.step("expedition crafts")
 	rule(right)
 	text(right,tr("제작대"),21)
 	craft_buttons.axe=button(right,tr("돌도끼 · 목재 3 + 돌 2"),func(): intent("craft","axe"))
@@ -2035,9 +2045,12 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	RpgUi.caption(right,tr("제작 전에 밤에 쓸 목재 2개를 남겨 두세요."),12,RpgUi.ACCENT)
 	RpgUi.caption(right,tr("붉은 공격 예고는 Shift로 피하세요.\n목재 두 개는 모닥불을 위해 남겨 두세요."),12)
 	right.get_parent().visible=false
+	await LoadPace.step("expedition hotbar")
 	build_play_hud(true)
 	# The one prompt chip, as in the village and rooms: what the interact key gathers right here.
 	hint=RpgUi.prompt(ui,560)
+	await LoadPace.step("expedition nodes")
+	if paced: hold(false)
 	update_run()
 	busy=false
 	veil.fade_in()
