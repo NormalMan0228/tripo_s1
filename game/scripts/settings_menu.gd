@@ -409,7 +409,7 @@ func cancel_close() -> void:
 	if not is_instance_valid(confirm): return
 	RpgUi.close_window(confirm.get_meta("rpg_window", {}))
 	confirm = null
-	if is_instance_valid(apply_button) and apply_button.is_visible_in_tree() and not apply_button.disabled: apply_button.grab_focus()
+	if is_instance_valid(apply_button) and apply_button.is_visible_in_tree() and not apply_button.disabled: apply_button.grab_focus(true)
 
 func close() -> void:
 	GameSettings.end_preview()
@@ -534,4 +534,4 @@ func _first_focus(node: Node) -> Control:
 
 ## Focus once the frame settles, if the control is still on screen.
 func _focus(control) -> void:
-	if is_instance_valid(control) and control.is_inside_tree() and control.is_visible_in_tree(): control.grab_focus()
+	if is_instance_valid(control) and control.is_inside_tree() and control.is_visible_in_tree(): control.grab_focus(true)

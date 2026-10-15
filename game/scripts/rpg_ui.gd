@@ -629,6 +629,22 @@ static func hover_motion(c: Control, lift := 1.05, pivot := Vector2(0.5, 0.5), s
 ## ticks softly as the digits roll (at most ~12 a second) and a gain ends on a coin jingle; the first
 ## fill of a label, and a count restarted by clearing its count_target (quests.gd reward_fly, whose
 ## flying stars carry the sound), stay silent.
+## "+N" rising off a counter that grew (the wallet's one gain effect, whatever paid it: a quest, a
+## sale, a gift, the server's balance in a presence reply), in the counter's own colour.
+static func gain_pop(l: Label, amount: int) -> void:
+	if amount <= 0 or calm() or not l.is_inside_tree(): return
+	var colour: Color = l.get_theme_color("font_color") if l.has_theme_color_override("font_color") else HOVER
+	var pop := label(l, "+%d" % amount, 15, colour)
+	pop.name = "GainPop"
+	pop.top_level = true
+	pop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pop.z_index = 5
+	pop.global_position = l.global_position + Vector2(l.size.x + 4.0, -4.0)
+	var tween := pop.create_tween()
+	tween.tween_property(pop, "global_position:y", pop.global_position.y - 20.0, 0.8).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(pop, "modulate:a", 0.0, 0.45).set_delay(0.35)
+	tween.tween_callback(pop.queue_free)
+
 static func count_to(l: Label, value: int, duration := -1.0) -> void:
 	if not is_instance_valid(l): return
 	var heard := l.has_meta("count_target")
@@ -652,6 +668,7 @@ static func count_to(l: Label, value: int, duration := -1.0) -> void:
 	tw.tween_method(roll, float(from), float(value), seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	# A count cut short by a newer one (killed) never finishes: only the last gain jingles.
 	if heard and gain: tw.finished.connect(func(): sfx("coin_gain", -12.0))
+	if heard and gain: gain_pop(l, value - from)
 	l.set_meta("count_tween", tw)
 	l.pivot_offset = l.size * 0.5
 	var pulse := l.create_tween()
@@ -2743,7 +2760,7 @@ static func dialogue_choices(d: Dictionary, entries: Array) -> Array:
 		if not calm():
 			b.modulate.a = 0.0
 			b.create_tween().tween_property(b, "modulate:a", 1.0, 0.18).set_delay(0.05 * index)
-	if not made.is_empty(): (made[0] as Button).grab_focus.call_deferred()
+	if not made.is_empty(): (made[0] as Button).grab_focus.call_deferred(true)
 	d.more.visible = false
 	d.picked = false
 	d.choices_at = Time.get_ticks_msec()
@@ -2835,7 +2852,35 @@ static func field(parent: Node, placeholder: String, secret := false, dropped :=
 	# field focused but deaf until it was clicked again.
 	line.keep_editing_on_text_submit = true
 	parent.add_child(line)
+	if secret or latin: caps_hint(parent, line)
 	return line
+
+## CapsLock as last seen in a Latin field: -1 unknown, 0 off, 1 on. Godot cannot read the lock
+## itself, so a letter tells it: upper case without Shift (or lower case with it) means the lock
+## is on. The CapsLock key flips a known state.
+static var caps_lock := -1
+
+static func caps_seen(event: InputEvent) -> void:
+	if not event is InputEventKey or not event.pressed or event.echo: return
+	if event.keycode == KEY_CAPSLOCK:
+		if caps_lock != -1: caps_lock = 1 - caps_lock
+		return
+	var ch := String.chr(event.unicode) if event.unicode > 0 else ""
+	if ch.length() != 1 or ch.to_upper() == ch.to_lower(): return
+	caps_lock = 1 if (ch == ch.to_upper()) != event.shift_pressed else 0
+
+## A quiet line under a Latin field that says CapsLock is on while the field is being typed in.
+static func caps_hint(parent: Node, line: LineEdit) -> Label:
+	var hint := label(parent, "⇪ " + TranslationServer.translate("CapsLock이 켜져 있어요"), 13, Color("ffd9a0"))
+	hint.name = "CapsHint"
+	hint.visible = false
+	var refresh := func(): hint.visible = line.has_focus() and caps_lock == 1
+	line.gui_input.connect(func(event):
+		caps_seen(event)
+		refresh.call())
+	line.focus_entered.connect(refresh)
+	line.focus_exited.connect(refresh)
+	return hint
 
 ## Hangul typed on a Korean 2-set keyboard back to the keys pressed, everything else outside
 ## printable ASCII taken out; true when the field had to change. Shift is not known for plain

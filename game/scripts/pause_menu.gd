@@ -244,4 +244,4 @@ func ask(question: String, yes: Callable, title := "") -> void:
 
 ## Focus once the frame settles, if the control is still on screen.
 func _focus(control) -> void:
-	if is_instance_valid(control) and control.is_inside_tree() and control.is_visible_in_tree(): control.grab_focus()
+	if is_instance_valid(control) and control.is_inside_tree() and control.is_visible_in_tree(): control.grab_focus(true)

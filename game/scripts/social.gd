@@ -278,6 +278,10 @@ func sync_peers(players: Array) -> void:
 		AvatarLook.wear(peers[id].node, record.get("avatar", {}), version, true)
 		peers[id].node.sprinting = bool(record.get("sprinting", false))
 		peers[id].label.text = str(record.username)+( tr(" · 연결 끊김") if not record.get("online", true) else "")+(tr(" · 관전") if record.get("hp", 100) <= 0 else "")
+		# The village's owner, seen by visitors: a crown over a gold name.
+		var hosting: bool = app.screen == "village" and str(id) == str(data.get("host_id", "")) and str(id) != str(data.get("self_id", ""))
+		peers[id].label.modulate = UiSound.HOVER if hosting else Color.WHITE
+		SocialHud.host_crown(peers[id].node, hosting)
 	for id in peers.keys():
 		if not retained.has(id):
 			if is_instance_valid(peers[id].node): peers[id].node.queue_free()
