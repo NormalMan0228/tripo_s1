@@ -7,9 +7,16 @@ const TEMPLATES := "res://i18n/templates.json"
 const SETTINGS := "user://settings.cfg"
 ## Test runs (tools/test.ps1 passes --qa) keep their own settings, so switching
 ## languages or logging in during QA never changes the player's language, world or name.
+## A run of tools/test.ps1 keeps them in its own throwaway data folder (TRIPOTHON_DATA_DIR, an
+## absolute path made for that run): it starts from defaults, goes away with the folder, and runs
+## from other worktrees at the same time (the same user:// folder) never read or delete its world,
+## language or keys.
 const QA_SETTINGS := "user://settings_qa.cfg"
 static func settings_path() -> String:
-	return QA_SETTINGS if "--qa" in OS.get_cmdline_user_args() else SETTINGS
+	if not "--qa" in OS.get_cmdline_user_args(): return SETTINGS
+	var run := OS.get_environment("TRIPOTHON_DATA_DIR")
+	if run.is_absolute_path() and DirAccess.dir_exists_absolute(run): return run.path_join("settings_qa.cfg")
+	return QA_SETTINGS
 const LANGUAGES := [["ko","한국어"],["en","English"],["zh","中文"]]
 static var installed := false
 static var templates: Array = []
