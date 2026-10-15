@@ -38,6 +38,8 @@ const CHAT_WHISPER := Color("f0a8c8")
 ## The window shade: a radial fall from SHADE_IN at the centre to SHADE_OUT at the corners.
 const SHADE_IN := Color(0.03,0.05,0.06,.55)
 const SHADE_OUT := Color(0.02,0.03,0.04,.86)
+## Dialogue choices take E/Space/Enter only this long after they appear (reading on never picks).
+const CHOICE_KEY_DELAY_MS := 300
 ## Leaf-coin count and warm alert text on night glass.
 const LEAF_LIGHT := Color("c8ec9f")
 const WARM := Color("ffd9a0")
@@ -2412,6 +2414,9 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 	more.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	more.visible = false
 	root.add_child(more)
+	# The key that reads on, beside the chevron (follows a rebound Interact key).
+	var read_on := keycap(more, "interact", 11)
+	read_on.position = Vector2(-30, -1)
 	if not calm():
 		var bob := more.create_tween().set_loops()
 		bob.tween_property(more, "offset_top", -60.0, 0.45).set_trans(Tween.TRANS_SINE)
@@ -2560,9 +2565,28 @@ static func dialogue_choices(d: Dictionary, entries: Array) -> Array:
 		for item in ["font_color","font_pressed_color","font_hover_pressed_color"]: b.add_theme_color_override(item, INK)
 		var cap := keycap(b, str(index), 12)
 		cap.position = Vector2(14, 12)
-		b.pressed.connect(func(): if action.is_valid(): action.call())
+		# One pick per list: a second press (E and a click together) never runs a choice twice.
+		b.pressed.connect(func():
+			if d.get("picked", false): return
+			d.picked = true
+			if action.is_valid(): action.call())
+		# Keys on the focused choice: W/S or the arrows move, E, Space or Enter picks, 1-9 pick
+		# directly. A key that lands right as the list appears (reading on with E) is ignored.
 		b.gui_input.connect(func(event):
-			if event is InputEventKey and event.pressed and not event.echo and event.keycode >= KEY_1 and event.keycode <= KEY_9:
+			if not event is InputEventKey or not event.pressed: return
+			var key := GameSettings.canonical_key(event)
+			if key in [KEY_W, KEY_S, KEY_UP, KEY_DOWN]:
+				b.accept_event()
+				var at := made.find(b) + (-1 if key in [KEY_W, KEY_UP] else 1)
+				(made[wrapi(at, 0, made.size())] as Button).grab_focus()
+				return
+			if event.echo: return
+			if key in [KEY_E, KEY_SPACE, KEY_ENTER, KEY_KP_ENTER]:
+				b.accept_event()
+				# The last line still typing: the key shows it whole (and the guard starts again).
+				if dialogue_typing(d): dialogue_skip(d)
+				elif dialogue_ready(d): b.pressed.emit()
+			elif event.keycode >= KEY_1 and event.keycode <= KEY_9:
 				var pick: int = event.keycode - KEY_1
 				if pick < made.size():
 					b.accept_event()
@@ -2576,7 +2600,47 @@ static func dialogue_choices(d: Dictionary, entries: Array) -> Array:
 			b.create_tween().tween_property(b, "modulate:a", 1.0, 0.18).set_delay(0.05 * index)
 	if not made.is_empty(): (made[0] as Button).grab_focus.call_deferred()
 	d.more.visible = false
+	d.picked = false
+	d.choices_at = Time.get_ticks_msec()
 	return made
+
+## Types the dialogue's current line out over `seconds` (the body's text is already set).
+static func dialogue_type(d: Dictionary, seconds: float) -> void:
+	var body: Label = d.body
+	if d.get("typing") is Tween and (d.typing as Tween).is_valid(): (d.typing as Tween).kill()
+	body.visible_ratio = 0.0
+	var typing := body.create_tween()
+	typing.tween_property(body, "visible_ratio", 1.0, seconds)
+	d.typing = typing
+
+static func dialogue_typing(d: Dictionary) -> bool:
+	return is_instance_valid(d.get("body")) and (d.body as Label).visible_ratio < 1.0
+
+## The whole line at once (a key while it types). Choices already up wait their guard again.
+static func dialogue_skip(d: Dictionary) -> void:
+	if d.get("typing") is Tween and (d.typing as Tween).is_valid(): (d.typing as Tween).kill()
+	if is_instance_valid(d.get("body")): (d.body as Label).visible_ratio = 1.0
+	if d.has("choices_at"): d.choices_at = Time.get_ticks_msec()
+
+## True once the choices have been up long enough for a key to mean "pick this" (not the
+## tail of reading on with E or Space).
+static func dialogue_ready(d: Dictionary) -> bool:
+	return d.has("choices_at") and Time.get_ticks_msec() - int(d.choices_at) >= CHOICE_KEY_DELAY_MS
+
+## E, Space or Enter on the last page when no choice holds the focus (a click elsewhere took
+## it): picks the highlighted choice, or the first. False when there is nothing to pick.
+static func dialogue_pick(d: Dictionary) -> bool:
+	if dialogue_typing(d):
+		dialogue_skip(d)
+		return true
+	if not is_instance_valid(d.get("choices")) or not dialogue_ready(d): return false
+	var buttons := (d.choices as Node).get_children().filter(func(child): return child is Button and not child.is_queued_for_deletion())
+	if buttons.is_empty(): return false
+	var chosen: Button = buttons[0]
+	for button in buttons:
+		if (button as Button).has_focus(): chosen = button
+	chosen.pressed.emit()
+	return true
 
 ## Shows or hides the "more" chevron (pages left to read).
 static func dialogue_more(d: Dictionary, waiting: bool) -> void:

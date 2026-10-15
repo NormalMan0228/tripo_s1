@@ -23,6 +23,12 @@ var VersionGate: GDScript
 var host := FakeHost.new()
 var restarted := 0
 var base := ""
+## A connection of the test's own (no gate watches it) and what /v1/client served it last.
+var looker: Node
+var served := {}
+## Every wait is for a state (a busy PC only makes it come later), bounded by these seconds.
+const SCENE_SECONDS := 60.0
+const STATE_SECONDS := 20.0
 
 ## A tiny HTTP/1.1 file server on 127.0.0.1: GET with "Range: bytes=N-" (206), 404 otherwise.
 ## cut_after[path] sends the headers and only that many body bytes once, then hangs up.
@@ -35,8 +41,9 @@ class FakeHost extends RefCounted:
 	## Bytes sent per connection and frame (a slow line shows the progress bar at work).
 	var pace := 1 << 20
 
-	func start(port: int) -> bool:
-		return server.listen(port, "127.0.0.1") == OK
+	## Listens on a port the system picks (free by construction; parallel runs never meet). 0 if none.
+	func start() -> int:
+		return server.get_local_port() if server.listen(0, "127.0.0.1") == OK else 0
 
 	func poll() -> void:
 		while server.is_connection_available():
@@ -110,7 +117,24 @@ func write_policy(data: Dictionary) -> void:
 		return
 	file.store_string(JSON.stringify(data))
 	file.close()
-	await create_timer(2.3).timeout
+	var written := Time.get_ticks_msec()
+	# The server looks at the file every two seconds (server/client_policy.py CHECK_SECONDS): at least
+	# that long, and until /v1/client serves the file's versions, pages and patch list.
+	while true:
+		var reply: Dictionary = await looker.request("/v1/client")
+		served = reply.get("data", {}) if reply.ok and reply.get("data") is Dictionary else {}
+		if Time.get_ticks_msec() - written >= 2300 and serves(data): return
+		if Time.get_ticks_msec() - written > STATE_SECONDS * 1000:
+			expect(false, "the server serves the new policy within %d s (%s)" % [STATE_SECONDS, JSON.stringify(served)])
+			return
+		await create_timer(0.2).timeout
+
+func serves(data: Dictionary) -> bool:
+	if not served.get("client") is Dictionary: return false
+	var client: Dictionary = served.client
+	for pair in [["min", "min_client_version"], ["latest", "latest_client_version"], ["download_url", "client_download_url"]]:
+		if str(client.get(pair[0], "")) != str(data.get(pair[1], "")): return false
+	return not data.has("client_patch_url") or str(client.get("patch_manifest_url", "")) == str(data.client_patch_url)
 
 func sha256(bytes: PackedByteArray) -> String:
 	var hashing := HashingContext.new()
@@ -143,13 +167,15 @@ func list_with(entry: Dictionary, latest := TARGET) -> PackedByteArray:
 	return JSON.stringify({"format": 1, "edition": "qa", "latest": latest, "bases": {base: entry}}).to_utf8_buffer()
 
 ## Opens the title the way the game starts (no session): main.gd checks the version before its menu.
-func launch(settle := 1.0) -> Node:
+## Returns the new title as soon as it is the scene in front (it asks the server from its first frame).
+func launch() -> Node:
 	if VersionGate: VersionGate.reset()
+	var before := current_scene.get_instance_id() if is_instance_valid(current_scene) else 0
 	change_scene_to_file("res://scenes/main.tscn")
-	await create_timer(settle).timeout
+	await wait_until(func(): return is_instance_valid(current_scene) and current_scene.get_instance_id() != before and current_scene.get("gate") != null, SCENE_SECONDS)
 	return current_scene
 
-func wait_until(condition: Callable, seconds: float) -> bool:
+func wait_until(condition: Callable, seconds := STATE_SECONDS) -> bool:
 	var deadline := Time.get_ticks_msec() + int(seconds * 1000)
 	while Time.get_ticks_msec() < deadline:
 		if condition.call(): return true
@@ -174,12 +200,10 @@ func run() -> void:
 	Patcher.restart_hook = func(): restarted += 1
 	saved_world = str(I18n.setting("server", ""))
 	I18n.remember("server", server)
-	var port := 0
-	for attempt in 20:
-		var candidate := 18800 + randi() % 900
-		if host.start(candidate):
-			port = candidate
-			break
+	looker = load("res://scripts/api.gd").new()
+	root.add_child(looker)
+	looker.base_url = server
+	var port := host.start()
 	expect(port > 0, "the patch host listens")
 	process_frame.connect(host.poll)
 	var pack := build_pack(work.path_join("source"))
@@ -218,13 +242,13 @@ func run() -> void:
 	host.files["/school/patches.json"] = list_with({"requires_reinstall": true, "reason": "engine"})
 	var title := await launch()
 	VersionGate = title.gate.get_script()
-	await wait_until(func(): return title.gate.patch_step == "installer", 10.0)
+	await wait_until(func(): return title.gate.patch_step == "installer")
 	var window := texts(title.gate.screen)
 	expect(VersionGate.blocked == "client_update_required" and "업데이트 필요" in window and "새로 설치해야" in window and "새 버전 받기" in window, "a release that needs the installer: the installer screen")
 	# The list does not have the announced version yet: the screen waits and checks again.
 	host.files["/school/patches.json"] = list_with(good, base)
 	title = await launch()
-	await wait_until(func(): return title.gate.patch_step == "waiting", 10.0)
+	await wait_until(func(): return title.gate.patch_step == "waiting")
 	expect("준비하고 있어요" in texts(title.gate.screen) and "다시 시도" in texts(title.gate.screen), "a patch not uploaded yet: 'being prepared', retried by itself")
 
 	# ---------------------------------------------------------------- the launch: patch, resume, verify, restart
@@ -232,9 +256,9 @@ func run() -> void:
 	host.cut_after[pack_path] = 200 * 1024
 	host.log.clear()
 	host.pace = 8 * 1024
-	title = await launch(0.05)
+	title = await launch()
 	var seen_progress := false
-	var deadline := Time.get_ticks_msec() + 40000
+	var deadline := Time.get_ticks_msec() + 120000
 	while restarted == 0 and Time.get_ticks_msec() < deadline:
 		if is_instance_valid(title.gate.patch_readout) and " / " in title.gate.patch_readout.text and title.gate.patch_step == "downloading": seen_progress = true
 		await process_frame
@@ -255,9 +279,9 @@ func run() -> void:
 	expect(str(ProjectSettings.get_setting("application/config/version")) == TARGET and load("res://scripts/api.gd").client_version() == TARGET, "the game now reports the new version")
 	expect(int(PatchBoot.read_state(Patcher.dir).get("boots", 0)) == 1, "this launch is counted until the title")
 	title = await launch()
-	await wait_until(func(): return title.get("title_page") == "menu", 15.0)
+	await wait_until(func(): return title.get("title_page") == "menu", SCENE_SECONDS)
 	expect(title.title_page == "menu" and not VersionGate.is_blocked() and not is_instance_valid(title.gate.update_pill), "the new version's title opens normally")
-	await create_timer(0.5).timeout
+	await wait_until(func(): return int(PatchBoot.read_state(Patcher.dir).get("boots", -1)) == 0)
 	expect(int(PatchBoot.read_state(Patcher.dir).get("boots", -1)) == 0, "reaching the title confirms the patch")
 
 	# ---------------------------------------------------------------- patch_boot.gd's guards
@@ -272,7 +296,8 @@ func run() -> void:
 	record.base = "0.0.1"
 	PatchBoot.write_state(Patcher.dir, record)
 	expect(not PatchBoot.boot(Patcher.dir) and PatchBoot.problem == "other_base", "a patch for another installed version is not loaded")
-	expect(PatchBoot.read_state(Patcher.dir).is_empty() and not FileAccess.file_exists(Patcher.dir.path_join(str(record.file))), "and is removed")
+	# (record is {} when no patch was recorded above: that run already failed, and goes on to its end.)
+	expect(PatchBoot.read_state(Patcher.dir).is_empty() and record.has("file") and not FileAccess.file_exists(Patcher.dir.path_join(str(record.file))), "and is removed")
 	await finish(work)
 
 func finish(work: String) -> void:

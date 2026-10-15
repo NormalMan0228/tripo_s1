@@ -211,7 +211,7 @@ var npcs: Array[Node3D]=[]
 ##   leave()                             the village is about to be torn down
 ## Missing scripts are skipped, so each add-on can land on its own.
 ## story.gd (the opening chapter) comes before shadow_folk.gd: it holds 모카's plan before her walker is placed.
-const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/story.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd"]
+const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/story.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd","res://scripts/treasure.gd"]
 var modules: Array[Node]=[]
 var prompt_wait := 0.0
 var chosen_map := "forest"
@@ -3447,14 +3447,10 @@ func open_dialogue(speaker: String, cast: String, lines: Array, choices: Array) 
 	var window: Dictionary = RpgUi.dialogue(village_modal,speaker,portrait_path if not cast.is_empty() else "")
 	var body: Label = window.body
 	var page := [0]
-	# The line's typing tween: finishing a line early stops it, or it would type the rest over again.
-	var typing := [null]
 	var show_page := func(index: int) -> void:
 		body.text=lines[index]
-		body.visible_ratio=0.0
 		RpgUi.dialogue_line(window,lines[index])
-		typing[0]=create_tween()
-		(typing[0] as Tween).tween_property(body,"visible_ratio",1.0,GameSettings.typing_seconds(lines[index].length()))
+		RpgUi.dialogue_type(window,GameSettings.typing_seconds(lines[index].length()))
 		VoiceBabble.speak(self,cast,lines[index],0.0,body)
 		if index<lines.size()-1:
 			RpgUi.dialogue_more(window,true)
@@ -3468,13 +3464,15 @@ func open_dialogue(speaker: String, cast: String, lines: Array, choices: Array) 
 					if action.is_valid(): action.call()])
 			RpgUi.dialogue_choices(window,entries)
 	var advance := func() -> void:
-		if body.visible_ratio<1.0:
-			if typing[0] is Tween and (typing[0] as Tween).is_valid(): (typing[0] as Tween).kill()
-			body.visible_ratio=1.0
+		if RpgUi.dialogue_typing(window):
+			RpgUi.dialogue_skip(window)
 		elif page[0]<lines.size()-1:
 			page[0]+=1
 			RpgUi.sfx("click",-8.0)
 			show_page.call(page[0])
+		else:
+			# The last page: the highlighted choice (E, Space or Enter when no choice holds the focus).
+			RpgUi.dialogue_pick(window)
 	village_modal.set_meta("advance",advance)
 	window.shade.gui_input.connect(func(event):
 		if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT: advance.call())

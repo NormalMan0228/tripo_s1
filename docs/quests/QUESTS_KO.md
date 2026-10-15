@@ -1,7 +1,7 @@
 # 주민 부탁 (퀘스트) · 별씨 보상
 
 마을 주민 **19명 모두**(이름이 붙은 4명, 카페의 모카, 낮에는 주민·밤에는 그림자인 14명)가 각자 작은 부탁을 하나씩 합니다. 부탁을 들어주면 **적당량의 별씨**(쉬운 심부름 3~6개, 편지가 오는 두 부탁은 8개, 모두 합쳐 **82개** ≈ 값싼 제작 2회)를 **계정당 한 번** 받습니다.
-첫 이야기 「마을의 첫 선물」이 끝나고 **모카의 편지를 읽으면** 열립니다(이야기가 없는 기존 계정은 바로). 시연 중인 이야기를 방해하지 않습니다.
+첫 이야기 「마을의 첫 선물」에서 **모카의 의자를 주문하면** 열립니다(제작을 기다리는 동안 할 일이 생김). 모카 자신의 부탁(사과 파이)만 이야기가 끝난 뒤 열립니다. 이야기가 없는 기존 계정은 바로 열립니다.
 
 ![주민 부탁 흐름](img/quest-flow.png)
 
@@ -71,7 +71,7 @@
 ## 4. 서버 규칙 (server/quests.py)
 
 - 진행은 계정마다 `quest_progress`(CREATE TABLE IF NOT EXISTS, 기존 데이터에 안전하게 추가)에 저장됩니다.
-- 열림: 이야기 기록이 없거나, 이야기가 `done`이고 모카의 편지를 읽었을 때. 이야기를 리셋(`admin_cli story reset`)하면 다시 닫힙니다(이미 받은 별씨는 그대로). 닫혀 있는 동안에는 받기·장소 보고·건네기가 모두 `quests_locked`로 거절됩니다.
+- 열림: 이야기 기록이 없거나, 이야기가 `done`이거나, 이야기가 `craft`(모카의 부탁 뒤)이고 그 뒤로 공방 제작을 한 번이라도 맡겼을 때. 이때 모카의 부탁(`moka_pie`, `quests.STORY_HELD`)만 `locked`로 남고 이야기가 끝나면 열립니다. 이야기를 리셋(`admin_cli story reset`)하면 다시 닫힙니다(이미 받은 별씨는 그대로). 닫혀 있는 동안에는 받기·장소 보고·건네기가 모두 `quests_locked`로 거절됩니다.
 - API: `GET /v1/quests`, `POST /v1/quests/{id}/accept`, `POST /v1/quests/{id}/progress`(장소·안부 부탁만, `place`=정해진 장소/주민 이름), `POST /v1/quests/{id}/complete`. `accept`에 `place`를 함께 보내면(천문대 안에서 하늘의 부탁을 받을 때) 그 장소가 바로 셉니다(밤 부탁은 밤에만). `/v1/me`의 `quests`는 가벼운 요약(`unlocked`, `catalog` 해시, 부탁별 `state`·`have`·`visited`)이고, 게임은 해시가 바뀌면 `/v1/quests`로 전체 목록을 한 번 받습니다. 노을의 불빛 조건은 마을 물건을 한 번의 쿼리로 보고, 디자인 판정(매니페스트)은 서버가 기억해 폴링마다 다시 읽지 않습니다.
 - 같은 요청 id의 재전송은 같은 답을 돌려주고(중복 지급 없음), 완료된 부탁은 `quest_already_done`, 원장에 이미 있으면 다시 주지 않습니다.
 - 거절 코드: `quest_not_found`(404), `quests_locked`, `quest_own_village_only`, `quest_not_active`, `quest_not_ready`, `quest_already_done`, `quest_wrong_kind`, `quest_bad_place`(422), `quest_too_fast`(429), `quest_not_night`(밤 심부름을 낮에 보고).

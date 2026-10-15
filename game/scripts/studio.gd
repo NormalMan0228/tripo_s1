@@ -25,6 +25,7 @@ const CraftTracker=preload("res://scripts/craft_tracker.gd")
 const CraftWords=preload("res://scripts/craft_words.gd")
 const Fx=preload("res://scripts/fx.gd")
 const NpcGifts=preload("res://scripts/npc_gifts.gd")
+const ShopSell=preload("res://scripts/shop_sell.gd")
 const AvatarLook=preload("res://scripts/avatar_look.gd")
 ## Visitors' and the host's walk in the home, drawn smoothly from the presence replies.
 const RemoteMotion=preload("res://scripts/remote_motion.gd")
@@ -240,8 +241,6 @@ var talk_window: Dictionary = {}
 var talk_lines: Array=[]
 var talk_choices: Array=[]
 var talk_page := 0
-## The page's typing tween: finishing a line early stops it, or it would type the rest over again.
-var talk_typing: Tween
 var talk_id := ""
 var pick_cycle := 0
 var pick_spot := Vector3(INF,0,INF)
@@ -1572,6 +1571,8 @@ func show_story() -> void:
 	story_home=null
 	# A resident's request to come to this room (quests.gd: 하늘's observatory at night).
 	preload("res://scripts/quests.gd").entered_room(self,room)
+	# The treasure chest in the owner's own home (treasure.gd).
+	preload("res://scripts/treasure.gd").enter_room(self)
 	if room!="home" or public_room or not visit_host.is_empty() or visiting or api.token.is_empty(): return
 	story_home=StoryHome.new()
 	add_child(story_home)
@@ -1873,6 +1874,7 @@ func nearest_decor() -> Dictionary:
 func use_decor(record: Dictionary) -> void:
 	last_used=record
 	if is_instance_valid(story_home) and story_home.use(record): return
+	if preload("res://scripts/treasure.gd").use_home(self,record): return
 	if record.kind=="gift":
 		use_gift(record)
 		return
@@ -1967,6 +1969,7 @@ func update_hint() -> void:
 		set_chip("interact",tr("쉿, 자고 있어요") if npcs[who].state.get("asleep",false) else tr("말 걸기"))
 	elif record.has("link"): set_chip("interact",(tr("▲ 계단 오르기") if up else tr("▼ 계단 내려가기")))
 	elif is_instance_valid(story_home) and not story_home.chip(record).is_empty(): set_chip("interact",story_home.chip(record))
+	elif not preload("res://scripts/treasure.gd").home_chip(self,record).is_empty(): set_chip("interact",preload("res://scripts/treasure.gd").home_chip(self,record))
 	else: set_chip("interact",tr(str(Interiors.ACTION_HINTS.get(str(Interiors.ACTIONS.get(str(record.kind),"look")),"살펴보기"))))
 
 ## The prompt chip (RpgUi.prompt, y 560 like every place): the action's key as a cap (from the
@@ -2712,10 +2715,14 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	# Residents of a house take gifts from their own village's player.
 	if lines.is_empty() and NpcGifts.can_receive(id) and not visiting and not api.token.is_empty():
 		talk.choices.insert(maxi(0,talk.choices.size()-1),["선물하기","gift"])
+	# 단비 at the counter buys the bag's finds: leaf coins and a daily starseed allowance (shop_sell.gd).
+	if lines.is_empty() and id=="shopkeeper" and str(entry.state.get("activity",""))=="shopkeep" and not visiting and not api.token.is_empty():
+		talk.choices.insert(0,["물건 팔기","sell"])
 	# The resident's request (quests.gd) comes first, as in the village.
 	if lines.is_empty() and not visiting:
 		var request: Array=preload("res://scripts/quests.gd").room_choice(self,id)
-		# Marked: reading on with E or Space never takes or hands over a request (advance_talk).
+		# Marked "request". Keys pick it only once the choices are up (RpgUi.dialogue_ready), and
+		# taking a request still asks first, with '다음에요' leading.
 		if not request.is_empty(): talk.choices.insert(0,request+["request"])
 	talk_id=id;talk_lines=talk.lines;talk_choices=talk.choices;talk_page=0
 	if entry.pose=="stand" and is_instance_valid(hero):
@@ -2740,10 +2747,8 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 func show_talk_page() -> void:
 	if not is_instance_valid(talk_box): return
 	talk_body.text=str(talk_lines[talk_page])
-	talk_body.visible_ratio=0.0
 	RpgUi.dialogue_line(talk_window,talk_body.text)
-	talk_typing = talk_body.create_tween()
-	talk_typing.tween_property(talk_body,"visible_ratio",1.0,GameSettings.typing_seconds(talk_body.text.length()))
+	RpgUi.dialogue_type(talk_window,GameSettings.typing_seconds(talk_body.text.length()))
 	if talk_page<talk_lines.size()-1:
 		RpgUi.dialogue_more(talk_window,true)
 	else:
@@ -2768,19 +2773,15 @@ func advance_talk() -> void:
 	if talk_window.is_empty():
 		close_talk()
 		return
-	if talk_body.visible_ratio<1.0:
-		if talk_typing and talk_typing.is_valid(): talk_typing.kill()
-		talk_body.visible_ratio=1.0
+	if RpgUi.dialogue_typing(talk_window):
+		RpgUi.dialogue_skip(talk_window)
 	elif talk_page<talk_lines.size()-1:
 		talk_page+=1
 		sfx_player.stream=Interiors.sfx("click");sfx_player.play()
 		show_talk_page()
 	elif not talk_choices.is_empty():
-		# The resident's own first choice; a request (quests.gd, marked in open_talk) only by a click.
-		for choice in talk_choices:
-			if (choice as Array).size()<3 or str(choice[2])!="request":
-				pick_talk(choice)
-				return
+		# The highlighted choice, as in the village (RpgUi.dialogue_pick; W/S or the arrows move it).
+		RpgUi.dialogue_pick(talk_window)
 
 func close_talk() -> void:
 	# A shared window (the storage chest) leaves the window stack with its close sound and fade.
@@ -2807,6 +2808,9 @@ func run_choice(action: String) -> void:
 	match action:
 		"gift":
 			open_gift(id)
+			return
+		"sell":
+			open_sell(id)
 			return
 		"coffee":
 			message(tr("따뜻한 코코아를 받았어요. 달콤해요!"))
@@ -2945,6 +2949,33 @@ func use_gift(record: Dictionary) -> void:
 	var owner_name := Interiors.short_name(str(record.npc),float(resident_clock().hour)) if not str(record.npc).is_empty() else ""
 	say(tr("%s의 소중한 선물 · %s") % [owner_name,str(record.name)],record)
 	sfx_player.stream=Interiors.sfx("pop");sfx_player.play()
+
+## 단비's selling window at the counter (shop_sell.gd). E or Esc closes it, like the storage list.
+func open_sell(id: String) -> void:
+	close_talk()
+	talk_box=ShopSell.window(self,api,func(reply: Dictionary): sold(id,reply))
+	talk_window={};talk_lines=[];talk_choices=[]
+	for item in [name_panel,hint_chip,hint_label,bubble]:
+		if is_instance_valid(item): item.visible=false
+
+## A sale at the counter: sparkles over 단비, a coin chime, starseeds into the wallet line.
+func sold(id: String, reply: Dictionary) -> void:
+	var stars := int(reply.get("stars",0))
+	if npcs.has(id):
+		var resident: Dictionary=npcs[id]
+		pop_over(resident,"✦" if stars>0 else "♪")
+		if stars>0:
+			var at: Vector3=resident.holder.global_position
+			Fx.burst(stage,at+Vector3(0,1.5,0),"sparkle",18,Color(0,0,0,0),0.5)
+			Fx.glow(stage,at+Vector3(0,1.3,0),Color("ffd27a"),1.6,1.0)
+	if stars>0 and is_instance_valid(wallet):
+		wallet.text=tr("별씨 %d") % int(reply.get("shards",0))
+		wallet.pivot_offset=wallet.size*0.5
+		var bump := wallet.create_tween()
+		bump.tween_property(wallet,"scale",Vector2.ONE*1.2,0.08)
+		bump.tween_property(wallet,"scale",Vector2.ONE,0.14)
+	sfx_player.stream=Interiors.sfx("ding");sfx_player.play()
+	message(str(reply.get("message","")))
 
 ## E on the house's storage chest: what the residents keep in storage (names and pictures only),
 ## for the owner and visitors alike. E or Esc closes it.

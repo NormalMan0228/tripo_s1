@@ -605,7 +605,7 @@ func adopt(data) -> void:
 		if data is Dictionary and data.get("states") is Array: fetch_full()
 		return
 	var open := 1 if open_for(token()) else 0
-	# 모카's letter was read while this login saw them closed: the residents' requests open (not on
+	# The chair was ordered (or the chapter ended) while this login saw them closed: the requests open (not on
 	# every login of an open account, and not when nobody has a request left).
 	if was_open == 0 and open == 1 and not story.visiting() and entries().any(func(item): return str(item.get("state", "")) == "available"):
 		get_tree().create_timer(1.2).timeout.connect(func(): if is_instance_valid(app): app.message(tr("마을 주민들이 부탁을 기다리고 있어요 · 머리 위 ! 를 찾아보세요")))

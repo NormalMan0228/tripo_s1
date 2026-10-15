@@ -76,6 +76,10 @@
    "en": " · %d commands",
    "zh": " · 命令 %d 条"
   },
+  " · 별씨 +%d": {
+   "en": " · Starseeds +%d",
+   "zh": " · 星种 +%d"
+  },
   " · 별씨는 돌려드렸어요": {
    "en": " · starseeds refunded",
    "zh": " · 星种已退还"
@@ -364,6 +368,10 @@
    "en": "%s's treasured gift · %s",
    "zh": "%s珍爱的礼物 · %s"
   },
+  "+%d잎전": {
+   "en": "+%d leaf coins",
+   "zh": "+%d 叶币"
+  },
   "+로 색을 모아 두세요": {
    "en": "Collect colours with +",
    "zh": "用 + 收集颜色"
@@ -463,6 +471,10 @@
   "E · %s 채집 (남은 자원 %d)  |  I · 가방  |  M · 소리": {
    "en": "E · Gather %s (%d left)  |  I · Bag  |  M · Sound",
    "zh": "E · 采集%s (剩余资源 %d)  |  I · 背包  |  M · 声音"
+  },
+  "E · Esc 닫기": {
+   "en": "E · Esc to close",
+   "zh": "E · Esc 关闭"
   },
   "E · 동쪽 숲": {
    "en": "E · East Woods",
@@ -1055,6 +1067,14 @@
   "가방에서 고르기": {
    "en": "Choose from my bag",
    "zh": "从背包里选"
+  },
+  "가방을 불러오지 못했어요.": {
+   "en": "Couldn't load your bag.",
+   "zh": "无法读取背包。"
+  },
+  "가방을 살펴보는 중…": {
+   "en": "Looking through your bag…",
+   "zh": "正在查看背包…"
   },
   "가방이 가벼워질수록 발걸음도 가벼워져요.": {
    "en": "The lighter the bag, the lighter my steps.",
@@ -1715,6 +1735,10 @@
   "금빛 표식까지 %.0fm": {
    "en": "%.0fm to the golden marker",
    "zh": "距金色标记 %.0fm"
+  },
+  "기다리는 동안 · 보물상자 · 사과 팔기 · 주민 부탁": {
+   "en": "While you wait · treasure chests · sell apples · residents' requests",
+   "zh": "等待期间 · 宝箱 · 卖苹果 · 居民的请求"
   },
   "기다릴게요. 저녁 일곱 시가 지나면 천문대 불이 켜져요.": {
    "en": "I'll be waiting. The observatory lights come on after seven in the evening.",
@@ -2591,6 +2615,10 @@
   "단비 · 잡화점 주인": {
    "en": "Danbi · Shopkeeper",
    "zh": "丹妃 · 杂货店老板"
+  },
+  "단비의 잡화점 · 물건 팔기": {
+   "en": "Danbi's general store · Sell",
+   "zh": "丹菲的杂货店 · 出售"
   },
   "단비의 집들이 점검": {
    "en": "Danbi's Housewarming Check",
@@ -3796,6 +3824,10 @@
    "en": "Drag across the object to set the direction and length.",
    "zh": "在物品上拖动以确定方向和长度。"
   },
+  "물건 팔기": {
+   "en": "Sell items",
+   "zh": "出售物品"
+  },
   "물건과 별씨는 서버에서 동시에 이전됩니다.": {
    "en": "Items and Starseeds are exchanged on the server at the same time.",
    "zh": "物品与星种将在服务器上同时转移。"
@@ -4668,6 +4700,26 @@
    "en": "Boram's Fish Book",
    "zh": "宝蓝的钓鱼图鉴"
   },
+  "보물상자 · 별씨 +%d": {
+   "en": "Treasure chest · Starseeds +%d",
+   "zh": "宝箱 · 星种 +%d"
+  },
+  "보물상자 열기": {
+   "en": "Open the treasure chest",
+   "zh": "打开宝箱"
+  },
+  "보물상자가 열리지 않았어요. 잠시 뒤 다시 해 보세요.": {
+   "en": "The treasure chest didn't open. Please try again in a moment.",
+   "zh": "宝箱没有打开。请稍后再试。"
+  },
+  "보물상자를 모두 찾았어요! %d/%d": {
+   "en": "You found every treasure chest! %d/%d",
+   "zh": "找到了所有宝箱！%d/%d"
+  },
+  "보물상자를 열었어요": {
+   "en": "You opened the treasure chest",
+   "zh": "打开了宝箱"
+  },
   "보상  %d 별씨": {
    "en": "Reward  %d Starseeds",
    "zh": "奖励  %d 星种"
@@ -5052,6 +5104,14 @@
    "en": "Oh, nice and plump! Quite a first harvest.",
    "zh": "哦，个个饱满！第一次收获就这么厉害。"
   },
+  "오늘 받을 별씨를 다 받았어요 · 내일 다시": {
+   "en": "Today's starseeds from selling are all in · more tomorrow",
+   "zh": "今天出售可得的星种已领完 · 明天再来"
+  },
+  "오늘 별씨 %d/%d · %d잎전어치마다 1개": {
+   "en": "Starseeds today %d/%d · 1 per %d leaf coins sold",
+   "zh": "今日星种 %d/%d · 每卖出 %d 叶币得 1 个"
+  },
   "오늘 저녁은 바다 생선구이를 하고 싶은데, 제 낚싯대가 영 시원찮네요.": {
    "en": "I want grilled sea fish tonight, but my rod just isn't biting.",
    "zh": "今晚想吃烤海鱼，可我的鱼竿一直不给力。"
@@ -5104,6 +5164,10 @@
    "en": "Mm, so fragrant! The pouch will be done in no time.",
    "zh": "嗯，好浓的香味！香囊很快就能做好。"
   },
+  "이미 열어 본 보물상자예요": {
+   "en": "You already opened this treasure chest",
+   "zh": "这个宝箱已经打开过了"
+  },
   "이사 오고 나서 집은 좀 꾸몄어요? 잡화점 주인은 그게 제일 궁금하답니다.": {
    "en": "Have you decorated your home since moving in? A shopkeeper is always curious.",
    "zh": "搬来以后家里布置了吗？杂货店老板最好奇这个了。"
@@ -5127,6 +5191,10 @@
   "작은 답례입니다. 받아 주십시오.": {
    "en": "A small token of thanks. Please accept it.",
    "zh": "一点小谢礼，请收下。"
+  },
+  "잠시 뒤에 다시 열어 보세요": {
+   "en": "Try opening it again in a moment",
+   "zh": "请稍后再打开"
   },
   "장난감이나 동물 모양 물건을 선물해 줘! 공방(C)에서 만들어도 돼.": {
    "en": "Give me a toy or an animal-shaped thing! You can make one in the workshop (C).",
@@ -7844,6 +7912,10 @@
    "en": "Leaf coins",
    "zh": "叶币"
   },
+  "잎전 %d": {
+   "en": "Leaf coins %d",
+   "zh": "叶币 %d"
+  },
   "잎전 %d  ·  수확 %d개  ·  낚은 물고기 %d마리": {
    "en": "Leaf coins %d  ·  Harvested %d  ·  Fish caught %d",
    "zh": "叶币 %d  ·  收获 %d 个  ·  钓到的鱼 %d 条"
@@ -8568,6 +8640,10 @@
    "en": "Crafting can't be finished right now. Your Starseeds have been returned.",
    "zh": "现在无法完成制作。委托的星种已退还给你。"
   },
+  "지금은 팔 수 없어요. 다시 해 볼게요.": {
+   "en": "Can't sell right now. Trying again.",
+   "zh": "现在无法出售，正在重试。"
+  },
   "지급했어요 · 별씨 %d · 잎전 %d": {
    "en": "Granted · Starseeds %d · Leaf coins %d",
    "zh": "已发放 · 星种 %d · 叶币 %d"
@@ -9044,6 +9120,10 @@
    "en": "Friends",
    "zh": "好友"
   },
+  "친구 마을의 보물상자는 열 수 없어요": {
+   "en": "Treasure chests in a friend's village can't be opened",
+   "zh": "不能打开朋友村庄里的宝箱"
+  },
   "친구가 마을이나 파티에 초대하면 초대장이 이곳에 도착해요.": {
    "en": "When friends invite you to their village or party, the invitation arrives here.",
    "zh": "朋友邀请你去村庄或派对时，邀请函会送到这里。"
@@ -9519,6 +9599,14 @@
   "팔 물건이 없어요.": {
    "en": "Nothing to sell.",
    "zh": "没有可以卖的东西。"
+  },
+  "팔 물건이 없어요. 사과를 따거나 낚시를 해 보세요.": {
+   "en": "Nothing to sell. Try picking apples or fishing.",
+   "zh": "没有可出售的物品。去摘苹果或钓鱼吧。"
+  },
+  "팔기": {
+   "en": "Sell",
+   "zh": "出售"
   },
   "팔레트": {
    "en": "Palette",
