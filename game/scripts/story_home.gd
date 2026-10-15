@@ -61,6 +61,15 @@ func _exit_tree() -> void:
 func unread() -> bool:
 	return str(state.get("step", "")) == "letter"
 
+## Opened once, the letter lets the walker out whatever the server answered (a failed save must
+## never keep anyone in; the server marks it read on the next try).
+var letter_seen := false
+## Test runs (--qa) walk fresh accounts in and out of the home: the hold is off there unless a test
+## asks for it (Engine meta "qa_letter_first").
+func keeps_door_shut() -> bool:
+	if "--qa" in OS.get_cmdline_user_args() and not Engine.has_meta("qa_letter_first"): return false
+	return unread() and not letter_seen
+
 ## Walking out before the welcome letter is read (item 54): the door stays shut, the letter calls
 ## (its star hops, a soft chime) and one short line says where to look, at most every few seconds.
 ## Only while the server says the letter is unread: a failed /v1/story never keeps anyone in.
@@ -171,6 +180,7 @@ func chip(target: Dictionary) -> String:
 
 ## The letter as a parchment card that unfolds; E, Space, Enter, Esc or a click closes it.
 func open_letter() -> void:
+	letter_seen = true
 	room.close_talk()
 	if is_instance_valid(room.hero): room.hero.face_point(letter.global_position)
 	reading = Control.new()

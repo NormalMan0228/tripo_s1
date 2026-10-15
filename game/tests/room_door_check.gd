@@ -18,6 +18,8 @@ func run() -> void:
 	check(login.ok,"login")
 	if not login.ok:quit(1);return
 	Engine.set_meta("studio_session",{"token":login.data.token,"url":api.base_url,"room":"home"})
+	# The welcome letter keeps the door shut until it is opened (off by default in test runs).
+	Engine.set_meta("qa_letter_first",true)
 	change_scene_to_file("res://scenes/studio.tscn")
 	var veil=load("res://scripts/transition.gd")
 	var deadline:=Time.get_ticks_msec()+60000
@@ -54,11 +56,13 @@ func run() -> void:
 	check(not door.opened and absf(door.hinge.rotation.y)<0.02,"door shut behind (%.2f rad)"%door.hinge.rotation.y)
 	await capture("room_door_shut.png")
 	# The welcome letter is unread: the door stays shut (story_home.gd hold_at_door).
-	if is_instance_valid(home.story_home) and home.story_home.unread():
+	check(is_instance_valid(home.story_home) and home.story_home.keeps_door_shut(),"the unread letter keeps the door shut")
+	if is_instance_valid(home.story_home) and home.story_home.keeps_door_shut():
 		home.leave()
 		await create_timer(0.3).timeout
 		check(not door.opened and not home.leaving,"door stays shut until the letter is read")
-		home.story_home.state={"step":"cafe"}
+		# Opening the letter lets the walker out even when the server could not save it.
+		home.story_home.letter_seen=true
 	home.leave()
 	await create_timer(0.3).timeout
 	check(door.opened,"door opens to walk out")
