@@ -2607,7 +2607,8 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	# The resident's request (quests.gd) comes first, as in the village.
 	if lines.is_empty() and not visiting:
 		var request: Array=preload("res://scripts/quests.gd").room_choice(self,id)
-		if not request.is_empty(): talk.choices.insert(0,request)
+		# Marked: reading on with E or Space never takes or hands over a request (advance_talk).
+		if not request.is_empty(): talk.choices.insert(0,request+["request"])
 	talk_id=id;talk_lines=talk.lines;talk_choices=talk.choices;talk_page=0
 	if entry.pose=="stand" and is_instance_valid(hero):
 		var look: Vector3=hero.global_position-entry.holder.global_position
@@ -2667,7 +2668,11 @@ func advance_talk() -> void:
 		sfx_player.stream=Interiors.sfx("click");sfx_player.play()
 		show_talk_page()
 	elif not talk_choices.is_empty():
-		pick_talk(talk_choices[0])
+		# The resident's own first choice; a request (quests.gd, marked in open_talk) only by a click.
+		for choice in talk_choices:
+			if (choice as Array).size()<3 or str(choice[2])!="request":
+				pick_talk(choice)
+				return
 
 func close_talk() -> void:
 	if is_instance_valid(talk_box): talk_box.queue_free()

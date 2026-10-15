@@ -17,6 +17,18 @@ var api: Node
 var box := {"lines":[], "choices":[], "count":0}
 var effects: Array = []
 
+## An api that records what the conversation would send (and answers no).
+class SentApi extends Node:
+	var token := ""
+	var sent: Array = []
+	func mutation(extra := {}) -> Dictionary:
+		return extra.merged({"request_id":"recorded"})
+	func post(path: String, payload: Dictionary) -> Dictionary:
+		sent.append([path, payload])
+		return {"ok":false, "error":"quests_locked", "data":{}}
+	func request(_path: String) -> Dictionary:
+		return {"ok":false, "error":"offline", "data":{}}
+
 func _initialize() -> void:
 	call_deferred("run")
 	create_timer(900).timeout.connect(func():
@@ -128,6 +140,62 @@ func local_post(path: String, payload: Dictionary, hour: int) -> Dictionary:
 	var ok: bool = int(response[1]) < 400 and data is Dictionary
 	return {"ok":ok, "data":data if data is Dictionary else {}, "error":"" if ok or not data is Dictionary else str(data.get("detail", ""))}
 
+## /v1/me's brief updates the kept list (same catalog), and the night names of the shadow folk.
+func brief_and_names(opened: Dictionary) -> void:
+	var me: Dictionary = (await api.request("/v1/me")).data.get("quests", {})
+	expect(not me.has("list") and me.get("states") is Array and str(me.get("catalog", "")) == str(opened.get("catalog", "")), "/v1/me carries only the states and the catalog digest")
+	expect(Quests.adopt_data(me, str(api.token)) and Quests.listed(str(api.token)).size() == 19 and str(Quests.by_id(str(api.token), "moka_pie").get("npc", "")) == "regular" and int(Quests.by_id(str(api.token), "moka_pie").get("stars", 0)) == 8, "the brief updates the kept list, its residents kept")
+	var stale := me.duplicate()
+	stale["catalog"] = "another"
+	expect(not Quests.adopt_data(stale, str(api.token)) and not Quests.adopt_data(me, "another-token"), "a brief with another catalog (or login) asks for the full list")
+	# 하늘 and 새벽 by day; at night the shadow's role is named with them, as over their heads.
+	expect(Quests.npc_name("stargazer", 12.0) == tr("하늘") and Quests.npc_name("stargazer", 22.0) == tr("하늘")+"("+tr("별지기")+")", "하늘 by day, 하늘(별지기) at night (%s)" % Quests.npc_name("stargazer", 22.0))
+	expect(Quests.npc_name("stroller", 23.0) == tr("새벽")+"("+tr("밤 산책자")+")" and Quests.npc_name("sora", 23.0) == tr("소라"), "새벽(밤 산책자) at night; the cast keep their names")
+	var stars: Dictionary = Quests.by_id(str(api.token), "haneul_stars")
+	expect(Quests.goal_text(stars, 1, true, 22.0).contains(tr("하늘")+"("+tr("별지기")+")") and Quests.done_word(stars, 22.0).contains(tr("별지기")), "the tracker and the 'done' word name the night role")
+
+## 하늘's request from inside her observatory: the yes carries the place (the server counts it at
+## night); E through her talk never opens the request by itself.
+func inside_the_observatory() -> void:
+	expect(Quests.place_of_room("05_observatory") == "observatory" and Quests.place_of_room("13_shop") == "", "the observatory is the room of 하늘's request")
+	var sent := SentApi.new()
+	root.add_child(sent)
+	sent.token = str(api.token)
+	var choice: Array = Quests.choice_for(sent, "stargazer", say, done, false, Callable(), "observatory")
+	var before := int(box.count)
+	(choice[1] as Callable).call()
+	await wait_for(func() -> bool: return int(box.count) > before, 5.0)
+	expect(await press("맡겨 줘요") and not sent.sent.is_empty() and str(sent.sent.back()[1].get("place", "")) == "observatory", "taken inside the observatory: the yes says where (%s)" % str(sent.sent))
+	var pie: Array = Quests.choice_for(sent, "regular", say, done, false, Callable(), "observatory")
+	before = int(box.count)
+	(pie[1] as Callable).call()
+	await wait_for(func() -> bool: return int(box.count) > before, 5.0)
+	expect(await press("맡겨 줘요") and not sent.sent.back()[1].has("place"), "another request's yes has no place")
+	sent.queue_free()
+	# The room itself at night: 하늘 at her telescope, the request on top, E reads on past it.
+	Engine.set_meta("interior_hour", 22.0)
+	Engine.set_meta("studio_session", {"token":str(api.token), "url":url, "room":"05_observatory"})
+	var room: Control = load("res://scenes/studio.tscn").instantiate()
+	root.add_child(room)
+	var present := await wait_for(func() -> bool: return room.npcs.has("stargazer") and not room.npcs.stargazer.state.get("asleep", false), 40.0)
+	expect(present, "하늘 is in the observatory at night")
+	if present:
+		room.open_talk("stargazer")
+		var top: Array = room.talk_choices[0] if not room.talk_choices.is_empty() else []
+		expect(top.size() == 3 and str(top[0]) == tr("✦ 부탁 들어주기") and str(top[2]) == "request", "her request is the first choice, marked as a request")
+		var ask: Array = Quests.lines_of(Quests.by_id(str(api.token), "haneul_stars"), "ask")
+		var asked := false
+		for i in 30:
+			if not is_instance_valid(room.talk_box): break
+			if room.talk_lines == ask: asked = true
+			room.advance_talk()
+			await process_frame
+		expect(not asked and str(Quests.by_id(str(api.token), "haneul_stars").state) == "available" and str((await talk("stargazer"))[0]) == "✦ 부탁 들어주기", "E through her talk picks her own choice, not the request")
+		room.close_talk()
+	Engine.remove_meta("interior_hour")
+	room.queue_free()
+	await create_timer(0.5).timeout
+
 func shards() -> int:
 	var me: Dictionary = await api.request("/v1/me")
 	return int(me.data.shards) if me.ok else -1
@@ -152,8 +220,8 @@ func run() -> void:
 	var untranslated: Array = []
 	for id in Quests.BOOK:
 		var book: Dictionary = Quests.BOOK[id]
-		for key in ["title", "accepted", "remind", "goal"]:
-			if not catalog.strings.has(str(book[key])): untranslated.append(book[key])
+		for key in ["title", "accepted", "remind", "goal", "already"]:
+			if book.has(key) and not catalog.strings.has(str(book[key])): untranslated.append(book[key])
 		for key in ["ask", "thanks", "reply"]:
 			for line in book.get(key, []):
 				if not catalog.strings.has(str(line)): untranslated.append(line)
@@ -174,6 +242,8 @@ func run() -> void:
 	await api.post("/v1/letters/read", api.mutation({"ids":[chapter.data.letters[0].id]}))
 	var opened := await refresh()
 	expect(opened.get("unlocked", false) and opened.list.all(func(q): return str(q.state) == "available"), "the letter read, every request is offered")
+	await brief_and_names(opened)
+	await inside_the_observatory()
 
 	# A lamp for 노을 and a teddy bear for 콩이 (the offline demo crafts), and the turnips' and the
 	# carrots' seeds go in first (they take 90 and 120 s).
@@ -315,7 +385,7 @@ func run() -> void:
 		expect(letters.size() == (1 if wants_letter else 0), "%s: %s" % [id, "a thank-you letter" if wants_letter else "no letter"])
 		if wants_letter and not letters.is_empty():
 			var page: Array = NpcGifts.letter_lines(letters[0])
-			expect(str(page[0]).contains(Quests.npc_name(npc)) and str(page[0]).contains(str(NpcGifts.QUEST_LETTERS[npc][0])), "%s: the letter reads in the mailbox" % id)
+			expect(str(page[0]).contains(Quests.npc_name(npc, 12.0)) and str(page[0]).contains(str(NpcGifts.QUEST_LETTERS[npc][0])), "%s: the letter reads in the mailbox" % id)
 	expect(await shards() == start+paid and paid == total, "all nineteen paid %d starseeds in all" % paid)
 	var ledger: Dictionary = await refresh()
 	expect(ledger.list.all(func(q): return str(q.state) == "done"), "every request is done")

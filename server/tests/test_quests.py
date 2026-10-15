@@ -116,7 +116,7 @@ def test_requests_wait_for_the_opening_chapter_and_its_letter(world):
     app, c, now = world
     h = account(c, 'newcomer')
     first = c.get('/v1/me', headers=h).json()['quests']
-    assert first['unlocked'] is False and {q['state'] for q in first['list']} == {'locked'}
+    assert first['unlocked'] is False and {q['state'] for q in first['states']} == {'locked'}
     assert accept(c, h, 'moka_pie').json()['detail'] == 'quests_locked'
     # The chapter: letter, 모카's request, the welcome chair on the terrace.
     for action in ('read_letter', 'accept'):
@@ -463,3 +463,112 @@ def test_the_operator_can_see_a_players_requests(world, capsys):
     assert shown['progress'][0]['quest_id'] == 'hangyeol_turnips' and shown['progress'][0]['state'] == 'done'
     assert shown['paid'][0]['quest'] == 'hangyeol_turnips' and shown['paid'][0]['amount'] == 4
     assert admin_cli.main(['quests', 'show', 'nobody', '--data-dir', str(app.state.settings.data_dir)]) == 1
+
+
+def finish_chapter(c, h):
+    """The opening chapter played through and 모카's letter read: the requests open."""
+    for action in ('read_letter', 'accept'):
+        assert c.post('/v1/story/step', headers=h, json=mutation(action=action)).status_code == 200
+    chair = next(o for o in c.get('/v1/me', headers=h).json()['objects'] if o['name'] == '환영의 나무 의자')
+    done = c.post('/v1/story/gift', headers=h, json=mutation(object_id=chair['id'], version=chair['version'])).json()
+    c.post('/v1/letters/read', headers=h, json=mutation(ids=[done['letters'][0]['id']]))
+    assert listing(c, h)['unlocked'] is True
+
+
+def test_reports_wait_while_a_story_reset_closes_the_requests(world):
+    app, c, now = world
+    h = account(c, 'rehearsal')
+    finish_chapter(c, h)
+    accept(c, h, 'naru_islands')
+    assert visit(c, h, 'square').json()['quest']['have'] == 1
+    assert admin_cli.main(['story', 'reset', 'rehearsal', '--data-dir', str(app.state.settings.data_dir)]) == 0
+    assert listing(c, h)['unlocked'] is False
+    now[0] += 10
+    assert visit(c, h, 'fields').json()['detail'] == 'quests_locked'
+    accept(c, h, 'haneul_stars')
+    assert c.post('/v1/quests/haneul_stars/progress', headers=local(h, now, 22), json=mutation(place='observatory')).json()['detail'] == 'quests_locked'
+    # Open again after the chapter: the report made while closed never counted.
+    finish_chapter(c, h)
+    assert quest(c, h, 'naru_islands')['visited'] == ['square']
+
+
+def test_a_request_taken_at_its_place_counts_it_at_once(world):
+    """하늘 is in her observatory at night: taking her request in there is the visit itself."""
+    app, c, now = world
+    h = account(c, 'inside')
+    free(app)
+    taken = c.post('/v1/quests/haneul_stars/accept', headers=local(h, now, 22), json=mutation(place='observatory'))
+    assert taken.status_code == 200, taken.text
+    assert taken.json()['quest']['state'] == 'ready' and taken.json()['quest']['visited'] == ['observatory']
+    assert complete(c, h, 'haneul_stars').json()['stars'] == quests.STARS['haneul_stars']
+    # By day the place does not count (a night errand), and another request's place never does.
+    other = account(c, 'daytime')
+    free(app)
+    assert c.post('/v1/quests/saebyeok_walk/accept', headers=local(other, now, 13), json=mutation(place='lighthouse_pier')).json()['quest']['state'] == 'active'
+    assert c.post('/v1/quests/garam_lookout/accept', headers=other, json=mutation(place='observatory')).json()['quest']['have'] == 0
+    assert c.post('/v1/quests/naru_islands/accept', headers=other, json=mutation(place='Square')).status_code == 422
+    # Counted at night later as before.
+    now[0] += 10
+    walk = c.post('/v1/quests/saebyeok_walk/progress', headers=local(other, now, 21), json=mutation(place='lighthouse_pier'))
+    assert walk.json()['quest']['state'] == 'ready'
+
+
+def test_me_carries_only_the_states_and_a_catalog_digest(world):
+    app, c, now = world
+    h = account(c, 'poller')
+    free(app)
+    full = listing(c, h)
+    me = c.get('/v1/me', headers=h).json()['quests']
+    assert set(me) == {'unlocked', 'catalog', 'states'} and me['catalog'] == full['catalog']
+    assert [s['id'] for s in me['states']] == [q['id'] for q in full['list']] and {s['state'] for s in me['states']} == {'available'}
+    assert len(json.dumps(me, ensure_ascii=False)) < 1200 < len(json.dumps(full, ensure_ascii=False))
+    # A visit counted shows in the states with the same catalog; taking a request changes the catalog.
+    accept(c, h, 'naru_islands')
+    taken = c.get('/v1/me', headers=h).json()['quests']
+    assert taken['catalog'] != me['catalog'] and taken['catalog'] == listing(c, h)['catalog']
+    visit(c, h, 'square')
+    seen = c.get('/v1/me', headers=h).json()['quests']
+    assert seen['catalog'] == taken['catalog']
+    assert next(s for s in seen['states'] if s['id'] == 'naru_islands') == {'id': 'naru_islands', 'state': 'active', 'have': 1, 'visited': ['square']}
+    # The catch baseline (the whole fish book) stays out of the poll.
+    catch(app, c, h, 'perch', 'mackerel')
+    accept(c, h, 'boram_catch')
+    assert 'since' not in json.dumps(c.get('/v1/me', headers=h).json()['quests']) and 'since' in json.dumps(listing(c, h))
+
+
+def test_the_light_request_does_not_rescan_every_piece_on_each_poll(world, monkeypatch):
+    app, c, now = world
+    h = account(c, 'collector')
+    free(app)
+    box = craft(app, c, h, '나무 상자', now)
+    with db(app) as conn:
+        row = dict(conn.execute('SELECT * FROM objects WHERE id=?', (box['id'],)).fetchone())
+        for n in range(40):
+            conn.execute('INSERT INTO objects(id,owner_id,creator_id,asset_id,name,color,version,state,x,z,rotation,created) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+                         (str(uuid.uuid4()), row['owner_id'], row['creator_id'], row['asset_id'], row['name'], row['color'], 1, 'placed', n, n, 0, row['created']))
+    accept(c, h, 'noeul_light')
+    reads = []
+    real = quests.design
+    monkeypatch.setattr(quests, 'design', lambda conn, asset_id: reads.append(asset_id) or real(conn, asset_id))
+    for poll in range(3):
+        assert next(s for s in c.get('/v1/me', headers=h).json()['quests']['states'] if s['id'] == 'noeul_light')['state'] == 'active'
+    # Forty copies of one design: read at most once, then kept for the next polls.
+    assert len(reads) <= 1
+    lamp = craft(app, c, h, '등불', now)
+    other = craft(app, c, h, '촛대', now)
+    with db(app) as conn:
+        conn.execute("UPDATE objects SET state='placed',x=20,z=20 WHERE id IN (?,?)", (lamp['id'], other['id']))
+    assert next(s for s in c.get('/v1/me', headers=h).json()['quests']['states'] if s['id'] == 'noeul_light')['state'] == 'ready'
+    # The count stops at what the request needs.
+    with db(app) as conn:
+        assert len(quests.lights_set_out(conn, row['owner_id'], 1)) == 1
+        assert set(quests.lights_set_out(conn, row['owner_id'])) == {lamp['id'], other['id']}
+
+
+def test_the_operator_example_states_the_real_totals():
+    """ops/production.env.example sizes the rewards for the operator: its totals are STARS's."""
+    import pathlib
+    text = (pathlib.Path(__file__).resolve().parents[2] / 'ops' / 'production.env.example').read_text(encoding='utf-8')
+    total = lambda scale: sum(quests.reward(q, scale) for q in quests.QUESTS)
+    assert total(1.0) == 82
+    assert ('%d in all at 1.0' % total(1.0)) in text and ('%d at 2.0' % total(2.0)) in text and ('%d at 5' % total(5.0)) in text

@@ -452,8 +452,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 'npc_letters_unread':app.state.npc_homes.unread_for(user['id']),
                 # The opening story chapter (server/story.py), None for accounts without it.
                 'story':app.state.story.public_for(conn,user['id']),
-                # Residents' requests (server/quests.py).
-                'quests':app.state.quests.public_for(conn,user['id'])}
+                # Residents' requests (server/quests.py brief: states only; the full list is /v1/quests).
+                'quests':app.state.quests.brief_for(conn,user['id'])}
 
     @app.post('/v1/objects/{object_id}')
     def edit_object(object_id:str,body:ObjectEdit,request:Request):

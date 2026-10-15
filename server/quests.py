@@ -18,13 +18,18 @@ The server checks every condition it can see from its own data:
 and trusts the game only for what it cannot see, with limits:
   visit    standing at a place (a signpost, the lookout, a pier) or entering a room: one report per
            place, from a fixed list, at least VISIT_GAP seconds apart; night requests only while it
-           is night by the player's clock (homestead.night, the time zone header)
+           is night by the player's clock (homestead.night, the time zone header); a request taken
+           while standing at its place (하늘 in her observatory) counts that place at once
   talk     passing a message on to another resident (that resident only, once).
 
 Rewards: STARS below (3-8 per request, 82 in all: about two cheap crafts). TRIPOTHON_QUEST_STARS_SCALE
 (server/config.py, default 1.0) multiplies them; 0 turns the rewards off (the requests still run and
 pay nothing). A request that may need a new craft never pays more than the cheapest craft costs.
+
+/v1/me carries brief(): each request's state and how far it is, and a digest of the rest (who asks,
+what for, the reward); the game asks /v1/quests for the full list when the digest changes.
 """
+import hashlib
 import json
 import math
 import uuid
@@ -124,6 +129,11 @@ class QuestReport(Mutation):
     place: str = Field(max_length=24, pattern=r'^[a-z_]+$')
 
 
+class QuestAccept(Mutation):
+    # Where the player stands as they take the request (a visit request's place counts at once).
+    place: str | None = Field(default=None, max_length=24, pattern=r'^[a-z_]+$')
+
+
 def fail(code, status=409):
     raise HTTPException(status, code)
 
@@ -158,28 +168,64 @@ def profile_version(conn, user_id):
     return row['version'] if row else 0
 
 
-def glows(conn, obj):
-    """True for a piece that gives light: its interaction (glow, flicker...), its library type's
-    family (light, flame), or a lamp, lantern or candle by its name or design."""
-    row = conn.execute('SELECT spec FROM object_interactions WHERE object_id=?', (obj['id'],)).fetchone()
-    if row:
-        spec = json.loads(row['spec'])
-        if any(str(p.get('kind', '')) in GLOW_KINDS for p in spec.get('presets', []) if isinstance(p, dict)):
+# What a design says about a piece. Studio manifests are written once (asset_studio, npc_homes),
+# so the answers keep between polls: asset id -> its manifest's facts, and (asset id, name) ->
+# whether it is a light by its design or name.
+_DESIGNS = {}
+_LIT = {}
+_KEEP = 4096
+
+
+def _kept(cache, key, make):
+    if key not in cache:
+        if len(cache) >= _KEEP:
+            cache.clear()
+        cache[key] = make()
+    return cache[key]
+
+
+def design(conn, asset_id):
+    """A piece's library type and its plan's title and category (empty for non-studio assets)."""
+    def read():
+        studio = conn.execute('SELECT manifest FROM studio_assets WHERE asset_id=?', (asset_id,)).fetchone()
+        manifest = json.loads(studio['manifest']) if studio else {}
+        plan = manifest.get('plan', {})
+        return {'archetype': str(manifest.get('provenance', {}).get('archetype', '')),
+                'title': plan.get('title'), 'category': plan.get('category')}
+    return _kept(_DESIGNS, asset_id, read)
+
+
+def lit_by_design(conn, asset_id, name):
+    """A lamp, lantern or candle by its library type's family (light, flame), its name or design."""
+    def judge():
+        facts = design(conn, asset_id)
+        kind = archetypes.BY_ID.get(facts['archetype'])
+        if kind and kind.get('family') in GLOW_FAMILIES:
             return True
-    studio = conn.execute('SELECT manifest FROM studio_assets WHERE asset_id=?', (obj['asset_id'],)).fetchone()
-    manifest = json.loads(studio['manifest']) if studio else {}
-    kind = archetypes.BY_ID.get(str(manifest.get('provenance', {}).get('archetype', '')))
-    if kind and kind.get('family') in GLOW_FAMILIES:
-        return True
-    plan = manifest.get('plan', {})
-    return 'light' in npc_homes.item_tags(obj['name'], plan.get('title'), plan.get('category'))
+        return 'light' in npc_homes.item_tags(name, facts['title'], facts['category'])
+    return _kept(_LIT, (asset_id, name), judge)
 
 
-def lights_set_out(conn, user_id):
-    """The player's glowing pieces standing in the village (not in a room)."""
-    rows = conn.execute("SELECT o.* FROM objects o LEFT JOIN furniture_locations f ON f.object_id=o.id "
-                        "WHERE o.owner_id=? AND o.state='placed' AND COALESCE(f.room,'village')='village'", (user_id,)).fetchall()
-    return [r['id'] for r in rows if glows(conn, r)]
+def lit_by_interaction(spec):
+    """Its interaction makes it glow (glow, flicker, pulse, hue)."""
+    if not spec:
+        return False
+    presets = json.loads(spec).get('presets', [])
+    return any(str(p.get('kind', '')) in GLOW_KINDS for p in presets if isinstance(p, dict))
+
+
+def lights_set_out(conn, user_id, enough=None):
+    """The player's glowing pieces standing in the village (not in a room), up to `enough`. One
+    query brings the pieces with their interactions; the designs' answers are kept (above)."""
+    found = []
+    for r in conn.execute("SELECT o.id,o.name,o.asset_id,i.spec FROM objects o LEFT JOIN furniture_locations f ON f.object_id=o.id "
+                          "LEFT JOIN object_interactions i ON i.object_id=o.id "
+                          "WHERE o.owner_id=? AND o.state='placed' AND COALESCE(f.room,'village')='village'", (user_id,)):
+        if lit_by_interaction(r['spec']) or lit_by_design(conn, r['asset_id'], r['name']):
+            found.append(r['id'])
+            if enough is not None and len(found) >= enough:
+                break
+    return found
 
 
 def home_pieces(conn, user_id):
@@ -193,9 +239,9 @@ def gift_kinds(conn, object_id, tags):
     """A gift's kinds: its item tags (npc_homes.item_tags) and 'toy' for a piece of the library's
     toys and hobbies room (a "장난감 로봇" may be designed as any of them)."""
     kinds = set(json.loads(tags or '[]'))
-    studio = conn.execute('SELECT s.manifest FROM objects o JOIN studio_assets s ON s.asset_id=o.asset_id WHERE o.id=?', (object_id,)).fetchone()
-    if studio:
-        kind = archetypes.BY_ID.get(str(json.loads(studio['manifest']).get('provenance', {}).get('archetype', '')))
+    row = conn.execute('SELECT asset_id FROM objects WHERE id=?', (object_id,)).fetchone()
+    if row:
+        kind = archetypes.BY_ID.get(design(conn, row['asset_id'])['archetype'])
         if kind and kind.get('room') == 'toys':
             kinds.add('toy')
     return kinds
@@ -236,12 +282,17 @@ def have(conn, user_id, quest_id, row, bag=None, life=None):
                             'WHERE g.host_id=? AND g.created>=? AND g.npc_id IN (%s)' % ','.join('?' * len(to)),
                             (user_id, row['accepted'], *to)).fetchall()
         wanted = set(quest.get('tags', ()))
-        count = sum(1 for r in rows if not wanted or wanted & gift_kinds(conn, r['object_id'], r['tags']))
+        count = 0
+        for r in rows:
+            if not wanted or wanted & gift_kinds(conn, r['object_id'], r['tags']):
+                count += 1
+                if count >= need:
+                    break
     elif kind == 'arrange':
         before = base.get('home', {})
         count = sum(1 for piece, version in home_pieces(conn, user_id).items() if piece not in before or version > before[piece])
     else:
-        count = len(lights_set_out(conn, user_id))
+        count = len(lights_set_out(conn, user_id, need))
     return min(need, count)
 
 
@@ -275,14 +326,36 @@ def entry(conn, user_id, quest_id, row, scale, open_, bag=None, life=None):
     return out
 
 
+# What changes from one poll to the next. The rest of an entry changes only when a request is
+# taken or handed over (or with the operator's scale): the catalog digest covers it.
+LIVE = ('state', 'have', 'visited')
+
+
 def public(conn, user_id, settings):
-    """Every request as the game shows it: {unlocked, scale, list}."""
+    """Every request as the game shows it: {unlocked, scale, catalog, list}."""
     rows = {r['quest_id']: r for r in conn.execute('SELECT * FROM quest_progress WHERE user_id=?', (user_id,))}
     open_ = unlocked(conn, user_id)
     life = life_state(conn, user_id) if any(QUESTS[q]['kind'] in ('bring', 'catch') and r['state'] == 'active' for q, r in rows.items() if q in QUESTS) else None
-    return {'unlocked': open_, 'scale': settings.quest_stars_scale,
-            'list': [entry(conn, user_id, quest_id, rows.get(quest_id), settings.quest_stars_scale, open_, life['bag'] if life else None, life)
-                     for quest_id in QUESTS]}
+    listing = [entry(conn, user_id, quest_id, rows.get(quest_id), settings.quest_stars_scale, open_, life['bag'] if life else None, life)
+               for quest_id in QUESTS]
+    fixed = [{k: v for k, v in item.items() if k not in LIVE} for item in listing]
+    catalog = hashlib.sha1(json.dumps(fixed, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
+    return {'unlocked': open_, 'scale': settings.quest_stars_scale, 'catalog': catalog, 'list': listing}
+
+
+def brief(listing):
+    """The poll's share of a listing (/v1/me): each request's state, how far it is and the places
+    counted. The game keeps the rest from the last full list with the same catalog (quests.gd)."""
+    states = []
+    for item in listing['list']:
+        short = {'id': item['id'], 'state': item['state']}
+        if item['have']:
+            short['have'] = item['have']
+        if item.get('visited'):
+            short['visited'] = item['visited']
+        states.append(short)
+    return {'unlocked': listing['unlocked'], 'catalog': listing['catalog'], 'states': states}
+
 
 def describe(conn, user_id):
     """Operator view (admin_cli quests show)."""
@@ -324,7 +397,7 @@ class Quests:
                 return {'quests': public(conn, user['id'], settings)}
 
         @app.post('/v1/quests/{quest_id}/accept')
-        def accept(quest_id: str, body: Mutation, request: Request):
+        def accept(quest_id: str, body: QuestAccept, request: Request):
             quest = quest_of(quest_id)
 
             def apply(conn, user):
@@ -337,8 +410,14 @@ class Quests:
                 if not row:
                     # What the condition is measured from (a new look, a catch, a piece at home count from now on).
                     baseline = baseline_for(conn, user['id'], quest)
-                    conn.execute('INSERT INTO quest_progress(user_id,quest_id,state,accepted,baseline) VALUES (?,?,?,?,?)',
-                                 (user['id'], quest_id, 'active', clock(), json.dumps(baseline)))
+                    now = clock()
+                    # Taken at its place (하늘 asks inside her observatory at night): that place counts
+                    # now, by the report's rules (a night errand only while it is night).
+                    progress = {}
+                    if quest['kind'] == 'visit' and body.place in quest['places'] and (not quest.get('night') or homestead.night(now)):
+                        progress = {'places': [body.place], 'last': now}
+                    conn.execute('INSERT INTO quest_progress(user_id,quest_id,state,accepted,baseline,progress) VALUES (?,?,?,?,?,?)',
+                                 (user['id'], quest_id, 'active', now, json.dumps(baseline), json.dumps(progress)))
                 return reply(conn, user, quest_id)
             return mutate(request, body, 'quest_accept:' + quest_id, apply)
 
@@ -348,6 +427,9 @@ class Quests:
 
             def apply(conn, user):
                 own_village(conn, user)
+                # Closed again after a story reset (admin_cli story reset): nothing counts until they reopen.
+                if not unlocked(conn, user['id']):
+                    fail('quests_locked')
                 row = active(conn, user, quest_id)
                 if quest['kind'] not in ('visit', 'talk'):
                     fail('quest_wrong_kind')
@@ -419,5 +501,6 @@ class Quests:
                 return reply(conn, user, quest_id, stars=stars, shards=shards, letters=letters, **extra)
             return mutate(request, body, 'quest_complete:' + quest_id, apply)
 
-    def public_for(self, conn, user_id):
-        return public(conn, user_id, self.settings)
+    def brief_for(self, conn, user_id):
+        """/v1/me's share (brief above)."""
+        return brief(public(conn, user_id, self.settings))

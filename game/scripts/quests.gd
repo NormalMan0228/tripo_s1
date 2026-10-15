@@ -22,6 +22,8 @@ const RpgUi := preload("res://scripts/rpg_ui.gd")
 const Guide := preload("res://scripts/guide.gd")
 const Farm := preload("res://scripts/farm.gd")
 const NpcGifts := preload("res://scripts/npc_gifts.gd")
+const Daylight := preload("res://scripts/daylight.gd")
+const Interiors := preload("res://scripts/interiors.gd")
 
 ## Guide keys: "story_quest:<id>" (a request's goal) and the book's line (story.gd routes "story_*").
 const KEY := "story_quest:"
@@ -32,7 +34,8 @@ const ISLANDS := {"square":"물결빛 광장","fields":"풍차 들판","garden":
 const MOKA_AT := Vector2(-59.6, -29.9)
 ## The words of each request (Korean source; translated where shown).
 ##   ask: the request; accepted: the answer to "맡겨 줘요"; remind: how far it is (%d/%d when it
-##   counts); thanks: the hand-over; goal: the tracker line (%d/%d when it counts); place: where
+##   counts); already: the answer when it is done the moment it is taken (taken at its place);
+##   thanks: the hand-over; goal: the tracker line (%d/%d when it counts); place: where
 ##   the guide leads before it is done ("" for the resident, "-" for nowhere, a Town place id,
 ##   "farm", "forage:<kind>", "tree:<kind>", "signpost", "home", "npc:<id>", "visit" for the
 ##   request's places); deliver/reply: a message passed to another resident (talk requests).
@@ -108,6 +111,7 @@ const BOOK := {
 	"haneul_stars":{"title":"하늘의 밤하늘 관측", "place":"visit",
 		"ask":["하암… 낮에는 졸려도, 밤이 되면 눈이 반짝 떠져요.", "해가 진 뒤에 별빛 천문대로 놀러 와요. 망원경으로 보는 별은 정말 달라요."],
 		"accepted":"기다릴게요. 저녁 일곱 시가 지나면 천문대 불이 켜져요.",
+		"already":"어머, 벌써 천문대에 와 있었네요! 오늘 밤 별이 참 잘 보여요.",
 		"remind":"해가 진 뒤(저녁 7시~새벽 6시)에 별빛 천문대 안으로 들어와 봐요.",
 		"thanks":["와 줬군요! 오늘 밤 고래자리가 유난히 또렷해요.", "별지기의 작은 선물이에요. 좋은 꿈 꿔요."],
 		"goal":"밤에 별빛 천문대 들어가 보기"},
@@ -163,9 +167,31 @@ static func t(text: String) -> String:
 # ------------------------------------------------------------------ the server's list (shared)
 
 ## The last list the server sent for this login (Engine metadata: it outlives rooms and the field).
-static func adopt_data(value, token: String) -> void:
-	if value is Dictionary and value.get("list") is Array:
-		Engine.set_meta("quest_state", {"token":token, "unlocked":bool(value.get("unlocked", false)), "list":value.list})
+## A full list (/v1/quests, the requests' replies) is kept with its catalog digest; /v1/me's brief
+## ({unlocked, catalog, states}) updates the kept list's states when the digest is the same.
+## False when nothing could be taken (a brief without a matching full list: ask /v1/quests).
+static func adopt_data(value, token: String) -> bool:
+	if not value is Dictionary: return false
+	if value.get("list") is Array:
+		Engine.set_meta("quest_state", {"token":token, "unlocked":bool(value.get("unlocked", false)), "catalog":str(value.get("catalog", "")), "list":value.list})
+		return true
+	if not value.get("states") is Array: return false
+	var kept := known(token)
+	if kept.is_empty() or str(kept.get("catalog", "")) != str(value.get("catalog", "")): return false
+	var live := {}
+	for item in value.states:
+		if item is Dictionary: live[str(item.get("id", ""))] = item
+	var merged: Array = []
+	for item in kept.get("list", []):
+		var now: Dictionary = (item as Dictionary).duplicate()
+		var fresh: Dictionary = live.get(str(now.get("id", "")), {})
+		if not fresh.is_empty():
+			now["state"] = str(fresh.get("state", now.get("state", "")))
+			now["have"] = int(fresh.get("have", 0))
+			if now.has("visited") or fresh.has("visited"): now["visited"] = fresh.get("visited", [])
+		merged.append(now)
+	Engine.set_meta("quest_state", {"token":token, "unlocked":bool(value.get("unlocked", false)), "catalog":str(kept.catalog), "list":merged})
+	return true
 
 static func known(token: String) -> Dictionary:
 	var kept: Dictionary = Engine.get_meta("quest_state", {})
@@ -188,10 +214,15 @@ static func by_id(token: String, id: String) -> Dictionary:
 		if str(entry.get("id", "")) == id: return entry
 	return {}
 
-## "모카", "나루": the resident's name without the job.
-static func npc_name(npc: String) -> String:
-	var title := DayFolk.title(npc) if DayFolk.has_look(npc) else t(str(Residents.resident(npc).get("title", npc)))
-	return title.split(" · ")[0]
+## "모카", "나루": the resident's name without the job. At night the day villagers walk as
+## shadows named by their role ("수상한 그림자 · 별지기"): "하늘(별지기)" then, so the name on
+## the tracker matches the one over their head. hour: the village's (-1: the player's clock).
+static func npc_name(npc: String, hour := -1.0) -> String:
+	if not DayFolk.has_look(npc): return t(str(Residents.resident(npc).get("title", npc))).split(" · ")[0]
+	var name := DayFolk.title(npc).split(" · ")[0]
+	var at := hour if hour >= 0.0 else Daylight.clock_hour()
+	if DayFolk.is_day(npc, at): return name
+	return "%s(%s)" % [name, Interiors.short_name(npc, at)]
 
 static func title_of(entry: Dictionary) -> String:
 	return t(str(BOOK.get(str(entry.get("id", "")), {}).get("title", "")))
@@ -200,9 +231,9 @@ static func counts(entry: Dictionary) -> bool:
 	return "%d" in str(BOOK.get(str(entry.get("id", "")), {}).get("goal", ""))
 
 ## The tracker's goal for a request: how far it is, or whom to tell.
-static func goal_text(entry: Dictionary, have: int, ready: bool) -> String:
+static func goal_text(entry: Dictionary, have: int, ready: bool, hour := -1.0) -> String:
 	if ready:
-		return (t("다 모았어요! %s에게 가져가기") if str(entry.get("kind", "")) == "bring" else t("다 됐어요! %s에게 알리기")) % npc_name(str(entry.npc))
+		return (t("다 모았어요! %s에게 가져가기") if str(entry.get("kind", "")) == "bring" else t("다 됐어요! %s에게 알리기")) % npc_name(str(entry.npc), hour)
 	var goal := t(str(BOOK[str(entry.id)].goal))
 	return goal % [have, int(entry.get("need", 1))] if counts(entry) else goal
 
@@ -228,17 +259,24 @@ static func choice(app: Node, npc: String, speaker: String, portrait: String, an
 	var here: Node = village_of(app)
 	return choice_for(app.api, npc, say, done, true, Callable(here, "state_of") if here else Callable())
 
-## The same inside a building (studio.gd open_talk), in that room's dialogue box.
+## The same inside a building (studio.gd open_talk), in that room's dialogue box. A request taken
+## in the room it asks for (하늘's observatory) counts the room at once.
 static func room_choice(room: Node, id: String) -> Array:
 	if not is_instance_valid(room) or str(room.api.token).is_empty(): return []
 	var say := func(lines: Array, choices: Array) -> void:
 		if is_instance_valid(room) and room.is_inside_tree() and room.npcs.has(id): room.open_talk(id, lines, choices)
 	var done := func(kind: String, reply: Dictionary) -> void: room_done(room, id, kind, reply)
-	return choice_for(room.api, id, say, done, false)
+	return choice_for(room.api, id, say, done, false, Callable(), place_of_room(str(room.get("room"))))
+
+## The visit place a room is ("observatory" for 05_observatory), or "".
+static func place_of_room(room_id: String) -> String:
+	for place in VISIT_SPOTS:
+		if str(VISIT_SPOTS[place]) == "room:"+room_id: return str(place)
+	return ""
 
 ## say(lines, choices) opens the caller's dialogue box; done(kind, reply) plays its effects
-## ("accepted", "completed", "guide", "wardrobe").
-static func choice_for(api: Node, npc: String, say: Callable, done: Callable, village: bool, judge := Callable()) -> Array:
+## ("accepted", "completed", "guide", "wardrobe"); here: the visit place the player stands at.
+static func choice_for(api: Node, npc: String, say: Callable, done: Callable, village: bool, judge := Callable(), here := "") -> Array:
 	# A message another resident asked to pass on to this one comes first (윤재's regards to 가람).
 	if open_for(str(api.token)):
 		for item in listed(str(api.token)):
@@ -249,7 +287,7 @@ static func choice_for(api: Node, npc: String, say: Callable, done: Callable, vi
 	var entry := entry_for(str(api.token), npc)
 	if entry.is_empty(): return []
 	match str(judge.call(entry) if judge.is_valid() else entry.get("state", "")):
-		"available": return [t("✦ 부탁 들어주기"), func(): offer(api, entry, say, done)]
+		"available": return [t("✦ 부탁 들어주기"), func(): offer(api, entry, say, done, here)]
 		"active": return [t("부탁 이야기"), func(): remind(api, str(entry.id), say, done, village)]
 		"ready": return [t("✦ 부탁한 것 건네기") if str(entry.kind) == "bring" else t("✦ 부탁을 마쳤어요"), func(): hand_over(api, str(entry.id), say, done)]
 	return []
@@ -270,14 +308,16 @@ static func lines_of(entry: Dictionary, key: String) -> Array:
 	for line in BOOK[str(entry.id)].get(key, []): out.append(t(str(line)))
 	return out
 
-static func offer(api: Node, entry: Dictionary, say: Callable, done: Callable) -> void:
+static func offer(api: Node, entry: Dictionary, say: Callable, done: Callable, here := "") -> void:
 	var stars := int(entry.get("stars", 0))
 	var yes := t("맡겨 줘요 · 별씨 +%d") % stars if stars > 0 else t("맡겨 줘요")
+	# Taken where it asks to go: the server counts the place with the yes (night errands at night).
+	var at := here if str(entry.get("kind", "")) == "visit" and here in entry.get("places", []) else ""
 	# "Not now" first: reading on with Space or E never takes a request by accident.
-	say.call(lines_of(entry, "ask"), [[t("다음에요"), Callable()], [yes, func(): accept(api, str(entry.id), say, done)]])
+	say.call(lines_of(entry, "ask"), [[t("다음에요"), Callable()], [yes, func(): accept(api, str(entry.id), say, done, at)]])
 
-static func accept(api: Node, id: String, say: Callable, done: Callable) -> void:
-	var result: Dictionary = await api.post("/v1/quests/%s/accept" % id, api.mutation())
+static func accept(api: Node, id: String, say: Callable, done: Callable, at := "") -> void:
+	var result: Dictionary = await api.post("/v1/quests/%s/accept" % id, api.mutation({"place":at} if not at.is_empty() else {}))
 	if not result.ok:
 		say.call([error_line(str(result.get("error", "")))], [])
 		return
@@ -286,7 +326,8 @@ static func accept(api: Node, id: String, say: Callable, done: Callable) -> void
 	if done.is_valid(): done.call("accepted", result.data)
 	# Already done (the apples were in the bag): the hand-over is the next choice.
 	if str(entry.get("state", "")) == "ready":
-		say.call([t(str(BOOK[id].accepted)), t("어머, 벌써 준비가 됐네?")], [[t("✦ 지금 건네기"), func(): hand_over(api, id, say, done)], [t("다녀올게요"), Callable()]])
+		var lines: Array = [t(str(BOOK[id].already))] if BOOK[id].has("already") else [t(str(BOOK[id].accepted)), t("어머, 벌써 준비가 됐네?")]
+		say.call(lines, [[t("✦ 지금 건네기"), func(): hand_over(api, id, say, done)], [t("다녀올게요"), Callable()]])
 		return
 	say.call([t(str(BOOK[id].accepted))], [[t("다녀올게요"), Callable()]])
 
@@ -374,8 +415,12 @@ static func village_done(app: Node, anchor: Node3D, kind: String, reply: Diction
 			if not note.is_empty(): app.get_tree().create_timer(3.2).timeout.connect(func(): if is_instance_valid(app): app.message(note))
 
 ## "다 모았어요! 모카에게 가져가 보세요" / "다 됐어요! 윤재에게 알려 주세요".
-static func done_word(entry: Dictionary) -> String:
-	return (t("다 모았어요! %s에게 가져가 보세요") if str(entry.get("kind", "")) == "bring" else t("다 됐어요! %s에게 알려 주세요")) % npc_name(str(entry.get("npc", "")))
+static func done_word(entry: Dictionary, hour := -1.0) -> String:
+	return (t("다 모았어요! %s에게 가져가 보세요") if str(entry.get("kind", "")) == "bring" else t("다 됐어요! %s에게 알려 주세요")) % npc_name(str(entry.get("npc", "")), hour)
+
+## A room's own clock (studio.gd resident_clock), else the player's.
+static func room_hour(room: Node) -> float:
+	return float(room.resident_clock().hour) if is_instance_valid(room) and room.has_method("resident_clock") else -1.0
 
 ## A room was entered (studio.gd show_story): a visit request whose place is this room counts
 ## (night requests only while it is night by the player's clock, as the server checks).
@@ -391,7 +436,7 @@ static func entered_room(room: Node, room_id: String) -> void:
 			if not result.ok or not is_instance_valid(room): return
 			adopt_data(result.data.get("quests"), str(api.token))
 			var now: Dictionary = result.data.get("quest", {})
-			if str(now.get("state", "")) == "ready" and room.has_method("message"): room.message(done_word(now))
+			if str(now.get("state", "")) == "ready" and room.has_method("message"): room.message(done_word(now, room_hour(room)))
 			return
 
 ## Night by the player's own clock (server/homestead.py night: before 6 or from 19).
@@ -409,7 +454,7 @@ static func room_done(room: Node, id: String, kind: String, reply: Dictionary) -
 		room.message(t("새 부탁 · %s") % title_of(entry))
 	elif kind == "progress":
 		room.pop_over(resident, "♪")
-		if str(entry.get("state", "")) == "ready": room.message(done_word(entry))
+		if str(entry.get("state", "")) == "ready": room.message(done_word(entry, room_hour(room)))
 	elif kind == "completed":
 		var stars := int(reply.get("stars", 0))
 		var at: Vector3 = resident.holder.global_position
@@ -513,9 +558,12 @@ var mark_wait := 0.0
 var focus := ""
 ## The tracker's lines -> guide keys (story_line_key asks).
 var line_keys := {}
-## Last seen state per request (for the "다 됐어요" moment) and whether requests were open.
+## Last seen state per request (for the "다 됐어요" moment) and whether the server said the
+## requests were open (1), closed (0) or has not said yet this login (-1).
 var seen := {}
 var was_open := -1
+## A full list asked for (/v1/me's brief did not match the kept one).
+var fetching := false
 ## The guided request (its legs across islands follow on).
 var followed := ""
 ## Signposts reported (island -> true) and the time of the last report.
@@ -551,10 +599,13 @@ func entry(id: String) -> Dictionary:
 
 ## The server's list (/v1/me and the requests' replies): the moments it brings.
 func adopt(data) -> void:
-	adopt_data(data, token())
+	if not adopt_data(data, token()):
+		if data is Dictionary and data.get("states") is Array: fetch_full()
+		return
 	var open := 1 if open_for(token()) else 0
-	if was_open == 0 and open == 1 and not story.visiting():
-		# 모카's letter was read: the residents' requests open.
+	# 모카's letter was read while this login saw them closed: the residents' requests open (not on
+	# every login of an open account, and not when nobody has a request left).
+	if was_open == 0 and open == 1 and not story.visiting() and entries().any(func(item): return str(item.get("state", "")) == "available"):
 		get_tree().create_timer(1.2).timeout.connect(func(): if is_instance_valid(app): app.message(tr("마을 주민들이 부탁을 기다리고 있어요 · 머리 위 ! 를 찾아보세요")))
 	was_open = open
 	for item in entries():
@@ -564,8 +615,20 @@ func adopt(data) -> void:
 		seen[id] = now
 	mark_wait = 0.0
 
+## The full list, once, when /v1/me's brief has nothing to update (a new login, a request taken
+## or handed over elsewhere).
+func fetch_full() -> void:
+	if fetching or not is_instance_valid(app) or token().is_empty(): return
+	fetching = true
+	var asked := token()
+	var result: Dictionary = await app.api.request("/v1/quests")
+	fetching = false
+	if result.ok and is_instance_valid(app) and token() == asked and result.data.get("quests") is Dictionary: adopt(result.data.quests)
+
+## What this login already knew (a village rebuilt after a room): nothing known yet is -1, so the
+## first answer of a login never reads as "just opened".
 func remember_states() -> void:
-	was_open = 1 if open_for(token()) else 0
+	was_open = -1 if known(token()).is_empty() else (1 if open_for(token()) else 0)
 	for item in entries(): seen[str(item.get("id", ""))] = state_of(item)
 
 ## The bag's count right now (the village life's state), else the server's.
@@ -622,7 +685,7 @@ func objective(base: String) -> String:
 	if not open.is_empty():
 		var item := focused()
 		var ready := state_of(item) == "ready"
-		var goal := goal_text(item, have_of(item), ready)
+		var goal := goal_text(item, have_of(item), ready, story.hour())
 		line_keys[goal] = KEY+str(item.id)
 		out.append("▸ "+goal)
 		var stars := int(item.get("stars", 0))
@@ -732,7 +795,7 @@ func tree_goal(kind: String, key: String) -> Dictionary:
 ## Where a resident is now: their walker or cast villager in view, their spot outside, or the door
 ## of the building they are in.
 func npc_goal(npc: String, key: String) -> Dictionary:
-	var name := npc_name(npc)
+	var name := npc_name(npc, story.hour())
 	for module in app.get("modules") if app.get("modules") != null else []:
 		if not is_instance_valid(module) or not "walkers" in module: continue
 		for walker in module.walkers:
@@ -792,7 +855,7 @@ func completed(item: Dictionary) -> void:
 ## The moment a request is done: a word, a sparkle, and the way back to the resident.
 func became_ready(item: Dictionary) -> void:
 	if not shown() or str(app.get("screen")) != "village": return
-	var who := npc_name(str(item.npc))
+	var who := npc_name(str(item.npc), story.hour())
 	app.message((tr("다 모았어요! %s에게 가져가 보세요") if str(item.kind) == "bring" else tr("다 됐어요! %s에게 알려 주세요")) % who)
 	if is_instance_valid(app.get("player")):
 		Fx.burst(app.world, app.player.global_position+Vector3(0, 1.8, 0), "sparkle", 12, Color(0,0,0,0), 0.35)
@@ -991,10 +1054,10 @@ func open_book() -> void:
 		line.add_child(words)
 		var head := RpgUi.label(words, title_of(item), 17, RpgUi.PAPER_INK, false)
 		head.add_theme_font_override("font", RpgUi.FONT_STRONG)
-		var detail := npc_name(str(item.npc))+" · "
+		var detail := npc_name(str(item.npc), story.hour())+" · "
 		match state:
-			"ready": detail += goal_text(item, have_of(item), true)
-			"active": detail += goal_text(item, have_of(item), false)
+			"ready": detail += goal_text(item, have_of(item), true, story.hour())
+			"active": detail += goal_text(item, have_of(item), false, story.hour())
 			"available": detail += tr("새 부탁 · 이야기를 걸어 보세요")
 			"done": detail += tr("완료")
 		RpgUi.caption(words, detail, 13)

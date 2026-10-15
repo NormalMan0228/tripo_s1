@@ -245,6 +245,21 @@ func run() -> void:
 	await create_timer(4.0).timeout
 	expect(counter() == before+5, "still +5 after polls")
 	app.close_village_modal()
+	# 4. Signed in again: the requests were open all along, so no "residents are waiting" word;
+	# the full list comes once (/v1/me carries the states only).
+	await app.logout()
+	await create_timer(1.0).timeout
+	await app.authenticate(false, preload("res://tests/qa_server.gd").url(), name, PASSWORD, "")
+	expect(await wait_for(func() -> bool: return app.screen == "village" and quests_module() != null, 60.0), "back in the village")
+	var toast := app.tr("마을 주민들이 부탁을 기다리고 있어요")
+	var toasted := false
+	var deadline := Time.get_ticks_msec()+8000
+	while Time.get_ticks_msec() < deadline:
+		if is_instance_valid(app.notice) and app.notice.text.contains(toast): toasted = true
+		await create_timer(0.2).timeout
+	expect(not toasted, "a new login of an open account does not say the residents are waiting")
+	expect(Quests.open_for(str(app.api.token)) and Quests.listed(str(app.api.token)).size() == 19 and str(Quests.by_id(str(app.api.token), "haeru_fish").get("state", "")) == "done", "the full list came with the new login")
+	expect(await wait_for(func() -> bool: return mark_of("sora").is_empty() and app.objective.text.contains("부탁"), 6.0), "the tracker and the marks follow it")
 	print("QUEST_E2E " + ("FAILED" if failed else "OK"))
 	await app.logout()
 	quit(1 if failed else 0)
