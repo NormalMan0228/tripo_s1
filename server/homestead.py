@@ -10,6 +10,7 @@ plots inside the farm meadow, on its grid, apart from each other and under a cap
 import contextvars
 import copy
 import secrets
+from . import economy
 
 
 # Village furniture coordinates are metres from the town green; this box covers all
@@ -41,6 +42,22 @@ CROPS = {
     'strawberry': {'name':'딸기','seconds':200,'yield':3,'seed_cost':5,'price':4},
     'sunflower': {'name':'해바라기','seconds':260,'yield':1,'seed_cost':6,'price':15},
 }
+# Effective seconds spent in seed, sprout and growing, respectively. Ripe is final.
+STAGES = ('seed', 'sprout', 'growing', 'ripe')
+DRY_GROWTH_RATE = 0.5
+CROPS.update({
+    'radish': {'name':'무','seconds':100,'yield':2,'seed_cost':2,'price':3},
+    'potato': {'name':'감자','seconds':140,'yield':2,'seed_cost':3,'price':4},
+    'tomato': {'name':'토마토','seconds':180,'yield':3,'seed_cost':5,'price':4},
+    'corn': {'name':'옥수수','seconds':240,'yield':2,'seed_cost':6,'price':7},
+})
+for _crop, _times in {
+    'turnip': (20,30,40), 'carrot': (25,40,55), 'pumpkin': (30,50,70),
+    'strawberry': (40,60,100), 'sunflower': (50,90,120),
+    'radish': (20,35,45), 'potato': (30,45,65), 'tomato': (35,65,80),
+    'corn': (50,80,110),
+}.items():
+    CROPS[_crop]['stage_seconds'] = dict(zip(STAGES[:3], _times))
 # Fish by water and time of day (KST). weight is the relative chance, size in cm.
 # Order matters only for tests that pin the random roll; perch stays the last pond fish.
 FISH = {
@@ -124,6 +141,7 @@ PRICES = {'turnip':3,'carrot':4,'pumpkin':6,'strawberry':4,'sunflower':15,'apple
           'stone':1,'copper_ore':6,'shell':2,'conch':7,'pearl':30,'flower':2,'mushroom':3,'gold_mushroom':16,'branch':1,
           'pinecone':2,'coconut':5}
 PRICES.update({fish:data['price'] for fish,data in FISH.items()})
+PRICES.update({crop:data['price'] for crop,data in CROPS.items()})
 SEED_COSTS = {crop+'_seed':data['seed_cost'] for crop,data in CROPS.items()}
 SHOP = {**SEED_COSTS,'bait':1}
 NAMES = {'apple':'사과','herb':'향초','bait':'미끼','stone':'돌멩이','copper_ore':'구리 원석','shell':'가리비 껍데기',
@@ -159,13 +177,64 @@ def normalise(state):
 
 def planted(plot): return bool(plot.get('crop'))
 
+
+def day_end(now):
+    offset = DAILY_OFFSET.get()
+    if offset is None: offset = UTC_OFFSET.get()
+    return (local_day(now)+1)*86400-offset*60
+
+
+def advance_plot(plot, now):
+    """Integrate server elapsed time, including midnight, without a ticking worker.
+
+    Legacy watered crops retain their promised ready_at (even across midnight).
+    Legacy dry crops accrue half-speed growth from their original planting time.
+    Migration is deterministic, so projecting a GET need not write to the database.
+    """
+    total = CROPS[plot['crop']]['seconds']
+    if 'growth_seconds' not in plot:
+        start = plot['planted_at']
+        until = None
+        if plot.get('watered') and plot.get('ready_at') is not None:
+            start = plot['ready_at']-total
+            until = max(day_end(start), plot['ready_at'])
+        plot.update(growth_seconds=0.0, growth_updated_at=start, watered_until=until)
+    start = plot['growth_updated_at']
+    end = max(start, now)  # A backwards clock must never award elapsed time twice.
+    until = plot.get('watered_until')
+    wet = max(0, min(end, until)-start) if until is not None else 0
+    plot['growth_seconds'] = min(total, plot['growth_seconds'] + wet + (end-start-wet)*DRY_GROWTH_RATE)
+    plot['growth_updated_at'] = end
+    plot['watered'] = until is not None and now < until
+
+
+def plot_view(plot, now):
+    advance_plot(plot, now)
+    total = CROPS[plot['crop']]['seconds']
+    growth = plot['growth_seconds']
+    threshold = 0
+    stage = 'ripe'
+    for name, seconds in CROPS[plot['crop']]['stage_seconds'].items():
+        threshold += seconds
+        if growth < threshold:
+            stage = name
+            break
+    # Predict the actual deadline if no further water is given, including expiry.
+    left = total-growth
+    wet_left = max(0, (plot.get('watered_until') or now)-max(now, plot['growth_updated_at']))
+    remaining = min(left, wet_left) + max(0, left-wet_left)/DRY_GROWTH_RATE
+    if left: remaining += max(0, plot['growth_updated_at']-now)
+    plot.update(stage=stage, stage_index=STAGES.index(stage), progress=growth/total,
+                ready=growth >= total, remaining=remaining, ready_at=now+remaining,
+                growth_rate=1.0 if plot['watered'] else DRY_GROWTH_RATE)
+
+
 def public(state, now):
     result=copy.deepcopy(normalise(state))
     result['server_time']=now
     for plot in result['plots']:
         if planted(plot):
-            plot['remaining']=max(0,plot['ready_at']-now) if plot.get('watered') else None
-            plot['ready']=bool(plot.get('watered') and now>=plot['ready_at'])
+            plot_view(plot, now)
     fish=result.get('fishing')
     if fish:
         for secret in ('catch','size'): fish.pop(secret,None)
@@ -174,7 +243,10 @@ def public(state, now):
     result['nodes']={node:at for node,at in result['nodes'].items() if at>now}
     result['drops']={node:drop for node,drop in result['drops'].items() if drop['until']>now and drop['items']}
     result['catalog']={'crops':CROPS,'prices':PRICES,'names':NAMES,'fish':FISH,'shop':SHOP,'max_plots':MAX_PLOTS,
-                       'starter_plots':len(STARTER_PLOTS),
+                       'starter_plots':len(STARTER_PLOTS), 'growth_stages':list(STAGES),
+                       'dry_growth_rate':DRY_GROWTH_RATE, 'weather':'none',
+                       'farm_zones':[list(zone) for zone in FARM_ZONES],
+                       'farm_grid':GRID, 'farm_grid_origin':list(GRID_ORIGIN),
                        'trees':{kind:{'fruit':rule['fruit'],'hang':list(rule['hang']),'respawn':rule['respawn']} for kind,rule in TREES.items()}}
     result['order_available']=state['order_day']!=local_day(now)
     result['night']=night(now)
@@ -199,11 +271,15 @@ def on_grid(value, origin):
     steps=(value-origin)/GRID
     return abs(steps-round(steps))<0.01
 
-def tillable(state, x, z):
-    if len(state['plots'])>=MAX_PLOTS: raise Rejected('life_plot_limit')
+def farmland(x, z):
     if not any(x0<=x<=x1 and z0<=z<=z1 for x0,z0,x1,z1 in FARM_ZONES): raise Rejected('life_not_farmland')
     if not (on_grid(x,GRID_ORIGIN[0]) and on_grid(z,GRID_ORIGIN[1])): raise Rejected('life_not_farmland')
     if abs(x-GRID_ORIGIN[0])<1 and abs(z-GRID_ORIGIN[1])<1: raise Rejected('life_not_farmland')
+
+
+def tillable(state, x, z):
+    if len(state['plots'])>=MAX_PLOTS: raise Rejected('life_plot_limit')
+    farmland(x, z)
     for plot in state['plots']:
         if max(abs(plot['x']-x),abs(plot['z']-z))<1.7: raise Rejected('life_plot_overlap')
 
@@ -220,25 +296,29 @@ def pick_fish(spot, now):
     return fish,round(size,1)
 
 def plot_action(state, body, now):
-    if body.plot>=len(state['plots']): raise Rejected('life_no_plot')
+    if body.action not in ('plant','water','harvest','untill'): raise Rejected('life_unknown_action')
+    if not 0<=body.plot<len(state['plots']): raise Rejected('life_no_plot')
     plot=state['plots'][body.plot]
+    farmland(plot['x'], plot['z'])
+    if planted(plot): advance_plot(plot, now)
     if body.action=='plant':
         if body.item not in CROPS: raise Rejected('life_invalid_crop')
         if planted(plot): raise Rejected('life_plot_occupied')
         spend(state,body.item+'_seed')
-        plot.update(crop=body.item,planted_at=now,watered=False,ready_at=None)
+        plot.update(crop=body.item,planted_at=now,watered=False,ready_at=None,
+                    growth_seconds=0.0,growth_updated_at=now,watered_until=None)
         return CROPS[body.item]['name']+' 씨앗을 심었어요. 물을 주세요.',None
     if body.action=='water':
         if not planted(plot): raise Rejected('life_empty_plot')
         if plot['watered']: raise Rejected('life_already_watered')
-        plot.update(watered=True,watered_at=now,ready_at=now+CROPS[plot['crop']]['seconds'])
+        plot.update(watered=True,watered_at=now,watered_until=day_end(now))
         return '물을 주었어요. 마을을 떠나도 계속 자랍니다.',None
     if body.action=='untill':
         if body.plot<len(STARTER_PLOTS): raise Rejected('life_starter_plot')
         if planted(plot): raise Rejected('life_plot_occupied')
         state['plots'].pop(body.plot)
         return '밭을 다시 풀밭으로 덮었어요.',None
-    if not planted(plot) or not plot['watered'] or now<plot['ready_at']: raise Rejected('life_not_ready')
+    if not planted(plot) or plot['growth_seconds']<CROPS[plot['crop']]['seconds']: raise Rejected('life_not_ready')
     crop=plot['crop']; count=CROPS[crop]['yield']
     add(state,crop,count); state['harvested']+=count
     state['plots'][body.plot]={'x':plot['x'],'z':plot['z']}
@@ -397,18 +477,18 @@ def act(state, body, now):
         if body.item not in SHOP: raise Rejected('life_invalid_item')
         cost=SHOP[body.item]*body.quantity
         if state['coins']<cost: raise Rejected('life_not_enough_coins')
-        state['coins']-=cost; add(state,body.item,body.quantity)
+        economy.change_coins(state,-cost); add(state,body.item,body.quantity)
         result=f'{NAMES[body.item]} {body.quantity}개를 샀어요.'
     elif action=='sell':
         if body.item not in PRICES: raise Rejected('life_invalid_item')
         spend(state,body.item,body.quantity)
-        income=PRICES[body.item]*body.quantity; state['coins']+=income
+        income=PRICES[body.item]*body.quantity; economy.change_coins(state,income)
         result=f'{object_word(NAMES[body.item])} 팔고 잎전 {income}개를 받았어요.'
     elif action=='order':
         day=local_day(now)
         if state['order_day']==day: raise Rejected('life_order_completed')
         spend(state,'turnip',2); spend(state,'perch')
-        state['coins']+=20; state['order_day']=day
+        economy.change_coins(state,20); state['order_day']=day
         result='마을 식탁 배달 완료! 잎전 20개를 받았어요.'
     else: raise Rejected('life_unknown_action')
     state['version']+=1

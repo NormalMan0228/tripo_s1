@@ -338,7 +338,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             record_event(conn,'admin_grant',user['id'],{'shards':body.shards,'coins':body.coins,'request_id':str(body.request_id)},clock())
             if body.coins:
                 state=life_state(conn,user['id'])
-                state['coins']=state.get('coins',0)+body.coins
+                economy.change_coins(state,body.coins)
                 state['version']=state.get('version',0)+1
                 conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
                              (user['id'],json.dumps(state)))
