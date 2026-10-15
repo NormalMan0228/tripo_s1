@@ -533,7 +533,7 @@ func make_mailbox(entry: Dictionary) -> void:
 	box(flag, Vector3(0.01,0.0,0.3), Vector3(0.025,0.16,0.1), Color("e9c44a"))
 	entry.flag = flag
 	var owner_sign := painted(root, "나의 집", Vector3(0,1.15,0.262), 22, Color("fbe9cf"))
-	owner_sign.add_to_group("home_sign")
+	owner_sign.add_to_group("home_sign", true)
 	owner_sign.set_meta("visit", "%s님의 집")
 	entry.next_check = 0.0
 

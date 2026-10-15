@@ -4,7 +4,7 @@ Each resident was drawn on its own (2026-10-16, Tripo Studio image tool, Nano Ba
 free) with the Sora standee as the style reference, on flat magenta (redraws use the earlier take
 as the reference: a letter for the postman, natural hands for the rest), into
 output/ui-art-20261015/portraits/dayp_<id>_<n>.jpg. PICKS names the chosen take per resident
-(01-03 picked by the user; 04-15 recommended, waiting for the user's OK).
+(all fifteen picked by the user, 2026-10-16).
 
 For every resident this writes
   game/assets/ui/standee/day_<id>.png   the background-free standee the dialogue shows
