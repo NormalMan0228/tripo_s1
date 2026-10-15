@@ -1714,6 +1714,12 @@ func share_presence() -> void:
 	if not response.ok or not is_inside_tree(): return
 	# The room's chat arrives with the walk (social_hud.gd).
 	if hub and is_instance_valid(hub): hub.ingest(response.data)
+	# The host walked out, locked us out or sent us out: back to the host's village (home_access).
+	var shut: String=preload("res://scripts/home_door.gd").refusal(response.data.get("home")) if not visit_host.is_empty() else ""
+	if not shut.is_empty():
+		message(shut)
+		leave()
+		return
 	var space = response.data.get("space")
 	if not space is Dictionary: return
 	if not visit_host.is_empty():
