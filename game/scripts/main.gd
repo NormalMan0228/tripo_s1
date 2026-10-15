@@ -2,6 +2,7 @@ extends Node3D
 
 const Art = preload("res://scripts/art.gd")
 const VillageBag = preload("res://scripts/village_bag.gd")
+const TitleSky = preload("res://scripts/title_sky.gd")
 const Loader = preload("res://scripts/model_loader.gd")
 const PaintApply = preload("res://scripts/painter/paint_apply.gd")
 const ObjectTransform = preload("res://scripts/object_transform.gd")
@@ -109,6 +110,8 @@ var pack: Label
 var objects_list: ItemList
 ## The village bag drawer (village_bag.gd); null outside the village.
 var bag: RefCounted
+## The title shows the turning World Labs sky (title_sky.gd) instead of the painted art.
+static var title_sky := false
 ## Left clicks that reached the world (furniture, placement) past the HUD.
 var world_clicks := 0
 var object_info: Label
@@ -582,6 +585,11 @@ func login_ui(page := "menu") -> void:
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(art)
+	# The living sky (title_sky.gd, World Labs panorama) in place of the painted art, when chosen.
+	if title_sky and TitleSky.available():
+		art.visible = false
+		ui.add_child(TitleSky.new())
+		ui.move_child(ui.get_child(ui.get_child_count()-1),art.get_index()+1)
 	# The art stays still: a slow zoom resampled the picture every frame and it shimmered.
 	# The light motes keep the title alive.
 	for spec in [[Vector2(0,0),Vector2(0,1),Color("bfe6ee"),0.0,0.30],[Vector2(0,0),Vector2(1,0),Color(0.03,0.05,0.06,.82),0.0,0.58],[Vector2(0,1),Vector2(0,0),Color(0.03,0.05,0.06,.55),0.0,0.32]]:
