@@ -102,7 +102,7 @@ static func dress(host: Node3D) -> Node3D:
 		var floor_y: float = building.global_position.y if building else Town.height_at(entry.at.x, entry.at.y)
 		var fit := _fit(space, entry, floor_y)
 		var base: Vector3 = fit.base
-		doors[id] = {"id":id, "room":String(entry.room), "base":base, "normal":fit.normal, "ground":float(fit.ground),
+		doors[id] = {"id":id, "room":String(entry.room), "base":base, "at":Vector2(entry.at), "normal":fit.normal, "ground":float(fit.ground),
 			"sound":base+Vector3(0, 1.1, 0)+(fit.normal as Vector3)*.3, "open":0.0, "glow":-1.0, "tween":null}
 		if building == null: continue
 		if not leaves.has(id) or not is_instance_valid(leaves[id].node):
@@ -294,7 +294,9 @@ func _near_door(at: Vector3) -> void:
 	var doors: Dictionary = root.get_meta("doors", {})
 	for id in doors:
 		var base: Vector3 = doors[id].base
-		if Vector2(at.x-base.x, at.z-base.z).length() < 2.6:
+		# By the wall or on the doorstep (a recessed door, the café's, stands back from its step).
+		var step: Vector2 = doors[id].get("at", Vector2(base.x, base.z))
+		if minf(Vector2(at.x-base.x, at.z-base.z).length(), Vector2(at.x, at.z).distance_to(step)) < 2.6:
 			swing(app, id, 0.9)
 			return
 
