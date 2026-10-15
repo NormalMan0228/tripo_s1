@@ -32,6 +32,15 @@ func run() -> void:
 	var buildings: Node3D = map.get_node_or_null("Buildings")
 	report["props"] = env.get("prop_nodes").size() if env and env.get("prop_nodes") != null else 0
 	report["lod_entries"] = env.get("lod_entries").size() if env and env.get("lod_entries") != null else 0
+	if env and env.get("prop_nodes") != null:
+		for prop: Node3D in (env.get("prop_nodes") as Array).slice(0, 3):
+			var owners := []
+			for mesh in prop.find_children("*", "MeshInstance3D", true, false):
+				owners.append([String(prop.get_path_to(mesh)), String(mesh.owner.name) if mesh.owner else "<none>", mesh.mesh.resource_path if mesh.mesh else ""])
+			print("MAPPERF_PROP %s scene=%s meshes=%s" % [prop.name, prop.scene_file_path, owners])
+	for m in app.modules:
+		if is_instance_valid(m) and str(m.get_script().resource_path).ends_with("field_objects.gd"):
+			report["field_object_meshes"] = m.find_children("*", "MeshInstance3D", true, false).size()
 	if "--buildings-2048" in OS.get_cmdline_user_args():
 		report["buildings"] = await building_sheet(buildings)
 		print("MAPPERF_BUILDINGS ", JSON.stringify(report.buildings))
@@ -55,6 +64,32 @@ func run() -> void:
 		views.append(row)
 		print("MAPPERF_VIEW ", JSON.stringify(row))
 	report["views"] = views
+	# Prop LODs on (as the game runs them) against every prop on its full mesh (the baked island before
+	# environment_layout.restore() registered its LODs again): same run, same views; pictures for a look.
+	var lod_ab := []
+	if env and env.has_method("settle_for_bake"):
+		for layer in root.find_children("*", "CanvasLayer", true, false): layer.visible = false
+		for view in [["square", Vector2(-33,37), 6.5], ["square", Vector2(-33,37), 10.0], ["lighthouse", Vector2(5,74), 10.0], ["square wide", Vector2(-33,37), 22.0]]:
+			var tag := "%s_z%s" % [String(view[0]).replace(" ", "_"), str(view[2]).replace(".", "_")]
+			place(view[1], view[2])
+			await create_timer(0.5).timeout
+			var on := await info()
+			var on_ms := await sample(1.5)
+			await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png(shots_dir().path_join("lod_%s_on.png" % tag))
+			env.set_process(false)
+			env.settle_for_bake()
+			var off := await info()
+			var off_ms := await sample(1.5)
+			await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png(shots_dir().path_join("lod_%s_off.png" % tag))
+			env.set_process(true)
+			var row := {"view": tag, "lod_entries": env.get("lod_entries").size(), "on": {"ms": on_ms.ms, "draws": on.draws, "prims": on.prims, "shadow_prims": on.shadow_prims},
+				"off": {"ms": off_ms.ms, "draws": off.draws, "prims": off.prims, "shadow_prims": off.shadow_prims}}
+			lod_ab.append(row)
+			print("MAPPERF_LOD ", JSON.stringify(row))
+		for layer in root.find_children("*", "CanvasLayer", true, false): layer.visible = true
+	report["lod_ab"] = lod_ab
 	# What each of the map's parts and the village modules add at the square (zoom 10), shadow pass apart.
 	place(Vector2(-33,37), 10.0)
 	var base := await info()

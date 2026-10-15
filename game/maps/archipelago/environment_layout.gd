@@ -142,7 +142,10 @@ func restore(owner_node: Node3D) -> void:
 	for prop in prop_nodes:
 		var spec: Dictionary = prop.get_meta("placement_spec")
 		for mesh: MeshInstance3D in prop.find_children("*","MeshInstance3D",true,false):
-			if mesh.owner == prop: _register_prop_lod(mesh,String(spec.id))
+			# Moved out of the baked island, the model's meshes have lost their owner: they are the ones
+			# whose mesh is the model scene's own (piles and flames the build added have none).
+			var own := mesh.owner == prop or (mesh.mesh != null and not prop.scene_file_path.is_empty() and mesh.mesh.resource_path.begins_with(prop.scene_file_path+"::"))
+			if own: _register_prop_lod(mesh,String(spec.id))
 		if spec.id == "21_boat":
 			floating_boats.append({"node":prop,"base_y":float(prop.get_meta("base_y",prop.position.y))})
 
