@@ -135,6 +135,8 @@ class Settings:
     signups_per_day: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SIGNUPS_PER_DAY', '200')))
     legacy_generation_enabled: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_ENABLE_LEGACY_GENERATION', 'false').lower() == 'true')
     credit_reserve: int = field(default_factory=lambda: int(os.getenv('TRIPO_RESERVE_PER_JOB', '200')))
+    # Paid character rig/animation is opt-in until separately approved.
+    rig_anim_enabled: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_RIG_ANIM_ENABLED', 'false').lower() == 'true')
     # Seconds one submitted Tripo part may take (queued, running or unreachable) before the craft
     # fails and its starseeds come back; the task is never submitted again.
     studio_part_deadline: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_PART_DEADLINE', '1200')))
