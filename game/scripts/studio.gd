@@ -2521,6 +2521,11 @@ func make_body(id: String, holder: Node3D) -> Node3D:
 			if figure is Node3D:
 				holder.add_child(figure)
 				figure.set_day(DayFolk.is_day(id,float(resident_clock().hour)),true)
+				# The figure's tag keeps one size on screen, made for the far village camera; the room's
+				# close camera blew it up over the whole café. Sized in the room like the other residents'.
+				var own = figure.get("nameplate")
+				if own is Label3D:
+					own.fixed_size=false;own.pixel_size=0.006;own.font_size=28;own.outline_size=4
 				return figure
 	var stand_in := Interiors.stand_in_figure(id)
 	holder.add_child(stand_in)
