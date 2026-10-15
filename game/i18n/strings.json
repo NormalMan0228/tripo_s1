@@ -1284,6 +1284,10 @@
    "en": "Mackerel",
    "zh": "鲭鱼"
   },
+  "고르기": {
+   "en": "Choose",
+   "zh": "选择"
+  },
   "고른 움직임이 없어요. 위 카드를 눌러 더해 보세요.": {
    "en": "No motion picked. Tap a card above to add one.",
    "zh": "还没有选择动作。点击上方卡片添加吧。"
@@ -5007,6 +5011,10 @@
   "쓱싹쓱싹… 광장은 깨끗한데, 뭔가 허전하지 않아요?": {
    "en": "Swish, swish… The square is clean, but doesn't it feel a bit bare?",
    "zh": "唰唰……广场很干净，可是不觉得有点空吗？"
+  },
+  "씨앗은 씨앗 노점에서 살 수 있어요": {
+   "en": "Seeds are sold at the seed stall",
+   "zh": "种子可在种子摊购买"
   },
   "씨앗을 심고 물을 주면 돼요. 지금 순무 %d/%d개예요.": {
    "en": "Plant the seeds and water them. Turnips %d/%d so far.",

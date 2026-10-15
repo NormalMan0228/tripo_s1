@@ -1,11 +1,16 @@
-extends PanelContainer
+extends Control
 ## 모양 바꾸기: the player's own object made wider, deeper or taller, sized up or down and
 ## mirrored. Every copy on screen (the bag preview, the placed one) follows the sliders
 ## live; 저장 keeps it on the server (POST /v1/objects/{id}/shape, server/object_shape.py),
 ## 원래대로 goes back to the made shape, and closing without saving puts the saved shape back.
 ## The village bag and the room 보관함 open it; object_transform.gd draws the shape.
+## It is a night-glass drawer on the window stack (RpgUi.drawer): the close key or Esc (the
+## stack's routing in main.gd / studio.gd) leaves it. This node is a full-screen holder that takes
+## no clicks; `place` picks the side ({"side":"left","top":128} in rooms, where the bag's own
+## preview sits on the right).
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const ObjectTransform = preload("res://scripts/object_transform.gd")
+const WIDTH := 324.0
 signal saved(shape: Dictionary)
 signal closed
 
@@ -25,22 +30,12 @@ var reset_button: Button
 var size_readout: Label
 var busy := false
 var syncing := false
+## The drawer's description on the window stack (root, card, head, title, close...).
+var window: Dictionary = {}
+## Where the drawer goes ({"side", "top"}; setup's `place`).
+var side: Dictionary = {}
 
-static var _theme: Theme
-
-## The night glass of the HUD with the shared gold sliders.
-static func panel_theme() -> Theme:
-	if _theme: return _theme
-	var t := RpgUi.night_theme().duplicate() as Theme
-	var shared := RpgUi.theme()
-	for item in ["slider", "grabber_area", "grabber_area_highlight"]: t.set_stylebox(item, "HSlider", shared.get_stylebox(item, "HSlider"))
-	for item in ["grabber", "grabber_highlight"]: t.set_icon(item, "HSlider", shared.get_icon(item, "HSlider"))
-	t.default_font = RpgUi.FONT_BODY
-	t.default_font_size = 15
-	_theme = t
-	return t
-
-func setup(api_node: Node, obj: Dictionary, show_on: Callable, speak: Callable) -> void:
+func setup(api_node: Node, obj: Dictionary, show_on: Callable, speak: Callable, place := {}) -> void:
 	api = api_node
 	object = obj.duplicate(true)
 	targets = show_on
@@ -50,24 +45,17 @@ func setup(api_node: Node, obj: Dictionary, show_on: Callable, speak: Callable) 
 	var listed = obj.get("shape")
 	version = int(listed.get("version", 0)) if listed is Dictionary else 0
 	name = "ShapePanel"
-	theme = panel_theme()
-	add_theme_stylebox_override("panel", RpgUi.panel_style("night"))
-	custom_minimum_size.x = 324
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
-	add_child(box)
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 8)
-	box.add_child(head)
-	RpgUi.label(head, tr("모양 바꾸기"), 20, RpgUi.GOLD).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var close_button := Button.new()
-	close_button.text = "✕"
-	close_button.name = "Close"
-	close_button.focus_mode = Control.FOCUS_NONE
-	close_button.custom_minimum_size = Vector2(36, 34)
-	close_button.tooltip_text = tr("닫기") + " · Esc"
-	close_button.pressed.connect(close)
-	head.add_child(close_button)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	side = place
+
+## The drawer is built once this holder is on screen: it slides in from where the screen's edge
+## really is (built off-screen, the slide would end at a zero-sized parent's edge).
+func _ready() -> void:
+	var place := side
+	window = RpgUi.drawer(self, tr("모양 바꾸기"), {"side":str(place.get("side", "right")), "top":float(place.get("top", 20.0)),
+		"kind":"night", "width":WIDTH, "action":"", "on_close":close, "id":"shape_panel"})
+	var box: VBoxContainer = window.body
 	var title := RpgUi.label(box, str(object.get("name", "")), 13, RpgUi.SOFT, false)
 	title.max_lines_visible = 1
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -89,7 +77,8 @@ func setup(api_node: Node, obj: Dictionary, show_on: Callable, speak: Callable) 
 		slider.focus_mode = Control.FOCUS_NONE
 		slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		slider.custom_minimum_size = Vector2(140, 22)
+		# 128: the row fits the 324 px drawer.
+		slider.custom_minimum_size = Vector2(128, 22)
 		row.add_child(slider)
 		var shown := RpgUi.numbers(RpgUi.label(row, "", 15), 15)
 		shown.custom_minimum_size.x = 54
@@ -103,43 +92,21 @@ func setup(api_node: Node, obj: Dictionary, show_on: Callable, speak: Callable) 
 		shown.tooltip_text = tr("두 번 누르면 100%")
 		shown.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.double_click: slider.value = 100)
-	mirror_button = Button.new()
+	mirror_button = RpgUi.button(box, tr("⇆ 좌우 반전"), Callable(), "normal", "md")
 	mirror_button.name = "Mirror"
 	mirror_button.toggle_mode = true
-	mirror_button.focus_mode = Control.FOCUS_NONE
-	mirror_button.text = tr("⇆ 좌우 반전")
-	mirror_button.custom_minimum_size.y = 38
 	mirror_button.button_pressed = bool(draft.mirror)
 	mirror_button.toggled.connect(func(on: bool): changed("mirror", on))
-	box.add_child(mirror_button)
 	var actions := HBoxContainer.new()
 	actions.add_theme_constant_override("separation", 8)
 	box.add_child(actions)
-	reset_button = Button.new()
+	reset_button = RpgUi.button(actions, tr("원래대로"), func(): await reset(), "normal", "lg")
 	reset_button.name = "Reset"
-	reset_button.text = tr("원래대로")
-	reset_button.focus_mode = Control.FOCUS_NONE
-	reset_button.custom_minimum_size = Vector2(108, 42)
-	reset_button.pressed.connect(func(): await reset())
-	actions.add_child(reset_button)
-	save_button = Button.new()
+	reset_button.custom_minimum_size.x = 108
+	save_button = RpgUi.button(actions, tr("저장"), func(): await save(), "gold", "lg")
 	save_button.name = "Save"
-	save_button.text = tr("저장")
-	save_button.theme_type_variation = "GoldButton"
-	save_button.focus_mode = Control.FOCUS_NONE
-	save_button.custom_minimum_size.y = 42
 	save_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	save_button.pressed.connect(func(): await save())
-	actions.add_child(save_button)
-	for b in [close_button, mirror_button, reset_button, save_button]: RpgUi.hover_motion(b, 1.04)
 	refresh()
-	RpgUi.pop_in(self)
-	RpgUi.sfx("open", -8.0)
-
-func _unhandled_key_input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_ESCAPE:
-		get_viewport().set_input_as_handled()
-		close()
 
 func changed(key: String, value) -> void:
 	if syncing: return
@@ -150,8 +117,8 @@ func changed(key: String, value) -> void:
 func refresh() -> void:
 	for key in ObjectTransform.AXES:
 		values[key].text = "%d%%" % int(draft[key])
-		values[key].add_theme_color_override("font_color", RpgUi.INK if int(draft[key]) == 100 else Color("ffe08a"))
-	mirror_button.add_theme_color_override("font_color", Color("ffe08a") if draft.mirror else RpgUi.INK)
+		values[key].add_theme_color_override("font_color", RpgUi.INK if int(draft[key]) == 100 else RpgUi.HOVER)
+	mirror_button.add_theme_color_override("font_color", RpgUi.HOVER if draft.mirror else RpgUi.INK)
 	var size := Vector3.ZERO
 	for node in shown():
 		ObjectTransform.apply(node, draft)
@@ -231,4 +198,6 @@ func close() -> void:
 		for node in shown(): ObjectTransform.apply(node, stored)
 	RpgUi.sfx("close", -10.0)
 	closed.emit()
+	# Off the window stack at once (Esc and the next key see the window under it), then gone.
+	if is_instance_valid(window.get("root")): (window.root as Node).queue_free()
 	queue_free()

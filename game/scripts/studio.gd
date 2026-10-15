@@ -1160,10 +1160,10 @@ func open_shape_panel() -> void:
 	cancel_placement()
 	var id: String=selected.id
 	shape_panel=ShapePanel.new()
-	shape_panel.setup(api,selected,func(): return [inspected if selected.get("id","")==id else null,placed.get(id)],func(text: String): message(text))
+	# On the left, under the room's frame: the bag's preview on the right stays in view.
+	shape_panel.setup(api,selected,func(): return [inspected if selected.get("id","")==id else null,placed.get(id)],func(text: String): message(text),{"side":"left","top":128.0})
 	shape_panel.saved.connect(func(shape: Dictionary): shape_saved(id,shape))
 	add_child(shape_panel)
-	shape_panel.position=Vector2(18,128)
 
 ## A saved shape: the room's list matches the server again.
 func shape_saved(id: String, shape: Dictionary) -> void:
@@ -2717,7 +2717,9 @@ func advance_talk() -> void:
 				return
 
 func close_talk() -> void:
-	if is_instance_valid(talk_box): talk_box.queue_free()
+	# A shared window (the storage chest) leaves the window stack with its close sound and fade.
+	if is_instance_valid(talk_box) and talk_box.has_meta("rpg_window"): RpgUi.close_window(talk_box.get_meta("rpg_window"))
+	elif is_instance_valid(talk_box): talk_box.queue_free()
 	talk_box=null
 	talk_window={}
 	talk_id=""
@@ -2879,31 +2881,25 @@ func open_storage(record: Dictionary) -> void:
 	close_talk()
 	sfx_player.stream=Interiors.sfx("creak");sfx_player.play()
 	if is_instance_valid(record.get("node")): Fx.wobble(record.node,0.05)
-	talk_box=Control.new();talk_box.name="StorageChest";talk_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(talk_box)
+	# The shared window (RpgUi.window): a small parchment card in the middle with the close key (Esc);
+	# E closes it too (advance_talk), shown as a key hint.
+	var w := RpgUi.window(self,tr("보관 상자"),{"width":RpgUi.WINDOW_W.small,"place":"centre","scroll":false,"on_close":close_talk,"id":"storage_chest"})
+	talk_box=w.root
 	talk_window={};talk_lines=[];talk_choices=[]
-	var shade := ColorRect.new();shade.color=Color(0,0,0,0.35);shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(event): if event is InputEventMouseButton and event.pressed: close_talk())
-	talk_box.add_child(shade)
-	var middle := CenterContainer.new();middle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	middle.mouse_filter=Control.MOUSE_FILTER_IGNORE;talk_box.add_child(middle)
-	var card := PanelContainer.new();card.add_theme_stylebox_override("panel",RpgUi.panel_style("night",22))
-	card.custom_minimum_size=Vector2(440,0)
-	middle.add_child(card)
-	var column := VBoxContainer.new();column.add_theme_constant_override("separation",10);card.add_child(column)
-	RpgUi.label(column,tr("보관 상자"),22,RpgUi.GOLD)
+	w.shade.gui_input.connect(func(event): if event is InputEventMouseButton and event.pressed: close_talk())
+	var column: VBoxContainer=w.body
 	var stored: Array=reply.data.get("stored",[])
 	var hour: float=float(resident_clock().hour)
-	RpgUi.label(column,tr("곧 꺼내 놓을지도 몰라요.") if not stored.is_empty() else tr("지금은 상자가 비어 있어요. 선물은 모두 집 안에 나와 있어요."),14,RpgUi.SOFT)
+	RpgUi.caption(column,tr("곧 꺼내 놓을지도 몰라요.") if not stored.is_empty() else tr("지금은 상자가 비어 있어요. 선물은 모두 집 안에 나와 있어요."),14)
 	for item in stored.slice(0,8):
 		var row := HBoxContainer.new();row.add_theme_constant_override("separation",12);column.add_child(row)
 		row.add_child(RpgUi.icon(NpcGifts.icon_for(item.get("tags",[])),40))
 		var words := VBoxContainer.new();row.add_child(words)
-		RpgUi.label(words,str(item.get("name","")),16)
-		RpgUi.label(words,tr("%s의 선물") % Interiors.short_name(str(item.get("npc","")),hour),12,RpgUi.SOFT)
-	if stored.size()>8: RpgUi.label(column,tr("…그리고 %d개 더") % (stored.size()-8),13,RpgUi.SOFT)
-	RpgUi.label(column,tr("E 닫기"),12,RpgUi.SOFT)
-	RpgUi.pop_in(card)
+		RpgUi.label(words,str(item.get("name","")),16,RpgUi.PAPER_INK,false).add_theme_font_override("font",RpgUi.FONT_STRONG)
+		RpgUi.caption(words,tr("%s의 선물") % Interiors.short_name(str(item.get("npc","")),hour),12)
+	if stored.size()>8: RpgUi.caption(column,tr("…그리고 %d개 더") % (stored.size()-8),13)
+	RpgUi.divider(column)
+	RpgUi.key_hint(column,"interact",tr("닫기"),"paper").size_flags_horizontal=Control.SIZE_SHRINK_END
 	for item in [name_panel,hint_chip,hint_label,bubble]:
 		if is_instance_valid(item): item.visible=false
 

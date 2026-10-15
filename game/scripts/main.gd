@@ -1623,7 +1623,6 @@ func open_shape_panel() -> void:
 	shape_panel.setup(api,selected,func(): return [inspect_model if selected.get("id","")==id else null,loaded.get(id)],message)
 	shape_panel.saved.connect(func(shape: Dictionary): shape_saved(id,shape))
 	ui.add_child(shape_panel)
-	shape_panel.position=Vector2(288,120)
 
 ## A saved shape: the lists match the server again, so the next poll reloads nothing.
 func shape_saved(id: String, shape: Dictionary) -> void:
