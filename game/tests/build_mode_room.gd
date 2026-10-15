@@ -1,4 +1,4 @@
-extends SceneTree
+﻿extends SceneTree
 ## Room build mode end to end on a QA server: two pieces placed 1.3 m apart in the home (the old
 ## two-cell rule refused that), the right-click menu over a placed piece, 돌리기, 넣기 and
 ## 물건 통과 (V) letting the walker stand inside a piece.
@@ -45,6 +45,7 @@ func run() -> void:
 	var ids: Array=[]
 	for prompt in ["wooden table","small stool"]:
 		var queued: Dictionary=await api.post("/v1/studio/jobs",api.mutation({"prompt":prompt,"geometry":"proxy","designer":"fixture"}))
+		if not queued.ok: print("CRAFT REFUSED ",queued.error);continue
 		for _i in 40:
 			var job: Dictionary=await api.request("/v1/studio/jobs/"+queued.data.id)
 			if job.ok and job.data.state=="ready": ids.append(str(job.data.object_id));break
@@ -92,5 +93,108 @@ func run() -> void:
 	await create_timer(2.5).timeout
 	check(str(obj(table).get("state",""))=="inventory","넣기 takes the table back to the bag")
 	check(not studio.placed.has(table),"…and it leaves the room")
+	await surfaces(ids)
 	print("BUILD_MODE_ROOM ",JSON.stringify({"ok":failures.is_empty(),"failures":failures}))
 	quit(0 if failures.is_empty() else 1)
+
+## Walls, ceiling and stacks (items 70, 74): the ghost on each surface, the server's pose back.
+func ghost_for(id: String) -> bool:
+	for i in studio.data.objects.size():
+		if str(studio.data.objects[i].id)==id: await studio.select_item(i)
+	await studio.begin_place()
+	return is_instance_valid(studio.ghost)
+
+func surfaces(ids: Array) -> void:
+	await stack(ids[0],ids[1])
+	await hang()
+
+## A second home (demo accounts can craft two pieces): a frame on the wall and a lamp on the ceiling.
+func hang() -> void:
+	var BuildRules = RoomBuild.BuildRules
+	var server: String=preload("res://tests/qa_server.gd").url()
+	var api=load("res://scripts/api.gd").new();root.add_child(api);api.base_url=server
+	var reply: Dictionary=await api.post("/v1/auth/register",{"username":"buildwall_"+str(Time.get_ticks_msec()),"password":"Local-build-qa-password1","invitation":""})
+	if not reply.ok: check(false,"a second account");return
+	api.token=reply.data.token
+	var made: Array=[]
+	for prompt in ["picture frame","hanging lamp"]:
+		var queued: Dictionary=await api.post("/v1/studio/jobs",api.mutation({"prompt":prompt,"geometry":"proxy","designer":"fixture"}))
+		if not queued.ok: print("CRAFT REFUSED ",queued.error);continue
+		for _i in 40:
+			var job: Dictionary=await api.request("/v1/studio/jobs/"+queued.data.id)
+			if job.ok and job.data.state=="ready": made.append(str(job.data.object_id));break
+			await create_timer(0.5).timeout
+	check(made.size()==2,"a frame and a lamp")
+	if made.size()<2: return
+	studio.queue_free()
+	await create_timer(0.3).timeout
+	Engine.set_meta("studio_session",{"token":api.token,"url":server,"room":"home"})
+	studio=load("res://scenes/studio.tscn").instantiate();root.add_child(studio)
+	for _i in 40:
+		if not studio.data.is_empty() and is_instance_valid(studio.hero): break
+		await create_timer(0.25).timeout
+	await create_timer(1.0).timeout
+	var frame: String=made[0]
+	var lamp: String=made[1]
+	var ratio: Vector2=Vector2(studio.viewport.size)/studio.view_container.size.max(Vector2.ONE)
+	if await ghost_for(frame):
+		var fsize: Vector3=studio.ghost.get_meta("size",Vector3.ONE)
+		print("FRAME size=",fsize," wall_ok='",BuildRules.wall_problem(fsize),"'")
+		var row: Control=studio.get_meta("surface_row")
+		var wall_button: Button=row.get_node("Surface_wall")
+		check(wall_button.disabled==not BuildRules.wall_problem(fsize).is_empty(),"the wall button follows the piece's shape")
+		if not wall_button.disabled:
+			RoomBuild.choose_mode(studio,"wall")
+			RoomBuild.follow(studio,studio.camera.unproject_position(Vector3(-3.2,1.8,-4.95))/ratio)
+			RoomBuild.follow(studio,studio.camera.unproject_position(Vector3(-1.05,2.0,-4.95))/ratio)
+			check(not studio.placement_problem(studio.place_at).is_empty(),"over the back window is refused: '%s'" % studio.placement_problem(studio.place_at))
+			RoomBuild.follow(studio,studio.camera.unproject_position(Vector3(-3.2,1.8,-4.95))/ratio)
+			check(not studio.placement_problem(studio.place_at).is_empty(),"over the kitchen shelf is refused: '%s'" % studio.placement_problem(studio.place_at))
+			RoomBuild.follow(studio,studio.camera.unproject_position(Vector3(-4.95,1.8,0.9))/ratio)
+			check(RoomBuild.surface(studio)=="wall" and str(studio.ghost.get_meta("build_wall",""))=="left" and studio.placement_rotation==90,"the ghost hangs on the left wall, facing in")
+			check(studio.placement_problem(studio.place_at).is_empty(),"the wall spot is free: '%s'" % studio.placement_problem(studio.place_at))
+			await studio.commit_place()
+			await create_timer(0.5).timeout
+			var o := obj(frame)
+			check(str(o.get("surface",""))=="wall" and float(o.get("y",0))>0.5,"the server keeps the frame on the wall (y=%s)" % str(o.get("y")))
+			check(is_instance_valid(studio.placed.get(frame)) and studio.placed[frame].position.y>0.5,"the frame shows up on the wall")
+		else: studio.cancel_placement()
+	if await ghost_for(lamp):
+		var lsize: Vector3=studio.ghost.get_meta("size",Vector3.ONE)
+		var reason: String=BuildRules.ceiling_problem(lsize,BuildRules.words_for(studio.selected,studio.ghost))
+		print("LAMP size=",lsize," ceiling_ok='",reason,"'")
+		if reason.is_empty():
+			RoomBuild.choose_mode(studio,"ceiling")
+			RoomBuild.follow(studio,studio.camera.unproject_position(Vector3(-1.5,0.07,1.0))/ratio)
+			check(RoomBuild.surface(studio)=="ceiling","the ghost hangs from the ceiling")
+			await studio.commit_place()
+			await create_timer(0.5).timeout
+			var o := obj(lamp)
+			check(str(o.get("surface",""))=="ceiling","the server keeps the lamp on the ceiling")
+			check(studio.placed.has(lamp) and studio.placed[lamp].position.y+lsize.y>2.9,"the lamp hangs near the ceiling")
+			check(not studio.movement_blocked(Vector3(float(o.x),0,float(o.z))),"walking under a hanging lamp is free")
+		else: studio.cancel_placement()
+	RoomBuild.RpgUi.clear_toasts(studio.toast_lane)
+	await capture("build-room-hang.png")
+
+func stack(table: String, stool: String) -> void:
+	var BuildRules = RoomBuild.BuildRules
+	check(await place(table,Vector3(1.5,0.08,-2.0)),"the table stands again")
+	var under: Node3D=studio.placed.get(table)
+	if not is_instance_valid(under): return
+	var ratio: Vector2=Vector2(studio.viewport.size)/studio.view_container.size.max(Vector2.ONE)
+	if await ghost_for(stool):
+		var ssize: Vector3=studio.ghost.get_meta("size",Vector3.ONE)
+		RoomBuild.choose_mode(studio,"floor")
+		var on_top: bool=RoomBuild.follow(studio,studio.camera.unproject_position(under.global_position+Vector3(0,under.get_meta("size",Vector3.ONE).y,0))/ratio)
+		check(on_top and RoomBuild.surface(studio)=="top","pointing at the table's top puts the ghost on it")
+		var problem: String=studio.placement_problem(studio.place_at)
+		print("STOOL size=",ssize," on table problem='",problem,"'")
+		if problem.is_empty():
+			await studio.commit_place()
+			await create_timer(0.5).timeout
+			check(str(obj(stool).get("surface",""))=="top" and str(obj(stool).get("parent",""))==table,"the server keeps the stool on the table")
+		else:
+			check(not BuildRules.stack_problem(ssize,under.get_meta("size",Vector3.ONE),1).is_empty(),"a refused stack says why")
+			studio.cancel_placement()
+		await capture("build-room-stack.png")

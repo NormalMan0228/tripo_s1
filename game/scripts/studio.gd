@@ -497,6 +497,8 @@ func build_ui() -> void:
 	# Any angle: the arrows turn 15°, R 15° (Shift back, Alt/Ctrl 1°) and the wheel 5°.
 	turn_readout=ObjectTransform.turn_bar(rotate_row,rotate_placement)
 	grid_toggle=CheckButton.new();grid_toggle.text=tr("격자");grid_toggle.button_pressed=true;grid_toggle.focus_mode=Control.FOCUS_NONE;rotate_row.add_child(grid_toggle)
+	# 바닥 / 벽 / 천장 (scripts/build/room_build.gd); 바닥 also puts pieces on top of others.
+	RoomBuild.surface_row(self,tools)
 	var confirm_row := row(tools)
 	place_button=RpgUi.button(confirm_row,tr("여기에 놓기"),commit_place,"primary");place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	# One sound for the press: the button's own press kind is the cancel (not a click and a cancel);
@@ -1169,7 +1171,7 @@ func reload_placed() -> void:
 		if obj.state!="placed" or obj.room!=room:continue
 		if placed.has(obj.id):
 			var existing: Node3D=placed[obj.id]
-			existing.position=Vector3(obj.x,0.07,obj.z);existing.rotation_degrees.y=obj.rotation
+			existing.position=Vector3(obj.x,0.07+float(obj.get("y",0.0)),obj.z);existing.rotation_degrees.y=obj.rotation
 			if existing.get_meta("studio",false) and obj.get("runtime_version")!=null and existing.runtime_version!=obj.runtime_version:
 				# A visitor reads the host's state through the guest route (the owner route refused it, so
 				# every change of the host's furniture state freed and reloaded the model).
@@ -1203,7 +1205,7 @@ func reload_placed() -> void:
 			if item:item.queue_free()
 			return
 		if item:
-			furniture.add_child(item);item.position=Vector3(obj.x,0.07,obj.z);item.rotation_degrees.y=obj.rotation;placed[obj.id]=item
+			furniture.add_child(item);item.position=Vector3(obj.x,0.07+float(obj.get("y",0.0)),obj.z);item.rotation_degrees.y=obj.rotation;placed[obj.id]=item
 
 func select_item(index: int) -> void:
 	if pending or index>=data.objects.size():return
@@ -1518,6 +1520,7 @@ func begin_place() -> void:
 					translucent.albedo_color.a=.62
 					mesh.set_surface_override_material(index,translucent)
 		place_at=ghost.position
+		RoomBuild.begin(self)
 	else:
 		placement_mode=false;refuse(tr("가구를 불러오지 못했어요. 다시 선택해 주세요."));return
 	# The ghost is up: a lift, and the green/red flip (_process) only sounds on a real change.
@@ -1527,7 +1530,7 @@ func begin_place() -> void:
 
 ## Turns the ghost by any whole number of degrees; it eases there (_process).
 func rotate_placement(degrees: int) -> void:
-	if not placement_mode or pending:return
+	if not placement_mode or pending or RoomBuild.surface(self)=="wall":return
 	placement_rotation=ObjectTransform.wrap_degrees(placement_rotation+degrees)
 	soft_tick("rotate",-8.0)
 	ObjectTransform.show_angle(turn_readout,placement_rotation)
@@ -1547,7 +1550,8 @@ func cancel_placement() -> void:
 	if placed.has(selected.get("id")) and is_instance_valid(placed[selected.id]):placed[selected.id].visible=true
 
 func view_input(event: InputEvent) -> void:
-	if placement_mode and event is InputEventMouseMotion:
+	# On a piece, a wall or the ceiling (room_build.gd); a plain floor spot keeps the code below.
+	if placement_mode and event is InputEventMouseMotion and not RoomBuild.follow(self,event.position):
 		var origin := camera.project_ray_origin(event.position)
 		var direction := camera.project_ray_normal(event.position)
 		if absf(direction.y)>0.001:
@@ -1611,9 +1615,10 @@ func commit_place() -> void:
 	var blocked := placement_problem(place_at)
 	if not blocked.is_empty():RpgUi.sfx("deny",-6.0);message(blocked);return
 	pending=true
-	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation({"version":selected.version,"room":room,"x":place_at.x,"z":place_at.z,"rotation":placement_rotation}))
+	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation(RoomBuild.placement_body(self,{"version":selected.version,"room":room,"x":place_at.x,"z":place_at.z,"rotation":placement_rotation})))
 	pending=false
 	if not reply.ok:RpgUi.sfx("deny",-6.0);message(tr("여기에는 놓을 수 없어요 · ")+reply.error);await refresh();return
+	RoomBuild.adopt_reply(self,reply.data)
 	adopt_ghost()
 	# Set down: a soft thunk under the arrival's own pop and twinkle (Fx.arrive).
 	RpgUi.sfx("place",-8.0)
@@ -1637,7 +1642,7 @@ func adopt_ghost() -> void:
 			for index in own.size():mesh.set_surface_override_material(index,own[index])
 			mesh.remove_meta("placing_materials")
 	item.reparent(furniture)
-	item.position=Vector3(place_at.x,0.07,place_at.z);item.rotation_degrees.y=placement_rotation
+	item.position=Vector3(place_at.x,0.07+float(item.get_meta("build_y",0.0)),place_at.z);item.rotation_degrees.y=placement_rotation
 	placed[id]=item
 	Fx.arrive(furniture,item,null,not moved)
 
@@ -2508,6 +2513,7 @@ func movement_blocked(at: Vector3) -> bool:
 	RoomBuild.PassThrough.load_pref()
 	if RoomBuild.PassThrough.on: return false
 	for id in placed:
+		if RoomBuild.off_floor(self,id):continue
 		var item: Node3D=placed[id]
 		var size: Vector3=item.get_meta("size",Vector3(1.6,1.6,1.6))
 		var local := (at-item.position).rotated(Vector3.UP,-item.rotation.y)
@@ -2528,6 +2534,7 @@ func blocking_record(at: Vector3) -> Dictionary:
 func placement_problem(at: Vector3) -> String:
 	if public_room:return tr("이곳에는 가구를 놓을 수 없어요.")
 	if floor_index!=0:return tr("가구는 1층에만 놓을 수 있어요.")
+	if placement_mode and RoomBuild.surface(self)!="floor":return RoomBuild.problem(self,at)
 	if absf(at.x)>4 or absf(at.z)>4:return tr("벽에서 한 칸 안쪽에 놓아 주세요.")
 	if absf(at.x)<1.5 and at.z>2.5:return tr("출입문 앞은 비워 주세요.")
 	if room=="workshop" and at.x < -1.8 and at.z < -1.5:return tr("고정 작업대와 겹쳐요.")
@@ -2544,7 +2551,7 @@ func placement_problem(at: Vector3) -> String:
 		if absf(at.x)+half.x>walls.x+0.05 or absf(at.z)+half.y>walls.y+0.05:return tr("벽에 닿아요. 조금 안쪽으로 옮기거나 돌려 보세요.")
 		for id in placed:
 			var item: Node3D=placed[id]
-			if id==selected.get("id") or not is_instance_valid(item):continue
+			if id==selected.get("id") or not is_instance_valid(item) or RoomBuild.off_floor(self,id):continue
 			if ObjectTransform.footprints_overlap(Vector2(at.x,at.z),Vector2(size.x,size.z),placement_rotation,Vector2(item.position.x,item.position.z),Vector2(item.get_meta("size",Vector3.ONE).x,item.get_meta("size",Vector3.ONE).z),item.rotation_degrees.y):
 				return tr("다른 가구와 겹쳐요.")
 	return ""
