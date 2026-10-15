@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 from contextlib import contextmanager, closing
 
 SCHEMA = '''
@@ -111,8 +112,14 @@ def widen_object_states(db):
 
 
 class Database:
-    def __init__(self, path, mode):
+    # Idle connections kept for reuse. Opening one costs far more than most queries (the schema is
+    # parsed again, the WAL index mapped): the 4 Hz presence poll would open three per request.
+    POOL_SIZE = 8
+
+    def __init__(self, path, mode, pool_size=POOL_SIZE):
         self.path = str(path)
+        self.pool_size = pool_size
+        self.idle, self.pool_lock = [], threading.Lock()
         with closing(self.connect()) as db:
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript(SCHEMA)
@@ -129,30 +136,93 @@ class Database:
                 raise ValueError('Demo and live must use different database directories')
 
     def connect(self):
-        db = sqlite3.connect(self.path, timeout=15, isolation_level=None)
+        # check_same_thread off: a pooled connection serves one request at a time, on any thread.
+        db = sqlite3.connect(self.path, timeout=15, isolation_level=None, check_same_thread=False)
         db.row_factory = sqlite3.Row
         db.execute('PRAGMA foreign_keys=ON')
         db.execute('PRAGMA busy_timeout=15000')
         return db
 
-    @contextmanager
-    def read(self):
-        """Read-only work must not reserve SQLite's single writer slot."""
-        db = self.connect()
+    def checkout(self):
+        with self.pool_lock:
+            if self.idle:
+                return self.idle.pop()
+        return self.connect()
+
+    def checkin(self, db):
+        """Back to the pool with no transaction open (a broken connection is closed instead)."""
         try:
-            yield db
-        finally:
+            if db.in_transaction:
+                db.rollback()
+        except sqlite3.Error:
+            db.close()
+            return
+        with self.pool_lock:
+            if len(self.idle) < self.pool_size:
+                self.idle.append(db)
+                return
+        db.close()
+
+    def close(self):
+        """Closes the idle connections (tools and tests that remove the files afterwards)."""
+        with self.pool_lock:
+            idle, self.idle = self.idle, []
+        for db in idle:
             db.close()
 
     @contextmanager
+    def read(self):
+        """Read-only work must not reserve SQLite's single writer slot."""
+        db = self.checkout()
+        try:
+            yield db
+        finally:
+            self.checkin(db)
+
+    @contextmanager
     def transaction(self):
-        db = self.connect()
+        db = self.checkout()
         try:
             db.execute('BEGIN IMMEDIATE')
             yield db
             db.commit()
         except BaseException:
-            db.rollback()
+            try:
+                db.rollback()
+            finally:
+                self.checkin(db)
             raise
-        finally:
-            db.close()
+        self.checkin(db)
+
+    @contextmanager
+    def write_then_read(self):
+        """A write transaction that builds its reply after the commit, on the same connection.
+
+        The caller writes under BEGIN IMMEDIATE, then calls phase.commit(): the writes are saved,
+        SQLite's single writer slot is free again for everyone else, and the rest of the work reads
+        one consistent snapshot (WAL readers never block writers). Without commit() it is an
+        ordinary transaction. Used by the 4 Hz presence poll (server/multiplayer.py)."""
+        db = self.checkout()
+        phase = Phases(db)
+        try:
+            db.execute('BEGIN IMMEDIATE')
+            yield phase
+            db.commit()
+        except BaseException:
+            try:
+                db.rollback()
+            finally:
+                self.checkin(db)
+            raise
+        self.checkin(db)
+
+
+class Phases:
+    def __init__(self, conn):
+        self.conn, self.writing = conn, True
+
+    def commit(self):
+        if self.writing:
+            self.conn.commit()
+            self.conn.execute('BEGIN')
+            self.writing = False

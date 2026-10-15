@@ -39,3 +39,55 @@ def test_delete_accounts_dry_run_then_backup_and_remove_only_matches(tmp_path, c
     with TestClient(app) as c:
         login = c.post('/v1/auth/login', json={'username': 'real_player', 'password': 'Studio-test-password'})
         assert login.status_code == 200
+
+
+def test_delete_accounts_removes_social_rows_on_both_sides(tmp_path, capsys):
+    from server.tests.social_world import World
+    w = World(tmp_path / 'data')
+    qa, real = w.players('qa_0a0b0c', 'real_one')
+    w.befriend(qa, real)
+    w.call(real, '/v1/social/blocks', user_id=qa.id)      # qa only appears as blocked_id
+    w.call(qa, '/v1/friends/requests', username='real_one')
+    w.call(real, '/v1/social/report', user_id=qa.id, reason='spam')
+    w.close()
+    data = tmp_path / 'data'
+    assert main(['delete-accounts', 'qa_0a0b0c', '--yes', '--data-dir', str(data), '--backups', str(tmp_path / 'backups')]) == 0
+    with sqlite3.connect(data / 'world.sqlite3') as conn:
+        for table in ('social_blocks', 'social_friends', 'social_requests', 'social_reports'):
+            assert conn.execute(f'SELECT count(*) FROM {table}').fetchone()[0] == 0, table
+        assert conn.execute("SELECT count(*) FROM users WHERE username='real_one'").fetchone()[0] == 1
+
+
+def test_chat_and_report_moderation_commands(tmp_path, capsys):
+    import json
+    from server.tests.social_world import World
+    w = World(tmp_path / 'data')
+    alice, bravo = w.players('alice', 'bravo')
+    w.visit(bravo, alice)
+    line = w.say(bravo, 'rude words here', channel='local')
+    w.say(bravo, 'hello', channel='local')
+    w.call(alice, '/v1/social/report', user_id=bravo.id, message_id=line['id'], reason='abuse')
+    args = ['--data-dir', str(tmp_path / 'data')]
+    capsys.readouterr()
+    assert main(['chat', 'list', '--username', 'bravo', '--grep', 'rude', *args]) == 0
+    listed = json.loads(capsys.readouterr().out)
+    assert [l['text'] for l in listed] == ['rude words here'] and listed[0]['channel'] == 'local'
+    assert main(['chat', 'delete', str(line['id']), *args]) == 0
+    assert json.loads(capsys.readouterr().out)['removed'] == 1
+    assert 'removed' in w.presence(alice, since=0)['chat']
+    assert main(['chat', 'mute', 'bravo', '15', *args]) == 0
+    capsys.readouterr()
+    w.tick(2)
+    # The operator's mute runs on the wall clock, far after this test's clock: muted.
+    assert w.say(bravo, 'still here?', 403)['detail'] == 'chat_muted'
+    assert main(['chat', 'mute', 'bravo', '0', *args]) == 0
+    assert w.say(bravo, 'back again')['ok']
+    capsys.readouterr()
+    assert main(['reports', 'list', *args]) == 0
+    reports = json.loads(capsys.readouterr().out)
+    assert reports[0]['reported'] == 'bravo' and reports[0]['message'] == 'rude words here'
+    assert main(['reports', 'close', str(reports[0]['id']), *args]) == 0
+    capsys.readouterr()
+    assert main(['reports', 'list', *args]) == 0
+    assert json.loads(capsys.readouterr().out) == []
+    w.close()
