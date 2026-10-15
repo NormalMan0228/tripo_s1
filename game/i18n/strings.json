@@ -11223,6 +11223,14 @@
   "%s·Space·클릭을 누르고 있으면 칸이 위로, 떼면 아래로": {
    "en": "Hold %s, Space or click to lift the zone; release to let it sink",
    "zh": "按住 %s、空格或鼠标，区域向上；松开则下沉"
+  },
+  "창문을 가려요. 옆으로 옮겨 주세요.": {
+   "en": "It covers a window. Move it aside.",
+   "zh": "挡住窗户了，请移到旁边。"
+  },
+  "벽에 걸린 다른 물건과 겹쳐요.": {
+   "en": "It overlaps something already on the wall.",
+   "zh": "与墙上的其他物品重叠。"
   }
  },
  "templates": [],
