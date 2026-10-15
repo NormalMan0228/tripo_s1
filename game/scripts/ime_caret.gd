@@ -35,6 +35,9 @@ const COMMIT_FRAMES := 8
 const LOST_BEFORE_HINT := 2
 const HINT_SECONDS := 14.0
 const CHOSEONG := "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
+## Loaded when needed, not held (an autoload holding UI scripts crashed the engine at exit, cloud_prefs.gd).
+const GAME_SETTINGS := "res://scripts/game_settings.gd"
+const PERF_OVERLAY := "res://scripts/perf_overlay.gd"
 
 signal syllable_lost(field: Control)
 
@@ -64,6 +67,24 @@ func _ready() -> void:
 	get_window().window_input.connect(_on_window_input)
 	if "--ime-trace" in OS.get_cmdline_user_args(): start_trace("user://logs/ime_trace.txt")
 	RenderingServer.frame_post_draw.connect(_keep_latin)
+	# The performance overlay when the setting is on, or later when it is turned on.
+	var settings = load(GAME_SETTINGS)
+	settings.listen(_on_settings)
+	if bool(settings.get_value("perf_overlay")): perf_overlay.call_deferred()
+
+## The performance overlay (perf_overlay.gd: F2, or Settings > 그래픽 > 성능 표시) is made on first use
+## here. It is not an autoload of its own: a new autoload changes project.binary, and a changed
+## project.binary sends every player to the installer instead of a patch (tools/game_patch.py).
+func perf_overlay() -> Node:
+	var overlay := get_tree().root.get_node_or_null("PerfOverlay")
+	if overlay == null:
+		overlay = load(PERF_OVERLAY).new()
+		overlay.name = "PerfOverlay"
+		get_tree().root.add_child(overlay)
+	return overlay
+
+func _on_settings(keys: Array[String]) -> void:
+	if "perf_overlay" in keys and bool(load(GAME_SETTINGS).get_value("perf_overlay")): perf_overlay()
 
 ## A Latin field (RpgUi.field: password, id, world address) types keyboard letters even when the
 ## Korean IME is in Hangul mode. Godot turns the IME on again whenever the field redraws, so it is
@@ -116,6 +137,9 @@ func _ime_text(field: Control) -> String:
 
 func _on_window_input(event: InputEvent) -> void:
 	if not event is InputEventKey: return
+	# F2 before the overlay exists: make it and show it (once made, it takes F2 itself).
+	if event.pressed and not event.echo and event.keycode == KEY_F2 and not get_tree().root.has_node("PerfOverlay"):
+		perf_overlay().show_overlay(true)
 	var focus := get_viewport().gui_get_focus_owner()
 	if event.pressed and event.is_action("ui_cancel") and focus is LineEdit: cancelled = focus
 	if trace:
