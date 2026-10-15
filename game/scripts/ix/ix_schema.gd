@@ -17,7 +17,7 @@ const TYPES := ["sit", "perch", "sit_ground", "lie", "stand_use", "reach", "grip
 ## The resting types the interaction driver plays in v1.
 const REST_TYPES := ["sit", "perch", "sit_ground", "lie"]
 ## Contact heights above the floor (m) per resting type; outside them a socket is not offered.
-const HEIGHT_RANGE := {"sit": [0.25, 0.68], "perch": [0.65, 1.10], "sit_ground": [-0.05, 0.15], "lie": [0.10, 0.95]}
+const HEIGHT_RANGE := {"sit": [0.15, 0.68], "perch": [0.65, 1.10], "sit_ground": [-0.05, 0.15], "lie": [0.10, 1.05]}
 ## The character socket that meets each object socket type.
 const ALIGNS := {"sit": "seat_contact", "perch": "seat_contact", "sit_ground": "seat_contact", "lie": "pelvis_lie",
 	"stand_use": "root", "reach": "root", "grip": "grip_r", "look_at": "eyes", "passage": "root", "place": "hold_front", "talk": "root"}

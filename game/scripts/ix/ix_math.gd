@@ -118,7 +118,12 @@ static func resolve(rec: Dictionary, ctx: Dictionary) -> Dictionary:
 	var floor_y: float = ctx.get("floor_y", NAN)
 	if is_nan(floor_y): floor_y = Transform3D(ctx.get("xform", Transform3D.IDENTITY)).origin.y
 	var height := origin.y - floor_y
-	var out := {"id": str(rec.get("id", "")), "type": str(rec.get("type", "sit")), "variant": str(rec.get("variant", "")),
+	var kind := str(rec.get("type", "sit"))
+	# The real height decides the way of sitting (a shape edit or a tall bed moves it): a seat above
+	# the sit range is a perch, one at the floor a ground seat.
+	if kind == "sit" and height > float(Schema.HEIGHT_RANGE.sit[1]) and height <= float(Schema.HEIGHT_RANGE.perch[1]): kind = "perch"
+	elif kind == "sit" and height < float(Schema.HEIGHT_RANGE.sit[0]): kind = "sit_ground"
+	var out := {"id": str(rec.get("id", "")), "type": kind, "variant": str(rec.get("variant", "")),
 		"origin": origin, "basis": basis, "yaw": yaw_of(basis.z), "params": params, "height": height, "floor_y": floor_y,
 		"mirror": mirror, "source": str(rec.get("source", "authored")), "valid": true, "why": ""}
 	var why := validity(out)
@@ -139,7 +144,7 @@ static func validity(resolved: Dictionary) -> String:
 	if kind == "lie":
 		var p: Dictionary = resolved.params
 		if float(p.get("length", 2.0)) < 1.3: return "short"
-		if float(p.get("width", 0.9)) < 0.5: return "narrow"
+		if float(p.get("width", 0.9)) < 0.42: return "narrow"
 	return ""
 
 # ------------------------------------------------------------------ repeat, approach
