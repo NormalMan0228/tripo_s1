@@ -281,6 +281,8 @@ func _ready() -> void:
 	add_child(world_audio)
 	# Under-foot puffs follow the footstep sound's surface (foot_fx.gd).
 	preload("res://scripts/foot_fx.gd").attach(self, world_audio)
+	# Fireflies at night, petals on the breeze by day, round the hero in the village (ambient_fx.gd).
+	preload("res://scripts/ambient_fx.gd").attach(self)
 	# The first start sets it up once the village is built (by then its thread is done).
 	if Engine.has_meta("studio_session"): world_audio.setup()
 	life=preload("res://scripts/village_life.gd").new()
