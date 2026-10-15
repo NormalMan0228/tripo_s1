@@ -94,9 +94,14 @@ func run_test() -> void:
 	app = Main.new()
 	root.add_child(app)
 	await process_frame
+	# The title may still be busy starting up (patch check, preloads): authenticate() returns at once then.
+	var waited := Time.get_ticks_msec()
+	while app.busy and Time.get_ticks_msec()-waited < 30000: await process_frame
+	print("TITLE_BUSY_MS %d" % (Time.get_ticks_msec()-waited))
 	var username := "footfx_"+str(Time.get_unix_time_from_system()).replace(".", "_")
 	await app.authenticate(true, preload("res://tests/qa_server.gd").url(), username, "Qa-footfx-123", "")
 	check(app.screen == "village", "village loads")
+	if app.screen != "village": print("NOTICE ", app.notice.text if is_instance_valid(app.notice) else "-", " screen=", app.screen)
 	if app.screen != "village":
 		quit(1)
 		return
