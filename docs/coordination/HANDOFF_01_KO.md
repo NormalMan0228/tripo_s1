@@ -16,8 +16,7 @@
 1. 무거운 작업 전에는 `powershell -ExecutionPolicy Bypass -File D:\lsm26\locks\wait_heavy.ps1`을 먼저 실행합니다.
 2. 버전과 문서:
    - `game/project.godot`의 `config/version="0.11.8"`
-   - `docs/releases/school_changes_KO.txt` 맨 위에 `== 0.11.8 (2026-10-16)` 절을 추가합니다(초안: C:\Users\dd\AppData\Local\Temp\claude\C--lsm26-triphthonS1\3d7d7a09-3a2f-44bf-ab93-48415f8d8e6d\scratchpad
-otes_0118_draft.txt).
+   - `docs/releases/school_changes_KO.txt` 맨 위에 `== 0.11.8 (2026-10-16)` 절을 추가합니다(초안: 아래 「도움 파일」의 notes_0118_draft.txt).
    - 로드맵: roadmap.json을 고치고 `tools/build_roadmap.py --note` 실행
    - 커밋합니다. `git add -A`는 쓰지 않습니다.
 3. import(실패하면 다시 시도) → `tools/bake_archipelago.py` → `tools/bake_survival.py` → `--script res://../tools/door_leaves.gd`
@@ -43,7 +42,7 @@ otes_0118_draft.txt).
 - 배포 점검표: env에 `TRIPOTHON_ENABLE_LEGACY_GENERATION`이 없거나 false인지 확인합니다.
 - 테스터 계정 tripo1~5는 배포 뒤 사용자가 VM에서 만듭니다(비밀번호는 숨김 입력). 명령은 `ops/README.md`에 있고 `-f ops/compose.gcp-free.yaml`을 붙입니다.
 
-## 0.11.8 뒤 병합 대기열 (C:\Users\dd\AppData\Local\Temp\claude\C--lsm26-triphthonS1\3d7d7a09-3a2f-44bf-ab93-48415f8d8e6d\scratchpadfter_0118_queue.txt)
+## 0.11.8 뒤 병합 대기열 (도움 파일 after_0118_queue.txt)
 
 - wt/build 5f4e1c5: 방 벽·천장 배치 클라이언트
 - wt/home 031ae19: 문 훅 연결
@@ -52,7 +51,12 @@ otes_0118_draft.txt).
 
 ## 주의
 
-- 공유 에셋 정션이 있는 worktree는 C:\Users\dd\AppData\Local\Temp\claude\C--lsm26-triphthonS1\3d7d7a09-3a2f-44bf-ab93-48415f8d8e6d\scratchpad
-m_wt.ps1로만 지웁니다(정션을 먼저 끊음).
-- strings.json 충돌은 C:\Users\dd\AppData\Local\Temp\claude\C--lsm26-triphthonS1\3d7d7a09-3a2f-44bf-ab93-48415f8d8e6d\scratchpad\strings_merge.py로 JSON 합집합을 만들어 풉니다. 풀고 나서 중복 키를 검사합니다.
+- 공유 에셋 정션이 있는 worktree는 도움 파일 rm_wt.ps1로만 지웁니다(정션을 먼저 끊음).
+- strings.json 충돌은 도움 파일 strings_merge.py로 JSON 합집합을 만들어 풉니다. 풀고 나서 중복 키를 검사합니다.
+
+## 도움 파일
+
+- 폴더: `C:\Users\dd\AppData\Local\Temp\claude\C--lsm26-triphthonS1\3d7d7a09-3a2f-44bf-ab93-48415f8d8e6d\scratchpad\`
+- `rm_wt.ps1`, `make_wt.ps1`, `strings_merge.py`, `verify_quick.ps1`, `verify_final.ps1`
+- `notes_0118_draft.txt`, `after_0118_queue.txt`, `rel0118_runbook.png`
 - `.import` 줄바꿈 변화(수천 개)와 추적되지 않는 `.uid`는 커밋하지 않습니다.
