@@ -2870,6 +2870,8 @@ static func field(parent: Node, placeholder: String, secret := false, dropped :=
 	line.keep_editing_on_text_submit = true
 	parent.add_child(line)
 	if secret or latin: caps_hint(parent, line)
+	# Free-text fields (chat, names) show the input language they type in (lang_chip.gd, 37).
+	else: load("res://scripts/lang_chip.gd").attach(line)
 	return line
 
 ## CapsLock as last seen in a Latin field: -1 unknown, 0 off, 1 on. Godot cannot read the lock

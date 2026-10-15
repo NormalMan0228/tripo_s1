@@ -180,6 +180,8 @@ func _build_form() -> void:
 	prompt.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	prompt.placeholder_text = tr("예: 작은 버섯 모양 의자")
 	form.add_child(prompt)
+	# The input language chip (한 / A) in the prompt's corner (lang_chip.gd, 37).
+	load("res://scripts/lang_chip.gd").attach(prompt)
 	kind_timer = Timer.new()
 	kind_timer.one_shot = true
 	kind_timer.wait_time = 0.45

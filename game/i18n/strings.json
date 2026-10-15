@@ -10823,6 +10823,10 @@
   "놓아 둔 가구를 써 봐요": {
    "en": "Use a placed piece of furniture",
    "zh": "使用已放置的家具"
+  },
+  "입력 언어 · 입력한 글자로 알아봐요 (한/영 키로 바꿔요)": {
+   "en": "Input language · read from what you type (switch with the Han/Eng key)",
+   "zh": "输入语言 · 根据输入的文字判断（用韩/英键切换）"
   }
  },
  "templates": []
