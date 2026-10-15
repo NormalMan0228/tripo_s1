@@ -10843,6 +10843,54 @@
   "모습을 저장하지 못했어요. 옷장(O)에서 다시 골라 주세요.": {
    "en": "Could not save the look. Pick it again in the wardrobe (O).",
    "zh": "未能保存外观。请在衣柜(O)中重新选择。"
+  },
+  "여": {
+   "en": "Female",
+   "zh": "女"
+  },
+  "모험가": {
+   "en": "Adventurer",
+   "zh": "冒险家"
+  },
+  "장인": {
+   "en": "Artisan",
+   "zh": "工匠"
+  },
+  "낚시꾼": {
+   "en": "Fisher",
+   "zh": "钓鱼人"
+  },
+  "대장장이": {
+   "en": "Smith",
+   "zh": "铁匠"
+  },
+  "약초사": {
+   "en": "Herbalist",
+   "zh": "草药师"
+  },
+  "발명가": {
+   "en": "Inventor",
+   "zh": "发明家"
+  },
+  "선원": {
+   "en": "Sailor",
+   "zh": "水手"
+  },
+  "준비 중": {
+   "en": "Coming soon",
+   "zh": "准备中"
+  },
+  "곧 만나요": {
+   "en": "See you soon",
+   "zh": "即将登场"
+  },
+  "장식": {
+   "en": "Accent",
+   "zh": "饰品"
+  },
+  "밀짚모자": {
+   "en": "Straw hat",
+   "zh": "草帽"
   }
  },
  "templates": []

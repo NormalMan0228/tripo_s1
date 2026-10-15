@@ -1,5 +1,7 @@
 extends HBoxContainer
 var avatar: Dictionary={}
+## The server takes avatar_v2 (accent, straw hat, any skin): main.gd hands it over from /health.
+var v2 := false
 var preview: Node3D
 var actor: CharacterBody3D
 const RpgUi=preload("res://scripts/rpg_ui.gd")
@@ -65,11 +67,12 @@ func _ready() -> void:
 			avatar.merge(presets.get(id,presets.explorer),true)
 			refresh())
 		row.add_child(b)
-	for key in ["hair","coat","pants","boots","skin"]:
+	for key in ["hair","coat","pants","boots","skin"]+(["accent"] if v2 else []):
 		var colors := ["#30595b","#774f3d","#d5a250","#c47b50","#ab789f","#e6dfce","#526552","#6889a1"]
 		if key=="skin": colors=["#e4b587","#f0cdb1","#bc865c","#895b43","#604431"]
+		if key=="accent": colors=["#c94f3d","#e9c46a","#5fa8a0","#7a9bd9","#ab789f","#f4e3c1","#3c2e1e","#4a7536"]
 		var label := Label.new()
-		label.text={"hair":tr("머리"),"coat":tr("상의"),"pants":tr("하의"),"boots":tr("신발"),"skin":tr("피부")}[key]
+		label.text={"hair":tr("머리"),"coat":tr("상의"),"pants":tr("하의"),"boots":tr("신발"),"skin":tr("피부"),"accent":tr("장식")}[key]
 		controls.add_child(label)
 		var palette := HBoxContainer.new()
 		controls.add_child(palette)
@@ -85,7 +88,8 @@ func _ready() -> void:
 			swatch.text="◆" if avatar[key]==color else "●"
 			swatch.pressed.connect(func(): avatar[key]=color; RpgUi.sfx("swatch",-8.0); refresh())
 			palette.add_child(swatch)
-		# Any colour (58): the server takes any #hex, so a picker follows the swatches.
+		# Any colour (58): the server takes any #hex (skin only with avatar_v2), so a picker follows.
+		if key=="skin" and not v2: continue
 		var free := ColorPickerButton.new()
 		free.name="Free_"+key
 		free.custom_minimum_size=Vector2(36,32)
@@ -97,9 +101,10 @@ func _ready() -> void:
 		free.popup_closed.connect(func(): RpgUi.sfx("swatch",-8.0))
 		palette.add_child(free)
 	var hat := OptionButton.new()
-	for title in [tr("모자 없음"),tr("여행 모자"),tr("베레모")]: hat.add_item(title)
-	hat.select(["none","cap","beret"].find(avatar.headwear))
-	hat.item_selected.connect(func(index): avatar.headwear=["none","cap","beret"][index]; RpgUi.sfx("select",-8.0); refresh())
+	var hats := ["none","cap","beret"]+(["straw"] if v2 else [])
+	for id in hats: hat.add_item({"none":tr("모자 없음"),"cap":tr("여행 모자"),"beret":tr("베레모"),"straw":tr("밀짚모자")}[id])
+	hat.select(maxi(0,hats.find(avatar.headwear)))
+	hat.item_selected.connect(func(index): avatar.headwear=hats[index]; RpgUi.sfx("select",-8.0); refresh())
 	controls.add_child(hat)
 	var pack := CheckButton.new()
 	pack.text=tr("여행 배낭")

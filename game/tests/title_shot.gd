@@ -20,6 +20,7 @@ func run() -> void:
 	root.add_child(app)
 	await create_timer(3.0).timeout
 	app.login_ui("menu")
+	preload("res://scripts/transition.gd").of(self).fade_in()
 	await create_timer(1.5).timeout
 	await capture("art")
 	Main.title_sky = true

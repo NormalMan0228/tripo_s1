@@ -4,6 +4,7 @@ extends SceneTree
 ##   godot --path game --script res://tests/char_select_shot.gd
 const Main = preload("res://scripts/main.gd")
 const CharacterSelect = preload("res://scripts/character_select.gd")
+const RpgUi = preload("res://scripts/rpg_ui.gd")
 var failures: Array[String] = []
 
 func expect(value: bool, message: String) -> void:
@@ -26,20 +27,24 @@ func run() -> void:
 	root.add_child(app)
 	await create_timer(3.0).timeout
 	app.login_ui("menu")
-	await create_timer(1.0).timeout
+	preload("res://scripts/transition.gd").of(self).fade_in()
+	await create_timer(1.2).timeout
 	var picker := CharacterSelect.new()
-	picker.avatar = {"character":"explorer_b"}
+	picker.avatar = {"character":"explorer"}
 	app.ui.add_child(picker)
 	await create_timer(1.2).timeout
 	await capture("first")
-	picker.pick("ranger")
+	expect(picker.chosen == "m1" and picker.cards["m2"].disabled, "the 남 tab opens on 모험가; characters without a model are locked (준비 중)")
+	await capture("male")
+	RpgUi.select_tab(picker.find_child("SexTabs", true, false), "f")
+	picker.pick("f1")
 	await create_timer(0.8).timeout
-	expect(picker.editor.avatar.character == "ranger", "a card dresses the editor as that traveller")
-	await capture("ranger")
+	expect(picker.editor.avatar.character == "explorer_b", "여 모험가 dresses the editor in its stand-in model")
+	await capture("female")
 	var got := [null]
 	picker.done.connect(func(look): got[0] = look)
 	picker.find_child("Start", true, false).pressed.emit()
 	await create_timer(0.3).timeout
-	expect(got[0] is Dictionary and got[0].character == "ranger", "모험 시작 hands back the chosen look")
+	expect(got[0] is Dictionary and got[0].character == "explorer_b", "모험 시작 hands back the chosen look")
 	print("CHAR_SELECT ", "PASS" if failures.is_empty() else "FAIL %d" % failures.size())
 	quit(0 if failures.is_empty() else 1)

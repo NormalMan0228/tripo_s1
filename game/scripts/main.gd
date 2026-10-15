@@ -111,6 +111,8 @@ var pack: Label
 var objects_list: ItemList
 ## The village bag drawer (village_bag.gd); null outside the village.
 var bag: RefCounted
+## The world takes the eight new characters' looks (accent, straw hat, any skin; /health avatar_v2).
+var avatar_v2 := false
 ## The title shows the turning World Labs sky (title_sky.gd) instead of the painted art.
 static var title_sky := false
 ## Left clicks that reached the world (furniture, placement) past the HUD.
@@ -781,6 +783,7 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	if not check(result): return
 	social.reset_session()
 	social.enabled = social.feature_enabled() and int(health.data.get("multiplayer_protocol", 0)) == 1
+	avatar_v2 = int(health.data.get("avatar_v2", 0)) >= 1
 	api.token = result.data.token
 	api.mode = result.data.mode
 	# The sign-in answer carries the look: the first walker (home or village) already wears it, and
@@ -796,7 +799,7 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		I18n.remember("username",username.strip_edges())
 	# A new account picks and dresses its traveller first (character_select.gd, 31); the real game
 	# only, so test harnesses that register accounts go straight on.
-	if register and get_tree().current_scene==self: await first_look()
+	if get_tree().current_scene==self and (register or await needs_character_select()): await first_look()
 	var veil := Transition.of(get_tree())
 	var at_home: bool = get_tree().current_scene==self
 	veil.loading(TownLayout.room_title("home") if at_home else tr("다섯 섬 마을"),"","room" if at_home else "village")
@@ -3792,13 +3795,21 @@ func restore_hud() -> void:
 		if is_instance_valid(item): item.visible=true
 	hidden_hud.clear()
 
+## An account the world asks to pick its character again (the eight new ones, avatar_v2:
+## /v1/me needs_character_select until a look is saved).
+func needs_character_select() -> bool:
+	if not avatar_v2: return false
+	var answer: Dictionary = await api.request("/v1/me")
+	return answer.ok and bool(answer.data.get("needs_character_select", false))
+
 ## The first look over the title (character_select.gd): saved as the profile before the first place.
 func first_look() -> void:
 	var picker := CharacterSelect.new()
 	picker.avatar = me.get("profile",{}).get("avatar",{}).duplicate(true)
+	picker.v2 = avatar_v2
 	ui.add_child(picker)
 	var chosen: Dictionary = await picker.done
-	var result: Dictionary = await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":chosen}))
+	var result: Dictionary = await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":AvatarLook.for_server(chosen,avatar_v2)}))
 	if result.ok: adopt_profile(result.data)
 	else: message(tr("모습을 저장하지 못했어요. 옷장(O)에서 다시 골라 주세요."))
 	if is_instance_valid(picker): picker.queue_free()
@@ -3808,10 +3819,11 @@ func open_wardrobe() -> void:
 	var v := modal_card(tr("나의 여행자"),"wardrobe")
 	var editor := preload("res://scripts/wardrobe.gd").new()
 	editor.avatar=me.get("profile",{}).get("avatar",{}).duplicate(true)
+	editor.v2=avatar_v2
 	v.add_child(editor)
 	var status := RpgUi.caption(v,tr("외형은 모든 지역에서 같게 유지됩니다. 능력치는 바뀌지 않습니다."),12)
 	var save := button(v,tr("이 모습으로 저장"),func():
-		var result: Dictionary=await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":editor.avatar}))
+		var result: Dictionary=await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":AvatarLook.for_server(editor.avatar,avatar_v2)}))
 		if not is_instance_valid(editor): return
 		if result.ok:
 			adopt_profile(result.data,true)
