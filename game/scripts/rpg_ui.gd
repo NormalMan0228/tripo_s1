@@ -236,6 +236,7 @@ static func theme() -> Theme:
 	for spec in [["PrimaryButton","btn_green",INK,true],["GoldButton","btn_gold",PAPER_INK,false],["NightButton","btn_night",INK,true]]:
 		t.set_type_variation(spec[0], "Button")
 		_buttons(t, spec[0], spec[1], spec[2], spec[3])
+	_extra_buttons(t, false)
 	t.set_type_variation("ChoiceButton", "Button")
 	t.set_stylebox("pressed", "ChoiceButton", frame("btn_gold_normal"))
 	t.set_stylebox("hover_pressed", "ChoiceButton", frame("btn_gold_hover"))
@@ -622,20 +623,208 @@ static func divider(parent: Node, color := PAPER_LINE, width := 0.0) -> Control:
 	parent.add_child(line)
 	return line
 
-## A little keyboard key cap ("E", "Tab", "Esc").
+## A little keyboard key cap ("E", "Tab", "Esc"). `key` may be an action id ("inventory"): the cap
+## then shows that action's key and relabels itself when the bindings change.
 static func keycap(parent: Node, key: String, size := 12) -> Label:
 	var cap := Label.new()
-	cap.text = key
+	cap.text = key_text(key)
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cap.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	cap.custom_minimum_size = Vector2(22, 22)
+	cap.custom_minimum_size = Vector2(KEY, KEY)
 	cap.add_theme_font_override("font", FONT_BOLD)
 	cap.add_theme_font_size_override("font_size", size)
 	cap.add_theme_color_override("font_color", Color("3a2614"))
 	cap.add_theme_stylebox_override("normal", frame("keycap"))
 	cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if is_action(key): watch_key(cap, key)
 	parent.add_child(cap)
 	return cap
+
+# ------------------------------------------------------------------ keys
+
+## True for a GameSettings action id ("inventory", "interact"), false for a literal key ("Esc").
+static func is_action(id: String) -> bool:
+	for entry in GameSettings.ACTIONS:
+		if entry[0] == id: return true
+	return false
+
+## The key to show for an action id (its current primary binding: "I", or "J" after a rebind);
+## a literal key ("Esc", "Enter", "1-9", "F9") passes through.
+static func key_text(action_or_key: String) -> String:
+	return GameSettings.key_label(action_or_key) if is_action(action_or_key) else action_or_key
+
+## Controls that show an action's key join this group; KeyWatch relabels them on a rebind.
+const KEY_GROUP := &"rpg_action_key"
+
+## Makes c follow the key of `action`: a Label shows key_text(action); with `tip_name` the control's
+## tooltip reads "<tip_name>  ·  <key>" (name_tip). Relabelled whenever the bindings change.
+static func watch_key(c: Control, action: String, tip_name := "") -> void:
+	if tip_name.is_empty(): c.set_meta("key_action", action)
+	else:
+		c.set_meta("key_tip_action", action)
+		c.set_meta("key_tip_name", tip_name)
+	c.add_to_group(KEY_GROUP)
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null or tree.root.has_node("RpgUiKeys"): return
+	var watch := KeyWatch.new()
+	watch.name = "RpgUiKeys"
+	tree.root.add_child.call_deferred(watch)
+
+## Relabels every key cap and key tooltip in the tree (KeyWatch calls it after a rebind).
+static func relabel_keys() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null: return
+	for node in tree.get_nodes_in_group(KEY_GROUP):
+		if node.has_meta("key_action") and node is Label:
+			(node as Label).text = key_text(str(node.get_meta("key_action")))
+		if node.has_meta("key_tip_action") and node is Control:
+			name_tip(node, str(node.get_meta("key_tip_name")), key_text(str(node.get_meta("key_tip_action"))))
+
+## One listener for all key caps: GameSettings.listen wants a plain method (no lambdas, see there).
+class KeyWatch extends Node:
+	func _enter_tree() -> void:
+		GameSettings.listen(_on_settings)
+	func _exit_tree() -> void:
+		GameSettings.unlisten(_on_settings)
+	func _on_settings(keys: Array[String]) -> void:
+		if "bindings" in keys: load("res://scripts/rpg_ui.gd").relabel_keys()
+
+## "[key] text": a key cap and its words ("[I] 가방"). kind "night" (cream, outlined) or "paper".
+static func key_hint(parent: Node, action_or_key: String, text: String, kind := "night") -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.name = "KeyHint"
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(row)
+	var cap := keycap(row, action_or_key, 12)
+	cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var words := label(row, text, 14, INK, true) if kind == "night" else caption(row, text, 14, PAPER_INK)
+	words.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.set_meta("words", words)
+	return row
+
+## The one close key: a flat 34 px painted "close" icon that lifts on hover, named "닫기 · Esc" (or
+## "닫기 · <the key that opened the window>" for an action, kept in step with rebinding).
+static func close_key(parent: Node, callback: Callable, action := "") -> Button:
+	var b := Button.new()
+	b.name = "Close"
+	b.icon = icon_texture("close")
+	b.expand_icon = true
+	b.flat = true
+	b.custom_minimum_size = Vector2(CLOSE, CLOSE)
+	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.set_meta("rpg_close", true)
+	var named := TranslationServer.translate("닫기")
+	if is_action(action):
+		name_tip(b, named, key_text(action))
+		watch_key(b, action, named)
+	else: name_tip(b, named, "Esc" if action.is_empty() else action)
+	hover_motion(b, 1.12)
+	b.pressed.connect(func(): if callback.is_valid(): callback.call())
+	parent.add_child(b)
+	return b
+
+const BUTTON_VARIANTS := {"normal":"", "primary":"PrimaryButton", "gold":"GoldButton", "night":"NightButton", "danger":"DangerButton", "ghost":"GhostButton"}
+const BUTTON_SIZES := {"sm":[BTN_SM, 13], "md":[BTN_MD, 15], "lg":[BTN_LG, 16], "menu":[BTN_MENU, 19]}
+
+## A text button in one of the shared looks: variant normal | primary | gold | night | danger |
+## ghost, size sm (32) | md (40) | lg (44) | menu (52). Hover lift with the hover and click sounds;
+## keyboard / pad focus only in menus (`menu`), never on the HUD.
+static func button(parent: Node, text: String, callback: Callable, variant := "normal", size := "md", menu := false) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.theme_type_variation = BUTTON_VARIANTS.get(variant, "")
+	var spec: Array = BUTTON_SIZES.get(size, BUTTON_SIZES.md)
+	b.custom_minimum_size.y = spec[0]
+	b.add_theme_font_size_override("font_size", spec[1])
+	if size == "menu": b.add_theme_font_override("font", FONT_STRONG)
+	b.focus_mode = Control.FOCUS_ALL if menu else Control.FOCUS_NONE
+	hover_motion(b, 1.03)
+	b.pressed.connect(func(): if callback.is_valid(): callback.call())
+	parent.add_child(b)
+	return b
+
+## The danger (red-tinted) and ghost (text-only until hovered) button looks for a theme.
+static func _extra_buttons(t: Theme, night: bool) -> void:
+	var base := "btn_night" if night else "btn_paper"
+	t.set_type_variation("DangerButton", "Button")
+	for state in ["normal","hover","pressed","disabled"]:
+		t.set_stylebox(state, "DangerButton", frame(base + "_" + state, Color(1.0, .74, .68)))
+	t.set_stylebox("hover_pressed", "DangerButton", frame(base + "_pressed", Color(1.0, .74, .68)))
+	t.set_stylebox("focus", "DangerButton", frame("focus"))
+	var danger_ink := INK if night else ACCENT
+	for item in ["font_color","font_hover_color","font_pressed_color","font_focus_color","font_hover_pressed_color"]:
+		t.set_color(item, "DangerButton", danger_ink)
+	t.set_color("font_disabled_color", "DangerButton", Color(danger_ink, .5))
+	t.set_type_variation("GhostButton", "Button")
+	var bare := StyleBoxEmpty.new()
+	bare.content_margin_left = 12; bare.content_margin_right = 12; bare.content_margin_top = 6; bare.content_margin_bottom = 6
+	for state in ["normal","disabled"]: t.set_stylebox(state, "GhostButton", bare)
+	t.set_stylebox("hover", "GhostButton", frame(base + "_hover", Color(1,1,1,.55)))
+	t.set_stylebox("pressed", "GhostButton", frame(base + "_pressed", Color(1,1,1,.7)))
+	t.set_stylebox("hover_pressed", "GhostButton", frame(base + "_pressed", Color(1,1,1,.7)))
+	t.set_stylebox("focus", "GhostButton", frame("focus"))
+	var ink := INK if night else PAPER_INK
+	for item in ["font_color","font_pressed_color","font_focus_color"]: t.set_color(item, "GhostButton", ink)
+	for item in ["font_hover_color","font_hover_pressed_color"]: t.set_color(item, "GhostButton", HOVER if night else ACCENT)
+	t.set_color("font_disabled_color", "GhostButton", Color(ink, .45))
+
+## A count pill (ACCENT) on the top-right corner of a slot or button; hidden at 0. Calling it
+## again on the same parent updates the same pill.
+static func badge(parent: Control, count: int) -> Label:
+	var pill: Label = parent.get_node_or_null("Badge")
+	if pill == null:
+		pill = Label.new()
+		pill.name = "Badge"
+		pill.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		pill.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		pill.add_theme_font_override("font", FONT_BOLD)
+		pill.add_theme_font_size_override("font_size", 11)
+		pill.add_theme_color_override("font_color", INK)
+		var dot := StyleBoxFlat.new()
+		dot.bg_color = ACCENT
+		dot.set_corner_radius_all(9)
+		dot.corner_detail = 8
+		dot.border_color = Color(OUTLINE, .6)
+		dot.set_border_width_all(1)
+		dot.content_margin_left = 5; dot.content_margin_right = 5
+		pill.add_theme_stylebox_override("normal", dot)
+		pill.custom_minimum_size = Vector2(18, 18)
+		pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pill.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		pill.offset_left = -12; pill.offset_right = 6; pill.offset_top = -6; pill.offset_bottom = 12
+		pill.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		parent.add_child(pill)
+	pill.text = str(count) if count < 100 else "99+"
+	pill.visible = count > 0
+	return pill
+
+## A round paint swatch ("#d98477") that lifts on hover; a gold rim marks the chosen one. Named
+## by its colour on hover.
+static func swatch(parent: Node, hex: String, selected: bool, callback: Callable) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(CLOSE, CLOSE)
+	b.focus_mode = Control.FOCUS_NONE
+	b.set_meta("hex", hex)
+	var colour := Color(hex)
+	for state in ["normal","hover","pressed"]:
+		var dot := StyleBoxFlat.new()
+		dot.bg_color = colour
+		dot.set_corner_radius_all(17)
+		dot.corner_detail = 12
+		var lit: bool = state != "normal" or selected
+		dot.set_border_width_all(3 if lit else 2)
+		dot.border_color = HOVER if lit else Color("6e4b2c")
+		dot.shadow_color = Color(0,0,0,.25)
+		dot.shadow_size = 3
+		dot.shadow_offset = Vector2(0,2)
+		b.add_theme_stylebox_override(state, dot)
+	name_tip(b, color_name(hex))
+	hover_motion(b, 1.15)
+	b.pressed.connect(func(): if callback.is_valid(): callback.call())
+	parent.add_child(b)
+	return b
 
 static func icon(path: String, size: float) -> TextureRect:
 	var image := TextureRect.new()
@@ -748,7 +937,9 @@ static func player_frame(ui: Control, portrait: String, fold_id := "") -> Dictio
 			else: shell.self_modulate.a = 0.0 if shut else 1.0)
 	return {"panel":shell, "name":name, "stars":stars, "leaves":leaves, "status":status, "column":column, "portrait":face}
 
-## Square slots with an icon, a key cap and a caption on a glass tray. With a
+## Square slots with an icon, a key cap and a caption on a glass tray. A slot spec is
+## {icon, label, call, action ("inventory" or a literal key like "F9"), primary}; an action's key cap
+## and its "name  ·  key" tooltip follow rebinding. With a
 ## fold_id a chevron key at the tray's right end slides it below the screen.
 static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxContainer:
 	var tray := PanelContainer.new()
@@ -778,7 +969,10 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 		b.custom_minimum_size = Vector2(SLOT, SLOT)
 		b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		b.focus_mode = Control.FOCUS_NONE
-		name_tip(b, slot.label, str(slot.get("key", "")))
+		# "action": an action id ("inventory") or a literal key ("F9"); "key" is the older name.
+		var key_id := str(slot.get("action", slot.get("key", "")))
+		name_tip(b, slot.label, key_text(key_id))
+		if is_action(key_id): watch_key(b, key_id, slot.label)
 		b.theme_type_variation = "HudSlot"
 		if slot.get("primary", false):
 			b.add_theme_stylebox_override("normal", frame("slot_night_primary"))
@@ -794,8 +988,8 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 		var caption_label := label(stack, slot.label, 12)
 		caption_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		caption_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		if not String(slot.get("key","")).is_empty():
-			var cap := keycap(b, slot.key, 11)
+		if not key_id.is_empty():
+			var cap := keycap(b, key_id, 11)
 			cap.position = Vector2(-7,-9)
 		b.pressed.connect(slot.call)
 		hover_motion(b, 1.08, Vector2(0.5, 1.0))
@@ -1168,6 +1362,7 @@ static func night_theme() -> Theme:
 		t.set_type_variation(spec[0],"Button")
 		_buttons(t,spec[0],spec[1],spec[2],spec[3])
 	t.set_color("font_hover_color","NightButton",HOVER)
+	_extra_buttons(t,true)
 	t.set_type_variation("HudSlot","Button")
 	for state in ["normal","hover","pressed","hover_pressed","disabled"]:
 		t.set_stylebox(state,"HudSlot",frame({"normal":"slot_night","hover":"slot_night_hover","pressed":"slot_night_pressed","hover_pressed":"slot_night_pressed","disabled":"slot_night"}[state]))

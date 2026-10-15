@@ -4,9 +4,17 @@ Shared look: warm two-stop gradient fills, a 3 px walnut outline with round join
 a soft drop shadow and one white highlight. Existing names (bag, craft, map, chest,
 wardrobe, expedition, leaf) are overwritten in place so every caller picks up the
 new art; the rest are new. Usage: art-venv python tools/build_ui_icons.py
+
+`--painted` only paints the raster icons that have no sheet in tools/build_ui_kit.py (the
+close key, assets/ui/icons/close.png) in the painted set's look: a brass ring, a parchment
+face, a lacquered red cross, walnut outlines, a soft shadow and a little grain. RpgUi.painted()
+then prefers the PNG over the SVG of the same name.
 """
 from pathlib import Path
 import re
+import sys
+
+PAINT_ONLY = '--painted' in sys.argv
 
 OUT = Path(__file__).resolve().parents[1] / 'game/assets/ui'
 INK = '#3b2414'
@@ -35,6 +43,8 @@ def dedupe(svg):
 def icon(name, defs, shapes, shadow):
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><defs>{"".join(defs)}</defs>'
            f'<g transform="translate(0 2.5)" fill="#1a0f06" opacity=".22">{shadow}</g>{shapes}</svg>')
+    if PAINT_ONLY:
+        return
     (OUT / f'{name}.svg').write_text(dedupe(svg), encoding='utf-8')
 
 
@@ -183,4 +193,83 @@ icon('chat', [grad('c', '#fffaf0', '#ecd9b0')],
      f'<circle cx="22" cy="28" r="3.5" fill="#d4533b"/><circle cx="32" cy="28" r="3.5" fill="#e9a24c"/><circle cx="42" cy="28" r="3.5" fill="#4a86b0"/>',
      '<path d="M12 12h40q6 0 6 6v20q0 6-6 6H30l-12 10v-10h-6q-6 0-6-6V18q0-6 6-6z"/>')
 
-print('icons written to', OUT)
+
+# ------------------------------------------------------------------ painted raster icons
+
+def paint_close(size=128, ss=4):
+    """The close key: brass ring, parchment face, red lacquer cross (128 px, drawn at 4x)."""
+    import numpy as np
+    from PIL import Image, ImageFilter
+    n = size * ss
+    y, x = np.mgrid[0:n, 0:n].astype(np.float32) + 0.5
+    u, v = (x - n / 2) / (n / 2), (y - n / 2) / (n / 2)   # -1..1
+    r = np.hypot(u, v)
+    aa = 1.5 / (n / 2)
+
+    def cover(d):  # signed distance (negative inside) to coverage
+        return np.clip(0.5 - d / aa, 0.0, 1.0)
+
+    def hexc(h):
+        h = h.lstrip('#')
+        return np.array([int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4)], np.float32)
+
+    def mix(a, b, t):
+        return a[None, None] * (1 - t[..., None]) + b[None, None] * t[..., None]
+
+    rgb = np.zeros((n, n, 3), np.float32)
+    alpha = np.zeros((n, n), np.float32)
+
+    def over(colour, cov):
+        nonlocal rgb, alpha
+        rgb = rgb * (1 - cov[..., None]) + colour * cov[..., None]
+        alpha = alpha + cov * (1 - alpha)
+
+    rng = np.random.default_rng(7)
+    grain = np.asarray(Image.fromarray((rng.random((n, n)) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(ss * 0.9)), np.float32) / 255.0
+    grain = (grain - grain.mean()) * 2.2
+    walnut = hexc('#2e1a0c')
+    # Shadow under the medallion.
+    shadow = cover(np.hypot(u, v - 0.06) - 0.9)
+    shadow = np.asarray(Image.fromarray((shadow * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(ss * 2.2)), np.float32) / 255.0
+    over(np.zeros(3, np.float32)[None, None], shadow * 0.38)
+    # Walnut outline, brass ring (lit from the top left), inner walnut line, parchment face.
+    over(walnut[None, None], cover(r - 0.9))
+    light = np.clip(0.5 - 0.5 * (u * 0.55 + v * 0.85) / np.maximum(r, 1e-3), 0, 1)
+    brass = mix(hexc('#a26a1f'), hexc('#f6d47a'), light ** 1.3)
+    brass *= (1 + 0.05 * grain)[..., None]
+    over(brass, cover(r - 0.84))
+    over(hexc('#5a3a18')[None, None], cover(r - 0.67))
+    face = mix(hexc('#fbf1d6'), hexc('#dcc28d'), np.clip((v + 0.65) / 1.3, 0, 1))
+    face *= (1 - 0.16 * np.clip((r - 0.35) / 0.3, 0, 1) ** 2)[..., None]
+    face *= (1 + 0.035 * grain)[..., None]
+    over(face, cover(r - 0.63))
+
+    # The cross: two capsules with a walnut rim, a lacquer gradient and a top-edge highlight.
+    def capsule(ax, ay, bx, by):
+        px, py = u - ax, v - ay
+        dx, dy = bx - ax, by - ay
+        t = np.clip((px * dx + py * dy) / (dx * dx + dy * dy), 0, 1)
+        return np.hypot(px - t * dx, py - t * dy)
+    arm = 0.30
+    d = np.minimum(capsule(-arm, -arm, arm, arm), capsule(arm, -arm, -arm, arm))
+    over(hexc('#3b1a10')[None, None], cover(d - 0.155))
+    lacquer = mix(hexc('#dd6a4c'), hexc('#8c2b1f'), np.clip((v + 0.35) / 0.7, 0, 1))
+    lacquer *= (1 + 0.04 * grain)[..., None]
+    over(lacquer, cover(d - 0.105))
+    shine = cover(d - 0.05) * np.clip(-(v + 0.02) * 3.0, 0, 1) * 0.45
+    over(np.ones(3, np.float32)[None, None], shine)
+    # A gloss arc on the ring's upper left.
+    gloss = cover(np.abs(r - 0.76) - 0.035) * np.clip(-(u * 0.6 + v * 0.8) - 0.35, 0, 1)
+    over(np.ones(3, np.float32)[None, None], gloss * 0.55)
+
+    out = np.dstack([np.clip(rgb / np.maximum(alpha, 1e-4)[..., None], 0, 1), alpha])
+    image = Image.fromarray((out * 255 + 0.5).astype(np.uint8), 'RGBA').resize((size, size), Image.LANCZOS)
+    path = OUT / 'icons' / 'close.png'
+    image.save(path)
+    print('painted', path)
+
+
+if PAINT_ONLY:
+    paint_close()
+else:
+    print('icons written to', OUT)

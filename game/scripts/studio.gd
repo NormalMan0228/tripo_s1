@@ -497,8 +497,8 @@ func build_ui() -> void:
 	# Bottom centre: the village's hotbar slots for what rooms have, with the same icons and keys.
 	var hud := Control.new();hud.name="Hotbar";hud.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);hud.theme=RpgUi.theme();add_child(hud)
-	var bar := RpgUi.hotbar(hud,[{"icon":"res://assets/ui/bag.svg","key":"I","label":tr("가방"),"call":func(): set_dock_open(not dock_panel.visible)},
-		{"icon":"res://assets/ui/craft.svg","key":"C","label":tr("제작"),"call":func(): open_craft()}],700)
+	var bar := RpgUi.hotbar(hud,[{"icon":"res://assets/ui/bag.svg","action":"inventory","label":tr("가방"),"call":func(): set_dock_open(not dock_panel.visible)},
+		{"icon":"res://assets/ui/craft.svg","action":"craft","label":tr("제작"),"call":func(): open_craft()}],700)
 	dock_toggle=bar.get_child(0);dock_toggle.name="DockToggle"
 	craft_slot=bar.get_child(1);craft_slot.name="CraftSlot"
 	var box := VBoxContainer.new();dock.add_child(box)

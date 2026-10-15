@@ -1214,11 +1214,12 @@ func build_village_hud() -> void:
 	var social_chip := ui.get_node_or_null("SocialChip")
 	if social_chip is Control: RpgUi.fold_shift(social_chip,"profile",Vector2(-36,0))
 	var slots := []
-	for spec in [["bag.svg","I",tr("가방"),toggle_drawer],["craft.svg","C",tr("제작"),open_craft],["map.svg","Tab",tr("지도"),life.open_map],
-			["chest.svg","B",tr("창고"),life.open_storage],["wardrobe.svg","O",tr("옷장"),open_wardrobe],["expedition.svg","",tr("탐험"),open_expedition]]+(
+	# Action ids: the key caps and "name  ·  key" tooltips follow rebinding (RpgUi.key_text).
+	for spec in [["bag.svg","inventory",tr("가방"),toggle_drawer],["craft.svg","craft",tr("제작"),open_craft],["map.svg","map",tr("지도"),life.open_map],
+			["chest.svg","storage",tr("창고"),life.open_storage],["wardrobe.svg","wardrobe",tr("옷장"),open_wardrobe],["expedition.svg","",tr("탐험"),open_expedition]]+(
 			[["admin.svg","F9",tr("관리"),open_admin]] if preload("res://scripts/build_mode.gd").admin else []):
 		var action: Callable = spec[3]
-		slots.append({"icon":"res://assets/ui/"+spec[0],"key":spec[1],"label":tr(spec[2]),"primary":spec[0]=="expedition.svg",
+		slots.append({"icon":"res://assets/ui/"+spec[0],"action":spec[1],"label":tr(spec[2]),"primary":spec[0]=="expedition.svg",
 			"call":func(): action.call()})
 	var bar := RpgUi.hotbar(ui,slots,700,"hotbar")
 	expedition_button = bar.get_child(5)
