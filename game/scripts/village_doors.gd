@@ -353,7 +353,10 @@ static func walk_out(host: Node, room: String, veil: Node) -> bool:
 	var walk := DoorWalk.begin(host, player, path, door, true, 0.0)
 	walk.delay = .12
 	# The door shuts once the walker is a stride clear of it.
-	walk.at(.55+1.0, func(): turn(host, door.id, 0.0, SHUT))
+	var ref: WeakRef = weakref(host)
+	walk.at(.55+1.0, func():
+		var node = ref.get_ref()
+		if node != null and is_instance_valid(node) and node.is_inside_tree(): turn(node, door.id, 0.0, SHUT))
 	if host.has_method("follow_camera"): host.follow_camera(1)
 	veil.fade_in()
 	return true
@@ -478,8 +481,9 @@ class DoorWalk extends Node:
 				(event[1] as Callable).call()
 		if travelled >= length-.002: finish()
 
-	## Hands the walker back to its own physics where the walk left it.
-	func finish() -> void:
+	## Hands the walker back to its own physics where the walk left it. leaving: the walk goes with its
+	## scene (a scene change, quitting); what was due at the door is dropped, the door with it.
+	func finish(leaving := false) -> void:
 		if done: return
 		done = true
 		if is_instance_valid(body):
@@ -488,9 +492,10 @@ class DoorWalk extends Node:
 			body.velocity = Vector3.ZERO
 			body.external_velocity = Vector2.ZERO
 			body.external_motion = Vector2.ZERO
-		for event in events: (event[1] as Callable).call()
+		if not leaving:
+			for event in events: (event[1] as Callable).call()
 		events.clear()
 		queue_free()
 
 	func _exit_tree() -> void:
-		if not done: finish()
+		if not done: finish(true)
