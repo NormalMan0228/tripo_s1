@@ -157,9 +157,12 @@ triggered the automatic mute. Checks, in order:
 | 11 | more than 600 lines a minute from one address (a school shares one) | 429 `chat_ip_limited` |
 | 12 | more than 20 global lines in 10 s on the whole server | 429 `global_chat_busy` |
 
-The filter masks listed words with `*` (also split by spaces, digits, dots, full-width or jamo:
-"시 1 발", "ㅅ.ㅂ", "f u c k"), phone numbers and links. Three masked lines (words, not phone
-numbers or links) within 5 minutes mute the player for 5 minutes. Runs of more than 12 identical
+The filter masks listed words with `*` (also split by spaces, digits, dots, full-width or jamo,
+jamo typed one by one included: "시 1 발", "ㅅ.ㅂ", "ㅆㅣㅂㅏㄹ", "시바ㄹ", "f u c k"), phone numbers
+and links. A match split by a space counts only when every part is a whole word ("시 발", "씨 발!"),
+so "몇 시 발표야", "씨 발라" or "다시 발견" stay as typed. Three masked lines (words, not phone
+numbers or links, and not matches split by a space, which are masked but never mute on their own)
+within 5 minutes mute the player for 5 minutes. Runs of more than 12 identical
 characters are cut to 12. Lists: `server/data/chat_words.txt` (syntax in its header) plus the
 operator's `VILLAGEN_CHAT_FILTER_EXTRA` file (relative to the data directory), read at start-up.
 A chat line writes no `requests` or `audit` row: the line itself (with its `request_id`) is the

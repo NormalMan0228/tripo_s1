@@ -172,7 +172,9 @@ class Chat:
                                (room, uid, checked.text, now, channel, to_id, str(body.request_id))).lastrowid
         conn.execute('DELETE FROM mp_messages WHERE created<?', (now-self.settings.chat_retention_hours*3600,))
         reply = {'ok': True, 'id': line_id, 'channel': channel, 'text': checked.text, 'masked': checked.masked > 0}
-        if checked.masked:
+        # Only matches not split by a space count towards the mute ("몇 시 발표" is not "시발",
+        # but a spaced reading is masked anyway and never mutes on its own).
+        if checked.masked > checked.split:
             record_event(conn, 'chat_masked', uid, {'words': checked.masked, 'message_id': line_id}, now)
             count = conn.execute("SELECT count(*) FROM security_events WHERE kind='chat_masked' AND created>? AND user_id=?", (now-MASK_MUTE_SECONDS, uid)).fetchone()[0]
             if count >= MASK_MUTE_LINES:

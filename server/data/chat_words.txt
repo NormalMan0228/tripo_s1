@@ -10,8 +10,10 @@
 #   +phrase   an allowed phrase: a match that lies inside it is left alone (시발점, 다시발)
 #
 # Matching ignores case, full-width letters, zero-width characters, and spaces, dots or digits
-# between letters, so "시 1 발", "ㅅ.ㅂ" and "f u c k" are caught. A split across a plain space only
-# counts when the first letter starts a word, so "다시 발견" stays readable.
+# between letters, and Hangul jamo typed one by one, so "시 1 발", "ㅅ.ㅂ", "ㅆㅣㅂㅏㄹ" and "f u c k"
+# are caught. A split across a plain space only
+# counts when every part is a whole word ("시 발", "씨 발!"), so "다시 발견" and "몇 시 발표야" stay
+# readable; such a split match is masked but never counts towards the automatic mute.
 # Left out on purpose (too many false positives in ordinary Korean): 보지 (보지 마), 자지 (자지 마),
 # 꺼져 (불이 꺼져), 졸라 (엄마를 졸라서), 새끼 alone (새끼 고양이), 미친 alone, 씹 alone (씹다),
 # 시바 (시바견).
@@ -24,6 +26,7 @@
 시빨
 쓰발
 씌발
+쒸발
 씨팔
 시팔
 씨벌
@@ -112,6 +115,15 @@
 +의존나
 +공존나
 +잔존나
+# 몇 시 발표야, 이 시 발음, 씨 발견 (시/씨 = 시각, 시, 씨앗 + 발표/발견/발음)
++시발표
++시발견
++시발음
++씨발표
++씨발견
++씨발음
+# 우리 개 새끼 낳았어 (강아지)
++개새끼낳
 
 # --- English
 fuck*

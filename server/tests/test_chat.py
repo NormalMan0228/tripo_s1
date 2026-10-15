@@ -161,8 +161,10 @@ def test_filter_masks_lines_and_mutes_after_three(world):
     sent = w.say(alice, '아 시 발 진짜', channel='local')
     assert sent['masked'] and sent['text'] == '아 * * 진짜'
     assert texts(chat_of(w, bravo))[-1] == '아 * * 진짜'
+    # A match split by a space is masked but does not count towards the mute.
     w.say(alice, 'ㅅㅂ 또', channel='local')
-    third = w.say(alice, 'fuck', channel='local')
+    assert 'muted_until' not in w.say(alice, 'fuck', channel='local')
+    third = w.say(alice, 'shit 또', channel='local')
     assert third['muted_until'] == pytest.approx(w.now[0]+300)
     w.tick(2)
     response = w.client.post('/v1/social/messages', headers=alice.headers, json={'request_id': '00000000-0000-4000-8000-000000000002', 'text': '안녕'})
@@ -172,6 +174,20 @@ def test_filter_masks_lines_and_mutes_after_three(world):
     assert w.say(alice, '안녕')['ok']
     with w.db() as conn:
         assert conn.execute("SELECT count(*) FROM security_events WHERE kind='chat_auto_mute'").fetchone()[0] == 1
+
+
+def test_school_phrases_are_never_masked_and_never_mute(world):
+    w = world
+    alice = w.player('alice')
+    for i, text in enumerate(['몇 시 발표야?', '국어 시 발표 언제야', '이 시 발표해', '지금 몇 시 발견했어', '씨 발라', '우리 개 새끼 낳았어']):
+        sent = w.say(alice, text, channel='local')
+        assert not sent['masked'] and sent['text'] == text and 'muted_until' not in sent
+        w.tick(5)
+    for _ in range(3):
+        w.tick(31)
+        assert not w.say(alice, '몇 시 발표야?', channel='local')['masked']
+    with w.db() as conn:
+        assert conn.execute("SELECT count(*) FROM security_events WHERE kind IN ('chat_masked','chat_auto_mute')").fetchone()[0] == 0
 
 
 def test_a_retried_line_is_kept_once_and_chat_writes_no_request_or_audit_rows(world):
