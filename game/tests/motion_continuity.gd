@@ -9,7 +9,8 @@ extends SceneTree
 ##           visual_only player.gd, as social.gd draws it), with a 12 m door jump (allowed: the
 ##           feed flags it and an effect plays).
 ## Prints MOTION_WATCH lines and MOTION_CONTINUITY PASS/FAIL. Headless, no server, no credits:
-##   Godot --headless --path game --script res://tests/motion_continuity.gd -- [--scene=village,room,multi] [--fps=144]
+##   Godot --headless --path game --script res://tests/motion_continuity.gd -- [--scene=village,room,multi] [--fps=144] [--hitch=N]
+## --hitch=N stalls every Nth frame for 70 ms (a loaded PC): the result must not change.
 ## Do not pass --fixed-fps: drawn frames must come between physics ticks.
 const MotionWatch = preload("res://tests/motion_watch.gd")
 const Stub = preload("res://tests/shadow_folk_stub.gd")
@@ -42,10 +43,15 @@ func arg(name: String, fallback: String) -> String:
 
 func run() -> void:
 	Engine.max_fps = int(arg("fps", "144"))
+	hitch_every = int(arg("hitch", "0"))
+	var sampler := Sampler.new()
+	sampler.test = self
+	root.add_child(sampler)
 	seed(20261016)
 	var scenes := arg("scene", "village,room,multi").split(",")
 	for scene in scenes:
 		_last_ticks = Engine.get_physics_frames()
+		watch = null
 		match scene:
 			"village": await village()
 			"room": await room()
@@ -76,10 +82,29 @@ func frames(count: int) -> void:
 	for i in count: await one_frame()
 
 var _last_ticks := 0
+var _hitch_count := 0
+var hitch_every := 0
 func one_frame() -> void:
+	# --hitch=N: a 70 ms stall every N frames (a loaded PC), so long frames are part of the run.
+	_hitch_count += 1
+	if hitch_every > 0 and _hitch_count % hitch_every == 0: OS.delay_msec(70)
 	await process_frame
-	var delta := get_process_delta()
-	follow(delta)
+	follow(get_process_delta())
+
+## Samples after every other node's _process (lowest priority): the frame's physics ticks and its
+## _process moves (rooms walk the hero there) are then both in, and judged with this frame's time.
+## (Sampling at process_frame, which comes before _process, mixed this frame's physics with the
+## last frame's _process: under load a long frame's step was judged with the next short frame.)
+class Sampler extends Node:
+	var test: SceneTree
+	func _init() -> void:
+		process_priority = 1000000
+		process_mode = Node.PROCESS_MODE_ALWAYS
+	func _process(delta: float) -> void:
+		test.sample(delta)
+
+func sample(delta: float) -> void:
+	if watch == null: return
 	var now := Engine.get_physics_frames()
 	if now != _last_ticks:
 		watch.tick(now-_last_ticks)
@@ -235,6 +260,7 @@ func room() -> void:
 	for d in [Vector2(1, 0), Vector2(0, -1), Vector2(-1, 0), Vector2(0.7, 0.7), Vector2(-0.7, -0.7), Vector2(0, 1)]:
 		steer(d)
 		await frames(70)
+		if "--trace" in OS.get_cmdline_user_args(): print("  ROOM_TRACE dir=", d, " at=", player.position, " allowed=", app.walk_allowed(), " input=", Input.get_vector("move_left", "move_right", "move_forward", "move_back"))
 		release()
 		await frames(12)
 	# Up the first staircase, ladder or hatch on this floor.
@@ -313,11 +339,6 @@ func multi() -> void:
 		# The feed flags a far jump (apply_to plays the effect): allowed.
 		if motion.teleported: watch.excuse("other_player", 3)
 		motion.apply_to(other)
-		var now_ticks := Engine.get_physics_frames()
-		if now_ticks != _last_ticks:
-			watch.tick(now_ticks-_last_ticks)
-			_last_ticks = now_ticks
-		watch.frame(delta)
 	finish("multi")
 	stage.queue_free()
 	follow_camera = true
