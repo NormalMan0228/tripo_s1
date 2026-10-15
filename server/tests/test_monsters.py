@@ -65,6 +65,17 @@ def test_every_species_appears_during_a_standard_week(map_id):
     assert 'brute' not in first  # the heavy hitter waits for later nights
 
 
+@pytest.mark.parametrize('map_id', catalog.MAPS)
+def test_public_state_names_the_species_tonight_can_bring(map_id):
+    s = simulation.new_run(5, 0, 60, map_id, 'veteran')
+    for day in range(1, 8):
+        s['elapsed'] = (day-1)*60+10.
+        shown = simulation.public_state(s)
+        assert shown['day'] == day
+        assert shown['night_species'] == list(catalog.night_species(map_id, day))
+        assert {e['kind'] for e in simulation.night_enemies(s, day)} <= set(shown['night_species'])
+
+
 def test_public_state_shows_variant_but_hides_charge_internals():
     s = open_field('quarry')
     boar = spawn('boar', s, 8., 0.)

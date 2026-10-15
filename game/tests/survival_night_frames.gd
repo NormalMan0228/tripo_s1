@@ -4,13 +4,18 @@ extends SceneTree
 ##     first creatures of the day's species spawn), where a species' first model used to be read from
 ##     disk in the spawn frame;
 ##   --window=entry: the first 7 s the world shows through the lifting veil (the card's fade, then
-##     play), where the models' GPU uploads landed when they were read a second after the card.
-## The survival map reads every species' model under the card (survival_map.gd prefetch_monsters);
-## --no-prefetch turns that off to compare. Run rendered:
+##     play), where the models' GPU uploads landed when they were read a second after the card;
+##   --window=day2: day 2 of a relaxed run (elapsed 60-98 s), when the second night's new species
+##     (server/catalog.py night_species) are read, up to just before that night.
+## The survival map reads the coming night's species' models under the card and a new night's ones
+## early in its day (survival_map.gd prefetch_monsters); --no-prefetch turns that off to compare.
+## Run rendered:
 ##   $env:TRIPOTHON_TEST_ARGS='--region=forest --window=entry'; tools/test.ps1 -SkipServerTests -ClientScript survival_night_frames -Capture
 ## Prints NIGHT_FRAMES {window, worst ms and when, frames over 33 ms, first spawn time, models cached}.
 ## The entry window fails when more than one frame is over --max-ms (default 33; 0 turns that off) or
-## one is over 50 ms, and (prefetch on) when a creature model was not in before the card lifted.
+## one is over 50 ms, and (prefetch on) when a model of the first night's species was not in before
+## the card lifted. The day2 window fails (prefetch on) when a model of the second night's species is
+## not in before that night, or a frame is over 50 ms.
 const Main = preload("res://scripts/main.gd")
 const Monster = preload("res://scripts/monster.gd")
 const SurvivalMap = preload("res://maps/survival/survival_map.gd")
@@ -21,11 +26,11 @@ var app: Node3D
 func _initialize() -> void:
 	call_deferred("run")
 
-func cached(region: String) -> int:
+## How many of these species' models (every species' by default) are in the resource cache.
+func cached(region: String, species: Array = Monster.WALK_REF.keys()) -> int:
 	var count := 0
-	for species in Monster.WALK_REF:
-		var path := Monster.resolved_path(species, region)
-		if path != "" and ResourceLoader.has_cached(path): count += 1
+	for path in SurvivalMap.monster_paths(region, species):
+		if ResourceLoader.has_cached(path): count += 1
 	return count
 
 func run() -> void:
@@ -48,6 +53,9 @@ func run() -> void:
 	if window == "entry":
 		await entry_window(region, prefetch, max_ms)
 		return
+	if window == "day2":
+		await day2_window(region, prefetch)
+		return
 	await app.start_run(region, "standard")
 	var worst := 0.0
 	var worst_at := 0.0
@@ -63,7 +71,7 @@ func run() -> void:
 		var frame := (now-last)/1000.0
 		last = now
 		var elapsed := float(app.run.get("elapsed", 0.0))
-		if cached_at_night < 0 and elapsed >= 38.0: cached_at_night = cached(region)
+		if cached_at_night < 0 and elapsed >= 38.0: cached_at_night = cached(region, SurvivalMap.night_species(app.run))
 		if first_spawn < 0.0 and not app.enemy_nodes.is_empty(): first_spawn = elapsed
 		if elapsed >= 36.0 and elapsed <= 46.0:
 			frames += 1
@@ -79,7 +87,8 @@ func run() -> void:
 ## from the first one; `at` is seconds since then.
 func entry_window(region: String, prefetch: bool, max_ms: float) -> void:
 	await app.start_run(region, "standard")
-	var cached_at_lift := cached(region)
+	var tonight := SurvivalMap.night_species(app.run)
+	var cached_at_lift := cached(region, tonight)
 	var veil: CanvasLayer = Transition.instance
 	var worst := 0.0
 	var worst_at := 0.0
@@ -110,12 +119,49 @@ func entry_window(region: String, prefetch: bool, max_ms: float) -> void:
 		elif not is_instance_valid(veil) or veil.veil.modulate.a < 0.999:
 			showing = true
 			from = now
-	var species := 0
-	for kind in Monster.WALK_REF: if Monster.resolved_path(kind, region) != "": species += 1
-	print("NIGHT_FRAMES window=entry region=%s prefetch=%s worst_ms=%.1f at=%.2f over_33ms=%d frames=%d models_cached_at_lift=%d/%d models_cached_after=%d over_max=%s" % [region, prefetch, worst, worst_at, over, frames, cached_at_lift, species, cached(region), str(longest)])
+	var species := SurvivalMap.monster_paths(region, tonight).size()
+	print("NIGHT_FRAMES window=entry region=%s prefetch=%s night_species=%s worst_ms=%.1f at=%.2f over_33ms=%d frames=%d models_cached_at_lift=%d/%d models_cached_after=%d of_all=%d over_max=%s" % [region, prefetch, ",".join(tonight), worst, worst_at, over, frames, cached_at_lift, species, cached(region, tonight), cached(region), str(longest)])
 	# One stray frame over max_ms is let through (a busy machine); the models' own reads made two.
 	var smooth := frames > 0 and over_max <= 1 and worst <= maxf(max_ms, 50.0)
 	print(("PASS" if smooth else "FAIL")+" entry window: at most one frame over %.0f ms and none over %.0f ms in the first %.0f s the world shows" % [max_ms, maxf(max_ms, 50.0), ENTRY_S])
 	var ready := not prefetch or cached_at_lift == species
-	print(("PASS" if ready else "FAIL")+" entry window: every creature model (%d/%d) was in before the card lifted" % [cached_at_lift, species])
+	print(("PASS" if ready else "FAIL")+" entry window: every model of the first night's species (%d/%d) was in before the card lifted" % [cached_at_lift, species])
 	quit(0 if smooth and ready else 1)
+
+## Day 2 of a relaxed run: the second night's new species are read during the day, before that night.
+func day2_window(region: String, prefetch: bool) -> void:
+	await app.start_run(region, "relaxed")
+	var first := SurvivalMap.night_species(app.run)
+	var at_entry := cached(region)
+	var worst := 0.0
+	var worst_at := 0.0
+	var over := 0
+	var frames := 0
+	var second: Array = []
+	var cached_before := -1
+	var last := Time.get_ticks_usec()
+	var started := Time.get_ticks_msec()
+	while Time.get_ticks_msec()-started < 150000:
+		await process_frame
+		var now := Time.get_ticks_usec()
+		var frame := (now-last)/1000.0
+		last = now
+		if app.run.get("status", "active") != "active": break
+		var elapsed := float(app.run.get("elapsed", 0.0))
+		if elapsed >= 60.0:
+			if second.is_empty(): second = SurvivalMap.night_species(app.run)
+			frames += 1
+			if frame > worst:
+				worst = frame
+				worst_at = elapsed
+			if frame > 33.0: over += 1
+		if elapsed >= 98.0:
+			cached_before = cached(region, second)
+			break
+	var wanted := SurvivalMap.monster_paths(region, second).size()
+	print("NIGHT_FRAMES window=day2 region=%s prefetch=%s first=%s second=%s models_cached_at_entry=%d models_of_second_night_cached_at_98s=%d/%d of_all=%d worst_ms=%.1f at=%.1f over_33ms=%d frames=%d status=%s" % [region, prefetch, ",".join(first), ",".join(second), at_entry, cached_before, wanted, cached(region), worst, worst_at, over, frames, app.run.get("status", "")])
+	var ready := cached_before >= 0 and (not prefetch or cached_before == wanted)
+	var smooth := frames > 0 and worst <= 50.0
+	print(("PASS" if ready else "FAIL")+" day2 window: the second night's species' models (%d/%d) were in before that night" % [cached_before, wanted])
+	print(("PASS" if smooth else "FAIL")+" day2 window: no frame over 50 ms in day 2 (worst %.1f ms at %.1f s)" % [worst, worst_at])
+	quit(0 if ready and smooth else 1)

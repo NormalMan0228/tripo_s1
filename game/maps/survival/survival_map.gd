@@ -112,27 +112,36 @@ var rng_before_rim := 0
 var rng_after_rim := 0
 ## The rim block came from the bake (survival_bake.gd rim_fits) in this build.
 var rim_replayed := false
-## The night's creatures: every species' model in this map's variant (the nights' rosters reach all
-## five by night 4-6, server/catalog.py), read under the card once the props are in, one at a time on
-## a worker thread, and held for the run: a species' first spawn finds its model in the resource cache
-## (monster.gd setup; read there, the spawn frame held 155 ms). Each read (~50 ms on its worker) puts
-## ~10 ms of work on the main thread in one frame (~28 ms for the first model in a process, more on a
-## busy machine): read together after the card they made 36-57 ms frames a second into play; two at a
-## time under the card, 52-64 ms frames there and 25-40 ms scatter steps. The build waits for the last
-## one before its batches: +0.1 s under the card in the forest, +0.2-0.25 s in the shorter quarry and
-## frost builds.
+## The night's creatures: the models (this map's variant) of the species the coming night can bring
+## (the run's night_species, server/catalog.py night_species: 2-3 species on the first nights, all five
+## by night 4-6), read under the card once the props are in, one at a time on a worker thread, and held
+## for the run: a species' first spawn finds its model in the resource cache (monster.gd setup; read
+## there, the spawn frame held 155 ms). Each model holds ~9 MB of textures, so only the coming night's
+## are read: when a new day brings species of its own, they are read early in that day, one at a time.
+## Each read (~50 ms on its worker) puts ~10 ms of work on the main thread in one frame (~28 ms for the
+## first model in a process, more on a busy machine): read together after the card they made 36-57 ms
+## frames a second into play; two at a time under the card, 52-64 ms frames there and 25-40 ms scatter
+## steps. The build waits for the last one before its batches.
 ## Off (--no-monster-prefetch, false before start_run, or a build without the card: tools, headless
 ## tests), each loads at its first spawn.
 static var prefetch_monsters := not "--no-monster-prefetch" in OS.get_cmdline_user_args()
 ## The most the card waits for the creature models after the build (ms; they take 0.1-0.25 s): a
-## slow disk or a stalled read leaves the rest to their first spawn instead of holding the card.
+## slow disk or a stalled read leaves the rest to the day's reads (or their first spawn) instead of
+## holding the card.
 const MONSTER_FEED_WAIT_MSEC := 1500
+## How far into a day (day_progress) its new species start loading: past the dawn, long before dusk.
+const MONSTER_DAY_FROM := 0.05
 var monster_scenes: Array[Resource] = []
 ## The creature models still to come in, the first one loading.
 var monster_feed: Array[String] = []
 ## The ones the feed has asked LoadPace for. Each is asked once: one that failed on its worker is
 ## dropped (LoadPace would only hand the same failed load back, and the card would wait for ever).
 var monster_asked := {}
+## The models this run has in (or gave up on, failed); built under the card, the map then follows the
+## run's days and reads the species each new night adds (_want_night_species).
+var monster_done := {}
+var monster_follow := false
+var monster_check := 0.0
 var stats := {"instances":0,"multimeshes":0,"props":0,"resource_visuals":0}
 
 static func layouts() -> Dictionary:
@@ -169,13 +178,21 @@ static func resource_paths(map: String) -> Array:
 	paths.append(CAMP)
 	return paths
 
-## The model of every creature species for this map's variant (the ones monster.gd setup loads).
-static func monster_paths(map: String) -> Array[String]:
+## The model of each creature species (every one when `species` is empty) for this map's variant
+## (the ones monster.gd setup loads).
+static func monster_paths(map: String, species: Array = []) -> Array[String]:
 	var paths: Array[String] = []
-	for species in Monster.WALK_REF:
-		var path := Monster.resolved_path(species,map)
+	for kind in (species if not species.is_empty() else Monster.WALK_REF.keys()):
+		var path := Monster.resolved_path(str(kind),map)
 		if path != "" and not path in paths: paths.append(path)
 	return paths
+
+## The species the run's coming night can bring (server/catalog.py night_species, sent with the run);
+## every species when the server does not say (an older server).
+static func night_species(run: Dictionary) -> Array:
+	var listed = run.get("night_species")
+	if listed is Array and not (listed as Array).is_empty(): return listed
+	return Monster.WALK_REF.keys()
 
 ## The camp's hearth model (camp centre of every map).
 const CAMP := "res://assets/storybook_camp_v1.glb"
@@ -256,11 +273,31 @@ func _start_monster_feed() -> void:
 	monster_scenes.clear()
 	monster_feed.clear()
 	monster_asked.clear()
-	if not prefetch_monsters or not LoadPace.covered: return
-	monster_feed = monster_paths(map_id)
+	monster_done.clear()
+	monster_follow = prefetch_monsters and LoadPace.covered
+	if not monster_follow: return
+	monster_feed = monster_paths(map_id,night_species(state))
 	var tree := Engine.get_main_loop() as SceneTree
 	if not tree.process_frame.is_connected(_feed_monsters): tree.process_frame.connect(_feed_monsters)
 	_feed_monsters()
+
+## During the run (every half second): early in a day, the models of the species its night can bring
+## that are not in yet (a new day's roster adds species; one the card ran out of time for) join the
+## feed, which reads them one at a time on a worker thread.
+func _want_night_species(run: Dictionary, delta: float) -> void:
+	if not monster_follow or LoadPace.covered: return
+	monster_check -= delta
+	if monster_check > 0.0: return
+	monster_check = 0.5
+	if bool(run.get("night",false)) or float(run.get("day_progress",0.0)) < MONSTER_DAY_FROM: return
+	var added := false
+	for path in monster_paths(map_id,night_species(run)):
+		if monster_done.has(path) or path in monster_feed: continue
+		monster_feed.append(path)
+		added = true
+	if not added: return
+	var tree := Engine.get_main_loop() as SceneTree
+	if not tree.process_frame.is_connected(_feed_monsters): tree.process_frame.connect(_feed_monsters)
 
 ## Every frame while models are to come: takes the one that came in and asks for the next.
 func _feed_monsters() -> void:
@@ -270,6 +307,7 @@ func _feed_monsters() -> void:
 		if LoadPace.held.has(path) or ResourceLoader.has_cached(path):
 			var scene := LoadPace.take(path)
 			if scene != null: monster_scenes.append(scene)
+			monster_done[path] = true
 			monster_feed.pop_front()
 			continue
 		if not monster_asked.has(path):
@@ -281,6 +319,7 @@ func _feed_monsters() -> void:
 		# is collected; collected here, that try reads the file afresh.
 		if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_FAILED:
 			ResourceLoader.load_threaded_get(path)
+		monster_done[path] = true
 		monster_feed.pop_front()
 	_stop_monster_feed()
 
@@ -288,7 +327,8 @@ func _stop_monster_feed() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree.process_frame.is_connected(_feed_monsters): tree.process_frame.disconnect(_feed_monsters)
 
-## The feed stops; the models not in yet load at their first spawn (monster.gd setup).
+## The feed stops; the models not in yet are read during the day (_want_night_species) or at their
+## first spawn (monster.gd setup).
 func _drop_monster_feed() -> void:
 	_stop_monster_feed()
 	for path in monster_feed: LoadPace.queue.erase(path)
@@ -306,11 +346,12 @@ func _finish_monster_feed() -> void:
 		await get_tree().process_frame
 		LoadPace.frame_waited = true
 		LoadPace.last_step = Time.get_ticks_usec()
-	# Uncovered meanwhile, out of the tree or out of time: the rest load at their first spawn.
+	# Uncovered meanwhile, out of the tree or out of time: the rest are read during the day.
 	_drop_monster_feed()
 
 func _exit_tree() -> void:
 	# Leaving before they are in: the next place's loads go first.
+	monster_follow = false
 	_drop_monster_feed()
 
 # ------------------------------------------------------------------ terrain
@@ -1482,6 +1523,7 @@ func _process(delta: float) -> void:
 	var run: Dictionary = state
 	if is_instance_valid(app) and app.get("run") is Dictionary and not (app.get("run") as Dictionary).is_empty():
 		run = app.get("run")
+	_want_night_species(run,delta)
 	var progress := float(run.get("day_progress",0.3))
 	var target_night := smoothstep(0.62,0.70,progress)*(1.0-smoothstep(0.95,1.0,progress))
 	if bool(run.get("night",false)): target_night = maxf(target_night,0.9)
