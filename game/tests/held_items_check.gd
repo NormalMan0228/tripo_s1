@@ -23,6 +23,13 @@ var last_model := Vector3.INF
 var last_palm := Vector3.INF
 var samples := 0
 var tiles: Array = []
+## Arm joints' turn per tick over the whole run (blend in/out, item swaps, tool toggles, walks).
+var arm_bones := PackedInt32Array()
+var arm_last := {}
+var worst_turn := 0.0
+var worst_turn_bone := ""
+var phase := "start"
+var turn_log: Array = []
 
 func check(value: bool, label: String) -> void:
 	print(("PASS " if value else "FAIL ") + label)
@@ -85,6 +92,9 @@ func run() -> void:
 	await look_rebuild()
 	await remote_walker(stage)
 	presence_rules()
+	for line in turn_log: print("INFO snap " + line)
+	print("INFO worst arm joint turn %.1f deg a tick (%s)" % [worst_turn, worst_turn_bone])
+	check(worst_turn < 25.0, "arms never snap: worst joint turn %.1f deg a tick over every take-out, put-away, walk and tool swap (%s)" % [worst_turn, worst_turn_bone])
 	check(not HeldItems.allowed("bouquet", {}) and HeldItems.allowed("bouquet", {"sunflower": 1}) and HeldItems.allowed("umbrella", {}), "bag rules: a bouquet needs flowers, an umbrella nothing")
 	check(HeldItems.pick_id("fish", {"perch": 1, "koi": 1}) == "fish_koi", "the fish shown off is the best one in the bag")
 	if capturing(): save_sheet()
@@ -95,6 +105,7 @@ func run() -> void:
 ## Final-pose samples (the skeleton's update): hand-to-handle distance and how far the item and
 ## the right palm moved relative to the body since the last tick.
 func _sampled() -> void:
+	_arm_turns()
 	if not measuring or not is_instance_valid(holder) or not holder.shown: return
 	var pose: SkeletonModifier3D = holder.pose
 	if pose == null or pose.weight < 0.999: return
@@ -107,6 +118,27 @@ func _sampled() -> void:
 	if last_palm.is_finite(): worst_palm_step = maxf(worst_palm_step, palm.distance_to(last_palm))
 	last_model = at
 	last_palm = palm
+
+func _arm_turns() -> void:
+	var skel: Skeleton3D = player.hand_skeleton
+	if not is_instance_valid(skel): return
+	if arm_bones.is_empty() or not arm_last.has("skel") or arm_last.skel != skel.get_instance_id():
+		arm_bones.clear()
+		arm_last = {"skel": skel.get_instance_id()}
+		for n in ["R_Upperarm", "R_Forearm", "R_Hand", "L_Upperarm", "L_Forearm", "L_Hand"]:
+			if skel.find_bone(n) >= 0: arm_bones.append(skel.find_bone(n))
+	# Only consecutive ticks compare (a rebuilt character starts a new run of samples).
+	var consecutive := int(arm_last.get("f", -10)) == Engine.get_physics_frames() - 1
+	for i in arm_bones:
+		var q := skel.get_bone_pose_rotation(i)
+		if consecutive and arm_last.has(i):
+			var turn := rad_to_deg((arm_last[i] as Quaternion).angle_to(q))
+			if turn > 25.0 and turn_log.size() < 12: turn_log.append("%s %s %.0f f%d last f%d w%.2f clip %s shown %s" % [phase, skel.get_bone_name(i), turn, Engine.get_physics_frames(), int(arm_last.get("f", -1)), holder.pose.weight if holder.pose else -1.0, player.current_clip, holder.shown])
+			if turn > worst_turn:
+				worst_turn = turn
+				worst_turn_bone = skel.get_bone_name(i) + " during " + phase
+		arm_last[i] = q
+	arm_last["f"] = Engine.get_physics_frames()
 
 func reset_metrics() -> void:
 	worst_grip = 0.0
@@ -135,16 +167,22 @@ func walk(direction: String, run_fast: bool, n: int) -> void:
 	player.sprinting = false
 
 func one_item(item: String, bag: Dictionary) -> void:
+	phase = item + " take"
 	HeldItems.hold(HeldItems.pick_id(item, bag))
-	await frames(4)
+	# Deterministic (a first-draw shader stall can finish the tween within a few frames): the item
+	# starts small and placing it on the hand keeps the pop tween's scale.
+	holder._place()
 	check(holder.model.scale.x < 0.9, "%s: pops in from small (scale %.2f), the placement keeps the tween's scale" % [item, holder.model.scale.x])
-	await frames(26)
+	await frames(30)
 	check(holder.shown and is_instance_valid(holder.model) and holder.model.visible, "%s: taken out and shown" % item)
 	check(HeldItems.CATALOG[item].socket in preload("res://scripts/ix/ix_schema.gd").CHARACTER_SOCKETS, "%s: sits on an ISS-1 character socket (%s)" % [item, HeldItems.CATALOG[item].socket])
 	reset_metrics()
 	measuring = true
+	phase = item + " idle"
 	await frames(30)
+	phase = item + " walk"
 	await walk("move_back", false, 90)
+	phase = item + " run"
 	await walk("move_right", true, 90)
 	await walk("move_left", false, 60)
 	await frames(30)
@@ -193,6 +231,7 @@ func save_sheet() -> void:
 	print("INFO saved " + path)
 
 func tool_toggle() -> void:
+	phase = "tool toggle"
 	HeldItems.hold("lantern")
 	await frames(30)
 	player.equip("watering_can")
@@ -213,6 +252,7 @@ func tool_toggle() -> void:
 	check(HeldItems.hero_showing() == "", "nothing reported while empty-handed")
 
 func look_rebuild() -> void:
+	phase = "rebuild"
 	HeldItems.hold("umbrella")
 	await frames(20)
 	var look: Dictionary = player.avatar.duplicate(true)
