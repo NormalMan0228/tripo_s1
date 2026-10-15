@@ -416,6 +416,73 @@ def chests(args):
     return 0
 
 
+def tester(args):
+    """Local operator access only. No HTTP route can set this flag."""
+    import getpass
+    import os
+    import uuid
+    from contextlib import closing
+    from argon2 import PasswordHasher
+    from .config import Settings
+    from .database import Database
+    from .models import strong_password
+    from .security import record_event
+    from .account_limits import tester_credits
+
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    if args.command != 'list' and args.username not in ('tripo1', 'tripo2', 'tripo3', 'tripo4', 'tripo5'):
+        print('Tester accounts must be named tripo1 through tripo5.')
+        return 1
+    # Read the existing mode; never create a second or mismatched world.
+    with sqlite3.connect(database) as conn:
+        mode = conn.execute("SELECT value FROM metadata WHERE key='mode'").fetchone()[0]
+    settings = Settings(data_dir=Path(args.data_dir), mode=mode)
+    limits = settings.limits_for({'is_tester': 1})
+    if not 0 <= limits.welcome_stars <= 10000 or not 1 <= limits.tester_credit_budget <= 10000000:
+        print('Invalid tester limits.')
+        return 1
+    password_hash = None
+    if args.command == 'create':
+        password = os.environ.get('TRIPOTHON_TESTER_PASSWORD') or getpass.getpass('Tester password: ')
+        if not 10 <= len(password) <= 128 or not strong_password(password):
+            print('Password must have 10-128 characters, an uppercase letter and a special character.')
+            return 1
+        password_hash = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1).hash(password)
+    with closing(Database(database, mode)) as db, db.transaction() as conn:
+        if args.command == 'list':
+            print(json.dumps({'accounts': [dict(r) for r in conn.execute(
+                'SELECT username,shards AS stars FROM users WHERE is_tester=1 ORDER BY username')],
+                'credits_committed': tester_credits(conn), 'credit_budget': limits.tester_credit_budget}))
+            return 0
+        user = conn.execute('SELECT * FROM users WHERE username=?', (args.username,)).fetchone()
+        if args.command == 'create':
+            if user:
+                print('Account already exists; use tester grant after verifying its owner.')
+                return 1
+            user_id, now = str(uuid.uuid4()), time.time()
+            conn.execute('INSERT INTO users(id,username,password_hash,shards,created,is_tester) VALUES (?,?,?,?,?,1)',
+                         (user_id, args.username, password_hash, limits.welcome_stars, now))
+            conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',
+                         (str(uuid.uuid4()), user_id, limits.welcome_stars, 'tester_welcome', user_id, now))
+            conn.execute('INSERT INTO objects(id,owner_id,creator_id,asset_id,name,created) VALUES (?,?,?,?,?,?)',
+                         (str(uuid.uuid4()), user_id, user_id, 'starter', 'Welcome wooden chair', now))
+            if settings.story_enabled:
+                from . import story
+                story.begin(conn, user_id, now)
+        else:
+            if not user:
+                print('No such account.')
+                return 1
+            user_id = user['id']
+            conn.execute('UPDATE users SET is_tester=1 WHERE id=?', (user_id,))
+        record_event(conn, 'tester_' + args.command, user_id, {'username': args.username}, time.time())
+        print(json.dumps({'ok': True, 'username': args.username, 'is_tester': True}))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     actions = parser.add_subparsers(dest='action', required=True)
@@ -469,7 +536,13 @@ def main(argv=None):
     found.add_argument('command', choices=('show',))
     found.add_argument('username')
     found.add_argument('--data-dir', default='/data')
+    testing = actions.add_parser('tester', help='operator-only tester accounts and shared credit usage')
+    testing.add_argument('command', choices=('create', 'grant', 'list'))
+    testing.add_argument('username', nargs='?')
+    testing.add_argument('--data-dir', default='/data')
     args = parser.parse_args(argv)
+    if args.action == 'tester':
+        return tester(args)
     if args.action == 'knocks':
         return knocks(args)
     if args.action == 'chat':

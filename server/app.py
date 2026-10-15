@@ -23,6 +23,8 @@ from . import simulation, catalog, homestead, campaign, object_paint, object_sha
 from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
                        LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER, ADMIN_DAILY_SHARD_LIMIT)
 from .stored_assets import read_glb
+from .studio_pricing import mesh_credits
+from .account_limits import daily_counts, reserve_tester_credits, record_tester_bill
 
 def uid(): return str(uuid.uuid4())
 def digest(s): return hashlib.sha256(s.encode()).hexdigest()
@@ -145,11 +147,15 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                     # The global worker serializes balance checks and provider submissions.
                     available = await provider.balance()
                     if available < settings.credit_reserve: raise ProviderError('insufficient_provider_credit')
+                    with db.transaction() as conn:
+                        limits=settings.limits_for(conn.execute('SELECT * FROM users WHERE id=?',(job['owner_id'],)).fetchone())
+                        reserve_tester_credits(conn,limits,job_id+':legacy',mesh_credits(settings.tripo_model,False,False))
                     task = await provider.submit(job['prompt'])
                     with db.transaction() as conn:
                         conn.execute("UPDATE jobs SET state='generating',provider_task=?,updated=? WHERE id=?",(task,clock(),job_id))
                     job['provider_task'] = task
                 result = await provider.task(job['provider_task'])
+                with db.transaction() as conn:record_tester_bill(conn,job_id+':legacy',result.get('credits_consumed'))
                 if result.get('status') in ('queued','running'): return
                 if result.get('status') in ('failed','cancelled'): raise ProviderError('generation_failed')
                 if result.get('status') != 'success': raise ProviderError('upstream_schema',uncertain=True)
@@ -258,9 +264,10 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def health():
         data=health_fields()
         # School servers spend from a fixed Tripo budget; the update script prints this line.
-        if settings.tripo_credit_budget:
+        limits=settings.limits_for(None)
+        if limits.tripo_credit_budget:
             from .asset_studio import tripo_credits_committed
-            with db.transaction() as conn:data['tripo_budget']={'used':round(tripo_credits_committed(conn)),'total':settings.tripo_credit_budget}
+            with db.transaction() as conn:data['tripo_budget']={'used':round(tripo_credits_committed(conn)),'total':limits.tripo_credit_budget}
         return data
 
     # The game's light check (about once a minute) and the download information: no database work.
@@ -400,8 +407,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             new_object(conn,user_id,'starter','환영의 나무 의자')
             # The opening story chapter starts with a letter on the desk at home (server/story.py).
             if settings.story_enabled: app.state.story.begin(conn,user_id,clock())
+            limits=settings.limits_for(None)
             if settings.mode=='demo': money(conn,user_id,80,'demo_welcome',user_id)
-            elif settings.welcome_stars: money(conn,user_id,settings.welcome_stars,'live_welcome',user_id)
+            elif limits.welcome_stars: money(conn,user_id,limits.welcome_stars,'live_welcome',user_id)
             record_event(conn,'register',user_id,{'username':body.username.lower(),'ip':client_ip(request)},clock())
             return session(conn,user_id)
 
@@ -597,11 +605,18 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             if settings.mode=='live' and conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled')").fetchone():fail('provider_busy')
             if settings.mode=='live' and not (settings.tripo_key and settings.paid_enabled): fail('live_generation_disabled',503)
             if conn.execute("SELECT 1 FROM jobs WHERE owner_id=? AND state IN ('queued','submitting','generating','downloading','unknown')",(user['id'],)).fetchone(): fail('generation_pending')
-            count=conn.execute('SELECT count(*) FROM jobs WHERE created>=?',(int(clock()//86400)*86400,)).fetchone()[0]
-            if count >= settings.daily_generation_limit: fail('daily_generation_limit',429)
+            count=daily_counts(conn,int(clock()//86400)*86400)
+            limits=settings.limits_for(user)
+            if limits.daily_generation_limit and count >= limits.daily_generation_limit: fail('daily_generation_limit',429)
+            if limits.user_daily_generation_limit and daily_counts(conn,int(clock()//86400)*86400,user['id'])>=limits.user_daily_generation_limit:fail('user_daily_generation_limit',429)
+            if 25 > limits.max_stars_per_craft: fail('craft_star_limit_exceeded',403)
             # One live job globally avoids overlapping credit reservations. Unknown holds the lock.
             if settings.mode=='live' and conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone(): fail('provider_busy')
-            job_id=uid(); money(conn,user['id'],-25,'generation_charge',job_id)
+            job_id=uid()
+            if settings.mode=='live':
+                try:reserve_tester_credits(conn,limits,job_id+':legacy',mesh_credits(settings.tripo_model,False,False))
+                except ProviderError as error:fail(error.code,429)
+            money(conn,user['id'],-25,'generation_charge',job_id)
             conn.execute('INSERT INTO jobs(id,owner_id,prompt,state,cost,provider_reserve,created,updated) VALUES (?,?,?,?,?,?,?,?)',
                          (job_id,user['id'],body.prompt.strip(),'queued',25,settings.credit_reserve,clock(),clock()))
             return {'id':job_id,'state':'queued','mode':settings.mode}
