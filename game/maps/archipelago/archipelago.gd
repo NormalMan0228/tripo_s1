@@ -259,7 +259,7 @@ func _install_ground(terrain: Node3D, packed: PackedScene) -> void:
 		m.visible = false
 
 ## The chunks draw on their own render layer, which five lamps leave out (GroundChunks.DARK_LAMPS);
-## --all-lamp-pools puts them on layer 1 too, so every lamp pools on the ground.
+## GroundChunks.all_lamp_pools (the default) puts them on layer 1 too, so every lamp pools on the ground.
 func _start_ground_lights() -> void:
 	var ground := get_node_or_null("Ground")
 	if ground == null or not GroundChunks.all_lamp_pools: return
