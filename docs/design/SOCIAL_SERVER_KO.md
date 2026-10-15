@@ -80,7 +80,7 @@
 
 ## 5. 확인한 것
 
-- 서버 테스트 전체: `.tools\server-venv\Scripts\python.exe -m pytest server/tests -q` → **932개 통과** (새 테스트 60개:
+- 서버 테스트 전체: `.tools\server-venv\Scripts\python.exe -m pytest server/tests -q` → **973개 통과** (리뷰 수정 후. 이 브랜치의 새 테스트 101개:
   채널·커서·기록·필터·속도 제한·정리·차단·친구·개인정보·노크·캐시·신고·운영자 도구·마이그레이션·자동 감속).
 - 예전 게임 호환: 0.11.5 게임으로 Godot 클라이언트 시험 `multiplayer`, `host_leaves`, `home_visit`, `visit_furniture_sync` 4개 모두 통과(포트 8863, 끝난 뒤 데이터 삭제).
 - 부하 시험: 위 표(`tools/test_multiplayer_load.py`, 포트 8867, 끝나면 데이터 삭제).
