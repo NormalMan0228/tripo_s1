@@ -223,6 +223,11 @@ func run() -> void:
 	expect(not turned.has("error") and turned.image.get_size() == Vector2i(800, 1600), "and a large one is re-encoded upright (%s)" % [turned.get("image", Image.new()).get_size()])
 	panel.prompt.text = ""
 	expect(CraftPanel.poll_pause(1) == 4.0 and CraftPanel.poll_pause(9) == 30.0, "failed polls back off up to 30 s")
+	# A picture that cuts the object at its edge (server cut_edges, task 73) is called out under it.
+	panel.show_job({"id": "edges", "state": "awaiting_confirmation", "cost": 20, "provenance": {}, "concept": {"url": "", "draws": 1, "max_draws": 4,
+		"estimate_with_concept": 25, "estimate_text_only": 20, "edges": ["right", "bottom"]}})
+	var cut_text := labels(panel.status)
+	expect("잘렸을" in cut_text and "오른쪽" in cut_text and "아래" in cut_text, "a picture cut at its edge warns and suggests a redraw")
 	panel.show_job({})
 	app.close_village_modal()
 	# A room opens the same window (C) and places the craft in the room.

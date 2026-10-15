@@ -249,6 +249,72 @@ def fixture_concept(prompt):
     draw.ellipse((96,96,416,416),fill=(80+tint[0]%150,80+tint[1]%150,80+tint[2]%150),outline=(90,70,50),width=8)
     out=io.BytesIO();image.save(out,'JPEG',quality=85);return out.getvalue()
 
+# Concept pictures whose object reaches the picture edge: Tripo rebuilds only what the picture shows, so
+# the object would come back cut (task 73). The window warns and suggests a redraw.
+EDGE_BAND=0.015      # the outermost 1.5% of each side
+EDGE_DISTANCE=40     # RGB distance from the background that counts as the object
+EDGE_SHARE=0.03      # object along at least 3% of the side
+
+def _solve(a,b):
+    """Gaussian elimination for the small background fit; None when singular."""
+    n=len(b);m=[row[:]+[b[i]] for i,row in enumerate(a)]
+    for c in range(n):
+        p=max(range(c,n),key=lambda r:abs(m[r][c]))
+        if abs(m[p][c])<1e-9:return None
+        m[c],m[p]=m[p],m[c]
+        for r in range(n):
+            if r!=c and m[r][c]:
+                f=m[r][c]/m[c][c];m[r]=[x-f*y for x,y in zip(m[r],m[c])]
+    return [m[i][n]/m[i][i] for i in range(n)]
+
+def cut_edges(blob:bytes)->list[str]:
+    """The sides ('top','bottom','left','right') where a concept picture's object touches or crosses the
+    picture edge. The background starts as the median of the outer 2-pixel frame and is refined into a
+    smooth (quadratic) surface fitted to the frame's background pixels, so soft gradients, vignettes and
+    shadows stay background. A side counts when pixels far from it run along >=3% of the side within its
+    outermost 1.5%. Never raises: an unreadable picture gives []."""
+    try:
+        image=Image.open(io.BytesIO(blob));image.draft('RGB',(256,256))
+        image=image.convert('RGB');image.thumbnail((256,256))
+        w,h=image.size
+        if w<16 or h<16:return []
+        px=image.load()
+        def basis(x,y):
+            u=2*x/(w-1)-1;v=2*y/(h-1)-1
+            return (1.0,u,v,u*u,v*v,u*v)
+        frame=[(basis(x,y),px[x,y]) for y in range(h) for x in range(w) if x<2 or y<2 or x>=w-2 or y>=h-2]
+        median=[sorted(c[k] for _,c in frame)[len(frame)//2] for k in range(3)]
+        coef=[[float(median[k]),0,0,0,0,0] for k in range(3)]
+        def off(f,c):return sum((c[k]-sum(a*b for a,b in zip(coef[k],f)))**2 for k in range(3))
+        # Refit on the pixels near the current background (an object at the edge drops out).
+        for limit in (1.5,0.75,0.75,0.75):
+            keep=[(f,c) for f,c in frame if off(f,c)<(limit*EDGE_DISTANCE)**2]
+            if len(keep)<len(frame)//8:break
+            ata=[[0.0]*6 for _ in range(6)];atb=[[0.0]*6 for _ in range(3)]
+            for f,c in keep:
+                for i in range(6):
+                    fi=f[i];row=ata[i]
+                    for j in range(i,6):row[j]+=fi*f[j]
+                    for k in range(3):atb[k][i]+=fi*c[k]
+            for i in range(6):
+                for j in range(i):ata[i][j]=ata[j][i]
+                if i:ata[i][i]+=0.001*len(keep)
+            fitted=[_solve(ata,atb[k]) for k in range(3)]
+            if None in fitted:break
+            coef=fitted
+        out=[]
+        for side,length,depth in (('top',w,h),('bottom',w,h),('left',h,w),('right',h,w)):
+            band=max(2,math.ceil(EDGE_BAND*depth))
+            hits=[]
+            for i in range(length):
+                at=[{'top':(i,d),'bottom':(i,h-1-d),'left':(d,i),'right':(w-1-d,i)}[side] for d in range(band)]
+                hits.append(any(off(basis(x,y),px[x,y])>EDGE_DISTANCE**2 for x,y in at))
+            # Lone pixels are noise: count hits with a neighbour.
+            total=sum(1 for i,hit in enumerate(hits) if hit and ((i>0 and hits[i-1]) or (i+1<length and hits[i+1])))
+            if total>=max(2,EDGE_SHARE*length):out.append(side)
+        return out
+    except Exception:return []
+
 # Player-facing wording of user_total_generation_limit for the room studio (see queue()).
 TRIAL_USED_UP='체험판 제작 %d회를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!'
 # Room placement refusal; released room clients print the detail after their own prefix.
@@ -504,7 +570,8 @@ class Studio:
                 if concept:
                     value['concept']={'url':'/v1/studio/jobs/'+job_id+'/concept?v='+str(concept.get('draws',1)),'draws':concept.get('draws',1),
                         'max_draws':MAX_CONCEPT_DRAWS,'redraw_credits':CONCEPT_CREDITS,'used':value['provenance'].get('concept_used'),
-                        'estimate_with_concept':value['provenance'].get('estimated_tripo_credits'),'estimate_text_only':value['provenance'].get('estimate_text_only')}
+                        'estimate_with_concept':value['provenance'].get('estimated_tripo_credits'),'estimate_text_only':value['provenance'].get('estimate_text_only'),
+                        'edges':concept.get('edges',[])}
                 return value
 
         @app.post('/v1/studio/jobs/{job_id}/cancel')
@@ -784,7 +851,8 @@ class Studio:
             return
         name=job['id']+'-concept.jpg'
         target=self.assets/name;temporary=target.with_suffix('.tmp');temporary.write_bytes(blob);temporary.replace(target)
-        concept.update(file=name,draws=int(concept.get('draws',0))+1)
+        # Sides where the object reaches the picture edge (it would be built cut): the window warns.
+        concept.update(file=name,draws=int(concept.get('draws',0))+1,edges=await asyncio.to_thread(cut_edges,blob))
         provenance['concept']=concept
         provenance.pop('concept_error',None);provenance.pop('concept_skipped',None)
         if body.geometry=='tripo':

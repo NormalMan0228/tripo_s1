@@ -890,6 +890,8 @@ func _show_quote(value: Dictionary) -> void:
 		var chosen := _entry("sizes", str(quote.get("size", "auto")))
 		var box := _dims_text(quote.get("dims", []))
 		_label(status, tr("스타일 %s · 크기 %s") % [_name(look), box if not box.is_empty() else _size_text(chosen) if not chosen.is_empty() else tr("자동")], 13, true)
+	# Sides where the object reaches the picture's edge (server cut_edges): it would be built cut (task 73).
+	var cut := PackedStringArray()
 	if not concept.is_empty():
 		_label(status, tr("AI가 그린 그림이에요. 이 그림으로 3D를 만들까요?"), 15)
 		var picture := TextureRect.new()
@@ -898,6 +900,11 @@ func _show_quote(value: Dictionary) -> void:
 		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		status.add_child(picture)
 		_load_picture(picture, str(concept.get("url", "")))
+		var words := {"top": tr("위"), "bottom": tr("아래"), "left": tr("왼쪽"), "right": tr("오른쪽")}
+		for side in concept.get("edges", []):
+			if words.has(str(side)): cut.append(str(words[str(side)]))
+		if not cut.is_empty():
+			_label(status, tr("그림에서 물건의 %s 끝이 잘렸을 수 있어요. 잘린 채로 3D가 만들어지니 '다시 그리기'를 권해요.") % "·".join(cut), 14, false, RpgUi.ACCENT)
 	if not design.get("parts", []).is_empty():
 		_label(status, tr("AI가 이렇게 정리했어요 (Tripo에 보내는 문장)"), 13, false, _accent())
 		for part in design.parts:
@@ -912,10 +919,12 @@ func _show_quote(value: Dictionary) -> void:
 		var with_picture := maxi(reserved, ceili(_number(concept.get("estimate_with_concept")) * rate))
 		var with_text := maxi(reserved, ceili(_number(concept.get("estimate_text_only")) * rate))
 		_button(row, tr("이 그림으로 만들기 · 별씨 %d") % with_picture, func() -> void: confirm(true), "gold")
-		var redraw := _button(row, tr("다시 그리기 (+5크레딧)"), redraw_concept)
 		var draws := int(concept.get("draws", 1))
 		var next_total := int(_number(concept.get("estimate_with_concept"))) + CONCEPT_CREDITS
-		redraw.disabled = draws >= int(concept.get("max_draws", 4)) or (cap > 0 and next_total > cap)
+		var locked := draws >= int(concept.get("max_draws", 4)) or (cap > 0 and next_total > cap)
+		# A cut picture makes the redraw a step forward too.
+		var redraw := _button(row, tr("다시 그리기 (+5크레딧)"), redraw_concept, "gold" if not cut.is_empty() and not locked else "")
+		redraw.disabled = locked
 		if redraw.disabled: redraw.tooltip_text = tr("그림은 최대 %d장까지, 1회 한도 안에서 그릴 수 있어요.") % int(concept.get("max_draws", 4))
 		var text_row := _row(status)
 		_button(text_row, tr("그림 없이 글로 만들기 · 별씨 %d") % with_text, func() -> void: confirm(false))

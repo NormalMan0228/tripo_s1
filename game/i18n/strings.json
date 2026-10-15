@@ -10863,6 +10863,26 @@
   "뼈대와 동작을 넣다가 실패했어요. 팔다리가 잘 보이는 사람 모양 캐릭터로 다시 맡겨 보세요.": {
    "en": "Adding the skeleton and motions failed. Try a human-shaped character with clearly visible arms and legs.",
    "zh": "加入骨骼和动作失败了。请换一个四肢清晰可见的人形角色再试。"
+  },
+  "그림에서 물건의 %s 끝이 잘렸을 수 있어요. 잘린 채로 3D가 만들어지니 '다시 그리기'를 권해요.": {
+   "en": "The object may be cut off at the %s edge of the picture. The 3D model would be built cut the same way, so 'Draw again' is recommended.",
+   "zh": "图中物品的%s边缘可能被裁掉了。3D 模型会照着裁掉的样子生成，建议点“重新画”。"
+  },
+  "위": {
+   "en": "top",
+   "zh": "上"
+  },
+  "아래": {
+   "en": "bottom",
+   "zh": "下"
+  },
+  "왼쪽": {
+   "en": "left",
+   "zh": "左"
+  },
+  "오른쪽": {
+   "en": "right",
+   "zh": "右"
   }
  },
  "templates": []
