@@ -149,8 +149,9 @@ func press() -> void:
 
 func cast() -> void:
 	if int(life.state.bag.get("bait",0))<1:
-		app.message(tr("미끼가 없어요. 씨앗 노점에서 미끼를 사 오세요."))
+		# The deny stamps the toast dedupe, so the message's chime stays quiet (one sound).
 		life.deny()
+		app.message(tr("미끼가 없어요. 씨앗 노점에서 미끼를 사 오세요."))
 		return
 	phase="casting"
 	refresh_hud()
@@ -390,7 +391,7 @@ func fight(delta: float) -> void:
 		if tick_clock<=0:
 			# Reel ratchet: uneven pawl spacing, brighter and quicker as the line tightens.
 			tick_clock=0.075*randf_range(0.8,1.2)*(1.0-0.2*progress)
-			life.sfx.play("tick",lerpf(0.93,1.08,progress),-6+2.0*progress+randf_range(-1.0,1.0))
+			life.sfx.play("tick",lerpf(0.93,1.08,progress),-3+2.0*progress+randf_range(-1.0,1.0))
 	splash_clock-=delta
 	if splash_clock<=0:
 		splash_clock=randf_range(0.35,0.8)

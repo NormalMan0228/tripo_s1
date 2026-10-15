@@ -2207,7 +2207,7 @@ func tick_run() -> void:
 			if not CombatAudio.play(self,"bandage"): sound.effect("bandage")
 			player.react("eat")
 		elif feedback.contains("먹었습니다"):
-			sound.effect("eat")
+			sound.effect("eat_soup" if feedback.contains("수프") else "eat")
 			player.react("eat")
 			HeroVoice.play(self,"eat")
 		elif feedback.contains("피웠습니다"): CombatAudio.play(self,"fuel",Vector3.ZERO)

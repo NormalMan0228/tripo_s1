@@ -1090,12 +1090,17 @@ def clean_stale(out: Path, kind: str, n: int) -> list:
 
 
 TAIL = {"trim_db": -50.0, "fade_out": 0.03}     # UI tails: cut 50 dB down, 30 ms raised-cosine fade
+# Peak ceilings (linear) for families whose sharp attacks jumped out in the in-game mix
+# (2026-10-15 Movie Maker capture: click_7 peaked at -1.9 dBFS while its family sat near -8).
+PEAK_CAP = {"click": 0.5}                         # about -6 dBFS
 
 
-def leveled(fn, ref_db: float, max_dur: float):
+def leveled(fn, ref_db: float, max_dur: float, ceiling: float | None = None):
     """Finish each take once before make_family finishes it again: the second pass measures the
     trimmed, capped file, so short takes (< 120 ms window) land on ref_db too."""
     kw = dict(TAIL, max_dur=max_dur)
+    if ceiling:
+        kw["ceiling"] = ceiling
 
     def run(rng, i):
         res = fn(rng, i)
@@ -1132,8 +1137,10 @@ def main(argv=None) -> int:
     for k in kinds:
         n, ref, fn, mx = FAMILIES[k]
         clean_stale(out, k, n)
-        meta = L.make_family(out, k, n, leveled(fn, refs[ref], mx), sr=SR, ref_db=refs[ref], seed_base="ui",
-                             finish_kw=dict(TAIL, max_dur=mx), verbose=False)
+        cap = PEAK_CAP.get(k)
+        fkw = dict(TAIL, max_dur=mx, **({"ceiling": cap} if cap else {}))
+        meta = L.make_family(out, k, n, leveled(fn, refs[ref], mx, cap), sr=SR, ref_db=refs[ref], seed_base="ui",
+                             finish_kw=fkw, verbose=False)
         b = sum(d["bytes"] for d in meta)
         total += b
         st = [d["st_db"] for d in meta]

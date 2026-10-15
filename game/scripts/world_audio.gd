@@ -86,7 +86,7 @@ const FLOOR_SURFACE := {"planks": "planks", "wide_planks": "planks", "checker": 
 ## Evens out the surfaces in game (dB, on top of each family's file level): keeps the balance of
 ## the earlier runtime synth (grass -15.5, sand -17.5, stone -15.8, wood -16.7 dBFS st-rms in game
 ## before footstep_db) and places the new floors next to their nearest old one.
-const SURFACE_DB := {"grass": 1.0, "sand": -2.5, "stone": 1.2, "wood": -1.7, "rock": -1.0, "shallow": -0.5,
+const SURFACE_DB := {"grass": 1.0, "sand": -0.5, "stone": 1.2, "wood": -1.7, "rock": -1.0, "shallow": -0.5,
 	"snow": -2.0, "ice": 1.0, "gravel": -0.8, "leaves": -0.6, "ash": -2.0, "dirt": -1.5, "planks": -1.0, "tile": 0.5,
 	"rug": -2.0, "stairs": -0.5}
 const SYNTH_SURFACE_DB := {"grass": -0.5, "sand": -1.5, "stone": -1.0, "wood": -2.5, "rock": -1.5, "shallow": 0.0}
