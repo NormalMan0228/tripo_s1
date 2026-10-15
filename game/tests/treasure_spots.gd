@@ -209,6 +209,10 @@ func check_chest(chest: Dictionary, per_island: Dictionary) -> void:
 	for prop in app.town.props:
 		if str(prop.id) in Treasure.SEATS: seat = minf(seat, at.distance_to(prop.at))
 	check(seat >= Treasure.SEAT_CLEAR, id+" clear of seats, so E there sits (%.1f m)" % seat)
+	# Gather spots win E in the village (village_life before modules): keep them out of reach.
+	var find := INF
+	for row in preload("res://scripts/forage.gd").NODES: find = minf(find, at.distance_to(Vector2(float(row[2]), float(row[3]))))
+	check(find >= 3.0, id+" clear of gather spots, so E there opens it (%.1f m)" % find)
 	for keep in Treasure.KEEP_CLEAR:
 		check(at.distance_to(keep[0]) >= float(keep[1]), id+" clear of the café terrace slot and 모카's place")
 	var stand := stand_of(chest)

@@ -128,7 +128,11 @@ func run() -> void:
 	var reply: Dictionary = await api.post("/v1/homestead", api.mutation({"action":"gather", "item":"apple", "version":int(state.version)}))
 	expect(reply.ok and int(reply.data.bag.get("apple", 0)) >= 2, "apples from the orchard box")
 	var apples := int(reply.data.bag.get("apple", 0))
-	await app.life.refresh()
+	# The village's own poll may be reading: refresh until the stall's copy has the apples.
+	expect(await wait_for(func() -> bool:
+		if int(app.life.state.get("bag", {}).get("apple", 0)) >= apples: return true
+		app.life.refresh()
+		return false, 8.0), "the stall sees the apples")
 	var before := int(app.frame.stars.text)
 	app.life.open_shop()
 	await process_frame

@@ -40,7 +40,7 @@ const FIELD := [
 	{"id":"square_cape", "at":Vector2(-6.0, -6.0)},
 	{"id":"square_backyard", "at":Vector2(-61.5, 9.0)},
 	# 풍차 들판: past the bushes by 모카's terrace (the demo opens it while a craft runs); by the windmill.
-	{"id":"fields_cafe", "at":Vector2(-53.0, -27.0)},
+	{"id":"fields_cafe", "at":Vector2(-51.0, -29.5)},
 	{"id":"fields_windmill", "at":Vector2(-11.0, -42.5)},
 	# 정원 언덕: among the reeds on the observatory pond's far bank; beside the gazebo.
 	{"id":"garden_pond", "at":Vector2(50.0, -52.5)},
