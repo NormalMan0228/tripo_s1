@@ -19,7 +19,9 @@ const LoadPace = preload("res://scripts/load_pace.gd")
 ## radius, clear of roads, doors, signposts and the other map points by 3 m or more). door is the
 ## standing point before the door of the model at this yaw and scale (teal_cottage.glb's door step
 ## is at local (-3.15, 3.96)); sign is the lot sign's spot in plot-local metres (x right, z front):
-## by the side path's end, west of the tree at (-20, 15.2) so its crown never hides the board.
+## at the front, west of the tree at (-20, 15.2) so its crown never hides the board. No road leads
+## here: a path between the town hall and the lamp at (-24, 29) would cut the fountain off from its
+## road (tests/field_objects_check.gd); the lot is seen across the grass from the green.
 const PLOTS := {
 	"danbi_plot":{"center":Vector2(-23.5,9.0),"radius":5.0,"yaw":12.0,"room":"danbi_house","title":"단비네 집",
 		"model":"res://maps/archipelago/assets/buildings/teal_cottage.glb","scale":0.9,"tint":Color(1.0,0.84,0.72),
