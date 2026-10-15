@@ -15,6 +15,8 @@ const Interiors = preload("res://scripts/interiors.gd")
 const GameSettings = preload("res://scripts/game_settings.gd")
 
 ## The letter's words (Korean source; i18n strings.json has en/zh).
+## The greeting opens the letter, above its title (item 54).
+const GREETING := "안녕!"
 const TITLE := "이사 온 걸 환영해!"
 const BODY := ["여기는 네 집이야.", "자유롭게 돌아다니며 네가 좋아하는 공간으로 꾸며 봐.",
 	"실력 있는 제작자가 온다고 해서 다들 기대하고 있어.",
@@ -58,6 +60,21 @@ func _exit_tree() -> void:
 
 func unread() -> bool:
 	return str(state.get("step", "")) == "letter"
+
+## Walking out before the welcome letter is read (item 54): the door stays shut, the letter calls
+## (its star hops, a soft chime) and one short line says where to look, at most every few seconds.
+## Only while the server says the letter is unread: a failed /v1/story never keeps anyone in.
+var nudged_ms := -100000
+func hold_at_door() -> void:
+	if Time.get_ticks_msec()-nudged_ms < 2500: return
+	nudged_ms = Time.get_ticks_msec()
+	room.message(tr("먼저 책상 위 편지를 읽어 볼까요?"))
+	RpgUi.sfx("toast", -8.0)
+	if is_instance_valid(marker):
+		var hop := marker.create_tween()
+		hop.tween_property(marker, "scale", Vector3.ONE*1.6, 0.14).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		hop.tween_property(marker, "scale", Vector3.ONE, 0.3).set_trans(Tween.TRANS_SINE)
+	if is_instance_valid(letter): Fx.burst(letter.get_parent(), letter.position + Vector3(0, 0.25, 0), "sparkle", 10, Color("ffd36a"), 0.4)
 
 ## The desk by the door on the ground floor (interiors.gd 10_red_house/0).
 func desk() -> Dictionary:
@@ -178,6 +195,8 @@ func open_letter() -> void:
 	paper.add_child(column)
 	var seal := RpgUi.heading(column, "✉", 30, Color("c0392b"))
 	seal.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var hello := RpgUi.heading(column, tr(GREETING), 24, RpgUi.PAPER_INK)
+	hello.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var head := RpgUi.heading(column, tr(TITLE), 30)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	RpgUi.divider(column)

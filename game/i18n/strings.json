@@ -1,5 +1,13 @@
 {
  "strings": {
+  "안녕!": {
+   "en": "Hi!",
+   "zh": "你好！"
+  },
+  "먼저 책상 위 편지를 읽어 볼까요?": {
+   "en": "How about reading the letter on the desk first?",
+   "zh": "先读一读书桌上的信吧？"
+  },
   "문이 잠겨 있어요.": {
    "en": "The door is locked.",
    "zh": "门锁着。"
