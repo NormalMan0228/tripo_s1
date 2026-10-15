@@ -13,7 +13,8 @@ extends SceneTree
 ## Music is muted on its bus for the take (it would sit under everything); every other bus plays
 ## at its default level. A monitor watches every AudioStreamPlayer(2D/3D) in the tree and logs each
 ## playback start: frame, bus, the take (resource path, or "synth:<cache>/<key>" for streams made
-## at runtime), pitch and level, plus the segment marks. Written as JSON to --events=<file>.
+## at runtime), pitch and level, plus the segment marks and the prompt chip's changes ("chip": it
+## ticks softly as it appears; UI events carry its state). Written as JSON to --events=<file>.
 ## "frame" counts process frames from the start; in the movie (--fixed-fps 30, 48 kHz) a sound
 ## logged at frame f starts about f*1600 - 1300 samples in (measured on the clicks).
 ## --dump=<dir> also saves the runtime-synthesized streams that played (older builds) as WAV.
@@ -41,6 +42,10 @@ var marks: Array = []
 var synth_names := {}
 var dump_dir := ""
 var events_path := ""
+## The prompt chip (main.hint, RpgUi.prompt) as it changes: it ticks softly (RpgUi.sfx "hover",
+## -14 dB) whenever it appears, so a quiet hover nobody scripted is attributed by this log.
+var chip_log: Array = []
+var chip_state := ""
 
 func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
@@ -60,7 +65,23 @@ func _on_node_added(node: Node) -> void:
 func _tick() -> void:
 	frame += 1
 	sim += 1.0/30.0
+	track_chip()
 	poll()
+
+func chip() -> Control:
+	if not is_instance_valid(app): return null
+	var hint = app.get("hint")
+	return hint if hint is Control and is_instance_valid(hint) else null
+
+func track_chip() -> void:
+	var hint := chip()
+	if hint == null: return
+	var shown := hint.is_visible_in_tree()
+	var text := str(hint.get_meta("prompt", "")) if shown else ""
+	var now := "%s|%s" % [shown, text]
+	if now == chip_state: return
+	chip_state = now
+	chip_log.append({"frame": frame, "t": snappedf(sim, 0.001), "visible": shown, "prompt": text})
 
 ## Logs every player that started since the last look (new stream, restarted, or newly playing).
 func poll(seg := "") -> void:
@@ -79,6 +100,9 @@ func poll(seg := "") -> void:
 		var entry := {"frame": frame, "t": snappedf(sim, 0.001), "take": _name(stream), "bus": str(p.bus),
 			"node": str(p.get_parent().name) + "/" + str(p.name) if p.get_parent() else str(p.name),
 			"pitch": snappedf(p.pitch_scale, 0.0001), "db": snappedf(p.volume_db, 0.01), "pos": snappedf(pos, 0.001)}
+		if str(p.bus) == "UI" and chip() != null:
+			track_chip()
+			entry["chip"] = chip_state
 		if not seg.is_empty(): entry["seg"] = seg
 		elif str(p.bus) == "UI":
 			# A UI sound nobody scripted: what the desktop pointer was over (it rests where it is).
@@ -283,7 +307,7 @@ func run() -> void:
 	# b. UI on real HUD buttons
 	var hud: Array = app.ui.find_children("*", "BaseButton", true, false).filter(func(b):
 		return b.is_visible_in_tree() and not b.disabled and b.mouse_entered.get_connections().size() > 0 and b.button_down.get_connections().size() == 1)
-	print("HUD buttons with hover+press hooks: %d" % hud.size())
+	print("HUD buttons with hover+press hooks: %d %s" % [hud.size(), hud.map(func(x): return x.tooltip_text.get_slice("  ", 0) if not x.tooltip_text.is_empty() else str(x.name))])
 	if not hud.is_empty():
 		mark("b_hover_start")
 		for i in 12:
@@ -355,5 +379,5 @@ func _write() -> void:
 	if file == null:
 		push_error("cannot write " + events_path)
 		return
-	file.store_string(JSON.stringify({"events": events, "marks": marks, "fps": 30}, " "))
+	file.store_string(JSON.stringify({"events": events, "marks": marks, "chip": chip_log, "fps": 30}, " "))
 	file.close()
