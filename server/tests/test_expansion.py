@@ -41,7 +41,7 @@ def test_expedition_choice_cannot_change_active_run_or_supply_reward(world):
 def test_region_resources_avoid_barriers_and_hazards(map_id):
     for seed in range(40):
         s=simulation.new_run(seed,0,60,map_id,'standard')
-        assert len(s['nodes'])==60
+        assert len(s['nodes'])==(36 if map_id=='tutorial' else 60)==catalog.MAPS[map_id]['nodes']
         assert simulation.clear_position(s,s['x'],s['z'])
         for node in s['nodes']:
             assert all(math.hypot(node['x']-o['x'],node['z']-o['z'])>=o['radius']+1.5 for o in s['obstacles']+s['hazards'])
@@ -62,10 +62,11 @@ def test_difficulty_changes_danger_and_server_reward():
     assert easy['hunger']>standard['hunger']>hard['hunger']
     assert len(easy['enemies'])<len(standard['enemies'])<len(hard['enemies'])
     assert easy['enemies'][0]['damage']<standard['enemies'][0]['damage']<hard['enemies'][0]['damage']
+    # Forest won (no boss here): 20 + 12 x 3 stages + play (20/4 + 100/10 = 15) = 71 before multipliers.
     for s in states: s.update(status='won',hp=100,harvested=20,kills=0)
-    assert [simulation.reward(s) for s in states]==[35,50,80]
+    assert [simulation.reward(s) for s in states]==[49,71,113]
     hard['map_id']='frost'
-    assert simulation.reward(hard)==104
+    assert simulation.reward(hard)==147
     hard['status']='lost'
     assert simulation.reward(hard)==0
 
@@ -101,7 +102,22 @@ def test_new_creatures_have_distinct_readable_attack_windows():
     ('quarry','relaxed',80),('quarry','standard',115),('quarry','veteran',184),
     ('frost','relaxed',91),('frost','standard',130),('frost','veteran',208),
 ])
+def test_exact_reward_rounding_of_runs_saved_before_stages(region,difficulty,expected):
+    from server.tests.legacy_saves import legacy_run
+    state=legacy_run(1,60,region,difficulty)
+    state.update(status='won',harvested=1000,hp=100)
+    assert simulation.reward(state)==expected
+
+
+# A boss clear with the play part at its cap (stages x 8 + 10): forest 90 + 45 boss = 135,
+# quarry 130 + 65 = 195, frost 170 + 85 = 255, times map x difficulty, rounded down.
+@pytest.mark.parametrize('region,difficulty,expected',[
+    ('forest','relaxed',94),('forest','standard',135),('forest','veteran',216),
+    ('quarry','relaxed',156),('quarry','standard',224),('quarry','veteran',358),
+    ('frost','relaxed',232),('frost','standard',331),('frost','veteran',530),
+    ('tutorial','veteran',20),('tutorial','standard',20),
+])
 def test_exact_reward_rounding(region,difficulty,expected):
     state=simulation.new_run(1,0,60,region,difficulty)
-    state.update(status='won',harvested=1000,hp=100)
+    state.update(status='won',harvested=1000,hp=100,boss_defeated=bool(state['boss']))
     assert simulation.reward(state)==expected

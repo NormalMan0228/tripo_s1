@@ -77,14 +77,23 @@ def test_survival_rejects_time_position_score_and_replay(world):
     assert state['elapsed']<=.3 and state['x']<=1.35
     assert c.post(route+'/input',headers=a,json={'sequence':1}).status_code==409
     assert c.post(route+'/claim',headers=a,json=mutation()).status_code==409
-    # A trusted fixture advances the run near its ending; no public API can set this.
+    # A trusted fixture advances the run to its boss night, the boss one blow from falling next to
+    # the player; no public API can set this. Only the player's swing ends the run.
+    from server import simulation, stages
     with app.state.db.transaction() as conn:
         s=json.loads(conn.execute('SELECT state FROM runs WHERE id=?',(rid,)).fetchone()[0])
-        s.update(elapsed=419.9,hunger=100,hp=100,fire_until=500,x=0,z=0)
+        s.update(elapsed=stages.final_night_at(s)+1,hunger=100,hp=100,fire_until=0,x=0,z=2.2,
+                 spawned_night=s['stage_count'],boss_spawned=True,nodes=[])
+        boss=simulation.boss_enemy(s)
+        boss.update(x=0.,z=4.,hp=5.,phase='recover',phase_until=10.**6)
+        s['enemies']=[boss]
         conn.execute('UPDATE runs SET state=? WHERE id=?',(json.dumps(s),rid))
     t[0]+=.2
     state=c.post(route+'/input',headers=a,json={'sequence':2}).json()
-    assert state['status']=='won'
+    assert state['status']=='active' and state['boss_night'] and state['boss']['hp']==5
+    t[0]+=.2
+    state=c.post(route+'/input',headers=a,json={'sequence':3,'action':'attack'}).json()
+    assert state['status']=='won' and state['boss'] is None and state['boss_defeated']
     claim=mutation(); r=c.post(route+'/claim',headers=a,json=claim)
     assert r.status_code==200
     assert c.post(route+'/claim',headers=a,json=claim).json()==r.json()
@@ -139,9 +148,11 @@ def test_limits_expiry_and_insufficient_funds(world):
 
 def test_full_seven_day_simulation():
     from server import simulation as sim
-    # Simulate the full 420s using only valid movement/harvest/eat/fire intents.
-    # The bot visits the guaranteed tree and berry bush, then returns to camp.
-    s=sim.new_run(42,0,60)
+    from server.tests.legacy_saves import legacy_run
+    # A run saved before stages still plays its seven days of 60 s: the full 420 s using only valid
+    # movement/harvest/eat/fire intents. The bot visits the guaranteed tree and berry bush, then
+    # returns to camp.
+    s=legacy_run(42)
     now=0.
     target=None
     for tick in range(4300):

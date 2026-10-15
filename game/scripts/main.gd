@@ -1215,7 +1215,7 @@ func build_play_hud(survival: bool) -> void:
 	task_head.add_theme_constant_override("separation",6)
 	task_card.add_child(task_head)
 	task_head.add_child(RpgUi.name_tip(RpgUi.icon("res://assets/ui/book.svg",22),tr("목표")))
-	RpgUi.label(task_head,tr("✦  일곱 밤의 목표").trim_prefix("✦  "),15,RpgUi.GOLD)
+	RpgUi.label(task_head,tr("목표"),15,RpgUi.GOLD)
 	var task_body := VBoxContainer.new()
 	task_body.add_theme_constant_override("separation",8)
 	task_card.add_child(task_body)
@@ -1248,7 +1248,7 @@ func build_play_hud(survival: bool) -> void:
 	RpgUi.pin(tracker,0.5,0.0)
 	day_track=RpgUi.numbers(RpgUi.label(tracker,"",18,RpgUi.INK),18)
 	day_track.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	RpgUi.name_tip(day_track,tr("일곱 밤 중 지나온 날"))
+	RpgUi.name_tip(day_track,tr("탐험 진행"))
 	if preload("res://scripts/build_mode.gd").developer():
 		var debug_box := panel(Vector2(20,520),252,"night")
 		developer_panel=debug_box.get_parent()
@@ -1887,6 +1887,11 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		return
 	close_village_modal()
 	cancel_preview()
+	# The first expedition is the tutorial until it is cleared once (/v1/me tutorial_done; a run under
+	# way resumes as it is, a party goes where its leader chose).
+	if party_run_id.is_empty() and not bool(me.get("tutorial_done",true)):
+		map_id="tutorial"
+		chapter_id=""
 	busy=true
 	# The expedition's props read on a worker thread while the server answers and the card comes up,
 	# for the map the run is on: a run under way (resumed) stays on the map it began on. A co-op run's
@@ -1930,7 +1935,14 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	region_titles.add_theme_constant_override("separation",-2)
 	region_head.add_child(region_titles)
 	RpgUi.label(region_titles,region_name(run.get("map_id","forest")),23,RpgUi.INK)
-	RpgUi.label(region_titles,tr("%s · 일곱 밤 생존") % difficulty_name(run.get("difficulty","standard")),12,RpgUi.GOLD)
+	# The run's terms: its stages (and the boss of the last night), the tutorial; seven nights before stages.
+	var terms := [difficulty_name(run.get("difficulty","standard"))]
+	if bool(run.get("tutorial",false)): terms.append(tr("튜토리얼"))
+	elif run.has("stage_count"):
+		terms.append(tr("스테이지 %d") % int(run.stage_count))
+		if bool(run.get("has_boss",false)): terms.append(tr("우두머리"))
+	else: terms.append(tr("일곱 밤 생존"))
+	RpgUi.label(region_titles," · ".join(terms),12,RpgUi.GOLD)
 	RpgUi.divider(left,Color(RpgUi.GOLD,.55))
 	metrics=text(left,"",13)
 	metrics.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
@@ -2236,7 +2248,7 @@ func update_run() -> void:
 		inventory_slots[item].button.disabled=amount<=0
 	pack.text=tr("탐험 소지품  %d / 80") % total
 	if is_instance_valid(objective):
-		if run.status=="won": objective.text=tr("일곱 밤을 견뎌냈어요!\n귀환하여 %d 별씨를 받으세요.") % run.reward
+		if run.status=="won": objective.text=tr("탐험 성공!\n귀환하여 %d 별씨를 받으세요.") % run.reward
 		elif run.status!="active": objective.text=tr("이번 탐험은 여기까지예요.\n귀환 후 다시 도전할 수 있어요.")
 		elif run.hunger<35: objective.text=tr("먼저 배를 채우세요\nQ로 열매나 수프를 먹으세요.")
 		elif run.night: objective.text=tr("불빛 안에서 밤을 버티세요\nF · 목재 2개로 불 30초 연장\n\n붉은 원 = 적의 공격 예고\nShift로 피하거나 Space로 공격")
@@ -2304,6 +2316,7 @@ func update_run() -> void:
 			var root := preload("res://scripts/shadow_beast.gd").new()
 			root.kind=enemy.get("kind","wolf")
 			root.variant=enemy.get("variant","")
+			root.from_enemy(enemy)
 			world.add_child(root)
 			root.position=Vector3(enemy.x,0,enemy.z)
 			enemy_nodes[enemy.id]=root
@@ -2473,7 +2486,7 @@ func show_results() -> void:
 	RpgUi.pin(card.get_parent(),0.5,0.0)
 	RpgUi.pop_in(card.get_parent(),0.32,0.9)
 	RpgUi.sfx("confirm" if won else "close",-6.0)
-	var band := RpgUi.ribbon(card,tr("일곱 밤을 견뎌냈어요") if won else tr("다시 피울 작은 불씨"),not won,24)
+	var band := RpgUi.ribbon(card,tr("탐험 성공") if won else tr("다시 피울 작은 불씨"),not won,24)
 	band.size_flags_horizontal=Control.SIZE_SHRINK_CENTER
 	var destination := "%s · %s" % [region_name(run.get("map_id","forest")),difficulty_name(run.get("difficulty","standard"))]
 	if preload("res://scripts/build_mode.gd").developer(): destination += tr(" · 보상 ×%.3f") % run.get("reward_multiplier",1.0)

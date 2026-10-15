@@ -19,7 +19,7 @@ from .client_policy import ClientPolicy, ClientGate, FILE_NAME as CLIENT_POLICY_
 from .database import Database
 from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction, PrefsUpdate
 from .provider import TripoProvider, ProviderError, validate_glb
-from . import simulation, catalog, homestead, campaign, object_paint, object_shape
+from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial
 from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
                        LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER, ADMIN_DAILY_SHARD_LIMIT)
 from .stored_assets import read_glb
@@ -461,6 +461,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 'studio_tripo_enabled': bool(settings.tripo_key and settings.paid_enabled),
                 'generation_cost':25,'profile':profile(conn,user['id']),'catalog':catalog.public_catalog(),'campaign':campaign.public(conn,user['id']),
                 'active_run':active['id'] if active else None,
+                # False until the expedition tutorial is cleared once: the game starts it for the first expedition.
+                'tutorial_done':tutorial.done(conn,user['id']),
                 'active_run_summary':active_summary,
                 'pending_reward':{'id':pending_reward['id'],'reward':pending_reward['reward']+campaign.pending_bonus(conn,user['id'],json.loads(pending_reward['state']))} if pending_reward else None,
                 'pending_job':pending_job['id'] if pending_job else None,
@@ -559,6 +561,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             if body.action: state['message']=simulation.action(state,body.action,body.target)
             award=simulation.reward(state)
             conn.execute('UPDATE runs SET state=?,status=?,reward=? WHERE id=?',(json.dumps(state),state['status'],award,run_id))
+            if state['status']=='won' and state.get('tutorial'): tutorial.mark(conn,user['id'],run_id,clock())
             return run_reply(conn,user['id'],{**dict(row),'reward':award},state)
 
     @app.post('/v1/runs/{run_id}/claim')
@@ -659,6 +662,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     from .multiplayer import Multiplayer
     multiplayer=Multiplayer(app,db,settings,clock,auth,mutate,money,profile,assets)
     app.state.multiplayer=multiplayer
+    # After the party tables: a new tutorial table records who went on expeditions before it.
+    tutorial.ensure(db,clock())
     from .friends import Friends
     app.state.friends=Friends(app,db,settings,clock,auth,mutate,multiplayer)
     app.state.object_paint=object_paint.ObjectPaint(app,db,clock,auth,mutate,own,assets)
