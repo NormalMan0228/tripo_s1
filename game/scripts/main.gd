@@ -2257,9 +2257,13 @@ func tick_run() -> void:
 			player.react("eat")
 		elif feedback.contains("먹었습니다"):
 			sound.effect("eat_soup" if feedback.contains("수프") else "eat")
+			preload("res://scripts/combat_fx.gd").heal(self)
 			player.react("eat")
 			HeroVoice.play(self,"eat")
-		elif feedback.contains("피웠습니다"): CombatAudio.play(self,"fuel",Vector3.ZERO)
+		elif feedback.contains("피웠습니다"):
+			CombatAudio.play(self,"fuel",Vector3.ZERO)
+			preload("res://scripts/combat_fx.gd").fuel(self)
+			preload("res://scripts/combat_fx.gd").eat(self)
 		elif feedback.contains("공격!") or feedback=="가까운 적이 없습니다.":
 			var weapon: String="spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else ""
 			var struck_enemy := {}
@@ -2446,6 +2450,7 @@ func update_run() -> void:
 		var voiced: bool=HeroVoice.play(self,"levelup" if won else "faint",0.0,true)
 		if won: effect_later("win",chime_length(str(HeroVoice.last_take.get("levelup","")),WIN_AFTER_MIN,WIN_AFTER_MAX) if voiced else 0.3)
 		elif run.status=="lost": sound.effect("lose")
+		preload("res://scripts/combat_fx.gd").ended(self,won)
 		if is_instance_valid(return_dialog): return_dialog.queue_free()
 		show_results()
 	flame.visible=run.fire_remaining>0

@@ -13,6 +13,7 @@ class FakeApp extends Node:
 	var player: CharacterBody3D
 	var screen := "expedition"
 	var ui: Control
+	var flame: Node3D
 
 var failures: Array[String] = []
 var app: FakeApp
@@ -82,7 +83,12 @@ func run_test() -> void:
 	CombatFx.hurt(app)
 	for kind in ["tree", "stone", "fiber", "berry", "other"]: CombatFx.harvest(app, kind, Vector3(-1, 0, 1))
 	CombatFx.crafted(app)
-	check(Fx.played-c0 >= 20, "combat helpers all draw (%d effects)" % (Fx.played-c0))
+	CombatFx.fuel(app)
+	CombatFx.heal(app)
+	CombatFx.eat(app)
+	CombatFx.ended(app, true)
+	CombatFx.ended(app, false)
+	check(Fx.played-c0 >= 34, "combat helpers all draw (%d effects)" % (Fx.played-c0))
 	for i in 30: await process_frame
 	if capture: await shoot()
 	print("VFX_CHECK %s failures=%d" % ["PASS" if failures.is_empty() else "FAIL", failures.size()])
@@ -118,13 +124,13 @@ func stage() -> Camera3D:
 		label(strips[i][0], tile.position+Vector3(0, 0.05, 1.9))
 	var floor := MeshInstance3D.new()
 	var big := PlaneMesh.new()
-	big.size = Vector2(16, 4.6)
+	big.size = Vector2(16, 7.4)
 	floor.mesh = big
 	var fm := StandardMaterial3D.new()
 	fm.albedo_color = Color("6e7f5a")
 	fm.roughness = 1.0
 	floor.material_override = fm
-	floor.position = Vector3(0, -0.01, 2.0)
+	floor.position = Vector3(0, -0.01, 3.4)
 	app.world.add_child(floor)
 	var cam := Camera3D.new()
 	cam.fov = 50
@@ -168,6 +174,21 @@ func combat_all() -> void:
 	CombatFx.crafted(app)
 	app.player.position = Vector3(-6.0, 0, 2.2)
 	CombatFx.hurt(app)
+	# Second row, nearer the camera: campfire fuel, a bandage, a meal, a won and a lost run.
+	if app.flame == null:
+		app.flame = Node3D.new()
+		app.world.add_child(app.flame)
+	app.flame.position = Vector3(-4.8, 0, 4.6)
+	CombatFx.fuel(app)
+	app.player.position = Vector3(-2.4, 0, 4.6)
+	CombatFx.heal(app)
+	app.player.position = Vector3(0.0, 0, 4.6)
+	CombatFx.eat(app)
+	app.player.position = Vector3(2.6, 0, 4.6)
+	CombatFx.ended(app, true)
+	app.player.position = Vector3(5.4, 0, 4.6)
+	CombatFx.ended(app, false)
+	app.player.position = Vector3(-6.0, 0, 2.2)
 
 func shoot() -> void:
 	# Let the checks' own puffs above finish first (smoke lives 2 s).
@@ -175,6 +196,8 @@ func shoot() -> void:
 	var cam := stage()
 	for item in [["휘두르기", -6.0], ["타격", -3.6], ["처치", -1.2], ["나무 채집", 1.2], ["돌 채집", 3.2], ["열매", 5.0], ["제작", 6.6]]:
 		label(item[0], Vector3(item[1], 0.05, 3.5))
+	for item in [["불 피우기", -4.8], ["회복", -2.4], ["먹기", 0.0], ["탐험 성공", 2.6], ["쓰러짐", 5.4]]:
+		label(item[0], Vector3(item[1], 0.05, 5.6))
 	await process_frame
 	var shots: Array[Image] = []
 	# 1. under-foot: close on the strips while the walkers run.
@@ -185,7 +208,7 @@ func shoot() -> void:
 	await RenderingServer.frame_post_draw
 	shots.append(root.get_texture().get_image())
 	# 2. combat: the blow's first instant (slash, flash, sparks) and a moment later (smoke, chips).
-	cam.look_at_from_position(Vector3(0, 4.4, 11.6), Vector3(0, 0.5, 2.0))
+	cam.look_at_from_position(Vector3(0, 5.2, 13.4), Vector3(0, 0.6, 3.4))
 	for f in 40: await process_frame
 	combat_all()
 	for f in 4: await process_frame
