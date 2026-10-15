@@ -42,7 +42,12 @@ RETURN_GIFT = {'title': '카페 머그잔', 'category': 'mug', 'parts': [
     ('handle', 'ellipsoid', [0.07, 0.12, 0.04], [0.13, 0.14, 0], '#c86f58'),
     ('coffee', 'ellipsoid', [0.17, 0.03, 0.17], [0, 0.245, 0], '#6b4226')]}
 
+DANBI_FLAG = 'danbi_moved_in'
+
 SCHEMA = '''
+CREATE TABLE IF NOT EXISTS story_flags (
+ user_id TEXT NOT NULL REFERENCES users(id), flag TEXT NOT NULL, created REAL NOT NULL,
+ PRIMARY KEY(user_id,flag));
 CREATE TABLE IF NOT EXISTS story_progress (
  user_id TEXT PRIMARY KEY REFERENCES users(id), chapter TEXT NOT NULL,
  step TEXT NOT NULL CHECK(step IN ('letter','cafe','craft','done')), run INTEGER NOT NULL DEFAULT 1,
@@ -65,6 +70,15 @@ class StoryGift(Mutation):
 
 def fail(code, status=409):
     raise HTTPException(status, code)
+
+
+def has_flag(conn, user_id, flag):
+    return conn.execute('SELECT 1 FROM story_flags WHERE user_id=? AND flag=?', (user_id, flag)).fetchone() is not None
+
+
+def move_in_danbi(conn, user_id, now):
+    """Server-owned story transition; there is deliberately no public flag setter."""
+    conn.execute('INSERT OR IGNORE INTO story_flags VALUES (?,?,?)', (user_id, DANBI_FLAG, now))
 
 
 def begin(conn, user_id, now):
@@ -95,7 +109,7 @@ def public(conn, user_id):
     if not row:
         return None
     out = {'chapter': row['chapter'], 'step': row['step'], 'run': row['run'], 'greeted': json.loads(row['greeted']),
-           'terrace': TERRACE, 'sender': SENDER}
+           'terrace': TERRACE, 'sender': SENDER, 'flags': {DANBI_FLAG: has_flag(conn, user_id, DANBI_FLAG)}}
     if row['step'] == 'craft':
         # Pieces made since 모카 asked, newest first (in the bag or set down; listed and given ones are not).
         out['made'] = [{'id': r['id'], 'name': r['name'], 'version': r['version'], 'state': r['state']} for r in conn.execute(
@@ -116,6 +130,7 @@ def reset(conn, user_id, now):
     chapter). Nothing is deleted but the terrace's placement: the piece on the café terrace goes
     back to the player's bag; letters, return gifts and every other piece stay. The caller has the
     tables (npc_homes.SCHEMA, SCHEMA) and the transaction."""
+    conn.execute('DELETE FROM story_flags WHERE user_id=? AND flag=?', (user_id, DANBI_FLAG))
     returned = []
     for item in conn.execute('SELECT object_id FROM npc_items WHERE host_id=? AND home_id=?', (user_id, TERRACE)).fetchall():
         conn.execute("UPDATE objects SET state='inventory',x=NULL,z=NULL,version=version+1 WHERE id=? AND owner_id=? AND state='gifted'",
@@ -145,6 +160,10 @@ class Story:
         self.db, self.settings, self.clock = db, settings, clock
         with db.read() as conn:
             conn.executescript(SCHEMA)
+        # Existing completed chapters already meet the same server-owned transition.
+        with db.transaction() as conn:
+            conn.execute("INSERT OR IGNORE INTO story_flags SELECT user_id,?,COALESCE(completed,updated) "
+                         "FROM story_progress WHERE chapter=? AND step='done'", (DANBI_FLAG, CHAPTER))
 
         def progress(conn, user_id):
             row = conn.execute('SELECT * FROM story_progress WHERE user_id=?', (user_id,)).fetchone()
@@ -231,6 +250,7 @@ class Story:
                              (letter_id, user['id'], SENDER, 1 - row['run'], present, now))
                 conn.execute("UPDATE story_progress SET step='done',requested_at=COALESCE(requested_at,?),gift_object_id=?,sittable=?,"
                              'letter_id=?,completed=?,updated=? WHERE user_id=?', (now, obj['id'], int(seat), letter_id, now, now, user['id']))
+                move_in_danbi(conn, user['id'], now)
                 home = conn.execute('SELECT version FROM npc_homes WHERE host_id=? AND home_id=?', (user['id'], TERRACE)).fetchone()
                 placed = [item for item in npc_homes.placed_items(conn, user['id'], TERRACE) if item['id'] == obj['id']]
                 return {'story': public(conn, user['id']), 'object_id': obj['id'], 'name': obj['name'], 'sittable': seat,

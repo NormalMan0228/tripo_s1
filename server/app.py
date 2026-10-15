@@ -347,7 +347,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             record_event(conn,'admin_grant',user['id'],{'shards':body.shards,'coins':body.coins,'request_id':str(body.request_id)},clock())
             if body.coins:
                 state=life_state(conn,user['id'])
-                state['coins']=state.get('coins',0)+body.coins
+                economy.change_coins(conn,user['id'],state,body.coins,'admin_grant',str(body.request_id),clock())
                 state['version']=state.get('version',0)+1
                 conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
                              (user['id'],json.dumps(state)))
@@ -358,18 +358,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     @app.post('/v1/homestead')
     def edit_life(body:LifeAction,request:Request):
         def edit(conn,user):
+            if body.action in ('buy','sell'):
+                return app.state.shops.trade(conn,user,'farm_stall',body.action,body)
+            if body.action=='order':
+                return app.state.shops.order(conn,user,body)
             state=life_state(conn,user['id'])
             try: result=homestead.act(state,body,clock())
             except homestead.Rejected as error: fail(str(error))
-            # Selling also pays starseeds (a daily allowance), through the ledger like every star.
-            if body.action=='sell':
-                stars=homestead.sell_stars(state,homestead.PRICES[body.item]*body.quantity,clock(),
-                                           settings.sell_stars_daily,settings.sell_coins_per_star)
-                if stars:
-                    money(conn,user['id'],stars,'sell_reward',str(body.request_id))
-                    result['message']=result['message'].replace('개를 받았어요.',f'개와 별씨 {stars}개를 받았어요.')
-                result['stars']=stars
-                result['shards']=conn.execute('SELECT shards FROM users WHERE id=?',(user['id'],)).fetchone()[0]
             result['sell_stars']=homestead.star_status(state,clock(),settings.sell_stars_daily,settings.sell_coins_per_star)
             conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
                          (user['id'],json.dumps(state)))
@@ -704,6 +699,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.npc_homes=NpcHomes(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
     from .story import Story
     app.state.story=Story(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
+    from .shops import Shops
+    app.state.shops=Shops(app,db,settings,clock,auth,mutate,money,assets)
     from .quests import Quests
     app.state.quests=Quests(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
     from .treasure import Treasure
