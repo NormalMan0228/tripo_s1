@@ -22,6 +22,7 @@ static func refusal(code: String, cap := 0) -> String:
 		"image_too_small": return _t("그림이 너무 작아요. 더 큰 그림을 골라 주세요.")
 		"image_unreadable", "invalid_image": return _t("그림을 읽지 못했어요. PNG나 JPG 그림을 골라 주세요.")
 		"invalid_craft_request": return _t("만들 물건을 2~1500자로 적어 주세요.")
+		"unknown_craft_kind": return _t("지금 고를 수 없는 기능이에요. 창을 다시 열어 주세요.")
 		"craft_over_trial_limit":
 			if cap >= 20: return _t("이 조합은 1회 제작 한도(%d크레딧)를 넘어요. 옵션을 줄이거나 운영자에게 한도를 물어보세요.") % cap
 			return _t("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요.")

@@ -82,12 +82,23 @@ def classify(prompt='', plan=None):
     return None
 
 
-def designer_hint(prompt, motion):
-    """The sentence the LLM designer gets for a known type: its category and part roles."""
-    arch = classify(prompt)
+def kind_of(prompt='', plan=None, archetype=''):
+    """The craft's library type: the one the player picked in the craft window (archetype, a
+    server/craft_kinds.py id), else classify()'s guess from the words."""
+    return BY_ID[archetype] if archetype in BY_ID else classify(prompt, plan)
+
+
+def designer_hint(prompt, motion, archetype=''):
+    """The sentence the LLM designer gets for a known type: its category and part roles (and, for a
+    type the player picked, its size rule)."""
+    arch = kind_of(prompt, None, archetype)
     if not arch:
         return ''
     head = '\nOBJECT TYPE (from the game\'s library): %s. Set plan.category to "%s".' % (arch['names']['en'], arch['id'])
+    if archetype:
+        from .craft_kinds import size_rule
+        head += ' The player picked this type: build it as a %s even if the words say more. Size rule: %s.' % (
+            arch['names']['en'].lower(), size_rule(archetype))
     if motion == 'static' or len(arch['roles']) < 2:
         return head
     roles = '; '.join('%s%s = %s' % (r['id'], ' (optional)' if r.get('optional') else '', r['hint']) for r in arch['roles'])
@@ -154,10 +165,10 @@ def least_meshes(arch, motion):
     return 1 if moving and all(roles.get(m, {}).get('primitive') for m in moving) else 2
 
 
-def craft_kind(prompt):
+def craft_kind(prompt, archetype=''):
     """What the craft window needs before a request: the type, whether it is always built moving,
     and the Tripo meshes a moving craft of it needs."""
-    arch = classify(prompt)
+    arch = kind_of(prompt, None, archetype)
     if not arch:
         return {'archetype': None, 'names': {}, 'always_moving': False, 'moving_meshes': 2, 'rest': ''}
     return {'archetype': arch['id'], 'names': arch['names'], 'always_moving': bool(arch.get('always_moving')),
@@ -231,15 +242,31 @@ def assign(arch_id, plan, program, style=''):
     return {'spec': spec, 'compiled': compiled, 'roles': roles}
 
 
-def fixture_design(prompt):
-    """The offline designer's plan for a library type that has one (development and tests)."""
-    arch = classify(prompt)
-    if not arch or 'fixture' not in arch:
+def role_fixture(arch):
+    """A plain offline plan made from a type's roles, for a picked type without its own fixture:
+    the root role as a box on the floor, each other required role a smaller box on top of it."""
+    roles = [r for r in arch['roles'] if not r.get('optional') and r['id'] != 'whole']
+    root = next((r for r in roles if r.get('root')), None)
+    if root is None:
+        return {'title': arch['names']['ko'], 'parts': [{'id': 'whole', 'shape': 'box', 'size': [.8, .8, .8], 'position': [0, .4, 0], 'color': '#c79a6b'}]}
+    parts = [{'id': root['id'], 'shape': 'box', 'size': [.8, .6, .8], 'position': [0, .3, 0], 'color': '#a87c56'}]
+    for i, r in enumerate(x for x in roles if x is not root):
+        parts.append({'id': r['id'], 'parent': root['id'], 'shape': 'box', 'size': [.6, .2, .6], 'position': [0, .4 + .22 * i, 0],
+                      'color': '#e9d29b'})
+    return {'title': arch['names']['ko'], 'parts': parts}
+
+
+def fixture_design(prompt, archetype=''):
+    """The offline designer's plan for a library type that has one (development and tests). A type
+    the player picked always gets one: its own fixture, or one made from its roles (role_fixture)."""
+    arch = kind_of(prompt, None, archetype)
+    if not arch or ('fixture' not in arch and not archetype):
         return None
+    fixture = arch['fixture'] if 'fixture' in arch else role_fixture(arch)
     parts = [{'id': p['id'], 'parent': p.get('parent', ''), 'prompt': p.get('prompt') or 'A standalone ' + p['id'].replace('_', ' '),
               'shape': p['shape'], 'size': p['size'], 'position': p['position'], 'rotation': p.get('rotation', [0, 0, 0]),
-              'pivot': p.get('pivot', [0, 0, 0]), 'color': p['color']} for p in arch['fixture']['parts']]
-    plan = validate_plan({'title': arch['fixture']['title'] + ' · 오프라인 시연', 'category': arch['id'], 'parts': parts})
+              'pivot': p.get('pivot', [0, 0, 0]), 'color': p['color']} for p in fixture['parts']]
+    plan = validate_plan({'title': fixture['title'] + ' · 오프라인 시연', 'category': arch['id'], 'parts': parts})
     return plan, {'version': 1, 'state': {}, 'functions': {}, 'events': {}}
 
 

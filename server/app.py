@@ -278,6 +278,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                     code=str((error.get('ctx') or {}).get('error') or '')
                     if error.get('type')=='string_too_long':code='image_too_large'
                     return JSONResponse({'detail':code if code in IMAGE_CODES else 'invalid_image'},422)
+                # A kind this server does not offer (server/craft_kinds.py): the window reloads its list.
+                if tuple(error.get('loc',()))[-1:]==('archetype',):return JSONResponse({'detail':'unknown_craft_kind'},422)
             return JSONResponse({'detail':'invalid_craft_request'},422)
         return JSONResponse({'detail':'invalid_request'},422)
 

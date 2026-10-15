@@ -16,6 +16,7 @@ const I18n = preload("res://scripts/i18n.gd")
 const CraftTracker = preload("res://scripts/craft_tracker.gd")
 const CraftWords = preload("res://scripts/craft_words.gd")
 const CraftSizeBox = preload("res://scripts/craft_size_box.gd")
+const CraftKindsRow = preload("res://scripts/craft_kinds_row.gd")
 ## The chosen look and size follow the account (cloud_prefs.gd syncs this section).
 const SETTINGS_SECTION := "craft"
 
@@ -83,6 +84,8 @@ var style_buttons := {}
 var size_buttons := {}
 ## "직접 정하기": the box the player drags (craft_size_box.gd), sent as dims when the server takes them.
 var size_box: CraftSizeBox
+## The "기능" row: 자동 or a kind the server lets the player pick (craft_kinds_row.gd).
+var kinds_row: CraftKindsRow
 var held_note: Label
 ## What the server's object library makes of the words (POST /v1/studio/kind): a type always built
 ## moving (a clock: its hands are free) and the Tripo meshes a moving craft of it needs.
@@ -171,6 +174,7 @@ func apply_info(studio: Dictionary) -> void:
 			designer.select(1 if llm else 0)
 			geometry.select(1 if tripo else 0)
 	_fill_styles()
+	kinds_row.setup(studio.get("kinds", []) if studio.get("kinds", []) is Array else [])
 	_update_options()
 	# Crafts the server could not confirm wait for an operator; the form says so instead of spinning.
 	var held := 0
@@ -237,6 +241,9 @@ func _build_form() -> void:
 	form.add_child(size_box)
 	size_box.dims_changed.connect(_save_dims)
 	for control in [style_title, style_grid, size_title, size_row, size_box]: control.visible = false
+	kinds_row = CraftKindsRow.new()
+	form.add_child(kinds_row)
+	kinds_row.picked.connect(func(_id: String) -> void: _update_options())
 	var choices := GridContainer.new()
 	choices.columns = 2
 	# One column in a room's narrow drawer.
@@ -463,7 +470,8 @@ func _update_options() -> void:
 		motion.select(0)
 		forced_motion = false
 	# Moving furniture needs two Tripo meshes, or one when the game makes every moving part (a clock).
-	var moving_meshes := int(kind_info.get("moving_meshes", 2))
+	var kind := _kind()
+	var moving_meshes := int(kind.get("moving_meshes", 2))
 	motion.set_item_disabled(1, not _fits(10 * moving_meshes) or simple or animating)
 	if (not _fits(10 * moving_meshes) or simple) and motion.selected == 1: motion.select(0)
 	# A photo is read by the LLM designer (a moving character is made from words only).
@@ -480,8 +488,10 @@ func _update_options() -> void:
 	var photo := not image_data.is_empty()
 	var unit := (10 + (10 if photo else 0) + (10 if textured else 0)) if mesh_model.selected == 0 else (110 if textured else 100)
 	if photo and refine.button_pressed: unit += 5
-	# A clock is always made with its hands (free): the moving option is chosen for the player.
-	var forced := bool(kind_info.get("always_moving", false)) and not simple and not animating and not motion.is_item_disabled(1) and (not tripo or _fits(unit * moving_meshes))
+	# A clock is always made with its hands (free): the moving option is chosen for the player. So is a
+	# picked kind that only works with a separate moving part (a chest's lid: needs_moving).
+	var clock := bool(kind.get("always_moving", false))
+	var forced := (clock or bool(kind.get("needs_moving", false))) and not simple and not animating and not motion.is_item_disabled(1) and (not tripo or _fits(unit * moving_meshes))
 	motion.set_item_disabled(0, forced)
 	if forced and motion.selected != 1:
 		motion.select(1)
@@ -506,8 +516,10 @@ func _update_options() -> void:
 	if animating:
 		concept_note.visible = true
 		concept_note.text = tr("사람 모양 캐릭터만 만들 수 있어요(예: 로봇 캐릭터, 기사). 뼈대와 동작에 %d크레딧이 더 들어요.") % rig_credits
+	elif forced and clock:
+		concept_note.text = tr("%s는 바늘이 실제 시각에 맞춰 움직이도록 만들어요. 바늘은 공방이 무료로 달아 드려요.") % (CraftKindsRow.text_of(kind, "names") if not (kind.get("names", {}) as Dictionary).is_empty() else tr("시계"))
 	elif forced:
-		concept_note.text = tr("%s는 바늘이 실제 시각에 맞춰 움직이도록 만들어요. 바늘은 공방이 무료로 달아 드려요.") % tr(str(kind_info.get("names", {}).get("ko", "시계")))
+		concept_note.text = tr("%s의 기능은 따로 움직이는 부품이 있어야 해서 움직이는 가구로 만들어요.") % CraftKindsRow.text_of(kind, "names")
 	elif concept:
 		concept_note.text = tr("사진이 없으면 AI가 먼저 그림을 그려 보여 드려요. 마음에 들면 그 그림으로 3D를 만들어요. (그림 1장 5크레딧)") if not tripo or _fits(with_concept) else tr("이번에는 그림 단계 없이 글로 만들어요. (1회 한도)")
 	elif picture_first.visible:
@@ -525,7 +537,14 @@ func _body() -> Dictionary:
 	if size_id == "custom" and info.has("dims") and size_box.has_box(): body["dims"] = size_box.value()
 	# Only servers that rig know the field (older ones refuse unknown fields).
 	if animate_box.visible and animate_box.button_pressed and not _rigging().is_empty(): body["animate"] = true
+	# The picked kind; only servers that list kinds know the field.
+	if kinds_row.offered() and not kinds_row.chosen.is_empty() and not body.has("animate"): body["archetype"] = kinds_row.chosen
 	return body
+
+## The kind the form plans for: the one the player picked, else the server's guess from the words.
+func _kind() -> Dictionary:
+	var picked := kinds_row.kind_info() if kinds_row != null else {}
+	return picked if not picked.is_empty() else kind_info
 
 ## The server's rigging offer (/v1/studio "rigging"), {} when it has none.
 func _rigging() -> Dictionary:
@@ -579,8 +598,14 @@ func request() -> void:
 	if not reply.ok:
 		RpgUi.sfx("deny", -6.0)
 		_say(_explain(reply.error))
+		# The server no longer offers that kind (an update): back to 자동 and read its list again.
+		if str(reply.error) == "unknown_craft_kind":
+			kinds_row.reset()
+			tracker.fetch_info()
 		return
 	RpgUi.sfx("craft_submit", -6.0)
+	# Each craft starts on 자동 again.
+	kinds_row.reset()
 	job_id = str(reply.data.id)
 	job_started.emit(job_id)
 	_say(tr("설계를 준비하고 있어요. 다른 가구를 꾸미며 기다릴 수 있어요."))
@@ -890,6 +915,12 @@ func _show_quote(value: Dictionary) -> void:
 		var chosen := _entry("sizes", str(quote.get("size", "auto")))
 		var box := _dims_text(quote.get("dims", []))
 		_label(status, tr("스타일 %s · 크기 %s") % [_name(look), box if not box.is_empty() else _size_text(chosen) if not chosen.is_empty() else tr("자동")], 13, true)
+	# The kind it is built as (picked, or found from the words) and its size rule.
+	var kind := kinds_row.entry(str(quote.get("archetype", "")))
+	if not kind.is_empty():
+		var picked: bool = bool(quote.get("archetype_picked", false))
+		_label(status, tr("기능: %s · %s") % [CraftKindsRow.text_of(kind, "names"), CraftKindsRow.text_of(kind, "does")] + ("" if picked else tr(" (자동)")), 14, false, _accent())
+		_label(status, CraftKindsRow.text_of(kind, "hint"), 13, true)
 	# Sides where the object reaches the picture's edge (server cut_edges): it would be built cut (task 73).
 	var cut := PackedStringArray()
 	if not concept.is_empty():
