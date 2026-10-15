@@ -1516,6 +1516,8 @@ func show_story() -> void:
 	story_home=null
 	# A resident's request to come to this room (quests.gd: 하늘's observatory at night).
 	preload("res://scripts/quests.gd").entered_room(self,room)
+	# The treasure chest in the owner's own home (treasure.gd).
+	preload("res://scripts/treasure.gd").enter_room(self)
 	if room!="home" or public_room or not visit_host.is_empty() or visiting or api.token.is_empty(): return
 	story_home=StoryHome.new()
 	add_child(story_home)
@@ -1771,6 +1773,7 @@ func nearest_decor() -> Dictionary:
 func use_decor(record: Dictionary) -> void:
 	last_used=record
 	if is_instance_valid(story_home) and story_home.use(record): return
+	if preload("res://scripts/treasure.gd").use_home(self,record): return
 	if record.kind=="gift":
 		use_gift(record)
 		return
@@ -1864,6 +1867,7 @@ func update_hint() -> void:
 		set_chip("E",tr("쉿, 자고 있어요") if npcs[who].state.get("asleep",false) else tr("말 걸기"))
 	elif record.has("link"): set_chip("E",(tr("▲ 계단 오르기") if up else tr("▼ 계단 내려가기")))
 	elif is_instance_valid(story_home) and not story_home.chip(record).is_empty(): set_chip("E",story_home.chip(record))
+	elif not preload("res://scripts/treasure.gd").home_chip(self,record).is_empty(): set_chip("E",preload("res://scripts/treasure.gd").home_chip(self,record))
 	else: set_chip("E",tr(str(Interiors.ACTION_HINTS.get(str(Interiors.ACTIONS.get(str(record.kind),"look")),"살펴보기"))))
 
 ## The controls line; the hotbar's keys (I 가방, C 제작) are in it as in the village's slots.

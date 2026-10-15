@@ -10223,6 +10223,38 @@
   "🔒 %s · 아무도 없어요": {
    "en": "🔒 %s · Nobody home",
    "zh": "🔒 %s · 没人在家"
+  },
+  "보물상자 열기": {
+   "en": "Open the treasure chest",
+   "zh": "打开宝箱"
+  },
+  "보물상자 · 별씨 +%d": {
+   "en": "Treasure chest · Starseeds +%d",
+   "zh": "宝箱 · 星种 +%d"
+  },
+  "보물상자를 열었어요": {
+   "en": "You opened the treasure chest",
+   "zh": "打开了宝箱"
+  },
+  "보물상자를 모두 찾았어요! %d/%d": {
+   "en": "You found every treasure chest! %d/%d",
+   "zh": "找到了所有宝箱！%d/%d"
+  },
+  "이미 열어 본 보물상자예요": {
+   "en": "You already opened this treasure chest",
+   "zh": "这个宝箱已经打开过了"
+  },
+  "친구 마을의 보물상자는 열 수 없어요": {
+   "en": "Treasure chests in a friend's village can't be opened",
+   "zh": "不能打开朋友村庄里的宝箱"
+  },
+  "잠시 뒤에 다시 열어 보세요": {
+   "en": "Try opening it again in a moment",
+   "zh": "请稍后再打开"
+  },
+  "보물상자가 열리지 않았어요. 잠시 뒤 다시 해 보세요.": {
+   "en": "The treasure chest didn't open. Please try again in a moment.",
+   "zh": "宝箱没有打开。请稍后再试。"
   }
  },
  "templates": []
