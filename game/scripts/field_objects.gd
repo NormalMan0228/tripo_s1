@@ -288,6 +288,8 @@ func _physics_process(delta: float) -> void:
 	if not seat.is_empty(): update_seat(delta)
 
 func walker_moving() -> bool:
+	# Letters typed into the chat press W/A/S/D too: they never walk off a seat or a view.
+	if app and app.has_method("text_input_active") and app.text_input_active(): return false
 	return Input.get_vector("move_left","move_right","move_forward","move_back").length() > 0.3
 
 func walker_xz() -> Vector2:

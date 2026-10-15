@@ -5,6 +5,7 @@ extends SceneTree
 ## still hide the HUD. Builds the pieces on their own, then the real village and
 ## field HUDs against recorded server replies (tests/ui_stub_api.gd). Headless:
 ##   godot --headless --path game --script res://tests/hud_fold_check.gd -- --qa
+const SocialHud = preload("res://scripts/social_hud.gd")
 const Main = preload("res://scripts/main.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const Minimap = preload("res://scripts/minimap.gd")
@@ -236,18 +237,20 @@ func village() -> void:
 	var card: Control = app.objective_card
 	var clip: Control = app.objective.get_parent().get_parent()
 	var bar: Control = app.expedition_button.get_parent()
-	var chip: Control = ui.get_node_or_null("SocialChip")
+	var hub: Node = SocialHud.of(stub)
+	var chat: Control = hub.chat if hub else null
 	expect(card is PanelContainer and clip.name == "FoldClip", "objective card wraps its goals in a fold clip")
 	expect(handle != null and handle.visible and not bar.visible, "saved hotbar fold restored on entering the village")
 	expect(not clip.visible and app.minimap.disc.visible, "saved objective fold restored, minimap open")
-	expect(chip != null and chip.visible, "social chip under the frame")
+	expect(chat != null and chat.visible and ui.get_node_or_null("SocialChip") == null, "the chat box (bottom left) replaces the social chip")
 	var card_top: float = card.position.y
 	# U: the mixed state folds everything.
 	press(KEY_U, app)
 	await settle()
 	expect(VILLAGE_IDS.all(func(id): return RpgUi.folded(id)), "U folds every village panel")
 	expect(not app.minimap.disc.visible and card.position.y < card_top - 150 and card.get_global_rect().position.y > app.minimap.get_global_rect().position.y + 30, "tracker rises under the folded minimap chip")
-	expect(not app.frame.column.get_parent().visible and not chip.visible and not bar.visible, "frame, social chip and hotbar folded")
+	expect(not app.frame.column.get_parent().visible and not bar.visible, "frame and hotbar folded")
+	expect(RpgUi.folded("chat") and chat.visible and not chat.body.visible, "U folds the chat box to its header")
 	# Shortcuts still work while folded.
 	press(KEY_I, app)
 	await settle(0.3)
@@ -259,13 +262,14 @@ func village() -> void:
 	app.open_dialogue("나루", "naru", ["안녕하세요."], [["좋아요", Callable()]])
 	await settle(0.3)
 	expect(not handle.visible and not card.visible and not app.minimap.visible and not app.frame.panel.visible, "dialogue hides the folded HUD")
+	expect(not chat.visible, "dialogue hides the chat box")
 	app.close_village_modal()
 	await settle(0.3)
 	expect(handle.visible and not bar.visible and card.visible and app.minimap.visible and app.frame.panel.visible, "closing the dialogue restores the folded HUD")
 	press(KEY_U, app)
 	await settle()
 	expect(VILLAGE_IDS.all(func(id): return not RpgUi.folded(id) and saved(id) == false), "U again opens every panel")
-	expect(clip.visible and app.minimap.disc.visible and bar.visible and not handle.visible and chip.visible and app.frame.column.get_parent().visible, "village HUD open")
+	expect(clip.visible and app.minimap.disc.visible and bar.visible and not handle.visible and chat.visible and chat.body.visible and app.frame.column.get_parent().visible, "village HUD open (chat open too)")
 	expect(absf(card.position.y - card_top) < 1.0, "tracker back under the open map (y %d)" % card.position.y)
 	app.open_dialogue("나루", "naru", ["안녕하세요."], [["좋아요", Callable()]])
 	await settle(0.3)
@@ -306,9 +310,18 @@ func village() -> void:
 	var goal_card: Control = app.objective_card
 	var goal_clip: Control = app.objective.get_parent().get_parent()
 	var goal_height: float = goal_card.size.y
-	var toolbar: Control = null
-	for child in ui.get_children():
-		if child is PanelContainer and child.get_global_rect().position.y > 600 and child.get_global_rect().size.x > 600: toolbar = child
+	# The field's icon hotbar (fold id "toolbar"): 가방 I, 먹기 Q, 모닥불 F, 붕대 H and 귀환.
+	var toolbar: Control = app.toolbar_bar.get_meta("tray") if is_instance_valid(app.toolbar_bar) else null
+	var caps := []
+	var tips := []
+	for slot in app.toolbar_bar.get_children():
+		var cap := ""
+		for child in slot.get_children():
+			if child is Label and child.has_meta("key_action"): cap = (child as Label).text
+		caps.append(cap)
+		tips.append(slot.tooltip_text)
+	expect(caps == ["I", "Q", "F", "H", ""] and tips[0] == TranslationServer.translate("가방") + "  ·  I" and tips[4] == TranslationServer.translate("귀환"),
+		"field hotbar slots and keys %s %s" % [caps, tips])
 	var field_handle: Control = ui.get_node_or_null("FoldHandle")
 	expect(toolbar != null and toolbar.visible and field_handle != null and not field_handle.visible, "toolbar open, handle hidden")
 	RpgUi.toggle_fold("survival_objective")

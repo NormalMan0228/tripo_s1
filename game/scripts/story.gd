@@ -192,7 +192,7 @@ func objective(base: String) -> String:
 			# While it is made: what the wait can hold (starseeds from chests, the shop and requests).
 			if crafting(): return "▸ "+tr("제작 중 · 완성되면 모카에게 가져가기")+"\n"+tr("기다리는 동안 · 보물상자 · 사과 팔기 · 주민 부탁")+("\n"+requests if not requests.is_empty() else "")
 			if stalled(): return "▸ "+tr("제작이 멈췄어요 · C로 다시 만들기")+"\n"+tr("어떤 모습이든 네 상상대로")
-			return "▸ "+tr("C · 모카의 의자 만들기")+"\n"+tr("어떤 모습이든 네 상상대로")
+			return "▸ "+tr("%s · 모카의 의자 만들기") % preload("res://scripts/rpg_ui.gd").key_text("craft")+"\n"+tr("어떤 모습이든 네 상상대로")
 		"done":
 			if not bool(story.get("letter", {}).get("read", true)):
 				return "✦ "+tr("마을의 첫 선물 · 완료")+"\n▸ "+tr("우편함에서 모카의 편지 읽기")+"\n"+base

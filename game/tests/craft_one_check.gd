@@ -159,7 +159,7 @@ func run() -> void:
 	compare(village_form, signature(room.craft_window), "village and home windows")
 	var room_slot := slot_of(room)
 	expect(village_slot_size != Vector2.ZERO and room_slot != null and village_slot_size == room_slot.size, "the same 제작 slot (C) in both hotbars")
-	expect(room.dock_toggle.tooltip_text == tr("가방") + "  ·  I" and room.default_hint().contains(tr("I 가방   C 제작")), "the home's bag is I, as in the village, and the key line says so")
+	expect(room.dock_toggle.tooltip_text == tr("가방") + "  ·  I" and room.craft_slot.tooltip_text == tr("제작") + "  ·  C", "the home's bag is I and its 제작 is C, as in the village's hotbar")
 	await capture()
 	if shots.size() == 2:
 		var a: Image = shots[0]

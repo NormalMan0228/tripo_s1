@@ -21,7 +21,7 @@ func run() -> void:
 	check(absf(app.inspected.manifest.plan.parts[1].position[1]-original[1]-.1)<.001,"binding persisted and reloaded")
 	await app.save_binding(true)
 	check(app.inspected.manifest.plan.parts[1].position==original,"original binding restored")
-	var tabs=app.find_children("*","TabContainer",true,false);tabs[0].current_tab=2 # 부품 맞춤
+	app.select_bag_page("fit") # 부품 맞춤
 	if "--capture" in OS.get_cmdline_user_args():
 		await RenderingServer.frame_post_draw;root.get_texture().get_image().save_png("res://../artifacts/studio-binding.png")
 	print("STUDIO_BINDING ",JSON.stringify({"ok":failures.is_empty(),"failures":failures}))

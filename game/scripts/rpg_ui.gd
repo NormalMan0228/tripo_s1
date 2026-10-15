@@ -133,6 +133,27 @@ const FRAMES := {
 	"bar_fill_red":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
 	"bar_fill_green":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
 	"bar_fill_gold":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
+	# UI kit 2 (tools/build_ui_kit2.py, frames_v2.json): title plate, banners, folder tabs, big menu buttons.
+	"title_plate_crest":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"title_plate":[[72, 26, 72, 32],[10, 6, 10, 12],[68, 14, 68, 14]],
+	"banner_red":[[101, 36, 101, 42],[10, 6, 10, 12],[73, 22, 73, 30]],
+	"banner_teal":[[101, 36, 101, 42],[10, 6, 10, 12],[73, 22, 73, 30]],
+	"tab_on":[[38, 28, 38, 18],[6, 4, 6, 6],[22, 12, 22, 10]],
+	"tab_off":[[38, 28, 38, 18],[6, 4, 6, 6],[22, 12, 22, 10]],
+	"tab_disabled":[[38, 28, 38, 18],[6, 4, 6, 6],[22, 12, 22, 10]],
+	"btn_menu_gold_normal":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_gold_hover":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_gold_pressed":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_gold_disabled":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_night_normal":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_night_hover":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_night_pressed":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_night_disabled":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"divider_leaf":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"corner_tl":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"corner_tr":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"corner_bl":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"corner_br":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
 }
 ## Design canvas the HUD is laid out on; pin() keeps pieces on their edge when the
 ## interface scale (GameSettings ui_scale) shrinks the logical canvas.
@@ -241,6 +262,7 @@ static func theme() -> Theme:
 		t.set_type_variation(spec[0], "Button")
 		_buttons(t, spec[0], spec[1], spec[2], spec[3])
 	_extra_buttons(t, false)
+	_kit2_buttons(t, false)
 	t.set_type_variation("ChoiceButton", "Button")
 	t.set_stylebox("pressed", "ChoiceButton", frame("btn_gold_normal"))
 	t.set_stylebox("hover_pressed", "ChoiceButton", frame("btn_gold_hover"))
@@ -368,6 +390,9 @@ static func theme() -> Theme:
 	return t
 
 # ------------------------------------------------------------------ names on hover
+
+## The quick paint palette of the bag, the same in the village and in rooms (swatch()).
+const PALETTE := ["#f6eee0","#edbc63","#d98477","#70afa3","#7c9ec6"]
 
 ## Paint swatches' names (translated where shown).
 const COLOR_NAMES := {"#f6eee0":"상아색","#edbc63":"꿀색","#d98477":"산호색","#70afa3":"청록색","#7c9ec6":"하늘색",
@@ -788,6 +813,172 @@ static func _extra_buttons(t: Theme, night: bool) -> void:
 	for item in ["font_hover_color","font_hover_pressed_color"]: t.set_color(item, "GhostButton", HOVER if night else ACCENT)
 	t.set_color("font_disabled_color", "GhostButton", Color(ink, .45))
 
+## UI kit 2 variations: "MenuGoldButton" / "MenuNightButton" (the big painted plates of the title and
+## big actions) and "TabButton" (folder tabs: tab_off, tab_on when pressed, tab_disabled).
+static func _kit2_buttons(t: Theme, night: bool) -> void:
+	for pair in [["MenuGoldButton", "btn_menu_gold", PAPER_INK], ["MenuNightButton", "btn_menu_night", INK]]:
+		t.set_type_variation(pair[0], "Button")
+		_buttons(t, pair[0], pair[1], pair[2], pair[0] == "MenuNightButton")
+		t.set_font("font", pair[0], FONT_STRONG)
+		t.set_font_size("font_size", pair[0], 19)
+		t.set_color("font_hover_color", pair[0], HOVER if pair[0] == "MenuNightButton" else ACCENT)
+	t.set_type_variation("TabButton", "Button")
+	t.set_stylebox("normal", "TabButton", frame("tab_off"))
+	t.set_stylebox("hover", "TabButton", frame("tab_off", Color(1.08, 1.06, 1.0)))
+	t.set_stylebox("pressed", "TabButton", frame("tab_on"))
+	t.set_stylebox("hover_pressed", "TabButton", frame("tab_on"))
+	t.set_stylebox("disabled", "TabButton", frame("tab_disabled"))
+	t.set_stylebox("focus", "TabButton", StyleBoxEmpty.new())
+	for item in ["font_color", "font_hover_color", "font_focus_color"]: t.set_color(item, "TabButton", PAPER_MUTED)
+	for item in ["font_pressed_color", "font_hover_pressed_color"]: t.set_color(item, "TabButton", PAPER_INK)
+	t.set_color("font_disabled_color", "TabButton", Color(PAPER_MUTED, .5))
+	t.set_font("font", "TabButton", FONT_STRONG)
+	t.set_font_size("font_size", "TabButton", 15)
+
+## A row of folder tabs (one ButtonGroup). entries: [{id, label, icon?, badge?}]; on_select(id) is
+## called when a tab is picked (by click or select_tab). The strip keeps meta "selected" (the id now
+## shown); step_tab moves it (PageUp/PageDown).
+static func tab_strip(parent: Node, entries: Array, on_select: Callable, kind := "paper") -> HBoxContainer:
+	var strip := HBoxContainer.new()
+	strip.name = "Tabs"
+	strip.add_theme_constant_override("separation", 2)
+	parent.add_child(strip)
+	var group := ButtonGroup.new()
+	var buttons := {}
+	for entry in entries:
+		var b := Button.new()
+		var id := str(entry.get("id", ""))
+		b.name = "Tab_" + id
+		b.text = str(entry.get("label", ""))
+		b.toggle_mode = true
+		b.button_group = group
+		b.focus_mode = Control.FOCUS_NONE
+		b.theme_type_variation = "TabButton"
+		b.custom_minimum_size = Vector2(0, 32)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if kind == "night":
+			b.self_modulate = Color(0.86, 0.9, 0.95)
+			# The cool tint dims the muted ink too much on glass: unpicked tabs read in full ink.
+			for item in ["font_color", "font_hover_color", "font_focus_color"]: b.add_theme_color_override(item, PAPER_INK)
+		if not str(entry.get("icon", "")).is_empty():
+			b.icon = icon_texture(str(entry.icon))
+			b.expand_icon = true
+			b.add_theme_constant_override("icon_max_width", 20)
+		strip.add_child(b)
+		if int(entry.get("badge", 0)) > 0: badge(b, int(entry.badge))
+		buttons[id] = b
+		b.toggled.connect(func(on: bool) -> void:
+			if not on: return
+			strip.set_meta("selected", id)
+			sfx("click", -12.0)
+			if on_select.is_valid(): on_select.call(id))
+	strip.set_meta("buttons", buttons)
+	return strip
+
+## Picks tab `id` on a tab_strip (no-op for an unknown id).
+static func select_tab(strip: Control, id: String) -> void:
+	if not is_instance_valid(strip) or not strip.has_meta("buttons"): return
+	var buttons: Dictionary = strip.get_meta("buttons")
+	if buttons.has(id) and is_instance_valid(buttons[id]): (buttons[id] as Button).button_pressed = true
+
+## Moves the strip's selection by `step` visible, enabled tabs (wrapping), for PageUp/PageDown.
+static func step_tab(strip: Control, step: int) -> void:
+	if not is_instance_valid(strip) or not strip.has_meta("buttons"): return
+	var buttons: Dictionary = strip.get_meta("buttons")
+	var ids: Array = buttons.keys().filter(func(k) -> bool: return is_instance_valid(buttons[k]) and (buttons[k] as Button).visible and not (buttons[k] as Button).disabled)
+	if ids.is_empty(): return
+	var at := ids.find(str(strip.get_meta("selected", ids[0])))
+	select_tab(strip, str(ids[posmod(at + step, ids.size())]))
+
+## A small round presence dot: "online" (ONLINE), "away" (AWAY: a room, the workshop or an
+## expedition) or "offline" (OFFLINE).
+static func status_dot(parent: Node, state: String, size := 10.0) -> Panel:
+	var dot := Panel.new()
+	dot.name = "Status"
+	var disc := StyleBoxFlat.new()
+	disc.bg_color = {"online": ONLINE, "away": AWAY}.get(state, OFFLINE)
+	disc.set_corner_radius_all(int(size))
+	disc.corner_detail = 8
+	disc.border_color = Color(OUTLINE, 0.8)
+	disc.set_border_width_all(1)
+	disc.anti_aliasing = true
+	dot.add_theme_stylebox_override("panel", disc)
+	dot.custom_minimum_size = Vector2(size, size)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(dot)
+	return dot
+
+## A round portrait of a player's character (assets/ui/portrait_<character>.png, the explorer
+## when unknown) in the portrait ring, `size` px.
+static func avatar_thumb(parent: Node, character: String, size := 36.0) -> Control:
+	var holder := Control.new()
+	holder.name = "Avatar"
+	holder.custom_minimum_size = Vector2(size, size)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(holder)
+	var medal := PanelContainer.new()
+	var disc := StyleBoxFlat.new()
+	disc.bg_color = Color("f5e6c4")
+	disc.set_corner_radius_all(int(size))
+	disc.corner_detail = 12
+	medal.add_theme_stylebox_override("panel", disc)
+	medal.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+	medal.position = Vector2(size * 0.08, size * 0.08)
+	medal.size = Vector2(size * 0.84, size * 0.84)
+	medal.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(medal)
+	var path := "res://assets/ui/portrait_%s.png" % character
+	if not ResourceLoader.exists(path): path = "res://assets/ui/portrait_explorer.png"
+	medal.add_child(icon(path, size * 0.84))
+	var ring := TextureRect.new()
+	ring.texture = half("portrait_ring")
+	ring.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ring.stretch_mode = TextureRect.STRETCH_SCALE
+	ring.size = Vector2(size, size)
+	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(ring)
+	return holder
+
+## One person in a social list: portrait, status dot, name (T_BODY) and a caption (where they are,
+## when they were last seen), then icon buttons. p: {username, character, state ("online" | "away" |
+## "offline"), where}. actions: [{icon, tip, call, disabled?}] (an icon name from assets/ui/icons).
+static func person_row(parent: Node, p: Dictionary, actions: Array) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.name = "Person_" + str(p.get("username", ""))
+	row.add_theme_constant_override("separation", GAP_S)
+	parent.add_child(row)
+	avatar_thumb(row, str(p.get("character", "explorer")), 38.0)
+	status_dot(row, str(p.get("state", "offline")))
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 0)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(column)
+	var name_label := label(column, str(p.get("username", "")), T_BODY, PAPER_INK, false)
+	name_label.add_theme_font_override("font", FONT_STRONG)
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	if not str(p.get("where", "")).is_empty():
+		var where := label(column, str(p.where), T_SMALL, PAPER_MUTED, false)
+		where.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	for action in actions:
+		var b := Button.new()
+		b.name = "Act_" + str(action.get("icon", ""))
+		b.theme_type_variation = "GhostButton"
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(BTN_SM, BTN_SM)
+		b.icon = icon_texture(str(action.get("icon", "")))
+		b.expand_icon = true
+		b.add_theme_constant_override("icon_max_width", 24)
+		b.disabled = bool(action.get("disabled", false))
+		name_tip(b, str(action.get("tip", "")))
+		var call: Callable = action.get("call", Callable())
+		if call.is_valid(): b.pressed.connect(call)
+		b.pressed.connect(func(): sfx("click", -10.0))
+		hover_motion(b, 1.1)
+		row.add_child(b)
+	return row
+
 ## A count pill (ACCENT) on the top-right corner of a slot or button; hidden at 0. Calling it
 ## again on the same parent updates the same pill.
 static func badge(parent: Control, count: int) -> Label:
@@ -1014,24 +1205,56 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 		bar.add_child(b)
 	bar.set_meta("tray", tray)
 	bar.set_meta("tray_top", y + 6)
-	if not fold_id.is_empty(): fold_dock(ui, fold_id, [tray, bar], 640.0 + width * 0.5, y + 6 + (SLOT + 8) * 0.5)
+	if not fold_id.is_empty(): bar.set_meta("fold_key", fold_dock(ui, fold_id, [tray, bar], 640.0 + width * 0.5, y + 6 + (SLOT + 8) * 0.5))
+	# The strip spans the canvas: a new UI scale resizes it, and the dock is laid out again.
+	bar.resized.connect(func(): _lay_dock(bar))
+	_lay_dock(bar)
 	return bar
 
 ## Shows or hides one hotbar slot (a room a visitor only looks around has no bag); the tray fits
 ## the slots left.
 static func show_slot(slot: Control, shown: bool) -> void:
 	slot.visible = shown
-	var bar := slot.get_parent()
-	if bar == null or not bar.has_meta("tray"): return
+	var bar := slot.get_parent() as Control
+	if bar and bar.has_meta("tray"): _lay_dock(bar)
+
+## The bottom-left corner is the chat box's (chat_box.gd: x 14 to 342 on the design canvas, at the
+## foot of every place). Pieces centred at the screen's foot (the hotbar, the prompt chip) move right
+## just enough to clear it when the canvas narrows (UI scale above 100 %), never past the right edge.
+const CHAT_CORNER := 350.0
+
+## How far a piece `width` wide, centred at the foot of a canvas `canvas_width` wide, moves right to
+## clear the chat corner, keeping `right_room` free at the right edge.
+static func corner_shift(width: float, canvas_width: float, right_room := 14.0) -> float:
+	var left := (canvas_width - width) * 0.5
+	return clampf(CHAT_CORNER - left, 0.0, maxf(0.0, canvas_width - right_room - left - width))
+
+## Lays a hotbar out for its shown slots and the canvas: the tray fits the visible slots, centred at
+## the screen's foot (moved right only to clear the chat corner), and the fold key sits at its right
+## end. Only x is set here, so a folded dock stays folded.
+static func _lay_dock(bar: Control) -> void:
+	if not is_instance_valid(bar) or not bar.has_meta("tray") or bar.get_meta("laying", false): return
 	var tray: Control = bar.get_meta("tray")
-	if not is_instance_valid(tray): return
+	var host := bar.get_parent() as Control
+	if not is_instance_valid(tray) or host == null: return
+	bar.set_meta("laying", true)
 	var count := 0
 	for child in bar.get_children():
 		if child is Control and (child as Control).visible: count += 1
-	var fitted := maxf(count, 1) * 80.0 - 10.0 + 36.0
-	tray.custom_minimum_size = Vector2(fitted, tray.custom_minimum_size.y)
-	tray.size = tray.custom_minimum_size
-	pin(tray, 0.5, 1.0, Vector2(640.0 - fitted * 0.5, float(bar.get_meta("tray_top"))))
+	var width := maxf(count, 1) * (SLOT + GAP) - GAP + 36.0
+	var canvas_width := host.size.x if host.size.x > 0.0 else CANVAS.x
+	var key: Control = bar.get_meta("fold_key") if bar.has_meta("fold_key") and is_instance_valid(bar.get_meta("fold_key")) else null
+	var shift := corner_shift(width, canvas_width, 14.0 + (36.0 if key else 0.0))
+	tray.custom_minimum_size.x = width
+	tray.offset_left = -width * 0.5 + shift
+	tray.offset_right = width * 0.5 + shift
+	bar.offset_left = shift
+	bar.offset_right = shift
+	if key:
+		var side := maxf(key.custom_minimum_size.x, 28.0)
+		key.offset_left = width * 0.5 + shift + 8.0
+		key.offset_right = key.offset_left + side
+	bar.set_meta("laying", false)
 
 # ------------------------------------------------------------------ toasts
 
@@ -1039,6 +1262,9 @@ static func show_slot(slot: Control, shown: bool) -> void:
 const TOAST_SECONDS := 4.5
 const TOAST_ACTION_SECONDS := 12.0
 const TOAST_MAX := 3
+## The same text again keeps its toast up longer only within this many seconds of its first showing:
+## a line repeated by a refresh loop (every reply says it again) still leaves on time.
+const TOAST_REFRESH_WINDOW := 2.0
 ## Chimes asked for so far (tests: the field's toasts stay silent).
 static var toast_chimes := 0
 ## Each kind its own glyph: error and warn are painted badges ("!" in lacquer red, an amber
@@ -1047,6 +1273,9 @@ const TOAST_ICONS := {"info":"res://assets/starseed.svg", "success":"res://asset
 	"error":"res://assets/ui/icons/alert.png", "social":"res://assets/ui/people.svg"}
 ## How long an evicted toast (the oldest, when a 4th arrives) takes to fade, and a slot to close.
 const TOAST_EVICT_SECONDS := 0.15
+## The side columns a top toast keeps clear of on a narrow canvas (frame or status card on the left,
+## minimap, map or location card on the right: each about 290 px from its edge).
+const TOAST_SIDE := 300.0
 const TOAST_COLLAPSE_SECONDS := 0.15
 
 ## The shared toast lane: a full-width column whose toasts stack centred from `y` on the design
@@ -1079,6 +1308,8 @@ static func toast_lane(host: Control, y := 94.0, width := 0.0, max_width := 640.
 				dismiss_toast(oldest, TOAST_EVICT_SECONDS))
 	else:
 		var top := y < CANVAS.y * 0.5
+		# A top lane shares its band with the side columns (frame, minimap, map and status cards).
+		if top: lane.set_meta("clear_sides", true)
 		lane.alignment = BoxContainer.ALIGNMENT_BEGIN if top else BoxContainer.ALIGNMENT_END
 		if top: lane.offset_top = y
 		else: lane.offset_bottom = -(CANVAS.y - y - 44.0)
@@ -1114,7 +1345,7 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 	if not is_instance_valid(lane) or text.is_empty(): return null
 	var same := find_toast(lane, text)
 	if same:
-		_toast_timer(same)
+		if Time.get_ticks_msec() * 0.001 - float(same.get_meta("born", 0.0)) < TOAST_REFRESH_WINDOW: _toast_timer(same)
 		if not calm():
 			same.pivot_offset = Vector2(same.size.x * 0.5, 0)
 			var pulse := same.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
@@ -1133,7 +1364,12 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 	var actions: Array = opts.get("actions", [])
 	pill.mouse_filter = Control.MOUSE_FILTER_STOP if not actions.is_empty() else Control.MOUSE_FILTER_IGNORE
 	var width: float = float(lane.get_meta("width", 0.0))
-	if width > 0.0: pill.custom_minimum_size.x = width
+	var widest := width if width > 0.0 else float(lane.get_meta("max_width", 640.0))
+	# On a narrowed canvas (UI scale above 100 %) a top toast stays between the side columns.
+	if lane.get_meta("clear_sides", false) and lane.size.x > 0.0: widest = minf(widest, maxf(lane.size.x - 2.0 * TOAST_SIDE, 260.0))
+	if width > 0.0:
+		width = widest
+		pill.custom_minimum_size.x = width
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1148,7 +1384,7 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	words.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var room := (width if width > 0.0 else float(lane.get_meta("max_width", 640.0))) - 96.0
+	var room := widest - 96.0
 	if width > 0.0: words.custom_minimum_size.x = room
 	else: words.custom_minimum_size.x = minf(room, FONT_STRONG.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, T_BODY).x + 4.0)
 	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1161,6 +1397,7 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 		key.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	lane.add_child(pill)
 	pill.set_meta("life", TOAST_ACTION_SECONDS if not actions.is_empty() else float(opts.get("seconds", TOAST_SECONDS)))
+	pill.set_meta("born", Time.get_ticks_msec() * 0.001)
 	_toast_timer(pill)
 	if not calm():
 		pill.modulate.a = 0.0
@@ -1231,7 +1468,9 @@ static func clear_toasts(lane: Control) -> void:
 ## "E  " of the text is drawn as a key cap.
 static func prompt(ui: Control, y: float) -> Label:
 	var pill := Label.new()
-	pill.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pill.name = "Prompt"
+	# Left: the words start after the key cap (fit_prompt makes the chip exactly as wide as both).
+	pill.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	pill.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	pill.add_theme_font_override("font", FONT_STRONG)
 	pill.add_theme_font_size_override("font_size", 16)
@@ -1256,6 +1495,8 @@ static func prompt(ui: Control, y: float) -> Label:
 			pill.create_tween().tween_property(pill, "modulate:a", 1.0, 0.15))
 	ui.add_child(pill)
 	pin(pill, 0.5, 1.0)
+	# A new UI scale narrows the canvas and moves the chip: it keeps clear of the chat corner.
+	pill.item_rect_changed.connect(fit_prompt.bind(pill))
 	return pill
 
 ## Sets a prompt chip's text. A leading key label ("E", "F", "Space", "LMB"…)
@@ -1276,8 +1517,25 @@ static func set_prompt(chip: Label, value: String) -> void:
 		cap.text = key
 		cap.size = Vector2.ZERO
 		var cap_width: float = maxf(cap.get_combined_minimum_size().x, 22.0)
-		if box: box.content_margin_left = 22.0 + (cap_width + 10.0 if cap.visible else 0.0)
+		if box: box.content_margin_left = 16.0 + cap_width + 8.0 if cap.visible else 22.0
 		cap.position = Vector2(16, (chip.size.y - 24.0) * 0.5)
+	fit_prompt(chip)
+
+## Fits a prompt chip to its key cap and words, centred where it is pinned (a Label centres its
+## text on its whole width, not after the cap, so the chip is made exactly as wide as it needs).
+static func fit_prompt(chip: Label) -> void:
+	if not is_instance_valid(chip) or chip.get_meta("fitting", false): return
+	chip.set_meta("fitting", true)
+	var width := chip.get_combined_minimum_size().x
+	if is_equal_approx(chip.anchor_left, 0.5):
+		var parent := chip.get_parent() as Control
+		var shift := corner_shift(width, parent.size.x) if parent and parent.size.x > 0.0 else 0.0
+		chip.offset_left = -width * 0.5 + shift
+		chip.offset_right = width * 0.5 + shift
+	else:
+		chip.size = Vector2(width, chip.size.y)
+		chip.position.x = CANVAS.x * 0.5 - width * 0.5
+	chip.set_meta("fitting", false)
 
 ## Pins a control laid out on the 1280x800 design canvas to an edge or centre
 ## (h/v: 0 = left/top, 0.5 = centre, 1 = right/bottom) so it stays put at any UI scale.
@@ -1570,11 +1828,13 @@ static func night_theme() -> Theme:
 	for item in ["font_color","font_pressed_color","font_hover_pressed_color","font_focus_color"]: t.set_color(item,"Button",INK)
 	t.set_color("font_hover_color","Button",HOVER)
 	t.set_color("font_disabled_color","Button",Color(INK,.45))
+	t.set_stylebox("focus","Button",frame("focus"))
 	for spec in [["GoldButton","btn_gold",PAPER_INK,false],["PrimaryButton","btn_green",INK,true],["NightButton","btn_night",INK,true]]:
 		t.set_type_variation(spec[0],"Button")
 		_buttons(t,spec[0],spec[1],spec[2],spec[3])
 	t.set_color("font_hover_color","NightButton",HOVER)
 	_extra_buttons(t,true)
+	_kit2_buttons(t,true)
 	t.set_type_variation("HudSlot","Button")
 	for state in ["normal","hover","pressed","hover_pressed","disabled"]:
 		t.set_stylebox(state,"HudSlot",frame({"normal":"slot_night","hover":"slot_night_hover","pressed":"slot_night_pressed","hover_pressed":"slot_night_pressed","disabled":"slot_night"}[state]))
@@ -1659,6 +1919,8 @@ static func _night_coverage(t: Theme) -> void:
 		t.set_stylebox("grabber_area_highlight", type, frame("bar_fill", Color("f3c96a")))
 		t.set_icon("grabber", type, half("slider_grabber"))
 		t.set_icon("grabber_highlight", type, half("slider_grabber_hover"))
+		# Keyboard / pad focus (the settings sliders): the same bright edge as the buttons.
+		t.set_stylebox("focus", type, frame("focus"))
 	t.set_stylebox("background", "ProgressBar", frame("bar_bg"))
 	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", AMBER))
 	t.set_color("font_color", "ProgressBar", INK)
@@ -1702,10 +1964,11 @@ static func shade(parent: Control, dim := 0.0) -> TextureRect:
 ## One window: title (T_WINDOW), optional head controls, the close key, a rule, then the body.
 ## opts: kind "paper" | "night"; width (WINDOW_W.standard); place "top" (y WINDOW_TOP) | "centre" |
 ## "bottom" (above the hotbar); modal (true: a shade, shared with a modal window already open on the
-## same host, and the world under it takes no clicks); action (the GameSettings action that opens
-## it: the close key is named with its key; "" names Esc); icon (a picture before the title);
-## on_close (what the close key does; default close_window); scroll (true: the body scrolls once the
-## card would pass the screen's foot); id; dim (shade opacity for a darker shade).
+## same host or on a host around it, and the world under it takes no clicks); action (the
+## GameSettings action that opens it: the close key is named with its key; "" names Esc); icon (a
+## picture before the title); on_close (what the close key does; default close_window); scroll
+## (true: the body scrolls once the card would pass the screen's foot); id; dim (shade opacity for a
+## darker shade); closable (false: no close key, and Esc routing leaves it open: a blocking screen).
 ## Returns {root, shade, card, head, title, body, close, id, action, kind, modal}; free it with
 ## close_window(w). Opens with pop_in and the open sound and joins the window stack.
 static func window(host: Control, title: String, opts := {}) -> Dictionary:
@@ -1751,13 +2014,14 @@ static func window(host: Control, title: String, opts := {}) -> Dictionary:
 	heading_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	head.add_child(heading_label)
+	var closable := bool(opts.get("closable", true))
 	var w := {"root":root, "shade":veil, "card":card, "head":head, "title":heading_label, "body":column, "close":null,
-		"id":id, "action":action, "kind":kind, "modal":modal}
+		"id":id, "action":action, "kind":kind, "modal":modal, "closable":closable}
 	var on_close: Callable = opts.get("on_close", Callable())
 	var shut := func() -> void:
 		if on_close.is_valid(): on_close.call()
 		else: close_window(w)
-	w["close"] = close_key(head, shut, action)
+	if closable: w["close"] = close_key(head, shut, action)
 	divider(column, PAPER_LINE if kind != "night" else Color(GOLD, .55))
 	if bool(opts.get("scroll", true)):
 		var scroll := ScrollContainer.new()
@@ -1833,6 +2097,10 @@ static func drawer(host: Control, title: String, opts := {}) -> Dictionary:
 	head.name = "Head"
 	head.add_theme_constant_override("separation", GAP_S)
 	column.add_child(head)
+	if not str(opts.get("icon", "")).is_empty():
+		var art := icon(str(opts.icon), 30)
+		art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(art)
 	var heading_label := Label.new()
 	heading_label.name = "Title"
 	heading_label.text = title
@@ -1842,17 +2110,64 @@ static func drawer(host: Control, title: String, opts := {}) -> Dictionary:
 	heading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	head.add_child(heading_label)
 	var w := {"root":root, "shade":null, "card":card, "head":head, "title":heading_label, "body":column, "close":null,
-		"id":id, "action":action, "kind":"drawer", "surface":kind, "modal":false}
+		"id":id, "action":action, "kind":"drawer", "surface":kind, "modal":false, "side":side}
 	var on_close: Callable = opts.get("on_close", Callable())
 	var shut := func() -> void:
 		if on_close.is_valid(): on_close.call()
 		else: close_window(w)
 	w["close"] = close_key(head, shut, action)
 	divider(column, PAPER_LINE if kind != "night" else Color(GOLD, .55))
+	if bool(opts.get("hidden", false)):
+		# Kept: closed until show_drawer opens it; it leaves the stack whenever it is hidden.
+		root.visible = false
+		root.set_meta("rpg_window", w)
+		var kept := root.get_instance_id()
+		root.tree_exiting.connect(func(): _forget_window(kept))
+		return w
 	_push_window(root, w)
 	slide_in(card, Vector2(-40.0 if left else 40.0, 0.0))
 	sfx("open", -10.0)
 	return w
+
+## Opens or closes a kept drawer (drawer(opts.hidden)): shown, it joins the window stack on top and
+## slides in from its side with the open sound; hidden, it leaves the stack. No-op when unchanged.
+static func show_drawer(w: Dictionary, shown: bool, animate := true) -> void:
+	var root: Control = w.get("root") if is_instance_valid(w.get("root")) else null
+	if root == null: return
+	var id := root.get_instance_id()
+	if root.visible == shown and (id in _stack) == shown: return
+	root.visible = shown
+	var card: Control = w.get("card") if is_instance_valid(w.get("card")) else null
+	if shown:
+		if not id in _stack: _stack.append(id)
+		_windows_changed()
+		if card: _slide_card(card, (-40.0 if str(w.get("side", "right")) == "left" else 40.0) if animate else 0.0)
+		if animate: sfx("open", -10.0)
+	else:
+		if card: _slide_card(card, 0.0)
+		_forget_window(id)
+		if animate: sfx("close", -10.0)
+
+## Slides a pinned card in by its offsets from `dx` away (0: straight to its place). A slide cut
+## short by a quick close and reopen starts again from the card's resting offsets, so it never
+## drifts.
+static func _slide_card(card: Control, dx: float) -> void:
+	var rest: Vector2 = card.get_meta("rest_x", Vector2(card.offset_left, card.offset_right))
+	card.set_meta("rest_x", rest)
+	var old = card.get_meta("slide") if card.has_meta("slide") else null
+	if old is Tween and (old as Tween).is_valid(): (old as Tween).kill()
+	card.offset_left = rest.x
+	card.offset_right = rest.y
+	card.modulate.a = 1.0
+	if is_zero_approx(dx) or calm() or not card.is_inside_tree(): return
+	card.offset_left = rest.x + dx
+	card.offset_right = rest.y + dx
+	card.modulate.a = 0.0
+	var tw := card.create_tween().set_parallel(true).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(card, "offset_left", rest.x, 0.28)
+	tw.tween_property(card, "offset_right", rest.y, 0.28)
+	tw.tween_property(card, "modulate:a", 1.0, 0.22)
+	card.set_meta("slide", tw)
 
 ## Closes a window or drawer: leaves the stack, plays the close sound and frees it (a short fade
 ## first when animate; at once otherwise, so callers that test is_instance_valid see it gone).
@@ -1905,6 +2220,26 @@ static func top_window() -> Dictionary:
 	var open := windows()
 	return open.back() if not open.is_empty() else {}
 
+## True when `key` (GameSettings.canonical_key of the event) is the key that opened window `w`:
+## the same key closes it (I, C, Tab, B, O...). Windows without an action close on Esc only.
+static func closes_window(w: Dictionary, key: int) -> bool:
+	var action := str(w.get("action", ""))
+	return not action.is_empty() and key != KEY_NONE and key == GameSettings.default_key(action)
+
+## Closes window `w` (the top of the stack when empty) the way its close key does, so the owner's
+## clean-up (on_close) runs. False when nothing could be closed (no window, a dialogue, or a
+## blocking screen without a close key).
+static func close_top(w := {}) -> bool:
+	if w.is_empty(): w = top_window()
+	if w.is_empty() or not bool(w.get("closable", true)): return false
+	var close = w.get("close")
+	if close is BaseButton and is_instance_valid(close):
+		(close as BaseButton).pressed.emit()
+		return true
+	if str(w.get("kind", "")) == "dialogue": return false
+	close_window(w)
+	return true
+
 ## The open modal windows (not drawers) on the stack.
 static func modal_open() -> bool:
 	return windows().any(func(w): return bool(w.get("modal", false)))
@@ -1939,13 +2274,15 @@ static func _windows_changed() -> void:
 		if callback.is_valid(): callback.call(open.size(), top_kind)
 		else: window_listeners.erase(callback)
 
-## The shade of a modal window already open on this host, so a window opened from another reuses it.
+## The shade of a modal window already open on this host, or on a host around it (settings opened
+## from the pause menu lives inside the pause layer), so a window opened from another reuses it.
 static func _modal_shade(host: Control) -> TextureRect:
 	for w in windows():
 		var root: Control = w.get("root")
 		var veil = w.get("shade")
-		if bool(w.get("modal", false)) and is_instance_valid(root) and root.get_parent() == host and is_instance_valid(veil) and veil is TextureRect:
-			return veil
+		if not bool(w.get("modal", false)) or not is_instance_valid(root) or not is_instance_valid(veil) or not (veil is TextureRect): continue
+		var under := root.get_parent()
+		if under == host or (under != null and under.is_ancestor_of(host)): return veil
 	return null
 
 # ------------------------------------------------------------------ dialogue
@@ -2120,7 +2457,10 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 		plate.modulate.a = 0.0
 		plate.create_tween().tween_property(plate, "modulate:a", 1.0, 0.2).set_delay(0.12)
 	sfx("open", -10.0)
-	return {"root":root, "shade":shade, "box":box, "body":body, "more":more, "choices":choices, "card":card, "plate":plate, "standee":standee}
+	var d := {"root":root, "shade":shade, "box":box, "body":body, "more":more, "choices":choices, "card":card, "plate":plate, "standee":standee}
+	# On the window stack as a modal "dialogue": the chat box and toasts step aside while it talks.
+	_push_window(root, {"root":root, "shade":shade, "close":null, "id":"dialogue", "action":"", "kind":"dialogue", "modal":true})
+	return d
 
 ## Where the standee stands on the 1280x800 canvas (bottom-left anchored offsets):
 ## its lower part sits behind the text box, which hides the waist crop.
@@ -2309,16 +2649,18 @@ static func dialogue_more(d: Dictionary, waiting: bool) -> void:
 		for child in d.choices.get_children(): child.queue_free()
 
 ## Large title-menu button: night glass with a gold edge that warms on hover.
-static func menu_button(parent: Node, value: String, callback: Callable, width := 300.0) -> Button:
+static func menu_button(parent: Node, value: String, callback: Callable, width := 300.0, variant := "NightButton") -> Button:
 	var b := Button.new()
 	b.text = value
-	b.custom_minimum_size = Vector2(width, 52)
+	b.custom_minimum_size = Vector2(width, BTN_MENU)
 	b.focus_mode = Control.FOCUS_NONE
-	b.theme_type_variation = "NightButton"
+	b.theme_type_variation = variant
 	b.add_theme_font_override("font", FONT_STRONG)
 	b.add_theme_font_size_override("font_size", 19)
-	b.add_theme_color_override("font_hover_color", HOVER)
-	b.add_theme_color_override("font_focus_color", HOVER)
+	# The UI kit 2 plates ("MenuGoldButton", "MenuNightButton") bring their own hover ink.
+	if variant == "NightButton":
+		b.add_theme_color_override("font_hover_color", HOVER)
+		b.add_theme_color_override("font_focus_color", HOVER)
 	b.pressed.connect(callback)
 	hover_motion(b, 1.03)
 	parent.add_child(b)

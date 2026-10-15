@@ -6,6 +6,7 @@ extends SceneTree
 ## the bag drawers, the seed picker, the storage and the wardrobe, and hovers pictures
 ## through the viewport. Headless:
 ##   godot --headless --path game --script res://tests/tooltip_check.gd -- --qa
+const SocialHud = preload("res://scripts/social_hud.gd")
 const Main = preload("res://scripts/main.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const I18n = preload("res://scripts/i18n.gd")
@@ -202,9 +203,10 @@ func village() -> void:
 	expect(await hover(card_key) == t("목표 접기"), "tracker fold key named")
 	var badge: Control = app.frame.panel.find_child("Fold", true, false)
 	expect(await hover(badge) == t("프로필 접기"), "profile fold key named")
-	var chip: Control = ui.get_node("SocialChip")
-	var keys := chip.find_children("*", "Button", true, false)
-	expect(keys.size() == 2 and await hover(keys[0]) == t("함께하기") and await hover(keys[1]) == t("인사"), "social chip keys named")
+	# The 함께하기 key now heads the chat box (social_hud.gd), named with its key K.
+	var hub: Node = SocialHud.of(app.api)
+	var people: Control = hub.chat.people_key if hub else null
+	expect(people != null and await hover(people) == t("함께하기")+"  ·  K", "the chat box's 함께하기 key named with K")
 	RpgUi.set_folded("hotbar", true, false)
 	await settle(0.1)
 	expect(await hover(ui.get_node("FoldHandle")) == t("퀵슬롯 펼치기"), "folded hotbar handle named")

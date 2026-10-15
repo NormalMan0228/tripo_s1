@@ -39,6 +39,7 @@ const VersionGate = preload("res://scripts/version_gate.gd")
 const PatchBoot = preload("res://scripts/patch_boot.gd")
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
 const Brand = preload("res://scripts/brand.gd")
+const SocialHud = preload("res://scripts/social_hud.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
@@ -67,7 +68,7 @@ static func worlds() -> Array:
 # Trading is deferred while the village / survival / generation loop is developed.
 const TRADING_UI_ENABLED := false
 const ITEM_NAMES := {"wood":"목재","stone":"돌","berry":"열매","fiber":"섬유","axe":"도끼","spear":"창","soup":"수프","bandage":"붕대"}
-const COLORS := ["#f6eee0","#edbc63","#d98477","#70afa3","#7c9ec6"]
+const COLORS := RpgUi.PALETTE
 const RECIPES := {"axe":{"wood":3,"stone":2},"spear":{"wood":4,"stone":2},"soup":{"berry":3,"wood":1},"bandage":{"fiber":3}}
 var api: Node
 var gate: CanvasLayer
@@ -173,10 +174,15 @@ var stamina_readout: Label
 var supplies: Label
 var camp_status: Label
 var field_map: Control
+## The field's map card (top right, where the village's minimap sits) and its icon hotbar
+## (가방, 먹기, 모닥불, 붕대, 귀환: RpgUi.hotbar, fold id "toolbar").
+var field_panel: Control
+var toolbar_bar: HBoxContainer
 var warmth_ring: MeshInstance3D
 var strike_markers: Dictionary = {}
 var repeat_action := 0.0
-var return_dialog: ConfirmationDialog
+## The survival "end the expedition?" window (its RpgUi.window root) while it is open.
+var return_dialog: Control
 var last_camp_warning := -100.0
 var canopy_elapsed := 0.0
 var paused := false
@@ -338,6 +344,8 @@ func make_theme() -> Theme:
 	return RpgUi.theme()
 
 func clear_ui() -> void:
+	# The chat and the 함께하기 drawer step back until the next HUD binds them (social.install_hud).
+	SocialHud.release_place(self)
 	craft_buttons.clear()
 	inventory_slots.clear()
 	quick_counts.clear()
@@ -348,17 +356,14 @@ func clear_ui() -> void:
 		ui.remove_child(child)
 		child.queue_free()
 
-## A framed card. "default"/"hero" are parchment cards with dark ink; "night",
-## "objective" and "toolbar" are HUD glass with cream text.
+## A framed card. "default"/"hero" are parchment cards with dark ink; "night" and
+## "objective" are HUD glass with cream text.
 func panel(at: Vector2, width: float, variant := "default") -> VBoxContainer:
 	var p := PanelContainer.new()
 	p.position = at
 	p.custom_minimum_size.x = width
-	var night: bool = variant in ["night","objective","toolbar"]
-	var style := RpgUi.panel_style(("night" if variant!="toolbar" else "pill") if night else ("paper" if variant=="hero" else "paper_plain"))
-	if variant=="toolbar":
-		style.content_margin_top=10
-		style.content_margin_bottom=10
+	var night: bool = variant in ["night","objective"]
+	var style := RpgUi.panel_style("night" if night else ("paper" if variant=="hero" else "paper_plain"))
 	p.add_theme_stylebox_override("panel",style)
 	if night: p.theme=night_theme()
 	ui.add_child(p)
@@ -555,16 +560,15 @@ func login_ui(page := "menu") -> void:
 				seed_spin.create_tween().set_loops().tween_property(seed_spin,"rotation",TAU,2.4).from(0.0)
 			RpgUi.label(row,tr("최신 버전인지 확인하고 있어요…"),19,Color("f1e8d2")).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		"menu":
-			var entries := [RpgUi.menu_button(body,tr("게임 시작"),func(): login_ui("login")),
-				RpgUi.menu_button(body,tr("설정"),func(): login_ui("settings")),
-				RpgUi.menu_button(body,tr("게임 종료"),func(): get_tree().quit())]
+			# The UI kit 2 menu plates: gold for the way in, night glass for the others.
+			var entries := [RpgUi.menu_button(body,tr("게임 시작"),func(): login_ui("login"),300.0,"MenuGoldButton"),
+				RpgUi.menu_button(body,tr("설정"),func(): login_ui("settings"),300.0,"MenuNightButton"),
+				RpgUi.menu_button(body,tr("게임 종료"),func(): get_tree().quit(),300.0,"MenuNightButton")]
 			# Arrow keys / pad move between the entries; Enter starts.
-			entries[0].theme_type_variation = "GoldButton"
-			entries[0].add_theme_color_override("font_hover_color",RpgUi.PAPER_INK)
-			entries[0].add_theme_color_override("font_focus_color",RpgUi.PAPER_INK)
 			for entry in entries:
 				entry.focus_mode = Control.FOCUS_ALL
 				entry.focus_entered.connect(func(): RpgUi.sfx("hover"))
+				if entry.theme_type_variation=="MenuNightButton": entry.add_theme_color_override("font_focus_color",RpgUi.HOVER)
 			entries[0].grab_focus.call_deferred()
 		"settings":
 			# Tabbed settings (scripts/settings_menu.gd) over the title art.
@@ -712,7 +716,8 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	await veil.fade_out()
 	if get_tree().current_scene==self:
 		# A new session starts at home; walking out of the front door opens the village.
-		Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":"home","multiplayer":social.enabled,"profile":me.profile})
+		Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":"home","multiplayer":social.enabled,"profile":me.profile,
+			"username":username.strip_edges().to_lower()})
 		# The title's village map waits outside the tree for the walk out of the home (as open_studio).
 		leave_modules()
 		if is_instance_valid(town): town.release_map()
@@ -945,7 +950,7 @@ func enter_village() -> void:
 	var drawer_title := HBoxContainer.new()
 	right.add_child(drawer_title)
 	drawer_title.add_child(RpgUi.icon("res://assets/ui/bag.svg",30))
-	text(drawer_title,tr("나의 보관함"),24).size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	text(drawer_title,tr("가방"),24).size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	close_button(drawer_title,toggle_drawer,"I")
 	rule(right)
 	objects_list = ItemList.new()
@@ -984,7 +989,7 @@ func enter_village() -> void:
 		price.custom_minimum_size.x = 115
 		sell_row.add_child(price)
 		button(sell_row,tr("별씨로 판매"),sell_object)
-	button(right,tr("C · 새 물건 제작 의뢰"),open_craft,"gold")
+	RpgUi.name_tip(button(right,tr("새 물건 제작 의뢰"),open_craft,"gold"),tr("새 물건 제작 의뢰"),RpgUi.key_text("craft"))
 	prompt = LineEdit.new()
 	prompt.max_length = 500
 	right.add_child(prompt)
@@ -1050,6 +1055,7 @@ func toggle_drawer() -> void:
 	if screen=="village":player.controls_enabled=world_movement_allowed()
 	if is_instance_valid(objective_card): objective_card.visible=not opening
 	if is_instance_valid(minimap): minimap.visible=not opening
+	if is_instance_valid(field_panel): field_panel.visible=not opening
 	if is_instance_valid(inspect_panel): inspect_panel.visible=opening
 	if is_instance_valid(inspect_view): inspect_view.render_target_update_mode=SubViewport.UPDATE_ALWAYS if opening else SubViewport.UPDATE_DISABLED
 
@@ -1154,9 +1160,6 @@ func build_village_hud() -> void:
 	RpgUi.fold_card(tracker,head,body,"objective")
 	# A folded minimap is just its chip: the tracker rises to sit under it.
 	RpgUi.fold_shift(tracker,"minimap",Vector2(0,-Minimap.FOLD_LIFT),"move")
-	# The social chip under the character frame folds away with it.
-	var social_chip := ui.get_node_or_null("SocialChip")
-	if social_chip is Control: RpgUi.fold_shift(social_chip,"profile",Vector2(-36,0))
 	var slots := []
 	# Action ids: the key caps and "name  ·  key" tooltips follow rebinding (RpgUi.key_text).
 	for spec in [["bag.svg","inventory",tr("가방"),toggle_drawer],["craft.svg","craft",tr("제작"),open_craft],["map.svg","map",tr("지도"),life.open_map],
@@ -1204,72 +1207,48 @@ func build_play_hud(survival: bool) -> void:
 	if not survival:
 		build_village_hud()
 		return
-	var task_card := panel(Vector2(958,20),298,"objective")
+	# Right column, as in the village: the map card on top (field_panel), the goal card under it.
+	var task_top: float=20.0+(field_panel.get_combined_minimum_size().y+8.0 if is_instance_valid(field_panel) else 0.0)
+	var task_card := panel(Vector2(1000,task_top),256,"objective")
 	RpgUi.pin(task_card.get_parent(),1.0,0.0)
 	var task_head := HBoxContainer.new()
 	task_head.add_theme_constant_override("separation",6)
 	task_card.add_child(task_head)
 	task_head.add_child(RpgUi.name_tip(RpgUi.icon("res://assets/ui/book.svg",22),tr("목표")))
-	RpgUi.label(task_head,tr("✦  일곱 밤의 목표").trim_prefix("✦  ") if survival else tr("✦  오늘의 마을 이야기").trim_prefix("✦  "),15,RpgUi.GOLD)
+	RpgUi.label(task_head,tr("✦  일곱 밤의 목표").trim_prefix("✦  "),15,RpgUi.GOLD)
 	var task_body := VBoxContainer.new()
 	task_body.add_theme_constant_override("separation",8)
 	task_card.add_child(task_body)
 	RpgUi.divider(task_body,Color(RpgUi.GOLD,.55))
 	objective=text(task_body,"",14)
-	objective.custom_minimum_size.x=254
+	objective.custom_minimum_size.x=212
 	objective.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	objective_card=task_card.get_parent()
 	RpgUi.fold_card(objective_card,task_head,task_body,"survival_objective")
-	var toolbar := panel(Vector2(300,612 if survival else 634),680,"toolbar")
-	if survival:
-		var quick_row := HBoxContainer.new();quick_row.alignment=BoxContainer.ALIGNMENT_CENTER
-		quick_row.add_theme_constant_override("separation",8);toolbar.add_child(quick_row)
-		for item in ["wood","stone","berry","fiber"]:
-			var chip := HBoxContainer.new();chip.add_theme_constant_override("separation",4);quick_row.add_child(chip)
-			RpgUi.name_tip(chip,tr(ITEM_NAMES[item]))
-			var icon := TextureRect.new();icon.texture=load("res://assets/items/"+item+".svg")
-			icon.custom_minimum_size=Vector2(26,26);icon.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
-			icon.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_CENTERED;icon.tooltip_text=tr(ITEM_NAMES[item]);chip.add_child(icon)
-			quick_counts[item]=RpgUi.numbers(text(chip,"0",16),16)
-			quick_counts[item].custom_minimum_size.x=26
-			if item!="fiber":
-				var gap := Control.new();gap.custom_minimum_size.x=12;quick_row.add_child(gap)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation",8)
-	toolbar.add_child(row)
-	button(row,tr("I  가방") if survival else tr("I  보관함"),toggle_drawer,"slot")
-	if survival:
-		button(row,tr("Q  먹기"),func(): intent("eat"),"slot")
-		button(row,tr("F  모닥불"),func(): intent("fire"),"slot")
-		button(row,tr("H  붕대"),func(): intent("heal"),"slot")
-		button(row,tr("귀환"),confirm_return,"slot")
-	else:
-		if TRADING_UI_ENABLED: button(row,tr("별씨 장터"),show_market)
-		expedition_button=button(row,tr("탐험  →"),open_expedition,"primary")
-		button(row,tr("옷장"),open_wardrobe,"slot")
-		button(row,tr("Tab  지도"),life.open_map,"slot")
-		button(row,tr("B  창고"),life.open_storage,"slot")
-	for child in row.get_children(): child.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	# Toolbar sits on the bottom edge; pin it once its rows exist.
-	var bar_panel: Control = toolbar.get_parent()
-	var bar_height: float = bar_panel.get_combined_minimum_size().y
-	bar_panel.size = Vector2(680,bar_height)
-	RpgUi.pin(bar_panel,0.5,1.0,Vector2(300,800-22-bar_height))
-	# Folds to a handle tab like the village hotbar; the keys keep working.
-	RpgUi.fold_dock(ui,"toolbar",[bar_panel],980,800-22-bar_height*0.5)
-	lay_toasts(520 if survival else 548)
-	if survival:
-		var tracker := PanelContainer.new()
-		tracker.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
-		tracker.position=Vector2(470,16)
-		tracker.custom_minimum_size=Vector2(340,0)
-		tracker.mouse_filter=Control.MOUSE_FILTER_IGNORE
-		ui.add_child(tracker)
-		tracker.size=Vector2(340,48)
-		RpgUi.pin(tracker,0.5,0.0)
-		day_track=RpgUi.numbers(RpgUi.label(tracker,"",18,RpgUi.INK),18)
-		day_track.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-		RpgUi.name_tip(day_track,tr("일곱 밤 중 지나온 날"))
+	# The goal card stays just under the map card when that grows (the ground's line on ice or embers).
+	if is_instance_valid(field_panel): field_panel.resized.connect(follow_field_panel)
+	# Bottom centre: the field's icon hotbar, keys and "name · key" tooltips from the bindings.
+	var slots := []
+	for spec in [["bag","inventory",tr("가방"),toggle_drawer],["hunger","eat",tr("먹기"),func(): intent("eat")],
+			["fire","campfire",tr("모닥불"),func(): intent("fire")],["heart","heal",tr("붕대"),func(): intent("heal")],
+			["home","",tr("귀환"),confirm_return]]:
+		var action: Callable=spec[3]
+		slots.append({"icon":"res://assets/ui/icons/%s.png" % spec[0],"action":spec[1],"label":spec[2],"call":func(): action.call()})
+	# Folds to a handle tab like the village hotbar (fold id "toolbar"); the keys keep working.
+	toolbar_bar=RpgUi.hotbar(ui,slots,700,"toolbar")
+	toolbar_bar.name="FieldHotbar"
+	lay_toasts(94)
+	var tracker := PanelContainer.new()
+	tracker.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
+	tracker.position=Vector2(470,16)
+	tracker.custom_minimum_size=Vector2(340,0)
+	tracker.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	ui.add_child(tracker)
+	tracker.size=Vector2(340,48)
+	RpgUi.pin(tracker,0.5,0.0)
+	day_track=RpgUi.numbers(RpgUi.label(tracker,"",18,RpgUi.INK),18)
+	day_track.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	RpgUi.name_tip(day_track,tr("일곱 밤 중 지나온 날"))
 	if preload("res://scripts/build_mode.gd").developer():
 		var debug_box := panel(Vector2(20,520),252,"night")
 		developer_panel=debug_box.get_parent()
@@ -1277,34 +1256,16 @@ func build_play_hud(survival: bool) -> void:
 		developer_label=text(debug_box,tr("F3 · 개발 정보"),12)
 		developer_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 
-func world_hint(value: String) -> void:
-	hint=Label.new()
-	hint.text=value
-	hint.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	hint.position=Vector2(300,566 if screen=="survival" else 605)
-	hint.size=Vector2(680,34)
-	hint.grow_horizontal=Control.GROW_DIRECTION_BOTH
-	hint.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
-	hint.add_theme_font_override("font",RpgUi.FONT_STRONG)
-	hint.add_theme_font_size_override("font_size",14)
-	hint.add_theme_color_override("font_color",RpgUi.INK)
-	var chip := RpgUi.panel_style("pill")
-	chip.content_margin_top=6
-	chip.content_margin_bottom=6
-	hint.add_theme_stylebox_override("normal",chip)
-	RpgUi.pin(hint,0.5,1.0)
-	hint.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	ui.add_child(hint)
+## The field's goal card sits 8 px under the map card (both pinned to the top right).
+func follow_field_panel() -> void:
+	if not is_instance_valid(objective_card) or not is_instance_valid(field_panel): return
+	var drop: float=field_panel.position.y+field_panel.size.y+8.0-objective_card.offset_top
+	objective_card.offset_top+=drop
+	objective_card.offset_bottom+=drop
 
-## Shrinks a centred chip label to its text after the text changes.
+## Shrinks the prompt chip to its key cap and text after the text changes (RpgUi.fit_prompt).
 func fit_chip(chip: Label) -> void:
-	var width: float=maxf(chip.get_combined_minimum_size().x,160.0)
-	if chip.anchor_left==0.5:
-		chip.offset_left=-width*0.5
-		chip.offset_right=width*0.5
-	else:
-		chip.size=Vector2(width,chip.size.y)
-		chip.position.x=640.0-width*0.5
+	RpgUi.fit_prompt(chip)
 
 func meter(parent: Node, color: Color) -> ProgressBar:
 	var bar := ProgressBar.new()
@@ -1493,6 +1454,7 @@ func poll_entitlements() -> void:
 		# Fail closed on auth loss or disconnection; don't retain protected models.
 		cancel_preview()
 		CraftTracker.end(api)
+		SocialHud.end(api)
 		api.token=""
 		build_world(false)
 		login_ui()
@@ -1622,7 +1584,6 @@ func open_shape_panel() -> void:
 	shape_panel.setup(api,selected,func(): return [inspect_model if selected.get("id","")==id else null,loaded.get(id)],message)
 	shape_panel.saved.connect(func(shape: Dictionary): shape_saved(id,shape))
 	ui.add_child(shape_panel)
-	shape_panel.position=Vector2(288,120)
 
 ## A saved shape: the lists match the server again, so the next poll reloads nothing.
 func shape_saved(id: String, shape: Dictionary) -> void:
@@ -1756,7 +1717,7 @@ func show_turn_hud(on: bool) -> void:
 		row.add_theme_constant_override("separation",12)
 		pill.add_child(row)
 		turn_readout=ObjectTransform.turn_bar(row,turn_preview)
-		RpgUi.label(row,tr("R · 휠"),13,RpgUi.SOFT,false).size_flags_vertical=Control.SIZE_SHRINK_CENTER
+		RpgUi.label(row,tr("%s · 휠") % RpgUi.key_text("rotate"),13,RpgUi.SOFT,false).size_flags_vertical=Control.SIZE_SHRINK_CENTER
 		ui.add_child(pill)
 		var size := pill.get_combined_minimum_size()
 		pill.position=Vector2(640-size.x*.5,496)
@@ -1969,16 +1930,40 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	metrics.custom_minimum_size.x=214
 	var hp_meter := status_meter(left,tr("♥  체력").trim_prefix("♥  "),Color("e2735f"),"heart")
 	hp_bar=hp_meter.bar;hp_readout=hp_meter.readout
-	var hunger_meter := status_meter(left,tr("◆  포만감").trim_prefix("◆  "),Color("e9b552"),"hunger")
+	var hunger_meter := status_meter(left,tr("◆  포만감").trim_prefix("◆  "),RpgUi.AMBER,"hunger")
 	hunger_bar=hunger_meter.bar;hunger_readout=hunger_meter.readout
 	var stamina_meter := status_meter(left,tr("✧  기력").trim_prefix("✧  "),Color("6fd0b6"),"stamina")
 	stamina_bar=stamina_meter.bar;stamina_readout=stamina_meter.readout
 	hp_bar.tooltip_text=tr("체력");hunger_bar.tooltip_text=tr("포만감");stamina_bar.tooltip_text=tr("기력")
-	var navigation := panel(Vector2(20,318),256,"night")
+	# The four gathered resources at a glance (pictures and numbers; the bag has the rest).
+	RpgUi.divider(left,Color(RpgUi.GOLD,.55))
+	var quick_row := HBoxContainer.new()
+	quick_row.name="QuickCounts"
+	quick_row.add_theme_constant_override("separation",4)
+	left.add_child(quick_row)
+	for item in ["wood","stone","berry","fiber"]:
+		var chip := HBoxContainer.new()
+		chip.add_theme_constant_override("separation",3)
+		chip.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		chip.alignment=BoxContainer.ALIGNMENT_CENTER
+		quick_row.add_child(chip)
+		RpgUi.name_tip(chip,tr(ITEM_NAMES[item]))
+		chip.add_child(RpgUi.name_tip(RpgUi.icon("res://assets/items/"+item+".svg",24),tr(ITEM_NAMES[item])))
+		quick_counts[item]=RpgUi.numbers(RpgUi.label(chip,"0",16),16)
+	# Top right, where the village's minimap sits: the field map and the way back to camp.
+	var navigation := panel(Vector2(1000,20),256,"night")
+	field_panel=navigation.get_parent()
+	field_panel.name="FieldMap"
+	RpgUi.pin(field_panel,1.0,0.0)
 	field_map=preload("res://scripts/field_map.gd").new()
 	navigation.add_child(field_map)
 	RpgUi.name_tip(field_map,tr("주변 지도"))
 	camp_status=text(navigation,"",12)
+	camp_status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	camp_status.custom_minimum_size=Vector2(210,0)
+	# Two lines (distance and fire, warmth); the ground's line on ice or embers makes a third.
+	camp_status.max_lines_visible=3
+	camp_status.custom_minimum_size.y=camp_status.get_line_height()*2+camp_status.get_theme_constant("line_spacing")
 	right=panel(Vector2(948,20),308,"hero")
 	RpgUi.pin(right.get_parent(),1.0,0.0)
 	var drawer_title := HBoxContainer.new()
@@ -2032,8 +2017,9 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	RpgUi.caption(right,tr("붉은 공격 예고는 Shift로 피하세요.\n목재 두 개는 모닥불을 위해 남겨 두세요."),12)
 	right.get_parent().visible=false
 	build_play_hud(true)
+	# The one prompt chip, as in the village and rooms: what the interact key gathers right here.
+	hint=RpgUi.prompt(ui,560)
 	update_run()
-	world_hint(tr("나무·열매·돌·풀에 가까이 가서 E로 채집하세요."))
 	busy=false
 	veil.fade_in()
 
@@ -2240,7 +2226,7 @@ func update_run() -> void:
 		if run.get("story") is Dictionary and run.status=="active":
 			objective.text=run.story.title+"\n"
 			for goal in run.story.goals:objective.text+="%s  %d / %d\n"%[goal.label,goal.current,goal.target]
-			objective.text+="\n"+(tr("Q · 먼저 음식을 드세요") if run.hunger<35 else tr("I 제작 · F 모닥불 · Q 식사"))
+			objective.text+="\n"+(tr("%s · 먼저 음식을 드세요") % RpgUi.key_text("eat") if run.hunger<35 else tr("%s 제작 · %s 모닥불 · %s 식사") % [RpgUi.key_text("inventory"),RpgUi.key_text("campfire"),RpgUi.key_text("eat")])
 	for recipe in craft_buttons:
 		var can_make: bool=run.status=="active"
 		for item in RECIPES[recipe]:
@@ -2351,18 +2337,37 @@ func confirm_return() -> void:
 		leave_run()
 		return
 	if is_instance_valid(return_dialog): return
-	return_dialog=ConfirmationDialog.new()
-	return_dialog.title=tr("탐험을 마칠까요?")
-	return_dialog.dialog_text=tr("지금 돌아가면 이번 도전이 끝나고 완주 보상을 받을 수 없습니다.\n")+(tr("동료의 탐험은 계속되며, 나의 완주 보상은 포기합니다.") if coop_run else (tr("현재 탐험은 일시 정지되어 있습니다.") if paused else tr("이 창을 보는 동안에도 생존 시간은 흐릅니다.")))
-	return_dialog.ok_button_text=tr("탐험을 마치고 귀환")
-	return_dialog.cancel_button_text=tr("계속 생존하기")
-	return_dialog.confirmed.connect(func():
-		return_dialog.queue_free()
-		leave_run())
-	return_dialog.canceled.connect(return_dialog.queue_free)
-	return_dialog.theme=ui.theme
-	add_child(return_dialog)
-	return_dialog.popup_centered(Vector2i(560,180))
+	# A night window like the pause menu's questions: over the pause menu (its layer and shade) when
+	# asked from there, otherwise on a layer of its own over the HUD, toasts and chat (the pause
+	# menu's layer), which goes with it. Esc or 계속 생존하기 keeps going.
+	var host: Control
+	var own_layer: CanvasLayer
+	if PauseMenu.is_open() and is_instance_valid(PauseMenu.current.root): host=PauseMenu.current.root
+	else:
+		own_layer=CanvasLayer.new()
+		own_layer.name="ReturnQuestion"
+		own_layer.layer=50
+		add_child(own_layer)
+		host=Control.new()
+		host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		host.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		host.theme=ui.theme
+		own_layer.add_child(host)
+	var w := RpgUi.window(host,tr("탐험을 마칠까요?"),{"kind":"night","width":440,"place":"centre","scroll":false,"id":"return_confirm"})
+	return_dialog=w.root
+	if own_layer: return_dialog.tree_exited.connect(func(): if is_instance_valid(own_layer) and not own_layer.is_queued_for_deletion(): own_layer.queue_free())
+	var words := RpgUi.label(w.body,tr("지금 돌아가면 이번 도전이 끝나고 완주 보상을 받을 수 없습니다.\n")+(tr("동료의 탐험은 계속되며, 나의 완주 보상은 포기합니다.") if coop_run else (tr("현재 탐험은 일시 정지되어 있습니다.") if paused else tr("이 창을 보는 동안에도 생존 시간은 흐릅니다."))),16)
+	words.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	words.custom_minimum_size.x=380
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation",RpgUi.GAP)
+	w.body.add_child(row)
+	var leave := RpgUi.button(row,tr("탐험을 마치고 귀환"),func():
+		RpgUi.close_window(w,false)
+		leave_run(),"primary","lg",true)
+	var stay := RpgUi.button(row,tr("계속 생존하기"),func(): RpgUi.close_window(w),"night","lg",true)
+	for b in [leave,stay]: b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	stay.grab_focus.call_deferred()
 
 ## Esc in survival: the pause menu (scripts/pause_menu.gd). Opening it sets paused
 ## and clears the pending action exactly as before, so tick_run sends nothing.
@@ -2527,6 +2532,7 @@ func logout() -> void:
 	await veil.fade_out()
 	await api.post("/v1/auth/logout",{})
 	CraftTracker.end(api)
+	SocialHud.end(api)
 	api.token=""
 	social.reset_session()
 	job_id=""
@@ -2541,6 +2547,7 @@ func logout() -> void:
 func force_logout(reason: String) -> void:
 	if api.token.is_empty() or screen=="logging_out": return
 	CraftTracker.end(api)
+	SocialHud.end(api)
 	api.token=""
 	screen="logging_out"
 	world_epoch+=1
@@ -2567,6 +2574,7 @@ func force_logout(reason: String) -> void:
 	veil.fade_in()
 
 func _exit_tree() -> void:
+	SocialHud.release_place(self)
 	GameSettings.unlisten(settings_changed)
 	# A pending studio session means the map is only travelling to a room and back.
 	if not Engine.has_meta("studio_session"): TownLayout.discard_kept()
@@ -2696,7 +2704,7 @@ func text_input_active() -> bool:
 func world_movement_allowed() -> bool:
 	if PauseMenu.is_open() or VersionGate.is_blocked(): return false
 	if is_instance_valid(painter) or is_instance_valid(interaction_panel): return false
-	if busy or text_input_active() or is_instance_valid(village_modal) or is_instance_valid(preview):return false
+	if busy or text_input_active() or is_instance_valid(village_modal) or is_instance_valid(preview) or is_instance_valid(return_dialog):return false
 	if is_instance_valid(right) and right.get_parent().visible:return false
 	if screen=="village":return true
 	return screen=="survival" and not paused and not results_shown and network_failures==0 and run.get("status","")=="active" and run.get("hp", 0)>0
@@ -2770,19 +2778,20 @@ func _process(delta: float) -> void:
 				var module_entry := module_closest()
 				var prop: Dictionary=town.nearest_prop(Vector2(player.position.x,player.position.z))
 				var prompt_text := ""
-				if not activity.is_empty() and social.visiting() and activity.get("id","")=="home": prompt_text="E  "+tr("%s님의 집 들어가기") % str(social.data.get("host_name",tr("친구")))
-				elif not activity.is_empty() and activity.has("prompt"): prompt_text="E  "+activity.prompt
-				elif not activity.is_empty(): prompt_text="E  "+tr(activity.title)
-				elif npc: prompt_text="E  "+I18n.talk_to(tr(npc.get_meta("title")))
-				elif not module_entry.is_empty(): prompt_text="E  "+str(module_entry.get("prompt",""))
-				elif not prop.is_empty(): prompt_text="E  "+town.prop_prompt(prop)
-				elif near(TownLayout.GATE,3): prompt_text="E  "+tr("탐험 떠나기")
-				elif near(TownLayout.HOME_DOOR,2): prompt_text="E  "+tr("나의 집 들어가기")
-				elif near(TownLayout.WORKSHOP_DOOR,2.5): prompt_text="E  "+tr("별씨 공방 들어가기")
-				elif not nearest_furniture().is_empty(): prompt_text="E  "+{"sit":tr("앉기"),"lie":tr("눕기")}.get(str(loaded[nearest_furniture()].get("rest")),tr("가구 사용하기"))
-				if is_instance_valid(seat) and seat.resting(): prompt_text="E  "+tr("일어나기")
+				# The interact key as bound (E, or G after a rebind) leads the chip as a key cap.
+				var key := RpgUi.key_text("interact")+"  "
+				if not activity.is_empty() and social.visiting() and activity.get("id","")=="home": prompt_text=key+tr("%s님의 집 들어가기") % str(social.data.get("host_name",tr("친구")))
+				elif not activity.is_empty() and activity.has("prompt"): prompt_text=key+activity.prompt
+				elif not activity.is_empty(): prompt_text=key+tr(activity.title)
+				elif npc: prompt_text=key+I18n.talk_to(tr(npc.get_meta("title")))
+				elif not module_entry.is_empty(): prompt_text=key+str(module_entry.get("prompt",""))
+				elif not prop.is_empty(): prompt_text=key+town.prop_prompt(prop)
+				elif near(TownLayout.GATE,3): prompt_text=key+tr("탐험 떠나기")
+				elif near(TownLayout.HOME_DOOR,2): prompt_text=key+tr("나의 집 들어가기")
+				elif near(TownLayout.WORKSHOP_DOOR,2.5): prompt_text=key+tr("별씨 공방 들어가기")
+				elif not nearest_furniture().is_empty(): prompt_text=key+{"sit":tr("앉기"),"lie":tr("눕기")}.get(str(loaded[nearest_furniture()].get("rest")),tr("가구 사용하기"))
+				if is_instance_valid(seat) and seat.resting(): prompt_text=key+tr("일어나기")
 				if is_instance_valid(village_modal): prompt_text=""
-				if prompt_text.begins_with("E  "): prompt_text=GameSettings.key_label("interact")+prompt_text.substr(1)
 				if str(hint.get_meta("prompt",""))!=prompt_text:
 					RpgUi.set_prompt(hint,prompt_text)
 					fit_chip(hint)
@@ -2843,33 +2852,54 @@ func update_harvest_hint() -> void:
 			closest=distance
 			selected_node=n
 	harvest_marker.visible=not selected_node.is_empty() and run.status=="active"
+	# The prompt chip names only what the interact key does here (its key from the bindings);
+	# away from anything to gather it steps back, as in the village.
+	var value := ""
 	if harvest_marker.visible:
 		harvest_marker.position=Vector3(selected_node.x,0.1,selected_node.z)
 		var names := {"tree":tr("나무"),"stone":tr("돌"),"berry":tr("열매"),"fiber":tr("풀")}
-		hint.text=tr("E · %s 채집 (남은 자원 %d)  |  I · 가방  |  M · 소리") % [names[selected_node.kind],selected_node.quantity]
-	elif run.status=="active":
-		hint.text=tr("자원 가까이 이동하세요  |  I · 가방  |  휠 · 확대/축소  |  M · 소리")
-	else:
-		hint.text=tr("탐험이 끝났습니다. 마을로 돌아가 결과를 확인하세요.")
+		value=RpgUi.key_text("interact")+"  "+tr("%s 채집 (남은 자원 %d)") % [names[selected_node.kind],selected_node.quantity]
+	if str(hint.get_meta("prompt",""))!=value:
+		RpgUi.set_prompt(hint,value)
+		fit_chip(hint)
+	hint.visible=not value.is_empty() and GameSettings.show_prompts()
 
 func _unhandled_input(event: InputEvent) -> void:
 	# Rebinding-aware: a key bound to an action reports that action's default key
 	# (Interact moved to G -> KEY_E); Esc, Enter, F-keys and digits report themselves.
 	var key := GameSettings.canonical_key(event)
+	var press: bool = event is InputEventKey and event.pressed and not event.echo
+	# The return question over survival: Esc keeps surviving; nothing behind it reacts meanwhile.
+	if is_instance_valid(return_dialog):
+		if press and key==KEY_ESCAPE: RpgUi.close_top(return_dialog.get_meta("rpg_window",{}))
+		if event is InputEventKey or event is InputEventMouseButton: get_viewport().set_input_as_handled()
+		return
 	if is_instance_valid(village_modal):
-		if event is InputEventKey and event.pressed and not event.echo and key==KEY_E and life.mode=="fish": life.reel()
-		# A conversation reads on with E, Space or Enter (the last page: the highlighted choice).
-		elif event is InputEventKey and event.pressed and not event.echo and village_modal.has_meta("advance") and key in [KEY_E,KEY_SPACE,KEY_ENTER,KEY_KP_ENTER]:
+		if press and key==KEY_E and life.mode=="fish":
+			life.reel()
+			return
+		# A conversation: E, Space and Enter show the rest of the line, then the next page.
+		if press and village_modal.has_meta("advance") and key in [KEY_E,KEY_SPACE,KEY_ENTER,KEY_KP_ENTER]:
 			village_modal.get_meta("advance").call()
 			get_viewport().set_input_as_handled()
-		if event is InputEventKey and event.pressed and key==KEY_ESCAPE: close_village_modal()
+			return
+		if event is InputEventKey and event.pressed and key==KEY_ESCAPE:
+			close_village_modal()
+			return
+		# The key that opened a window closes it (C craft, Tab map, B storage, O wardrobe).
+		if press and not text_input_active() and RpgUi.closes_window(modal_window(village_modal),key):
+			close_village_modal()
+			get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and key in [KEY_ESCAPE,KEY_E] and screen=="village" and is_instance_valid(seat) and seat.resting():
 		seat.stand()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and key==KEY_ESCAPE and screen in ["village","survival"]:
-		# Esc backs out of placement and the bag first, then opens the pause menu.
+		# Esc backs out of placement, then a side drawer on the window stack, then the bag, then
+		# opens the pause menu.
+		var top := RpgUi.top_window()
 		if screen=="village" and is_instance_valid(preview): cancel_preview()
+		elif not top.is_empty() and not bool(top.get("modal",false)) and RpgUi.close_top(top): pass
 		elif is_instance_valid(right) and right.get_parent().visible: toggle_drawer()
 		elif screen=="survival": toggle_pause()
 		else: PauseMenu.open(self)
@@ -2945,7 +2975,8 @@ func close_village_modal() -> void:
 	if is_instance_valid(life): life.closed()
 	restore_hud()
 	if is_instance_valid(village_modal):
-		# A shared window (modal_card) leaves the window stack; dialogues and the craft window go as before.
+		# A shared window (modal_card) leaves the window stack; dialogues and the craft window (its
+		# window lives under its holder) are freed whole.
 		if village_modal.has_meta("rpg_window"): RpgUi.close_window(village_modal.get_meta("rpg_window"),false)
 		else:
 			RpgUi.sfx("close",-10.0)
@@ -2957,7 +2988,7 @@ func close_village_modal() -> void:
 ## A centred parchment window over the shared shade (RpgUi.window): display-font title, the close
 ## key, an ornamented rule, then the caller's content. `action` is the GameSettings action that
 ## opens it (its key names the close key; "" names Esc). Opens with a fade + pop.
-## Callers pass "" until U-WP-04 routes the opening key to close the window: only Esc closes it now.
+## The opening key closes the window too (main._unhandled_input); Esc always does.
 func modal_card(title: String, action := "") -> VBoxContainer:
 	close_village_modal()
 	cancel_preview()
@@ -2966,6 +2997,24 @@ func modal_card(title: String, action := "") -> VBoxContainer:
 	village_modal=w.root
 	player.controls_enabled=false
 	return w.body
+
+## The social layer's hooks (social_hud.gd): an invitation or knock answered from a notice, a
+## visit that started from the friends list, a chat line said by someone here.
+func answer_social_invite(invitation: Dictionary, decision: String) -> void:
+	await social.answer(invitation, decision)
+
+func follow_visit() -> void:
+	social.poll()
+
+func chat_bubble(user_id: String, username: String, text: String) -> void:
+	if screen=="village": social.bubble(user_id, username, text)
+
+## The window-stack description of a village modal (the craft window holds its window one level
+## down, under the notes' lane), so its opening key can close it.
+func modal_window(modal: Control) -> Dictionary:
+	if not is_instance_valid(modal): return {}
+	if modal==craft_window: return craft_window.window
+	return modal.get_meta("rpg_window",{})
 
 ## The round close key for drawers and side panels (RpgUi.close_key), named "닫기" with the panel's key.
 func close_button(parent: Node, callback: Callable, key := "") -> Button:
@@ -3320,7 +3369,7 @@ func restore_hud() -> void:
 
 func open_wardrobe() -> void:
 	if screen!="village": return
-	var v := modal_card(tr("나의 여행자"))
+	var v := modal_card(tr("나의 여행자"),"wardrobe")
 	var editor := preload("res://scripts/wardrobe.gd").new()
 	editor.avatar=me.get("profile",{}).get("avatar",{}).duplicate(true)
 	v.add_child(editor)
@@ -3341,7 +3390,9 @@ func open_wardrobe() -> void:
 
 func open_studio(destination: String="workshop") -> void:
 	var session := {"token":api.token,"url":api.base_url,"room":destination,"multiplayer":social.enabled,
-		"profile":me.get("profile",{}).duplicate(true)}
+		"profile":me.get("profile",{}).duplicate(true),"username":str(me.get("username",""))}
+	# The room's character frame shows the same two currencies as the village's.
+	if is_instance_valid(life) and life.state.has("coins"): session.coins=int(life.state.coins)
 	session.visiting=social.visiting()
 	if social.visiting():
 		# Friends may step into the host's home and public buildings; the workshop stays private.
