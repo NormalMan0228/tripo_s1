@@ -1210,7 +1210,7 @@ static func front(root: Node3D, s: Dictionary) -> void:
 	hinge.name="FrontDoor"
 	root.add_child(hinge)
 	hinge.position=Vector3(dx+DOOR_HALF+0.02,0,hd+WALL+0.02)
-	hinge.rotation.y=deg_to_rad(108)
+	hinge.rotation.y=deg_to_rad(FRONT_DOOR_OPEN_DEGREES)
 	var leaf_w := DOOR_HALF*2-0.16
 	var door_color := col(t,"accent").darkened(0.1) if s.theme!="lodge" else Color("7a5638")
 	Art.box(hinge,Vector3(-leaf_w*0.5,0.56,0),Vector3(leaf_w,1.02,0.07),door_color)
@@ -1229,6 +1229,21 @@ static func front(root: Node3D, s: Dictionary) -> void:
 	var sign := Art.label3d(root,TranslationServer.translate("마을 →"),Vector3(dx,1.15,hd+0.3),Color("f6e7c3"))
 	sign.font_size=26
 	sign.name="ExitSign"
+
+## The room's front door hinge ("FrontDoor", made by front()), or null when the room has none.
+## Its rotation.y runs from 0 (closed in the doorway) to FRONT_DOOR_OPEN_DEGREES (open outward, the
+## default look). Hooks for the 집·문·방문 session: docs/coordination/DOOR_HOOKS_KO.md.
+const FRONT_DOOR_OPEN_DEGREES := 108.0
+static func front_door(root: Node3D) -> Node3D:
+	if root == null: return null
+	var hinge := root.get_node_or_null("FrontDoor") as Node3D
+	return hinge if hinge else root.find_child("FrontDoor", true, false) as Node3D
+
+## Opens the room's front door by `amount` (0 closed .. 1 open as front() leaves it), at once:
+## callers tween it (tween_method). No-op without a door.
+static func set_front_door_open(root: Node3D, amount: float) -> void:
+	var hinge := front_door(root)
+	if hinge: hinge.rotation.y = deg_to_rad(FRONT_DOOR_OPEN_DEGREES)*clampf(amount, 0.0, 1.0)
 
 ## A window on a wall: frame, curtains and a view of the outside that follows the
 ## real clock (see view_material). Returns its interaction record.
