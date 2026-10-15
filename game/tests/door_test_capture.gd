@@ -68,9 +68,14 @@ func exterior() -> void:
 			Doors.set_door_open(id, amount)
 			var image := await shot("%s_ext_%s_%s.png" % [label, id, ["closed", "half", "open"][int(amount*2)]])
 			if amount == 0.0: report["closed_changed_pixels_"+id] = differ(plain, image)
-		# Thickness: from the hinge side, close, the leaf half open.
+		# Thickness: the leaf half open, close on its free edge from the side it swings to.
 		Doors.set_door_open(id, 0.5)
-		look_at_door(door, 1.7, -55.0)
+		var size := Doors.leaf_size(id)
+		var edge: Vector3 = leaf.global_transform*Vector3(-size.x, 1.2, -size.z*0.5)
+		var across: Vector3 = (leaf.get_parent() as Node3D).global_basis.x
+		app.camera.size = 1.3
+		app.camera.position = edge-across*3.5+(leaf.get_parent() as Node3D).global_basis.z*6.0+Vector3(0, 2.0, 0)
+		app.camera.look_at(edge)
 		await shot("%s_ext_%s_thickness.png" % [label, id])
 		Doors.set_door_open(id, 0.0)
 	if props: props.visible = true
