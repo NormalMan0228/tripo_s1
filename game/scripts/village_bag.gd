@@ -1,13 +1,14 @@
 extends RefCounted
 ## The village bag drawer (6, docs/design/UI_0118_KO.md): a header (bag, count, tidy, close), page
-## tabs (전체 / 보관 / 배치 / 판매 with counts), a 4-column grid of slots (the furniture icon with
-## a dot of the object's colour, a pin when placed, a tag when listed), the chosen object's name and
+## tabs (전체 / 보관 / 배치 / 판매 with counts), a 4-column grid of slots (the object's 3D picture,
+## bag_thumbs.gd, or the furniture icon until it is drawn, with a dot of the object's colour, a pin when placed, a tag when listed), the chosen object's name and
 ## state, the colour swatches, an action board with the bag icons (tools/build_ui_kit3.py: 놓기 or
 ## 회수 by state, 색칠, 모양, 사용, 상호작용,
 ## 판매 where trading is on) and the gold 새 물건 제작 key. main.gd keeps its ItemList
 ## (objects_list, hidden) as the selection model: a slot selects its row there and calls
 ## select_object, so tests and older code that drive objects_list keep working.
 const RpgUi = preload("res://scripts/rpg_ui.gd")
+const BagThumbs = preload("res://scripts/bag_thumbs.gd")
 const COLUMNS := 4
 const SLOT := Vector2(64, 64)
 const PAGES := [["all", "전체"], ["inventory", "보관"], ["placed", "배치"], ["listed", "판매"]]
@@ -200,6 +201,9 @@ func _slot(index: int, obj: Dictionary) -> Button:
 	art.size = SLOT - Vector2(16, 16)
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	slot.add_child(art)
+	# The object's own 3D picture once it is drawn (bag_thumbs.gd); the furniture icon until then.
+	var thumb := BagThumbs.lookup(app, obj, func(texture: Texture2D): if is_instance_valid(art): art.texture = texture)
+	if thumb: art.texture = thumb
 	# The object's own colour as a dot in the corner.
 	if Color.html_is_valid(str(obj.get("color", ""))):
 		var dot := Panel.new()

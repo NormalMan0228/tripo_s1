@@ -27,7 +27,26 @@ func run() -> void:
 			copy.id = "%s-%d" % [str(objects[0].id), i]
 			copy.name = names[i]
 			copy.state = states[i]
+			copy.color = ["#f4e3c1", "#e9c46a", "#e07a6f", "#5fa8a0", "#7a9bd9", "#d98477", "#f4e3c1", "#a0a0a0"][i]
 			objects.append(copy)
+	# Stand-in models for the slot pictures (no server): a coloured chair-ish block per object.
+	var thumbs = preload("res://scripts/bag_thumbs.gd")
+	thumbs.loader = func(obj: Dictionary) -> Node3D:
+		var root3d := Node3D.new()
+		var seat := MeshInstance3D.new()
+		seat.mesh = BoxMesh.new()
+		seat.mesh.size = Vector3(0.6, 0.12, 0.6)
+		seat.position.y = 0.45
+		var back := MeshInstance3D.new()
+		back.mesh = BoxMesh.new()
+		back.mesh.size = Vector3(0.6, 0.6, 0.1)
+		back.position = Vector3(0, 0.8, -0.25)
+		for part in [seat, back]:
+			var m := StandardMaterial3D.new()
+			m.albedo_color = Color(str(obj.get("color", "#c08050"))) if Color.html_is_valid(str(obj.get("color", ""))) else Color("c08050")
+			part.material_override = m
+			root3d.add_child(part)
+		return root3d
 	var app := Main.new()
 	root.add_child(app)
 	await create_timer(1.6).timeout
@@ -41,7 +60,7 @@ func run() -> void:
 	preload("res://scripts/transition.gd").of(self).fade_in()
 	await create_timer(1.2).timeout
 	app.toggle_drawer()
-	await create_timer(0.8).timeout
+	await create_timer(2.5).timeout
 	await capture("village")
 	app.toggle_drawer()
 	await app.start_run("forest", "standard")
