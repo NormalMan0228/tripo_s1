@@ -7,6 +7,7 @@ from .security import ADMIN_DAILY_SHARD_LIMIT, record_event
 
 log = logging.getLogger(__name__)
 
+
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS economy_flags (
  user_id TEXT NOT NULL REFERENCES users(id), code TEXT NOT NULL,
