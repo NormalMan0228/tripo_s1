@@ -10223,6 +10223,34 @@
   "🔒 %s · 아무도 없어요": {
    "en": "🔒 %s · Nobody home",
    "zh": "🔒 %s · 没人在家"
+  },
+  "%s 채집 (남은 자원 %d)": {
+   "en": "Gather %s (%d left)",
+   "zh": "采集%s (剩余资源 %d)"
+  },
+  "놓기": {
+   "en": "Place",
+   "zh": "放置"
+  },
+  "가방으로 회수": {
+   "en": "Put Back in the Bag",
+   "zh": "收回背包"
+  },
+  "열기·켜기 같은 동작": {
+   "en": "Open, switch on and other actions",
+   "zh": "打开、点亮等动作"
+  },
+  "직접 고르기": {
+   "en": "Pick Your Own",
+   "zh": "自己挑选"
+  },
+  "새 물건 제작 의뢰": {
+   "en": "Commission a New Item",
+   "zh": "委托制作新物品"
+  },
+  "모닥불": {
+   "en": "Campfire",
+   "zh": "篝火"
   }
  },
  "templates": []

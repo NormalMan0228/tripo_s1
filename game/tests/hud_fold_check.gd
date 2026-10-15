@@ -310,9 +310,18 @@ func village() -> void:
 	var goal_card: Control = app.objective_card
 	var goal_clip: Control = app.objective.get_parent().get_parent()
 	var goal_height: float = goal_card.size.y
-	var toolbar: Control = null
-	for child in ui.get_children():
-		if child is PanelContainer and child.get_global_rect().position.y > 600 and child.get_global_rect().size.x > 600: toolbar = child
+	# The field's icon hotbar (fold id "toolbar"): 가방 I, 먹기 Q, 모닥불 F, 붕대 H and 귀환.
+	var toolbar: Control = app.toolbar_bar.get_meta("tray") if is_instance_valid(app.toolbar_bar) else null
+	var caps := []
+	var tips := []
+	for slot in app.toolbar_bar.get_children():
+		var cap := ""
+		for child in slot.get_children():
+			if child is Label and child.has_meta("key_action"): cap = (child as Label).text
+		caps.append(cap)
+		tips.append(slot.tooltip_text)
+	expect(caps == ["I", "Q", "F", "H", ""] and tips[0] == TranslationServer.translate("가방") + "  ·  I" and tips[4] == TranslationServer.translate("귀환"),
+		"field hotbar slots and keys %s %s" % [caps, tips])
 	var field_handle: Control = ui.get_node_or_null("FoldHandle")
 	expect(toolbar != null and toolbar.visible and field_handle != null and not field_handle.visible, "toolbar open, handle hidden")
 	RpgUi.toggle_fold("survival_objective")

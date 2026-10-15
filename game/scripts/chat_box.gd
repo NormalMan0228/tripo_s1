@@ -126,7 +126,7 @@ func _ready() -> void:
 
 ## Bottom-left spot per place: above the room's way-out row, above the expedition's tool bar.
 func place_for(kind: String) -> void:
-	bottom = {"room":726.0, "survival":604.0}.get(kind, 786.0)
+	bottom = {"room":786.0, "survival":786.0}.get(kind, 786.0)
 	position = Vector2(14, bottom - HEIGHT)
 	size = Vector2(WIDTH, HEIGHT)
 	RpgUi.pin(self, 0.0, 1.0)

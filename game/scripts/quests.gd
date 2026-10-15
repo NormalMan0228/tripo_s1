@@ -462,6 +462,8 @@ static func room_done(room: Node, id: String, kind: String, reply: Dictionary) -
 		Fx.burst(room.stage, at+Vector3(0, 1.5, 0), "sparkle", 22, Color(0,0,0,0), 0.5)
 		Fx.glow(room.stage, at+Vector3(0, 1.3, 0), Color("ffd27a"), 2.0, 1.2)
 		if is_instance_valid(room.get("wallet")): room.wallet.text = t("별씨 %d") % int(reply.get("shards", 0))
+		# The room's character frame counts the reward up too.
+		if reply.has("shards") and room.has_method("show_stars"): room.show_stars(int(reply.shards))
 		room.message(t("부탁 완료 · %s · %s") % [title_of(entry), stars_text(stars)] if stars > 0 else t("부탁 완료 · %s") % title_of(entry))
 		var note := NpcGifts.letters_note(reply)
 		if not note.is_empty(): room.create_tween().tween_callback(func(): room.message(note)).set_delay(3.0)
