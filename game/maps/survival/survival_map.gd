@@ -28,7 +28,6 @@ const SurvivalBake = preload("res://maps/survival/survival_bake.gd")
 const Daytime = preload("res://maps/survival/survival_daytime.gd")
 ## The tutorial's goals shown in the world (beacons, sparkles, rings; no words).
 const TutorialGuide = preload("res://maps/survival/survival_guide.gd")
-const Daylight = preload("res://scripts/daylight.gd")
 const LOD_ZOOM := 18.5
 const FAR := 64.0
 const RESOURCE_KINDS := ["tree","stone","berry","fiber"]
@@ -230,7 +229,7 @@ func build(run: Dictionary) -> void:
 	map_id = str(run.get("map_id","forest"))
 	if not LOOK.has(map_id): map_id = "forest"
 	look = LOOK[map_id]
-	daytime.setup(look)
+	daytime.setup(look,map_id)
 	var all := layouts()
 	spec = all.maps[map_id]
 	bounds = float(all.bounds)
@@ -1616,8 +1615,9 @@ func _haze() -> Color:
 	return daytime.haze
 
 ## The map's grade at the stage's hour. main.gd lerps its own survival values every frame; this
-## node runs after it (process_priority) and sets the map's grade instead. The night colour grade
-## (daylight.gd's curve, a share of it) follows the graphics setting as in the village.
+## node runs after it (process_priority) and sets the map's grade instead. The colour grade (the
+## night's, the sunset's, the boss night's curves: survival_daytime.gd) follows the graphics setting
+## as in the village.
 func _apply_grade(_snap: bool) -> void:
 	if env == null or sun == null:
 		_bind()
@@ -1628,11 +1628,7 @@ func _apply_grade(_snap: bool) -> void:
 		env.ambient_light_color = daytime.ambient_color
 		env.ambient_light_energy = daytime.ambient_energy
 		env.fog_enabled = false
-		# Stepped, so the curve's texture is redrawn a few times over an evening, not every frame.
-		var grade := snappedf(daytime.grade,1.0/32.0) if GameSettings.night_grade() else 0.0
-		env.adjustment_enabled = daytime.saturation < 0.995 or grade > 0.002
-		env.adjustment_saturation = daytime.saturation
-		Daylight._grade(env,grade)
+		daytime.grade_environment(env,GameSettings.night_grade())
 	if sun != null:
 		sun.light_color = daytime.sun_color
 		sun.light_energy = daytime.sun_energy
