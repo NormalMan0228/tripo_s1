@@ -472,6 +472,9 @@ def letters(conn, host_id, limit=50):
             # The resident's request is done (server/quests.py): its own thank-you words.
             letter['level'] = 0
             letter['quest'] = {'npc': r['npc_id']}
+        content = npc_letters.content_for(letter)
+        if content is not None:
+            letter['content'] = content
         out.append(letter)
     return out
 

@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import Request
 
-from . import homestead, npc_homes, npc_letters, quests, village_residents
+from . import homestead, npc_homes, npc_letters, quest_content, quests, village_residents
 from .models import Mutation
 
 BOARD_SIZE = 5
@@ -51,6 +51,9 @@ def public(conn, user_id, settings, now):
         if item['npc'] in missing and item['state'] != 'done':
             item['state'] = 'locked'
         item.update(day=day, letter=True)
+        content = quest_content.quest_template(quest_id, now)
+        if content is not None:
+            item['content'] = content
         listing.append(item)
     completed = sum(r['state'] == 'done' for r in rows.values())
     return {'day': day, 'timezone': 'Asia/Seoul',
