@@ -328,7 +328,7 @@ func _build_custom(page: VBoxContainer) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	page.add_child(row)
-	row.add_child(RpgUi.icon("res://assets/ui/starseed.svg", 24))
+	row.add_child(RpgUi.icon("res://assets/starseed.svg", 24))
 	describe_note = RpgUi.caption(row, "", 13, RpgUi.PAPER_INK)
 	describe_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	describe_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
