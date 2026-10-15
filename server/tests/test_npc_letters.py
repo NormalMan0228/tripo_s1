@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from server.app import create_app
 from server.config import Settings
-from server import npc_letters
+from server import npc_letters, village_residents
 
 
 def mutation(**values):
@@ -201,3 +201,47 @@ def test_dispatch_requires_callers_write_transaction(world):
         with pytest.raises(ValueError, match='npc_letter_transaction_required'):
             npc_letters.dispatch(conn, user_id, 'naru', 'request_done', 'key', now[0])
         assert conn.execute('SELECT count(*) FROM npc_letters').fetchone()[0] == 0
+
+
+def test_return_mail_coexists_with_legacy_quests_story_and_anniversary(world):
+    app, client, now = world
+    now[0] = timestamp('2027-01-09T10:00:00+09:00')
+    app.state.settings.resident_moves = True
+    user_id, headers = account(app, client, 'alice')
+    with app.state.db.transaction() as conn:
+        village_residents.ensure(conn, user_id, now[0], app.state.settings)
+        conn.execute("UPDATE story_progress SET step='done' WHERE user_id=?", (user_id,))
+        # An upgraded save already has hearts, request/story letters and a full
+        # legacy move cycle. New event letters must keep all their meanings.
+        legacy = {}
+        for level in (0, 1, 100, 200, 201):
+            legacy[level] = str(uuid.uuid4())
+            conn.execute('INSERT INTO npc_letters(id,host_id,npc_id,level,created) VALUES (?,?,?,?,?)',
+                         (legacy[level], user_id, 'shopkeeper', level, now[0]))
+        request_id = npc_letters.dispatch(conn, user_id, 'shopkeeper', 'request_done', 'board:danbi_home', now[0])
+        conn.execute("UPDATE village_residents SET state='away',moves=1 WHERE host_id=?", (user_id,))
+        assert village_residents.arrive(conn, user_id, 'shopkeeper', now[0], app.state.settings)
+        before = conn.execute('SELECT shards FROM users WHERE id=?', (user_id,)).fetchone()[0]
+    now[0] += app.state.settings.resident_arrive_seconds
+    # Read-all itself settles the return and delivers today's anniversary.
+    body = mutation()
+    response = client.post('/v1/letters/read', headers=headers, json=body)
+    assert response.status_code == 200 and response.json() == {'unread': 0}
+    assert client.post('/v1/letters/read', headers=headers, json=body).json() == response.json()
+    mail = client.get('/v1/letters', headers=headers).json()
+    assert mail['unread'] == 0 and len(mail['letters']) == 8
+    assert all(letter['read'] for letter in mail['letters'])
+    letters = {letter['id']: letter for letter in mail['letters']}
+    assert 'story' in letters[legacy[0]] and letters[legacy[1]]['level'] == 1
+    assert 'quest' in letters[legacy[100]] and 'quest' in letters[request_id]
+    assert [letters[legacy[level]]['move']['kind'] for level in (200, 201)] == ['in', 'out']
+    returned = next(letter for letter in mail['letters'] if letter.get('event', {}).get('type') == 'move_in')
+    assert returned['move'] == {'kind': 'back', 'npc': 'shopkeeper'}
+    assert returned['event']['key'] == 'residency:1'
+    assert len([letter for letter in mail['letters'] if letter.get('event', {}).get('type') == 'resident_day']) == 1
+    assert client.get('/v1/letters', headers=headers).json() == mail
+    with app.state.db.read() as conn:
+        assert conn.execute('SELECT shards FROM users WHERE id=?', (user_id,)).fetchone()[0] == before
+        assert conn.execute('SELECT count(*) FROM npc_letter_events WHERE host_id=?', (user_id,)).fetchone()[0] == 3
+        news = conn.execute("SELECT letter_id FROM village_news WHERE host_id=? AND kind='returned'", (user_id,)).fetchone()
+        assert news['letter_id'] == returned['id']

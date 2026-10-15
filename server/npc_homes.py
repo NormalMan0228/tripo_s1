@@ -105,6 +105,8 @@ SENDERS = {
 # A resident's thank-you letter for a finished request (server/quests.py) has this level: one per
 # resident, clear of the hearts (1..4) and the story chapter's runs (0 and below).
 QUEST_LETTER_LEVEL = 100
+# Compatibility for move letters created before event-backed delivery.
+MOVE_LETTER_LEVEL = 200
 
 # Item tags from the piece's name and its design title/category. English words match whole-word
 # prefixes ("lamp" matches "lamps", not "clamp"); Korean words match anywhere in the text.
@@ -444,8 +446,15 @@ def letters(conn, host_id, limit=50):
             letter['event'] = {'type': r['event'], 'key': r['event_key'], 'payload': json.loads(r['payload'])}
             if r['event'] == 'request_done':
                 letter['quest'] = {'npc': r['npc_id']}
+            elif r['event'] in ('move_in', 'move_out'):
+                default = 'out' if r['event'] == 'move_out' else 'in'
+                letter['move'] = {'kind': letter['event']['payload'].get('kind', default), 'npc': r['npc_id']}
         elif r['level'] <= 0:
             letter['story'] = {'chapter': 'first_gift', 'object': r['about_name'] or '', 'sittable': r['about_mood'] == 'love'}
+        elif r['level'] >= MOVE_LETTER_LEVEL:
+            offset = r['level'] - MOVE_LETTER_LEVEL
+            letter['level'] = 0
+            letter['move'] = {'kind': 'out' if offset % 2 else 'back' if offset else 'in', 'npc': r['npc_id']}
         elif r['level'] >= QUEST_LETTER_LEVEL:
             # The resident's request is done (server/quests.py): its own thank-you words.
             letter['level'] = 0
@@ -752,6 +761,7 @@ class NpcHomes:
         def read_letters(request: Request):
             with db.read() as conn:
                 user = auth(conn, request)
+            app.state.village_residents.residents_for(user['id'])
             self.deliver_daily(user['id'])
             with db.read() as conn:
                 return {'letters': letters(conn, user['id']), 'unread': unread_letters(conn, user['id'])}
@@ -759,6 +769,7 @@ class NpcHomes:
         @app.post('/v1/letters/read')
         def mark_read(body: LettersRead, request: Request):
             def apply(conn, user):
+                app.state.village_residents.sync_in(conn, user['id'], clock())
                 npc_letters.dispatch_daily(conn, user['id'], clock())
                 ids = [str(i) for i in body.ids]
                 if ids:

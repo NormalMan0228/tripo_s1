@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import Request
 
-from . import homestead, npc_homes, npc_letters, quests
+from . import homestead, npc_homes, npc_letters, quests, village_residents
 from .models import Mutation
 
 BOARD_SIZE = 5
@@ -42,11 +42,14 @@ def public(conn, user_id, settings, now):
     rows = {r['quest_id']: r for r in conn.execute(
         'SELECT * FROM quest_board_progress WHERE user_id=? AND day=?', (user_id, day))}
     opened = quests.unlocked(conn, user_id)
-    waiting = quests.held(conn, user_id)
+    waiting = quests.held(conn, user_id, settings)
+    missing = village_residents.absent(conn, user_id, settings)
     listing = []
     for quest_id in offers(now):
         item = quests.entry(conn, user_id, quest_id, rows.get(quest_id), settings.quest_stars_scale,
                             opened and quest_id not in waiting)
+        if item['npc'] in missing and item['state'] != 'done':
+            item['state'] = 'locked'
         item.update(day=day, letter=True)
         listing.append(item)
     completed = sum(r['state'] == 'done' for r in rows.values())
@@ -73,7 +76,8 @@ class QuestBoard:
                 quests.fail('quest_board_not_offered', 404)
             if host_for(conn, user['id']) != user['id']:
                 quests.fail('quest_own_village_only')
-            if not quests.unlocked(conn, user['id'], quest_id):
+            app.state.village_residents.sync_in(conn, user['id'], now)
+            if not quests.unlocked(conn, user['id'], quest_id) or quest_id in quests.held(conn, user['id'], settings):
                 quests.fail('quests_locked')
             return quests.QUESTS[quest_id]
 
@@ -97,6 +101,8 @@ class QuestBoard:
         def read(request: Request):
             with db.read() as conn:
                 user = auth(conn, request)
+            app.state.village_residents.residents_for(user['id'])
+            with db.read() as conn:
                 return {'board': public(conn, user['id'], settings, clock())}
 
         @app.post('/v1/quest_board/{day}/{quest_id}/accept')

@@ -356,7 +356,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             record_event(conn,'admin_grant',user['id'],{'shards':body.shards,'coins':body.coins,'request_id':str(body.request_id)},clock())
             if body.coins:
                 state=life_state(conn,user['id'])
-                state['coins']=state.get('coins',0)+body.coins
+                economy.change_coins(conn,user['id'],state,body.coins,'admin_grant',str(body.request_id),clock())
                 state['version']=state.get('version',0)+1
                 conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
                              (user['id'],json.dumps(state)))
@@ -367,18 +367,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     @app.post('/v1/homestead')
     def edit_life(body:LifeAction,request:Request):
         def edit(conn,user):
+            if body.action in ('buy','sell'):
+                return app.state.shops.trade(conn,user,'farm_stall',body.action,body)
+            if body.action=='order':
+                return app.state.shops.order(conn,user,body)
             state=life_state(conn,user['id'])
             try: result=homestead.act(state,body,clock())
             except homestead.Rejected as error: fail(str(error))
-            # Selling also pays starseeds (a daily allowance), through the ledger like every star.
-            if body.action=='sell':
-                stars=homestead.sell_stars(state,homestead.PRICES[body.item]*body.quantity,clock(),
-                                           settings.sell_stars_daily,settings.sell_coins_per_star)
-                if stars:
-                    money(conn,user['id'],stars,'sell_reward',str(body.request_id))
-                    result['message']=result['message'].replace('개를 받았어요.',f'개와 별씨 {stars}개를 받았어요.')
-                result['stars']=stars
-                result['shards']=conn.execute('SELECT shards FROM users WHERE id=?',(user['id'],)).fetchone()[0]
             result['sell_stars']=homestead.star_status(state,clock(),settings.sell_stars_daily,settings.sell_coins_per_star)
             conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
                          (user['id'],json.dumps(state)))
@@ -477,6 +472,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def me(request:Request):
         with db.read() as conn:
             user = auth(conn,request)
+        residency = app.state.village_residents.residents_for(user['id'])
+        with db.read() as conn:
             active = conn.execute("SELECT id,state FROM runs WHERE owner_id=? AND status='active'",(user['id'],)).fetchone()
             active_summary = None
             if active:
@@ -486,7 +483,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             pending_job = conn.execute("SELECT id FROM jobs WHERE owner_id=? AND state IN ('queued','submitting','generating','unknown') ORDER BY created LIMIT 1",(user['id'],)).fetchone()
             # The craft under way (asset_studio.py), so the village follows it again after a relaunch.
             craft = conn.execute("SELECT id,state FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled','unknown') ORDER BY created DESC LIMIT 1",(user['id'],)).fetchone()
-            return {'username':user['username'],'shards':user['shards'],'mode':settings.mode,'role':user['role'],
+            return {'residents':residency,'username':user['username'],'shards':user['shards'],'mode':settings.mode,'role':user['role'],
                 'generation_enabled': settings.mode=='demo' or bool(settings.legacy_generation_enabled and settings.tripo_key and settings.paid_enabled),
                 'studio_tripo_enabled': bool(settings.tripo_key and settings.paid_enabled),
                 'generation_cost':25,'profile':profile(conn,user['id']),'catalog':catalog.public_catalog(),'campaign':campaign.public(conn,user['id']),
@@ -523,7 +520,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             else:
                 if row['state']!='inventory': fail('retrieve_before_moving')
                 if not homestead.village_inside(body.x, body.z): fail('outside_room')
-                reserved = homestead.village_reserved(body.x, body.z)
+                reserved = homestead.village_reserved(body.x, body.z, settings.resident_moves)
                 if reserved: fail(reserved)
                 other = conn.execute("SELECT x,z FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? AND state='placed' AND COALESCE(room,'village')='village'",(user['id'],)).fetchall()
                 if len(other)>=30: fail('village_full')
@@ -715,8 +712,12 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.object_shape=object_shape.ObjectShape(app,db,clock,mutate,own)
     from .npc_homes import NpcHomes
     app.state.npc_homes=NpcHomes(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
+    from .village_residents import VillageResidents
+    app.state.village_residents=VillageResidents(app,db,settings,clock,auth,multiplayer.host_for)
     from .story import Story
     app.state.story=Story(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
+    from .shops import Shops
+    app.state.shops=Shops(app,db,settings,clock,auth,mutate,money,assets)
     from .quests import Quests
     app.state.quests=Quests(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
     from .quest_board import QuestBoard

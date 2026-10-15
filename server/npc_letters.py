@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS npc_letter_events (
 '''
 
 EVENTS = frozenset(('request_done', 'resident_day', 'move_in', 'move_out'))
-# Hearts occupy 1..4, the old request letters 100, and story runs 0 and below.
+# Hearts occupy 1..4, old request letters 100, legacy move letters 200 and up,
+# and story runs 0 and below. New move mail uses the same event namespace.
 EVENT_LEVEL_START = 1_000_000
 SERVER_TIMEZONE = timezone(timedelta(hours=9))
 # Village anniversary dates, not character birthdays. The schedule is stable
