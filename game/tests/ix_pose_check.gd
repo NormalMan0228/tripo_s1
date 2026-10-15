@@ -117,6 +117,13 @@ func run() -> void:
 	var without: Quaternion = sample.thigh_rot
 	pose.active = true
 	check(rad_to_deg(with_layer.angle_to(without)) < 3.0, "at weight 0 the legs follow the clip (%.2f deg)" % rad_to_deg(with_layer.angle_to(without)))
+	# Cost: one full pose (hips, root tilt, six leg bones, spine, arms) on the walker's skeleton.
+	var cfg := IxPose.configure(skel, player.visual)
+	var t0 := Time.get_ticks_usec()
+	for i in 500: IxPose.pose_skeleton(skel, cfg, 1.5, -1.55, -0.1, 0.35, 0.7, 0.3, 0.0, Basis.IDENTITY, 1.0)
+	var per_call := (Time.get_ticks_usec() - t0) / 500.0
+	report["pose_cost_us"] = per_call
+	check(per_call < 400.0, "one pose costs %.0f us (budget 400)" % per_call)
 	# The fallback (no driver): mode alone eases the pose in and out.
 	pose.driven = false
 	pose.mode = "sit"
