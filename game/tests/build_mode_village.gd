@@ -40,11 +40,20 @@ func select(id: String) -> void:
 		if str(app.me.objects[i].id)==id: app.select_object(i)
 	await create_timer(0.6).timeout
 
+## begin_place waits out a refresh in flight (it returns at once while one runs).
+func ghost_up() -> bool:
+	for _i in 20:
+		if not app.busy and not app.refreshing:
+			await app.begin_place()
+			if is_instance_valid(app.preview): return true
+		await create_timer(0.3).timeout
+	print("NO PREVIEW busy=",app.busy," refreshing=",app.refreshing)
+	return false
+
 func place_at(id: String, x: float, z: float) -> bool:
 	await select(id)
 	print("PLACE ",id," state=",obj(id).get("state")," selected=",app.selected.get("id")," busy=",app.busy," refreshing=",app.refreshing)
-	await app.begin_place()
-	if not is_instance_valid(app.preview): print("NO PREVIEW");return false
+	if not await ghost_up(): return false
 	app.preview_follow=false
 	app.preview.position=Town.furniture_point(x,z)
 	print("SPOT ",Vector2(x,z)," problem='",app.placement_problem(),"'")
@@ -69,7 +78,7 @@ func run() -> void:
 	# A meadow spot off the roads, clear of buildings, near the arrival.
 	var spot := Vector2.INF
 	await select(table)
-	await app.begin_place()
+	if not await ghost_up(): quit(1);return
 	app.preview_follow=false
 	for offset in [Vector2(-8,-4),Vector2(-6,6),Vector2(6,-6),Vector2(8,6),Vector2(-10,2),Vector2(10,-2),Vector2(4,10),Vector2(-4,-10)]:
 		var here: Vector2=Town.furniture_local(app.player.position)+offset
@@ -108,7 +117,7 @@ func run() -> void:
 	check(int(obj(table).rotation)==(before+90)%360,"돌리기 turns the table 90° (%d -> %d)" % [before,int(obj(table).rotation)])
 	# The lamp onto the table's top.
 	await select(lamp)
-	await app.begin_place()
+	if not await ghost_up(): quit(1);return
 	app.preview_follow=false
 	var body: CollisionObject3D=null
 	for child in app.loaded[table].get_children():
@@ -147,8 +156,7 @@ func run() -> void:
 	check(not app.loaded.has(table) and not app.loaded.has(lamp),"both are gone from the village")
 	# A door: nothing may stand in front of it.
 	await select(table)
-	await app.begin_place()
-	if is_instance_valid(app.preview):
+	if await ghost_up():
 		app.preview_follow=false
 		var door: Vector2=Town.DOORS[8].at
 		app.preview.position=Vector3(door.x,Town.height_at(door.x,door.y),door.y)
