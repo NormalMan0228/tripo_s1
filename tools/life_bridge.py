@@ -14,6 +14,23 @@ body = json.loads(body_path.read_text(encoding='utf-8'))
 try:
     if body.get('action') == '__get':
         reply = {'ok': True, 'data': homestead.public(state, now)}
+    elif body.get('action') in ('buy', 'sell'):
+        # The farm stall without a database (the server's route is server/shops.py with the leaf
+        # ledger): the same prices and the same coin checks (economy.apply_coins), state untouched on refusal.
+        body.setdefault('request_id', str(uuid.uuid4()))
+        action = LifeAction(**body)
+        trial = json.loads(json.dumps(state))
+        if action.action == 'buy':
+            if action.item not in homestead.SHOP: raise homestead.Rejected('life_invalid_item')
+            economy.apply_coins(trial, -homestead.SHOP[action.item]*action.quantity)
+            homestead.add(trial, action.item, action.quantity)
+        else:
+            if action.item not in homestead.PRICES: raise homestead.Rejected('life_invalid_item')
+            homestead.spend(trial, action.item, action.quantity)
+            economy.apply_coins(trial, homestead.PRICES[action.item]*action.quantity)
+        state.clear(); state.update(trial)
+        reply = {'ok': True, 'data': homestead.public(state, now)}
+        state_path.write_text(json.dumps(state), encoding='utf-8')
     else:
         body.setdefault('request_id', str(uuid.uuid4()))
         reply = {'ok': True, 'data': homestead.act(state, LifeAction(**body), now)}

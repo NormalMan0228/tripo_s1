@@ -16,7 +16,6 @@ BRIDGE = Path(__file__).resolve().parents[2] / 'tools' / 'life_bridge.py'
                                          ('12', 'invalid_coin_balance'),
                                          (True, 'invalid_coin_balance'),
                                          (1.0, 'invalid_coin_balance')])
-@pytest.mark.skip(reason='buy/sell/order moved from homestead to server/shops.py (codex/lifesrv); the life bridge has no shop')
 def test_leaf_coin_refusals_preserve_bridge_error_and_state(tmp_path, monkeypatch, capsys, balance, code):
     state_path = tmp_path / 'state.json'
     body_path = tmp_path / 'body.json'
