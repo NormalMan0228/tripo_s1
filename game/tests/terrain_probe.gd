@@ -32,7 +32,7 @@ func run() -> void:
 	var chunks: Node3D = map.get_node_or_null("Ground")
 	# The ground as drawn: the model's ground meshes (before the chunks) or the chunks.
 	var grounds := ground_nodes(map).filter(func(g): return (g as MeshInstance3D).mesh != null)
-	if chunks: grounds += chunks.get_children().filter(func(c): return String(c.name).begins_with("Chunk_"))
+	if chunks: grounds += chunks.get_children().filter(func(c): return String(c.name).begins_with("Chunk_") or String(c.name).begins_with("Shade_"))
 	var ocean := [chunks.get_node("Ocean")] if chunks and chunks.has_node("Ocean") else map.find_children("Ocean__central_surface", "MeshInstance3D", true, false)
 	report["ocean_lods"] = lods_of((ocean[0] as MeshInstance3D).mesh) if not ocean.is_empty() and (ocean[0] as MeshInstance3D).mesh else []
 	report["ground_meshes"] = grounds.size()
@@ -171,6 +171,15 @@ func light_pressure(map: Node3D, grounds: Array) -> Dictionary:
 	out["chunk_worst"] = worst
 	out["chunk_worst_lit"] = worst_lit
 	out["chunks_over_8"] = over
+	# The same with the chunks' boxes grown by a cull margin (the engine pairs lights by the grown box).
+	var grown := {}
+	for margin in [1.0, 2.0, 4.0]:
+		var most := 0
+		for key: String in boxes:
+			var near := lights.filter(func(l): return (l.box as AABB).intersects((boxes[key] as AABB).grow(margin)) and (not layers.has(key) or (int(l.mask) & int(layers[key])) != 0))
+			most = maxi(most, near.size())
+		grown[str(margin)] = most
+	out["chunk_worst_lit_with_margin"] = grown
 	return out
 
 ## generate_lod on one 32 m cell of the town ground: are its border vertices and edges kept?

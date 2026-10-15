@@ -10,7 +10,8 @@ hidden are checked against the thresholds of the level (1a: the chunks are the s
 >= 99.99 % of the pixels the same and a mean difference <= 0.01/255; 1b: simplified ground, mean
 <= 0.06/255 at zoom 6.5 and <= 0.08/255 at 10 and 22, 99.9th percentile <= 4/255, no pixel over
 32/255); the "_lit" pairs are reported only. Then the crack test (crack_A/B, crack_close_A/B: the
-grounds white on magenta from above): magenta inside B where A is white is a hole between chunks.
+grounds white on magenta from above, nothing below the line the chunks leave out): magenta in B
+where A is white is a hole between chunks (white only in B is a kept triangle reaching below it).
 A difference image (x8, red) is written next to each pair that fails. Prints TERRAIN_AB_DIFF {...}
 and exits 1 on a failure.
 """

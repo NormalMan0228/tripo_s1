@@ -15,7 +15,7 @@ extends SceneTree
 ## Prints AB_CAPTURE {...} when done.
 const Town = preload("res://scripts/town.gd")
 const Profile = preload("res://scripts/controller_profile.gd")
-const SPOTS := [["square", Vector2(-33,37)], ["cafe", Vector2(-60.2,-27.6)], ["meadow", Vector2(-18,-31)], ["headland", Vector2(62,-38)],
+const ALL_SPOTS := [["square", Vector2(-33,37)], ["cafe", Vector2(-60.2,-27.6)], ["meadow", Vector2(-18,-31)], ["headland", Vector2(62,-38)],
 	["camp", Vector2(52,36)], ["lighthouse", Vector2(5,74)], ["falls", Vector2(2,-14)], ["shore", Vector2(-80,10)],
 	["south_lamps", Vector2(-25,57)], ["bridge_lamps", Vector2(16,27)], ["camp_lamp", Vector2(66,44)]]
 var app: Node
@@ -23,12 +23,17 @@ var out_dir := "res://../artifacts/terrain_p2/ab/"
 var label := "cap"
 var zooms := [6.5, 10.0, 22.0]
 var report := {}
+var only := []
+
+var SPOTS: Array:
+	get: return ALL_SPOTS.filter(func(spot): return only.is_empty() or only.has(spot[0]))
 
 func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="): out_dir = arg.trim_prefix("--out=").trim_suffix("/")+"/"
 		if arg.begins_with("--label="): label = arg.trim_prefix("--label=")
 		if arg.begins_with("--zooms="): zooms = Array(arg.trim_prefix("--zooms=").split(",")).map(func(z): return float(z))
+		if arg.begins_with("--spots="): only = Array(arg.trim_prefix("--spots=").split(","))
 	call_deferred("run")
 
 func run() -> void:
@@ -37,16 +42,26 @@ func run() -> void:
 		quit(1)
 		return
 	var args := OS.get_cmdline_user_args()
-	# Time almost stopped (0 makes the walker's physics divide by it): residents, water and clouds hold still.
-	Engine.time_scale = 0.0001
+	# Time stopped: residents, water and clouds hold still (the hidden walker rests: its physics divides
+	# by the step); the camera stays where place() puts it (the follow view would drift it to the walker).
+	app.player.process_mode = Node.PROCESS_MODE_DISABLED
+	Engine.time_scale = 0.0
+	# The boats bob on the wall clock.
+	var props: Node = app.town.map.get_node_or_null("Environment")
+	if props: props.floating_boats.clear()
+	free_camera(true)
 	for arg in args:
 		if arg.begins_with("--switch-hour="):
 			set_hour(float(arg.trim_prefix("--switch-hour=")))
 			for i in 30: await process_frame
+	# --no-sun-shadows: tells shadow-map differences from the rest.
+	if "--no-sun-shadows" in args:
+		for sun in app.find_children("*", "DirectionalLight3D", true, false): sun.shadow_enabled = false
 	if "--views" in args: await views()
 	if "--lampsets" in args: await lamp_sets()
 	if "--ab" in args: await ab()
 	Engine.time_scale = 1.0
+	app.player.process_mode = Node.PROCESS_MODE_INHERIT
 	print("AB_CAPTURE ", JSON.stringify(report))
 	quit(0)
 
@@ -132,7 +147,6 @@ func free_camera(on: bool) -> void:
 	app.warming = on
 
 func top_view() -> void:
-	free_camera(true)
 	app.camera.size = 210.0
 	app.camera.position = Vector3(-5, 300, 0)
 	app.camera.look_at(Vector3(-5, 0, 0.001), Vector3.FORWARD)
@@ -153,7 +167,6 @@ func lamp_sets() -> void:
 	var keep_far: float = app.camera.far
 	var hidden := ground_only(true, ground_parts(map))
 	var lights := point_lights().filter(func(l): return (l as Light3D).is_visible_in_tree())
-	free_camera(true)
 	var pooled := []
 	var quiet := []
 	var means := {}
@@ -173,7 +186,6 @@ func lamp_sets() -> void:
 		else: quiet.append(light_key(light))
 	for node in hidden: node.visible = true
 	app.camera.far = keep_far
-	free_camera(false)
 	report["lamp_sets"] = {"pooled": pooled, "quiet": quiet}
 	print("LAMP_SETS ", JSON.stringify({"hour": app.daylight.current_hour(), "lights": lights.size(), "pooled": pooled.size(), "quiet": quiet, "means": means}))
 
@@ -214,6 +226,7 @@ func full_ground(map: Node3D) -> Dictionary:
 		var fresh := terrain.find_child("Ocean__central_surface", true, false) as MeshInstance3D
 		undo[ocean] = [ocean.mesh, ocean.visible]
 		ocean.mesh = fresh.mesh
+		if chunks and chunks.has_node("Ocean"): ocean.material_override = (chunks.get_node("Ocean") as MeshInstance3D).material_override
 	holder.free()
 	layout.free()
 	return undo
@@ -238,6 +251,65 @@ func ab() -> void:
 	var undo := await full_ground(map)
 	var full := {}
 	for node: MeshInstance3D in undo: full[node] = [node.mesh, true]
+	if "--merged" in OS.get_cmdline_user_args():
+		# Experiment: A is the chunks' triangles merged back into one mesh per island (no dropped ones).
+		var parts := {}
+		for chunk: MeshInstance3D in map.get_node("Ground").get_children().filter(func(c): return String(c.name).begins_with("Chunk_")):
+			var key := String(chunk.mesh.surface_get_name(0))
+			if not parts.has(key): parts[key] = []
+			parts[key].append(chunk)
+		for node: MeshInstance3D in undo:
+			if not parts.has(String(node.name)): continue
+			var tool := SurfaceTool.new()
+			for chunk: MeshInstance3D in parts[String(node.name)]: tool.append_from(chunk.mesh, 0, Transform3D.IDENTITY)
+			var merged := tool.commit()
+			merged.surface_set_material(0, (parts[String(node.name)][0] as MeshInstance3D).mesh.surface_get_material(0))
+			full[node] = [merged, true]
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--margin="):
+			# Experiment: the chunks culled with a margin (shadow casters near the edge of a split).
+			for chunk in map.get_node("Ground").get_children(): if chunk is GeometryInstance3D: chunk.extra_cull_margin = float(arg.trim_prefix("--margin="))
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--shadow-skirt="):
+			# Experiment: the dropped triangles reaching above this height kept as shadow casters only.
+			var reach := float(arg.trim_prefix("--shadow-skirt="))
+			var kept := 0
+			for node: MeshInstance3D in undo:
+				if not String(node.name).ends_with("__ground"): continue
+				var arrays := (full[node][0] as Mesh).surface_get_arrays(0)
+				var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+				var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+				var faces := PackedVector3Array()
+				for t in range(0, index.size(), 3):
+					var high := maxf(verts[index[t]].y, maxf(verts[index[t+1]].y, verts[index[t+2]].y))
+					if high < -0.30 and high >= reach: faces.append_array(PackedVector3Array([verts[index[t]], verts[index[t+1]], verts[index[t+2]]]))
+				if faces.is_empty(): continue
+				kept += faces.size()/3
+				var shell := ArrayMesh.new()
+				var shell_arrays := []
+				shell_arrays.resize(Mesh.ARRAY_MAX)
+				shell_arrays[Mesh.ARRAY_VERTEX] = faces
+				shell.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, shell_arrays)
+				var caster := MeshInstance3D.new()
+				caster.mesh = shell
+				caster.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+				map.get_node("Ground").add_child(caster)
+			print("SHADOW_SKIRT ", reach, " triangles ", kept)
+	if "--anchors" in OS.get_cmdline_user_args():
+		# Experiment: shadow-only stand-ins with each island ground's whole box, under the chunks.
+		for node: MeshInstance3D in undo:
+			if not String(node.name).ends_with("__ground"): continue
+			var anchor := MeshInstance3D.new()
+			var tiny := ArrayMesh.new()
+			var arrays := []
+			arrays.resize(Mesh.ARRAY_MAX)
+			var at := (full[node][0] as Mesh).get_aabb().get_center()
+			arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([at, at, at])
+			tiny.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			anchor.mesh = tiny
+			anchor.custom_aabb = (full[node][0] as Mesh).get_aabb()
+			anchor.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+			map.get_node("Ground").add_child(anchor)
 	use(map, false, full, chunked)
 	var lights := point_lights()
 	var shown := lights.filter(func(l): return (l as Light3D).visible)
@@ -255,10 +327,28 @@ func ab() -> void:
 						use(map, before, full, chunked)
 						await shot("ab_h%d_%s_z%s_%s%s.png" % [int(h), spot[0], str(zoom), "A" if before else "B", "_lit" if lit else ""])
 					pairs += 1
-	# Cracks: both grounds white and unshaded on magenta, the rest hidden.
-	var white := StandardMaterial3D.new()
-	white.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	white.albedo_color = Color.WHITE
+	if "--chunk-ids" in OS.get_cmdline_user_args():
+		# Experiment: each chunk a flat colour (its index), at the same views, to place differences.
+		use(map, false, full, chunked)
+		var chunk_list := map.get_node("Ground").get_children().filter(func(c): return String(c.name).begins_with("Chunk_"))
+		for index in chunk_list.size():
+			var flat := StandardMaterial3D.new()
+			flat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			flat.albedo_color = Color8(index*6, 255-index*6, (index*37) % 256)
+			chunk_list[index].material_override = flat
+		set_hour(12.0)
+		for spot in SPOTS:
+			for zoom in zooms:
+				place(spot[1], zoom)
+				await shot("ids_%s_z%s.png" % [spot[0], str(zoom)])
+		for chunk in chunk_list: chunk.material_override = null
+		print("CHUNK_IDS ", JSON.stringify(chunk_list.map(func(c): return String(c.name))))
+	# Cracks: both grounds white and unshaded on magenta, the rest hidden; below the line the chunks
+	# leave out nothing is drawn in either (a chunk keeps a whole triangle that reaches above it).
+	var white := ShaderMaterial.new()
+	white.shader = Shader.new()
+	white.shader.code = " ".join(["shader_type spatial;", "render_mode unshaded, cull_disabled;", "varying float height;",
+		"void vertex() { height = (MODEL_MATRIX*vec4(VERTEX, 1.0)).y; }", "void fragment() { if (height < -0.30) { discard; } ALBEDO = vec3(1.0); }"])
 	var env: Environment = app.environment
 	var keep_bg := [env.background_mode, env.background_color, env.fog_enabled, env.adjustment_enabled, env.glow_enabled, env.tonemap_mode]
 	env.background_mode = Environment.BG_COLOR
@@ -271,7 +361,7 @@ func ab() -> void:
 	for before in [true, false]:
 		use(map, before, full, chunked)
 		var parts := map.find_children("*__ground", "MeshInstance3D", true, false).filter(func(g): return (g as MeshInstance3D).mesh != null and g.visible)
-		if not before: parts = map.get_node("Ground").get_children()
+		if not before: parts = map.get_node("Ground").get_children().filter(func(c): return String(c.name).begins_with("Chunk_"))
 		var hidden := ground_only(true, parts)
 		for part: MeshInstance3D in parts: part.material_override = white
 		top_view()
@@ -286,6 +376,5 @@ func ab() -> void:
 	env.background_mode = keep_bg[0]; env.background_color = keep_bg[1]; env.fog_enabled = keep_bg[2]
 	env.adjustment_enabled = keep_bg[3]; env.glow_enabled = keep_bg[4]; env.tonemap_mode = keep_bg[5]
 	app.camera.far = keep_far
-	free_camera(false)
 	use(map, false, full, chunked)
 	report["ab_pairs"] = pairs
