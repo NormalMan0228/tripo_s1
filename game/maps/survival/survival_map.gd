@@ -108,7 +108,10 @@ var adopt_wait := 0.0
 var baked: Resource = null
 var bake_record := false
 var rim_record: Array = []
+var rng_before_rim := 0
 var rng_after_rim := 0
+## The rim block came from the bake (survival_bake.gd rim_fits) in this build.
+var rim_replayed := false
 ## The night's creatures: every species' model in this map's variant (the nights' rosters reach all
 ## five by night 4-6, server/catalog.py), read under the card once the props are in, one at a time on
 ## a worker thread, and held for the run: a species' first spawn finds its model in the resource cache
@@ -211,6 +214,9 @@ func build(run: Dictionary) -> void:
 	if not SurvivalBake.disabled and ResourceLoader.exists(bake_path):
 		if LoadPace.pending(bake_path): await LoadPace.fetch(bake_path)
 		baked = SurvivalBake.data(map_id,state,spec,bounds)
+		# And only while this code still gives the ground and water the bake holds (its fingerprint:
+		# an exported game cannot compare the scripts' text).
+		if baked != null and not SurvivalBake.ground_fits(self,baked): baked = null
 	var span := LoadPace.narrow(0.0, 0.35)
 	await _build_ground()
 	LoadPace.span = span
@@ -413,9 +419,7 @@ func _ground_mesh() -> ArrayMesh:
 			verts[k] = Vector3(x,y,z)
 			var il := maxi(i-1,0); var ir := mini(i+1,count-1)
 			var jd := maxi(j-1,0); var ju := mini(j+1,count-1)
-			var dx := (heights[j*count+ir]-heights[j*count+il])/maxf(axis[ir]-axis[il],0.001)
-			var dzv := (heights[ju*count+i]-heights[jd*count+i])/maxf(axis[ju]-axis[jd],0.001)
-			normals[k] = Vector3(-dx,1.0,-dzv).normalized()
+			normals[k] = _ground_normal(heights[j*count+il],heights[j*count+ir],axis[ir]-axis[il],heights[jd*count+i],heights[ju*count+i],axis[ju]-axis[jd])
 			colors[k] = _splat(x,z,y,obstacles,hazards)
 	var indices := PackedInt32Array()
 	for j in count-1:
@@ -431,6 +435,12 @@ func _ground_mesh() -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
 	return mesh
+
+## A ground vertex's normal from its neighbours' heights (left/right `wx` apart, down/up `wz` apart).
+func _ground_normal(left: float, right: float, wx: float, down: float, up: float, wz: float) -> Vector3:
+	var dx := (right-left)/maxf(wx,0.001)
+	var dzv := (up-down)/maxf(wz,0.001)
+	return Vector3(-dx,1.0,-dzv).normalized()
 
 func _ground_material(node: MeshInstance3D) -> void:
 	var mat := ShaderMaterial.new()
@@ -501,12 +511,18 @@ func _splat(x: float, z: float, y: float, obstacles: Array, hazards: Array) -> C
 
 # ------------------------------------------------------------------ water
 func _build_water() -> void:
-	if map_id == "forest":
-		var mat := _water_material(false)
-		_water_patch(Rect2(4.0,3.0,14.0,13.5),0.4,float(look.pond_y),mat,true)
-		_water_patch(Rect2(-FAR,bounds-1.0,FAR*2.0,FAR-bounds+1.0),2.0,float(look.water_y),mat,false)
-	elif map_id == "frost":
-		_water_patch(Rect2(-FAR,bounds-1.0,FAR*2.0,FAR-bounds+1.0),2.0,float(look.water_y),_water_material(true),false)
+	var mat: ShaderMaterial = null
+	for patch in _water_patches():
+		if mat == null: mat = _water_material(map_id == "frost")
+		_water_patch(patch[0],patch[1],patch[2],mat,patch[3])
+
+## The map's water sheets: [area, grid step, level, pond] (the forest's pond and lake, frost's lake).
+func _water_patches() -> Array:
+	var lake := [Rect2(-FAR,bounds-1.0,FAR*2.0,FAR-bounds+1.0),2.0,float(look.water_y),false]
+	match map_id:
+		"forest": return [[Rect2(4.0,3.0,14.0,13.5),0.4,float(look.pond_y),true],lake]
+		"frost": return [lake]
+	return []
 
 func _water_material(frozen: bool) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
@@ -543,12 +559,10 @@ func _water_mesh(area: Rect2, step: float, level: float, pond: bool) -> ArrayMes
 	for j in nz:
 		for i in nx:
 			var x := area.position.x+i*step; var z := area.position.y+j*step
-			var ground := height(x,z)
-			var depth := level-ground
+			var vertex := _water_vertex(x,z,level,pond)
 			verts.append(Vector3(x,level,z)); normals.append(Vector3.UP)
-			var shore := clampf(-pond_distance(x,z)/2.4,0.0,1.0) if pond else clampf(depth/1.4,0.0,1.0)
-			colors.append(Color(shore,0,0,1))
-			wet.append(1 if depth > -0.05 else 0)
+			colors.append(Color(vertex.x,0,0,1))
+			wet.append(1 if vertex.y > 0.0 else 0)
 	var indices := PackedInt32Array()
 	for j in nz-1:
 		for i in nx-1:
@@ -563,6 +577,12 @@ func _water_mesh(area: Rect2, step: float, level: float, pond: bool) -> ArrayMes
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
 	return mesh
+
+## A water vertex at (x, z): its shore foam (x) and whether the water is over the ground there (y 1/0).
+func _water_vertex(x: float, z: float, level: float, pond: bool) -> Vector2:
+	var depth := level-height(x,z)
+	var shore := clampf(-pond_distance(x,z)/2.4,0.0,1.0) if pond else clampf(depth/1.4,0.0,1.0)
+	return Vector2(shore,1.0 if depth > -0.05 else 0.0)
 
 # ------------------------------------------------------------------ hazards
 func _build_hazards() -> void:
@@ -1056,7 +1076,14 @@ func _scatter_rim(id: String, count: int, scale_min: float, scale_max: float, mi
 ## The rim block (scatter beyond the play square: the same for every run of a map, baked) then the
 ## inside block (it keeps clear of the run's resource nodes, so it is placed here every time) and grass.
 func _build_scatter() -> void:
+	# The baked rim when it starts from this build's random state and the rim code still places what
+	# it placed for the bake (survival_bake.gd rim_fits); else the rim block runs here.
+	var replay := false
 	if baked != null and baked.has_meta("rim"):
+		await LoadPace.step("scatter")
+		replay = SurvivalBake.rim_fits(self,baked)
+	rim_replayed = replay
+	if replay:
 		await LoadPace.step("scatter")
 		_replay_rim(baked.get_meta("rim"))
 		rng.state = int(baked.get_meta("rng_after_rim"))
@@ -1064,6 +1091,7 @@ func _build_scatter() -> void:
 		var before := {}
 		if bake_record:
 			for key in batches: before[key] = batches[key].xforms.size()
+			rng_before_rim = rng.state
 		await _scatter_rim_block()
 		if bake_record:
 			rim_record = _record_rim(before)
@@ -1103,47 +1131,99 @@ func _replay_rim(rim: Array) -> void:
 				Vector3(flat[i+6],flat[i+7],flat[i+8]),Vector3(flat[i+9],flat[i+10],flat[i+11])))
 		stats.instances += flat.size()/12
 
+## The bake's fingerprints of this map's code (survival_bake.gd ground_fits, rim_fits). An exported
+## game cannot read its scripts' text, so it compares what the code gives now with what it gave when
+## the bake was made: at fixed points, and for a short seeded run of the rim block.
+const PROBE_SEED := 20261015
+const PROBE_POINTS := 48
+const PROBE_WATER_POINTS := 12
+const RIM_PROBE_COUNT := 3
+
+## The ground grid, and at PROBE_POINTS grid vertices the height, normal and splat colour as the
+## ground mesh has them (heights in float32 as it holds them); per water sheet its area, step and
+## level, and the shore foam and wet flag at PROBE_WATER_POINTS of its vertices. For the run's layout.
+func bake_probe() -> PackedFloat64Array:
+	var out := PackedFloat64Array()
+	var axis := _grid_axis()
+	var count := axis.size()
+	out.append_array([count,axis[0],axis[count/2],axis[count-1]])
+	var obstacles: Array = state.get("obstacles",spec.obstacles)
+	var hazards: Array = state.get("hazards",spec.hazards)
+	var pick := RandomNumberGenerator.new()
+	pick.seed = PROBE_SEED
+	var h := PackedFloat32Array()
+	h.resize(5)
+	for n in PROBE_POINTS:
+		var i := pick.randi_range(1,count-2)
+		var j := pick.randi_range(1,count-2)
+		h[0] = height(axis[i],axis[j])
+		h[1] = height(axis[i-1],axis[j]); h[2] = height(axis[i+1],axis[j])
+		h[3] = height(axis[i],axis[j-1]); h[4] = height(axis[i],axis[j+1])
+		var normal := _ground_normal(h[1],h[2],axis[i+1]-axis[i-1],h[3],h[4],axis[j+1]-axis[j-1])
+		var color := _splat(axis[i],axis[j],h[0],obstacles,hazards)
+		out.append_array([h[0],normal.x,normal.y,normal.z,color.r,color.g,color.b,color.a])
+	for patch in _water_patches():
+		var area: Rect2 = patch[0]
+		var step: float = patch[1]
+		out.append_array([area.position.x,area.position.y,area.size.x,area.size.y,step,patch[2],1.0 if patch[3] else 0.0])
+		var nx := int(ceil(area.size.x/step))+1
+		var nz := int(ceil(area.size.y/step))+1
+		for n in PROBE_WATER_POINTS:
+			var i := pick.randi_range(0,nx-1)
+			var j := pick.randi_range(0,nz-1)
+			var vertex := _water_vertex(area.position.x+i*step,area.position.y+j*step,patch[2],patch[3])
+			out.append_array([vertex.x,vertex.y])
+	return out
+
+## The rim block's code in a short run of its own: every entry capped at RIM_PROBE_COUNT (the quarry
+## wall's first row over a few metres), from a seeded random state into batches of its own. The
+## instances it queues, per batch key. The build's batches, random state and stats are left as they were.
+func rim_probe() -> PackedFloat64Array:
+	var keep_state := rng.state
+	var keep_batches := batches
+	var keep_instances: int = stats.instances
+	batches = {}
+	rng.seed = PROBE_SEED
+	for entry: Array in RIM_BLOCK.get(map_id,[]): _rim_entry(entry,RIM_PROBE_COUNT)
+	var out := PackedFloat64Array()
+	for key: String in batches:
+		out.append(key.hash())
+		for xf: Transform3D in batches[key].xforms:
+			out.append_array([xf.origin.x,xf.origin.y,xf.origin.z,xf.basis.x.x,xf.basis.x.y,xf.basis.x.z,xf.basis.y.y])
+	batches = keep_batches
+	rng.state = keep_state
+	stats.instances = keep_instances
+	return out
+
+## The rim block, per map in its order (the build steps the card between entries):
+## ["rim", id, count, scale_min, scale_max, min_rim, max_rim, south_ok, opts, spacing] (_scatter_rim),
+## ["shore", id, count, scale_min, scale_max] (_shore) and ["cliff"] (_cliff_wall, CLIFF_ROWS).
+## Constants, so an exported game sees a change here in the bake's fingerprint (survival_bake.gd).
+const RIM_BLOCK := {
+	"forest":[["rim","pine_tall",55,0.75,1.1,1.0,8.0,false,{},2.6],["rim","pine_tall",110,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8],
+		["rim","oak_broad",10,0.85,1.05,2.0,8.0,false,{},4.5],["rim","oak_broad",18,0.9,1.2,8.0,26.0,false,{"lod":"low"},4.5],
+		["rim","birch_slim",16,0.8,1.05,0.8,8.0,false,{},2.8],["rim","birch_slim",16,0.85,1.15,8.0,24.0,false,{"lod":"low"},2.8],
+		["rim","bush_round",50,0.8,1.3,0.0,16.0,true,{"shadow":false},0.0],["rim","fern_clump",60,0.8,1.3,0.0,14.0,true,{"shadow":false},0.0],
+		["shore","reeds",70,0.8,1.2]],
+	"quarry":[["cliff"],["rim","dead_tree",14,0.8,1.2,6.0,26.0,false,{"lod":"low"},5.0],
+		["rim","dry_shrub",70,0.8,1.4,0.0,24.0,true,{"shadow":false},0.0],["rim","sandstone_boulder",40,0.5,1.1,0.8,20.0,true,{"lod":"low"},0.0]],
+	"frost":[["rim","snow_pine",60,0.75,1.1,1.0,8.0,false,{},2.6],["rim","snow_pine",120,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8],
+		["rim","snow_boulder",26,0.6,1.3,0.8,22.0,true,{"lod":"low"},0.0],["rim","frost_shrub",40,0.8,1.2,0.0,14.0,true,{"shadow":false},0.0],
+		["rim","ice_crystal",10,0.5,0.9,2.0,14.0,false,{},0.0]]}
+## Quarry wall rows: [offset beyond the square, gap, scale_min, scale_max, lod].
+const CLIFF_ROWS := [[1.2,2.1,1.5,2.2,"auto"],[5.2,2.6,1.4,2.1,"auto"],[9.5,3.2,1.5,2.3,"low"],[14.0,4.0,1.6,2.4,"low"]]
+
 func _scatter_rim_block() -> void:
-	match map_id:
-		"forest":
-			await LoadPace.step("scatter")
-			_scatter_rim("pine_tall",55,0.75,1.1,1.0,8.0,false,{},2.6)
-			await LoadPace.step("scatter")
-			_scatter_rim("pine_tall",110,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8)
-			await LoadPace.step("scatter")
-			_scatter_rim("oak_broad",10,0.85,1.05,2.0,8.0,false,{},4.5)
-			await LoadPace.step("scatter")
-			_scatter_rim("oak_broad",18,0.9,1.2,8.0,26.0,false,{"lod":"low"},4.5)
-			await LoadPace.step("scatter")
-			_scatter_rim("birch_slim",16,0.8,1.05,0.8,8.0,false,{},2.8)
-			await LoadPace.step("scatter")
-			_scatter_rim("birch_slim",16,0.85,1.15,8.0,24.0,false,{"lod":"low"},2.8)
-			await LoadPace.step("scatter")
-			_scatter_rim("bush_round",50,0.8,1.3,0.0,16.0,true,{"shadow":false})
-			await LoadPace.step("scatter")
-			_scatter_rim("fern_clump",60,0.8,1.3,0.0,14.0,true,{"shadow":false})
-			await LoadPace.step("scatter")
-			_shore("reeds",70,0.8,1.2)
-		"quarry":
-			await LoadPace.step("scatter")
-			_cliff_wall()
-			await LoadPace.step("scatter")
-			_scatter_rim("dead_tree",14,0.8,1.2,6.0,26.0,false,{"lod":"low"},5.0)
-			await LoadPace.step("scatter")
-			_scatter_rim("dry_shrub",70,0.8,1.4,0.0,24.0,true,{"shadow":false})
-			await LoadPace.step("scatter")
-			_scatter_rim("sandstone_boulder",40,0.5,1.1,0.8,20.0,true,{"lod":"low"})
-		"frost":
-			await LoadPace.step("scatter")
-			_scatter_rim("snow_pine",60,0.75,1.1,1.0,8.0,false,{},2.6)
-			await LoadPace.step("scatter")
-			_scatter_rim("snow_pine",120,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8)
-			await LoadPace.step("scatter")
-			_scatter_rim("snow_boulder",26,0.6,1.3,0.8,22.0,true,{"lod":"low"})
-			await LoadPace.step("scatter")
-			_scatter_rim("frost_shrub",40,0.8,1.2,0.0,14.0,true,{"shadow":false})
-			await LoadPace.step("scatter")
-			_scatter_rim("ice_crystal",10,0.5,0.9,2.0,14.0,false,{})
+	for entry: Array in RIM_BLOCK.get(map_id,[]):
+		await LoadPace.step("scatter")
+		_rim_entry(entry,-1)
+
+## One rim block entry; `most` >= 0 caps its count (the fingerprint's short run, rim_probe()).
+func _rim_entry(entry: Array, most: int) -> void:
+	match String(entry[0]):
+		"rim": _scatter_rim(entry[1],int(entry[2]) if most < 0 else mini(int(entry[2]),most),entry[3],entry[4],entry[5],entry[6],entry[7],entry[8],entry[9])
+		"shore": _shore(entry[1],int(entry[2]) if most < 0 else mini(int(entry[2]),most),entry[3],entry[4])
+		"cliff": _cliff_wall(CLIFF_ROWS if most < 0 else CLIFF_ROWS.slice(0,1),INF if most < 0 else float(most)*3.0)
 
 func _scatter_inside_block() -> void:
 	match map_id:
@@ -1185,13 +1265,13 @@ func _shore(id: String, count: int, smin: float, smax: float) -> void:
 
 ## Quarry walls: rows of sandstone shelves along the terrace risers (north, east, west; the south
 ## stays open as the cart road out) sell the cut pit; scattered blocks fill the upper ledges.
-func _cliff_wall() -> void:
-	for row in [[1.2,2.1,1.5,2.2,"auto"],[5.2,2.6,1.4,2.1,"auto"],[9.5,3.2,1.5,2.3,"low"],[14.0,4.0,1.6,2.4,"low"]]:
+func _cliff_wall(rows: Array = CLIFF_ROWS, reach := INF) -> void:
+	for row in rows:
 		var offset: float = row[0]
 		var gap: float = row[1]
 		var edge := bounds+1.3+offset
 		var t := -FAR
-		while t < FAR:
+		while t < minf(FAR,-FAR+reach):
 			for side in 3:
 				var p := Vector2(t,-edge) if side == 0 else Vector2(edge*(1.0 if side == 1 else -1.0),t)
 				if p.y > bounds+2.0 or absf(p.x) > FAR-2.0 or absf(p.y) > FAR-2.0: continue

@@ -11,6 +11,10 @@ extends SceneTree
 ## stats or in its props. Each map is built for the layout with no
 ## resource nodes and with a fixture of 12 nodes (the inside scatter then differs from the bake tool's
 ## build), and once with a moved obstacle, which must build without the bake.
+## Then as an exported game sees it (SurvivalBake.exported: no script text, so no key()): the fresh bake
+## is used whole; another export key is refused; code that changes the ground (height), the rim helpers
+## (_sample_rim) or the random numbers drawn before the rim (features) is caught by the fingerprints
+## (survival_map.gd bake_probe, rim_probe, rng_before_rim): no bake, or the rim built at runtime.
 ## Prints SURVIVAL_BAKE_CHECK {...}.
 const Map = preload("res://maps/survival/survival_map.gd")
 const SurvivalBake = preload("res://maps/survival/survival_bake.gd")
@@ -28,6 +32,23 @@ func _grass_chunks() -> Dictionary:
 	return chunks
 """
 var recorder: GDScript
+## Code changes an exported game must catch without reading the scripts' text.
+const TAMPERED := {
+	"height":"extends \"res://maps/survival/survival_map.gd\"
+func height(x: float, z: float) -> float:
+	return super.height(x,z)+0.01
+",
+	"rim":"extends \"res://maps/survival/survival_map.gd\"
+func _sample_rim(min_rim: float, max_rim: float, south_ok: bool) -> Vector2:
+	var p := super._sample_rim(min_rim,max_rim,south_ok)
+	return p if p.x == INF else p+Vector2(0.5,0.0)
+",
+	"features":"extends \"res://maps/survival/survival_map.gd\"
+func _build_features() -> void:
+	rng.randf()
+	await super._build_features()
+",
+}
 var name_numbers := RegEx.create_from_string("@(\\w+)@\\d+")
 
 func _initialize() -> void:
@@ -64,6 +85,7 @@ func run() -> void:
 			var baked := await build(map_id, state, true)
 			if runtime.used_bake: failures.append("%s %s: the runtime build used the bake" % [map_id, fixture])
 			if not baked.used_bake: failures.append("%s %s: the baked build did not use the bake" % [map_id, fixture])
+			if not baked.rim_replayed: failures.append("%s %s: the baked build did not replay the baked rim" % [map_id, fixture])
 			var differ := []
 			for i in maxi(runtime.nodes.size(), baked.nodes.size()):
 				var a: String = runtime.nodes[i] if i < runtime.nodes.size() else "(none)"
@@ -100,10 +122,58 @@ func run() -> void:
 		if fallback.used_bake: failures.append("%s: a moved obstacle still used the bake" % map_id)
 		if not fallback.has_ground: failures.append("%s: the fallback build has no ground" % map_id)
 		release(fallback)
+		# The fingerprints' cost (the first build of a map in a run of the game computes them once).
+		var timed := await build(map_id, reference(map_id, spec), true)
+		var t := Time.get_ticks_usec()
+		timed.map.bake_probe()
+		entry["bake_probe_ms"] = snappedf((Time.get_ticks_usec()-t)/1000.0, 0.01)
+		t = Time.get_ticks_usec()
+		timed.map.rim_probe()
+		entry["rim_probe_ms"] = snappedf((Time.get_ticks_usec()-t)/1000.0, 0.01)
+		release(timed)
 		report.maps[map_id] = entry
 		print("SURVIVAL_BAKE_MAP %s %s" % [map_id, JSON.stringify(entry)])
 	report["node_differences"] = total_differences
+	report["exported"] = await exported_checks(all)
 	finish(report)
+
+## As an exported game: SurvivalBake cannot compare key() there, only export_key() and the fingerprints.
+func exported_checks(all: Dictionary) -> Dictionary:
+	var out := {}
+	SurvivalBake.exported = true
+	SurvivalBake.reset()
+	for map_id in SurvivalBake.MAPS:
+		var spec: Dictionary = all.maps[map_id]
+		var seen := {}
+		var fresh := await build(map_id, reference(map_id, spec), true)
+		seen["fresh"] = [fresh.used_bake, fresh.rim_replayed]
+		if not (fresh.used_bake and fresh.rim_replayed): failures.append("exported %s: the fresh bake was not used whole" % map_id)
+		release(fresh)
+		for change in TAMPERED:
+			var script := GDScript.new()
+			script.source_code = TAMPERED[change]
+			script.reload()
+			var result := await build(map_id, reference(map_id, spec), true, script)
+			seen[change] = [result.used_bake, result.rim_replayed]
+			# A changed ground: no bake at all. A changed rim or random state before it: the baked ground
+			# and water, the rim built here.
+			var want := [false, false] if change == "height" else [true, false]
+			if seen[change] != want: failures.append("exported %s: %s change gave bake/rim %s, expected %s" % [map_id, change, seen[change], want])
+			release(result)
+		# Another export key (a constant or layouts.json changed since the bake): refused.
+		var data: Resource = load(SurvivalBake.path(map_id))
+		var kept: String = data.get_meta("export_key")
+		data.set_meta("export_key", "changed")
+		SurvivalBake.reset()
+		seen["export_key"] = SurvivalBake.problem(map_id)
+		data.set_meta("export_key", kept)
+		SurvivalBake.reset()
+		if seen.export_key != "export key": failures.append("exported %s: another export key gave '%s'" % [map_id, seen.export_key])
+		out[map_id] = seen
+	SurvivalBake.exported = false
+	SurvivalBake.reset()
+	print("SURVIVAL_BAKE_EXPORTED %s" % JSON.stringify(out))
+	return out
 
 func finish(report: Dictionary) -> void:
 	report["ok"] = failures.is_empty()
@@ -124,13 +194,13 @@ func fixture_nodes() -> Array:
 	return nodes
 
 ## One build in its own world; `use_bake` false builds as if there were no baked data.
-func build(map_id: String, state: Dictionary, use_bake: bool) -> Dictionary:
+func build(map_id: String, state: Dictionary, use_bake: bool, script: GDScript = null) -> Dictionary:
 	SurvivalBake.disabled = not use_bake
 	var viewport := SubViewport.new()
 	viewport.own_world_3d = true
 	viewport.size = Vector2i(64, 64)
 	root.add_child(viewport)
-	var map: Node3D = recorder.new()
+	var map: Node3D = (script if script else recorder).new()
 	viewport.add_child(map)
 	var started := Time.get_ticks_usec()
 	await map.build(state)
@@ -144,7 +214,7 @@ func build(map_id: String, state: Dictionary, use_bake: bool) -> Dictionary:
 	describe(map, map, nodes)
 	return {"viewport":viewport, "map":map, "ms":snappedf(ms, 0.1), "used_bake":map.baked != null, "rng":str(map.rng.state),
 		"report":JSON.stringify(map.report(), "", true), "props":props, "nodes":nodes, "has_ground":map.has_node("Ground"),
-		"recorded":map.recorded}
+		"recorded":map.get("recorded"), "rim_replayed":map.rim_replayed}
 
 func release(result: Dictionary) -> void:
 	(result.viewport as Node).queue_free()

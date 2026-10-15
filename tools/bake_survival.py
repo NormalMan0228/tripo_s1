@@ -9,7 +9,10 @@
 What it holds and when it counts: game/maps/survival/survival_bake.gd. The bake itself is
 tools/bake_survival.gd (Godot, headless): per map the ground mesh, the water sheets and the rim
 block of the scatter. Fresh means: same layouts.json, survival_map.gd, survival_bake.gd, engine and
-set of prop models present as when it was made.
+set of prop models present as when it was made. An exported game cannot read its scripts' text: it
+compares the bake's export key (layouts.json, props present, the map script's constants) and its
+fingerprints of the map code (ground, water and rim at fixed points) instead, and builds without the
+bake (or only the rim at runtime) when they differ.
 
 The export steps keep it fresh: tools/build_game.ps1 bakes before exporting, tools/game_patch.py
 before exporting a patch, and tools/package_release.py refuses a pack whose bake is stale or older

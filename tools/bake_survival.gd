@@ -3,8 +3,9 @@ extends SceneTree
 ## and when it counts: game/maps/survival/survival_bake.gd). Run through tools/bake_survival.py, or:
 ##   .tools/godot/Godot_v4.7.2-stable_win64_console.exe --headless --path game --script res://../tools/bake_survival.gd
 ## Builds each map once without baked data from its layout (the layout's obstacles and hazards, no
-## resource nodes), the way the game builds it, and saves the ground mesh, the water sheets and the
-## rim block's instances with the rng state after it. Prints BAKE_SURVIVAL <map> {...} and BAKE_DONE.
+## resource nodes), the way the game builds it, and saves the ground mesh, the water sheets, the rim
+## block's instances with the rng state before and after it, and the fingerprints of the map's code
+## (bake_probe, rim_probe). Prints BAKE_SURVIVAL <map> {...} and BAKE_DONE.
 ## --check: only says whether every map's bake is fresh (exit 0) or not (exit 3).
 const Map = preload("res://maps/survival/survival_map.gd")
 const SurvivalBake = preload("res://maps/survival/survival_bake.gd")
@@ -45,12 +46,17 @@ func run() -> void:
 		data.set_meta("format", SurvivalBake.FORMAT)
 		data.set_meta("engine", SurvivalBake.engine())
 		data.set_meta("key", SurvivalBake.key())
+		data.set_meta("export_key", SurvivalBake.export_key())
 		data.set_meta("map_id", map_id)
 		data.set_meta("layout_sig", SurvivalBake.layout_sig(state, spec, float(all.bounds)))
 		data.set_meta("ground", ground)
 		data.set_meta("water", water)
 		data.set_meta("rim", map.rim_record)
+		data.set_meta("rng_before_rim", map.rng_before_rim)
 		data.set_meta("rng_after_rim", map.rng_after_rim)
+		# The fingerprints an exported game compares (it cannot read the scripts' text).
+		data.set_meta("probe", map.bake_probe())
+		data.set_meta("rim_probe", map.rim_probe())
 		var file := SurvivalBake.path(map_id)
 		var error := ResourceSaver.save(data, file, ResourceSaver.FLAG_COMPRESS)
 		if error != OK:
