@@ -21,6 +21,8 @@ const CHUNK := 12.0
 ## Under the loading card the build is paced over frames and the models load on worker threads.
 const LoadPace = preload("res://scripts/load_pace.gd")
 const Monster = preload("res://scripts/monster.gd")
+## The map's static data baked ahead (ground, water, rim scatter; tools/bake_survival.py).
+const SurvivalBake = preload("res://maps/survival/survival_bake.gd")
 const LOD_ZOOM := 18.5
 const FAR := 64.0
 const RESOURCE_KINDS := ["tree","stone","berry","fiber"]
@@ -101,6 +103,12 @@ var dusk := 0.0
 var focus := Vector3.ZERO
 var follow_particles: Array[Node3D] = []
 var adopt_wait := 0.0
+## This build's baked data (survival_bake.gd data(): fresh and made for this layout), or null to
+## build everything here. tools/bake_survival.gd sets bake_record to collect the rim block.
+var baked: Resource = null
+var bake_record := false
+var rim_record: Array = []
+var rng_after_rim := 0
 ## The night's creatures (every species in this map's variant) read on worker threads once the card
 ## is gone, so the first spawn of a species finds its model in the resource cache (monster.gd setup).
 var monster_wait := 1.0
@@ -127,7 +135,8 @@ const MAP_PROPS := {
 		"snow_pine","snowman","frost_shrub","snow_fence"]}
 
 static func resource_paths(map: String) -> Array:
-	var paths := []
+	# The baked data first: the build needs it before anything else.
+	var paths := [SurvivalBake.path(map)]
 	var placed: Array = MAP_PROPS.get(map, MAP_PROPS.forest)
 	for id in placed:
 		for path: String in prop_paths(id): if not path.is_empty(): paths.append(path)
@@ -168,6 +177,13 @@ func build(run: Dictionary) -> void:
 	process_priority = 100
 	# Its per-frame work starts once it is built (a paced build spans frames).
 	set_process(false)
+	# Read on a worker thread since the expedition began (resource_paths); used only when it is
+	# fresh and was made for this run's obstacles and hazards, else the map is built as before.
+	baked = null
+	var bake_path := SurvivalBake.path(map_id)
+	if not SurvivalBake.disabled and ResourceLoader.exists(bake_path):
+		if LoadPace.pending(bake_path): await LoadPace.fetch(bake_path)
+		baked = SurvivalBake.data(map_id,state,spec,bounds)
 	var span := LoadPace.narrow(0.0, 0.35)
 	await _build_ground()
 	LoadPace.span = span
@@ -262,6 +278,21 @@ func _grid_axis() -> PackedFloat32Array:
 	return axis
 
 func _build_ground() -> void:
+	var mesh: ArrayMesh
+	if baked != null:
+		mesh = baked.get_meta("ground")
+		LoadPace.done(1.0)
+	else:
+		mesh = await _ground_mesh()
+	var node := MeshInstance3D.new()
+	node.name = "Ground"
+	node.mesh = mesh
+	_ground_material(node)
+	add_child(node)
+
+## The terrain as one mesh on _grid_axis (0.5 m inside +-32 m, 2 m beyond): heights, normals and
+## the splat colours (trail, soil, rock, accent) per vertex. Baked by tools/bake_survival.py.
+func _ground_mesh() -> ArrayMesh:
 	var axis := _grid_axis()
 	var count := axis.size()
 	var heights := PackedFloat32Array()
@@ -306,9 +337,9 @@ func _build_ground() -> void:
 	arrays[Mesh.ARRAY_INDEX] = indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
-	var node := MeshInstance3D.new()
-	node.name = "Ground"
-	node.mesh = mesh
+	return mesh
+
+func _ground_material(node: MeshInstance3D) -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = GROUND_SHADER
 	for key in ["grass_detail","sand_detail","rock_detail"]:
@@ -339,7 +370,6 @@ func _build_ground() -> void:
 	mat.set_shader_parameter("path_count",mini(spec.paths.reduce(func(acc,p): return acc+p.points.size()-1,0),32))
 	node.material_override = mat
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(node)
 	materials.append(mat)
 
 func _splat(x: float, z: float, y: float, obstacles: Array, hazards: Array) -> Color:
@@ -396,6 +426,23 @@ func _water_material(frozen: bool) -> ShaderMaterial:
 	return mat
 
 func _water_patch(area: Rect2, step: float, level: float, mat: ShaderMaterial, pond: bool) -> void:
+	var mesh: ArrayMesh = _baked_water("Pond" if pond else "Lake") if baked != null else _water_mesh(area,step,level,pond)
+	if mesh == null: return
+	var node := MeshInstance3D.new()
+	node.name = "Pond" if pond else "Lake"
+	node.mesh = mesh
+	node.material_override = mat
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(node)
+
+func _baked_water(water_name: String) -> ArrayMesh:
+	for entry in baked.get_meta("water",[]):
+		if entry[0] == water_name: return entry[1]
+	return null
+
+## A water sheet at `level` over the cells where it is above the ground (null when there are none),
+## shore foam in the vertex colour. Baked by tools/bake_survival.py.
+func _water_mesh(area: Rect2, step: float, level: float, pond: bool) -> ArrayMesh:
 	var nx := int(ceil(area.size.x/step))+1
 	var nz := int(ceil(area.size.y/step))+1
 	var verts := PackedVector3Array(); var colors := PackedColorArray(); var normals := PackedVector3Array()
@@ -415,19 +462,14 @@ func _water_patch(area: Rect2, step: float, level: float, mat: ShaderMaterial, p
 			var a := j*nx+i
 			if wet[a]+wet[a+1]+wet[a+nx]+wet[a+nx+1] == 0: continue
 			indices.append_array([a,a+1,a+nx,a+1,a+nx+1,a+nx])
-	if indices.is_empty(): return
+	if indices.is_empty(): return null
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts; arrays[Mesh.ARRAY_NORMAL] = normals
 	arrays[Mesh.ARRAY_COLOR] = colors; arrays[Mesh.ARRAY_INDEX] = indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
-	var node := MeshInstance3D.new()
-	node.name = "Pond" if pond else "Lake"
-	node.mesh = mesh
-	node.material_override = mat
-	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(node)
+	return mesh
 
 # ------------------------------------------------------------------ hazards
 func _build_hazards() -> void:
@@ -918,7 +960,57 @@ func _scatter_rim(id: String, count: int, scale_min: float, scale_max: float, mi
 			spots.append(p)
 		if _instance(id,Vector3(p.x,y-0.1,p.y),rng.randf()*TAU,rng.randf_range(scale_min,scale_max),opts): placed += 1
 
+## The rim block (scatter beyond the play square: the same for every run of a map, baked) then the
+## inside block (it keeps clear of the run's resource nodes, so it is placed here every time) and grass.
 func _build_scatter() -> void:
+	if baked != null and baked.has_meta("rim"):
+		await LoadPace.step("scatter")
+		_replay_rim(baked.get_meta("rim"))
+		rng.state = int(baked.get_meta("rng_after_rim"))
+	else:
+		var before := {}
+		if bake_record:
+			for key in batches: before[key] = batches[key].xforms.size()
+		await _scatter_rim_block()
+		if bake_record:
+			rim_record = _record_rim(before)
+			rng_after_rim = rng.state
+	await _scatter_inside_block()
+	await LoadPace.step("scatter")
+	await _grass()
+
+## The instances the rim block queued, per batch key in the batches' order: [key, id, shadow, lod,
+## 12 floats per transform (basis columns, origin)].
+func _record_rim(before: Dictionary) -> Array:
+	var out := []
+	for key in batches:
+		var b: Dictionary = batches[key]
+		var from: int = before.get(key,0)
+		if b.xforms.size() <= from: continue
+		var flat := PackedFloat32Array()
+		for i in range(from,b.xforms.size()):
+			var xf: Transform3D = b.xforms[i]
+			flat.append_array([xf.basis.x.x,xf.basis.x.y,xf.basis.x.z,xf.basis.y.x,xf.basis.y.y,xf.basis.y.z,
+				xf.basis.z.x,xf.basis.z.y,xf.basis.z.z,xf.origin.x,xf.origin.y,xf.origin.z])
+		out.append([key,b.id,b.shadow,b.lod,flat])
+	return out
+
+## Queues the baked rim block as _instance() did: keys new to the batches in their first order, each
+## key's transforms appended in their order.
+func _replay_rim(rim: Array) -> void:
+	for record in rim:
+		var key: String = record[0]
+		var id: String = record[1]
+		if not _prop(id).ok: continue
+		if not batches.has(key): batches[key] = {"id":id,"shadow":record[2],"lod":record[3],"xforms":[]}
+		var list: Array = batches[key].xforms
+		var flat: PackedFloat32Array = record[4]
+		for i in range(0,flat.size(),12):
+			list.append(Transform3D(Vector3(flat[i],flat[i+1],flat[i+2]),Vector3(flat[i+3],flat[i+4],flat[i+5]),
+				Vector3(flat[i+6],flat[i+7],flat[i+8]),Vector3(flat[i+9],flat[i+10],flat[i+11])))
+		stats.instances += flat.size()/12
+
+func _scatter_rim_block() -> void:
 	match map_id:
 		"forest":
 			await LoadPace.step("scatter")
@@ -939,6 +1031,30 @@ func _build_scatter() -> void:
 			_scatter_rim("fern_clump",60,0.8,1.3,0.0,14.0,true,{"shadow":false})
 			await LoadPace.step("scatter")
 			_shore("reeds",70,0.8,1.2)
+		"quarry":
+			await LoadPace.step("scatter")
+			_cliff_wall()
+			await LoadPace.step("scatter")
+			_scatter_rim("dead_tree",14,0.8,1.2,6.0,26.0,false,{"lod":"low"},5.0)
+			await LoadPace.step("scatter")
+			_scatter_rim("dry_shrub",70,0.8,1.4,0.0,24.0,true,{"shadow":false})
+			await LoadPace.step("scatter")
+			_scatter_rim("sandstone_boulder",40,0.5,1.1,0.8,20.0,true,{"lod":"low"})
+		"frost":
+			await LoadPace.step("scatter")
+			_scatter_rim("snow_pine",60,0.75,1.1,1.0,8.0,false,{},2.6)
+			await LoadPace.step("scatter")
+			_scatter_rim("snow_pine",120,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8)
+			await LoadPace.step("scatter")
+			_scatter_rim("snow_boulder",26,0.6,1.3,0.8,22.0,true,{"lod":"low"})
+			await LoadPace.step("scatter")
+			_scatter_rim("frost_shrub",40,0.8,1.2,0.0,14.0,true,{"shadow":false})
+			await LoadPace.step("scatter")
+			_scatter_rim("ice_crystal",10,0.5,0.9,2.0,14.0,false,{})
+
+func _scatter_inside_block() -> void:
+	match map_id:
+		"forest":
 			await LoadPace.step("scatter")
 			_scatter_inside("bush_round",16,0.7,1.0,1.4,{"shadow":false},true,0.9)
 			await LoadPace.step("scatter")
@@ -952,14 +1068,6 @@ func _build_scatter() -> void:
 				_scatter_inside(flower,14,0.55,0.8,0.3,{"shadow":false},true)
 		"quarry":
 			await LoadPace.step("scatter")
-			_cliff_wall()
-			await LoadPace.step("scatter")
-			_scatter_rim("dead_tree",14,0.8,1.2,6.0,26.0,false,{"lod":"low"},5.0)
-			await LoadPace.step("scatter")
-			_scatter_rim("dry_shrub",70,0.8,1.4,0.0,24.0,true,{"shadow":false})
-			await LoadPace.step("scatter")
-			_scatter_rim("sandstone_boulder",40,0.5,1.1,0.8,20.0,true,{"lod":"low"})
-			await LoadPace.step("scatter")
 			_scatter_inside("dry_shrub",26,0.6,1.0,0.8,{"shadow":false},true,0.6)
 			await LoadPace.step("scatter")
 			_scatter_inside("sandstone_boulder",12,0.14,0.22,0.5,{"shadow":false},true)
@@ -967,23 +1075,11 @@ func _build_scatter() -> void:
 			_scatter_inside("cut_blocks",4,0.18,0.24,1.2,{},true,1.0)
 		"frost":
 			await LoadPace.step("scatter")
-			_scatter_rim("snow_pine",60,0.75,1.1,1.0,8.0,false,{},2.6)
-			await LoadPace.step("scatter")
-			_scatter_rim("snow_pine",120,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8)
-			await LoadPace.step("scatter")
-			_scatter_rim("snow_boulder",26,0.6,1.3,0.8,22.0,true,{"lod":"low"})
-			await LoadPace.step("scatter")
-			_scatter_rim("frost_shrub",40,0.8,1.2,0.0,14.0,true,{"shadow":false})
-			await LoadPace.step("scatter")
-			_scatter_rim("ice_crystal",10,0.5,0.9,2.0,14.0,false,{})
-			await LoadPace.step("scatter")
 			_scatter_inside("frost_shrub",18,0.6,0.95,1.0,{"shadow":false},true,0.7)
 			await LoadPace.step("scatter")
 			_scatter_inside("ice_crystal",8,0.22,0.32,0.6,{"shadow":false},true)
 			await LoadPace.step("scatter")
 			_snow_fences()
-	await LoadPace.step("scatter")
-	await _grass()
 
 func _shore(id: String, count: int, smin: float, smax: float) -> void:
 	var placed := 0
