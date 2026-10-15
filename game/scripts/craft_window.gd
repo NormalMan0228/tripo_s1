@@ -24,11 +24,9 @@ var card: PanelContainer
 var scroll: ScrollContainer
 var title: Label
 var close_key: Button
-## A short line over the card for what the craft says while the window is open (the place's own
-## toast sits under the window).
-var note_pill: PanelContainer
-var note_label: Label
-var note_tween: Tween
+## Short lines over the card for what the craft says while the window is open (the place's own
+## toast lane sits under the window): the shared toast lane (RpgUi.toast), just above the card.
+var note_lane: VBoxContainer
 
 func setup(place: Node, network: Node) -> void:
 	host = place
@@ -94,17 +92,8 @@ func setup(place: Node, network: Node) -> void:
 	scroll.add_child(panel)
 	panel.setup(place, network)
 	panel.minimum_size_changed.connect(_fit)
-	note_pill = PanelContainer.new()
-	note_pill.name = "Note"
-	note_pill.add_theme_stylebox_override("panel", RpgUi.panel_style("pill"))
-	note_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	note_pill.visible = false
-	add_child(note_pill)
-	note_label = RpgUi.label(note_pill, "", 15, RpgUi.INK)
-	note_label.add_theme_font_override("font", RpgUi.FONT_STRONG)
-	note_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	note_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note_label.custom_minimum_size.x = 0
+	note_lane = RpgUi.toast_lane(self, CARD_TOP - 50.0, 0.0, CARD_WIDTH - 80.0)
+	note_lane.name = "Notes"
 
 func _ready() -> void:
 	_fit()
@@ -135,25 +124,7 @@ func _fit() -> void:
 	scroll.custom_minimum_size.y = minf(panel.get_combined_minimum_size().y, room)
 
 ## A short line over the card (the craft accepted, a refusal, the picture is ready), fading out.
+## Silent: the place's own toast under the window chimes for the same line.
 func note(words: String) -> void:
-	if words.is_empty() or not is_instance_valid(note_pill): return
-	note_label.text = words
-	note_label.custom_minimum_size.x = minf(CARD_WIDTH - 80.0, note_label.get_theme_font("font").get_string_size(words, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 4.0)
-	note_pill.reset_size()
-	note_pill.visible = true
-	_place_note.call_deferred()
-	if note_tween and note_tween.is_valid(): note_tween.kill()
-	note_pill.modulate.a = 1.0
-	if not RpgUi.calm(): RpgUi.pop_in(note_pill, 0.22, 0.9)
-	note_tween = note_pill.create_tween()
-	note_tween.tween_interval(4.5)
-	note_tween.tween_property(note_pill, "modulate:a", 0.0, 0.5)
-	note_tween.tween_callback(func() -> void: note_pill.visible = false)
-
-func _place_note() -> void:
-	if not is_instance_valid(note_pill) or not is_instance_valid(card): return
-	note_pill.reset_size()
-	# Over the card's top edge, where the place's own toasts sit (the card fills the screen below).
-	var at := card.get_rect()
-	note_pill.position = Vector2(at.position.x + (at.size.x - note_pill.size.x) * 0.5, maxf(8.0, at.position.y - note_pill.size.y - 6.0))
-	note_pill.pivot_offset = note_pill.size * 0.5
+	if words.is_empty() or not is_instance_valid(note_lane): return
+	RpgUi.toast(note_lane, words, "info", {"sound": false})

@@ -1015,6 +1015,161 @@ static func show_slot(slot: Control, shown: bool) -> void:
 	tray.size = tray.custom_minimum_size
 	pin(tray, 0.5, 1.0, Vector2(640.0 - fitted * 0.5, float(bar.get_meta("tray_top"))))
 
+# ------------------------------------------------------------------ toasts
+
+## How long a toast stays: plain ones, and ones that carry action buttons.
+const TOAST_SECONDS := 4.5
+const TOAST_ACTION_SECONDS := 12.0
+const TOAST_MAX := 3
+## Chimes asked for so far (tests: the field's toasts stay silent).
+static var toast_chimes := 0
+const TOAST_ICONS := {"info":"res://assets/starseed.svg", "success":"res://assets/ui/leaf.svg", "warn":"res://assets/starseed.svg",
+	"error":"res://assets/ui/close.svg", "social":"res://assets/ui/people.svg"}
+
+## The shared toast lane: a full-width column whose toasts stack centred from `y` on the design
+## canvas (top lane), or upward ending at `y` + 44 when y is in the lower half (the field's lane).
+## width > 0 gives every toast that width (the village's 520 px pills); 0 fits each to its text up
+## to max_width.
+static func toast_lane(host: Control, y := 94.0, width := 0.0, max_width := 640.0) -> VBoxContainer:
+	var lane := VBoxContainer.new()
+	lane.name = "ToastLane"
+	lane.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lane.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lane.add_theme_constant_override("separation", 6)
+	var top := y < CANVAS.y * 0.5
+	lane.alignment = BoxContainer.ALIGNMENT_BEGIN if top else BoxContainer.ALIGNMENT_END
+	if top: lane.offset_top = y
+	else: lane.offset_bottom = -(CANVAS.y - y - 44.0)
+	lane.set_meta("width", width)
+	lane.set_meta("max_width", max_width)
+	lane.theme = night_theme()
+	host.add_child(lane)
+	return lane
+
+## The toasts on a lane, oldest first (those already leaving are not counted).
+static func toasts(lane: Control) -> Array:
+	var out := []
+	if not is_instance_valid(lane): return out
+	for child in lane.get_children():
+		if child.has_meta("toast") and not child.get_meta("leaving", false): out.append(child)
+	return out
+
+## The toast on the lane that shows this text, or null.
+static func find_toast(lane: Control, text: String) -> Control:
+	for item in toasts(lane):
+		if str(item.get_meta("toast")) == text: return item
+	return null
+
+## A short line in a night pill with a kind icon (info: the star-seed glint, success, warn, error,
+## social), popping in with a soft chime. It leaves after 4.5 s (12 s with action buttons:
+## opts.actions = [{label, call}], pressing one runs it and dismisses the toast). At most three
+## stack on a lane (the oldest leaves); the same text while it is still shown refreshes that toast
+## instead of stacking. opts.sound = false keeps it silent (the field, a window's own notes); it is
+## silent with reduced motion too. Returns the toast.
+static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Control:
+	if not is_instance_valid(lane) or text.is_empty(): return null
+	var same := find_toast(lane, text)
+	if same:
+		_toast_timer(same)
+		if not calm():
+			same.pivot_offset = Vector2(same.size.x * 0.5, 0)
+			var pulse := same.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			pulse.tween_property(same, "scale", Vector2.ONE * 1.04, 0.08)
+			pulse.tween_property(same, "scale", Vector2.ONE, 0.18)
+		return same
+	var standing := toasts(lane)
+	while standing.size() >= TOAST_MAX:
+		var oldest: Control = standing.pop_front()
+		oldest.set_meta("leaving", true)
+		lane.remove_child(oldest)
+		oldest.queue_free()
+	var pill := PanelContainer.new()
+	pill.name = "Toast"
+	pill.set_meta("toast", text)
+	pill.set_meta("kind", kind)
+	pill.add_theme_stylebox_override("panel", panel_style("pill"))
+	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var actions: Array = opts.get("actions", [])
+	pill.mouse_filter = Control.MOUSE_FILTER_STOP if not actions.is_empty() else Control.MOUSE_FILTER_IGNORE
+	var width: float = float(lane.get_meta("width", 0.0))
+	if width > 0.0: pill.custom_minimum_size.x = width
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pill.add_child(row)
+	var glint := icon(str(TOAST_ICONS.get(kind, TOAST_ICONS.info)), 24)
+	glint.name = "Kind"
+	glint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if kind == "warn": glint.modulate = AWAY
+	row.add_child(glint)
+	var words := label(row, text, T_BODY, INK)
+	words.name = "Text"
+	words.add_theme_font_override("font", FONT_STRONG)
+	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	words.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var room := (width if width > 0.0 else float(lane.get_meta("max_width", 640.0))) - 96.0
+	if width > 0.0: words.custom_minimum_size.x = room
+	else: words.custom_minimum_size.x = minf(room, FONT_STRONG.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, T_BODY).x + 4.0)
+	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	for entry in actions:
+		var run: Callable = entry.get("call", Callable())
+		var act := func() -> void:
+			if run.is_valid(): run.call()
+			dismiss_toast(pill)
+		var key := button(row, str(entry.get("label", "")), act, "night", "sm")
+		key.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	lane.add_child(pill)
+	pill.set_meta("life", TOAST_ACTION_SECONDS if not actions.is_empty() else float(opts.get("seconds", TOAST_SECONDS)))
+	_toast_timer(pill)
+	if not calm():
+		pill.modulate.a = 0.0
+		pill.scale = Vector2(0.92, 0.92)
+		var held: WeakRef = weakref(pill)
+		var start := func() -> void:
+			var node: Control = held.get_ref()
+			if node == null or not node.is_inside_tree(): return
+			node.pivot_offset = Vector2(node.size.x * 0.5, 0)
+			var tw := node.create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(node, "scale", Vector2.ONE, 0.3)
+			tw.tween_property(node, "modulate:a", 1.0, 0.2)
+		start.call_deferred()
+		if bool(opts.get("sound", true)):
+			toast_chimes += 1
+			sfx("toast", -12.0)
+	return pill
+
+## (Re)starts a toast's stay, then fades it out and frees it.
+static func _toast_timer(pill: Control) -> void:
+	if pill.has_meta("timer"):
+		var old: Tween = pill.get_meta("timer")
+		if old and old.is_valid(): old.kill()
+	if not pill.is_inside_tree(): return
+	var tw := pill.create_tween()
+	tw.tween_interval(float(pill.get_meta("life", TOAST_SECONDS)))
+	tw.tween_callback(func(): dismiss_toast(pill))
+	pill.set_meta("timer", tw)
+
+## Fades a toast out and frees it.
+static func dismiss_toast(pill: Control) -> void:
+	if not is_instance_valid(pill) or pill.get_meta("leaving", false): return
+	pill.set_meta("leaving", true)
+	if pill.has_meta("timer"):
+		var old: Tween = pill.get_meta("timer")
+		if old and old.is_valid(): old.kill()
+	if calm() or not pill.is_inside_tree():
+		pill.queue_free()
+		return
+	var tw := pill.create_tween()
+	tw.tween_property(pill, "modulate:a", 0.0, 0.3).set_trans(Tween.TRANS_SINE)
+	tw.tween_callback(pill.queue_free)
+
+## Clears a lane at once (a place that says "nothing to show").
+static func clear_toasts(lane: Control) -> void:
+	for item in toasts(lane):
+		item.set_meta("leaving", true)
+		item.queue_free()
+
 ## Floating interaction chip above the hotbar; hidden while empty. The leading
 ## "E  " of the text is drawn as a key cap.
 static func prompt(ui: Control, y: float) -> Label:

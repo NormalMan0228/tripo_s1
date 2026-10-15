@@ -153,8 +153,7 @@ var step_distance := 0.0
 var last_step_at := Vector3.ZERO
 var ambience_elapsed := 10.0
 var day_track: Label
-var toast_panel: PanelContainer
-var toast_time := 0.0
+var toast_lane: VBoxContainer
 var last_notice := ""
 var ambience: CPUParticles3D
 var sun_defaults: Dictionary
@@ -402,74 +401,18 @@ func message(value: String) -> void:
 	# Server messages arrive in Korean; already translated client text passes through.
 	value = I18n.server(value)
 	if is_instance_valid(notice): notice.text = value
-	if is_instance_valid(toast_panel): toast_panel.reset_size.call_deferred()
-	if is_instance_valid(toast_panel) and value!=last_notice and not value.is_empty():
+	# The shared toast lane (RpgUi.toast): a line still on screen refreshes, a new one stacks (max 3).
+	if is_instance_valid(toast_lane) and not value.is_empty() and (value!=last_notice or RpgUi.find_toast(toast_lane,value)):
 		last_notice=value
-		toast_time=4.5
-		show_toast()
+		RpgUi.toast(toast_lane,value,"info",{"sound":screen!="survival"})
 
-## Toasts slide down from their resting spot with a soft chime; a toast already on
-## screen just swaps its text.
-func show_toast() -> void:
-	if toast_panel.has_meta("fade"):
-		var old: Tween = toast_panel.get_meta("fade")
-		if old and old.is_valid(): old.kill()
-	var showing: bool=toast_panel.visible and toast_panel.modulate.a>0.6
-	toast_panel.visible=true
-	if showing or RpgUi.calm():
-		toast_panel.modulate.a=1.0
-		toast_panel.scale=Vector2.ONE
-		return
-	toast_panel.pivot_offset=Vector2(toast_panel.size.x*0.5,0)
-	toast_panel.scale=Vector2(0.92,0.92)
-	toast_panel.modulate.a=0.0
-	var tw := toast_panel.create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tw.tween_property(toast_panel,"scale",Vector2.ONE,0.3)
-	tw.tween_property(toast_panel,"modulate:a",1.0,0.2)
-	toast_panel.set_meta("fade",tw)
-	if screen!="survival": RpgUi.sfx("toast",-12.0)
-
-func hide_toast() -> void:
-	if not is_instance_valid(toast_panel) or not toast_panel.visible: return
-	var tw := toast_panel.create_tween()
-	tw.tween_property(toast_panel,"modulate:a",0.0,0.3).set_trans(Tween.TRANS_SINE)
-	tw.tween_callback(func():
-		if toast_time<=0: toast_panel.visible=false)
-	toast_panel.set_meta("fade",tw)
-
-## The HUD toast: a glass pill with a starseed glint and wrapped text.
-func make_toast(at: Vector2, width: float) -> void:
-	# The toast lane: a full-screen column that keeps the toast centred at the top
-	# (village) or just above the toolbar (field) at any interface scale.
-	var lane := VBoxContainer.new()
-	lane.name = "ToastLane"
-	lane.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	lane.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var top: bool = at.y<400
-	lane.alignment = BoxContainer.ALIGNMENT_BEGIN if top else BoxContainer.ALIGNMENT_END
-	if top: lane.offset_top = at.y
-	else: lane.offset_bottom = -(RpgUi.CANVAS.y-at.y-44.0)
-	ui.add_child(lane)
-	toast_panel = PanelContainer.new()
-	toast_panel.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
-	toast_panel.custom_minimum_size.x = width
-	toast_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	lane.add_child(toast_panel)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation",10)
-	toast_panel.add_child(row)
-	var glint := RpgUi.icon("res://assets/starseed.svg",24)
-	glint.size_flags_vertical=Control.SIZE_SHRINK_CENTER
-	row.add_child(glint)
-	notice = RpgUi.label(row,"",15,RpgUi.INK)
-	notice.add_theme_font_override("font",RpgUi.FONT_STRONG)
-	notice.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	notice.custom_minimum_size.x=width-96
-	notice.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	notice.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	notice.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	toast_panel.visible = false
+## The HUD's toast lane at design y (520 px pills) and a hidden copy of the last line (notice).
+func lay_toasts(y: float) -> void:
+	toast_lane = RpgUi.toast_lane(ui,y,520)
+	notice = Label.new()
+	notice.name = "NoticeText"
+	notice.visible = false
+	ui.add_child(notice)
 	last_notice = ""
 
 func error_message(code: String) -> String:
@@ -1223,7 +1166,7 @@ func build_village_hud() -> void:
 			"call":func(): action.call()})
 	var bar := RpgUi.hotbar(ui,slots,700,"hotbar")
 	expedition_button = bar.get_child(5)
-	make_toast(Vector2(380,94),520)
+	lay_toasts(94)
 	if preload("res://scripts/build_mode.gd").developer():
 		var debug_box := panel(Vector2(20,520),252,"night")
 		developer_panel=debug_box.get_parent()
@@ -1289,7 +1232,7 @@ func build_play_hud(survival: bool) -> void:
 	RpgUi.pin(bar_panel,0.5,1.0,Vector2(300,800-22-bar_height))
 	# Folds to a handle tab like the village hotbar; the keys keep working.
 	RpgUi.fold_dock(ui,"toolbar",[bar_panel],980,800-22-bar_height*0.5)
-	make_toast(Vector2(380,520 if survival else 548),520)
+	lay_toasts(520 if survival else 548)
 	if survival:
 		var tracker := PanelContainer.new()
 		tracker.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
@@ -2736,9 +2679,6 @@ func _process(delta: float) -> void:
 		update_canopy_visibility()
 	if is_instance_valid(inspect_model) and is_instance_valid(inspect_panel) and inspect_panel.visible:
 		inspect_model.rotation.y+=delta*0.35
-	if toast_time>0:
-		toast_time-=delta
-		if toast_time<=0: hide_toast()
 	if is_instance_valid(flame) and flame.visible:
 		flame.scale=Vector3(1.0+sin(Time.get_ticks_msec()*0.011)*0.07,1.0+sin(Time.get_ticks_msec()*0.015)*0.12,1.0)
 	if screen=="survival":

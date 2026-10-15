@@ -199,8 +199,7 @@ var walk_out := Vector3.ZERO
 ## RPG-style HUD over the full-screen room view.
 var name_panel: PanelContainer
 var name_tween: Tween
-var toast_panel: PanelContainer
-var toast_tween: Tween
+var toast_lane: VBoxContainer
 var hint_chip: PanelContainer
 var hint_key: Label
 ## The hotbar slots, as in the village: 가방 (I) opens the dock, 제작 (C) the craft window.
@@ -443,15 +442,10 @@ func build_ui() -> void:
 	subtitle_label=RpgUi.label(head,tr("상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요"),13,Color("d8e3d4"),false)
 	subtitle_label.custom_minimum_size.x=0;subtitle_label.autowrap_mode=TextServer.AUTOWRAP_OFF
 	if BuildMode.developer(): RpgUi.label(head,tr("개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다"),11,Color("e3b07a"),false)
-	# Top centre: what just happened (server replies, furniture lines).
-	toast_panel=PanelContainer.new();toast_panel.name="StatusToast";toast_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	toast_panel.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
-	toast_panel.set_anchors_preset(Control.PRESET_CENTER_TOP);toast_panel.grow_horizontal=Control.GROW_DIRECTION_BOTH
-	toast_panel.offset_top=92;toast_panel.offset_bottom=92
-	add_child(toast_panel)
-	status_label=RpgUi.label(toast_panel,tr("서버에 연결하고 있어요"),15,RpgUi.INK,false)
-	status_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	toast_panel.visible=false
+	# Top centre: what just happened (server replies, furniture lines), on the shared toast lane;
+	# status_label keeps the last line.
+	toast_lane=RpgUi.toast_lane(self,94)
+	status_label=Label.new();status_label.name="StatusText";status_label.visible=false;status_label.text=tr("서버에 연결하고 있어요");add_child(status_label)
 	# Bottom centre: a key chip for what E (or walking) does right here.
 	hint_chip=PanelContainer.new();hint_chip.name="HintChip";hint_chip.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	hint_chip.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
@@ -619,19 +613,9 @@ func message(value: String, toast := true) -> void:
 			var code: String=match_value.get_string()
 			if words.has(code): value=value.replace(code,words[code])
 	status_label.text=value
-	if is_instance_valid(toast_panel) and is_inside_tree():
-		if not toast:
-			toast_panel.visible=false
-			return
-		toast_panel.visible=not value.is_empty()
-		toast_panel.modulate.a=1.0
-		toast_panel.reset_size()
-		var toast_width: float=toast_panel.get_combined_minimum_size().x
-		toast_panel.offset_left=-toast_width*0.5;toast_panel.offset_right=toast_width*0.5
-		if toast_tween and toast_tween.is_valid(): toast_tween.kill()
-		toast_tween=create_tween()
-		toast_tween.tween_interval(4.5)
-		toast_tween.tween_property(toast_panel,"modulate:a",0.0,0.6)
+	if is_instance_valid(toast_lane) and is_inside_tree():
+		if not toast or value.is_empty(): RpgUi.clear_toasts(toast_lane)
+		else: RpgUi.toast(toast_lane,value)
 
 func build_stage() -> void:
 	stage=Node3D.new();viewport.add_child(stage)
