@@ -1,6 +1,7 @@
 extends Control
 ## The always-on chat box, bottom left in every place (social_hud.gd owns it): a header (the
-## 함께하기 key with its badge, the channel chip, the fold key), the log, and the field.
+## 함께하기 key with its badge, the 채팅창 title, the channel chip, the unread pill, the fold key),
+## the log, and the field.
 ## Enter focuses the field (social_hud.gd hears it after the place's keys), Enter sends and gives
 ## the keys back to walking, an empty Enter or Esc just gives them back, and a click in the world
 ## does too (and is used up, so it does not click furniture). The Korean IME commits its last
@@ -19,6 +20,7 @@ const HEIGHT := 226.0
 const IDLE := 8.0
 const TEXT_LINGER := 4.0
 const MOVE_ACTIONS := ["move_forward", "move_back", "move_left", "move_right", "run"]
+const CROWN := "res://assets/ui/icons/crown.png"
 const CHANNEL_NAMES := {"local":"마을", "party":"파티", "global":"전체", "whisper":"귓속말"}
 const CHANNEL_COLOURS := {"local":RpgUi.INK, "party":RpgUi.TEAL, "global":RpgUi.CHAT_GLOBAL, "whisper":RpgUi.CHAT_WHISPER, "system":RpgUi.SOFT}
 
@@ -31,6 +33,7 @@ var channel_key: Button
 var fold_key: Button
 var body: VBoxContainer
 var unread_pill: Label
+var title: Label
 ## The channel a line goes out on, and the whisper partner when it is "whisper".
 var channel := "local"
 var whisper_to := ""
@@ -72,6 +75,9 @@ func _ready() -> void:
 	people_key.pressed.connect(func(): hub.toggle_window())
 	RpgUi.hover_motion(people_key, 1.1, Vector2(0.5, 0.5), true, "")
 	head.add_child(people_key)
+	title = RpgUi.label(head, tr("채팅창"), 14, RpgUi.GOLD)
+	title.name = "Title"
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	channel_key = Button.new()
 	channel_key.name = "Channel"
 	channel_key.theme_type_variation = "GhostButton"
@@ -85,9 +91,23 @@ func _ready() -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_child(spacer)
-	unread_pill = RpgUi.label(head, "", 12, RpgUi.INK)
+	# New lines while folded or faded: a gold pill that hops when the count grows.
+	var pill := PanelContainer.new()
+	pill.name = "UnreadPill"
+	var pill_style := StyleBoxFlat.new()
+	pill_style.bg_color = RpgUi.GOLD
+	pill_style.set_corner_radius_all(11)
+	pill_style.content_margin_left = 8
+	pill_style.content_margin_right = 8
+	pill_style.content_margin_top = 1
+	pill_style.content_margin_bottom = 1
+	pill.add_theme_stylebox_override("panel", pill_style)
+	pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pill.visible = false
+	head.add_child(pill)
+	unread_pill = RpgUi.label(pill, "", 12, RpgUi.PAPER_INK, false)
 	unread_pill.name = "Unread"
-	unread_pill.visible = false
 	fold_key = RpgUi.fold_toggle(head, "chat", Vector2.DOWN, 26.0)
 	body = VBoxContainer.new()
 	body.name = "Body"
@@ -268,6 +288,10 @@ func format(line: Dictionary, me: String) -> String:
 	var colour: Color = CHANNEL_COLOURS.get(kind, RpgUi.INK)
 	var pending := " …" if line.get("pending", false) else ""
 	var name_part := "[url=who:%s][b][color=#%s]%s[/color][/b][/url]" % [escape(who).uri_encode(), name_colour.to_html(false), escape(who)]
+	# The owner of the village (or home) being visited speaks under a crown in the place's chat.
+	var host := str(hub.overview.get("host_id", ""))
+	if kind == "local" and not host.is_empty() and str(line.get("user_id", "")) == host:
+		name_part = "[img=16x16]%s[/img]" % CROWN + name_part
 	return "[color=#%s]%s%s: %s%s[/color]" % [colour.to_html(false), tag, name_part, text, pending]
 
 static func escape(value: String) -> String:
@@ -285,8 +309,20 @@ func update_badge() -> void:
 	var invites: Array = hub.overview.get("invites", []) if hub.overview.get("invites") is Array else []
 	RpgUi.badge(people_key, int(hub.counts.requests) + int(hub.counts.knocks) + invites.size())
 	if reading(): hub.unread = 0
-	unread_pill.visible = hub.unread > 0
-	unread_pill.text = tr("새 대화 %d") % hub.unread
+	var pill: Control = unread_pill.get_parent()
+	var text := tr("새 대화 %d") % hub.unread
+	if hub.unread > 0 and (not pill.visible or unread_pill.text != text): _hop(pill)
+	pill.visible = hub.unread > 0
+	unread_pill.text = text
+
+func _hop(pill: Control) -> void:
+	if RpgUi.calm(): return
+	await get_tree().process_frame
+	if not is_instance_valid(pill): return
+	pill.pivot_offset = pill.size * 0.5
+	var tween := pill.create_tween()
+	tween.tween_property(pill, "scale", Vector2(1.18, 1.18), 0.09).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(pill, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 # ------------------------------------------------------------------ fade
 

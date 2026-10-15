@@ -519,7 +519,7 @@ func _open_screen(reason: String) -> void:
 	RpgUi.divider(column, Color(RpgUi.GOLD, .8))
 	retry_button = _button(column, tr("다시 시도"), func(): retry(), 320, true)
 	_button(column, tr("게임 종료"), func(): get_tree().quit(), 320, false)
-	retry_button.grab_focus.call_deferred()
+	retry_button.grab_focus.call_deferred(true)
 
 ## No patch can do it: the installer page (the address comes from the server).
 func _open_installer_screen(why: String) -> void:
@@ -537,7 +537,7 @@ func _open_installer_screen(why: String) -> void:
 	first.disabled = not url.begins_with("https://")
 	if first.disabled: _line(column, tr("받는 곳은 운영자 공지를 확인해 주세요."), 13, Color(RpgUi.INK, .7))
 	_button(column, tr("게임 종료"), func(): get_tree().quit(), 320, false)
-	if not first.disabled: first.grab_focus.call_deferred()
+	if not first.disabled: first.grab_focus.call_deferred(true)
 
 ## The installed game patches itself: list, download with progress, check, restart.
 func _open_patch_screen() -> void:
@@ -576,7 +576,7 @@ func _patch_show(step: String, text: String, bar := -1.0) -> void:
 	for child in patch_buttons.get_children(): child.queue_free()
 	if step in ["failed", "waiting"]:
 		var again := _button(patch_buttons, tr("다시 시도"), func(): _run_patch(), 320, true)
-		again.grab_focus.call_deferred()
+		again.grab_focus.call_deferred(true)
 		if step == "failed" and str(client.get("download_url", "")).begins_with("https://"):
 			_button(patch_buttons, tr("설치 파일 받기"), func(): open_download(), 320, false)
 	if step != "restarting": _button(patch_buttons, tr("게임 종료"), func(): get_tree().quit(), 320, false)

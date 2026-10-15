@@ -163,7 +163,10 @@ func _ready() -> void:
 		await LoadPace.step("town")
 	index_props()
 	var home := point(HOME_DOOR)
-	A.label3d(self,tr("나의 집 · E 들어가기"),home+Vector3(0,3.4,0),Color("f5e5b7"))
+	# The owner's name goes on the sign while visiting (main.gd home_signs).
+	var home_sign := A.label3d(self,tr("나의 집 · E 들어가기"),home+Vector3(0,3.4,0),Color("f5e5b7"))
+	home_sign.add_to_group("home_sign")
+	home_sign.set_meta("visit","%s님의 집 · E 들어가기")
 	A.label3d(self,tr("별씨 공방 · E 들어가기"),point(WORKSHOP_DOOR)+Vector3(0,3.6,0),Color("fff1c8"))
 	for i in mini(3,story_progress):
 		var at := point(HOME_DOOR+Vector2(-2.2+i*1.6,1.6),.25)

@@ -841,7 +841,9 @@ func build_room() -> void:
 	set_floor(0)
 	title_label.text=tr("나의 작은 집") if room=="home" else tr("물결빛 공방")
 	subtitle_label.text=tr("상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요")
-	if not visit_host.is_empty(): title_label.text=tr("%s님의 집") % visit_name
+	if not visit_host.is_empty():
+		title_label.text=tr("%s님의 집") % visit_name
+		subtitle_label.text=tr("놀러 온 집 · 가구는 구경만 할 수 있어요")
 	if public_room:
 		title_label.text=tr(str(building_spec.name))
 		subtitle_label.text=tr(str(building_spec.kind))+"  ·  "+tr(str(building_spec.flavour))
@@ -1754,6 +1756,7 @@ func share_presence() -> void:
 			Art.style_nameplate(plate)
 			peers[record.id]={"node":body,"motion":RemoteMotion.new()}
 		AvatarLook.wear(peers[record.id].node,record.get("avatar",{}),version,true)
+		SocialHud.host_crown(peers[record.id].node,str(record.id)==str(space.get("host_id","")))
 		if int(peers[record.id].get("floor",-1))!=level:
 			# Changing floors is a jump, not a glide across the room.
 			peers[record.id].motion.reset()
@@ -1834,7 +1837,7 @@ func leave() -> void:
 	if floor_index==0 and is_instance_valid(hero):
 		walk_out=Vector3(float(room_spec.get("door_x",0.0)),0,float(room_spec.size.y)*0.5+1.6)
 	veil.play_door("open",room)
-	veil.loading(tr("다섯 섬 마을"),"","village")
+	veil.loading(tr("%s님의 마을") % visit_name if not visit_host.is_empty() else tr("다섯 섬 마을"),"","village")
 	# The room's sound goes with the light: the beds fade with the veil, the music fades across the
 	# scene change while the village's own track comes in (no hard cut).
 	fade_room_audio(Transition.OUT)

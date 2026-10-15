@@ -637,7 +637,7 @@ func login_ui(page := "menu") -> void:
 				entry.focus_mode = Control.FOCUS_ALL
 				entry.focus_entered.connect(func(): RpgUi.sfx("hover"))
 				if entry.theme_type_variation=="MenuNightButton": entry.add_theme_color_override("font_focus_color",RpgUi.HOVER)
-			entries[0].grab_focus.call_deferred()
+			entries[0].grab_focus.call_deferred(true)
 		"settings":
 			# Tabbed settings (scripts/settings_menu.gd) over the title art.
 			SettingsMenu.open(ui,func(): login_ui("menu"))
@@ -1357,6 +1357,7 @@ func status_meter(parent: Node, title: String, color: Color, icon_name := "") ->
 func refresh_inventory() -> void:
 	# The village is where the craft's news is told now (also while visiting a friend).
 	craft_tracker()
+	home_signs()
 	if social.visiting():
 		if is_instance_valid(wallet):
 			wallet.visible = true
@@ -2589,7 +2590,7 @@ func confirm_return() -> void:
 		leave_run(),"primary","lg",true)
 	var stay := RpgUi.button(row,tr("계속 생존하기"),func(): RpgUi.close_window(w),"night","lg",true)
 	for b in [leave,stay]: b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	stay.grab_focus.call_deferred()
+	stay.grab_focus.call_deferred(true)
 
 ## Esc in survival: the pause menu (scripts/pause_menu.gd). Opening it sets paused
 ## and clears the pending action exactly as before, so tick_run sends nothing.
@@ -3062,7 +3063,7 @@ func _process(delta: float) -> void:
 				elif not module_entry.is_empty(): prompt_text=key+str(module_entry.get("prompt",""))
 				elif not prop.is_empty(): prompt_text=key+town.prop_prompt(prop)
 				elif near(TownLayout.GATE,3): prompt_text=key+tr("탐험 떠나기")
-				elif near(TownLayout.HOME_DOOR,2): prompt_text=key+tr("나의 집 들어가기")
+				elif near(TownLayout.HOME_DOOR,2): prompt_text=key+(tr("%s님의 집 들어가기") % str(social.data.get("host_name",tr("친구"))) if social.visiting() else tr("나의 집 들어가기"))
 				elif near(TownLayout.WORKSHOP_DOOR,2.5): prompt_text=key+tr("별씨 공방 들어가기")
 				elif not nearest_furniture().is_empty(): prompt_text=key+{"sit":tr("앉기"),"lie":tr("눕기")}.get(str(loaded[nearest_furniture()].get("rest")),tr("가구 사용하기"))
 				if is_instance_valid(seat) and seat.resting(): prompt_text=key+tr("일어나기")
@@ -3364,8 +3365,16 @@ func answer_social_invite(invitation: Dictionary, decision: String) -> void:
 func follow_visit() -> void:
 	social.poll()
 
+## The house's signs (the sign over the door, the mailbox) say whose house it is: 나의 집 at home,
+## "<owner>님의 집" while visiting.
+func home_signs() -> void:
+	var host := str(social.data.get("host_name",tr("친구")))
+	for sign in get_tree().get_nodes_in_group("home_sign"):
+		if not sign.has_meta("mine"): sign.set_meta("mine",sign.text)
+		sign.text = tr(str(sign.get_meta("visit"))) % host if social.visiting() else str(sign.get_meta("mine"))
+
 func chat_bubble(user_id: String, username: String, text: String) -> void:
-	if screen=="village": social.bubble(user_id, username, text)
+	if screen in ["village","survival"]: social.bubble(user_id, username, text)
 
 ## The window-stack description of a village modal (the craft window holds its window one level
 ## down, under the notes' lane), so its opening key can close it.

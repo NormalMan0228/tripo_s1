@@ -10679,6 +10679,30 @@
   "우두머리의 밤": {
    "en": "The boss's night",
    "zh": "首领之夜"
+  },
+  "CapsLock이 켜져 있어요": {
+   "en": "Caps Lock is on",
+   "zh": "大写锁定已开启"
+  },
+  "채팅창": {
+   "en": "Chat",
+   "zh": "聊天"
+  },
+  "%s님의 집 · E 들어가기": {
+   "en": "%s's house · E to enter",
+   "zh": "%s的家 · 按E进入"
+  },
+  "%s님의 마을": {
+   "en": "%s's village",
+   "zh": "%s的村庄"
+  },
+  "놀러 온 집 · 가구는 구경만 할 수 있어요": {
+   "en": "Visiting · you can look at the furniture but not move it",
+   "zh": "做客中 · 家具只能观看"
+  },
+  "새 대화 %d": {
+   "en": "%d new",
+   "zh": "新消息 %d"
   }
  },
  "templates": []

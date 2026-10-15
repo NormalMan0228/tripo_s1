@@ -2743,7 +2743,7 @@ static func dialogue_choices(d: Dictionary, entries: Array) -> Array:
 		if not calm():
 			b.modulate.a = 0.0
 			b.create_tween().tween_property(b, "modulate:a", 1.0, 0.18).set_delay(0.05 * index)
-	if not made.is_empty(): (made[0] as Button).grab_focus.call_deferred()
+	if not made.is_empty(): (made[0] as Button).grab_focus.call_deferred(true)
 	d.more.visible = false
 	d.picked = false
 	d.choices_at = Time.get_ticks_msec()
@@ -2835,7 +2835,35 @@ static func field(parent: Node, placeholder: String, secret := false, dropped :=
 	# field focused but deaf until it was clicked again.
 	line.keep_editing_on_text_submit = true
 	parent.add_child(line)
+	if secret or latin: caps_hint(parent, line)
 	return line
+
+## CapsLock as last seen in a Latin field: -1 unknown, 0 off, 1 on. Godot cannot read the lock
+## itself, so a letter tells it: upper case without Shift (or lower case with it) means the lock
+## is on. The CapsLock key flips a known state.
+static var caps_lock := -1
+
+static func caps_seen(event: InputEvent) -> void:
+	if not event is InputEventKey or not event.pressed or event.echo: return
+	if event.keycode == KEY_CAPSLOCK:
+		if caps_lock != -1: caps_lock = 1 - caps_lock
+		return
+	var ch := String.chr(event.unicode) if event.unicode > 0 else ""
+	if ch.length() != 1 or ch.to_upper() == ch.to_lower(): return
+	caps_lock = 1 if (ch == ch.to_upper()) != event.shift_pressed else 0
+
+## A quiet line under a Latin field that says CapsLock is on while the field is being typed in.
+static func caps_hint(parent: Node, line: LineEdit) -> Label:
+	var hint := label(parent, "⇪ " + TranslationServer.translate("CapsLock이 켜져 있어요"), 13, Color("ffd9a0"))
+	hint.name = "CapsHint"
+	hint.visible = false
+	var refresh := func(): hint.visible = line.has_focus() and caps_lock == 1
+	line.gui_input.connect(func(event):
+		caps_seen(event)
+		refresh.call())
+	line.focus_entered.connect(refresh)
+	line.focus_exited.connect(refresh)
+	return hint
 
 ## Hangul typed on a Korean 2-set keyboard back to the keys pressed, everything else outside
 ## printable ASCII taken out; true when the field had to change. Shift is not known for plain

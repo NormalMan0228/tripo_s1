@@ -123,7 +123,7 @@ static func window(parent: Node, api: Node, sold: Callable) -> Control:
 			row.add_child(sell)
 			if first == null: first = sell
 		if shown == 0: RpgUi.label(list, t("팔 물건이 없어요. 사과를 따거나 낚시를 해 보세요."), 15, RpgUi.SOFT)
-		if first != null: first.grab_focus.call_deferred()
+		if first != null: first.grab_focus.call_deferred(true)
 	var load := func() -> void:
 		var loaded: Dictionary = await api.request("/v1/homestead")
 		if not is_instance_valid(root): return

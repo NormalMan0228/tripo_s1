@@ -107,34 +107,128 @@ static func release_place(node: Node) -> void:
 	for hub in hubs.values():
 		if is_instance_valid(hub): hub.unbind(node)
 
-## A speech bubble over `actor` for a chat line: a short billboard label that floats up and fades.
-## One per actor: a new line replaces the last.
+## A speech bubble over `actor` for a chat line, in every place (village, rooms, expeditions): a
+## cream card with a tail, sized to the words (a billboard quad drawn by BUBBLE_SHADER), that pops
+## up, stays 4 s and fades. One per actor: a new line replaces the last. Its tail stops just over
+## the nameplate (2.05 m).
+const BUBBLE_PIXEL := 0.0055
+const BUBBLE_FONT := 28
+const BUBBLE_WIDTH := 340.0
+const BUBBLE_PAD := Vector2(24, 14)
+const BUBBLE_TAIL := 0.12
+const BUBBLE_SHADER := """
+shader_type spatial;
+render_mode unshaded, depth_test_disabled, cull_disabled, shadows_disabled, blend_mix, fog_disabled;
+uniform vec2 box_size = vec2(1.0, 0.3);
+uniform float tail = 0.12;
+uniform float radius = 0.09;
+uniform float rim = 0.016;
+uniform vec4 fill : source_color = vec4(1.0, 0.97, 0.89, 0.96);
+uniform vec4 edge : source_color = vec4(0.24, 0.18, 0.12, 0.9);
+uniform float opacity = 1.0;
+void vertex() {
+	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0] * length(MODEL_MATRIX[0].xyz),
+		INV_VIEW_MATRIX[1] * length(MODEL_MATRIX[1].xyz), INV_VIEW_MATRIX[2] * length(MODEL_MATRIX[2].xyz), MODEL_MATRIX[3]);
+}
+void fragment() {
+	vec2 quad = vec2(box_size.x, box_size.y + tail);
+	vec2 p = (UV - 0.5) * quad;
+	p.y = -p.y - tail * 0.5;
+	vec2 d = abs(p) - (box_size * 0.5 - radius);
+	float box = length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - radius;
+	// The tail: a triangle from under the card down to a tip a little left of centre.
+	float rise = p.y + box_size.y * 0.5 + tail;
+	float along = clamp(rise / tail, 0.0, 1.5);
+	float centre = mix(-tail * 0.45, 0.0, along);
+	float spike = max(max(abs(p.x - centre) - along * tail * 0.75, -rise), rise - tail - radius);
+	float shape = min(box, spike);
+	float aa = fwidth(shape) * 1.2;
+	float inside = 1.0 - smoothstep(-aa, aa, shape);
+	float core = 1.0 - smoothstep(-aa, aa, shape + rim);
+	vec4 colour = mix(edge, fill, core);
+	ALBEDO = colour.rgb;
+	ALPHA = colour.a * inside * opacity;
+}
+"""
+static var _bubble_shader: Shader
+
+## The owner's crown over a walker's nameplate (a visitor sees it over the village's or the home's
+## owner); `on` false takes it off. A chat bubble over a crowned walker sits higher.
+static func host_crown(actor: Node3D, on: bool, plate_height := 2.05) -> void:
+	if not is_instance_valid(actor): return
+	var crown := actor.get_node_or_null("HostCrown") as Sprite3D
+	if not on:
+		if crown: crown.free()
+		return
+	if crown: return
+	var texture: Texture2D = load("res://assets/ui/icons/crown.png")
+	if texture == null: return
+	crown = Sprite3D.new()
+	crown.name = "HostCrown"
+	crown.texture = texture
+	crown.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	crown.no_depth_test = true
+	crown.pixel_size = 0.2 / maxf(texture.get_height(), 1.0)
+	crown.position = Vector3(0, plate_height + 0.24, 0)
+	crown.render_priority = 3
+	actor.add_child(crown)
+
 static func bubble(actor: Node3D, text: String, height := 2.45) -> void:
 	if not is_instance_valid(actor) or text.strip_edges().is_empty(): return
 	var old := actor.get_node_or_null("ChatBubble")
 	if old: old.free()
+	if actor.get_node_or_null("HostCrown"): height += 0.24
+	var shown := text.strip_edges().left(40) + ("…" if text.strip_edges().length() > 40 else "")
 	var label := Label3D.new()
-	label.name = "ChatBubble"
-	label.text = text.left(40) + ("…" if text.length() > 40 else "")
+	label.name = "Words"
+	label.text = shown
+	label.font = RpgUi.FONT_STRONG
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	label.fixed_size = false
-	label.pixel_size = 0.0055
-	label.font_size = 30
-	label.outline_size = 10
-	label.modulate = RpgUi.INK
-	label.outline_modulate = Color(RpgUi.OUTLINE, 0.9)
-	label.width = 360.0
+	label.pixel_size = BUBBLE_PIXEL
+	label.font_size = BUBBLE_FONT
+	label.outline_size = 0
+	label.modulate = RpgUi.PAPER_INK
+	label.width = BUBBLE_WIDTH
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.position = Vector3(0, height, 0)
 	label.render_priority = 3
-	actor.add_child(label)
-	var tween := label.create_tween()
-	tween.tween_property(label, "position:y", height + 0.12, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var words: Vector2 = RpgUi.FONT_STRONG.get_multiline_string_size(shown, HORIZONTAL_ALIGNMENT_CENTER, BUBBLE_WIDTH, BUBBLE_FONT)
+	var box := (words + BUBBLE_PAD * 2.0) * BUBBLE_PIXEL
+	if _bubble_shader == null:
+		_bubble_shader = Shader.new()
+		_bubble_shader.code = BUBBLE_SHADER
+	var material := ShaderMaterial.new()
+	material.shader = _bubble_shader
+	material.render_priority = 2
+	material.set_shader_parameter("box_size", box)
+	material.set_shader_parameter("tail", BUBBLE_TAIL)
+	material.set_shader_parameter("fill", Color(RpgUi.INK, 0.96))
+	material.set_shader_parameter("edge", Color(RpgUi.PAPER_INK, 0.9))
+	var quad := QuadMesh.new()
+	quad.size = Vector2(box.x, box.y + BUBBLE_TAIL)
+	quad.center_offset = Vector3(0, -BUBBLE_TAIL * 0.5, 0)
+	var card := MeshInstance3D.new()
+	card.name = "Card"
+	card.mesh = quad
+	card.material_override = material
+	card.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var root := Node3D.new()
+	root.name = "ChatBubble"
+	var rest := height - 0.18 + BUBBLE_TAIL + box.y * 0.5
+	root.position = Vector3(0, rest - 0.1, 0)
+	root.scale = Vector3.ONE * 0.85
+	root.add_child(card)
+	root.add_child(label)
+	actor.add_child(root)
+	var tween := root.create_tween()
+	tween.tween_property(root, "position:y", rest, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(root, "scale", Vector3.ONE, 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_interval(4.0)
-	tween.tween_property(label, "modulate:a", 0.0, 0.5)
-	tween.parallel().tween_property(label, "outline_modulate:a", 0.0, 0.5)
-	tween.tween_callback(label.queue_free)
+	tween.tween_method(func(alpha: float):
+		material.set_shader_parameter("opacity", alpha)
+		label.modulate.a = alpha, 1.0, 0.0, 0.5)
+	tween.tween_callback(root.queue_free)
 
 func stop() -> void:
 	if stopped: return
