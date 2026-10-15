@@ -10,6 +10,8 @@ extends SceneTree
 ## After the last entry three fixed spots per map (camp, a scatter-dense spot, a rim spot) are
 ## sampled for 2 s each and captured with the UI hidden to --out=DIR as <map>_<spot>.png.
 ## The time of day is held at day_progress 0.3 (plain day grade) while measuring.
+## --alternate-prefetch: entries alternate the survival map's creature prefetch (survival_map.gd
+## prefetch_monsters) off and on (warmups keep it on), to compare both under the same conditions.
 ## Prints EXPB lines and EXPB_RESULT {json}; also writes <out>/<map>.json.
 ## Usage: Godot --path game --position X,Y --script res://tests/expedition_baseline.gd --
 ##   --server=http://127.0.0.1:8831 --map=forest --out=D:/.../baseline --load-phases --mute
@@ -263,8 +265,13 @@ func run() -> void:
 		finish()
 		return
 	result["village_before"] = memory()
+	var alternate := "--alternate-prefetch" in OS.get_cmdline_user_args()
+	var survival_map = load("res://maps/survival/survival_map.gd")
 	for n in warmup+entries:
 		var tag := ("warmup%d" % n) if n < warmup else ("entry%d" % (n-warmup+1))
+		if alternate:
+			survival_map.prefetch_monsters = n < warmup or (n-warmup) % 2 == 1
+			tag += "_prefetch" if bool(survival_map.prefetch_monsters) else "_noprefetch"
 		await create_timer(2.0).timeout
 		var entry := await change("village -> "+map_id, func(): current_scene.start_run(map_id),
 			func(): return current_scene.get("screen") == "survival" and not current_scene.busy)
