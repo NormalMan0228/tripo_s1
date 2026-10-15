@@ -378,6 +378,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 conn.execute('INSERT INTO users(id,username,password_hash,shards,created) VALUES (?,?,?,?,?)',(user_id,body.username.lower(),password_hash,0,clock()))
             except sqlite3.IntegrityError: fail('username_unavailable')
             new_object(conn,user_id,'starter','환영의 나무 의자')
+            # The opening story chapter starts with a letter on the desk at home (server/story.py).
+            if settings.story_enabled: app.state.story.begin(conn,user_id,clock())
             if settings.mode=='demo': money(conn,user_id,80,'demo_welcome',user_id)
             elif settings.welcome_stars: money(conn,user_id,settings.welcome_stars,'live_welcome',user_id)
             record_event(conn,'register',user_id,{'username':body.username.lower(),'ip':client_ip(request)},clock())
@@ -447,7 +449,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 # Residents' home versions (npc_homes.py): a house the client has cached at this version is current.
                 'npc_homes':app.state.npc_homes.versions_for(user['id']),'npc_homes_host':user['id'],
                 # Unread letters from residents (the village mailbox raises its flag).
-                'npc_letters_unread':app.state.npc_homes.unread_for(user['id'])}
+                'npc_letters_unread':app.state.npc_homes.unread_for(user['id']),
+                # The opening story chapter (server/story.py), None for accounts without it.
+                'story':app.state.story.public_for(conn,user['id'])}
 
     @app.post('/v1/objects/{object_id}')
     def edit_object(object_id:str,body:ObjectEdit,request:Request):
@@ -635,6 +639,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.object_shape=object_shape.ObjectShape(app,db,clock,mutate,own)
     from .npc_homes import NpcHomes
     app.state.npc_homes=NpcHomes(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
+    from .story import Story
+    app.state.story=Story(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
     from .interactions import Interactions
     app.state.interactions=Interactions(app,db,settings,clock,auth,mutate,own,money,studio)
     from .usage_report import UsageReport; app.state.usage_report=UsageReport(app,db,settings,clock)

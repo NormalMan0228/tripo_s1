@@ -504,6 +504,8 @@ static func layout(id: String, floor_index: int, f: Dictionary) -> Array:
 			l.append(link(it("staircase",hw-0.78,-hd+1.4,0.0,{"size":Vector3(1.4,h,2.7),"variant":"left"}),1,Vector2.ZERO))
 			l.append(it("floor_lamp",3.12,-hd+0.42))
 			l.append(wall("bookshelf",f,0,1,0.9))
+			# A writing desk by the front door: the story chapter's welcome letter lies on it (story_home.gd).
+			l.append(wall("desk",f,0,1,2.85))
 			l.append(wall("sofa",f,0,-1,0.5))
 			l.append(wall("picture_frame",f,0,-1,2.6,1.95))
 			l.append(it("coat_rack",-hw+0.4,hd-0.75))

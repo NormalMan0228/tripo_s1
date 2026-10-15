@@ -439,7 +439,15 @@ ARCHETYPES = [
     {'id': 'seat', 'names': {'ko': '의자', 'en': 'Seat'}, 'family': 'rest', 'room': 'seating',
      'words': ['의자', '스툴', '걸상', '좌식의자', 'chair', 'stool', 'seat'],
      'roles': [{'id': 'whole', 'words': ['seat', 'chair', 'body', 'frame'], 'root': True, 'hint': 'the seat'}],
-     'behaviours': [], 'single': [], 'rest': 'sit'},
+     'behaviours': [], 'single': [], 'rest': 'sit',
+     # The offline designer's chair (demo servers and tests: the story chapter's "의자").
+     'fixture': {'title': '나무 의자', 'parts': [
+         box('seat', [.46, .06, .46], [0, .45, 0], LIGHT_WOOD),
+         box('leg_front_left', [.05, .42, .05], [-.19, -.24, .19], WOOD, 'seat'),
+         box('leg_front_right', [.05, .42, .05], [.19, -.24, .19], WOOD, 'seat'),
+         box('leg_back_left', [.05, .42, .05], [-.19, -.24, -.19], WOOD, 'seat'),
+         box('leg_back_right', [.05, .42, .05], [.19, -.24, -.19], WOOD, 'seat'),
+         box('back', [.46, .46, .05], [0, .26, -.205], LIGHT_WOOD, 'seat', rotation=[-6, 0, 0])]}},
 ]
 
 # ---------------------------------------------------------------- the library, by room (built with the builders)

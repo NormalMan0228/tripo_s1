@@ -21,6 +21,14 @@ npc-homes shows one player's village residents' homes (server/npc_homes.py): eve
 it is in storage or at which slot, the next change time, and friendship. Read-only.
 
     ... python -m server.admin_cli npc-homes USERNAME
+
+story shows or restarts one player's opening story chapter "마을의 첫 선물" (server/story.py).
+reset puts the account back at the letter on the desk (rehearsals; an account made before the
+chapter existed starts it this way): the piece on the café terrace goes back to the bag, every other
+piece, letter and return gift stays. Ask the player to sign in again afterwards.
+
+    ... python -m server.admin_cli story show USERNAME
+    ... python -m server.admin_cli story reset USERNAME
 """
 from __future__ import annotations
 
@@ -180,6 +188,35 @@ def npc_homes(args):
     return 0
 
 
+def story(args):
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    from . import story as chapter
+    with sqlite3.connect(database, timeout=30, isolation_level=None) as conn:
+        conn.row_factory = sqlite3.Row
+        user = conn.execute('SELECT id FROM users WHERE username=?', (args.username.lower(),)).fetchone()
+        if not user:
+            print('No such account.')
+            return 1
+        # A world from before the chapter (or resident gifts) gets the empty tables first.
+        from .npc_homes import SCHEMA as HOMES
+        conn.executescript(HOMES + chapter.SCHEMA)
+        if args.command == 'show':
+            print(json.dumps(chapter.describe(conn, user['id']), ensure_ascii=False, indent=1))
+            return 0
+        conn.execute('BEGIN IMMEDIATE')
+        try:
+            result = chapter.reset(conn, user['id'], time.time())
+            conn.execute('COMMIT')
+        except BaseException:
+            conn.execute('ROLLBACK')
+            raise
+        print(json.dumps({'ok': True, 'username': args.username.lower(), **result}, ensure_ascii=False))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     actions = parser.add_subparsers(dest='action', required=True)
@@ -198,7 +235,13 @@ def main(argv=None):
     homes = actions.add_parser('npc-homes', help="show one player's residents' homes and gifts")
     homes.add_argument('username')
     homes.add_argument('--data-dir', default='/data')
+    chapter = actions.add_parser('story', help='show or restart the opening story chapter of one player')
+    chapter.add_argument('command', choices=('show', 'reset'))
+    chapter.add_argument('username')
+    chapter.add_argument('--data-dir', default='/data')
     args = parser.parse_args(argv)
+    if args.action == 'story':
+        return story(args)
     if args.action == 'npc-homes':
         return npc_homes(args)
     if args.action == 'library':

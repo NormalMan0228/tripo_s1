@@ -222,12 +222,25 @@ static func _owner_working(building: String, at: float) -> bool:
 		if (hour >= from and hour < to) or (hour+24.0 >= from and hour+24.0 < to): return true
 	return false
 
+## Residents the story chapter keeps out of their plan (story.gd: 모카 waits on the café terrace
+## as the story's own figure, a passer-by sits on the terrace's new chair). Their place is "story":
+## no building has them inside and their walker steps out of sight, so nobody is seen twice.
+static var held := {}
+
+## Takes `id` out of (on) or gives it back to (off) its daily plan.
+static func hold(id: String, on: bool) -> void:
+	if on == held.has(id): return
+	if on: held[id] = {"place":"story","spot":"","activity":"story","asleep":false}
+	else: held.erase(id)
+	_states.clear()
+
 ## Where a resident is right now: {place, spot, activity, asleep, from, to}.
 ## hour/day default to the local clock; pass the daylight override hour to test.
 static func now(id: String, hour := -1.0, day := -1) -> Dictionary:
 	var c := clock()
 	if hour < 0.0: hour = c.hour
 	if day < 0: day = c.day
+	if held.has(id): return held[id].merged({"id":id,"from":hour,"to":hour+1.0})
 	for block in plan(id, day):
 		if hour >= block.from and hour < block.to: return block.merged({"id":id})
 	for block in plan(id, day-1):
