@@ -23,6 +23,7 @@ func run() -> void:
 	await menu()
 	await pass_through()
 	await ring()
+	await houses()
 	print("build_mode_check: %d failure(s)" % failures.size())
 	quit(0 if failures.is_empty() else 1)
 
@@ -135,6 +136,29 @@ func pass_through() -> void:
 	check(not PassThrough.on and walker.collision_mask&16,"…and takes hold once the walker is out")
 	check(PassThrough.for_walker(walker)==helper,"one helper per walker")
 	world.queue_free()
+
+## 주민 이사 (43): the house on its plot, the walker set down at the door, no furniture on a plot.
+func houses() -> void:
+	var HousePlots = load("res://scripts/house_plots.gd")
+	var Plots = load("res://maps/archipelago/plots.gd")
+	var plot: String=Plots.ids()[0]
+	var centre: Vector2=Plots.PLOTS[plot].center
+	check(HousePlots.on_plot(centre)==plot and HousePlots.on_plot(centre+Vector2(20,0)).is_empty(),"the plot covers its own ground only")
+	check(not BuildRules.village_problem(Vector3(centre.x,0,centre.y),Vector3(0.3,0.3,0.3),0).is_empty(),"no furniture on a plot")
+	check(HousePlots.door_at(plot)==Plots.door_point(plot),"door_at is the plot's door")
+	var app := Node3D.new()
+	app.set_script(load("res://tests/house_app.gd"))
+	root.add_child(app)
+	app.player.global_position=Vector3(centre.x,2.3,centre.y)
+	await HousePlots.show_house(plot,true,true,app)
+	check(Plots.is_built(plot),"show_house builds the house")
+	var stood := Vector2(app.player.global_position.x,app.player.global_position.z)
+	check(stood.distance_to(HousePlots.door_at(plot))<0.01,"the walker inside the new walls is set down at the door")
+	await HousePlots.show_house(plot,false,true,app)
+	check(not Plots.is_built(plot),"show_house(false) clears the plot again")
+	HousePlots.set_sign(plot,"곧 새 이웃이 이사 와요")
+	check(str(Plots.sign_texts.get(plot,""))=="곧 새 이웃이 이사 와요","set_sign keeps the sign's text")
+	app.queue_free()
 
 func ring() -> void:
 	var ui := Control.new()

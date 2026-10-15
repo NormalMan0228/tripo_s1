@@ -11231,6 +11231,14 @@
   "벽에 걸린 다른 물건과 겹쳐요.": {
    "en": "It overlaps something already on the wall.",
    "zh": "与墙上的其他物品重叠。"
+  },
+  "새 이웃의 집터예요. 다른 곳에 놓아 주세요.": {
+   "en": "This lot is for a new neighbour. Put it somewhere else.",
+   "zh": "这是新邻居的宅基地，请放到别处。"
+  },
+  "다른 물건과 겹쳐요.": {
+   "en": "It overlaps another piece.",
+   "zh": "与其他物品重叠。"
   }
  },
  "templates": [],

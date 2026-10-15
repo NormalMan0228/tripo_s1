@@ -148,8 +148,14 @@ func hang() -> void:
 			RoomBuild.follow(studio,studio.camera.unproject_position(Vector3(-3.2,1.8,-4.95))/ratio)
 			RoomBuild.follow(studio,studio.camera.unproject_position(Vector3(-1.05,2.0,-4.95))/ratio)
 			check(not studio.placement_problem(studio.place_at).is_empty(),"over the back window is refused: '%s'" % studio.placement_problem(studio.place_at))
-			RoomBuild.follow(studio,studio.camera.unproject_position(Vector3(-3.2,1.8,-4.95))/ratio)
-			check(not studio.placement_problem(studio.place_at).is_empty(),"over the kitchen shelf is refused: '%s'" % studio.placement_problem(studio.place_at))
+			# Over one of the room's own wall pieces on the back wall (shelf, clock...).
+			var fixture := {}
+			for record in studio.decor:
+				if record.get("mounted",false) and is_instance_valid(record.get("node")) and float(record.center.z)<-4.0: fixture=record;break
+			if not fixture.is_empty():
+				var middle: Vector3=Vector3(fixture.center.x,(fixture.node as Node3D).global_position.y+Vector3(fixture.get("size",Vector3.ONE)).y*0.5,-4.95)
+				RoomBuild.follow(studio,studio.camera.unproject_position(middle)/ratio)
+				check(not studio.placement_problem(studio.place_at).is_empty(),"over the room's %s is refused: '%s'" % [str(fixture.get("kind","")),studio.placement_problem(studio.place_at)])
 			RoomBuild.follow(studio,studio.camera.unproject_position(Vector3(-4.95,1.8,0.9))/ratio)
 			check(RoomBuild.surface(studio)=="wall" and str(studio.ghost.get_meta("build_wall",""))=="left" and studio.placement_rotation==90,"the ghost hangs on the left wall, facing in")
 			check(studio.placement_problem(studio.place_at).is_empty(),"the wall spot is free: '%s'" % studio.placement_problem(studio.place_at))

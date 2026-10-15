@@ -248,8 +248,29 @@ static func placement_problem(app) -> String:
 		var stack := BuildRules.stack_problem(span,parent.get_meta("size",Vector3.ONE),depth_of(app,parent_id)+1)
 		if not stack.is_empty(): return stack
 		if not BuildRules.on_footprint(parent,preview.position,0.05): return TranslationServer.translate("아래 물건 위에 올려 주세요.")
-		return ""
-	return BuildRules.village_problem(preview.position,span,float(app.preview_rotation))
+		return box_problem(app)
+	var ways := BuildRules.village_problem(preview.position,span,float(app.preview_rotation))
+	return ways if not ways.is_empty() else box_problem(app)
+
+## The server's own rule (server/build_rules.py): turned footprints that meet and height bands that
+## overlap. Fitted collision lets a chair slip between a table's legs; the server's boxes do not.
+static func box_problem(app) -> String:
+	var preview: Node3D=app.preview
+	var span: Vector3=preview.get_meta("size",Vector3.ONE)
+	var moving: String=app.preview_moving
+	var support: String=str(preview.get_meta("stack_parent","")) if stacking(app) else ""
+	var here := Vector2(preview.position.x,preview.position.z)
+	var bottom: float=preview.position.y
+	for id in app.loaded:
+		var item = app.loaded[id]
+		if str(id)==moving or str(id)==support or not is_instance_valid(item) or not item.visible: continue
+		if carried_by(app,str(id),moving) or carried_by(app,support,str(id)): continue
+		var size: Vector3=item.get_meta("size",Vector3.ONE)
+		var low: float=item.global_position.y
+		if minf(bottom+span.y,low+size.y)-maxf(bottom,low)<=0.02: continue
+		if ObjectTransform.footprints_overlap(here,Vector2(span.x,span.z),float(app.preview_rotation),Vector2(item.global_position.x,item.global_position.z),Vector2(size.x,size.z),item.rotation_degrees.y):
+			return TranslationServer.translate("다른 물건과 겹쳐요.")
+	return ""
 
 ## Puts the ghost down on its support (new or moved): one placement step on the server.
 static func place_stacked(app) -> void:
