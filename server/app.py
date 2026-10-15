@@ -432,7 +432,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             value=body.avatar.resolve(appearance.saved_avatar(previous['avatar']))
             version=previous['version']+1
             # Only one of the 8 new characters completes the first selection (an 0.11.8 wardrobe save does not).
-            needs_select=previous['needs_character_select'] and not body.avatar.chooses_character()
+            needs_select=previous['needs_character_select'] and not body.avatar.chooses_character(request.headers.get('x-villagen-version','')[:40])
             conn.execute('INSERT INTO profiles(user_id,avatar,version,needs_character_select) VALUES (?,?,?,?) '
                          'ON CONFLICT(user_id) DO UPDATE SET avatar=excluded.avatar,version=excluded.version,'
                          'needs_character_select=excluded.needs_character_select',

@@ -60,6 +60,8 @@ CHARACTERS = ('m1','m2','m3','m4','f1','f2','f3','f4')
 # The released models: Explorer B and Mira look feminine, Ru and Theo masculine.
 LEGACY_CHARACTERS = {'explorer_b':'f1','explorer':'m1','ranger':'f1','tinker':'m1'}
 HEX = r'^#[0-9a-fA-F]{6}$'
+# Games from this version have the character select screen (older ones only the released wardrobe).
+SELECT_FROM = '0.11.9'
 
 class Avatar(Strict):
     character: Literal['m1','m2','m3','m4','f1','f2','f3','f4'] = 'f1'
@@ -94,8 +96,13 @@ class AvatarPatch(Strict):
             raise ValueError('avatar_field_must_not_be_null')
         return value
 
-    def chooses_character(self):
-        return 'character' in self.model_fields_set and self.character in CHARACTERS
+    def chooses_character(self, client_version=None):
+        """A first character selection: a new id from a game that has the select screen. The 0.11.8
+        wardrobe echoes the id it was given (f1 after the migration) with its 8 old keys and never
+        accent, so its saves do not count unless the game says it is 0.11.9 or later."""
+        from .client_policy import older
+        newer = bool(client_version) and not older(client_version, SELECT_FROM)
+        return 'character' in self.model_fields_set and self.character in CHARACTERS and ('accent' in self.model_fields_set or newer)
 
     def resolve(self, previous=None):
         value = Avatar.model_validate(previous or {}).model_dump()
