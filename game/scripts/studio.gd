@@ -28,6 +28,7 @@ const NpcGifts=preload("res://scripts/npc_gifts.gd")
 const AvatarLook=preload("res://scripts/avatar_look.gd")
 ## Visitors' and the host's walk in the home, drawn smoothly from the presence replies.
 const RemoteMotion=preload("res://scripts/remote_motion.gd")
+const SocialHud=preload("res://scripts/social_hud.gd")
 ## The home shares spots four times a second; other rooms (the workshop, a public building) still
 ## say every few seconds that this player is here, so a host crafting in the workshop keeps the
 ## guests in the village (server/multiplayer.py HOST_GONE_SECONDS).
@@ -220,6 +221,8 @@ var talk_window: Dictionary = {}
 var talk_lines: Array=[]
 var talk_choices: Array=[]
 var talk_page := 0
+## The page's typing tween: finishing a line early stops it, or it would type the rest over again.
+var talk_typing: Tween
 var talk_id := ""
 var pick_cycle := 0
 var pick_spot := Vector3(INF,0,INF)
@@ -1522,7 +1525,27 @@ func update_capacity() -> void:
 	room_capacity.tooltip_text=tr("가구의 복잡도와 이미지 크기에 따라 용량이 달라져요. 꽉 차면 일부 가구를 회수하거나 다른 방으로 옮겨 주세요.")
 
 func _exit_tree() -> void:
+	SocialHud.release_place(self)
 	if not Engine.has_meta("studio_session"): preload("res://scripts/town.gd").discard_kept()
+
+## This session's social layer (chat, the 함께하기 drawer), bound to this room; null without multiplayer.
+func social_hub() -> Node:
+	if not social_session or api.token.is_empty(): return null
+	var hub := SocialHud.of(api)
+	if hub and hub.place != self and is_inside_tree(): hub.bind(self,"room",toast_lane)
+	return hub
+
+## Where this walker is, for the lists (social_hud.presence_extra).
+func social_place() -> String:
+	if room=="home": return "home"
+	return "workshop" if room=="workshop" else "room"
+
+## A chat line said by someone in this room: a bubble over their head.
+func chat_bubble(user_id: String, username: String, text: String) -> void:
+	var actor: Node3D=null
+	if peers.has(user_id) and is_instance_valid(peers[user_id].node): actor=peers[user_id].node
+	elif is_instance_valid(hero) and not user_id.is_empty() and user_id==str(SocialHud.of(api).overview.get("self_id","")): actor=hero
+	if actor and actor.visible: SocialHud.bubble(actor,text)
 
 ## Shares this walker's spot inside the home and, for visitors, loads the host's
 ## furniture. Everyone in the same home sees the others (server: mp_presence).
@@ -1537,10 +1560,14 @@ func share_presence() -> void:
 	# (remote_motion.gd); kept-alive like the village's polls.
 	var spot := {"scene":"home","x":hero.position.x,"z":hero.position.z,"y":floor_index*3.0,"yaw":wrapf(heading,-PI,PI)}
 	if rich_presence: spot.merge({"vx":clampf(moving.x,-30,30),"vz":clampf(moving.y,-30,30),"t":RemoteMotion.now()})
+	var hub := social_hub()
+	if hub: spot.merge(hub.presence_extra(social_place(),floor_index))
 	var response: Dictionary=await api.post_kept("/v1/social/presence",spot,4.0)
 	presence_pending=false
-	if not response.ok and int(response.get("status",0))==422: rich_presence=false
+	if not response.ok and int(response.get("status",0))==422 and not (hub and hub.presence_refused(response)): rich_presence=false
 	if not response.ok or not is_inside_tree(): return
+	# The room's chat arrives with the walk (social_hud.gd).
+	if hub and is_instance_valid(hub): hub.ingest(response.data)
 	var space = response.data.get("space")
 	if not space is Dictionary: return
 	if not visit_host.is_empty():
@@ -1601,8 +1628,15 @@ func update_peers(delta: float) -> void:
 func keep_present() -> void:
 	if presence_pending or api.token.is_empty() or VersionGate.is_blocked(): return
 	presence_pending=true
-	await api.post_kept("/v1/social/presence",{"scene":"away"},4.0)
+	var hub := social_hub()
+	var body := {"scene":"away"}
+	if hub: body.merge(hub.presence_extra(social_place(),floor_index))
+	var response: Dictionary=await api.post_kept("/v1/social/presence",body,4.0)
 	presence_pending=false
+	if not is_inside_tree() or not hub or not is_instance_valid(hub): return
+	# The workshop and the residents' rooms get the chat on the heartbeat's answer.
+	if response.ok: hub.ingest(response.data)
+	else: hub.presence_refused(response)
 
 ## Closing the game in a room: friends see this player leave at once (social.gd does the same in
 ## the village; server/multiplayer.py leave).
@@ -1614,6 +1648,7 @@ func _notification(what: int) -> void:
 func logged_out(_reason: String) -> void:
 	if api.token.is_empty(): return
 	CraftTracker.end(api)
+	SocialHud.end(api)
 	api.token=""
 	leaving=true
 	var cloud := get_node_or_null("/root/CloudPrefs")
@@ -1660,14 +1695,24 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				if talk_page>=talk_lines.size()-1 and index<talk_choices.size(): pick_talk(talk_choices[index])
 		get_viewport().set_input_as_handled()
 		return
-	# The craft window takes the keys while open; Esc closes it (also while typing), as in the village.
+	var focus := get_viewport().gui_get_focus_owner()
+	var typing: bool = focus is LineEdit or focus is TextEdit
+	# The craft window takes the keys while open; Esc closes it (also while typing), and so does C
+	# when no field is being typed in, as in the village.
 	if is_instance_valid(craft_window):
-		if event.physical_keycode==KEY_ESCAPE:
+		if event.physical_keycode==KEY_ESCAPE or (key==KEY_C and not typing):
 			close_craft()
 			get_viewport().set_input_as_handled()
 		return
-	var focus := get_viewport().gui_get_focus_owner()
-	if focus is LineEdit or focus is TextEdit:return
+	# Any other shared window over the room: Esc or its own opening key closes it.
+	var top := RpgUi.top_window()
+	if not top.is_empty() and str(top.get("kind",""))!="dialogue":
+		if event.physical_keycode==KEY_ESCAPE or (not typing and RpgUi.closes_window(top,key)):
+			if RpgUi.close_top(top):
+				get_viewport().set_input_as_handled()
+				return
+		if bool(top.get("modal",false)): return
+	if typing:return
 	if event.physical_keycode==KEY_ESCAPE:
 		if placement_mode: cancel_placement()
 		elif not resting.is_empty(): stand_up()
@@ -2631,8 +2676,8 @@ func show_talk_page() -> void:
 	talk_body.text=str(talk_lines[talk_page])
 	talk_body.visible_ratio=0.0
 	RpgUi.dialogue_line(talk_window,talk_body.text)
-	var typing := talk_body.create_tween()
-	typing.tween_property(talk_body,"visible_ratio",1.0,GameSettings.typing_seconds(talk_body.text.length()))
+	talk_typing = talk_body.create_tween()
+	talk_typing.tween_property(talk_body,"visible_ratio",1.0,GameSettings.typing_seconds(talk_body.text.length()))
 	if talk_page<talk_lines.size()-1:
 		RpgUi.dialogue_more(talk_window,true)
 	else:
@@ -2658,6 +2703,7 @@ func advance_talk() -> void:
 		close_talk()
 		return
 	if talk_body.visible_ratio<1.0:
+		if talk_typing and talk_typing.is_valid(): talk_typing.kill()
 		talk_body.visible_ratio=1.0
 	elif talk_page<talk_lines.size()-1:
 		talk_page+=1

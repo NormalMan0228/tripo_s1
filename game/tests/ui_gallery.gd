@@ -3,6 +3,7 @@ extends SceneTree
 ## and captures each to artifacts/<prefix><screen>.png. Run windowed:
 ##   godot --path game --script res://tests/ui_gallery.gd -- --prefix=ui-after- --hour=12
 ## Optional: --languages=ko,en,zh  --only=title,village
+const SocialHud = preload("res://scripts/social_hud.gd")
 const Main = preload("res://scripts/main.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const Stub = preload("res://tests/ui_stub_api.gd")
@@ -168,11 +169,17 @@ func tour(fixture: Dictionary) -> void:
 		await capture("seeds")
 		await close_modal()
 	if wanted("social"):
+		# The 함께하기 drawer and the chat box live on the social layer (social_hud.gd).
 		app.social.enabled = true
-		await app.social.open_menu()
-		await settle(0.5)
-		await capture("social")
-		await close_modal()
+		var hub: Node = SocialHud.of(app.api)
+		if hub:
+			hub.bind(app, "village", app.toast_lane)
+			hub.open_window("village")
+			await settle(0.6)
+			await capture("social")
+			hub.close_window()
+			hub.unbind(app)
+			SocialHud.end(app.api)
 		app.social.enabled = false
 	if wanted("admin"):
 		app.open_admin()

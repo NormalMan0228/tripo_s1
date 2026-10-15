@@ -39,6 +39,7 @@ const VersionGate = preload("res://scripts/version_gate.gd")
 const PatchBoot = preload("res://scripts/patch_boot.gd")
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
 const Brand = preload("res://scripts/brand.gd")
+const SocialHud = preload("res://scripts/social_hud.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
@@ -336,6 +337,8 @@ func make_theme() -> Theme:
 	return RpgUi.theme()
 
 func clear_ui() -> void:
+	# The chat and the 함께하기 drawer step back until the next HUD binds them (social.install_hud).
+	SocialHud.release_place(self)
 	craft_buttons.clear()
 	inventory_slots.clear()
 	quick_counts.clear()
@@ -1490,6 +1493,7 @@ func poll_entitlements() -> void:
 		# Fail closed on auth loss or disconnection; don't retain protected models.
 		cancel_preview()
 		CraftTracker.end(api)
+		SocialHud.end(api)
 		api.token=""
 		build_world(false)
 		login_ui()
@@ -2519,6 +2523,7 @@ func logout() -> void:
 	await veil.fade_out()
 	await api.post("/v1/auth/logout",{})
 	CraftTracker.end(api)
+	SocialHud.end(api)
 	api.token=""
 	social.reset_session()
 	job_id=""
@@ -2533,6 +2538,7 @@ func logout() -> void:
 func force_logout(reason: String) -> void:
 	if api.token.is_empty() or screen=="logging_out": return
 	CraftTracker.end(api)
+	SocialHud.end(api)
 	api.token=""
 	screen="logging_out"
 	world_epoch+=1
@@ -2559,6 +2565,7 @@ func force_logout(reason: String) -> void:
 	veil.fade_in()
 
 func _exit_tree() -> void:
+	SocialHud.release_place(self)
 	GameSettings.unlisten(settings_changed)
 	# A pending studio session means the map is only travelling to a room and back.
 	if not Engine.has_meta("studio_session"): TownLayout.discard_kept()
@@ -2848,16 +2855,33 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Rebinding-aware: a key bound to an action reports that action's default key
 	# (Interact moved to G -> KEY_E); Esc, Enter, F-keys and digits report themselves.
 	var key := GameSettings.canonical_key(event)
+	var press: bool = event is InputEventKey and event.pressed and not event.echo
 	if is_instance_valid(village_modal):
-		if event is InputEventKey and event.pressed and not event.echo and key==KEY_E and life.mode=="fish": life.reel()
-		if event is InputEventKey and event.pressed and key==KEY_ESCAPE: close_village_modal()
+		if press and key==KEY_E and life.mode=="fish":
+			life.reel()
+			return
+		# A conversation: E, Space and Enter show the rest of the line, then the next page.
+		if press and village_modal.has_meta("advance") and key in [KEY_E,KEY_SPACE,KEY_ENTER,KEY_KP_ENTER]:
+			village_modal.get_meta("advance").call()
+			get_viewport().set_input_as_handled()
+			return
+		if event is InputEventKey and event.pressed and key==KEY_ESCAPE:
+			close_village_modal()
+			return
+		# The key that opened a window closes it (C craft, Tab map, B storage, O wardrobe).
+		if press and not text_input_active() and RpgUi.closes_window(modal_window(village_modal),key):
+			close_village_modal()
+			get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and key in [KEY_ESCAPE,KEY_E] and screen=="village" and is_instance_valid(seat) and seat.resting():
 		seat.stand()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and key==KEY_ESCAPE and screen in ["village","survival"]:
-		# Esc backs out of placement and the bag first, then opens the pause menu.
+		# Esc backs out of placement, then a side drawer on the window stack, then the bag, then
+		# opens the pause menu.
+		var top := RpgUi.top_window()
 		if screen=="village" and is_instance_valid(preview): cancel_preview()
+		elif not top.is_empty() and not bool(top.get("modal",false)) and RpgUi.close_top(top): pass
 		elif is_instance_valid(right) and right.get_parent().visible: toggle_drawer()
 		elif screen=="survival": toggle_pause()
 		else: PauseMenu.open(self)
@@ -2907,9 +2931,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				KEY_H: intent("heal")
 				KEY_SPACE: intent("attack")
 		elif screen=="village":
-			if is_instance_valid(village_modal) and village_modal.has_meta("advance") and key in [KEY_E,KEY_SPACE,KEY_ENTER]:
-				village_modal.get_meta("advance").call()
-				return
 			if key==KEY_TAB: life.open_map()
 			if key==KEY_B: life.open_storage()
 			if key==KEY_F9 and preload("res://scripts/build_mode.gd").admin: open_admin()
@@ -2948,7 +2969,7 @@ func close_village_modal() -> void:
 ## A centred parchment window over the shared shade (RpgUi.window): display-font title, the close
 ## key, an ornamented rule, then the caller's content. `action` is the GameSettings action that
 ## opens it (its key names the close key; "" names Esc). Opens with a fade + pop.
-## Callers pass "" until U-WP-04 routes the opening key to close the window: only Esc closes it now.
+## The opening key closes the window too (main._unhandled_input); Esc always does.
 func modal_card(title: String, action := "") -> VBoxContainer:
 	close_village_modal()
 	cancel_preview()
@@ -2957,6 +2978,24 @@ func modal_card(title: String, action := "") -> VBoxContainer:
 	village_modal=w.root
 	player.controls_enabled=false
 	return w.body
+
+## The social layer's hooks (social_hud.gd): an invitation or knock answered from a notice, a
+## visit that started from the friends list, a chat line said by someone here.
+func answer_social_invite(invitation: Dictionary, decision: String) -> void:
+	await social.answer(invitation, decision)
+
+func follow_visit() -> void:
+	social.poll()
+
+func chat_bubble(user_id: String, username: String, text: String) -> void:
+	if screen=="village": social.bubble(user_id, username, text)
+
+## The window-stack description of a village modal, with the craft window's action filled in
+## (it is its own window), so its opening key can close it.
+func modal_window(modal: Control) -> Dictionary:
+	if not is_instance_valid(modal): return {}
+	if modal==craft_window: return {"action":"craft"}
+	return modal.get_meta("rpg_window",{})
 
 ## The round close key for drawers and side panels (RpgUi.close_key), named "닫기" with the panel's key.
 func close_button(parent: Node, callback: Callable, key := "") -> Button:
@@ -3264,12 +3303,14 @@ func open_dialogue(speaker: String, cast: String, lines: Array, choices: Array) 
 	var window: Dictionary = RpgUi.dialogue(village_modal,speaker,portrait_path if not cast.is_empty() else "")
 	var body: Label = window.body
 	var page := [0]
+	# The line's typing tween: finishing a line early stops it, or it would type the rest over again.
+	var typing := [null]
 	var show_page := func(index: int) -> void:
 		body.text=lines[index]
 		body.visible_ratio=0.0
 		RpgUi.dialogue_line(window,lines[index])
-		var typing := create_tween()
-		typing.tween_property(body,"visible_ratio",1.0,GameSettings.typing_seconds(lines[index].length()))
+		typing[0]=create_tween()
+		(typing[0] as Tween).tween_property(body,"visible_ratio",1.0,GameSettings.typing_seconds(lines[index].length()))
 		VoiceBabble.speak(self,cast,lines[index],0.0,body)
 		if index<lines.size()-1:
 			RpgUi.dialogue_more(window,true)
@@ -3284,6 +3325,7 @@ func open_dialogue(speaker: String, cast: String, lines: Array, choices: Array) 
 			RpgUi.dialogue_choices(window,entries)
 	var advance := func() -> void:
 		if body.visible_ratio<1.0:
+			if typing[0] is Tween and (typing[0] as Tween).is_valid(): (typing[0] as Tween).kill()
 			body.visible_ratio=1.0
 		elif page[0]<lines.size()-1:
 			page[0]+=1
@@ -3310,7 +3352,7 @@ func restore_hud() -> void:
 
 func open_wardrobe() -> void:
 	if screen!="village": return
-	var v := modal_card(tr("나의 여행자"))
+	var v := modal_card(tr("나의 여행자"),"wardrobe")
 	var editor := preload("res://scripts/wardrobe.gd").new()
 	editor.avatar=me.get("profile",{}).get("avatar",{}).duplicate(true)
 	v.add_child(editor)

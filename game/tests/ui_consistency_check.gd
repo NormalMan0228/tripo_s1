@@ -238,7 +238,7 @@ func check_village_windows() -> void:
 	await app.enter_village()
 	await create_timer(0.8).timeout
 	var openers := [["expedition", func(): await app.open_expedition(), "Esc"], ["story", func(): app.open_story(), "Esc"],
-		["wardrobe", func(): app.open_wardrobe(), "Esc"], ["map", func(): app.life.open_map(), "Esc"], ["storage", func(): app.life.open_storage(), "Esc"],
+		["wardrobe", func(): app.open_wardrobe(), "O"], ["map", func(): app.life.open_map(), "Tab"], ["storage", func(): app.life.open_storage(), "B"],
 		["shop", func(): app.life.open_shop(), "Esc"], ["log", func(): app.life.open_log(), "Esc"], ["admin", func(): app.open_admin(), "Esc"]]
 	for entry in openers:
 		await (entry[1] as Callable).call()

@@ -118,7 +118,11 @@ const ACTIONS := [
 	["rotate","가구 돌리기",[KEY_R,KEY_NONE]],
 	["toggle_sound","소리 켜기/끄기",[KEY_M,KEY_NONE]],
 	["toggle_hud","HUD 접기/펼치기",[KEY_U,KEY_NONE]],
+	["social","함께하기 · 친구",[KEY_K,KEY_NONE]],
 ]
+## Actions that project.godot does not declare (a PCK patch cannot change it): apply_input adds
+## them to the InputMap at start-up.
+const RUNTIME_ACTIONS := ["social"]
 ## Keys that cannot be bound (Esc opens the pause menu and cancels a rebind; F3/F9 are tools).
 const RESERVED_KEYS := [KEY_ESCAPE,KEY_F3,KEY_F9,KEY_ENTER,KEY_KP_ENTER]
 
@@ -543,6 +547,13 @@ static func canonical_key(event: InputEvent) -> int:
 	return key
 
 ## Short name of the action's primary key for prompts and guides ("E", "Space").
+## The default key of an action (what canonical_key reports for whatever key it is bound to now),
+## KEY_NONE for an unknown action.
+static func default_key(action: String) -> int:
+	for entry in ACTIONS:
+		if entry[0] == action: return int(entry[2][0])
+	return KEY_NONE
+
 static func key_label(action: String) -> String:
 	var keys := binding(action)
 	var key: int = keys[0] if int(keys[0]) != KEY_NONE else int(keys[1])

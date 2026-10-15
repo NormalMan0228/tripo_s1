@@ -131,6 +131,27 @@ const FRAMES := {
 	"bar_fill_red":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
 	"bar_fill_green":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
 	"bar_fill_gold":[[16, 12, 16, 12],[0, 0, 0, 0],[]],
+	# UI kit 2 (tools/build_ui_kit2.py, frames_v2.json): title plate, banners, folder tabs, big menu buttons.
+	"title_plate_crest":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"title_plate":[[72, 26, 72, 32],[10, 6, 10, 12],[68, 14, 68, 14]],
+	"banner_red":[[101, 36, 101, 42],[10, 6, 10, 12],[73, 22, 73, 30]],
+	"banner_teal":[[101, 36, 101, 42],[10, 6, 10, 12],[73, 22, 73, 30]],
+	"tab_on":[[38, 28, 38, 18],[6, 4, 6, 6],[22, 12, 22, 10]],
+	"tab_off":[[38, 28, 38, 18],[6, 4, 6, 6],[22, 12, 22, 10]],
+	"tab_disabled":[[38, 28, 38, 18],[6, 4, 6, 6],[22, 12, 22, 10]],
+	"btn_menu_gold_normal":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_gold_hover":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_gold_pressed":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_gold_disabled":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_night_normal":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_night_hover":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_night_pressed":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"btn_menu_night_disabled":[[62, 36, 62, 42],[10, 6, 10, 12],[30, 18, 30, 22]],
+	"divider_leaf":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"corner_tl":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"corner_tr":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"corner_bl":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
+	"corner_br":[[0, 0, 0, 0],[0, 0, 0, 0],[]],
 }
 ## Design canvas the HUD is laid out on; pin() keeps pieces on their edge when the
 ## interface scale (GameSettings ui_scale) shrinks the logical canvas.
@@ -239,6 +260,7 @@ static func theme() -> Theme:
 		t.set_type_variation(spec[0], "Button")
 		_buttons(t, spec[0], spec[1], spec[2], spec[3])
 	_extra_buttons(t, false)
+	_kit2_buttons(t, false)
 	t.set_type_variation("ChoiceButton", "Button")
 	t.set_stylebox("pressed", "ChoiceButton", frame("btn_gold_normal"))
 	t.set_stylebox("hover_pressed", "ChoiceButton", frame("btn_gold_hover"))
@@ -785,6 +807,169 @@ static func _extra_buttons(t: Theme, night: bool) -> void:
 	for item in ["font_color","font_pressed_color","font_focus_color"]: t.set_color(item, "GhostButton", ink)
 	for item in ["font_hover_color","font_hover_pressed_color"]: t.set_color(item, "GhostButton", HOVER if night else ACCENT)
 	t.set_color("font_disabled_color", "GhostButton", Color(ink, .45))
+
+## UI kit 2 variations: "MenuGoldButton" / "MenuNightButton" (the big painted plates of the title and
+## big actions) and "TabButton" (folder tabs: tab_off, tab_on when pressed, tab_disabled).
+static func _kit2_buttons(t: Theme, night: bool) -> void:
+	for pair in [["MenuGoldButton", "btn_menu_gold", PAPER_INK], ["MenuNightButton", "btn_menu_night", INK]]:
+		t.set_type_variation(pair[0], "Button")
+		_buttons(t, pair[0], pair[1], pair[2], pair[0] == "MenuNightButton")
+		t.set_font("font", pair[0], FONT_STRONG)
+		t.set_font_size("font_size", pair[0], 19)
+		t.set_color("font_hover_color", pair[0], HOVER if pair[0] == "MenuNightButton" else ACCENT)
+	t.set_type_variation("TabButton", "Button")
+	t.set_stylebox("normal", "TabButton", frame("tab_off"))
+	t.set_stylebox("hover", "TabButton", frame("tab_off", Color(1.08, 1.06, 1.0)))
+	t.set_stylebox("pressed", "TabButton", frame("tab_on"))
+	t.set_stylebox("hover_pressed", "TabButton", frame("tab_on"))
+	t.set_stylebox("disabled", "TabButton", frame("tab_disabled"))
+	t.set_stylebox("focus", "TabButton", StyleBoxEmpty.new())
+	for item in ["font_color", "font_hover_color", "font_focus_color"]: t.set_color(item, "TabButton", PAPER_MUTED)
+	for item in ["font_pressed_color", "font_hover_pressed_color"]: t.set_color(item, "TabButton", PAPER_INK)
+	t.set_color("font_disabled_color", "TabButton", Color(PAPER_MUTED, .5))
+	t.set_font("font", "TabButton", FONT_STRONG)
+	t.set_font_size("font_size", "TabButton", 15)
+
+## A row of folder tabs (one ButtonGroup). entries: [{id, label, icon?, badge?}]; on_select(id) is
+## called when a tab is picked (by click or select_tab). The strip keeps meta "selected" (the id now
+## shown); step_tab moves it (PageUp/PageDown).
+static func tab_strip(parent: Node, entries: Array, on_select: Callable, kind := "paper") -> HBoxContainer:
+	var strip := HBoxContainer.new()
+	strip.name = "Tabs"
+	strip.add_theme_constant_override("separation", 2)
+	parent.add_child(strip)
+	var group := ButtonGroup.new()
+	var buttons := {}
+	for entry in entries:
+		var b := Button.new()
+		var id := str(entry.get("id", ""))
+		b.name = "Tab_" + id
+		b.text = str(entry.get("label", ""))
+		b.toggle_mode = true
+		b.button_group = group
+		b.focus_mode = Control.FOCUS_NONE
+		b.theme_type_variation = "TabButton"
+		b.custom_minimum_size = Vector2(0, 32)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if kind == "night": b.self_modulate = Color(0.86, 0.9, 0.95)
+		if not str(entry.get("icon", "")).is_empty():
+			b.icon = icon_texture(str(entry.icon))
+			b.expand_icon = true
+			b.add_theme_constant_override("icon_max_width", 20)
+		strip.add_child(b)
+		if int(entry.get("badge", 0)) > 0: badge(b, int(entry.badge))
+		buttons[id] = b
+		b.toggled.connect(func(on: bool) -> void:
+			if not on: return
+			strip.set_meta("selected", id)
+			sfx("click", -12.0)
+			if on_select.is_valid(): on_select.call(id))
+	strip.set_meta("buttons", buttons)
+	return strip
+
+## Picks tab `id` on a tab_strip (no-op for an unknown id).
+static func select_tab(strip: Control, id: String) -> void:
+	if not is_instance_valid(strip) or not strip.has_meta("buttons"): return
+	var buttons: Dictionary = strip.get_meta("buttons")
+	if buttons.has(id) and is_instance_valid(buttons[id]): (buttons[id] as Button).button_pressed = true
+
+## Moves the strip's selection by `step` visible, enabled tabs (wrapping), for PageUp/PageDown.
+static func step_tab(strip: Control, step: int) -> void:
+	if not is_instance_valid(strip) or not strip.has_meta("buttons"): return
+	var buttons: Dictionary = strip.get_meta("buttons")
+	var ids: Array = buttons.keys().filter(func(k) -> bool: return is_instance_valid(buttons[k]) and (buttons[k] as Button).visible and not (buttons[k] as Button).disabled)
+	if ids.is_empty(): return
+	var at := ids.find(str(strip.get_meta("selected", ids[0])))
+	select_tab(strip, str(ids[posmod(at + step, ids.size())]))
+
+## A small round presence dot: "online" (ONLINE), "away" (AWAY: a room, the workshop or an
+## expedition) or "offline" (OFFLINE).
+static func status_dot(parent: Node, state: String, size := 10.0) -> Panel:
+	var dot := Panel.new()
+	dot.name = "Status"
+	var disc := StyleBoxFlat.new()
+	disc.bg_color = {"online": ONLINE, "away": AWAY}.get(state, OFFLINE)
+	disc.set_corner_radius_all(int(size))
+	disc.corner_detail = 8
+	disc.border_color = Color(OUTLINE, 0.8)
+	disc.set_border_width_all(1)
+	disc.anti_aliasing = true
+	dot.add_theme_stylebox_override("panel", disc)
+	dot.custom_minimum_size = Vector2(size, size)
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(dot)
+	return dot
+
+## A round portrait of a player's character (assets/ui/portrait_<character>.png, the explorer
+## when unknown) in the portrait ring, `size` px.
+static func avatar_thumb(parent: Node, character: String, size := 36.0) -> Control:
+	var holder := Control.new()
+	holder.name = "Avatar"
+	holder.custom_minimum_size = Vector2(size, size)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(holder)
+	var medal := PanelContainer.new()
+	var disc := StyleBoxFlat.new()
+	disc.bg_color = Color("f5e6c4")
+	disc.set_corner_radius_all(int(size))
+	disc.corner_detail = 12
+	medal.add_theme_stylebox_override("panel", disc)
+	medal.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+	medal.position = Vector2(size * 0.08, size * 0.08)
+	medal.size = Vector2(size * 0.84, size * 0.84)
+	medal.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(medal)
+	var path := "res://assets/ui/portrait_%s.png" % character
+	if not ResourceLoader.exists(path): path = "res://assets/ui/portrait_explorer.png"
+	medal.add_child(icon(path, size * 0.84))
+	var ring := TextureRect.new()
+	ring.texture = half("portrait_ring")
+	ring.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ring.stretch_mode = TextureRect.STRETCH_SCALE
+	ring.size = Vector2(size, size)
+	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(ring)
+	return holder
+
+## One person in a social list: portrait, status dot, name (T_BODY) and a caption (where they are,
+## when they were last seen), then icon buttons. p: {username, character, state ("online" | "away" |
+## "offline"), where}. actions: [{icon, tip, call, disabled?}] (an icon name from assets/ui/icons).
+static func person_row(parent: Node, p: Dictionary, actions: Array) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.name = "Person_" + str(p.get("username", ""))
+	row.add_theme_constant_override("separation", GAP_S)
+	parent.add_child(row)
+	avatar_thumb(row, str(p.get("character", "explorer")), 38.0)
+	status_dot(row, str(p.get("state", "offline")))
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 0)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(column)
+	var name_label := label(column, str(p.get("username", "")), T_BODY, PAPER_INK, false)
+	name_label.add_theme_font_override("font", FONT_STRONG)
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	if not str(p.get("where", "")).is_empty():
+		var where := label(column, str(p.where), T_SMALL, PAPER_MUTED, false)
+		where.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	for action in actions:
+		var b := Button.new()
+		b.name = "Act_" + str(action.get("icon", ""))
+		b.theme_type_variation = "GhostButton"
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(BTN_SM, BTN_SM)
+		b.icon = icon_texture(str(action.get("icon", "")))
+		b.expand_icon = true
+		b.add_theme_constant_override("icon_max_width", 24)
+		b.disabled = bool(action.get("disabled", false))
+		name_tip(b, str(action.get("tip", "")))
+		var call: Callable = action.get("call", Callable())
+		if call.is_valid(): b.pressed.connect(call)
+		b.pressed.connect(func(): sfx("click", -10.0))
+		hover_motion(b, 1.1)
+		row.add_child(b)
+	return row
 
 ## A count pill (ACCENT) on the top-right corner of a slot or button; hidden at 0. Calling it
 ## again on the same parent updates the same pill.
@@ -1573,6 +1758,7 @@ static func night_theme() -> Theme:
 		_buttons(t,spec[0],spec[1],spec[2],spec[3])
 	t.set_color("font_hover_color","NightButton",HOVER)
 	_extra_buttons(t,true)
+	_kit2_buttons(t,true)
 	t.set_type_variation("HudSlot","Button")
 	for state in ["normal","hover","pressed","hover_pressed","disabled"]:
 		t.set_stylebox(state,"HudSlot",frame({"normal":"slot_night","hover":"slot_night_hover","pressed":"slot_night_pressed","hover_pressed":"slot_night_pressed","disabled":"slot_night"}[state]))
@@ -1903,6 +2089,25 @@ static func top_window() -> Dictionary:
 	var open := windows()
 	return open.back() if not open.is_empty() else {}
 
+## True when `key` (GameSettings.canonical_key of the event) is the key that opened window `w`:
+## the same key closes it (I, C, Tab, B, O...). Windows without an action close on Esc only.
+static func closes_window(w: Dictionary, key: int) -> bool:
+	var action := str(w.get("action", ""))
+	return not action.is_empty() and key != KEY_NONE and key == GameSettings.default_key(action)
+
+## Closes window `w` (the top of the stack when empty) the way its close key does, so the owner's
+## clean-up (on_close) runs. False when nothing could be closed (no window, or a dialogue).
+static func close_top(w := {}) -> bool:
+	if w.is_empty(): w = top_window()
+	if w.is_empty(): return false
+	var close = w.get("close")
+	if close is BaseButton and is_instance_valid(close):
+		(close as BaseButton).pressed.emit()
+		return true
+	if str(w.get("kind", "")) == "dialogue": return false
+	close_window(w)
+	return true
+
 ## The open modal windows (not drawers) on the stack.
 static func modal_open() -> bool:
 	return windows().any(func(w): return bool(w.get("modal", false)))
@@ -2115,7 +2320,10 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 		plate.modulate.a = 0.0
 		plate.create_tween().tween_property(plate, "modulate:a", 1.0, 0.2).set_delay(0.12)
 	sfx("open", -10.0)
-	return {"root":root, "shade":shade, "box":box, "body":body, "more":more, "choices":choices, "card":card, "plate":plate, "standee":standee}
+	var d := {"root":root, "shade":shade, "box":box, "body":body, "more":more, "choices":choices, "card":card, "plate":plate, "standee":standee}
+	# On the window stack as a modal "dialogue": the chat box and toasts step aside while it talks.
+	_push_window(root, {"root":root, "shade":shade, "close":null, "id":"dialogue", "action":"", "kind":"dialogue", "modal":true})
+	return d
 
 ## Where the standee stands on the 1280x800 canvas (bottom-left anchored offsets):
 ## its lower part sits behind the text box, which hides the waist crop.

@@ -16,6 +16,7 @@ extends SceneTree
 ## by default; 60-90 is a person's press). The IME helper's trace (focus, editing, composition, keys)
 ## goes to user://logs/ime_trace.txt; a field whose composed syllables never arrived (Godot 4.7.2
 ## engine bug godotengine/godot#123269) fails with that named.
+const SocialHud = preload("res://scripts/social_hud.gd")
 const Main = preload("res://scripts/main.gd")
 var server := preload("res://tests/qa_server.gd").url()
 var hold_ms := 12
@@ -198,21 +199,28 @@ func run() -> void:
 		await typed(app.craft_box.prompt, "wkrdms. qjtjt. ahdid. dmlwk ", "작은 버섯 모양 의자 ", "village craft prompt")
 	app.close_village_modal()
 
-	# 함께하기 while presence polls: the invite name, then two chat lines with Enter, no click between.
+	# 함께하기 while presence polls: the invite name in the drawer, then two lines in the always-on
+	# chat box: Enter sends and gives the keys back, Enter again opens it for the next line.
 	during = func(): app.social.poll()
-	await app.social.open_menu()
-	await create_timer(0.6).timeout
-	var social_fields := fields_in(app.village_modal, "LineEdit") if is_instance_valid(app.village_modal) else []
-	expect(social_fields.size() >= 2, "함께하기 has the invite and chat fields")
-	if social_fields.size() >= 2:
-		await typed(social_fields[0], "cheogkf. dlfma ", "초대할 이름 ", "social invite name")
-		var chat: LineEdit = social_fields[social_fields.size()-1]
-		var sent := await typed(chat, "dkssudgktpdy>....qksrkdnjdy>..", "안녕하세요\n반가워요\n", "social chat field empty after two Enters")
-		var said := func() -> Array: return app.social.data.get("messages", []).map(func(m): return str(m.text))
+	var hub: Node = SocialHud.of(app.api)
+	expect(hub != null, "the social layer is up in the village")
+	if hub:
+		hub.open_window("village")
+		await create_timer(0.6).timeout
+		var name_fields: Array = hub.window.form.find_children("*", "LineEdit", true, false)
+		expect(name_fields.size() == 1, "the 함께하기 drawer has the invite name field")
+		if name_fields.size() == 1:
+			await typed(name_fields[0], "cheogkf. dlfma ", "초대할 이름 ", "social invite name")
+		hub.close_window()
+		await create_timer(0.3).timeout
+		var sent := await typed(hub.chat.field, "dkssudgktpdy>....>qksrkdnjdy>..", "안녕하세요
+반가워요
+", "chat box empty after two lines (Enter, Enter, Enter)")
+		var said := func() -> Array: return hub.lines.map(func(m): return str(m.get("text", "")))
 		await wait_until(func(): return said.call().has("반가워요"), 5.0)
 		if not sent.is_empty():
-			expect(said.call().has("안녕하세요") and said.call().has("반가워요"), "social chat: both lines sent (%s)" % [said.call()])
-	app.close_village_modal()
+			expect(said.call().has("안녕하세요") and said.call().has("반가워요"), "chat box: both lines sent (%s)" % [said.call()])
+		expect(not hub.chat.field.has_focus(), "the chat lets go after the last Enter")
 	during = Callable()
 
 	# The interaction editor's describe box (글로 설명하기), on a free fixture chest.

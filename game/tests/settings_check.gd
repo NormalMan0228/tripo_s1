@@ -88,6 +88,8 @@ func check_project_defaults() -> void:
 	# Before apply_input runs, InputMap holds exactly what project.godot declares.
 	for entry in GameSettings.ACTIONS:
 		var action: String = entry[0]
+		# Runtime actions are added by apply_input (project.godot stays as shipped).
+		if action in GameSettings.RUNTIME_ACTIONS: continue
 		check(InputMap.has_action(action), "project.godot declares %s" % action)
 		var keys := []
 		for event in InputMap.action_get_events(action):
