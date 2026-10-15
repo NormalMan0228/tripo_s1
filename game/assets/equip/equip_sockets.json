@@ -1,0 +1,19 @@
+{
+ "about": "Equip sockets (scripts/equip_sockets.gd). sockets: per-socket tuning in metres of the rig's rest pose. items: hold = socket while in use, stow = socket while carried but not used ('' = put away), grip = the item-space point that sits on the socket origin, rot / stow_rot = turn in the socket frame (degrees x, y, z; the socket's +Y runs along the grip toward the tool head), scale = size factor. Crafted items get the same record from EquipSockets.estimate_grip().",
+ "sockets": {
+  "back": {"out": 0.13, "up": 0.04, "tilt_deg": 28.0},
+  "hip_r": {"side": 0.17, "up": 0.0, "forward": 0.02},
+  "hip_l": {"side": 0.17, "up": 0.0, "forward": 0.02},
+  "head": {"up": 0.16}
+ },
+ "items": {
+  "axe": {"hold": "hand_r", "stow": "back", "grip": [0, 0, 0], "rot": [0, 0, 0], "stow_rot": [0, 0, 180], "scale": 1.0},
+  "spear": {"hold": "hand_r", "stow": "back", "grip": [0, 0, 0], "rot": [0, 0, 0], "stow_rot": [0, 0, 0], "scale": 1.0},
+  "rod": {"hold": "hand_r", "stow": "back", "grip": [0, 0, 0], "rot": [0, 0, 0], "stow_rot": [0, 0, 0], "scale": 1.0},
+  "hoe": {"hold": "hand_r", "stow": "back", "grip": [0, -0.2, 0], "rot": [0, 0, 0], "stow_rot": [0, 0, 0], "scale": 1.0},
+  "watering_can": {"hold": "hand_r", "stow": "", "grip": [0, 0.12, 0], "rot": [0, 0, 0], "stow_rot": [0, 0, 0], "scale": 1.0},
+  "broom": {"hold": "hand_r", "stow": "back", "grip": [0, -0.2, 0], "rot": [0, 0, 0], "stow_rot": [0, 0, 0], "scale": 1.0},
+  "umbrella": {"hold": "hand_r", "stow": "back", "grip": [0, 0, 0], "rot": [0, 0, 0], "stow_rot": [0, 0, 0], "scale": 1.0},
+  "lantern": {"hold": "hand_r", "stow": "hip_r", "grip": [0, 0, 0], "rot": [0, 0, 0], "stow_rot": [0, 0, 0], "scale": 1.0}
+ }
+}
