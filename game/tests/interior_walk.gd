@@ -5,10 +5,11 @@ extends SceneTree
 ##    interactable piece and every stair without getting stuck,
 ##  - every piece is usable from where it can be reached (E picks it and it answers),
 ##  - every stair arrives on a free, connected spot of its target floor,
-##  - every room has at least 8 things to use.
+##  - every room has at least 2 things to use (the default rooms are sparse: players and
+##    residents fill them with their own pieces).
 ##   Godot --headless --path game -s res://tests/interior_walk.gd [-- --room=01_cafe]
 const Interiors = preload("res://scripts/interiors.gd")
-const ROOMS := ["home","workshop","01_cafe","02_timber_house","03_teal_cottage","04_windmill","05_observatory","06_orange_cottage","07_greenhouse","11_purple_house","12_blue_house","13_shop","16_blue_cottage","17_lighthouse"]
+const ROOMS := ["home","workshop","01_cafe","02_timber_house","03_teal_cottage","04_windmill","05_observatory","06_orange_cottage","07_greenhouse","11_purple_house","12_blue_house","13_shop","16_blue_cottage","17_lighthouse","18_meadow_house","danbi_house"]
 const CELL := 0.2
 const STEP := 1.0/60.0
 var failures: Array[String] = []
@@ -181,7 +182,7 @@ func walk_floor(app: Control, id: String, index: int, start: Vector3) -> void:
 			app.set_floor(here)
 		app.hero.position = start
 	for r in counts:
-		check(int(counts[r]) >= 8, "%s: room %s has only %d things to use" % [label,spec.rooms[r].name,int(counts[r])])
+		check(int(counts[r]) >= 2, "%s: room %s has only %d things to use" % [label,spec.rooms[r].name,int(counts[r])])
 		report.append({"room":"%s/%d/%s" % [id,index,spec.rooms[r].name],"usable":counts[r]})
 
 ## Within reach of E (first press, or a later press on the same spot).

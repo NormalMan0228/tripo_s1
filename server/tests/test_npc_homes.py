@@ -259,6 +259,75 @@ def test_friendship_counts_the_first_gift_of_the_day_most(world):
     assert not third['again'] and third['gain'] >= npc_homes.GAIN['thanks']
 
 
+def test_gift_affinity_daily_cap_is_atomic_and_cannot_be_reset_by_header(world):
+    app, c, now = world
+    auth = account(c, 'daily_gifts')
+    starter = c.get('/v1/me', headers=auth).json()['objects'][0]
+    pieces = []
+    with app.state.db.transaction() as conn:
+        for _ in range(8):
+            object_id = str(uuid.uuid4())
+            conn.execute('INSERT INTO objects(id,owner_id,creator_id,asset_id,name,created) '
+                         'SELECT ?,owner_id,creator_id,asset_id,?,created FROM objects WHERE id=?',
+                         (object_id, 'travel compass', starter['id']))
+            pieces.append({'id': object_id, 'version': 1})
+    for piece in pieces[:6]:
+        body = mutation(object_id=piece['id'], version=piece['version'])
+        reply = c.post('/v1/npcs/naru/gift', headers=auth, json=body)
+        assert reply.status_code == 200, reply.text
+    capped = reply.json()
+    assert capped['friendship']['points'] == npc_homes.GIFT_DAILY_POINTS
+    assert capped['daily_gain'] == {'earned': 30, 'cap': 30, 'remaining': 0}
+    assert c.post('/v1/npcs/naru/gift', headers=auth, json=body).json() == capped
+    options = c.get('/v1/npcs/naru/gift', headers=auth).json()
+    assert options['can_gift'] and options['daily_gain']['remaining'] == 0
+    for offset in ('-720', '0', '840'):
+        rejected = give(c, {**auth, 'X-Villagen-UTC-Offset': offset}, 'naru', pieces[6])
+        assert rejected.status_code == 429 and rejected.json()['detail'] == 'npc_gift_daily_limit'
+    restarted = create_app(app.state.settings, clock=lambda: now[0], worker_enabled=False)
+    with TestClient(restarted) as other_client:
+        assert give(other_client, auth, 'naru', pieces[6]).status_code == 429
+        assert other_client.get('/v1/npcs/naru/gift', headers=auth).json()['daily_gain']['earned'] == 30
+    assert obj(c, auth, pieces[6]['id'])['state'] == 'inventory'
+    # Limits are per resident; a gift to another resident remains available.
+    assert give(c, auth, 'scout', pieces[7]).status_code == 200
+    with app.state.db.read() as conn:
+        assert conn.execute("SELECT count(*) FROM npc_gifts WHERE npc_id='naru'").fetchone()[0] == 6
+    now[0] += 86400
+    auth = account(c, 'daily_gifts', '/v1/auth/login')
+    tomorrow = give(c, auth, 'naru', pieces[6])
+    assert tomorrow.status_code == 200, tomorrow.text
+    assert tomorrow.json()['gain'] == 20 and tomorrow.json()['daily_gain']['remaining'] == 10
+
+
+def test_concurrent_gifts_cannot_exceed_remaining_daily_affinity(world):
+    app, c, now = world
+    auth = account(c, 'racing_daily_gifts')
+    starter = c.get('/v1/me', headers=auth).json()['objects'][0]
+    first = give(c, auth, 'naru', starter)
+    assert first.status_code == 200, first.text
+    pieces = []
+    with app.state.db.transaction() as conn:
+        conn.execute("UPDATE npc_gifts SET points=?", (npc_homes.GIFT_DAILY_POINTS - 1,))
+        for _ in range(2):
+            object_id = str(uuid.uuid4())
+            conn.execute('INSERT INTO objects(id,owner_id,creator_id,asset_id,name,created) '
+                         'SELECT ?,owner_id,creator_id,asset_id,name,created FROM objects WHERE id=?',
+                         (object_id, starter['id']))
+            pieces.append({'id': object_id, 'version': 1})
+    replies = []
+    threads = [threading.Thread(target=lambda item: replies.append(give(c, auth, 'naru', item)), args=(piece,)) for piece in pieces]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert sorted(reply.status_code for reply in replies) == [200, 429]
+    accepted = next(reply.json() for reply in replies if reply.status_code == 200)
+    assert accepted['gain'] == 1 and accepted['daily_gain']['remaining'] == 0
+    with app.state.db.read() as conn:
+        assert conn.execute('SELECT SUM(points) FROM npc_gifts').fetchone()[0] == npc_homes.GIFT_DAILY_POINTS
+
+
 def test_tags_slots_and_fit():
     assert {'light', 'plant'} <= set(item_tags('꽃 조명', 'flower_lamp'))
     assert 'sea' not in item_tags('oak cabinet') and 'storage' in item_tags('oak cabinet')

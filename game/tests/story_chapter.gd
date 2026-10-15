@@ -252,6 +252,19 @@ func run() -> void:
 	await shot("terrace", 1.0)
 	var done := await story_of(town.api)
 	expect(done.get("step", "") == "done" and done.get("gift", {}).get("id", "") == chair_id and done.get("gift", {}).get("sittable", false), "the server has the chapter done with the chair")
+
+	# 7b. The epilogue: a few calm seconds later 다온 runs up with news from the forest, the tracker
+	# leads to the stone gate, and reaching it is recorded (story_forest.gd).
+	expect(await wait_for(func() -> bool: return is_instance_valid(story.forest.runner), 20.0), "다온 comes running after the gift scene")
+	expect(await wait_for(func() -> bool: return is_instance_valid(town.village_modal) and modal_text(town).contains(tr("우편배달부")), 12.0), "다온 speaks (%s)" % modal_text(town).left(60))
+	await shot("daon", 0.6)
+	expect(await press_choice(town, tr("가 볼게요"), 12.0), "the walker says it will go to the forest")
+	expect(await wait_for(func() -> bool: return town.objective.text.contains(tr("숲의 돌문으로 가기")), 6.0), "the tracker leads to the stone gate")
+	expect(await wait_for(func() -> bool: return not is_instance_valid(story.forest.runner), 8.0), "다온 runs off toward the forest")
+	expect("forest_told" in (await story_of(town.api)).get("events", []), "the server keeps 다온's news")
+	await teleport(town, Town.GATE+Vector2(0, 2.0))
+	expect(await wait_for(func() -> bool: return "forest_gate" in story.story.get("events", []), 8.0), "reaching the stone gate is recorded")
+	expect(await wait_for(func() -> bool: return not town.objective.text.contains(tr("숲의 돌문으로 가기")), 4.0), "and the gate line leaves the tracker")
 	await wait_for(func() -> bool: return town.objective.text.contains(tr("우편함에서 모카의 편지 읽기")), 6.0)
 	expect(town.objective.text.contains(tr("마을의 첫 선물 · 완료")) and town.objective.text.contains(tr("우편함에서 모카의 편지 읽기")), "the tracker shows the chapter done and the letter waiting")
 
@@ -313,6 +326,9 @@ func run() -> void:
 	expect(await press_choice(town, tr("다행이에요"), 10.0), "모카 likes it anyway")
 	await wait_for(func() -> bool: return is_instance_valid(story.banner_node), 8.0)
 	expect(is_instance_valid(story.banner_node) and not is_instance_valid(story.guest), "the ribbon shows and nobody sits on a lamp")
+	# 다온 comes for this maker too; "조금 이따가" still counts as told and keeps the gate line.
+	expect(await press_choice(town, tr("조금 이따가"), 25.0), "다온 comes; the walker says later")
+	expect(await wait_for(func() -> bool: return town.objective.text.contains(tr("숲의 돌문으로 가기")), 6.0), "the gate line waits on the tracker")
 	await shot("terrace-lamp", 1.0)
 
 	# 10. The operator reset puts the first maker back at the letter (rehearsals).

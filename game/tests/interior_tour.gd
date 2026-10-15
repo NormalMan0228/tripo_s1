@@ -263,8 +263,8 @@ func stairs_and_effects() -> void:
 			await capture("interior-stair-%s-arrive" % shot[0],0.35)
 			break
 		await close(app)
-	for shot in [["home",0,"cooking_stove"],["home",0,"kitchen_counter"],["01_cafe",0,"piano"],["17_lighthouse",2,"lighthouse_lens"],["16_blue_cottage",0,"fireplace"],
-			["02_timber_house",0,"bookshelf"],["07_greenhouse",0,"potted_plant"],["home",1,"chest"],["13_shop",0,"shop_counter"],["home",0,"wall_clock"]]:
+	for shot in [["home",0,"desk"],["home",0,"floor_lamp"],["01_cafe",0,"piano"],["17_lighthouse",2,"lighthouse_lens"],["16_blue_cottage",0,"fireplace"],
+			["02_timber_house",0,"bookshelf"],["07_greenhouse",0,"seedling_bench"],["home",1,"bed"],["13_shop",0,"shop_counter"],["home",0,"wall_clock"]]:
 		var app := await open(shot[0])
 		app.set_floor(int(shot[1]))
 		for record in app.decor:

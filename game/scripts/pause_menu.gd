@@ -167,9 +167,9 @@ func _to_title() -> void:
 	app.logout()
 
 func _quit_game() -> void:
-	# The same notice as closing the window, so friends see this player leave at once (social.gd).
-	get_tree().root.propagate_notification(NOTIFICATION_WM_CLOSE_REQUEST)
-	get_tree().quit()
+	# The same notice as closing the window, so friends see this player leave at once (social.gd),
+	# then the screen fades out before the game closes (clean_exit.gd).
+	preload("res://scripts/clean_exit.gd").request_quit(get_tree())
 
 ## A menu plate ("MenuGoldButton" or "MenuNightButton") that arrows and the pad can reach.
 func _item(parent: Node, text: String, callback: Callable, variant := "MenuNightButton") -> Button:
@@ -244,4 +244,4 @@ func ask(question: String, yes: Callable, title := "") -> void:
 
 ## Focus once the frame settles, if the control is still on screen.
 func _focus(control) -> void:
-	if is_instance_valid(control) and control.is_inside_tree() and control.is_visible_in_tree(): control.grab_focus()
+	if is_instance_valid(control) and control.is_inside_tree() and control.is_visible_in_tree(): control.grab_focus(true)

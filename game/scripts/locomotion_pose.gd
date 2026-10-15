@@ -1,5 +1,6 @@
 extends SkeletonModifier3D
 ## Contact-aware lower-body IK over the reviewed clips; no face/hand/mesh edits.
+const FINGER_PARTS := ["Thumb_","Index_","Middle_","Ring_","Little_"]
 var actor: Node3D
 var legs: Array[Dictionary]=[]
 var phase := 0.0
@@ -18,13 +19,17 @@ func smooth_solved_pose(skeleton: Skeleton3D,delta: float,legs_only: bool) -> vo
 	for index in skeleton.get_bone_count():
 		var is_leg := false
 		for leg in legs:
-			if index in [leg.hip,leg.knee,leg.foot]:is_leg=true
+			if index==leg.hip or index==leg.knee or index==leg.foot:
+				is_leg=true
+				break
 		if is_leg!=legs_only:continue
 		var name := skeleton.get_bone_name(index)
 		if name.begins_with("Face_"):continue
 		var finger := false
-		for digit in ["Thumb_","Index_","Middle_","Ring_","Little_"]:
-			if digit in name:finger=true
+		for digit in FINGER_PARTS:
+			if digit in name:
+				finger=true
+				break
 		if finger:continue
 		var target := skeleton.get_bone_pose_rotation(index)
 		if previous_solved.has(index):
@@ -103,7 +108,7 @@ func _process_modification_with_delta(delta: float) -> void:
 	smooth_solved_pose(skeleton,delta,false)
 	speed=actor.locomotion_velocity.length()
 	running=speed>3.4
-	var active: bool=speed>.12 and actor.current_clip in ["walk","run"]
+	var active: bool=speed>.12 and (actor.current_clip=="walk" or actor.current_clip=="run")
 	blend=lerpf(blend,1.0 if active else 0.0,1.0-exp(-16.0*delta))
 	if not active:
 		contact_error=0

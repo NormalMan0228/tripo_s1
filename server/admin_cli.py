@@ -100,6 +100,10 @@ def plan(conn, usernames, pattern):
         assets = {a for a in mine - others if a != 'starter'}
     removals = {}
     for name, columns in schema.items():
+        # Provider costs survive deletion of the player or craft that incurred them.
+        # These ledgers intentionally have no account/job foreign keys.
+        if name in ('tripo_attempts', 'tripo_job_holds', 'llm_call_reservations'):
+            continue
         conditions, values = [], []
         if name == 'users':
             conditions.append(('id', users))
@@ -155,7 +159,22 @@ def delete_accounts(args):
     print(json.dumps({'backup': str(snapshot)}))
     with sqlite3.connect(database, timeout=30) as conn:
         conn.execute('PRAGMA foreign_keys=OFF')
-        _, removals, files, objects = plan(conn, set(args.usernames), args.pattern)
+        conn.execute('BEGIN IMMEDIATE')
+        chosen, removals, files, objects = plan(conn, set(args.usernames), args.pattern)
+        if 'tripo_job_holds' in tables(conn):
+            from .tripo_budget import manage_job
+            # A hold covers requests not yet sent. Provider attempts stay in their ledger.
+            chosen_ids = [row[0] for row in chosen]
+            conn.row_factory = sqlite3.Row
+            for user_id in chosen_ids:
+                testing = conn.execute('SELECT is_tester FROM users WHERE id=?', (user_id,)).fetchone()[0]
+                for table in ('studio_jobs', 'jobs'):
+                    if table not in tables(conn):
+                        continue
+                    for job in conn.execute(f'SELECT id FROM {table} WHERE owner_id=?', (user_id,)).fetchall():
+                        manage_job(conn, job['id'], user_id, testing, time.time())
+            conn.executemany('UPDATE tripo_job_holds SET credits=0 WHERE owner_id=?',
+                             [(user_id,) for user_id in chosen_ids])
         for name, (where, values, _) in removals.items():
             conn.execute(f'DELETE FROM "{name}" WHERE {where}', values)
         conn.commit()
@@ -215,6 +234,43 @@ def npc_homes(args):
     return 0
 
 
+def residents(args):
+    """Local operator moves; no player mutation endpoint and no relationship reset."""
+    from . import village_residents as residency, npc_homes as homes, story as chapter, build_rules
+    from .config import Settings
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    settings = Settings(data_dir=Path(args.data_dir))
+    # Validate the relevant configuration without reading or writing another world.
+    import math
+    if any(not math.isfinite(t) or not 0 <= t <= 30 * 86400
+           for t in (settings.resident_arrive_seconds, settings.resident_leave_seconds)):
+        raise ValueError('Invalid resident move timing')
+    if args.command != 'show' and not settings.resident_moves:
+        print('TRIPOTHON_RESIDENT_MOVES is disabled.')
+        return 1
+    with sqlite3.connect(database, timeout=30) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.execute('PRAGMA foreign_keys=ON')
+        user = conn.execute('SELECT id FROM users WHERE username=?', (args.username.lower(),)).fetchone()
+        if not user:
+            print('No such account.')
+            return 1
+        conn.executescript(homes.SCHEMA + chapter.SCHEMA + residency.SCHEMA + build_rules.SCHEMA)
+        chapter.migrate_events(conn)
+        conn.execute('BEGIN IMMEDIATE')
+        now = time.time()
+        residency.sync(conn, user['id'], now, settings)
+        if args.command != 'show':
+            action = residency.arrive if args.command == 'move-in' else residency.leave
+            action(conn, user['id'], args.npc, now, settings)
+        result = residency.brief(conn, user['id'], now, settings)
+    print(json.dumps(result, ensure_ascii=False, indent=1))
+    return 0
+
+
 def story(args):
     database = Path(args.data_dir) / 'world.sqlite3'
     if not database.is_file():
@@ -229,7 +285,9 @@ def story(args):
             return 1
         # A world from before the chapter (or resident gifts) gets the empty tables first.
         from .npc_homes import SCHEMA as HOMES
-        conn.executescript(HOMES + chapter.SCHEMA)
+        from .village_residents import SCHEMA as RESIDENTS
+        conn.executescript(HOMES + chapter.SCHEMA + RESIDENTS)
+        chapter.migrate_events(conn)
         if args.command == 'show':
             print(json.dumps(chapter.describe(conn, user['id']), ensure_ascii=False, indent=1))
             return 0
@@ -363,7 +421,9 @@ def demo(args):
             print(json.dumps(staging.pieces(conn, named[args.username]), ensure_ascii=False, indent=1))
             return 0
         from .npc_homes import SCHEMA as HOMES
-        conn.executescript(HOMES + chapter.SCHEMA)
+        from .village_residents import SCHEMA as RESIDENTS
+        conn.executescript(HOMES + chapter.SCHEMA + RESIDENTS)
+        chapter.migrate_events(conn)
         conn.execute('BEGIN IMMEDIATE')
         try:
             result = staging.prep(conn, args.data_dir, named[args.username], time.time(), args.stars,
@@ -434,6 +494,7 @@ def ledger_check(args):
 
 def tester(args):
     """Local operator access only. No HTTP route can set this flag."""
+    from . import economy
     import getpass
     import os
     import uuid
@@ -444,6 +505,7 @@ def tester(args):
     from .models import strong_password
     from .security import record_event
     from .account_limits import tester_credits
+    from .economy import change_shards
 
     database = Path(args.data_dir) / 'world.sqlite3'
     if not database.is_file():
@@ -480,9 +542,8 @@ def tester(args):
                 return 1
             user_id, now = str(uuid.uuid4()), time.time()
             conn.execute('INSERT INTO users(id,username,password_hash,shards,created,is_tester) VALUES (?,?,?,?,?,1)',
-                         (user_id, args.username, password_hash, limits.welcome_stars, now))
-            conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',
-                         (str(uuid.uuid4()), user_id, limits.welcome_stars, 'tester_welcome', user_id, now))
+                         (user_id, args.username, password_hash, 0, now))
+            change_shards(conn,user_id,limits.welcome_stars,'tester_welcome',user_id,now)
             conn.execute('INSERT INTO objects(id,owner_id,creator_id,asset_id,name,created) VALUES (?,?,?,?,?,?)',
                          (str(uuid.uuid4()), user_id, user_id, 'starter', 'Welcome wooden chair', now))
             if settings.story_enabled:
@@ -500,6 +561,58 @@ def tester(args):
 
 
 
+def budget_usage(args):
+    """Local-only account breakdown; the HTTP usage key still exposes aggregates only."""
+    from .usage_report import budget_safety_report
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    with sqlite3.connect(database, timeout=30) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.execute('BEGIN')
+        if not {'tripo_attempts', 'llm_call_reservations'}.issubset(tables(conn)):
+            print('Start the upgraded server once to initialize the budget ledgers.')
+            return 1
+        report = budget_safety_report(conn, time.time(), include_accounts=True)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def tripo_reservations(args):
+    """Operator reconciliation after the provider has confirmed there was no charge."""
+    from .tripo_budget import release_attempt
+    from .provider import ProviderError
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    if args.command == 'release' and (not args.attempt_id or not args.confirmed_no_charge or not (args.reason or '').strip()):
+        print('Release requires ATTEMPT_ID, --confirmed-no-charge and --reason with provider confirmation evidence.')
+        return 1
+    with sqlite3.connect(database, timeout=30) as conn:
+        conn.row_factory = sqlite3.Row
+        if 'tripo_attempts' not in tables(conn):
+            print('Start the upgraded server once to initialize the budget ledgers.')
+            return 1
+        if args.command == 'list':
+            where = ' WHERE state=?' if args.state else ''
+            rows = conn.execute('SELECT * FROM tripo_attempts' + where + ' ORDER BY created,attempt_id',
+                                (args.state,) if args.state else ()).fetchall()
+            print(json.dumps([dict(row) for row in rows], ensure_ascii=False, indent=2))
+            return 0
+        conn.execute('BEGIN IMMEDIATE')
+        try:
+            release_attempt(conn, args.attempt_id, args.reason.strip(), time.time())
+        except (ValueError, ProviderError) as error:
+            conn.rollback()
+            print(getattr(error, 'code', str(error)))
+            return 1
+        row = dict(conn.execute('SELECT * FROM tripo_attempts WHERE attempt_id=?', (args.attempt_id,)).fetchone())
+    print(json.dumps({'ok': True, 'attempt': row}, ensure_ascii=False, indent=2))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     actions = parser.add_subparsers(dest='action', required=True)
@@ -515,6 +628,11 @@ def main(argv=None):
     learned.add_argument('--kind', choices=('describe', 'design'))
     learned.add_argument('--limit', type=int, default=50)
     learned.add_argument('--data-dir', default='/data')
+    moving = actions.add_parser('residents', help='show residency or start an operator move')
+    moving.add_argument('username')
+    moving.add_argument('command', choices=('show', 'move-in', 'move-out'), nargs='?', default='show')
+    moving.add_argument('npc', choices=('shopkeeper',), nargs='?', default='shopkeeper')
+    moving.add_argument('--data-dir', default='/data')
     homes = actions.add_parser('npc-homes', help="show one player's residents' homes and gifts")
     homes.add_argument('username')
     homes.add_argument('--data-dir', default='/data')
@@ -559,7 +677,20 @@ def main(argv=None):
     testing.add_argument('command', choices=('create', 'grant', 'list'))
     testing.add_argument('username', nargs='?')
     testing.add_argument('--data-dir', default='/data')
+    budget = actions.add_parser('budget-usage', help='durable Tripo usage, LLM calls today and top ten accounts')
+    budget.add_argument('--data-dir', default='/data')
+    reservations = actions.add_parser('tripo-reservations', help='inspect attempts or release a provider-confirmed uncharged attempt')
+    reservations.add_argument('command', choices=('list', 'release'))
+    reservations.add_argument('attempt_id', nargs='?')
+    reservations.add_argument('--state', choices=('unknown', 'reserved', 'charged', 'released'))
+    reservations.add_argument('--confirmed-no-charge', action='store_true')
+    reservations.add_argument('--reason', help='provider confirmation or reconciliation evidence; never include secrets')
+    reservations.add_argument('--data-dir', default='/data')
     args = parser.parse_args(argv)
+    if args.action == 'budget-usage':
+        return budget_usage(args)
+    if args.action == 'tripo-reservations':
+        return tripo_reservations(args)
     if args.action == 'ledger-check':
         return ledger_check(args)
     if args.action == 'tester':
@@ -570,6 +701,8 @@ def main(argv=None):
         return chat(args)
     if args.action == 'reports':
         return reports(args)
+    if args.action == 'residents':
+        return residents(args)
     if args.action == 'story':
         return story(args)
     if args.action == 'demo':

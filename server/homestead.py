@@ -11,6 +11,8 @@ import contextvars
 import copy
 import secrets
 from . import economy
+import json
+from functools import lru_cache
 
 
 # Village furniture coordinates are metres from the town green; this box covers all
@@ -23,12 +25,17 @@ def village_inside(x, z):
     return VILLAGE_X[0] <= x <= VILLAGE_X[1] and VILLAGE_Z[0] <= z <= VILLAGE_Z[1]
 
 
-def village_reserved(x, z):
+def village_reserved(x, z, resident_moves=False):
     """Outdoor furniture coordinates are relative to the island town green.
 
     The arrival spot and the walk up to the workshop (town hall) door stay clear.
     Returns an error code, or None when the parcel may be used.
     """
+    if resident_moves:
+        from .village_residents import plot_reserved
+        reserved = plot_reserved(x, z)
+        if reserved:
+            return reserved
     if abs(x) < 2 and abs(z) < 2:
         return 'spawn_area_reserved'
     if -3.5 < x < 3.5 and -12 < z < -6:
@@ -229,6 +236,13 @@ def plot_view(plot, now):
                 growth_rate=1.0 if plot['watered'] else DRY_GROWTH_RATE)
 
 
+def public_crops(raw, now):
+    """What a visitor sees of the host's farm (multiplayer.village): the plots only, grown to now,
+    never the private inventory or fishing state."""
+    life = public(json.loads(raw) if raw else initial(), now)
+    return {'version': life['version'], 'plots': life['plots'], 'server_time': now}
+
+
 def public(state, now):
     result=copy.deepcopy(normalise(state))
     result['server_time']=now
@@ -254,6 +268,12 @@ def public(state, now):
 
 def night(now):
     hour=(now/3600+UTC_OFFSET.get()/60)%24
+    return hour<6 or hour>=19
+
+def reward_night(now):
+    """Reward eligibility follows the fixed account offset, never a request header."""
+    offset=DAILY_OFFSET.get()
+    hour=(now/3600+(KST*60 if offset is None else offset)/60)%24
     return hour<6 or hour>=19
 
 def spend(state, item, count=1):
@@ -284,7 +304,7 @@ def tillable(state, x, z):
         if max(abs(plot['x']-x),abs(plot['z']-z))<1.7: raise Rejected('life_plot_overlap')
 
 def pick_fish(spot, now):
-    time='night' if night(now) else 'day'
+    time='night' if reward_night(now) else 'day'
     pool=[(fish,data) for fish,data in FISH.items() if spot in data['spots'] and data['time'] in ('any',time)]
     ticket=secrets.randbelow(sum(data['weight'] for _,data in pool))
     for fish,data in pool:
@@ -473,23 +493,6 @@ def act(state, body, now):
         result,reward=shake(state,body,now)
     elif action=='pickup':
         result,reward=pickup(state,body,now)
-    elif action=='buy':
-        if body.item not in SHOP: raise Rejected('life_invalid_item')
-        cost=SHOP[body.item]*body.quantity
-        if state['coins']<cost: raise Rejected('life_not_enough_coins')
-        economy.change_coins(state,-cost); add(state,body.item,body.quantity)
-        result=f'{NAMES[body.item]} {body.quantity}개를 샀어요.'
-    elif action=='sell':
-        if body.item not in PRICES: raise Rejected('life_invalid_item')
-        spend(state,body.item,body.quantity)
-        income=PRICES[body.item]*body.quantity; economy.change_coins(state,income)
-        result=f'{object_word(NAMES[body.item])} 팔고 잎전 {income}개를 받았어요.'
-    elif action=='order':
-        day=local_day(now)
-        if state['order_day']==day: raise Rejected('life_order_completed')
-        spend(state,'turnip',2); spend(state,'perch')
-        economy.change_coins(state,20); state['order_day']=day
-        result='마을 식탁 배달 완료! 잎전 20개를 받았어요.'
     else: raise Rejected('life_unknown_action')
     state['version']+=1
     response=public(state,now); response['message']=result

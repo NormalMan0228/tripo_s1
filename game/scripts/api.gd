@@ -70,13 +70,17 @@ var kept: HTTPClient
 var kept_origin := ""
 var kept_used := 0
 var kept_busy := false
+## Last round trip (ms) of each kept-alive path, for the performance overlay (perf_overlay.gd).
+var round_trip_ms := {}
 
 func post_kept(path: String, payload: Dictionary, timeout := 12.0) -> Dictionary:
+	var started := Time.get_ticks_msec()
 	if kept_busy: return await request(path, payload, HTTPClient.METHOD_POST, false, timeout)
 	kept_busy = true
 	var result := await _kept_request(path, JSON.stringify(payload), timeout)
 	kept_busy = false
-	if result.is_empty(): return await request(path, payload, HTTPClient.METHOD_POST, false, timeout)
+	if result.is_empty(): result = await request(path, payload, HTTPClient.METHOD_POST, false, timeout)
+	round_trip_ms[path] = Time.get_ticks_msec()-started
 	return result
 
 ## The server's host, port, TLS and path prefix, from base_url.

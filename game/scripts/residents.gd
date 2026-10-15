@@ -2,9 +2,12 @@ extends RefCounted
 ## Who lives where, and where everyone is at any hour. Pure data plus seeded
 ## daily plans, so the outdoor walkers, the interiors, the window lights and the
 ## door locks all agree without talking to each other. Every resident has a home
-## building and their own bed in it; shop and special-building owners live in a
-## back room of their workplace. Plans change a little every real day (seeded by
-## resident and date), and night owls keep night hours.
+## building and their own bed in it. The café, seed-shop and mill owners share
+## 풍차 언덕 하숙집 (18_meadow_house); the other shop and special-building owners
+## still live in a back room of their workplace (TODO MAP 40: stargazer, gardener;
+## the shopkeeper 단비 moves to her plot house with the story, plots.gd). Plans
+## change a little every real day (seeded by resident and date), and night owls
+## keep night hours.
 ##
 ## Places are building ids from TownLayout.DOORS ("01_cafe", ...) or "outside".
 ## Spots inside a building are furniture words the interiors map to real pieces:
@@ -34,12 +37,12 @@ const RESIDENTS := [
 			{"place":"outside","spot":"pond_pier","activity":"fish","from":16.0,"to":19.0}]},
 	{"id":"kid","kind":"shadow","home":"06_orange_cottage","sleep":"day","bedtime":20.5,
 		"work":[{"place":"outside","spot":"pond","activity":"play","from":9.0,"to":17.0}]},
-	{"id":"farmer","kind":"shadow","home":"03_teal_cottage","sleep":"early",
+	{"id":"farmer","kind":"shadow","home":"18_meadow_house","sleep":"early",
 		"work":[{"place":"03_teal_cottage","spot":"counter","activity":"shopkeep","from":8.5,"to":12.5},
 			{"place":"outside","spot":"farm","activity":"farm","from":13.5,"to":17.5}]},
-	{"id":"regular","kind":"shadow","home":"01_cafe","sleep":"day",
+	{"id":"regular","kind":"shadow","home":"18_meadow_house","sleep":"day",
 		"work":[{"place":"01_cafe","spot":"counter","activity":"barista","from":8.0,"to":20.0}]},
-	{"id":"miller","kind":"shadow","home":"04_windmill","sleep":"early",
+	{"id":"miller","kind":"shadow","home":"18_meadow_house","sleep":"early",
 		"work":[{"place":"04_windmill","spot":"millstone","activity":"mill","from":7.0,"to":17.0}]},
 	{"id":"stargazer","kind":"shadow","home":"05_observatory","sleep":"night",
 		"work":[{"place":"05_observatory","spot":"telescope","activity":"stargaze","from":19.5,"to":28.0}]},

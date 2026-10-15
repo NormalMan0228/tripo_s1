@@ -9,7 +9,8 @@
 # never inside one, so 바나나체어 is not 나체 and 처음부터 is not 음부. Still left out because they
 # start ordinary words: 성기 (성기사), 참수 (참수리), 시신 (시신경), 고어 (고어 문자), 마약 alone
 # (마약 방석, 마약 침대...: the LLM judges it). Latin entries are whole words (plurals included),
-# `word*` also as a word's start, two words a phrase.
+# `word*` also as a word's start, two words a phrase (also written as one word). `*단어` (Hangul) also
+# matches inside a word: only for long names that never hide in ordinary words (not 나치: 바나나치즈).
 
 [sexual]
 섹스
@@ -65,19 +66,20 @@ torture device
 
 [hate]
 나치
-하켄크로이츠
-스와스티카
+*나치깃발
+*하켄크로이츠
+*스와스티카
 욱일기
-히틀러
+*히틀러
 kkk
 nazi
 swastika
 hitler
 
 [drugs]
-필로폰
-히로뽕
-코카인
+*필로폰
+*히로뽕
+*코카인
 헤로인
 대마초
 엑스터시

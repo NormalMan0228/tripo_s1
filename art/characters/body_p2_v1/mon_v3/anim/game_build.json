@@ -1,0 +1,601 @@
+{
+ "fps": 30,
+ "texture_max": 1024,
+ "notes": "clips: game clip name -> text found in the Tripo action name, or {match,start,end} seconds for one stage of a multi-stage motion. cleanup: tools/body_gen/mesh_cleanup.py options (same as mon_v3/clean). Heights in metres (player is about 1.7 m).",
+ "monsters": {
+  "goblin": {
+   "height_m": 1.2,
+   "tripo_task": "29151d3f-bcd0-4571-8d7f-64eb1026e91f",
+   "clips": {
+    "idle": "A hunched, sneaky goblin standing in place: it shifts",
+    "walk": "A hunched goblin sneaking forward with quick small ste",
+    "run": "A small hunched goblin scurrying fast in place: body",
+    "attack": "A hunched goblin crouches low, then lunges forward and",
+    "hurt": "A hunched goblin is hit: it flinches back with a sta",
+    "death": "A hunched goblin is struck hard, staggers back clutchi"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "glow_hues": [
+    [
+     0.11,
+     0.19
+    ]
+   ],
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "catalog": {
+    "name": "고블린",
+    "map": "forest",
+    "tier": "weak"
+   }
+  },
+  "werewolf": {
+   "height_m": 1.9,
+   "tripo_task": "ae505b63-3c49-42fb-8ffd-a75c84b50a59",
+   "clips": {
+    "idle": "A lean, muscular werewolf standing in place in a low",
+    "walk": "A muscular werewolf prowling in place on its toes, h",
+    "run": "A feral werewolf sprinting in place in a deep forwar",
+    "attack": "A feral werewolf rears up tall on its toes with both",
+    "hurt": "A muscular werewolf is struck: it recoils half a ste",
+    "death": "A muscular werewolf is struck hard: it throws its he"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "glow_hues": [
+    [
+     0.11,
+     0.19
+    ]
+   ],
+   "catalog": {
+    "name": "늑대인간",
+    "map": "forest",
+    "tier": "mid"
+   }
+  },
+  "troll": {
+   "height_m": 2.8,
+   "tripo_task": "7d9dfe1c-4684-4f0e-bea0-90943a3d6317",
+   "clips": {
+    "idle": "A huge pot-bellied troll standing in place, slouched",
+    "walk": "A huge pot-bellied troll lumbering in place with a w",
+    "run": "A huge pot-bellied troll charging in place in a clum",
+    "attack": "A huge pot-bellied troll clasps both fists together ",
+    "hurt": "A huge pot-bellied troll is hit in the belly: it fol",
+    "death": "A huge pot-bellied troll is struck hard: it wobbles "
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "glow_hues": [
+    [
+     0.11,
+     0.19
+    ]
+   ],
+   "catalog": {
+    "name": "트롤",
+    "map": "forest",
+    "tier": "mid"
+   }
+  },
+  "cyclops": {
+   "height_m": 3.4,
+   "tripo_task": "3246ec10-37fe-44fe-87fb-2546efad4250",
+   "clips": {
+    "idle": "A massive one-eyed cyclops brute standing in place i",
+    "walk": "A massive one-eyed cyclops swaggering in place with ",
+    "run": "A massive one-eyed cyclops running in place like a b",
+    "attack": "A massive one-eyed cyclops draws its right fist back",
+    "hurt": "A massive one-eyed cyclops is rocked by a hit: its u",
+    "death": "A massive one-eyed cyclops is struck hard: it clutch"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "catalog": {
+    "name": "사이클롭스",
+    "map": "forest",
+    "tier": "strong"
+   }
+  },
+  "treant": {
+   "height_m": 5.0,
+   "tripo_task": "23c87040-75a2-4f57-b5f4-d8607acd6070",
+   "clips": {
+    "idle": "An ancient towering tree giant standing rooted in pl",
+    "walk": "An ancient towering tree giant trudging in place wit",
+    "run": "An ancient towering tree giant running in place with",
+    "attack": "An ancient towering tree giant slowly twists its tru",
+    "hurt": "An ancient towering tree giant is hit: its trunk-lik",
+    "death": "An ancient towering tree giant is struck down: its l"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "catalog": {
+    "name": "고목 트렌트",
+    "map": "forest",
+    "tier": "boss"
+   }
+  },
+  "skeleton": {
+   "height_m": 1.7,
+   "tripo_task": "e6f14d78-b825-454d-a322-c946466043fa",
+   "clips": {
+    "idle": "A lanky armored skeleton warrior in rusty plate stan",
+    "walk": "A lanky armored skeleton warrior walking in place wi",
+    "run": "A lanky armored skeleton warrior running in place in",
+    "attack": "A lanky armored skeleton warrior in a wide crouch je",
+    "hurt": "A lanky armored skeleton warrior is struck on the le",
+    "death": "A lanky armored skeleton warrior is struck and its j"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "glow_hues": [
+    [
+     0.5,
+     0.62
+    ]
+   ],
+   "catalog": {
+    "name": "해골 병사",
+    "map": "quarry",
+    "tier": "weak"
+   }
+  },
+  "lizardman": {
+   "height_m": 1.7,
+   "tripo_task": "ab9bb0d5-faa7-41b8-9c19-a0705fef0057",
+   "clips": {
+    "idle": "A muscular lizardman in a leather harness crouches l",
+    "walk": "A muscular lizardman walking in place with a quick r",
+    "run": "A muscular lizardman sprinting in place like a runni",
+    "attack": "A muscular lizardman crouches low, then whirls aroun",
+    "hurt": "A muscular lizardman is hit: it jerks its head back,",
+    "death": "A muscular lizardman is struck hard and spins half a"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "catalog": {
+    "name": "리자드맨",
+    "map": "quarry",
+    "tier": "weak"
+   }
+  },
+  "minotaur": {
+   "height_m": 2.9,
+   "tripo_task": "a9228193-a0a3-4149-898d-18ab5ba3109b",
+   "clips": {
+    "idle": "A massive hunched minotaur with heavy shoulders stan",
+    "walk": "A massive hunched minotaur walking in place with a h",
+    "run": "A massive minotaur charging like a bull, running in ",
+    "attack": "A massive hunched minotaur lowers its horned head, d",
+    "hurt": "A massive hunched minotaur is hit: its horned head i",
+    "death": "A massive minotaur is struck hard: it lowers its hor"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "catalog": {
+    "name": "미노타우로스",
+    "map": "quarry",
+    "tier": "strong"
+   }
+  },
+  "mummy_king": {
+   "height_m": 2.3,
+   "tripo_task": "dd5acbb2-f00b-4653-af81-d4a9eb0a3b8b",
+   "clips": {
+    "idle": "A bulky mummy king in a golden pharaoh headdress sta",
+    "walk": "A bulky mummy king walking in place with a slow, sti",
+    "run": "A bulky mummy king running in place with a fast lurc",
+    "attack": "A bulky mummy king steps forward and seizes an unsee",
+    "hurt": "A bulky mummy king is struck in the chest but barely",
+    "death": "A bulky mummy king is struck and goes rigid: it sink"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "cleanup": "--weld 0.0006 --fill 8",
+   "catalog": {
+    "name": "미라 왕",
+    "map": "quarry",
+    "tier": "strong"
+   }
+  },
+  "ghoul": {
+   "height_m": 1.6,
+   "tripo_task": "cf8b46c0-41e3-4f01-a51c-5cc1869996a4",
+   "clips": {
+    "idle": "A gaunt, hunched ghoul squats low in place on splaye",
+    "walk": "A gaunt, hunched ghoul walking in place with a bow-l",
+    "run": "A gaunt ghoul running in place in a frantic scramble",
+    "attack": "A gaunt, crouching ghoul darts both long clawed arms",
+    "hurt": "A gaunt, crouching ghoul is struck: it is knocked do",
+    "death": "A gaunt ghoul is struck down: it convulses and falls"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "glow_hues": [
+    [
+     0.95,
+     1.0
+    ],
+    [
+     0.0,
+     0.03
+    ]
+   ],
+   "catalog": {
+    "name": "구울",
+    "map": "frost",
+    "tier": "weak"
+   }
+  },
+  "ice_shardling": {
+   "height_m": 1.4,
+   "tripo_task": "abef5dad-f051-4ee9-818f-68d9f384273b",
+   "clips": {
+    "idle": "A squat, heavy ice crystal golem stands in place in ",
+    "walk": "A squat ice crystal golem walking in place with shor",
+    "run": "A squat ice crystal golem running in place like a wi",
+    "attack": "A squat ice crystal golem crouches stiffly, then mak",
+    "hurt": "A squat ice crystal golem is hit: its whole body jol",
+    "death": "A squat ice crystal golem is hit hard: every limb lo"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "catalog": {
+    "name": "얼음 조각병",
+    "map": "frost",
+    "tier": "weak"
+   }
+  },
+  "draugr": {
+   "height_m": 1.9,
+   "tripo_task": "86b48343-263a-4408-a102-587416b3417b",
+   "clips": {
+    "idle": "A stocky undead Viking warrior in a horned helmet an",
+    "walk": "A stocky undead Viking warrior walking in place with",
+    "run": "A stocky undead Viking warrior running in place with",
+    "attack": "A stocky undead Viking warrior shifts his weight ont",
+    "hurt": "A stocky undead Viking warrior is struck on the helm",
+    "death": "A stocky undead Viking warrior is struck down: he pi"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "catalog": {
+    "name": "드라우그",
+    "map": "frost",
+    "tier": "weak"
+   }
+  },
+  "yeti": {
+   "height_m": 2.6,
+   "tripo_task": "459d60c6-410b-4af4-89d5-94d5215ee127",
+   "clips": {
+    "idle": "A massive white-furred horned yeti stands in place i",
+    "walk": "A massive white-furred yeti walking in place with a ",
+    "run": "A massive white-furred yeti running in place in a go",
+    "attack": "A massive white-furred yeti spreads both huge arms w",
+    "hurt": "A massive white-furred yeti is hit: it rocks back a ",
+    "death": "A massive white-furred yeti is struck down: it stagg"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "catalog": {
+    "name": "예티",
+    "map": "frost",
+    "tier": "mid"
+   }
+  },
+  "wendigo": {
+   "height_m": 2.2,
+   "tripo_task": "fe88a817-9e58-42a9-9227-5b8feb44f316",
+   "clips": {
+    "idle": "A tall, emaciated wendigo with a deer skull head and",
+    "walk": "A tall, emaciated wendigo walking in place with slow",
+    "run": "A tall, emaciated wendigo running in place with an e",
+    "attack": "A tall, emaciated wendigo stands tall without steppi",
+    "hurt": "A tall, emaciated wendigo is hit: its whole body jer",
+    "death": "A tall, emaciated wendigo is struck down: it rears u"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "catalog": {
+    "name": "웬디고",
+    "map": "frost",
+    "tier": "mid"
+   }
+  },
+  "frost_hag": {
+   "height_m": 1.8,
+   "tripo_task": "fc8d3926-eada-48b9-9a44-5e92ded5635b",
+   "clips": {
+    "idle": "A hunched old frost witch in a heavy hooded fur robe",
+    "walk": "A hunched old frost witch in a hooded fur robe walki",
+    "run": "A hunched old frost witch in a hooded robe running i",
+    "attack": "A hunched old frost witch in a hooded robe draws bot",
+    "hurt": "A hunched old frost witch in a hooded robe is struck",
+    "death": "Mortally struck, a hunched old frost witch in a hood"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "catalog": {
+    "name": "서리 마녀",
+    "map": "frost",
+    "tier": "mid"
+   }
+  },
+  "frost_knight": {
+   "height_m": 2.1,
+   "tripo_task": "d3a90bca-a609-4dba-b0ea-83c990f7c761",
+   "clips": {
+    "idle": "A towering undead frost knight in spiked ice plate a",
+    "walk": "A towering undead frost knight in heavy spiked ice a",
+    "run": "Charging hard, a towering undead frost knight in hea",
+    "attack": "A towering undead frost knight in spiked ice armor l",
+    "hurt": "A towering undead frost knight in ice armor is struc",
+    "death": "A towering undead frost knight in heavy ice armor is"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "catalog": {
+    "name": "서리 기사",
+    "map": "frost",
+    "tier": "mid"
+   }
+  },
+  "ice_golem": {
+   "height_m": 3.2,
+   "tripo_task": "14e2b3d8-b10e-4936-879f-413886cdbc0e",
+   "clips": {
+    "idle": "A massive blocky ice golem with huge boulder fists s",
+    "walk": "A massive blocky ice golem walking in place with slo",
+    "run": "A massive blocky ice golem running in place in a hea",
+    "attack": "A massive blocky ice golem swings its huge right bou",
+    "hurt": "A massive blocky ice golem is struck in the chest, i",
+    "death": "A massive blocky ice golem is struck hard: it sways "
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "catalog": {
+    "name": "얼음 골렘",
+    "map": "frost",
+    "tier": "strong"
+   }
+  },
+  "glacier_giant": {
+   "height_m": 3.6,
+   "tripo_task": "11fa5e3d-9c60-4b04-a105-566735b7ca41",
+   "clips": {
+    "idle": "A huge muscular frost giant with an ice crystal crow",
+    "walk": "A huge muscular frost giant with a long icy beard wa",
+    "run": "A huge muscular frost giant with a long icy beard ru",
+    "attack": "A huge muscular frost giant with a long icy beard ra",
+    "hurt": "A huge muscular frost giant with a long icy beard is",
+    "death": "Mortally struck, a huge muscular frost giant with a "
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "catalog": {
+    "name": "빙하 거인",
+    "map": "frost",
+    "tier": "strong"
+   }
+  },
+  "boni": {
+   "height_m": 1.6,
+   "tripo_task": "0c805f8c-3bfe-48f4-82ae-12b0e261f9d5",
+   "kind": "npc",
+   "note": "npc.gd plays the first clip (idle) and rescales to 1.72 m",
+   "clips": {
+    "idle": "A cheerful young craftswoman in a leather tool apron s",
+    "walk": "A cheerful young craftswoman in a leather tool apron w",
+    "work": "A young craftswoman works in place at an unseen workbe"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "work"
+   ],
+   "loop_min_seconds": {
+    "idle": 2.0,
+    "walk": 1.0,
+    "work": 3.5
+   }
+  },
+  "sol": {
+   "height_m": 1.6,
+   "tripo_task": "dd015750-14cd-4db9-b712-a1e80f1509e3",
+   "kind": "npc",
+   "note": "npc.gd plays the first clip (idle) and rescales to 1.72 m",
+   "clips": {
+    "idle": "A cheerful young gardener girl in an apron stands in p",
+    "walk": "A cheerful young gardener girl walking in place with a",
+    "work": "A young gardener girl works in place: she holds an uns"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "work"
+   ],
+   "loop_min_seconds": {
+    "idle": 2.0,
+    "walk": 1.0,
+    "work": 3.5
+   }
+  },
+  "chimera": {
+   "height_m": 3.0,
+   "tripo_task": "a9228193-a0a3-4149-898d-18ab5ba3109b",
+   "clips": {
+    "idle": "A massive hunched minotaur with heavy shoulders stan",
+    "walk": "A massive hunched minotaur walking in place with a h",
+    "run": "A massive minotaur charging like a bull, running in ",
+    "attack": "A massive hunched minotaur lowers its horned head, d",
+    "hurt": "A massive hunched minotaur is hit: its horned head i",
+    "death": "A massive minotaur is struck hard: it lowers its hor"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "catalog": {
+    "name": "키메라",
+    "map": "quarry",
+    "tier": "boss"
+   },
+   "proxy_of": "minotaur",
+   "note": "boss stand-in body until chimera (키메라) has its own model: the minotaur motions at 3.0 m, shipped as chimera_<map>.glb"
+  },
+  "dragon": {
+   "height_m": 5.0,
+   "tripo_task": "11fa5e3d-9c60-4b04-a105-566735b7ca41",
+   "clips": {
+    "idle": "A huge muscular frost giant with an ice crystal crow",
+    "walk": "A huge muscular frost giant with a long icy beard wa",
+    "run": "A huge muscular frost giant with a long icy beard ru",
+    "attack": "A huge muscular frost giant with a long icy beard ra",
+    "hurt": "A huge muscular frost giant with a long icy beard is",
+    "death": "Mortally struck, a huge muscular frost giant with a "
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_min_seconds": {
+    "run": 0.7
+   },
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "catalog": {
+    "name": "서리 용",
+    "map": "frost",
+    "tier": "boss"
+   },
+   "proxy_of": "glacier_giant",
+   "note": "boss stand-in body until dragon (서리 용) has its own model: the glacier_giant motions at 5.0 m, shipped as dragon_<map>.glb"
+  }
+ }
+}

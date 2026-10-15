@@ -1,0 +1,124 @@
+{
+  "elapsed_seconds": 30.001,
+  "process_cpu_seconds": 12.812,
+  "total": {
+    "requests": 3234,
+    "rps": 107.797,
+    "p50_ms": 4.097,
+    "p95_ms": 7.336,
+    "max_ms": 98.895,
+    "errors": 0,
+    "statuses": {
+      "200": 3234
+    },
+    "response_bytes": 16613048
+  },
+  "routes": {
+    "chat": {
+      "requests": 180,
+      "rps": 6.0,
+      "p50_ms": 4.725,
+      "p95_ms": 21.772,
+      "max_ms": 50.444,
+      "errors": 0,
+      "statuses": {
+        "200": 180
+      },
+      "response_bytes": 13252
+    },
+    "craft": {
+      "requests": 534,
+      "rps": 17.799,
+      "p50_ms": 2.266,
+      "p95_ms": 3.504,
+      "max_ms": 59.117,
+      "errors": 0,
+      "statuses": {
+        "200": 534
+      },
+      "response_bytes": 104664
+    },
+    "home": {
+      "requests": 360,
+      "rps": 12.0,
+      "p50_ms": 4.381,
+      "p95_ms": 6.409,
+      "max_ms": 13.708,
+      "errors": 0,
+      "statuses": {
+        "200": 360
+      },
+      "response_bytes": 3840480
+    },
+    "presence": {
+      "requests": 1800,
+      "rps": 59.998,
+      "p50_ms": 4.444,
+      "p95_ms": 8.074,
+      "max_ms": 98.895,
+      "errors": 0,
+      "statuses": {
+        "200": 1800
+      },
+      "response_bytes": 12615052
+    },
+    "village": {
+      "requests": 360,
+      "rps": 12.0,
+      "p50_ms": 2.49,
+      "p95_ms": 4.813,
+      "max_ms": 17.451,
+      "errors": 0,
+      "statuses": {
+        "200": 360
+      },
+      "response_bytes": 39600
+    }
+  },
+  "diagnostics": {
+    "presence": {
+      "status": 200,
+      "statements": {
+        "SELECT": 33,
+        "PRAGMA": 2,
+        "BEGIN": 2,
+        "INSERT": 1,
+        "COMMIT": 2
+      },
+      "begin_immediate": 1
+    },
+    "craft": {
+      "status": 200,
+      "statements": {
+        "SELECT": 3
+      },
+      "begin_immediate": 0
+    },
+    "sqlite": {
+      "journal_mode": "wal",
+      "busy_timeout": 15000,
+      "synchronous": 2
+    },
+    "object_plan": [
+      "SEARCH objects USING COVERING INDEX objects_owner_state_id (owner_id=? AND state=?)"
+    ]
+  },
+  "config": {
+    "players": 60,
+    "seconds": 30.0,
+    "warmup": 3,
+    "interval": 1.0,
+    "history_users": 300,
+    "objects": 24,
+    "label": "after"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "sqlite": "3.50.4",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "cpu_count": 24,
+    "transport": "TestClient",
+    "worker_enabled": false
+  },
+  "database_bytes": 9823856
+}

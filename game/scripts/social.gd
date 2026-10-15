@@ -116,7 +116,7 @@ func _process(delta: float) -> void:
 				entry["ground_at"]=Time.get_ticks_msec()
 				if place=="village": entry["ground"]="stone" if preload("res://scripts/roads.gd").on_road(Vector2(at.x,at.z)) else "grass"
 				else: entry["ground"]=app.region_surface() if app.has_method("region_surface") else "grass"
-			audio.stride("peer%d" % entry.node.get_instance_id(),at,delta,str(entry.get("ground","grass")))
+			audio.stride(entry.audio_key,at,delta,str(entry.get("ground","grass")))
 	if not enabled or app.api.token.is_empty(): return
 	var interval := 0.0
 	match app.screen:
@@ -277,12 +277,16 @@ func sync_peers(players: Array) -> void:
 			nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 			preload("res://scripts/art.gd").plate_priority(nameplate)
 			actor.add_child(nameplate)
-			peers[id] = {"node":actor, "label":nameplate, "motion":RemoteMotion.new()}
+			peers[id] = {"node":actor, "label":nameplate, "motion":RemoteMotion.new(), "audio_key":"peer%d" % actor.get_instance_id()}
 		peers[id].motion.push_record(record, target)
 		AvatarLook.wear(peers[id].node, record.get("avatar", {}), version, true)
 		peers[id].node.sprinting = bool(record.get("sprinting", false))
 		HeldItems.show_on(peers[id].node, record.get("held", ""))
 		peers[id].label.text = str(record.username)+( tr(" · 연결 끊김") if not record.get("online", true) else "")+(tr(" · 관전") if record.get("hp", 100) <= 0 else "")
+		# The village's owner, seen by visitors: a crown over a gold name.
+		var hosting: bool = app.screen == "village" and str(id) == str(data.get("host_id", "")) and str(id) != str(data.get("self_id", ""))
+		peers[id].label.modulate = UiSound.HOVER if hosting else Color.WHITE
+		SocialHud.host_crown(peers[id].node, hosting)
 	for id in peers.keys():
 		if not retained.has(id):
 			if is_instance_valid(peers[id].node): peers[id].node.queue_free()

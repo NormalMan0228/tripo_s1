@@ -16,6 +16,7 @@ const SFX_BANK := "res://scripts/sfx_bank.gd"
 const WORLD_AUDIO := "res://scripts/world_audio.gd"
 
 func _notification(what: int) -> void:
+	_notification_close(what)
 	if what != NOTIFICATION_PREDELETE: return
 	if ResourceLoader.has_cached(SETTINGS): load(SETTINGS).listeners.clear()
 	if ResourceLoader.has_cached(SFX_BANK): load(SFX_BANK).clear()
@@ -35,3 +36,38 @@ static func let_audio_release() -> void:
 		var since := AudioServer.get_time_since_last_mix()
 		if since < last: mixes += 1
 		last = since
+
+# ------------------------------------------------------------------ the fade out (item 57)
+
+## The game goes dark before it closes (게임 종료 in the menus, the title's 종료, the window's X),
+## like every other scene change. The window's X waits here instead of closing at once: the close
+## notice still reaches every node first (friends see this player leave, social.gd / studio.gd),
+## then the screen fades and the game quits. Never more than QUIT_WAIT s, whatever the fade does.
+const QUIT_FADE := 0.4
+const QUIT_WAIT := 0.8
+var quitting := false
+
+func _ready() -> void:
+	get_tree().set_auto_accept_quit(false)
+
+func _notification_close(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST: fade_and_quit()
+
+## Fades the screen and quits (once). Headless runs and tests quit at once.
+func fade_and_quit() -> void:
+	if quitting: return
+	quitting = true
+	var tree := get_tree()
+	if DisplayServer.get_name() == "headless":
+		tree.quit()
+		return
+	tree.create_timer(QUIT_WAIT, true, false, true).timeout.connect(tree.quit)
+	var veil = load("res://scripts/transition.gd").of(tree)
+	if veil != null: await veil.fade_out(QUIT_FADE)
+	tree.quit()
+
+## For buttons: the close notice to every node, then the fade (falls back to quitting at once).
+static func request_quit(tree: SceneTree) -> void:
+	tree.root.propagate_notification(NOTIFICATION_WM_CLOSE_REQUEST)
+	var exit := tree.root.get_node_or_null("CleanExit")
+	if exit == null: tree.quit()

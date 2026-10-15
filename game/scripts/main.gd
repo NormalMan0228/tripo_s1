@@ -41,6 +41,11 @@ const PatchBoot = preload("res://scripts/patch_boot.gd")
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
 const Brand = preload("res://scripts/brand.gd")
 const SocialHud = preload("res://scripts/social_hud.gd")
+## Build mode: placed-object menu, stacking, ways kept open, 물건 통과 (scripts/build/).
+const VillageBuild = preload("res://scripts/build/village_build.gd")
+const LoadRing = preload("res://scripts/build/load_ring.gd")
+## The building doors swing and the walker walks through them (entering and leaving rooms).
+const VillageDoors = preload("res://scripts/village_doors.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
@@ -106,6 +111,8 @@ var wallet: Label
 var metrics: Label
 var pack: Label
 var objects_list: ItemList
+## Left clicks that reached the world (furniture, placement) past the HUD.
+var world_clicks := 0
 var object_info: Label
 var prompt: LineEdit
 var price: SpinBox
@@ -238,7 +245,7 @@ var npcs: Array[Node3D]=[]
 ##   leave()                             the village is about to be torn down
 ## Missing scripts are skipped, so each add-on can land on its own.
 ## story.gd (the opening chapter) comes before shadow_folk.gd: it holds 모카's plan before her walker is placed.
-const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/story.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd","res://scripts/treasure.gd"]
+const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/village_doors.gd","res://scripts/field_objects.gd","res://scripts/story.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd","res://scripts/treasure.gd"]
 var modules: Array[Node]=[]
 var prompt_wait := 0.0
 var chosen_map := "forest"
@@ -258,6 +265,7 @@ func _ready() -> void:
 	I18n.setup()
 	# Window, renderer, buses, key bindings, UI scale (game_settings.gd).
 	GameSettings.apply_all(get_tree())
+	Art.watch_labels(get_tree())
 	var veil := Transition.of(get_tree())
 	# The first load shows the island cover art; a walk out of a room keeps its card. At the game's
 	# start boot.gd (main.tscn's first node) has drawn it already: it stays as it is (same tip).
@@ -356,10 +364,12 @@ func _ready() -> void:
 		if api.token.is_empty(): return
 		social.enabled = social.feature_enabled() and server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
 		await enter_village()
-		player.position=TownLayout.door_return(str(session.get("room","workshop")))
-		follow_camera(1)
-		veil.play_door("close",str(session.get("room","workshop")))
-		veil.fade_in()
+		# The walker steps out of the open door and it shuts behind (village_doors.gd); no door there: the doorstep.
+		if not VillageDoors.walk_out(self,str(session.get("room","workshop")),veil):
+			player.position=TownLayout.door_return(str(session.get("room","workshop")))
+			follow_camera(1)
+			veil.play_door("close",str(session.get("room","workshop")))
+			veil.fade_in()
 	else:
 		# The game opens on its title, which first asks the remembered world whether this version may
 		# play: an update (patch or installer) or the maintenance screen comes before the menu.
@@ -484,6 +494,7 @@ func error_message(code: String) -> String:
 		"registration_closed_today":tr("오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요."),
 		"client_update_required":tr("새 버전을 받아야 계속할 수 있어요."),
 		"server_maintenance":tr("서버 점검 중이에요. 잠시 뒤 다시 들어와 주세요.")}
+	messages.merge(VillageBuild.BuildRules.server_words())
 	if not preload("res://scripts/build_mode.gd").developer():
 		messages.server_update_required=tr("마을을 업데이트하고 있어요. 잠시 뒤 다시 접속해 주세요.")
 	return str(messages.get(code,tr("요청을 완료하지 못했습니다: ")+code if preload("res://scripts/build_mode.gd").developer() else tr("지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.")))
@@ -635,13 +646,13 @@ func login_ui(page := "menu") -> void:
 			# The UI kit 2 menu plates: gold for the way in, night glass for the others.
 			var entries := [RpgUi.menu_button(body,tr("게임 시작"),func(): login_ui("login"),300.0,"MenuGoldButton"),
 				RpgUi.menu_button(body,tr("설정"),func(): login_ui("settings"),300.0,"MenuNightButton"),
-				RpgUi.menu_button(body,tr("게임 종료"),func(): get_tree().quit(),300.0,"MenuNightButton")]
+				RpgUi.menu_button(body,tr("게임 종료"),func(): preload("res://scripts/clean_exit.gd").request_quit(get_tree()),300.0,"MenuNightButton")]
 			# Arrow keys / pad move between the entries; Enter starts.
 			for entry in entries:
 				entry.focus_mode = Control.FOCUS_ALL
 				entry.focus_entered.connect(func(): RpgUi.sfx("hover"))
 				if entry.theme_type_variation=="MenuNightButton": entry.add_theme_color_override("font_focus_color",RpgUi.HOVER)
-			entries[0].grab_focus.call_deferred()
+			entries[0].grab_focus.call_deferred(true)
 		"settings":
 			# Tabbed settings (scripts/settings_menu.gd) over the title art.
 			SettingsMenu.open(ui,func(): login_ui("menu"))
@@ -783,19 +794,27 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		I18n.remember("server",host)
 		I18n.remember("username",username.strip_edges())
 	var veil := Transition.of(get_tree())
-	var at_home: bool = get_tree().current_scene==self
+	# Where the session picks up (server/last_spot.py): a first sign-in, a long time away or a game
+	# ended at home wakes up in the attic bed; otherwise back on the spot in the own village.
+	var resume = result.data.get("resume")
+	var wake: bool = not resume is Dictionary or bool(resume.get("wake",false))
+	var spot = resume.get("spot") if resume is Dictionary and not wake else null
+	var in_village: bool = spot is Dictionary and str(spot.get("scene",""))=="village"
+	var at_home: bool = get_tree().current_scene==self and not in_village
 	veil.loading(TownLayout.room_title("home") if at_home else tr("다섯 섬 마을"),"","room" if at_home else "village")
 	await veil.fade_out()
-	if get_tree().current_scene==self:
+	if at_home:
 		# A new session starts at home; walking out of the front door opens the village.
+		# Waking: the walker gets up from the attic bed (studio.gd, bed_wake.gd); else in at the door.
 		Engine.set_meta("studio_session",{"token":api.token,"url":api.base_url,"room":"home","multiplayer":social.enabled,"profile":me.profile,
-			"username":username.strip_edges().to_lower()})
+			"username":username.strip_edges().to_lower(),"wake":wake})
 		# The title's village map waits outside the tree for the walk out of the home (as open_studio).
 		leave_modules()
 		if is_instance_valid(town): town.release_map()
 		get_tree().change_scene_to_packed(studio_scene())
 		return
 	await enter_village()
+	if in_village: preload("res://scripts/bed_wake.gd").resume_spot(self,spot)
 	veil.fade_in()
 
 ## Under the loading card (LoadPace.covered) the build is paced over frames so the card keeps
@@ -867,6 +886,7 @@ func build_world(survival: bool) -> bool:
 	world.add_child(player)
 	# The carried thing (held_items.gd, #64) comes along into the village.
 	if not survival: preload("res://scripts/held_items.gd").adopt(self, player)
+	if not survival: VillageBuild.PassThrough.for_walker(player)
 	LoadPace.done(0.88)
 	if not survival: await spawn_villagers()
 	if epoch!=world_epoch: return false
@@ -1080,6 +1100,9 @@ func enter_village() -> void:
 	build_inspector()
 	await refresh_inventory()
 	screen = "village"
+	# A long frame makes the next one run up to 8 physics ticks, which makes it long again: in the
+	# village (client physics only) at most 4, so a hitch passes instead of snowballing.
+	Engine.max_physics_steps_per_frame = 4
 	if social.visiting(): social.accept_crops()
 	else: await life.enter()
 	player.controls_enabled = true
@@ -1214,7 +1237,8 @@ func build_village_hud() -> void:
 	plate.content_margin_top = 14
 	plate.content_margin_bottom = 16
 	tracker.add_theme_stylebox_override("panel",plate)
-	tracker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# The card takes clicks on its glass, not the furniture behind it (62).
+	tracker.mouse_filter = Control.MOUSE_FILTER_STOP
 	ui.add_child(tracker)
 	RpgUi.pin(tracker,1.0,0.0)
 	var column := VBoxContainer.new()
@@ -1365,6 +1389,7 @@ func status_meter(parent: Node, title: String, color: Color, icon_name := "") ->
 func refresh_inventory() -> void:
 	# The village is where the craft's news is told now (also while visiting a friend).
 	craft_tracker()
+	home_signs()
 	if social.visiting():
 		if is_instance_valid(wallet):
 			wallet.visible = true
@@ -1395,7 +1420,8 @@ func refresh_inventory() -> void:
 	# Also while the village is still loading (screen "loading"): the walker built before /v1/me
 	# answered wears the saved look now.
 	wear_profile()
-	reward_button.visible=me.get("pending_reward")!=null
+	# The HUD may have been rebuilt while /v1/me was on its way (a busy PC, a window run).
+	if is_instance_valid(reward_button): reward_button.visible=me.get("pending_reward")!=null
 	if is_instance_valid(expedition_button):
 		var saved = me.get("active_run_summary")
 		expedition_button.tooltip_text=(tr("탐험 이어하기 · %d일") % saved.day) if saved is Dictionary else tr("탐험")
@@ -1454,7 +1480,7 @@ func sync_placed(objects: Array, prefix: String="/v1/objects/") -> bool:
 	for obj in objects:
 		var existing = loaded.get(obj.id)
 		if is_instance_valid(existing):
-			existing.position = TownLayout.furniture_point(obj.x,obj.z)
+			existing.position = VillageBuild.spot(obj,objects)
 			existing.rotation_degrees.y = obj.rotation
 			sync_shape(existing,obj)
 			var kept: bool=await sync_runtime(existing,obj,prefix)
@@ -1470,7 +1496,7 @@ func sync_placed(objects: Array, prefix: String="/v1/objects/") -> bool:
 			continue
 		asset.set_meta("object_key",object_key(obj))
 		object_root.add_child(asset)
-		asset.position = TownLayout.furniture_point(obj.x,obj.z)
+		asset.position = VillageBuild.spot(obj,objects)
 		asset.rotation_degrees.y = obj.rotation
 		Loader.add_collision(asset)
 		loaded[obj.id] = asset
@@ -1550,7 +1576,8 @@ func poll_entitlements() -> void:
 	var story := chapter()
 	if story: story.adopt(result.data.get("story"))
 	if story: story.adopt_quests(result.data.get("quests"))
-	if objects_signature(result.data.objects)!=objects_signature(me.objects) or result.data.shards!=me.shards:
+	# Back from a room, `me` holds only the look until the first refresh answers.
+	if objects_signature(result.data.objects)!=objects_signature(me.get("objects",[])) or result.data.shards!=me.get("shards",-1):
 		cancel_preview()
 		await refresh_inventory()
 
@@ -1745,7 +1772,9 @@ func begin_place() -> void:
 	cancel_preview()
 	if is_instance_valid(shape_panel): shape_panel.close()
 	busy = true
+	var ring := LoadRing.start(ui)
 	preview = await load_object(selected)
+	LoadRing.finish(ring)
 	busy = false
 	if preview:
 		world.add_child(preview)
@@ -1754,7 +1783,8 @@ func begin_place() -> void:
 		preview_follow=not moving
 		preview_mouse=get_viewport().get_mouse_position()
 		if moving:
-			preview.position=TownLayout.furniture_point(selected.x,selected.z)
+			preview.position=VillageBuild.spot(selected,me.objects)
+			VillageBuild.resume_stack(self)
 			if is_instance_valid(loaded.get(preview_moving)): loaded[preview_moving].visible=false
 		preview.rotation_degrees.y=preview_rotation
 		# A ground disc shows whether the spot is free: green to place, red when blocked.
@@ -1825,11 +1855,13 @@ func show_turn_hud(on: bool) -> void:
 ## Mirrors homestead.village_inside/village_reserved and adds the map's own geometry.
 func placement_problem() -> String:
 	var p := TownLayout.furniture_local(preview.position)
+	var build_problem := VillageBuild.placement_problem(self)
+	if not build_problem.is_empty(): return build_problem
 	if p.x< -60 or p.x>130 or p.y< -115 or p.y>60: return tr("섬 안쪽에 놓아 주세요.")
 	if preview.position.y<TownLayout.SHORE_MIN_Y+.5: return tr("물 위에는 놓을 수 없어요.")
 	if absf(p.x)<2 and absf(p.y)<2: return tr("광장 한가운데는 비워 주세요.")
 	if absf(p.x)<3.5 and p.y> -12 and p.y< -6: return tr("공방 입구 앞은 비워 주세요.")
-	if Vector2(player.position.x-preview.position.x,player.position.z-preview.position.z).length()<1.3:
+	if not VillageBuild.stacking(self) and Vector2(player.position.x-preview.position.x,player.position.z-preview.position.z).length()<1.3:
 		return tr("캐릭터와 겹치지 않는 곳에 놓으세요.")
 	var span: Vector3=preview.get_meta("size",Vector3.ONE)
 	var box := BoxShape3D.new();box.size=Vector3(maxf(span.x,.4),maxf(span.y-.1,.2),maxf(span.z,.4))
@@ -1852,6 +1884,9 @@ func place_preview() -> void:
 	var problem := placement_problem()
 	if not problem.is_empty():
 		refuse(problem)
+		return
+	if VillageBuild.stacking(self):
+		await VillageBuild.place_stacked(self)
 		return
 	if not preview_moving.is_empty():
 		if await move_object(p):
@@ -2031,6 +2066,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	await LoadPace.step("expedition hud")
 	clear_ui()
 	screen="survival"
+	Engine.max_physics_steps_per_frame = 8
 	player.controls_enabled=false
 	left=panel(Vector2(20,20),256,"night")
 	var region_head := HBoxContainer.new()
@@ -2621,7 +2657,7 @@ func confirm_return() -> void:
 		leave_run(),"primary","lg",true)
 	var stay := RpgUi.button(row,tr("계속 생존하기"),func(): RpgUi.close_window(w),"night","lg",true)
 	for b in [leave,stay]: b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	stay.grab_focus.call_deferred()
+	stay.grab_focus.call_deferred(true)
 
 ## Esc in survival: the pause menu (scripts/pause_menu.gd). Opening it sets paused
 ## and clears the pending action exactly as before, so tick_run sends nothing.
@@ -3080,11 +3116,13 @@ func _process(delta: float) -> void:
 				elif not module_entry.is_empty(): prompt_text=key+str(module_entry.get("prompt",""))
 				elif not prop.is_empty(): prompt_text=key+town.prop_prompt(prop)
 				elif near(TownLayout.GATE,3): prompt_text=key+tr("탐험 떠나기")
-				elif near(TownLayout.HOME_DOOR,2): prompt_text=key+tr("나의 집 들어가기")
+				elif near(TownLayout.HOME_DOOR,2): prompt_text=key+(tr("%s님의 집 들어가기") % str(social.data.get("host_name",tr("친구"))) if social.visiting() else tr("나의 집 들어가기"))
 				elif near(TownLayout.WORKSHOP_DOOR,2.5): prompt_text=key+tr("별씨 공방 들어가기")
 				elif not nearest_furniture().is_empty(): prompt_text=key+{"sit":tr("앉기"),"lie":tr("눕기")}.get(str(loaded[nearest_furniture()].get("rest")),tr("가구 사용하기"))
 				if is_instance_valid(seat) and seat.resting(): prompt_text=key+tr("일어나기")
 				if is_instance_valid(village_modal): prompt_text=""
+				# Walking through a door (village_doors.gd): no prompt over it.
+				if VillageDoors.walking(self): prompt_text=""
 				if str(hint.get_meta("prompt",""))!=prompt_text:
 					# The chip ticks very softly as it appears (RpgUi.prompt, every place alike).
 					RpgUi.set_prompt(hint,prompt_text)
@@ -3108,12 +3146,14 @@ func _process(delta: float) -> void:
 			# A picked-up object stays put (to turn it in place) until the pointer moves.
 			if not preview_follow and mouse.distance_to(preview_mouse)>8: preview_follow=true
 			var origin := camera.project_ray_origin(mouse)
-			var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+camera.project_ray_normal(mouse)*400,1|2|8)) if preview_follow else {}
+			var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+camera.project_ray_normal(mouse)*400,1|2|8|VillageBuild.CRAFTED,VillageBuild.rids(loaded.get(preview_moving,null)))) if preview_follow else {}
 			# A new piece's ghost has no spot of its own until the pointer first puts it on the ground:
 			# that frame (and the ones before it) stay silent, it only takes its colour.
 			var first_spot := not preview.has_meta("ghost_spot")
-			# Only open ground takes furniture; buildings, bridges and props keep the last spot.
-			if not hit.is_empty() and hit.collider is CollisionObject3D and hit.collider.collision_layer&1:
+			# On top of one of your pieces (village_build.gd), else only open ground takes furniture;
+			# buildings, bridges and props keep the last spot.
+			if preview_follow and VillageBuild.follow(self,hit): pass
+			elif not hit.is_empty() and hit.collider is CollisionObject3D and hit.collider.collision_layer&1:
 				var local := TownLayout.furniture_local(hit.position).snapped(Vector2(0.5,0.5))
 				var cell := TownLayout.furniture_point(local.x,local.y)
 				# A faint tick when the ghost lands on a new 0.5 m cell (at most ~11 a second).
@@ -3263,6 +3303,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				KEY_H: intent("heal")
 				KEY_SPACE: intent("attack")
 		elif screen=="village":
+			if key==KEY_V: VillageBuild.toggle_pass(self)
 			if key==KEY_TAB: life.open_map()
 			if key==KEY_B: life.open_storage()
 			if key==KEY_F9 and preload("res://scripts/build_mode.gd").admin: open_admin()
@@ -3276,8 +3317,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif key==KEY_E and near(TownLayout.WORKSHOP_DOOR,2.5): open_studio()
 			elif key==KEY_E: village_furniture_event(nearest_furniture(),"click")
 	if screen=="village" and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
+		# Counted for tests/hud_click_tour.gd: a click on the HUD must never get here.
+		world_clicks+=1
 		if is_instance_valid(preview): place_preview()
 		else: click_furniture(event.position)
+	if screen=="village" and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_RIGHT:
+		VillageBuild.right_click(self,event.position)
 
 func region_name(id: String) -> String:
 	var known: Dictionary={"forest":tr("솔바람 숲"),"quarry":tr("노을 채석장"),"frost":tr("서리빛 분지")}
@@ -3382,8 +3427,23 @@ func answer_social_invite(invitation: Dictionary, decision: String) -> void:
 func follow_visit() -> void:
 	social.poll()
 
+## The star-seed balance from a presence reply (social_hud.gd ingest): the frame's counter rolls
+## to it with the "+N" pop, so a sale or a grant shows without reloading the village.
+func live_shards(shards: int) -> void:
+	if me.is_empty() or int(me.get("shards",-1))==shards: return
+	me.shards = shards
+	if frame.has("stars") and is_instance_valid(frame.stars): RpgUi.count_to(frame.stars,shards)
+
+## The house's signs (the sign over the door, the mailbox) say whose house it is: 나의 집 at home,
+## "<owner>님의 집" while visiting.
+func home_signs() -> void:
+	var host := str(social.data.get("host_name",tr("친구")))
+	for sign in get_tree().get_nodes_in_group("home_sign"):
+		if not sign.has_meta("mine"): sign.set_meta("mine",sign.text)
+		sign.text = tr(str(sign.get_meta("visit"))) % host if social.visiting() else str(sign.get_meta("mine"))
+
 func chat_bubble(user_id: String, username: String, text: String) -> void:
-	if screen=="village": social.bubble(user_id, username, text)
+	if screen in ["village","survival"]: social.bubble(user_id, username, text)
 
 ## The window-stack description of a village modal (the craft window holds its window one level
 ## down, under the notes' lane), so its opening key can close it.
@@ -3843,17 +3903,19 @@ func open_studio(destination: String="workshop") -> void:
 			# The host's home opens only while the host is inside (server/home_access.py).
 			var shut: String=preload("res://scripts/home_door.gd").refusal(social.data.get("home"))
 			if not shut.is_empty():
-				refuse(shut)
+				preload("res://scripts/home_door.gd").refuse_at_door(self,social.data)
 				return
 			session.visit_host=str(social.data.get("host_id",""))
 			session.visit_name=str(social.data.get("host_name",tr("친구")))
-	if busy or api.token.is_empty(): return
+	if busy or api.token.is_empty() or VillageDoors.walking(self): return
 	Engine.set_meta("studio_session",session)
 	var veil := Transition.of(get_tree())
-	veil.play_door("open",destination)
 	player.controls_enabled=false
 	veil.loading(tr("%s님의 집") % str(session.visit_name) if session.has("visit_name") else TownLayout.room_title(destination),"","room")
-	await veil.fade_out()
+	# Near the door the walker turns to it, the door swings open and it walks in under the fade (village_doors.gd).
+	if not await VillageDoors.walk_in(self,destination,veil):
+		veil.play_door("open",destination)
+		await veil.fade_out()
 	leave_modules()
 	if is_instance_valid(town): town.release_map()
 	get_tree().change_scene_to_packed(studio_scene())

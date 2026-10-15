@@ -51,7 +51,7 @@ static func _add(slot: Control) -> void:
 	dot.size = dot.custom_minimum_size
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dot.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	dot.offset_left = -14; dot.offset_right = 6; dot.offset_top = -8; dot.offset_bottom = 12
+	dot.offset_left = -24; dot.offset_right = -4; dot.offset_top = -8; dot.offset_bottom = 12
 	dot.pivot_offset = Vector2(10, 10)
 	slot.add_child(dot)
 	if RpgUi.calm(): return

@@ -23,7 +23,9 @@ def account(c, name, password='Quest-test-password'):
 
 
 def make(tmp_path, now, **kw):
-    settings = Settings(data_dir=tmp_path, daily_generation_limit=100, user_daily_generation_limit=50, **kw)
+    # Night-eligibility tests advance the real reward clock across multiple calendar days.
+    settings = Settings(data_dir=tmp_path, daily_generation_limit=100, user_daily_generation_limit=50,
+                        session_seconds=7 * 86400, **kw)
     return create_app(settings, clock=lambda: now[0], worker_enabled=False)
 
 
@@ -153,6 +155,11 @@ def local(h, now, hour):
     return {**h, 'X-Villagen-UTC-Offset': str(int(round(shift * 60)))}
 
 
+def reward_hour(now, hour):
+    """Advance the server clock to this hour in these accounts' fixed Korea time zone."""
+    now[0] += (hour * 3600 - (now[0] + homestead.KST * 3600) % 86400) % 86400
+
+
 def mine(c, h, name=None, ident=None):
     return next(o for o in c.get('/v1/me', headers=h).json()['objects'] if (name and o['name'] == name) or (ident and o['id'] == ident))
 
@@ -194,8 +201,9 @@ def test_every_request_runs_from_offer_to_one_reward(world):
         elif kind in ('visit', 'talk'):
             for spot in rule['places'][:rule['count']]:
                 now[0] += 5
-                # Night errands are reported by a player whose clock says 21:00.
-                r = c.post('/v1/quests/%s/progress' % quest_id, headers=local(h, now, 21) if rule.get('night') else h, json=mutation(place=spot))
+                if rule.get('night'):
+                    reward_hour(now, 21)
+                r = c.post('/v1/quests/%s/progress' % quest_id, headers=h, json=mutation(place=spot))
                 assert r.status_code == 200, r.text
         elif kind == 'outfit':
             look = c.get('/v1/me', headers=h).json()['profile']
@@ -279,15 +287,21 @@ def test_night_errands_and_messages(world):
     app, c, now = world
     h = account(c, 'nightowl')
     free(app)
-    # The player's own clock decides (the time zone header): 13:00 is day, 21:00 and 03:00 are night.
+    # The account's fixed clock decides: a forged night header cannot complete a day visit.
+    reward_hour(now, 13)
     accept(c, h, 'saebyeok_walk')
     walk = lambda hour: c.post('/v1/quests/saebyeok_walk/progress', headers=local(h, now, hour), json=mutation(place='lighthouse_pier'))
     assert walk(13).json()['detail'] == 'quest_not_night'
-    assert walk(21).json()['quest']['state'] == 'ready'
+    assert walk(21).json()['detail'] == 'quest_not_night'
+    reward_hour(now, 21)
+    assert walk(13).json()['quest']['state'] == 'ready'
+    reward_hour(now, 7)
     accept(c, h, 'haneul_stars')
     stars = lambda hour: c.post('/v1/quests/haneul_stars/progress', headers=local(h, now, hour), json=mutation(place='observatory'))
     assert stars(7).json()['detail'] == 'quest_not_night'
-    assert stars(3).json()['quest']['state'] == 'ready'
+    assert stars(3).json()['detail'] == 'quest_not_night'
+    reward_hour(now, 3)
+    assert stars(7).json()['quest']['state'] == 'ready'
     # 윤재's regards go to 가람 only.
     accept(c, h, 'yunjae_regards')
     assert visit(c, h, 'sora', 'yunjae_regards').status_code == 422
@@ -504,19 +518,23 @@ def test_a_request_taken_at_its_place_counts_it_at_once(world):
     """하늘 is in her observatory at night: taking her request in there is the visit itself."""
     app, c, now = world
     h = account(c, 'inside')
+    c.get('/v1/me', headers=h)  # Fix the account clock before trying forged headers.
     free(app)
-    taken = c.post('/v1/quests/haneul_stars/accept', headers=local(h, now, 22), json=mutation(place='observatory'))
+    reward_hour(now, 22)
+    taken = c.post('/v1/quests/haneul_stars/accept', headers=local(h, now, 13), json=mutation(place='observatory'))
     assert taken.status_code == 200, taken.text
     assert taken.json()['quest']['state'] == 'ready' and taken.json()['quest']['visited'] == ['observatory']
     assert complete(c, h, 'haneul_stars').json()['stars'] == quests.STARS['haneul_stars']
     # By day the place does not count (a night errand), and another request's place never does.
     other = account(c, 'daytime')
+    c.get('/v1/me', headers=other)
     free(app)
-    assert c.post('/v1/quests/saebyeok_walk/accept', headers=local(other, now, 13), json=mutation(place='lighthouse_pier')).json()['quest']['state'] == 'active'
+    reward_hour(now, 13)
+    assert c.post('/v1/quests/saebyeok_walk/accept', headers=local(other, now, 21), json=mutation(place='lighthouse_pier')).json()['quest']['state'] == 'active'
     assert c.post('/v1/quests/garam_lookout/accept', headers=other, json=mutation(place='observatory')).json()['quest']['have'] == 0
     assert c.post('/v1/quests/naru_islands/accept', headers=other, json=mutation(place='Square')).status_code == 422
     # Counted at night later as before.
-    now[0] += 10
+    reward_hour(now, 21)
     walk = c.post('/v1/quests/saebyeok_walk/progress', headers=local(other, now, 21), json=mutation(place='lighthouse_pier'))
     assert walk.json()['quest']['state'] == 'ready'
 

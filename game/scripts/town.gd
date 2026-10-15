@@ -9,6 +9,7 @@ const LoadPace=preload("res://scripts/load_pace.gd")
 const Fx=preload("res://scripts/fx.gd")
 const TreeFruit=preload("res://scripts/tree_fruit.gd")
 const IxData=preload("res://scripts/ix/ix_data.gd")
+const Plots=preload("res://maps/archipelago/plots.gd")
 ## Sea level guard for walkers: below this the body returns to its last ground.
 const SHORE_MIN_Y := 0.45
 ## Town green on the south-west island. Players start here.
@@ -59,12 +60,14 @@ const DOORS := [
 	{"id":"13_shop","room":"13_shop","title":"잡화점","at":Vector2(-17.9,29.9),"center":Vector2(-17,28)},
 	{"id":"16_blue_cottage","room":"16_blue_cottage","title":"파란 지붕 오두막","at":Vector2(70.05,55.8),"center":Vector2(70,52)},
 	{"id":"17_lighthouse","room":"17_lighthouse","title":"등대","at":Vector2(7,80.6),"center":Vector2(7,78)},
+	{"id":"18_meadow_house","room":"18_meadow_house","title":"풍차 언덕 하숙집","at":Vector2(-22.9,-51.9),"center":Vector2(-20.5,-54.5)},
 ]
 
 static func door_for(room: String) -> Dictionary:
 	for door in DOORS:
 		if door.room==room: return door
-	return {}
+	# Plot houses (maps/archipelago/plots.gd) have their doors only while built.
+	return Plots.door_for(room)
 
 ## The building's name for a room id ("home" -> "나의 집"), translated; "" if none.
 static func room_title(room: String) -> String:
@@ -162,8 +165,14 @@ func _ready() -> void:
 		await roads.build(space,map.get_node_or_null("Environment"))
 		await LoadPace.step("town")
 	index_props()
+	# Building plots (단비's lot): stakes or the house story code turned on.
+	await Plots.install(self,space)
 	var home := point(HOME_DOOR)
-	A.label3d(self,tr("나의 집 · E 들어가기"),home+Vector3(0,3.4,0),Color("f5e5b7"))
+	# The owner's name goes on the sign while visiting (main.gd home_signs); the group is saved with
+	# the baked island (persistent).
+	var home_sign := A.label3d(self,tr("나의 집 · E 들어가기"),home+Vector3(0,3.4,0),Color("f5e5b7"))
+	home_sign.add_to_group("home_sign",true)
+	home_sign.set_meta("visit","%s님의 집 · E 들어가기")
 	A.label3d(self,tr("별씨 공방 · E 들어가기"),point(WORKSHOP_DOOR)+Vector3(0,3.6,0),Color("fff1c8"))
 	for i in mini(3,story_progress):
 		var at := point(HOME_DOOR+Vector2(-2.2+i*1.6,1.6),.25)

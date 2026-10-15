@@ -1,0 +1,3585 @@
+{
+  "project_root": "game",
+  "blockers": 279,
+  "warnings": 232,
+  "findings": [
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 11,
+      "message": "Resource path does not exist in the tree: res://assets/interior/bed.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 43,
+      "message": "Resource path does not exist in the tree: res://assets/interior/wardrobe_closet.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 75,
+      "message": "Resource path does not exist in the tree: res://assets/interior/bookshelf.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 107,
+      "message": "Resource path does not exist in the tree: res://assets/interior/dining_table.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 139,
+      "message": "Resource path does not exist in the tree: res://assets/interior/wooden_chair.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 171,
+      "message": "Resource path does not exist in the tree: res://assets/interior/sofa.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 203,
+      "message": "Resource path does not exist in the tree: res://assets/interior/kitchen_counter.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 235,
+      "message": "Resource path does not exist in the tree: res://assets/interior/cooking_stove.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 267,
+      "message": "Resource path does not exist in the tree: res://assets/interior/potted_plant.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 299,
+      "message": "Resource path does not exist in the tree: res://assets/interior/floor_lamp.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 331,
+      "message": "Resource path does not exist in the tree: res://assets/interior/shop_counter.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 363,
+      "message": "Resource path does not exist in the tree: res://assets/interior/display_shelf.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 395,
+      "message": "Resource path does not exist in the tree: res://assets/interior/crate_stack.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 427,
+      "message": "Resource path does not exist in the tree: res://assets/interior/barrel.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 459,
+      "message": "Resource path does not exist in the tree: res://assets/interior/workbench.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 491,
+      "message": "Resource path does not exist in the tree: res://assets/interior/telescope.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 523,
+      "message": "Resource path does not exist in the tree: res://assets/interior/seedling_bench.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 555,
+      "message": "Resource path does not exist in the tree: res://assets/interior/cafe_counter.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 587,
+      "message": "Resource path does not exist in the tree: res://assets/interior/round_cafe_table.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 619,
+      "message": "Resource path does not exist in the tree: res://assets/interior/piano.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 651,
+      "message": "Resource path does not exist in the tree: res://assets/interior/fireplace.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 683,
+      "message": "Resource path does not exist in the tree: res://assets/interior/lighthouse_lens.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 715,
+      "message": "Resource path does not exist in the tree: res://assets/interior/rug.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/interior/manifest.json",
+      "line": 750,
+      "message": "Resource path does not exist in the tree: res://assets/interior/wall_clock.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 20,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/wolf_forest.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 146,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/boar_forest.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 272,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/brute_forest.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 433,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/wisp_forest.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 581,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/shroom_forest.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 729,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/wolf_quarry.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 857,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/boar_quarry.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 985,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/brute_quarry.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 1143,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/wisp_quarry.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 1295,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/shroom_quarry.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 1447,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/wolf_frost.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 1571,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/boar_frost.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 1695,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/brute_frost.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 1849,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/wisp_frost.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "assets/monsters/manifest.json",
+      "line": 1997,
+      "message": "Resource path does not exist in the tree: res://assets/monsters/shroom_frost.glb"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 5,
+      "message": "Dynamic path 'res://maps/archipelago/assets/archipelago_terrain_environment_v1.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 26,
+      "message": "Dynamic path 'res://maps/archipelago/building_placements.json': 1 matching file(s); examples: res://maps/archipelago/building_placements.json. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 29,
+      "message": "Dynamic path 'res://maps/archipelago/environment_layout.json': 1 matching file(s); examples: res://maps/archipelago/environment_layout.json. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 33,
+      "message": "Dynamic path 'res://maps/archipelago/assets/prop_lods/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 46,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v3/*_surface_normal.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 49,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 153,
+      "message": "Dynamic path 'res://maps/archipelago/building_layout.gd': 1 matching file(s); examples: res://maps/archipelago/building_layout.gd. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 174,
+      "message": "Dynamic path 'res://maps/archipelago/*': 65 matching file(s); examples: res://maps/archipelago/archipelago.gd, res://maps/archipelago/archipelago.gd.uid, res://maps/archipelago/bridge_timber.gdshader. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 176,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v3/*_surface_normal.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 177,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/current_field.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 178,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/coast_field.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 179,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/shore_distance.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 180,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/organic_foam.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 187,
+      "message": "Dynamic path 'res://maps/archipelago/*': 65 matching file(s); examples: res://maps/archipelago/archipelago.gd, res://maps/archipelago/archipelago.gd.uid, res://maps/archipelago/bridge_timber.gdshader. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 189,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v3/pond_surface_normal.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 190,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/organic_foam.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 197,
+      "message": "Dynamic path 'res://maps/archipelago/waterfall_splash.gdshader': 1 matching file(s); examples: res://maps/archipelago/waterfall_splash.gdshader. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 199,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/organic_foam.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 208,
+      "message": "Dynamic path 'res://maps/archipelago/ground_surface.gdshader': 1 matching file(s); examples: res://maps/archipelago/ground_surface.gdshader. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 212,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 213,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/grass_detail_normal.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 214,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/sand_detail_normal.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 215,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/headland_normals.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 219,
+      "message": "Dynamic path 'res://maps/archipelago/rock_surface.gdshader': 1 matching file(s); examples: res://maps/archipelago/rock_surface.gdshader. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 220,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/rock_detail.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/archipelago.gd",
+      "line": 225,
+      "message": "Dynamic path 'res://maps/archipelago/environment_layout.gd': 1 matching file(s); examples: res://maps/archipelago/environment_layout.gd. Runtime values remain unchecked."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_layout.gd",
+      "line": 10,
+      "message": "Resource path does not exist in the tree: res://../art/maps/archipelago_placement_v1/"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/building_layout.gd",
+      "line": 237,
+      "message": "Dynamic path 'res://../art/maps/archipelago_placement_v1/placement_verification.json': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/building_layout.gd",
+      "line": 265,
+      "message": "Dynamic path 'res://../art/maps/archipelago_placement_v1/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 12,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/cafe.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 76,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/timber_house.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 140,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/teal_cottage.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 204,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/windmill.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 268,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/observatory.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 332,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/orange_cottage.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 396,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/greenhouse.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 460,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/gazebo.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 524,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/town_hall.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 588,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/red_house.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 652,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/purple_house.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 716,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/blue_house.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 780,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/shop.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 844,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/stage.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 897,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/picnic_shelter.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 961,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/blue_cottage.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 1025,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/lighthouse.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/building_placements.json",
+      "line": 1089,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/blue_house.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 9,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/cafe.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 83,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/timber_house.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 153,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/teal_cottage.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 247,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/windmill.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 341,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/observatory.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 387,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/orange_cottage.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 473,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/greenhouse.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 519,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/town_hall.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 565,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/red_house.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 631,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/purple_house.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 729,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/blue_house.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 819,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/shop.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 865,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/blue_cottage.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 951,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/lighthouse.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.gd",
+      "line": 20,
+      "message": "Resource path does not exist in the tree: res://../art/maps/archipelago_environment_v1/"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/environment_layout.gd",
+      "line": 30,
+      "message": "Dynamic path 'res://../*/': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/environment_layout.gd",
+      "line": 77,
+      "message": "Dynamic path 'res://maps/archipelago/assets/prop_lods/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/environment_layout.gd",
+      "line": 132,
+      "message": "Dynamic path 'res://../*/': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/environment_layout.gd",
+      "line": 216,
+      "message": "Dynamic path 'res://maps/archipelago/assets/prop_lods/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 10,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/bridge_short.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 41,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/bridge_long.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 72,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/tent_orange.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 103,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/tent_green.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 134,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/firepit.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 165,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/bench.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 196,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/lamp.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 238,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/round_tree.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 269,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/conifer.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 300,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/palm.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 331,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/shrub.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 362,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/white_flowers.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 393,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/yellow_flowers.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 424,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/bridge_rope.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 455,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/bridge_boardwalk.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 486,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/pier.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 517,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/boat.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 548,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/picnic_table.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 579,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/beach_umbrella.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 610,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/beach_lounger.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 641,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/cafe_umbrella.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 672,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/cafe_table.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 703,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/cafe_chair.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 734,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/signboard.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 765,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/timber_fence.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 796,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/picket_fence.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 827,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/speaker.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 858,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/planter.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 889,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/pink_flowers.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 920,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/reeds.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 8323,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/fitted_bridges/18_bridge_short.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 8567,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/fitted_bridges/49_bridge_boardwalk.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 8816,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/fitted_bridges/48_bridge_rope.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 9060,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/fitted_bridges/19_bridge_long.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/island_bake.gd",
+      "line": 26,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/generated/"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/island_bake.gd",
+      "line": 27,
+      "message": "Dynamic path 'res://maps/archipelago/generated/manifest.json': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/island_bake.gd",
+      "line": 28,
+      "message": "Dynamic path 'res://maps/archipelago/generated/collision.res': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/island_bake.gd",
+      "line": 29,
+      "message": "Dynamic path 'res://maps/archipelago/generated/island.scn': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/island_bake.gd",
+      "line": 30,
+      "message": "Dynamic path 'res://maps/archipelago/generated/ground.scn': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/island_bake.gd",
+      "line": 42,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/archipelago/island_bake.gd",
+      "line": 108,
+      "message": "Dynamic path 'res://maps/archipelago/assets/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/archipelago/plots.gd",
+      "line": 27,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/buildings/teal_cottage.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 10,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/pine_tall.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 11,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/pine_tall_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 32,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/oak_broad.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 33,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/oak_broad_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 54,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/birch_slim.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 55,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/birch_slim_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 76,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/bush_round.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 77,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/bush_round_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 98,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/berry_bush.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 99,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/berry_bush_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 120,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/fiber_grass.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 121,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/fiber_grass_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 142,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/stone_pile.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 143,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/stone_pile_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 164,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/fern_clump.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 165,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/fern_clump_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 186,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/mushroom_cluster.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 187,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/mushroom_cluster_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 208,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/fallen_log.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 209,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/fallen_log_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 230,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/tree_stump.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 231,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/tree_stump_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 252,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/mossy_boulder.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 253,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/mossy_boulder_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 274,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/signpost.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 275,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/signpost_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 296,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/log_bench.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 297,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/log_bench_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 318,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/camp_supplies.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 319,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/camp_supplies_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 340,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/firewood_pile.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 341,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/firewood_pile_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 362,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/forest_ruin.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 363,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/forest_ruin_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 384,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/sandstone_cliff.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 385,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/sandstone_cliff_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 406,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/sandstone_boulder.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 407,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/sandstone_boulder_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 428,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/cut_blocks.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 429,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/cut_blocks_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 450,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/mine_cart.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 451,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/mine_cart_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 472,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/quarry_crane.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 473,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/quarry_crane_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 494,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/dead_tree.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 495,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/dead_tree_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 516,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/dry_shrub.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 517,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/dry_shrub_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 538,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/ember_rock.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 539,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/ember_rock_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 560,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/tool_rack.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 561,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/tool_rack_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 582,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/snow_pine.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 583,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/snow_pine_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 604,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/ice_crystal.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 605,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/ice_crystal_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 626,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/snow_boulder.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 627,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/snow_boulder_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 648,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/frost_shrub.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 649,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/frost_shrub_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 670,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/snowman.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 671,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/snowman_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 692,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/sled.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 693,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/sled_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 714,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/sled_empty.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 715,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/sled_empty_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 736,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/snow_fence.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 737,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/snow_fence_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 758,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/frost_shrine.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/assets/manifest.json",
+      "line": 759,
+      "message": "Resource path does not exist in the tree: res://maps/survival/assets/frost_shrine_lod1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/survival_bake.gd",
+      "line": 34,
+      "message": "Resource path does not exist in the tree: res://maps/survival/generated/"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_bake.gd",
+      "line": 56,
+      "message": "Dynamic path 'res://maps/survival/generated/survival_*.res': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 14,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 15,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/v5/"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 159,
+      "message": "Dynamic path 'res://maps/survival/layouts.json': 1 matching file(s); examples: res://maps/survival/layouts.json. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 221,
+      "message": "Dynamic path 'res://maps/archipelago/assets/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 222,
+      "message": "Dynamic path 'res://maps/survival/assets/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 222,
+      "message": "Dynamic path 'res://maps/survival/assets/*_lod1.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 514,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 515,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/grass_detail_normal.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 516,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/sand_detail_normal.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 517,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v5/rock_detail_normal.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 595,
+      "message": "Dynamic path 'res://maps/archipelago/assets/v3/pond_surface_normal.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "maps/survival/survival_map.gd",
+      "line": 986,
+      "message": "Dynamic path 'res://maps/survival/assets/sled_empty.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/build/placed_menu.gd",
+      "line": 83,
+      "message": "Dynamic path 'res://assets/ui/*.svg': 52 matching file(s); examples: res://assets/ui/admin.svg, res://assets/ui/bag.svg, res://assets/ui/book.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/chat_box.gd",
+      "line": 226,
+      "message": "InputMap.has_action uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/chat_box.gd",
+      "line": 295,
+      "message": "Dynamic path 'res://assets/ui/icons/crown.png*': 2 matching file(s); examples: res://assets/ui/icons/crown.png, res://assets/ui/icons/crown.png.import. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/combat_audio.gd",
+      "line": 128,
+      "message": "Dynamic path 'res://assets/sfx/combat/*': 596 matching file(s); examples: res://assets/sfx/combat/bandage_1.wav, res://assets/sfx/combat/bandage_1.wav.import, res://assets/sfx/combat/bandage_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/combat_audio.gd",
+      "line": 178,
+      "message": "Dynamic path 'res://assets/sfx/combat/*': 596 matching file(s); examples: res://assets/sfx/combat/bandage_1.wav, res://assets/sfx/combat/bandage_1.wav.import, res://assets/sfx/combat/bandage_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/combat_audio.gd",
+      "line": 273,
+      "message": "Dynamic path 'res://assets/sfx/combat/heartbeat_loop.wav': 1 matching file(s); examples: res://assets/sfx/combat/heartbeat_loop.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/combat_audio.gd",
+      "line": 319,
+      "message": "Dynamic path 'res://assets/sfx/combat/campfire_loop.wav': 1 matching file(s); examples: res://assets/sfx/combat/campfire_loop.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/controller_profile.gd",
+      "line": 30,
+      "message": "InputMap.has_action uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/controller_profile.gd",
+      "line": 31,
+      "message": "InputMap.add_action uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/controller_profile.gd",
+      "line": 34,
+      "message": "InputMap.action_add_event uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/creature_audio.gd",
+      "line": 199,
+      "message": "Dynamic path 'res://assets/sfx/creatures/layer_*_*': 60 matching file(s); examples: res://assets/sfx/creatures/layer_forest_accent_1.wav, res://assets/sfx/creatures/layer_forest_accent_1.wav.import, res://assets/sfx/creatures/layer_forest_accent_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/creature_audio.gd",
+      "line": 219,
+      "message": "Dynamic path 'res://assets/sfx/creatures/step_*': 76 matching file(s); examples: res://assets/sfx/creatures/step_flutter_1.wav, res://assets/sfx/creatures/step_flutter_1.wav.import, res://assets/sfx/creatures/step_flutter_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/creature_audio.gd",
+      "line": 241,
+      "message": "Dynamic path 'res://assets/sfx/creatures/*_*': 2374 matching file(s); examples: res://assets/sfx/creatures/basilisk_alert_1.wav, res://assets/sfx/creatures/basilisk_alert_1.wav.import, res://assets/sfx/creatures/basilisk_alert_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/creature_audio.gd",
+      "line": 273,
+      "message": "Dynamic path 'res://assets/sfx/creatures/*_*': 2374 matching file(s); examples: res://assets/sfx/creatures/basilisk_alert_1.wav, res://assets/sfx/creatures/basilisk_alert_1.wav.import, res://assets/sfx/creatures/basilisk_alert_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/creature_audio.gd",
+      "line": 274,
+      "message": "Dynamic path 'res://assets/sfx/creatures/*': 2374 matching file(s); examples: res://assets/sfx/creatures/basilisk_alert_1.wav, res://assets/sfx/creatures/basilisk_alert_1.wav.import, res://assets/sfx/creatures/basilisk_alert_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/creature_audio.gd",
+      "line": 275,
+      "message": "Dynamic path 'res://assets/sfx/creatures/*_*_forest': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/creature_audio.gd",
+      "line": 297,
+      "message": "Dynamic path 'res://assets/sfx/creatures/step_*': 76 matching file(s); examples: res://assets/sfx/creatures/step_flutter_1.wav, res://assets/sfx/creatures/step_flutter_1.wav.import, res://assets/sfx/creatures/step_flutter_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/creature_audio.gd",
+      "line": 299,
+      "message": "Dynamic path 'res://assets/sfx/creatures/layer_*_*': 60 matching file(s); examples: res://assets/sfx/creatures/layer_forest_accent_1.wav, res://assets/sfx/creatures/layer_forest_accent_1.wav.import, res://assets/sfx/creatures/layer_forest_accent_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/field_objects.gd",
+      "line": 24,
+      "message": "Dynamic path 'res://assets/sfx/field/*.wav': 174 matching file(s); examples: res://assets/sfx/field/arrive_1.wav, res://assets/sfx/field/arrive_2.wav, res://assets/sfx/field/arrive_3.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/field_objects.gd",
+      "line": 321,
+      "message": "Dynamic path 'res://assets/sfx/field/*.wav': 174 matching file(s); examples: res://assets/sfx/field/arrive_1.wav, res://assets/sfx/field/arrive_2.wav, res://assets/sfx/field/arrive_3.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/field_objects.gd",
+      "line": 1456,
+      "message": "Dynamic path 'res://assets/sfx/field/*.wav': 174 matching file(s); examples: res://assets/sfx/field/arrive_1.wav, res://assets/sfx/field/arrive_2.wav, res://assets/sfx/field/arrive_3.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/game_settings.gd",
+      "line": 517,
+      "message": "InputMap.add_action uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/game_settings.gd",
+      "line": 517,
+      "message": "InputMap.has_action uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/game_settings.gd",
+      "line": 518,
+      "message": "InputMap.action_get_events uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/game_settings.gd",
+      "line": 519,
+      "message": "InputMap.action_erase_event uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/game_settings.gd",
+      "line": 524,
+      "message": "InputMap.action_add_event uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/hero_voice.gd",
+      "line": 65,
+      "message": "Dynamic path 'res://assets/sfx/hero/*': 168 matching file(s); examples: res://assets/sfx/hero/attack_1.wav, res://assets/sfx/hero/attack_1.wav.import, res://assets/sfx/hero/attack_10.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/hero_voice.gd",
+      "line": 93,
+      "message": "Dynamic path 'res://assets/sfx/hero/*': 168 matching file(s); examples: res://assets/sfx/hero/attack_1.wav, res://assets/sfx/hero/attack_1.wav.import, res://assets/sfx/hero/attack_10.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "scripts/interaction_panel.gd",
+      "line": 331,
+      "message": "Resource path does not exist in the tree: res://assets/ui/starseed.svg"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "scripts/interiors.gd",
+      "line": 23,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/interiors.gd",
+      "line": 1259,
+      "message": "Dynamic path 'res://assets/interior/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/interiors.gd",
+      "line": 1260,
+      "message": "Dynamic path 'res://assets/interior/*': 1 matching file(s); examples: res://assets/interior/manifest.json. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/interiors.gd",
+      "line": 1276,
+      "message": "Dynamic path 'res://assets/interior/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/interiors.gd",
+      "line": 1278,
+      "message": "Dynamic path 'res://assets/interior/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/interiors.gd",
+      "line": 1279,
+      "message": "Dynamic path 'res://maps/archipelago/assets/environment/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/interiors.gd",
+      "line": 1280,
+      "message": "Dynamic path 'res://maps/archipelago/assets/environment/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/interiors.gd",
+      "line": 2794,
+      "message": "Dynamic path 'res://assets/portraits/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/interiors.gd",
+      "line": 2795,
+      "message": "Dynamic path 'res://assets/ui/day_*.png': 17 matching file(s); examples: res://assets/ui/day_boni.png, res://assets/ui/day_farmer.png, res://assets/ui/day_fisher.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/interiors.gd",
+      "line": 2796,
+      "message": "Dynamic path 'res://assets/ui/shadow_*.png': 15 matching file(s); examples: res://assets/ui/shadow_farmer.png, res://assets/ui/shadow_fisher.png, res://assets/ui/shadow_gardener.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "scripts/life_sfx.gd",
+      "line": 17,
+      "message": "Resource path does not exist in the tree: res://assets/sfx/combat/harvest_fiber"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "scripts/life_sfx.gd",
+      "line": 17,
+      "message": "Resource path does not exist in the tree: res://assets/sfx/combat/harvest_stone"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "scripts/life_sfx.gd",
+      "line": 18,
+      "message": "Resource path does not exist in the tree: res://assets/sfx/combat/harvest_tree"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/main.gd",
+      "line": 1265,
+      "message": "Dynamic path 'res://assets/ui/*': 508 matching file(s); examples: res://assets/ui/admin.svg, res://assets/ui/admin.svg.import, res://assets/ui/bag.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/main.gd",
+      "line": 1335,
+      "message": "Dynamic path 'res://assets/ui/icons/*.png': 43 matching file(s); examples: res://assets/ui/icons/accept.png, res://assets/ui/icons/add_friend.png, res://assets/ui/icons/alert.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/main.gd",
+      "line": 2104,
+      "message": "Dynamic path 'res://assets/items/*.svg': 15 matching file(s); examples: res://assets/items/axe.svg, res://assets/items/bandage.svg, res://assets/items/berry.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/main.gd",
+      "line": 2148,
+      "message": "Dynamic path 'res://assets/items/*.svg': 15 matching file(s); examples: res://assets/items/axe.svg, res://assets/items/bandage.svg, res://assets/items/berry.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/main.gd",
+      "line": 2971,
+      "message": "Dynamic path 'res://assets/ui/portrait_*.png': 4 matching file(s); examples: res://assets/ui/portrait_explorer.png, res://assets/ui/portrait_explorer_b.png, res://assets/ui/portrait_ranger.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/main.gd",
+      "line": 3802,
+      "message": "Dynamic path 'res://assets/portraits/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/monster.gd",
+      "line": 45,
+      "message": "Dynamic path 'res://assets/monsters/*_*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/npc.gd",
+      "line": 44,
+      "message": "Dynamic path 'res://assets/npc/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/npc.gd",
+      "line": 48,
+      "message": "Dynamic path 'res://assets/npc/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/npc.gd",
+      "line": 51,
+      "message": "Dynamic path 'res://assets/npc/*.glb': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/npc_gifts.gd",
+      "line": 170,
+      "message": "Dynamic path 'res://assets/items/*.svg': 15 matching file(s); examples: res://assets/items/axe.svg, res://assets/items/bandage.svg, res://assets/items/berry.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/painter/paint_widgets.gd",
+      "line": 12,
+      "message": "Dynamic path 'res://assets/ui/painter/*.svg': 29 matching file(s); examples: res://assets/ui/painter/arrow_down.svg, res://assets/ui/painter/arrow_up.svg, res://assets/ui/painter/brush.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/painter/paint_widgets.gd",
+      "line": 27,
+      "message": "Dynamic path 'res://assets/ui/painter/*.svg': 29 matching file(s); examples: res://assets/ui/painter/arrow_down.svg, res://assets/ui/painter/arrow_up.svg, res://assets/ui/painter/brush.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/painter/paint_widgets.gd",
+      "line": 351,
+      "message": "Dynamic path 'res://assets/ui/painter/*.svg': 29 matching file(s); examples: res://assets/ui/painter/arrow_down.svg, res://assets/ui/painter/arrow_up.svg, res://assets/ui/painter/brush.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/painter/paint_widgets.gd",
+      "line": 360,
+      "message": "Dynamic path 'res://assets/ui/painter/*.svg': 29 matching file(s); examples: res://assets/ui/painter/arrow_down.svg, res://assets/ui/painter/arrow_up.svg, res://assets/ui/painter/brush.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "scripts/patch_boot.gd",
+      "line": 125,
+      "message": "Resource path does not exist in the tree: res://project.binary"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/player.gd",
+      "line": 157,
+      "message": "Dynamic path 'res://assets/*.glb': 24 matching file(s); examples: res://assets/authored_axe_v1.glb, res://assets/authored_spear_v1.glb, res://assets/brute.glb. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/player.gd",
+      "line": 266,
+      "message": "Dynamic path 'res://assets/authored_*_v1.glb': 2 matching file(s); examples: res://assets/authored_axe_v1.glb, res://assets/authored_spear_v1.glb. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/rpg_ui.gd",
+      "line": 174,
+      "message": "Dynamic path 'res://assets/ui/frames/*.png': 81 matching file(s); examples: res://assets/ui/frames/arrow_down.png, res://assets/ui/frames/arrow_down_light.png, res://assets/ui/frames/banner_red.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/rpg_ui.gd",
+      "line": 207,
+      "message": "Dynamic path 'res://assets/ui/*.svg': 52 matching file(s); examples: res://assets/ui/admin.svg, res://assets/ui/bag.svg, res://assets/ui/book.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/rpg_ui.gd",
+      "line": 213,
+      "message": "Dynamic path 'res://assets/ui/icons/*.png': 43 matching file(s); examples: res://assets/ui/icons/accept.png, res://assets/ui/icons/add_friend.png, res://assets/ui/icons/alert.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/rpg_ui.gd",
+      "line": 1059,
+      "message": "Dynamic path 'res://assets/ui/portrait_*.png': 4 matching file(s); examples: res://assets/ui/portrait_explorer.png, res://assets/ui/portrait_explorer_b.png, res://assets/ui/portrait_ranger.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/sfx_bank.gd",
+      "line": 137,
+      "message": "Dynamic path 'res://assets/sfx/*': 6996 matching file(s); examples: res://assets/sfx/ambience/birds.wav, res://assets/sfx/ambience/birds.wav.import, res://assets/sfx/ambience/birds_far.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/shadow_folk.gd",
+      "line": 603,
+      "message": "Dynamic path 'res://assets/ui/day_*.png': 17 matching file(s); examples: res://assets/ui/day_boni.png, res://assets/ui/day_farmer.png, res://assets/ui/day_fisher.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/shadow_folk.gd",
+      "line": 603,
+      "message": "Dynamic path 'res://assets/ui/shadow_*.png': 15 matching file(s); examples: res://assets/ui/shadow_farmer.png, res://assets/ui/shadow_fisher.png, res://assets/ui/shadow_gardener.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/sound.gd",
+      "line": 117,
+      "message": "Dynamic path 'res://assets/audio/*.*': 10 matching file(s); examples: res://assets/audio/forest.ogg, res://assets/audio/forest.ogg.import, res://assets/audio/frost.ogg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/story.gd",
+      "line": 474,
+      "message": "Dynamic path 'res://assets/ui/day_*.png': 17 matching file(s); examples: res://assets/ui/day_boni.png, res://assets/ui/day_farmer.png, res://assets/ui/day_fisher.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/story.gd",
+      "line": 474,
+      "message": "Dynamic path 'res://assets/ui/shadow_*.png': 15 matching file(s); examples: res://assets/ui/shadow_farmer.png, res://assets/ui/shadow_fisher.png, res://assets/ui/shadow_gardener.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/story.gd",
+      "line": 850,
+      "message": "Dynamic path 'res://assets/ui/day_*.png': 17 matching file(s); examples: res://assets/ui/day_boni.png, res://assets/ui/day_farmer.png, res://assets/ui/day_fisher.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/story.gd",
+      "line": 850,
+      "message": "Dynamic path 'res://assets/ui/shadow_*.png': 15 matching file(s); examples: res://assets/ui/shadow_farmer.png, res://assets/ui/shadow_fisher.png, res://assets/ui/shadow_gardener.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/story_forest.gd",
+      "line": 138,
+      "message": "Dynamic path 'res://assets/ui/day_*.png': 17 matching file(s); examples: res://assets/ui/day_boni.png, res://assets/ui/day_farmer.png, res://assets/ui/day_fisher.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/story_forest.gd",
+      "line": 138,
+      "message": "Dynamic path 'res://assets/ui/shadow_*.png': 15 matching file(s); examples: res://assets/ui/shadow_farmer.png, res://assets/ui/shadow_fisher.png, res://assets/ui/shadow_gardener.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/studio.gd",
+      "line": 454,
+      "message": "Dynamic path 'res://assets/ui/portrait_*.png': 4 matching file(s); examples: res://assets/ui/portrait_explorer.png, res://assets/ui/portrait_explorer_b.png, res://assets/ui/portrait_ranger.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/studio.gd",
+      "line": 1102,
+      "message": "Dynamic path 'res://assets/items/*.svg': 15 matching file(s); examples: res://assets/items/axe.svg, res://assets/items/bandage.svg, res://assets/items/berry.svg. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/transition.gd",
+      "line": 418,
+      "message": "Dynamic path 'res://assets/sfx/doors/*_*.wav': 120 matching file(s); examples: res://assets/sfx/doors/01_cafe_close.wav, res://assets/sfx/doors/01_cafe_close_1.wav, res://assets/sfx/doors/01_cafe_close_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/transition.gd",
+      "line": 440,
+      "message": "Dynamic path 'res://assets/sfx/doors/*_*.wav': 120 matching file(s); examples: res://assets/sfx/doors/01_cafe_close.wav, res://assets/sfx/doors/01_cafe_close_1.wav, res://assets/sfx/doors/01_cafe_close_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/village.gd",
+      "line": 28,
+      "message": "InputMap.has_action uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/village.gd",
+      "line": 29,
+      "message": "InputMap.add_action uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "scripts/village.gd",
+      "line": 33,
+      "message": "InputMap.action_add_event uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/voice_babble.gd",
+      "line": 244,
+      "message": "Dynamic path 'res://assets/sfx/voice/*.wav': 217 matching file(s); examples: res://assets/sfx/voice/emote_child_dots_1.wav, res://assets/sfx/voice/emote_child_dots_2.wav, res://assets/sfx/voice/emote_child_dots_3.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/voice_babble.gd",
+      "line": 255,
+      "message": "Dynamic path 'res://assets/sfx/voice/*': 434 matching file(s); examples: res://assets/sfx/voice/emote_child_dots_1.wav, res://assets/sfx/voice/emote_child_dots_1.wav.import, res://assets/sfx/voice/emote_child_dots_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/voice_babble.gd",
+      "line": 256,
+      "message": "Dynamic path 'res://assets/sfx/voice/*.wav': 217 matching file(s); examples: res://assets/sfx/voice/emote_child_dots_1.wav, res://assets/sfx/voice/emote_child_dots_2.wav, res://assets/sfx/voice/emote_child_dots_3.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/voice_babble.gd",
+      "line": 331,
+      "message": "Dynamic path 'res://assets/sfx/voice/quill': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/voice_babble.gd",
+      "line": 488,
+      "message": "Dynamic path 'res://assets/sfx/voice/quill': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/voice_babble.gd",
+      "line": 502,
+      "message": "Dynamic path 'res://assets/sfx/voice/greet_*': 48 matching file(s); examples: res://assets/sfx/voice/greet_child_1.wav, res://assets/sfx/voice/greet_child_1.wav.import, res://assets/sfx/voice/greet_child_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/voice_babble.gd",
+      "line": 532,
+      "message": "Dynamic path 'res://assets/sfx/voice/emote_*_*': 240 matching file(s); examples: res://assets/sfx/voice/emote_child_dots_1.wav, res://assets/sfx/voice/emote_child_dots_1.wav.import, res://assets/sfx/voice/emote_child_dots_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/world_audio.gd",
+      "line": 159,
+      "message": "Dynamic path 'res://assets/sfx/ambience/birds.wav': 1 matching file(s); examples: res://assets/sfx/ambience/birds.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/world_audio.gd",
+      "line": 550,
+      "message": "Dynamic path 'res://assets/sfx/ambience/*.wav': 103 matching file(s); examples: res://assets/sfx/ambience/birds.wav, res://assets/sfx/ambience/birds_far.wav, res://assets/sfx/ambience/cafe.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "scripts/world_audio.gd",
+      "line": 577,
+      "message": "Dynamic path 'res://assets/sfx/ambience/*.wav': 103 matching file(s); examples: res://assets/sfx/ambience/birds.wav, res://assets/sfx/ambience/birds_far.wav, res://assets/sfx/ambience/cafe.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/admin_tour.gd",
+      "line": 10,
+      "message": "Dynamic path 'res://../artifacts/admin-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/archetype_gallery.gd",
+      "line": 241,
+      "message": "Resource path does not exist in the tree: res://../artifacts/archetype-gallery.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/archipelago_probe.gd",
+      "line": 92,
+      "message": "Dynamic path 'res://../artifacts/island-shot-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/archipelago_probe.gd",
+      "line": 116,
+      "message": "Dynamic path 'res://../artifacts/island-top-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/archipelago_probe.gd",
+      "line": 149,
+      "message": "Dynamic path 'res://../artifacts/island-view-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/asset_motion.gd",
+      "line": 64,
+      "message": "Resource path does not exist in the tree: res://../artifacts/explorer-walk.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/asset_motion.gd",
+      "line": 77,
+      "message": "Resource path does not exist in the tree: res://../artifacts/explorer-gather.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/asset_motion.gd",
+      "line": 85,
+      "message": "Resource path does not exist in the tree: res://../artifacts/explorer-attack.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/audio_bank_check.gd",
+      "line": 76,
+      "message": "Resource path does not exist in the tree: res://../artifacts/audio-bank-check.txt"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/audio_bank_check.gd",
+      "line": 83,
+      "message": "Dynamic path 'res://assets/sfx/*/': 6996 matching file(s); examples: res://assets/sfx/ambience/birds.wav, res://assets/sfx/ambience/birds.wav.import, res://assets/sfx/ambience/birds_far.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/audio_bank_check.gd",
+      "line": 232,
+      "message": "Resource path does not exist in the tree: res://assets/portraits/haeru.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/audio_check.gd",
+      "line": 114,
+      "message": "Dynamic path 'res://assets/sfx/steps/*_*_': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/avatar_everywhere_check.gd",
+      "line": 168,
+      "message": "Resource path does not exist in the tree: res://../artifacts/avatar-everywhere"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/avatar_rooms_check.gd",
+      "line": 19,
+      "message": "Dynamic path 'res://../artifacts/avatar-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/bed_wake_check.gd",
+      "line": 12,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/build_mode_room.gd",
+      "line": 20,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/build_mode_village.gd",
+      "line": 22,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/building_holes.gd",
+      "line": 117,
+      "message": "Dynamic path 'res://../artifacts/holes-*-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/character_scale_review.gd",
+      "line": 49,
+      "message": "Resource path does not exist in the tree: res://../artifacts"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/chat_box_check.gd",
+      "line": 49,
+      "message": "Dynamic path 'res://../artifacts/chat-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/content_patch.gd",
+      "line": 13,
+      "message": "Resource path does not exist in the tree: res://../artifacts"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/controller_acceptance.gd",
+      "line": 18,
+      "message": "Resource path does not exist in the tree: res://../artifacts"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/controller_motion_review.gd",
+      "line": 17,
+      "message": "Resource path does not exist in the tree: res://../artifacts/controller-motion"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/craft_badge_check.gd",
+      "line": 40,
+      "message": "Resource path does not exist in the tree: res://../artifacts/craft-badge.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/craft_live.gd",
+      "line": 24,
+      "message": "Dynamic path 'res://../artifacts/craft-live-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/craft_one_check.gd",
+      "line": 171,
+      "message": "Resource path does not exist in the tree: res://../artifacts/craft-one-side-by-side.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/craft_panel_check.gd",
+      "line": 24,
+      "message": "Dynamic path 'res://../artifacts/craft-panel-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/daylight_check.gd",
+      "line": 34,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/demo_keys.gd",
+      "line": 41,
+      "message": "Dynamic path 'res://../artifacts/demo-keys-*-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/design_preview.gd",
+      "line": 35,
+      "message": "Dynamic path 'res://../artifacts/design-preview-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/door_sounds_check.gd",
+      "line": 75,
+      "message": "Resource path does not exist in the tree: res://../artifacts/door-sounds-check.txt"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/door_test_capture.gd",
+      "line": 20,
+      "message": "Resource path does not exist in the tree: res://../artifacts/mapdoor/door_test/"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/expanded_motion.gd",
+      "line": 13,
+      "message": "Dynamic path 'res://../artifacts/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/expansion.gd",
+      "line": 13,
+      "message": "Dynamic path 'res://../artifacts/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/expedition_ui_check.gd",
+      "line": 27,
+      "message": "Dynamic path 'res://../artifacts/exp-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/explorer_b_integration.gd",
+      "line": 12,
+      "message": "Resource path does not exist in the tree: res://../artifacts/explorer-b-game.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/explorer_b_integration.gd",
+      "line": 24,
+      "message": "Resource path does not exist in the tree: res://../artifacts/explorer-b-tool.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/exterior_views.gd",
+      "line": 105,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/field_objects_check.gd",
+      "line": 148,
+      "message": "Resource path does not exist in the tree: res://../artifacts/field-objects-check.txt"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/field_objects_check.gd",
+      "line": 314,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/fishing_shapes_check.gd",
+      "line": 177,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/font_shots.gd",
+      "line": 57,
+      "message": "Dynamic path 'res://../artifacts/font-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/foot_fx_village.gd",
+      "line": 89,
+      "message": "Dynamic path 'res://../artifacts/foot_fx_*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/furniture_showcase.gd",
+      "line": 49,
+      "message": "Dynamic path 'res://../artifacts/*-review-frames': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/furniture_showcase.gd",
+      "line": 61,
+      "message": "Dynamic path 'res://../artifacts/*-showcase.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/furniture_stress.gd",
+      "line": 16,
+      "message": "Resource path does not exist in the tree: res://../artifacts/furniture-stress.json"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/furniture_stress.gd",
+      "line": 39,
+      "message": "Resource path does not exist in the tree: res://../artifacts/furniture-stress.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/furniture_stress.gd",
+      "line": 41,
+      "message": "Resource path does not exist in the tree: res://../artifacts/furniture-stress-results.json"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/guide_tour.gd",
+      "line": 29,
+      "message": "Dynamic path 'res://../artifacts/guide-**.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/haeru_motion_review.gd",
+      "line": 19,
+      "message": "Resource path does not exist in the tree: res://../artifacts/haeru-motion"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/home_access_ui.gd",
+      "line": 48,
+      "message": "Dynamic path 'res://../artifacts/home_access_*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/home_roundtrip.gd",
+      "line": 9,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/home_visit.gd",
+      "line": 61,
+      "message": "Resource path does not exist in the tree: res://../artifacts/home-visit-guest.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/home_visit.gd",
+      "line": 66,
+      "message": "Resource path does not exist in the tree: res://../artifacts/home-visit-host.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/hud_fold_tour.gd",
+      "line": 26,
+      "message": "Dynamic path 'res://../artifacts/hud-fold-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ime_probe.gd",
+      "line": 37,
+      "message": "Resource path does not exist in the tree: res://../artifacts/ime-probe.txt"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/inspect_placed.gd",
+      "line": 27,
+      "message": "Dynamic path 'res://../artifacts/placed-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/integration.gd",
+      "line": 19,
+      "message": "Dynamic path 'res://../artifacts/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/interaction_check.gd",
+      "line": 108,
+      "message": "Resource path does not exist in the tree: res://../artifacts/interaction-editor.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/island_walk.gd",
+      "line": 27,
+      "message": "Dynamic path 'res://../artifacts/island-walk-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_lab.gd",
+      "line": 20,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/bench.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_lab.gd",
+      "line": 20,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/cafe_chair.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_lab.gd",
+      "line": 21,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/beach_lounger.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_lab.gd",
+      "line": 21,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/picnic_table.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_lab.gd",
+      "line": 72,
+      "message": "Resource path does not exist in the tree: res://../artifacts/ix"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_lab.gd",
+      "line": 287,
+      "message": "Resource path does not exist in the tree: res://../artifacts/ix/ix_sheet.jpg"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_prop_probe.gd",
+      "line": 9,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/bench.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_prop_probe.gd",
+      "line": 9,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/picnic_table.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_prop_probe.gd",
+      "line": 10,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/beach_lounger.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_prop_probe.gd",
+      "line": 10,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/cafe_chair.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_sources_check.gd",
+      "line": 153,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/bench.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_sources_check.gd",
+      "line": 153,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/picnic_table.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_sources_check.gd",
+      "line": 154,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/beach_lounger.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/ix_sources_check.gd",
+      "line": 154,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/environment/cafe_chair.glb"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/landmark_review.gd",
+      "line": 10,
+      "message": "Dynamic path 'res://../artifacts/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/life_loop.gd",
+      "line": 26,
+      "message": "Resource path does not exist in the tree: res://../.tools/server-venv/Scripts/python.exe"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/life_loop.gd",
+      "line": 105,
+      "message": "Dynamic path 'res://../artifacts/life-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/life_sound_check.gd",
+      "line": 78,
+      "message": "Dynamic path 'res://assets/sfx/life/*_': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/life_sound_check.gd",
+      "line": 121,
+      "message": "Dynamic path 'res://assets/sfx/core/*_': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/living_objects_check.gd",
+      "line": 138,
+      "message": "Resource path does not exist in the tree: res://../artifacts/clock-tick-1.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/living_objects_check.gd",
+      "line": 140,
+      "message": "Resource path does not exist in the tree: res://../artifacts/clock-tick-2.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/living_objects_check.gd",
+      "line": 160,
+      "message": "Dynamic path 'res://../artifacts/clock-hands-*.jpg': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/locomotion_continuity.gd",
+      "line": 51,
+      "message": "Resource path does not exist in the tree: res://../artifacts/production-lab-20261003"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/material_restore.gd",
+      "line": 6,
+      "message": "Resource path does not exist in the tree: res://../artifacts/material-cases.json"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/measure_gait.gd",
+      "line": 42,
+      "message": "Resource path does not exist in the tree: res://../artifacts/production-lab-20261003/source-gait-measurement.json"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/model_gallery.gd",
+      "line": 18,
+      "message": "Dynamic path 'res://../artifacts/*.json': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/model_gallery.gd",
+      "line": 34,
+      "message": "Dynamic path 'res://../artifacts/*-frames': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/model_gallery.gd",
+      "line": 53,
+      "message": "Dynamic path 'res://../artifacts/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/monster_gallery.gd",
+      "line": 27,
+      "message": "Resource path does not exist in the tree: res://../artifacts/monsters"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/monsters.gd",
+      "line": 39,
+      "message": "Resource path does not exist in the tree: res://../artifacts/monsters.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/monsters.gd",
+      "line": 46,
+      "message": "Resource path does not exist in the tree: res://../artifacts/monsters-windup.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/multiplayer.gd",
+      "line": 30,
+      "message": "Dynamic path 'res://../artifacts/multiplayer-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/npc_dialogue.gd",
+      "line": 13,
+      "message": "Dynamic path 'res://../artifacts/npc-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/npc_gift_check.gd",
+      "line": 75,
+      "message": "Dynamic path 'res://../artifacts/npc-gift-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/object_transform_check.gd",
+      "line": 23,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/occluder_check.gd",
+      "line": 72,
+      "message": "Dynamic path 'res://../artifacts/occluder-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/open_structures.gd",
+      "line": 48,
+      "message": "Dynamic path 'res://../artifacts/open-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/patch_update_check.gd",
+      "line": 161,
+      "message": "Resource path does not exist in the tree: res://qa_patch_probe.txt"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/patch_update_check.gd",
+      "line": 162,
+      "message": "Resource path does not exist in the tree: res://qa_patch_filler.bin"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/patch_update_check.gd",
+      "line": 192,
+      "message": "Resource path does not exist in the tree: res://../artifacts/qa-patch/client_policy.json"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/patch_update_check.gd",
+      "line": 278,
+      "message": "Resource path does not exist in the tree: res://qa_patch_probe.txt"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/peer_door_check.gd",
+      "line": 21,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/perf_overlay_check.gd",
+      "line": 96,
+      "message": "Resource path does not exist in the tree: res://../artifacts"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/perf_overlay_hud.gd",
+      "line": 38,
+      "message": "Resource path does not exist in the tree: res://../artifacts"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/picture_furniture.gd",
+      "line": 4,
+      "message": "Resource path does not exist in the tree: res://../artifacts/picture-furniture-20261002/"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/picture_furniture.gd",
+      "line": 38,
+      "message": "Dynamic path 'res://../artifacts/picture-furniture-20261002/render-input.json': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/picture_furniture.gd",
+      "line": 49,
+      "message": "Dynamic path 'res://../artifacts/picture-furniture-20261002/public/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/picture_furniture.gd",
+      "line": 54,
+      "message": "Dynamic path 'res://../artifacts/picture-furniture-20261002/reference.jpg': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/picture_furniture.gd",
+      "line": 64,
+      "message": "Dynamic path 'res://../artifacts/picture-furniture-20261002/frames': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/picture_furniture.gd",
+      "line": 71,
+      "message": "Dynamic path 'res://../artifacts/picture-furniture-20261002/frames/frame_*.jpg': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/picture_furniture.gd",
+      "line": 72,
+      "message": "Dynamic path 'res://../artifacts/picture-furniture-20261002/public/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/plot_views.gd",
+      "line": 42,
+      "message": "Resource path does not exist in the tree: res://../artifacts/mapinterior"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/presentation.gd",
+      "line": 11,
+      "message": "Dynamic path 'res://../artifacts/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/quest_e2e.gd",
+      "line": 46,
+      "message": "Dynamic path 'res://../artifacts/quest-shot-*-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/render_portraits.gd",
+      "line": 55,
+      "message": "Dynamic path 'res://assets/ui/portrait_*.png': 4 matching file(s); examples: res://assets/ui/portrait_explorer.png, res://assets/ui/portrait_explorer_b.png, res://assets/ui/portrait_ranger.png. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/residents_walk.gd",
+      "line": 258,
+      "message": "Dynamic path 'res://../artifacts/residents-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/room_door_check.gd",
+      "line": 12,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "tests/settings_check.gd",
+      "line": 93,
+      "message": "InputMap.has_action uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "tests/settings_check.gd",
+      "line": 95,
+      "message": "InputMap.action_get_events uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-input-action",
+      "file": "tests/settings_check.gd",
+      "line": 284,
+      "message": "InputMap.action_get_events uses a dynamic action; verify its values against project.godot [input]."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/settings_check.gd",
+      "line": 498,
+      "message": "Resource path does not exist in the tree: res://../artifacts"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/seven_days.gd",
+      "line": 19,
+      "message": "Dynamic path 'res://../artifacts/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 23,
+      "message": "Resource path does not exist in the tree: res://assets/sfx/combat/hit_flesh"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 24,
+      "message": "Resource path does not exist in the tree: res://assets/sfx/ui/hover"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 25,
+      "message": "Resource path does not exist in the tree: res://assets/sfx/combat/hit_stone"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 26,
+      "message": "Resource path does not exist in the tree: res://assets/sfx/ui/__no_such_family__"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 28,
+      "message": "Resource path does not exist in the tree: res://assets/sfx/__test__/single_take"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 123,
+      "message": "Dynamic path 'res://assets/sfx/combat/hit_flesh_1.wav': 1 matching file(s); examples: res://assets/sfx/combat/hit_flesh_1.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 126,
+      "message": "Dynamic path 'res://assets/sfx/combat/hit_flesh_*.wav': 13 matching file(s); examples: res://assets/sfx/combat/hit_flesh_1.wav, res://assets/sfx/combat/hit_flesh_10.wav, res://assets/sfx/combat/hit_flesh_11.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 130,
+      "message": "Dynamic path 'res://assets/sfx/combat/hit_flesh.wav': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 134,
+      "message": "Dynamic path 'res://assets/sfx/ui/hover.wav': 1 matching file(s); examples: res://assets/sfx/ui/hover.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 134,
+      "message": "Dynamic path 'res://assets/sfx/ui/hover_1.wav': 1 matching file(s); examples: res://assets/sfx/ui/hover_1.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 137,
+      "message": "Dynamic path 'res://assets/sfx/*': 6996 matching file(s); examples: res://assets/sfx/ambience/birds.wav, res://assets/sfx/ambience/birds.wav.import, res://assets/sfx/ambience/birds_far.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 144,
+      "message": "Dynamic path 'res://assets/sfx/': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 168,
+      "message": "Dynamic path 'res://assets/sfx/': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/sfx_bank_check.gd",
+      "line": 234,
+      "message": "Dynamic path 'res://assets/sfx/ui/__no_such_family__.wav': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/shadow_folk_capture.gd",
+      "line": 26,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/shadow_folk_portraits.gd",
+      "line": 21,
+      "message": "Resource path does not exist in the tree: res://../artifacts/shadow-folk-portraits/"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/shadow_probe.gd",
+      "line": 57,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/shadow_still_check.gd",
+      "line": 124,
+      "message": "Dynamic path 'res://../artifacts/shadow-still-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/smoke.gd",
+      "line": 83,
+      "message": "Resource path does not exist in the tree: res://../artifacts/village-preview.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/story_chapter.gd",
+      "line": 49,
+      "message": "Dynamic path 'res://../artifacts/story-shot-*-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/story_journal.gd",
+      "line": 18,
+      "message": "Resource path does not exist in the tree: res://../artifacts/story-journal.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/studio_binding.gd",
+      "line": 26,
+      "message": "Resource path does not exist in the tree: res://../artifacts/studio-binding.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/studio_e2e.gd",
+      "line": 59,
+      "message": "Resource path does not exist in the tree: res://../artifacts/studio-e2e.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/studio_e2e.gd",
+      "line": 68,
+      "message": "Resource path does not exist in the tree: res://../artifacts/studio-e2e.json"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/studio_flow.gd",
+      "line": 40,
+      "message": "Resource path does not exist in the tree: res://../artifacts/studio-interaction.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/studio_mode_review.gd",
+      "line": 25,
+      "message": "Resource path does not exist in the tree: res://../artifacts"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/studio_review.gd",
+      "line": 13,
+      "message": "Resource path does not exist in the tree: res://../artifacts/studio-review.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/studio_sync.gd",
+      "line": 71,
+      "message": "Resource path does not exist in the tree: res://../artifacts/generated-controls.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/survival_maps.gd",
+      "line": 38,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/terrain_ab_capture.gd",
+      "line": 22,
+      "message": "Resource path does not exist in the tree: res://../artifacts/terrain_p2/ab/"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/terrain_probe.gd",
+      "line": 190,
+      "message": "Resource path does not exist in the tree: res://maps/archipelago/assets/archipelago_terrain_environment_v1.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/texture_shrink_check.gd",
+      "line": 15,
+      "message": "Resource path does not exist in the tree: res://assets/interior/barrel.glb"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/title_art_check.gd",
+      "line": 29,
+      "message": "Resource path does not exist in the tree: res://assets/title_"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/title_art_check.gd",
+      "line": 33,
+      "message": "Dynamic path 'res://../artifacts/title-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/tooltip_tour.gd",
+      "line": 25,
+      "message": "Dynamic path 'res://../artifacts/tooltip-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/town_review.gd",
+      "line": 7,
+      "message": "Dynamic path 'res://../artifacts/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/transition_frames.gd",
+      "line": 114,
+      "message": "Resource path does not exist in the tree: res://../artifacts/transition-frames.png"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/transition_frames.gd",
+      "line": 115,
+      "message": "Resource path does not exist in the tree: res://../artifacts/transition-frames.txt"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/treasure_check.gd",
+      "line": 42,
+      "message": "Dynamic path 'res://../artifacts/treasure-shot-*-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/treasure_spots.gd",
+      "line": 141,
+      "message": "Resource path does not exist in the tree: res://../artifacts/treasure-spots.txt"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/treasure_spots.gd",
+      "line": 349,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/tree_drops.gd",
+      "line": 30,
+      "message": "Dynamic path 'res://../artifacts/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/ui0118_shots.gd",
+      "line": 27,
+      "message": "Dynamic path 'res://../artifacts/ui0118-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/ui_bubble_shot.gd",
+      "line": 25,
+      "message": "Dynamic path 'res://../artifacts/bubble-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/ui_consistency_check.gd",
+      "line": 153,
+      "message": "Dynamic path 'res://scripts/*': 215 matching file(s); examples: res://scripts/action_pose.gd, res://scripts/action_pose.gd.uid, res://scripts/ambience_spots.gd. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/ui_gallery.gd",
+      "line": 35,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/ui_sfx_check.gd",
+      "line": 46,
+      "message": "Dynamic path 'res://assets/sfx/ui/*.wav': 355 matching file(s); examples: res://assets/sfx/ui/brush_1.wav, res://assets/sfx/ui/brush_10.wav, res://assets/sfx/ui/brush_11.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/ui_tour.gd",
+      "line": 24,
+      "message": "Dynamic path 'res://../artifacts/ui-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/version_gate_check.gd",
+      "line": 51,
+      "message": "Dynamic path 'res://../artifacts/version-gate-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/version_gate_check.gd",
+      "line": 176,
+      "message": "Resource path does not exist in the tree: res://../artifacts/qa-version/client_policy.json"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/vfx_check.gd",
+      "line": 201,
+      "message": "Resource path does not exist in the tree: res://../artifacts/vfx_sheet.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/village_doors_check.gd",
+      "line": 27,
+      "message": "Dynamic path 'res://../artifacts/village_doors_*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/village_furniture.gd",
+      "line": 44,
+      "message": "Resource path does not exist in the tree: res://../artifacts/village-furniture.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/village_life.gd",
+      "line": 14,
+      "message": "Dynamic path 'res://../artifacts/*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/village_rest_check.gd",
+      "line": 133,
+      "message": "Resource path does not exist in the tree: res://../artifacts/village-sit.jpg"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/village_rest_check.gd",
+      "line": 134,
+      "message": "Resource path does not exist in the tree: res://../artifacts/village-sit.jpg"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/vm_edges.gd",
+      "line": 3,
+      "message": "Resource path does not exist in the tree: res://../artifacts/vm-edges.json"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/vm_edges.gd",
+      "line": 13,
+      "message": "Resource path does not exist in the tree: res://../artifacts/vm-edges-results.json"
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/vm_parity.gd",
+      "line": 4,
+      "message": "Resource path does not exist in the tree: res://../artifacts/vm-parity.json"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/voice_variety_check.gd",
+      "line": 62,
+      "message": "Dynamic path 'res://assets/sfx/voice/*': 434 matching file(s); examples: res://assets/sfx/voice/emote_child_dots_1.wav, res://assets/sfx/voice/emote_child_dots_1.wav.import, res://assets/sfx/voice/emote_child_dots_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/voice_variety_check.gd",
+      "line": 91,
+      "message": "Dynamic path 'res://assets/sfx/voice/emote_*_*': 240 matching file(s); examples: res://assets/sfx/voice/emote_child_dots_1.wav, res://assets/sfx/voice/emote_child_dots_1.wav.import, res://assets/sfx/voice/emote_child_dots_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/voice_variety_check.gd",
+      "line": 94,
+      "message": "Dynamic path 'res://assets/sfx/voice/greet_*': 48 matching file(s); examples: res://assets/sfx/voice/greet_child_1.wav, res://assets/sfx/voice/greet_child_1.wav.import, res://assets/sfx/voice/greet_child_2.wav. Runtime values remain unchecked."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/voice_variety_check.gd",
+      "line": 97,
+      "message": "Dynamic path 'res://assets/sfx/voice/quill': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/wardrobe_check.gd",
+      "line": 13,
+      "message": "Dynamic path 'res://../artifacts/wardrobe-*.png': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/world_navigation.gd",
+      "line": 27,
+      "message": "Resource path does not exist in the tree: res://../artifacts/harbor-walk.png"
+    },
+    {
+      "severity": "warning",
+      "code": "dynamic-resource",
+      "file": "tests/world_polish_capture.gd",
+      "line": 41,
+      "message": "Dynamic path 'res://../artifacts/*': no matching files in the project tree; verify runtime values or generated assets."
+    },
+    {
+      "severity": "blocker",
+      "code": "missing-resource",
+      "file": "tests/world_polish_capture.gd",
+      "line": 135,
+      "message": "Resource path does not exist in the tree: res://assets/portraits/haeru.png"
+    }
+  ],
+  "commit": "ff066b7"
+}

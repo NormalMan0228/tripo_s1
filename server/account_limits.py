@@ -11,8 +11,12 @@ def daily_counts(conn, since, user_id=None):
 
 
 def tester_credits(conn, exclude=''):
-    return conn.execute('SELECT COALESCE(SUM(credits),0) FROM tester_credit_spend WHERE reference!=?',
-                        (exclude,)).fetchone()[0]
+    from .tripo_budget import committed_credits
+    total = committed_credits(conn, tester=True)
+    if exclude:
+        row = conn.execute('SELECT credits FROM tester_credit_spend WHERE reference=?', (exclude,)).fetchone()
+        total -= row[0] if row else 0
+    return total
 
 
 def check_tester_budget(conn, limits, credits, reference=''):

@@ -1,0 +1,1136 @@
+{
+	"01_cafe": {
+		"bottom": 0.4,
+		"front": -1.472,
+		"height": 2.6,
+		"hinge": "right",
+		"left": -0.62,
+		"mesh": "res://maps/archipelago/doors/cafe.res",
+		"model": "res://maps/archipelago/assets/buildings/cafe.glb",
+		"opening": "res://maps/archipelago/doors/cafe_opening.res",
+		"origin": [
+			0.6,
+			0.0,
+			5.2
+		],
+		"out": [
+			0.212,
+			0.0,
+			0.9773
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				1.72,
+				0.0
+			],
+			[
+				1.72,
+				2.05
+			],
+			[
+				1.655,
+				2.26
+			],
+			[
+				1.468,
+				2.439
+			],
+			[
+				1.189,
+				2.558
+			],
+			[
+				0.86,
+				2.6
+			],
+			[
+				0.531,
+				2.558
+			],
+			[
+				0.252,
+				2.439
+			],
+			[
+				0.065,
+				2.26
+			],
+			[
+				0.0,
+				2.05
+			]
+		],
+		"side": [
+			0.9773,
+			0.0,
+			-0.212
+		],
+		"thickness": 0.06,
+		"triangles": 1648,
+		"width": 1.72
+	},
+	"02_timber_house": {
+		"bottom": 0.72,
+		"front": -2.005,
+		"height": 2.48,
+		"hinge": "right",
+		"left": -0.48,
+		"mesh": "res://maps/archipelago/doors/timber_house.res",
+		"model": "res://maps/archipelago/assets/buildings/timber_house.glb",
+		"opening": "res://maps/archipelago/doors/timber_house_opening.res",
+		"origin": [
+			2.7009,
+			0.0,
+			3.9122
+		],
+		"out": [
+			0.5993,
+			0.0,
+			0.8005
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				1.6,
+				0.0
+			],
+			[
+				1.8,
+				0.2
+			],
+			[
+				1.84,
+				0.32
+			],
+			[
+				1.88,
+				1.84
+			],
+			[
+				1.88,
+				2.04
+			],
+			[
+				1.36,
+				2.4
+			],
+			[
+				1.2,
+				2.48
+			],
+			[
+				0.24,
+				2.48
+			],
+			[
+				0.0,
+				2.32
+			]
+		],
+		"side": [
+			0.8005,
+			0.0,
+			-0.5993
+		],
+		"thickness": 0.06,
+		"triangles": 2254,
+		"width": 1.88
+	},
+	"03_teal_cottage": {
+		"bottom": 0.48,
+		"front": -2.164,
+		"height": 2.24,
+		"hinge": "right",
+		"left": -0.96,
+		"mesh": "res://maps/archipelago/doors/teal_cottage.res",
+		"model": "res://maps/archipelago/assets/buildings/teal_cottage.glb",
+		"opening": "res://maps/archipelago/doors/teal_cottage_opening.res",
+		"origin": [
+			-3.1452,
+			0.0,
+			3.9633
+		],
+		"out": [
+			-0.6632,
+			0.0,
+			0.7484
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				1.48,
+				0.0
+			],
+			[
+				1.48,
+				0.04
+			],
+			[
+				1.44,
+				1.76
+			],
+			[
+				1.4,
+				1.88
+			],
+			[
+				1.36,
+				1.96
+			],
+			[
+				1.2,
+				2.12
+			],
+			[
+				1.12,
+				2.2
+			],
+			[
+				1.04,
+				2.24
+			],
+			[
+				0.44,
+				2.24
+			],
+			[
+				0.32,
+				2.2
+			],
+			[
+				0.28,
+				2.16
+			],
+			[
+				0.24,
+				2.12
+			],
+			[
+				0.08,
+				1.92
+			],
+			[
+				0.04,
+				1.76
+			],
+			[
+				0.0,
+				0.04
+			]
+		],
+		"side": [
+			0.7484,
+			0.0,
+			0.6632
+		],
+		"thickness": 0.06,
+		"triangles": 2298,
+		"width": 1.48
+	},
+	"04_windmill": {
+		"bottom": 0.8,
+		"front": -1.658,
+		"height": 2.4,
+		"hinge": "right",
+		"left": -0.92,
+		"mesh": "res://maps/archipelago/doors/windmill.res",
+		"model": "res://maps/archipelago/assets/buildings/windmill.glb",
+		"opening": "res://maps/archipelago/doors/windmill_opening.res",
+		"origin": [
+			-0.9,
+			0.0,
+			3.0
+		],
+		"out": [
+			-0.3792,
+			0.0,
+			0.9253
+		],
+		"outline": [
+			[
+				0.0,
+				0.32
+			],
+			[
+				0.04,
+				0.0
+			],
+			[
+				0.16,
+				0.0
+			],
+			[
+				1.24,
+				0.04
+			],
+			[
+				1.56,
+				0.32
+			],
+			[
+				1.56,
+				0.36
+			],
+			[
+				1.28,
+				1.92
+			],
+			[
+				1.12,
+				2.28
+			],
+			[
+				0.88,
+				2.4
+			],
+			[
+				0.44,
+				2.4
+			],
+			[
+				0.32,
+				2.32
+			],
+			[
+				0.24,
+				2.24
+			],
+			[
+				0.16,
+				2.16
+			],
+			[
+				0.08,
+				2.0
+			],
+			[
+				0.04,
+				1.68
+			],
+			[
+				0.0,
+				1.0
+			]
+		],
+		"side": [
+			0.9253,
+			0.0,
+			0.3792
+		],
+		"thickness": 0.06,
+		"triangles": 1600,
+		"width": 1.56
+	},
+	"05_observatory": {
+		"bottom": 1.13,
+		"front": -1.271,
+		"height": 1.95,
+		"hinge": "right",
+		"left": 0.3,
+		"mesh": "res://maps/archipelago/doors/observatory.res",
+		"model": "res://maps/archipelago/assets/buildings/observatory.glb",
+		"opening": "res://maps/archipelago/doors/observatory_opening.res",
+		"origin": [
+			0.0,
+			0.0,
+			5.4
+		],
+		"out": [
+			-0.3067,
+			0.0,
+			0.9518
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				1.3,
+				0.0
+			],
+			[
+				1.3,
+				1.95
+			],
+			[
+				0.0,
+				1.95
+			]
+		],
+		"side": [
+			0.9518,
+			0.0,
+			0.3067
+		],
+		"thickness": 0.06,
+		"triangles": 344,
+		"width": 1.3
+	},
+	"06_orange_cottage": {
+		"bottom": 0.48,
+		"front": -0.909,
+		"height": 2.4,
+		"hinge": "right",
+		"left": -0.56,
+		"mesh": "res://maps/archipelago/doors/orange_cottage.res",
+		"model": "res://maps/archipelago/assets/buildings/orange_cottage.glb",
+		"opening": "res://maps/archipelago/doors/orange_cottage_opening.res",
+		"origin": [
+			-1.9284,
+			0.0,
+			2.2981
+		],
+		"out": [
+			-0.6428,
+			0.0,
+			0.766
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				0.08,
+				0.0
+			],
+			[
+				1.28,
+				0.04
+			],
+			[
+				1.28,
+				0.32
+			],
+			[
+				1.24,
+				1.72
+			],
+			[
+				1.2,
+				1.88
+			],
+			[
+				1.16,
+				1.96
+			],
+			[
+				1.12,
+				2.0
+			],
+			[
+				0.72,
+				2.4
+			],
+			[
+				0.56,
+				2.4
+			],
+			[
+				0.28,
+				2.16
+			],
+			[
+				0.12,
+				2.0
+			],
+			[
+				0.04,
+				1.84
+			],
+			[
+				0.0,
+				0.36
+			]
+		],
+		"side": [
+			0.766,
+			0.0,
+			0.6428
+		],
+		"thickness": 0.06,
+		"triangles": 5288,
+		"width": 1.28
+	},
+	"07_greenhouse": {
+		"bottom": 0.6,
+		"front": -0.975,
+		"height": 2.0,
+		"hinge": "right",
+		"left": -0.95,
+		"mesh": "res://maps/archipelago/doors/greenhouse.res",
+		"model": "res://maps/archipelago/assets/buildings/greenhouse.glb",
+		"opening": "res://maps/archipelago/doors/greenhouse_opening.res",
+		"origin": [
+			-2.2779,
+			0.0,
+			2.9156
+		],
+		"out": [
+			-0.6157,
+			0.0,
+			0.788
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				1.9,
+				0.0
+			],
+			[
+				1.9,
+				2.0
+			],
+			[
+				0.0,
+				2.0
+			]
+		],
+		"side": [
+			0.788,
+			0.0,
+			0.6157
+		],
+		"thickness": 0.06,
+		"triangles": 1358,
+		"width": 1.9
+	},
+	"09_town_hall": {
+		"bottom": 1.13,
+		"front": -3.222,
+		"height": 2.1,
+		"hinge": "right",
+		"left": -0.73,
+		"mesh": "res://maps/archipelago/doors/town_hall.res",
+		"model": "res://maps/archipelago/assets/buildings/town_hall.glb",
+		"opening": "res://maps/archipelago/doors/town_hall_opening.res",
+		"origin": [
+			1.8945,
+			0.0,
+			6.1164
+		],
+		"out": [
+			0.2959,
+			0.0,
+			0.9552
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				2.0,
+				0.0
+			],
+			[
+				2.0,
+				2.1
+			],
+			[
+				0.0,
+				2.1
+			]
+		],
+		"side": [
+			0.9552,
+			0.0,
+			-0.2959
+		],
+		"thickness": 0.06,
+		"triangles": 792,
+		"width": 2.0
+	},
+	"10_red_house": {
+		"bottom": 0.72,
+		"front": -1.467,
+		"height": 2.48,
+		"hinge": "right",
+		"left": -0.56,
+		"mesh": "res://maps/archipelago/doors/red_house.res",
+		"model": "res://maps/archipelago/assets/buildings/red_house.glb",
+		"opening": "res://maps/archipelago/doors/red_house_opening.res",
+		"origin": [
+			2.6691,
+			0.0,
+			3.8309
+		],
+		"out": [
+			0.6106,
+			0.0,
+			0.7919
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				0.2,
+				0.0
+			],
+			[
+				1.52,
+				0.04
+			],
+			[
+				1.52,
+				2.32
+			],
+			[
+				1.48,
+				2.44
+			],
+			[
+				0.44,
+				2.48
+			],
+			[
+				0.08,
+				2.48
+			],
+			[
+				0.04,
+				2.36
+			],
+			[
+				0.0,
+				0.04
+			]
+		],
+		"side": [
+			0.7919,
+			0.0,
+			-0.6106
+		],
+		"thickness": 0.06,
+		"triangles": 2958,
+		"width": 1.52
+	},
+	"11_purple_house": {
+		"bottom": 0.52,
+		"front": -1.259,
+		"height": 2.2,
+		"hinge": "right",
+		"left": -0.52,
+		"mesh": "res://maps/archipelago/doors/purple_house.res",
+		"model": "res://maps/archipelago/assets/buildings/purple_house.glb",
+		"opening": "res://maps/archipelago/doors/purple_house_opening.res",
+		"origin": [
+			2.5,
+			0.0,
+			3.6
+		],
+		"out": [
+			0.6102,
+			0.0,
+			0.7923
+		],
+		"outline": [
+			[
+				0.0,
+				0.72
+			],
+			[
+				0.04,
+				0.0
+			],
+			[
+				1.24,
+				0.0
+			],
+			[
+				1.24,
+				1.8
+			],
+			[
+				1.16,
+				1.96
+			],
+			[
+				1.08,
+				2.04
+			],
+			[
+				1.04,
+				2.08
+			],
+			[
+				0.96,
+				2.12
+			],
+			[
+				0.88,
+				2.16
+			],
+			[
+				0.76,
+				2.2
+			],
+			[
+				0.48,
+				2.2
+			],
+			[
+				0.36,
+				2.16
+			],
+			[
+				0.2,
+				2.08
+			],
+			[
+				0.12,
+				2.0
+			],
+			[
+				0.08,
+				1.92
+			],
+			[
+				0.04,
+				1.84
+			],
+			[
+				0.0,
+				0.76
+			]
+		],
+		"side": [
+			0.7923,
+			0.0,
+			-0.6102
+		],
+		"thickness": 0.06,
+		"triangles": 1694,
+		"width": 1.24
+	},
+	"12_blue_house": {
+		"bottom": 0.72,
+		"front": -0.936,
+		"height": 2.12,
+		"hinge": "right",
+		"left": -0.32,
+		"mesh": "res://maps/archipelago/doors/blue_house.res",
+		"model": "res://maps/archipelago/assets/buildings/blue_house.glb",
+		"opening": "res://maps/archipelago/doors/blue_house_opening.res",
+		"origin": [
+			-2.6,
+			0.0,
+			2.8
+		],
+		"out": [
+			-0.6267,
+			0.0,
+			0.7793
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				1.24,
+				0.0
+			],
+			[
+				1.24,
+				0.12
+			],
+			[
+				1.16,
+				1.68
+			],
+			[
+				1.12,
+				1.84
+			],
+			[
+				1.0,
+				2.0
+			],
+			[
+				0.88,
+				2.08
+			],
+			[
+				0.76,
+				2.12
+			],
+			[
+				0.44,
+				2.12
+			],
+			[
+				0.32,
+				2.08
+			],
+			[
+				0.24,
+				2.0
+			],
+			[
+				0.12,
+				1.88
+			],
+			[
+				0.08,
+				1.8
+			],
+			[
+				0.04,
+				1.64
+			],
+			[
+				0.0,
+				0.12
+			]
+		],
+		"side": [
+			0.7793,
+			0.0,
+			0.6267
+		],
+		"thickness": 0.06,
+		"triangles": 2172,
+		"width": 1.24
+	},
+	"13_shop": {
+		"bottom": 0.45,
+		"front": 0.361,
+		"height": 1.9,
+		"hinge": "right",
+		"left": -0.5,
+		"mesh": "res://maps/archipelago/doors/shop.res",
+		"model": "res://maps/archipelago/assets/buildings/shop.glb",
+		"opening": "res://maps/archipelago/doors/shop_opening.res",
+		"origin": [
+			-0.9,
+			0.0,
+			1.9
+		],
+		"out": [
+			-0.4281,
+			0.0,
+			0.9037
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				1.0,
+				0.0
+			],
+			[
+				1.0,
+				1.9
+			],
+			[
+				0.0,
+				1.9
+			]
+		],
+		"side": [
+			0.9037,
+			0.0,
+			0.4281
+		],
+		"thickness": 0.06,
+		"triangles": 500,
+		"width": 1.0
+	},
+	"16_blue_cottage": {
+		"bottom": 0.56,
+		"front": -1.161,
+		"height": 2.28,
+		"hinge": "right",
+		"left": -0.76,
+		"mesh": "res://maps/archipelago/doors/blue_cottage.res",
+		"model": "res://maps/archipelago/assets/buildings/blue_cottage.glb",
+		"opening": "res://maps/archipelago/doors/blue_cottage_opening.res",
+		"origin": [
+			-2.6516,
+			0.0,
+			2.7224
+		],
+		"out": [
+			-0.6977,
+			0.0,
+			0.7163
+		],
+		"outline": [
+			[
+				0.0,
+				0.32
+			],
+			[
+				0.04,
+				0.0
+			],
+			[
+				1.44,
+				0.0
+			],
+			[
+				1.52,
+				0.32
+			],
+			[
+				1.52,
+				0.8
+			],
+			[
+				1.48,
+				1.76
+			],
+			[
+				1.44,
+				1.96
+			],
+			[
+				1.24,
+				2.16
+			],
+			[
+				1.2,
+				2.2
+			],
+			[
+				1.04,
+				2.28
+			],
+			[
+				0.48,
+				2.28
+			],
+			[
+				0.24,
+				2.16
+			],
+			[
+				0.04,
+				1.96
+			],
+			[
+				0.0,
+				1.72
+			]
+		],
+		"side": [
+			0.7163,
+			0.0,
+			0.6977
+		],
+		"thickness": 0.06,
+		"triangles": 2160,
+		"width": 1.52
+	},
+	"17_lighthouse": {
+		"bottom": 0.72,
+		"front": -1.208,
+		"height": 2.2,
+		"hinge": "right",
+		"left": -1.08,
+		"mesh": "res://maps/archipelago/doors/lighthouse.res",
+		"model": "res://maps/archipelago/assets/buildings/lighthouse.glb",
+		"opening": "res://maps/archipelago/doors/lighthouse_opening.res",
+		"origin": [
+			0.0,
+			0.0,
+			2.6
+		],
+		"out": [
+			-0.0719,
+			0.0,
+			0.9974
+		],
+		"outline": [
+			[
+				0.0,
+				0.44
+			],
+			[
+				0.04,
+				0.0
+			],
+			[
+				1.2,
+				0.0
+			],
+			[
+				1.24,
+				0.28
+			],
+			[
+				1.24,
+				1.76
+			],
+			[
+				1.08,
+				2.0
+			],
+			[
+				1.0,
+				2.08
+			],
+			[
+				0.88,
+				2.16
+			],
+			[
+				0.72,
+				2.2
+			],
+			[
+				0.44,
+				2.2
+			],
+			[
+				0.36,
+				2.16
+			],
+			[
+				0.24,
+				2.08
+			],
+			[
+				0.2,
+				2.04
+			],
+			[
+				0.16,
+				2.0
+			],
+			[
+				0.08,
+				1.84
+			],
+			[
+				0.04,
+				1.72
+			],
+			[
+				0.0,
+				0.68
+			]
+		],
+		"side": [
+			0.9974,
+			0.0,
+			0.0719
+		],
+		"thickness": 0.06,
+		"triangles": 3808,
+		"width": 1.24
+	},
+	"18_meadow_house": {
+		"bottom": 0.72,
+		"front": -0.96,
+		"height": 2.12,
+		"hinge": "right",
+		"left": -0.32,
+		"mesh": "res://maps/archipelago/doors/blue_house.res",
+		"model": "res://maps/archipelago/assets/buildings/blue_house.glb",
+		"opening": "res://maps/archipelago/doors/blue_house_opening.res",
+		"origin": [
+			-2.6087,
+			0.0,
+			2.8261
+		],
+		"out": [
+			-0.6318,
+			0.0,
+			0.7751
+		],
+		"outline": [
+			[
+				0.0,
+				0.0
+			],
+			[
+				1.2,
+				0.0
+			],
+			[
+				1.2,
+				0.16
+			],
+			[
+				1.16,
+				1.64
+			],
+			[
+				1.12,
+				1.76
+			],
+			[
+				1.08,
+				1.88
+			],
+			[
+				0.96,
+				2.0
+			],
+			[
+				0.88,
+				2.08
+			],
+			[
+				0.76,
+				2.12
+			],
+			[
+				0.4,
+				2.12
+			],
+			[
+				0.24,
+				2.04
+			],
+			[
+				0.2,
+				2.0
+			],
+			[
+				0.12,
+				1.92
+			],
+			[
+				0.08,
+				1.84
+			],
+			[
+				0.04,
+				1.72
+			],
+			[
+				0.0,
+				0.16
+			]
+		],
+		"side": [
+			0.7751,
+			0.0,
+			0.6318
+		],
+		"thickness": 0.06,
+		"triangles": 2200,
+		"width": 1.2
+	}
+}

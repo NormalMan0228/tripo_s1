@@ -66,6 +66,10 @@ const WALK := "shadow/walk"
 const IDLE := "shadow/idle"
 const BASE_SCALE := 1.7
 const STEP_HEIGHT := 0.36
+## Walker capsule (0.32) + this body (0.28) + a hair: a resident never steps closer.
+const PLAYER_CLEAR := 0.62
+## Fastest the drawn body rises or sinks onto a new floor height (m/s).
+const CLIMB_SPEED := 2.8
 ## Ground probes: terrain/rocks and decks/floors, never props or tree canopies.
 const GROUND_MASK := 1|2
 ## Pond surfaces sit above the sea's shore line, so their beds count as water too.
@@ -212,6 +216,12 @@ var steps_in_row := 0
 var since_step := 0.0
 ## Animation level of detail: advance the rig every anim_stride physics frames.
 var anim_stride := 1
+## The body moves in 60 Hz physics ticks; the visual is drawn between the last two tick
+## positions (draw(), from shadow_folk's frame loop) so walkers glide on faster screens.
+var tick_from := Vector3.ZERO
+var tick_to := Vector3.ZERO
+## The pose's own visual offset (apply_layout: seated hips, a lying body).
+var layout_offset := Vector3.ZERO
 var anim_clock := 0.0
 var anim_frame := 0
 var step_clock := 0.0
@@ -418,6 +428,11 @@ func attach(bone: String, offset: Vector3, basis := Basis.IDENTITY) -> Node3D:
 	var rest: Transform3D = skeleton.global_transform*skeleton.get_bone_global_rest(index)
 	holder.transform = rest.affine_inverse()*(figure.global_transform*Transform3D(basis, offset))
 	return holder
+
+## The shared equipment socket `name` (equip_sockets.gd: hand_r, hand_l, back, hip_r, hip_l, head) on
+## this resident's rig, or null. The same names as the player's sockets.
+func socket(name: String) -> Node3D:
+	return preload("res://scripts/equip_sockets.gd").socket(skeleton, name) if is_instance_valid(skeleton) else null
 
 func silhouette_mesh(parent: Node3D, mesh: Mesh, at: Vector3, rotation_degrees_value := Vector3.ZERO, size := Vector3.ONE) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
@@ -869,17 +884,18 @@ func apply_layout() -> void:
 		"lie":
 			var dir := Vector3(sin(face_yaw), 0, cos(face_yaw))
 			visual.rotation = Vector3(-PI*0.5, face_yaw+PI, 0)
-			visual.position = -dir*length*0.5+Vector3(0, 0.16*width_scale, 0)
+			layout_offset = -dir*length*0.5+Vector3(0, 0.16*width_scale, 0)
 		"sit":
 			visual.rotation = Vector3(0, face_yaw, 0)
-			visual.position = Vector3(0, -hip_local+0.04, 0)
+			layout_offset = Vector3(0, -hip_local+0.04, 0)
 		"sit_ground":
 			visual.rotation = Vector3(0, face_yaw, 0)
-			visual.position = Vector3(0, -hip_local+0.11, 0)
+			layout_offset = Vector3(0, -hip_local+0.11, 0)
 		_:
 			if still: visual.rotation = Vector3(0, face_yaw, 0)
 			else: visual.rotation.x = 0.0
-			visual.position = Vector3.ZERO
+			layout_offset = Vector3.ZERO
+	visual.position = layout_offset
 	if is_instance_valid(nameplate):
 		nameplate.position.y = (0.75 if pose == "lie" else (1.3 if pose.begins_with("sit") else 1.88))*height_scale+0.22
 		bubble.position.y = nameplate.position.y+0.4
@@ -990,11 +1006,8 @@ func _process(delta: float) -> void:
 	anim_frame += 1
 	# Lying figures hold one frame; others step slower when the camera is far.
 	if pose == "lie" and not pose_dirty: return
-	var stride := 1
-	var camera := get_viewport().get_camera_3d()
-	if camera:
-		var d := camera.global_position.distance_to(global_position)
-		stride = 1 if d < 14.0 else (2 if d < 30.0 else 4)
+	var lod := preload("res://scripts/anim_lod.gd")
+	var stride: int = lod.stride(lod.planes(get_viewport().get_camera_3d()), global_position, global_position)
 	if anim_frame % stride != 0 and not pose_dirty: return
 	animator.speed_scale = clip_speed
 	animator.advance(anim_clock)
@@ -1213,12 +1226,25 @@ static var profile := false
 static var profile_us := 0
 
 func _physics_process(delta: float) -> void:
+	tick_from = position
 	if not profile:
 		step(delta)
-		return
-	var started := Time.get_ticks_usec()
-	step(delta)
-	profile_us += Time.get_ticks_usec()-started
+	else:
+		var started := Time.get_ticks_usec()
+		step(delta)
+		profile_us += Time.get_ticks_usec()-started
+	# A jump (a slip, a door, a placement) is drawn at once, not slid across.
+	if position.distance_squared_to(tick_from) > 1.0: tick_from = position
+	tick_to = position
+
+## Draws the visual between the last two physics positions (fraction of the tick).
+func draw(fraction: float) -> void:
+	if not is_instance_valid(visual): return
+	# Moved outside the physics tick (placed, emerged): no blending across it.
+	if position.distance_squared_to(tick_to) > 0.000001:
+		tick_from = position
+		tick_to = position
+	visual.position = layout_offset+tick_from.lerp(tick_to, fraction)-position
 
 func step(delta: float) -> void:
 	update_fade(delta)
@@ -1319,7 +1345,7 @@ func step(delta: float) -> void:
 	horizontal = horizontal.move_toward(goal, (5.0 if goal.length() > horizontal.length() else 7.0)*delta)
 	var before := position
 	glide(delta)
-	resting = not walking and horizontal == Vector2.ZERO and position.y >= min_ground_y
+	resting = not walking and horizontal == Vector2.ZERO and position.y >= min_ground_y and absf(ground_y-position.y) < 0.01
 	var moved := Vector2(position.x-before.x, position.z-before.z)
 	stats.distance += moved.length()
 	since_step += moved.length()
@@ -1339,8 +1365,16 @@ func step(delta: float) -> void:
 ## refused (the stall logic then steps aside or turns back).
 func glide(delta: float) -> void:
 	var step_xz := horizontal*delta
-	if step_xz == Vector2.ZERO and ground_clock > 0: return
+	if step_xz == Vector2.ZERO and ground_clock > 0 and absf(ground_y-position.y) < 0.01: return
 	var from := position
+	# Never into the walker's capsule: the kinematic step shoved the player's body out
+	# by up to a metre a tick (it jumped on screen). Only the sideways part is kept.
+	var player_at: Vector2 = folk.player_xz()
+	var away := Vector2(from.x, from.z)-player_at
+	if away.length() < PLAYER_CLEAR+step_xz.length() and away.length() > 0.001:
+		away = away.normalized()
+		var inward := step_xz.dot(away)
+		if inward < 0.0: step_xz -= away*inward
 	position.x += step_xz.x
 	position.z += step_xz.y
 	ground_clock -= 1
@@ -1367,7 +1401,10 @@ func glide(delta: float) -> void:
 			ground_y = from.y
 			return
 	var gap := ground_y-position.y
-	position.y = ground_y if absf(gap) > 0.5 else position.y+gap*minf(1.0, 18.0*delta)
+	# A step, a deck or a stair is climbed over a few frames (never a whole step in one
+	# tick: that read as a hop); only a placement or a real drop snaps.
+	if just_placed or absf(gap) > 1.6: position.y = ground_y
+	else: position.y += clampf(gap*minf(1.0, 18.0*delta), -CLIMB_SPEED*delta, CLIMB_SPEED*delta)
 	if position.y >= min_ground_y:
 		safe_position = position
 		has_safe_position = true

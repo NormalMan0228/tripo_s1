@@ -16,7 +16,7 @@ extends Node3D
 ##     interior never show her twice; her words open by themselves when the walker arrives;
 ##   * greetings: a short speech bubble and a heart over each resident the first time the walker
 ##     comes near (once each, kept on the server);
-##   * the gift: the piece appears on the terrace's little deck at once, 모카 is delighted, a
+##   * the gift: the piece appears on the terrace at once, 모카 is delighted, a
 ##     passer-by walks over and sits on a seat, and a ribbon closes the chapter.
 ## Everyone (the owner and visitors) sees the terrace's piece; a seat has someone resting on it
 ## when the walker comes by in the daytime. Visitors see no chapter of their own here.
@@ -62,7 +62,8 @@ const ARRIVE := 3.4
 const GREET_REACH := 4.6
 const GREET_GAP := 3.0
 ## Residents who may sit on the terrace's seat (shadow folk with a daytime look).
-const GUESTS := ["gentleman", "stroller", "poet", "sweeper", "postman", "gardener", "miller", "shopkeeper", "kid"]
+## (Not 다온 the postman: he runs up after the gift with the forest news, story_forest.gd.)
+const GUESTS := ["gentleman", "stroller", "poet", "sweeper", "gardener", "miller", "shopkeeper", "kid"]
 ## Each resident's first words to the newcomer, in their own voice (shadow_folk.gd, day_folk.gd).
 const GREETINGS := {"naru":"새로 온 제작자구나! 반가워!", "sora":"어머, 새로 이사 온 분이죠? 반가워요!",
 	"moru":"새 이웃이군. 마을에 온 걸 환영해.", "haeru":"어서 와요! 이사 온 걸 환영해요.",
@@ -79,9 +80,12 @@ static var current: Node
 ## The residents' requests once the chapter is over (quests.gd, a child of this module): their
 ## tracker lines and guide goals go through this module's ("story_quest:*", "story_quest_book").
 const Quests := preload("res://scripts/quests.gd")
+## The epilogue after the gift: 다온 runs up with news from the forest (story_forest.gd).
+const StoryForest := preload("res://scripts/story_forest.gd")
 
 var app: Node
 var quests: Node
+var forest: Node
 ## server/story.py public() for this account ({} without the chapter or while visiting).
 var story: Dictionary = {}
 var busy := false
@@ -90,7 +94,6 @@ var moka_yaw := 0.0
 var guest: Node3D
 var guest_id := ""
 var guest_seated := false
-var deck: Node3D
 var piece: Node3D
 var piece_item: Dictionary = {}
 var piece_seat := false
@@ -130,6 +133,10 @@ func setup(main: Node) -> void:
 	quests = Quests.new()
 	add_child(quests)
 	quests.setup(main, self)
+	forest = StoryForest.new()
+	forest.name = "StoryForest"
+	forest.story = self
+	add_child(forest)
 
 ## The residents' requests from the server (main.gd, with /v1/me).
 func adopt_quests(data) -> void:
@@ -199,8 +206,15 @@ func objective(base: String) -> String:
 			if stalled(): return "▸ "+tr("제작이 멈췄어요 · C로 다시 만들기")+"\n"+tr("어떤 모습이든 네 상상대로")
 			return "▸ "+tr("%s · 모카의 의자 만들기") % preload("res://scripts/rpg_ui.gd").key_text("craft")+"\n"+tr("어떤 모습이든 네 상상대로")
 		"done":
+			# 다온's news first (the way on to the forest), then 모카's letter at the mailbox.
+			var lines := PackedStringArray()
+			if is_instance_valid(forest) and forest.active():
+				lines.append("▸ "+tr("숲의 돌문으로 가기"))
+				lines.append(tr("다온: 돌문 너머에서 이상한 소리가 나요"))
 			if not bool(story.get("letter", {}).get("read", true)):
-				return "✦ "+tr("마을의 첫 선물 · 완료")+"\n▸ "+tr("우편함에서 모카의 편지 읽기")+"\n"+base
+				lines.append("✦ "+tr("마을의 첫 선물 · 완료"))
+				lines.append("▸ "+tr("우편함에서 모카의 편지 읽기"))
+			if not lines.is_empty(): return "\n".join(lines)+("\n"+base if not base.is_empty() else "")
 	return base
 
 ## The village's first toast while the chapter runs ("" for the usual welcome).
@@ -246,7 +260,7 @@ func story_line_key(line: String) -> String:
 	for entry in [["나의 집 · 책상 위 편지 읽기", "story_home"], ["카페 '빨간 지붕'에 인사하러 가기", "story_cafe"],
 			["완성! 모카에게 가져가기", "story_cafe"], ["C · 모카의 의자 만들기", "story_craft"],
 			["제작이 멈췄어요 · C로 다시 만들기", "story_craft"], ["그림이 나왔어요 · C로 확인하기", "story_craft"],
-			["우편함에서 모카의 편지 읽기", "story_mailbox"]]:
+			["우편함에서 모카의 편지 읽기", "story_mailbox"], ["숲의 돌문으로 가기", "story_forest"]]:
 		if line == tr(entry[0]): return entry[1]
 	return ""
 
@@ -265,6 +279,7 @@ func story_goal(key: String) -> Dictionary:
 		"story_mailbox":
 			var box := field_entry("mailbox")
 			goal = {"at":box.get("at", Vector2(-51.3, 22.6)), "name":tr("나의 우편함"), "key":key}
+		"story_forest": goal = {"at":Town.GATE, "name":tr("숲의 돌문"), "key":key}
 		_: return {}
 	var here := island_of(walker_at())
 	var there := island_of(goal.at)
@@ -313,7 +328,7 @@ func current_key() -> String:
 	for line in objective("").split("\n"):
 		if line.begins_with("▸ "):
 			var key := story_line_key(line.trim_prefix("▸ "))
-			if key in ["story_home", "story_cafe", "story_mailbox"]: return key
+			if key in ["story_home", "story_cafe", "story_mailbox", "story_forest"]: return key
 	return ""
 
 ## A new chapter goal is guided at once (unless the player turned the guide off); a guided one
@@ -356,7 +371,7 @@ func steer_guide() -> void:
 ## At a signpost on the way: its travel choices open with the goal's island on top.
 func arrived(key: String) -> void:
 	if not key.begins_with("story_") or not is_instance_valid(app) or is_instance_valid(app.get("village_modal")): return
-	var goal: Vector2 = {"story_home":Town.HOME_DOOR, "story_cafe":MOKA_AT}.get(key, Vector2.INF)
+	var goal: Vector2 = {"story_home":Town.HOME_DOOR, "story_cafe":MOKA_AT, "story_forest":Town.GATE}.get(key, Vector2.INF)
 	if key == "story_mailbox": goal = field_entry("mailbox").get("at", Vector2(-51.3, 22.6))
 	if key.begins_with(Quests.KEY) and is_instance_valid(quests):
 		quests.arrived(key)
@@ -392,6 +407,7 @@ func _process(delta: float) -> void:
 		return
 	if busy or story.is_empty() or visiting(): return
 	if step() == "craft": tell_done()
+	if step() == "done" and is_instance_valid(forest): forest.tick(delta)
 	if waiting():
 		greet_wait -= delta
 		if greet_wait <= 0.0: greet_nearby()
@@ -550,6 +566,12 @@ func accept(open_window: bool) -> void:
 	app.message(tr("새 목표 · 모카의 의자 만들기"))
 	if open_window: app.open_craft()
 
+## The epilogue's events (server/story.py EVENTS: forest_told, forest_gate), once each.
+func post_event(event: String) -> Dictionary:
+	var result: Dictionary = await app.api.post("/v1/story/step", app.api.mutation({"action":"event", "event":event}))
+	if result.ok and result.data.get("story") is Dictionary: adopt(result.data.story)
+	return result
+
 func post_step(action: String, npc := "") -> Dictionary:
 	var body := {"action":action}
 	if not npc.is_empty(): body["npc"] = npc
@@ -624,6 +646,8 @@ func finale(reply: Dictionary) -> void:
 	var note := NpcGifts.letters_note(reply)
 	if not note.is_empty():
 		get_tree().create_timer(5.6).timeout.connect(func(): if is_instance_valid(app): app.message(note))
+	# A few calm seconds later 다온 comes running with news from the forest (story_forest.gd).
+	if is_instance_valid(forest): forest.arm()
 
 # ------------------------------------------------------------------ the terrace
 
@@ -664,9 +688,6 @@ func clear_piece() -> void:
 	piece_item = {}
 	piece_seat = false
 	release_guest()
-	if is_instance_valid(deck):
-		deck.queue_free()
-		deck = null
 
 func show_piece(item: Dictionary, fresh: bool) -> void:
 	var node: Node3D = await app.load_object(item, "/v1/social/village/objects/")
@@ -675,47 +696,14 @@ func show_piece(item: Dictionary, fresh: bool) -> void:
 		return
 	if node == null: return
 	clear_piece()
-	build_deck()
 	add_child(node)
-	node.position = Town.point(Vector2(float(item.get("x", TERRACE.x)), float(item.get("z", TERRACE.y))), 0.06)
+	# Straight on the grass (the round plank deck under it was removed, user 2026-10-16).
+	node.position = Town.point(Vector2(float(item.get("x", TERRACE.x)), float(item.get("z", TERRACE.y))), 0.0)
 	node.rotation_degrees.y = float(item.get("rotation", 0))
 	Loader.add_collision(node)
 	piece = node
 	piece_item = item
 	if fresh: Fx.arrive(self, node, app, true)
-
-## A round plank deck under the terrace's piece.
-func build_deck() -> void:
-	if is_instance_valid(deck): return
-	deck = Node3D.new()
-	deck.name = "TerraceDeck"
-	add_child(deck)
-	deck.position = Town.point(TERRACE, 0.0)
-	for layer in [[1.25, 0.05, Color("8a6446")], [1.12, 0.07, Color("c39a6b")]]:
-		var disc := CylinderMesh.new()
-		disc.top_radius = layer[0]
-		disc.bottom_radius = layer[0]
-		disc.height = layer[1]
-		disc.radial_segments = 12
-		disc.rings = 1
-		var mesh := MeshInstance3D.new()
-		mesh.mesh = disc
-		mesh.position.y = float(layer[1])*0.5-0.01
-		var material := StandardMaterial3D.new()
-		material.albedo_color = layer[2]
-		material.roughness = 0.85
-		mesh.material_override = material
-		deck.add_child(mesh)
-	for i in 4:
-		var plank := MeshInstance3D.new()
-		var bar := BoxMesh.new()
-		bar.size = Vector3(2.1, 0.012, 0.03)
-		plank.mesh = bar
-		plank.position = Vector3(0, 0.066, -0.75+i*0.5)
-		var line := StandardMaterial3D.new()
-		line.albedo_color = Color("9c7550")
-		plank.material_override = line
-		deck.add_child(plank)
 
 ## A resident sits on the terrace's seat: walking over from the café road the first time,
 ## already resting on later visits. Their plan is held meanwhile (residents.gd).

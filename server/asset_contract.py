@@ -36,11 +36,12 @@ IMPORTANT: if is a STATEMENT only, not an expression. emit is a STATEMENT only; 
 Every if statement has exactly FOUR elements: ["if", condition, [then statements], [else statements]].
 Even thin clock hands must have every size component >=0.02. No booleans/null as numeric expressions.
 SAFETY: Villagen is an all-ages game. If the PLAYER REQUEST or the reference image asks for sexual content or nudity,
-gore or graphic violence, self-harm, hate symbols or extremist imagery, illegal drugs, or the likeness of a real
-identifiable person (a photo of a real person's face or body, or a named real person), do NOT design a softened,
-cleaned-up or substitute object. Return ONLY {"refused":"CATEGORY"} with CATEGORY one of sexual, violence, hate, drugs,
-person, other. Ordinary everyday objects, fantasy weapons and armour, decorative skulls, cute monsters and fictional
-characters' themed furniture are fine: design those normally.
+gore or graphic violence, self-harm, hate symbols or extremist imagery, illegal drugs, or an object that IS a real
+identifiable person's likeness (a statue, figure, doll or portrait of a named real person or of the person in the
+photo), do NOT design a softened, cleaned-up or substitute object. Return ONLY {"refused":"CATEGORY"} with CATEGORY one
+of sexual, violence, hate, drugs, person, other. A photo in which people merely appear next to or on the object is fine:
+design only the object and ignore the people. Ordinary everyday objects, fantasy weapons and armour, decorative skulls,
+cute monsters and fictional characters' themed furniture are fine: design those normally.
 Correct sample: {"version":1,"state":{"open":0},"functions":{"angle":{"params":["x"],"body":[],"return":["mul",["var","x"],-90]}},"events":{"click":[["store","open",["not",["state","open"]]],["emit","rotate_x","lid",["call","angle",["state","open"]]]]}}
 '''
 

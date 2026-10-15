@@ -335,6 +335,7 @@ def test_used_up_trial_reads_well_in_released_room_and_village_clients(tmp_path)
 
 
 def test_server_tripo_budget_stops_crafting_when_used_up(tmp_path):
+    from server import tripo_budget
     settings = Settings(data_dir=tmp_path, mode='live', paid_enabled=True, tripo_key='test-only-key',
                         studio_llm='gemini', gemini_key='test-only-key',
                         registration_code='test-only-invitation-123456',
@@ -356,19 +357,27 @@ def test_server_tripo_budget_stops_crafting_when_used_up(tmp_path):
         first = request()
         assert first.status_code == 200, first.json()
         with app.state.db.transaction() as db:
+            user = db.execute("SELECT * FROM users WHERE username='school_one'").fetchone()
+            limits = settings.limits_for(user)
+            attempt = tripo_budget.reserve_attempt(db,limits,first.json()['id'],user['id'],'mesh','whole',20,0,0)
+            tripo_budget.record_task(db,attempt,'t1',0)
+            tripo_budget.record_result(db,attempt,{'status':'success','credits_consumed':20},0)
             db.execute("UPDATE studio_jobs SET state='ready', parts=?, provenance=? WHERE id=?",
                        ('{"whole": {"state": "ready", "task": "t1", "credits_consumed": 20}}', '{"estimated_tripo_credits": 20}', first.json()['id']))
         # A second one is quoted (20) and confirmed: 40 committed of 50.
         second = request().json()['id']
         with app.state.db.transaction() as db:
-            db.execute("UPDATE studio_jobs SET state='awaiting_confirmation', provenance=? WHERE id=?",
-                       ('{"estimated_tripo_credits": 20, "quoted_game_cost": 40}', second))
+            db.execute("UPDATE studio_jobs SET state='awaiting_confirmation', provenance=?,parts=? WHERE id=?",
+                       ('{"estimated_tripo_credits": 20, "quoted_game_cost": 40}', '{"whole":{"state":"pending"}}', second))
         confirmed = client.post(f'/v1/studio/jobs/{second}/confirm', headers=headers, json={'request_id': str(uuid.uuid4())})
         assert confirmed.status_code == 200, confirmed.json()
         studio = client.get('/v1/studio', headers=headers).json()
         assert studio['tripo_budget'] == 50 and studio['tripo_budget_used'] == 40
         # 40 + 20 > 50: the next coloured craft is refused; a 10-credit one still fits.
         with app.state.db.transaction() as db:
+            attempt = tripo_budget.reserve_attempt(db,limits,second,user['id'],'mesh','whole',20,0,0)
+            tripo_budget.record_task(db,attempt,'t2',0)
+            tripo_budget.record_result(db,attempt,{'status':'success','credits_consumed':20},0)
             db.execute("UPDATE studio_jobs SET state='ready', parts=? WHERE id=?",
                        ('{"whole": {"state": "ready", "task": "t2", "credits_consumed": 20}}', second))
         refused = request()

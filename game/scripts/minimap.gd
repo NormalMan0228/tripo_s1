@@ -38,7 +38,8 @@ var guide_layer: Control
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(204, 228)
-	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Clicks on the map stay on it, not on the furniture behind (62).
+	mouse_filter = Control.MOUSE_FILTER_STOP
 	if ResourceLoader.exists(TownMap.MAP_IMAGE): background = load(TownMap.MAP_IMAGE)
 	font = RpgUi.FONT_STRONG
 	# Placed by absolute position in the right half of the 1280-wide layout: keep the

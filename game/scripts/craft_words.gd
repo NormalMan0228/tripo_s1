@@ -26,6 +26,9 @@ static func refusal(code: String, cap := 0) -> String:
 			if cap >= 20: return _t("이 조합은 1회 제작 한도(%d크레딧)를 넘어요. 옵션을 줄이거나 운영자에게 한도를 물어보세요.") % cap
 			return _t("체험판에서는 가장 간단한 제작(직접 색칠 · 정적인 가구 · H3)만 할 수 있어요.")
 		"tripo_budget_exhausted": return _t("이번 학기 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요.")
+		"animate_requires_character": return _t("움직이는 캐릭터는 사람 모양만 만들 수 있어요. '로봇 캐릭터'처럼 적어 주세요.")
+		"animate_requires_text": return _t("움직이는 캐릭터는 사진 없이 글로만 만들 수 있어요.")
+		"animate_requires_tripo", "rigging_disabled": return _t("지금은 움직이는 캐릭터를 만들 수 없어요.")
 		"tester_credit_budget_exhausted": return _t("이 계정의 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요.")
 		"craft_star_limit_exceeded": return _t("이 제작은 별씨 한도를 넘어요. 옵션을 줄여 다시 맡겨 주세요.")
 		"user_total_generation_limit": return _t("이 계정의 제작 의뢰 횟수를 모두 썼어요. 만든 물건으로 마을을 꾸며 보세요!")
@@ -75,6 +78,7 @@ static func failure(value: Dictionary) -> Dictionary:
 		"setup": why = _t("공방 설정 문제로 만들지 못했어요. 운영자에게 알려 주세요.")
 		"credit": why = _t("공방 재료가 떨어졌어요. 운영자에게 알려 주세요.")
 		"limit": why = _t("제작 한도를 넘어 멈췄어요.")
+		"rig": why = _t("뼈대와 동작을 넣다가 실패했어요. 팔다리가 잘 보이는 사람 모양 캐릭터로 다시 맡겨 보세요.")
 		_: why = _t("제작을 마치지 못했어요.")
 	return {"title": _t("제작에 실패했어요"), "why": why + " " + back, "refused": false}
 

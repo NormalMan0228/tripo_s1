@@ -322,6 +322,36 @@ def test_described_interaction_uses_the_studio_designer_and_refunds_failures(wor
     assert limited.status_code == 429 and limited.json()['detail'] == 'interaction_daily_limit'
 
 
+def test_failed_interaction_retries_refund_the_original_charge_only_once(world):
+    from server.design_provider import DesignFailure
+    app, c = world
+    auth = account(c, 'refund_retries')
+    object_id = craft(app, c, auth, 'chest')
+    route = '/v1/objects/' + object_id + '/interaction/describe'
+
+    class Broken:
+        async def generate(self, *args):
+            raise DesignFailure([{'validation_error': 'invalid_expression'}])
+
+    app.state.settings.studio_llm = 'openai'
+    app.state.studio.designer = Broken()
+    before = c.get('/v1/me', headers=auth).json()['shards']
+    body = mutation(text='make it spin')
+    first = c.post(route, headers=auth, json=body)
+    assert first.status_code == 200 and first.json()['state'] == 'failed', first.text
+    for _ in range(3):
+        assert c.post(route, headers=auth, json=body).json() == first.json()
+    with app.state.db.transaction() as conn:
+        for _ in range(3):
+            app.state.interactions.give_up(conn, first.json()['design_id'], 'design_interrupted')
+        rows = conn.execute("SELECT amount,reason FROM ledger WHERE reference=? ORDER BY rowid",
+                            (first.json()['design_id'],)).fetchall()
+    assert [(row['amount'], row['reason']) for row in rows] == [
+        (-interactions.DESCRIBE_COST, 'interaction_charge'),
+        (interactions.DESCRIBE_COST, 'interaction_refund')]
+    assert c.get('/v1/me', headers=auth).json()['shards'] == before
+
+
 def test_visitors_see_the_interaction(world):
     app, c = world
     a, b = account(c, 'alice'), account(c, 'bobby')

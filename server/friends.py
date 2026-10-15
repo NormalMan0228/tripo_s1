@@ -15,7 +15,8 @@ from typing import Literal
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import Field, model_validator
-from .models import Strict, Mutation, Avatar
+from .models import Strict, Mutation
+from .appearance import public_avatar
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS social_friends (
@@ -144,10 +145,7 @@ def where_of(row):
 
 
 def look(raw):
-    try:
-        return json.loads(raw) if raw else Avatar().model_dump()
-    except ValueError:
-        return Avatar().model_dump()
+    return public_avatar(raw)
 
 
 class Roster:

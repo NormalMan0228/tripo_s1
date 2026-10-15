@@ -2,6 +2,7 @@ extends Node3D
 ## A fixed pose parent plus a motion pivot per part, with bbox-normalized GLB.
 const VM=preload("res://scripts/asset_vm.gd")
 const Loader=preload("res://scripts/model_loader.gd")
+const RigMotion=preload("res://scripts/rig_motion.gd")
 var manifest: Dictionary={}
 var pivots: Dictionary={}
 var surfaces: Dictionary={}
@@ -186,7 +187,15 @@ func build(value: Dictionary, blobs: Dictionary) -> bool:
 	start_program(program_of(value),runtime.get("state",{}))
 	set_meta("size",total.size*factor)
 	set_meta("studio",true)
+	# A crafted character (task 67): its clips loop and its bones are checked once shown (rig_motion.gd).
+	var rig: Dictionary=value.get("provenance",{}).get("rig",{})
+	if rig.get("moves",false) is bool and rig.get("moves",false):
+		set_meta("rig",rig)
+		RigMotion.start(self,rig)
 	return true
+
+func _ready() -> void:
+	if has_meta("rig") and not has_meta("rig_moving"): RigMotion.verify(self)
 
 func preview_binding(id: String, edit: Dictionary) -> void:
 	# Inspection-only pose edit. Server validation is required before persistence.

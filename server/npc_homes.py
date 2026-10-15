@@ -43,7 +43,7 @@ from .models import Mutation
 from .asset_assembly import extent, fixture_glb, validate_plan
 from .provider import ProviderError
 from .stored_assets import read_glb
-from . import homestead, object_paint, object_shape
+from . import homestead, npc_letters, object_paint, object_shape
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS npc_homes (
@@ -64,16 +64,19 @@ CREATE TABLE IF NOT EXISTS npc_friendship (
 CREATE TABLE IF NOT EXISTS npc_gifts (
  id TEXT PRIMARY KEY, host_id TEXT NOT NULL REFERENCES users(id), npc_id TEXT NOT NULL,
  object_id TEXT NOT NULL REFERENCES objects(id), mood TEXT NOT NULL, points INTEGER NOT NULL, created REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS npc_gifts_daily ON npc_gifts(host_id,npc_id,created);
 -- One letter per resident and heart; the fourth heart's letter carries the return gift.
 CREATE TABLE IF NOT EXISTS npc_letters (
  id TEXT PRIMARY KEY, host_id TEXT NOT NULL REFERENCES users(id), npc_id TEXT NOT NULL, level INTEGER NOT NULL,
  gift_object_id TEXT REFERENCES objects(id), created REAL NOT NULL, read_at REAL, UNIQUE(host_id,npc_id,level));
 -- A one-mesh model's measured box (metres, before the game's sizing), so it is read only once.
 CREATE TABLE IF NOT EXISTS asset_bounds (asset_id TEXT PRIMARY KEY REFERENCES assets(id), size TEXT NOT NULL);
-'''
+''' + npc_letters.SCHEMA
 
 # Who takes gifts: every resident whose bed is in a house (game/scripts/residents.gd, same homes).
-# Shop and workplace owners sleep in back rooms of working buildings and are left out for now.
+# Shop and workplace owners are left out for now: the café, seed-shop and mill owners (regular, farmer,
+# miller) moved to 18_meadow_house, which has no gift slots yet; the others sleep in back rooms of
+# their working buildings.
 # personality picks the client's reaction lines; taste weights the item tags below.
 NPCS = {
     'naru': {'name': '나루', 'home': '02_timber_house', 'personality': 'cheerful', 'taste': {'travel': 3, 'light': 2, 'nature': 1}},
@@ -92,10 +95,19 @@ NPCS = {
 }
 # Letter writers who do not take ordinary gifts: 모카, the café owner, writes the story chapter's
 # thank-you letter (server/story.py) and keeps its gift on the café terrace.
-SENDERS = {'regular': {'name': '모카', 'personality': 'cheerful'}}
+SENDERS = {
+    'regular': {'name': '모카', 'personality': 'cheerful'},
+    'farmer': {'name': '한결', 'personality': 'calm'},
+    'stargazer': {'name': '하늘', 'personality': 'dreamy'},
+    'gardener': {'name': '초록', 'personality': 'calm'},
+    'miller': {'name': '두레', 'personality': 'cheerful'},
+    'shopkeeper': {'name': '단비', 'personality': 'cheerful'},
+}
 # A resident's thank-you letter for a finished request (server/quests.py) has this level: one per
 # resident, clear of the hearts (1..4) and the story chapter's runs (0 and below).
 QUEST_LETTER_LEVEL = 100
+# Compatibility for move letters created before event-backed delivery.
+MOVE_LETTER_LEVEL = 200
 
 # Item tags from the piece's name and its design title/category. English words match whole-word
 # prefixes ("lamp" matches "lamps", not "clamp"); Korean words match anywhere in the text.
@@ -126,6 +138,8 @@ MAX_CATCH_UP = 24
 # the resident loves), later ones that day a little. Hearts are settings.npc_levels.
 GAIN = {'love': 20, 'like': 15, 'thanks': 10}
 GAIN_AGAIN = 2
+# The first loved gift and five further gifts fill one resident's daily allowance.
+GIFT_DAILY_POINTS = 30
 # Older one-mesh models stand indoors with their longest side this long (the village shows them
 # at 1.6 m); a model that cannot be measured uses a box by its kind.
 LEGACY_LONGEST = 1.2
@@ -307,6 +321,16 @@ def friendship(conn, host_id, npc_id, levels):
             'next': levels[level] if level < len(levels) else None}
 
 
+def gift_allowance(conn, host_id, npc_id, now):
+    offset = homestead.DAILY_OFFSET.get()
+    shift = (homestead.KST * 60 if offset is None else offset) * 60
+    start = ((now + shift) // 86400) * 86400 - shift
+    earned = conn.execute('SELECT COALESCE(SUM(points),0) FROM npc_gifts '
+                          'WHERE host_id=? AND npc_id=? AND created>=? AND created<?',
+                          (host_id, npc_id, start, start + 86400)).fetchone()[0]
+    return {'earned': earned, 'cap': GIFT_DAILY_POINTS, 'remaining': max(0, GIFT_DAILY_POINTS - earned)}
+
+
 def glb_bounds(blob):
     """The model's box (width, height, depth) from its meshes' POSITION bounds through the default
     scene's node transforms, the way the game measures it; None when it cannot be read."""
@@ -419,9 +443,10 @@ def letters(conn, host_id, limit=50):
     # A story letter (level 0 or below, server/story.py) names the piece it thanks for: the gift
     # written down in the same moment.
     about = 'FROM npc_gifts g WHERE l.level<=0 AND g.host_id=l.host_id AND g.npc_id=l.npc_id AND g.created=l.created ORDER BY g.rowid DESC LIMIT 1'
-    rows = conn.execute('SELECT l.*,o.name AS gift_name,(SELECT t.name ' + about.replace('FROM npc_gifts g', 'FROM npc_gifts g JOIN objects t ON t.id=g.object_id') +
+    rows = conn.execute('SELECT l.*,e.event,e.event_key,e.payload,o.name AS gift_name,(SELECT t.name ' + about.replace('FROM npc_gifts g', 'FROM npc_gifts g JOIN objects t ON t.id=g.object_id') +
                         ') AS about_name,(SELECT g.mood ' + about + ') AS about_mood FROM npc_letters l '
                         'LEFT JOIN objects o ON o.id=l.gift_object_id '
+                        'LEFT JOIN npc_letter_events e ON e.letter_id=l.id '
                         'WHERE l.host_id=? ORDER BY l.created DESC,l.level DESC LIMIT ?', (host_id, limit)).fetchall()
     out = []
     for r in rows:
@@ -429,12 +454,27 @@ def letters(conn, host_id, limit=50):
         letter = {'id': r['id'], 'npc': r['npc_id'], 'name': who.get('name', ''), 'personality': who.get('personality', 'calm'),
                   'level': max(r['level'], 0), 'created': r['created'], 'read': r['read_at'] is not None,
                   'gift': {'id': r['gift_object_id'], 'name': r['gift_name']} if r['gift_object_id'] else None}
-        if r['level'] <= 0:
+        if r['event']:
+            letter['level'] = 0
+            letter['event'] = {'type': r['event'], 'key': r['event_key'], 'payload': json.loads(r['payload'])}
+            if r['event'] == 'request_done':
+                letter['quest'] = {'npc': r['npc_id']}
+            elif r['event'] in ('move_in', 'move_out'):
+                default = 'out' if r['event'] == 'move_out' else 'in'
+                letter['move'] = {'kind': letter['event']['payload'].get('kind', default), 'npc': r['npc_id']}
+        elif r['level'] <= 0:
             letter['story'] = {'chapter': 'first_gift', 'object': r['about_name'] or '', 'sittable': r['about_mood'] == 'love'}
+        elif r['level'] >= MOVE_LETTER_LEVEL:
+            offset = r['level'] - MOVE_LETTER_LEVEL
+            letter['level'] = 0
+            letter['move'] = {'kind': 'out' if offset % 2 else 'back' if offset else 'in', 'npc': r['npc_id']}
         elif r['level'] >= QUEST_LETTER_LEVEL:
             # The resident's request is done (server/quests.py): its own thank-you words.
             letter['level'] = 0
             letter['quest'] = {'npc': r['npc_id']}
+        content = npc_letters.content_for(letter)
+        if content is not None:
+            letter['content'] = content
         out.append(letter)
     return out
 
@@ -631,8 +671,10 @@ class NpcHomes:
                 items = [dict(r) for r in conn.execute(
                     "SELECT o.id,o.name,o.color,o.version,EXISTS(SELECT 1 FROM studio_assets s WHERE s.asset_id=o.asset_id) AS studio "
                     "FROM objects o WHERE o.owner_id=? AND o.state='inventory' ORDER BY o.created DESC LIMIT 24", (user['id'],))]
+                allowance = gift_allowance(conn, user['id'], npc_id, clock())
                 return {'npc': npc_id, 'home': npc['home'], 'personality': npc['personality'],
                         'can_gift': host_for(conn, user['id']) == user['id'],
+                        'daily_gain': allowance,
                         'friendship': friendship(conn, user['id'], npc_id, levels), 'items': items}
 
         @app.post('/v1/npcs/{npc_id}/gift')
@@ -651,6 +693,9 @@ class NpcHomes:
                     fail('stale_object_version')
                 if obj['state'] != 'inventory':
                     fail('object_not_in_inventory')
+                allowance = gift_allowance(conn, user['id'], npc_id, now)
+                if not allowance['remaining']:
+                    fail('npc_gift_daily_limit', 429)
                 studio = conn.execute('SELECT manifest FROM studio_assets WHERE asset_id=?', (obj['asset_id'],)).fetchone()
                 shape = conn.execute('SELECT width,depth,height,scale FROM object_shape WHERE object_id=?', (obj['id'],)).fetchone()
                 shape = dict(shape) if shape else None
@@ -688,7 +733,7 @@ class NpcHomes:
                 day = homestead.local_day(now)
                 before = conn.execute('SELECT last_day FROM npc_friendship WHERE host_id=? AND npc_id=?', (user['id'], npc_id)).fetchone()
                 again = bool(before and before['last_day'] == day)
-                gain = GAIN_AGAIN if again else GAIN[mood]
+                gain = min(GAIN_AGAIN if again else GAIN[mood], allowance['remaining'])
                 conn.execute('INSERT INTO npc_friendship(host_id,npc_id,points,gifts,last_day) VALUES (?,?,?,1,?) '
                              'ON CONFLICT(host_id,npc_id) DO UPDATE SET points=points+excluded.points,gifts=gifts+1,last_day=excluded.last_day',
                              (user['id'], npc_id, gain, day))
@@ -708,6 +753,7 @@ class NpcHomes:
                 fresh = [letter for letter in letters(conn, user['id']) if letter['id'] in written]
                 return {'npc': npc_id, 'object_id': obj['id'], 'name': obj['name'], 'mood': mood, 'again': again, 'gain': gain,
                         'personality': npc['personality'], 'home': home_id, 'home_version': home['version'],
+                        'daily_gain': gift_allowance(conn, user['id'], npc_id, now),
                         'friendship': bond, 'letters': sorted(fresh, key=lambda letter: letter['level'])}
             return mutate(request, body, 'npc_gift:' + npc_id, give)
 
@@ -737,11 +783,16 @@ class NpcHomes:
         def read_letters(request: Request):
             with db.read() as conn:
                 user = auth(conn, request)
+            app.state.village_residents.residents_for(user['id'])
+            self.deliver_daily(user['id'])
+            with db.read() as conn:
                 return {'letters': letters(conn, user['id']), 'unread': unread_letters(conn, user['id'])}
 
         @app.post('/v1/letters/read')
         def mark_read(body: LettersRead, request: Request):
             def apply(conn, user):
+                app.state.village_residents.sync_in(conn, user['id'], clock())
+                npc_letters.dispatch_daily(conn, user['id'], clock())
                 ids = [str(i) for i in body.ids]
                 if ids:
                     conn.execute('UPDATE npc_letters SET read_at=? WHERE host_id=? AND read_at IS NULL AND id IN (%s)' % ','.join('?' * len(ids)),
@@ -762,8 +813,18 @@ class NpcHomes:
             return versions(conn, host_id)
 
     def unread_for(self, user_id):
+        self.deliver_daily(user_id)
         with self.db.read() as conn:
             return unread_letters(conn, user_id)
+
+    def deliver_daily(self, user_id):
+        """Write only when today's anniversary letter is still missing."""
+        now = self.clock()
+        with self.db.read() as conn:
+            pending = npc_letters.daily_pending(conn, user_id, now)
+        if pending:
+            with self.db.transaction() as conn:
+                npc_letters.dispatch_daily(conn, user_id, now)
 
     def versions_in(self, conn, host_id):
         """The same inside a caller's write transaction (the visit presence)."""

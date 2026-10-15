@@ -21,6 +21,11 @@ def test_word_list_refuses_by_category_and_spares_ordinary_words():
     assert check_text('porno poster') == 'sexual'
     assert check_text('코카인 상자') == 'drugs'
     assert check_text('씨발 의자') == 'words'
+    # Obfuscations and compounds, and English swears.
+    for text, category in (('나 체 조각상', 'sexual'), ('s e x chair', 'sexual'), ('s3x chair', 'sexual'), ('p0rn poster', 'sexual'),
+                           ('selfharm kit', 'violence'), ('빨간나치깃발', 'hate'), ('미니히틀러 동상', 'hate'), ('가짜코카인 상자', 'drugs'),
+                           ('fuck you sign', 'words'), ('f u c k chair', 'words')):
+        assert check_text(text) == category, text
     assert check_text('잘린머리 장식') == 'violence' and check_text('나체 조각상') == 'sexual' and check_text('meth lab table') == 'drugs'
     # Hangul matches at the start of a word only; ambiguous Latin words are left to the LLM designer.
     for fine in ('작은 버섯 모양 의자', '마약 방석 같은 푹신한 쿠션', '고어텍스 재킷 걸이', '대마법사의 지팡이', '완성기념 트로피',
@@ -28,7 +33,10 @@ def test_word_list_refuses_by_category_and_spares_ordinary_words():
                  '처음부터 끝까지 원목인 책상', '이음부를 금속으로 감싼 의자', '마음부자 저금통', '얼음부엉이 조각상', '참수리 조각상',
                  '고어 문자가 새겨진 돌판', '시신경 모형', '바나나체어', '마나체스트', '마약 침대', '마약 담요', '도시체험관 모형',
                  '성기사의 방패', 'white power strip', 'naked flame lamp', 'cock weathervane', 'balls of yarn basket',
-                 '녹음부스 책상', '방음부스', '소음경고 표지판', '바나나치즈케이크 모형', '자살방지 포스터', '자살 방지 안내판', 'Gore-Tex jacket hanger'):
+                 '녹음부스 책상', '방음부스', '소음경고 표지판', '바나나치즈케이크 모형', '자살방지 포스터', '자살 방지 안내판', 'Gore-Tex jacket hanger',
+                 '야 동물 모양 의자', '음 부엌 선반', '나 체스판 만들어줘', '나 치즈 모양 쿠션', '자 살구색 소파', '오후 3시 체크인 안내판',
+                 'https://www.ikea.com/kr/ko/p/poang-chair에 있는 의자', 'fire retardant curtain', 'bastard sword rack', 'cocktail table',
+                 '3d printer', 'essex sign'):
         assert check_text(fine) == '', fine
 
 
