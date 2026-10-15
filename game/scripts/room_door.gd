@@ -12,8 +12,8 @@ extends Node
 const DoorAudio=preload("res://scripts/door_audio.gd")
 const Interiors=preload("res://scripts/interiors.gd")
 
-## The leaf's open angle (interiors.gd builds it at 108°) and its swing times.
-const OPEN := 1.885
+## The leaf moves through interiors.gd set_front_door_open (0 shut .. 1 open): which side it hangs on,
+## one leaf or two, and which way it opens are the room's (the map session's) to say. Swing times:
 const OPEN_SECONDS := 0.42
 const CLOSE_SECONDS := 0.5
 ## Walking pace through the door (a little under the room's own 2.8 m/s: a step in, not a dash).
@@ -28,6 +28,9 @@ const MAX_DELTA := 0.05
 
 var studio: Node
 var hinge: Node3D
+## The floor the door is on (interiors.gd front_door / set_front_door_open take it), and how open.
+var ground: Node3D
+var amount := 0.0
 var room := ""
 var spec: Dictionary = {}
 var holds := {}
@@ -49,11 +52,12 @@ static func bind(owner_room: Node, door: Node, ground: Node3D, room_id: String) 
 		owner_room.add_child(door)
 	door.studio=owner_room
 	door.hinge=leaf
+	door.ground=ground
 	door.room=room_id
 	door.spec=owner_room.building_spec.floors[0] if not owner_room.building_spec.is_empty() else {}
 	door.holds.clear()
 	door.opened=false
-	leaf.rotation.y=0.0
+	door.pose(0.0)
 	return door
 
 func door_at() -> Vector3:
@@ -76,7 +80,11 @@ func hold(key: String, seconds: float) -> void:
 func release(key: String) -> void:
 	holds.erase(key)
 
-## The leaf swings open (a little past and back, like a door pushed) or shut (a small bounce off
+func pose(value: float) -> void:
+	amount=value
+	if is_instance_valid(ground): Interiors.set_front_door_open(ground,value)
+
+## The leaf swings open (fast, slowing as it opens, like a door pushed) or shut (a small bounce off
 ## the frame), with the door's sounds where it is.
 func swing(open: bool, sound := true) -> void:
 	if not is_instance_valid(hinge): return
@@ -84,12 +92,12 @@ func swing(open: bool, sound := true) -> void:
 	if swing_tween and swing_tween.is_valid(): swing_tween.kill()
 	swing_tween=create_tween()
 	if open:
-		swing_tween.tween_property(hinge,"rotation:y",OPEN,OPEN_SECONDS).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		swing_tween.tween_method(pose,amount,1.0,OPEN_SECONDS).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		if sound: DoorAudio.door_open(studio,room,door_at(),OPEN_SECONDS)
 	else:
-		swing_tween.tween_property(hinge,"rotation:y",0.0,CLOSE_SECONDS).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		swing_tween.tween_property(hinge,"rotation:y",0.07,0.07).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-		swing_tween.tween_property(hinge,"rotation:y",0.0,0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		swing_tween.tween_method(pose,amount,0.0,CLOSE_SECONDS).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		swing_tween.tween_method(pose,0.0,0.04,0.07).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+		swing_tween.tween_method(pose,0.04,0.0,0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 		if sound: DoorAudio.door_close(studio,room,door_at(),CLOSE_SECONDS)
 
 ## Stands open at once, silently (someone has just opened it from the other side).
@@ -97,7 +105,7 @@ func set_open() -> void:
 	if not is_instance_valid(hinge): return
 	if swing_tween and swing_tween.is_valid(): swing_tween.kill()
 	opened=true
-	hinge.rotation.y=OPEN
+	pose(1.0)
 
 ## The walker comes in from outside: it stands past the open door facing in, walks to the room's
 ## spawn spot as the card lifts, and the door shuts behind it.

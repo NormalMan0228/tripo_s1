@@ -107,7 +107,9 @@ static func dress(host: Node3D) -> Node3D:
 		if building == null: continue
 		if not leaves.has(id) or not is_instance_valid(leaves[id].node):
 			var cut := BuildingDoors.door_leaf(id)
-			if cut: register(id, cut, Vector3.UP, deg_to_rad(BuildingDoors.OPEN_DEGREES))
+			# The map's own door: its hinge side, one or two leaves and the way it opens are the map's
+			# (BuildingDoors.set_door_open); here only how far open.
+			if cut: leaves[id] = {"node":cut, "cut":true}
 			else:
 				var leaf := _child(building, ["Door", "door", "Door_"+id, "door_"+id])
 				if leaf: register(id, leaf)
@@ -208,6 +210,9 @@ static func _pose(door: Dictionary, value: float) -> void:
 	door.open = value
 	var leaf: Dictionary = leaves.get(door.id, {})
 	if leaf.is_empty() or not is_instance_valid(leaf.node): return
+	if leaf.get("cut", false):
+		BuildingDoors.set_door_open(String(door.id), value)
+		return
 	(leaf.node as Node3D).transform.basis = (leaf.rest as Basis)*Basis(leaf.axis, float(leaf.angle)*value)
 
 static func open(host: Node, key: String, seconds := SWING) -> void: turn(host, key, 1.0, seconds)
