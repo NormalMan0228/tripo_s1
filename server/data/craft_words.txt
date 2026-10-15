@@ -1,0 +1,113 @@
+# Villagen craft request word list (server/craft_moderation.py): a craft whose description names one
+# of these is refused before anything is charged, with the section as the reason the game shows.
+# Same syntax as chat_words.txt (one entry per line, `+phrase` allows a longer phrase that contains a
+# listed word), under [category] headers: sexual, violence, hate, drugs. Swear words come from
+# chat_words.txt (category words). Everything else (a real person, subtler requests, the reference
+# photo) is judged by the LLM designer, and Tripo's own content check backs both up.
+#
+# Hangul matches anywhere in the description (spaces and symbols ignored), so keep Korean entries
+# long enough to be unambiguous: 성기 (완성기념), 야한 (해야한다), 대마 (대마법사), 내장 (내장형)
+# are left out on purpose. Latin entries are whole words (plurals included).
+
+[sexual]
+섹스
+성행위
+성관계
+딜도
+바이브레이터
+자위기구
+성인용품
+포르노
+야동
+음란물
+음란한
+나체
+알몸
+젖꼭지
+유두
+음경
+음부
+sex
+porn*
+porno
+pornography
+nudes
+naked
+nsfw
+hentai
+dildo
+vibrator
+penis
+vagina
+genitals
+nipple
+boobs
+xxx
+erotic
+fetish
+
+[violence]
+시체
+시신
+참수
+잘린머리
+잘린손
+피투성이
+피범벅
+고어
++고어텍스
+고문기구
+자살
+자해
+corpse
+gore
+gory
+severed
+beheaded
+decapitated
+dismembered
+suicide
+self harm
+torture device
+
+[hate]
+나치
+하켄크로이츠
+스와스티카
+욱일기
+히틀러
+나치깃발
+kkk
+nazi
+swastika
+hitler
+white power
+
+[drugs]
+마약
++마약방석
++마약베개
++마약쿠션
++마약매트
++마약의자
++마약소파
++마약이불
++마약김밥
++마약떡볶이
++마약옥수수
++마약토스트
++마약계란
++마약빵
+필로폰
+히로뽕
+코카인
+헤로인
+대마초
+엑스터시
+cocaine
+heroin
+meth
+methamphetamine
+marijuana
+cannabis
+ecstasy pill

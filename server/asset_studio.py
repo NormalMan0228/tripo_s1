@@ -28,6 +28,8 @@ from .stored_assets import read_glb
 from .object_paint import version_column as paint_version
 from . import object_shape
 from . import craft_styles
+from . import craft_moderation
+from .craft_moderation import Refused
 from . import interactions
 from . import archetypes
 from . import clock_hands
@@ -54,6 +56,51 @@ CREATE TABLE IF NOT EXISTS furniture_locations (
  object_id TEXT PRIMARY KEY REFERENCES objects(id), room TEXT NOT NULL DEFAULT 'village');
 '''
 
+# Reference photos: what the craft window may send, and what the server keeps and passes on (Tripo's
+# upload and the LLM take 1 MB). Larger photos are scaled down here; every photo is re-encoded, which
+# also drops its metadata (camera, GPS).
+IMAGE_UPLOAD_BYTES=6*1024*1024
+IMAGE_FIELD_CHARS=IMAGE_UPLOAD_BYTES*4//3+64
+IMAGE_KEPT_BYTES=1024*1024
+IMAGE_KEPT_SIDE=2048
+IMAGE_MIN_SIDE=16
+# The image codes the craft window words (app.py turns a refused photo into one of these).
+IMAGE_CODES=('invalid_image','image_too_large','image_too_small','image_unreadable')
+
+def reference_image(value):
+    """A checked reference photo as a PNG or JPEG data URL of at most IMAGE_KEPT_SIDE px and
+    IMAGE_KEPT_BYTES, or '' for none. Raises ValueError with one of IMAGE_CODES."""
+    if not value:return value
+    if not value.startswith(('data:image/png;base64,','data:image/jpeg;base64,')):raise ValueError('image_unreadable')
+    try:blob=base64.b64decode(value.split(',',1)[1],validate=True)
+    except Exception:raise ValueError('image_unreadable') from None
+    if len(blob)>IMAGE_UPLOAD_BYTES:raise ValueError('image_too_large')
+    try:
+        with Image.open(io.BytesIO(blob)) as im:
+            if im.format not in ('PNG','JPEG'):raise ValueError('image_unreadable')
+            # Decompression bombs: the header's size is checked before any pixel is decoded.
+            if max(im.size)>8192 or im.size[0]*im.size[1]>40_000_000:raise ValueError('image_too_large')
+            if min(im.size)<IMAGE_MIN_SIDE:raise ValueError('image_too_small')
+            im.load()
+            alpha=im.mode in ('RGBA','LA') or (im.mode=='P' and 'transparency' in im.info)
+            picture=im.convert('RGBA' if alpha else 'RGB')
+    except ValueError:raise
+    except Exception:raise ValueError('image_unreadable') from None
+    side=IMAGE_KEPT_SIDE
+    while True:
+        copy=picture.copy()
+        if max(copy.size)>side:copy.thumbnail((side,side),Image.LANCZOS)
+        out=io.BytesIO()
+        if alpha:copy.save(out,'PNG',optimize=True);kind='png'
+        else:copy.save(out,'JPEG',quality=90 if side==IMAGE_KEPT_SIDE else 85,optimize=True);kind='jpeg'
+        if out.tell()<=IMAGE_KEPT_BYTES or side<=512:break
+        side=int(side*.75)
+    if out.tell()>IMAGE_KEPT_BYTES:
+        # A noisy transparent picture: kept as a JPEG on white.
+        flat=Image.new('RGB',copy.size,'white');flat.paste(copy,mask=copy.split()[-1] if alpha else None)
+        out=io.BytesIO();flat.save(out,'JPEG',quality=85,optimize=True);kind='jpeg'
+    return 'data:image/'+kind+';base64,'+base64.b64encode(out.getvalue()).decode()
+
 class StudioRequest(Mutation):
     # Two letters name plenty of furniture ("의자", "책상").
     prompt: str=Field(min_length=2,max_length=1500)
@@ -65,7 +112,8 @@ class StudioRequest(Mutation):
     image_mode: Literal['original','refine']='original'
     model: Literal['gpt-6-luna','gpt-5.6-terra','gpt-6-sol','gpt-6-astra']='gpt-6-luna'
     effort: Literal['low','medium','high','xhigh']='high'
-    image: str=Field(default='',max_length=1400000)
+    # A reference photo up to IMAGE_UPLOAD_BYTES; stored and sent on as at most 2048 px and 1 MB (see image_data).
+    image: str=Field(default='',max_length=IMAGE_FIELD_CHARS)
     # Text-only crafts: draw a concept picture first and let the player approve it (see draw_concept).
     concept: bool=False
     # Named look and size the player picked (server/craft_styles.py).
@@ -75,16 +123,7 @@ class StudioRequest(Mutation):
     @field_validator('image')
     @classmethod
     def image_data(cls,v):
-        if not v:return v
-        if not v.startswith(('data:image/png;base64,','data:image/jpeg;base64,')):raise ValueError('invalid_image')
-        try:
-            blob=base64.b64decode(v.split(',',1)[1],validate=True)
-            if len(blob)>1024*1024:raise ValueError()
-            with Image.open(io.BytesIO(blob)) as im:
-                if im.format not in ('PNG','JPEG') or max(im.size)>2048 or min(im.size)<16:raise ValueError()
-                im.verify()
-        except Exception:raise ValueError('invalid_image') from None
-        return v
+        return reference_image(v)
 
 class KindQuery(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -328,6 +367,10 @@ class Studio:
             # Moving furniture keeps separate parts: at least two Tripo meshes, or one when the game
             # makes every moving part.
             meshes=archetypes.least_meshes(kind,body.motion)
+            # An inappropriate description is refused with its reason before anything is charged
+            # (server/craft_moderation.py); the photo and subtler requests are judged by the designer.
+            refused=craft_moderation.check_text(body.prompt)
+            if refused:fail('refused_'+refused,422)
             def create(conn,user):
                 if body.designer=='llm' and settings.studio_llm=='fixture':fail('llm_not_configured',503)
                 if body.geometry=='tripo' and not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
@@ -398,6 +441,8 @@ class Studio:
                 value['stages']=['design']+(['concept'] if asked and not photo and drawn else [])+['mesh','done']
                 value['progress']=build_progress(parts) if value['state'] in ('building','submitting') else None
                 value['parts']={k:v['state'] for k,v in parts.items()}
+                # Why a craft failed, in the few reasons the window words (craft_moderation.failure_reason).
+                value['reason'],value['refusal']=craft_moderation.failure_reason(value['error'] if value['state'] in ('failed','unknown') else '')
                 concept=value['provenance'].get('concept')
                 if concept:
                     value['concept']={'url':'/v1/studio/jobs/'+job_id+'/concept?v='+str(concept.get('draws',1)),'draws':concept.get('draws',1),
@@ -665,13 +710,16 @@ class Studio:
                 for _ in range(80):
                     result=await tripo.task(task)
                     if result.get('status')=='success':break
-                    if result.get('status') in ('failed','cancelled','banned','expired'):raise ProviderError('concept_failed')
+                    if result.get('status')=='banned':raise Refused('other')
+                    if result.get('status') in ('failed','cancelled','expired'):raise ProviderError('concept_failed')
                     await asyncio.sleep(self.poll_pause)
                 else:raise ProviderError('concept_timeout')
                 credits=result.get('credits_consumed')
                 entry['concept_credits_consumed']=spent+(credits if type(credits) in (int,float) else CONCEPT_CREDITS)
                 blob=await tripo.fetch_image(image_url(result.get('output') or {}))
         except ProviderError as error:
+            # Tripo refused the picture for its content: the 3D build would be refused too, so the craft ends here.
+            if error.code.startswith('refused_'):raise
             provenance['concept_error']=error.code
             return
         name=job['id']+'-concept.jpg'
@@ -896,7 +944,8 @@ class Studio:
                         if result.get('status') in ('queued','running'):
                             track(entry,result);self.overdue(parts)
                             self.update(job_id,state='building',parts=json.dumps(parts));return
-                        if result.get('status') in ('failed','cancelled'):raise ProviderError('image_refinement_failed')
+                        if result.get('status')=='banned':raise Refused('other')
+                        if result.get('status') in ('failed','cancelled','expired'):raise ProviderError('image_refinement_failed')
                         if result.get('status')!='success':raise ProviderError('upstream_schema',uncertain=True)
                         entry.update(state='image_ready',image_credits_consumed=result.get('credits_consumed'));entry.pop('progress',None)
                         self.update(job_id,state='building',parts=json.dumps(parts))
@@ -938,7 +987,9 @@ class Studio:
                     if result.get('status') in ('queued','running'):
                         track(entry,result);self.overdue(parts)
                         self.update(job_id,state='building',parts=json.dumps(parts));return
-                    if result.get('status') in ('failed','cancelled'):raise ProviderError('generation_failed')
+                    # Tripo's content check banned the task: refused, not a held (unknown) submission.
+                    if result.get('status')=='banned':raise Refused('other')
+                    if result.get('status') in ('failed','cancelled','expired'):raise ProviderError('generation_failed')
                     if result.get('status')!='success':raise ProviderError('upstream_schema',uncertain=True)
                     entry['credits_consumed']=result.get('credits_consumed')
                     # Keep actual provider billing even if download/validation subsequently fails.

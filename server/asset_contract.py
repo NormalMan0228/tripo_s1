@@ -35,6 +35,12 @@ Never claim actual 3D AI geometry was generated: this is a design contract only.
 IMPORTANT: if is a STATEMENT only, not an expression. emit is a STATEMENT only; never nest it inside do.
 Every if statement has exactly FOUR elements: ["if", condition, [then statements], [else statements]].
 Even thin clock hands must have every size component >=0.02. No booleans/null as numeric expressions.
+SAFETY: Villagen is an all-ages game. If the PLAYER REQUEST or the reference image asks for sexual content or nudity,
+gore or graphic violence, self-harm, hate symbols or extremist imagery, illegal drugs, or the likeness of a real
+identifiable person (a photo of a real person's face or body, or a named real person), do NOT design a softened,
+cleaned-up or substitute object. Return ONLY {"refused":"CATEGORY"} with CATEGORY one of sexual, violence, hate, drugs,
+person, other. Ordinary everyday objects, fantasy weapons and armour, decorative skulls, cute monsters and fictional
+characters' themed furniture are fine: design those normally.
 Correct sample: {"version":1,"state":{"open":0},"functions":{"angle":{"params":["x"],"body":[],"return":["mul",["var","x"],-90]}},"events":{"click":[["store","open",["not",["state","open"]]],["emit","rotate_x","lid",["call","angle",["state","open"]]]]}}
 '''
 
@@ -44,6 +50,8 @@ def prompt_for(text, feedback='', style=None):
 def parse_design(text):
     if len(text)>120000: raise ProgramError('design_too_large')
     value=json.loads(text)
+    # A designer that answered the SAFETY refusal field empty still designed the object.
+    if isinstance(value,dict) and value.get('refused')=='': value={k:v for k,v in value.items() if k!='refused'}
     if not isinstance(value,dict) or set(value)!={'plan','program'}: raise ProgramError('invalid_design')
     plan=validate_plan(value['plan'])
     program=validate_program(value['program'],{p['id'] for p in plan['parts']})

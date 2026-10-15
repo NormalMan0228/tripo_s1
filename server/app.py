@@ -247,7 +247,16 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             # drops just those and keeps polling (server/multiplayer.py Presence).
             fields=sorted({str(e['loc'][1]) for e in exc.errors() if len(e.get('loc',()))>1 and e['loc'][0]=='body'})
             return JSONResponse({'detail':'invalid_request','fields':fields},422)
-        return JSONResponse({'detail':'invalid_craft_request' if request.url.path.startswith('/v1/studio/') else 'invalid_request'},422)
+        if request.url.path.startswith('/v1/studio/'):
+            # A refused reference photo says why (too large, too small, not a picture), not the description's words.
+            from .asset_studio import IMAGE_CODES
+            for error in exc.errors():
+                if tuple(error.get('loc',()))[-1:]==('image',):
+                    code=str((error.get('ctx') or {}).get('error') or '')
+                    if error.get('type')=='string_too_long':code='image_too_large'
+                    return JSONResponse({'detail':code if code in IMAGE_CODES else 'invalid_image'},422)
+            return JSONResponse({'detail':'invalid_craft_request'},422)
+        return JSONResponse({'detail':'invalid_request'},422)
 
     @app.exception_handler(ProviderError)
     async def protected_asset_error(request,exc):
@@ -656,7 +665,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             return {'ok':True}
         return mutate(request,body,'market:'+listing_id+':'+action,transfer)
 
-    from .asset_studio import Studio
+    from .asset_studio import Studio,IMAGE_FIELD_CHARS
     studio=Studio(app,db,settings,clock,provider,auth,mutate,money,own,new_object,assets,designer,profile)
     app.state.studio=studio
     from .multiplayer import Multiplayer
@@ -692,7 +701,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             try:await self.inner(scope,receive,send)
             finally:homestead.UTC_OFFSET.reset(token)
     app.add_middleware(PlayerTimeZone)
-    app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':1500000},
+    app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':IMAGE_FIELD_CHARS+16384},
                        pattern_limits=[(object_paint.UPLOAD_PATH,object_paint.BODY_LIMIT)])
     # Before everything else: maintenance (503) and too-old games (426) stop here; every reply,
     # 413/429 included, carries the notice version.
