@@ -25,6 +25,9 @@ services:
       TRIPOTHON_STARS_PER_CREDIT: ${TRIPOTHON_STARS_PER_CREDIT:-1}
       TRIPO_USER_TOTAL_REQUEST_LIMIT: ${TRIPO_USER_TOTAL_REQUEST_LIMIT:-0}
       TRIPOTHON_WELCOME_STARS: ${TRIPOTHON_WELCOME_STARS:-0}
+      # Selling at the village shop: one starseed per N leaf coins, at most this many a day (0 = off).
+      TRIPOTHON_SELL_STARS_DAILY: ${TRIPOTHON_SELL_STARS_DAILY:-15}
+      TRIPOTHON_SELL_COINS_PER_STAR: ${TRIPOTHON_SELL_COINS_PER_STAR:-3}
       # Residents' requests: their starseed rewards times this (server/quests.py STARS; 0 = off).
       TRIPOTHON_QUEST_STARS_SCALE: ${TRIPOTHON_QUEST_STARS_SCALE:-1.0}
       # The trial game has no invitation field: sign-up is open by default (limited per address/day).

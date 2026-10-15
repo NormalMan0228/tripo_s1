@@ -2858,6 +2858,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	var key := GameSettings.canonical_key(event)
 	if is_instance_valid(village_modal):
 		if event is InputEventKey and event.pressed and not event.echo and key==KEY_E and life.mode=="fish": life.reel()
+		# A conversation reads on with E, Space or Enter (the last page: the highlighted choice).
+		elif event is InputEventKey and event.pressed and not event.echo and village_modal.has_meta("advance") and key in [KEY_E,KEY_SPACE,KEY_ENTER,KEY_KP_ENTER]:
+			village_modal.get_meta("advance").call()
+			get_viewport().set_input_as_handled()
 		if event is InputEventKey and event.pressed and key==KEY_ESCAPE: close_village_modal()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and key in [KEY_ESCAPE,KEY_E] and screen=="village" and is_instance_valid(seat) and seat.resting():
@@ -2915,9 +2919,6 @@ func _unhandled_input(event: InputEvent) -> void:
 				KEY_H: intent("heal")
 				KEY_SPACE: intent("attack")
 		elif screen=="village":
-			if is_instance_valid(village_modal) and village_modal.has_meta("advance") and key in [KEY_E,KEY_SPACE,KEY_ENTER]:
-				village_modal.get_meta("advance").call()
-				return
 			if key==KEY_TAB: life.open_map()
 			if key==KEY_B: life.open_storage()
 			if key==KEY_F9 and preload("res://scripts/build_mode.gd").admin: open_admin()
@@ -3297,6 +3298,9 @@ func open_dialogue(speaker: String, cast: String, lines: Array, choices: Array) 
 			page[0]+=1
 			RpgUi.sfx("click",-8.0)
 			show_page.call(page[0])
+		else:
+			# The last page: the highlighted choice (E, Space or Enter when no choice holds the focus).
+			RpgUi.dialogue_pick(window)
 	village_modal.set_meta("advance",advance)
 	window.shade.gui_input.connect(func(event):
 		if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT: advance.call())

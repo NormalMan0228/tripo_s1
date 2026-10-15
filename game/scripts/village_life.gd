@@ -11,6 +11,8 @@ const Farm=preload("res://scripts/farm.gd")
 const Forage=preload("res://scripts/forage.gd")
 const Fishing=preload("res://scripts/fishing.gd")
 const RpgUi=preload("res://scripts/rpg_ui.gd")
+const ShopSell=preload("res://scripts/shop_sell.gd")
+const Quests=preload("res://scripts/quests.gd")
 const CROP_ORDER := ["turnip","carrot","pumpkin","strawberry","sunflower"]
 var app: Node3D
 var state: Dictionary={}
@@ -550,6 +552,9 @@ func open_shop() -> void:
 	var v: VBoxContainer=app.modal_card(tr("씨앗 가게 · 잎전 %d")%state.coins)
 	mode="shop"
 	app.text(v,tr("잎전으로 씨앗과 미끼를 사고, 직접 얻은 수확물을 팔아요."),14)
+	# Selling also pays starseeds up to a daily allowance (shop_sell.gd, server app.py sell_stars).
+	var allowance := ShopSell.status_text(state)
+	if not allowance.is_empty(): app.text(v,allowance,14).add_theme_color_override("font_color",RpgUi.HOVER)
 	var row := HBoxContainer.new()
 	v.add_child(row)
 	var shop: Dictionary=state.catalog.get("shop",{"turnip_seed":2,"pumpkin_seed":4,"bait":1})
@@ -572,8 +577,17 @@ func open_shop() -> void:
 		var count := int(state.bag.get(item,0))
 		if count<1: continue
 		var amount := mini(count,20)
-		var b: Button=app.button(grid,tr("%s %d개 → +%d잎전")%[tr(state.catalog.names[item]),amount,int(state.catalog.prices[item])*amount],func():
-			await action("sell",{"item":item,"quantity":amount})
+		var coins: int=int(state.catalog.prices[item])*amount
+		var stars := ShopSell.estimate(state,coins)
+		var b: Button=app.button(grid,tr("%s %d개 → +%d잎전")%[tr(state.catalog.names[item]),amount,coins]+(tr(" · 별씨 +%d")%stars if stars>0 else ""),func():
+			var data: Dictionary=await request("sell",{"item":item,"quantity":amount})
+			if not data.is_empty():
+				app.message(data.message)
+				app.sound.effect("reward")
+				# Starseeds from the sale burst over the walker and fly into the counter.
+				if int(data.get("stars",0))>0 and is_instance_valid(app.player):
+					Quests.reward_burst(app,app.player.position,int(data.stars))
+					Quests.reward_fly(app,app.player.position,int(data.stars),int(data.get("shards",0)))
 			if mode=="shop" and is_instance_valid(app.village_modal): open_shop())
 		b.custom_minimum_size.x=228
 	if grid.get_child_count()==0: app.text(grid,tr("팔 물건이 없어요."),14)

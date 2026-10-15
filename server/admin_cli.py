@@ -335,6 +335,45 @@ def knocks(args):
         return 0
     finally:
         conn.close()
+def demo(args):
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    if not 0 <= args.stars <= 10000:
+        print('--stars must be 0-10000.')
+        return 1
+    from . import demo as staging, story as chapter
+    with sqlite3.connect(database, timeout=30, isolation_level=None) as conn:
+        conn.row_factory = sqlite3.Row
+        named = {}
+        for name in [args.username] + ([args.source] if args.source else []):
+            row = conn.execute('SELECT id FROM users WHERE username=?', (name.lower(),)).fetchone()
+            if not row:
+                print('No such account: ' + name)
+                return 1
+            named[name] = row['id']
+        if args.command == 'list':
+            print(json.dumps(staging.pieces(conn, named[args.username]), ensure_ascii=False, indent=1))
+            return 0
+        from .npc_homes import SCHEMA as HOMES
+        conn.executescript(HOMES + chapter.SCHEMA)
+        conn.execute('BEGIN IMMEDIATE')
+        try:
+            result = staging.prep(conn, args.data_dir, named[args.username], time.time(), args.stars,
+                                  named.get(args.source), args.pick)
+            conn.execute('COMMIT')
+        except ValueError as error:
+            conn.execute('ROLLBACK')
+            print(str(error))
+            return 1
+        except BaseException:
+            conn.execute('ROLLBACK')
+            raise
+        print(json.dumps({'ok': True, 'username': args.username.lower(), **result}, ensure_ascii=False))
+    return 0
+
+
 def quests(args):
     database = Path(args.data_dir) / 'world.sqlite3'
     if not database.is_file():
@@ -375,6 +414,13 @@ def main(argv=None):
     chapter.add_argument('command', choices=('show', 'reset'))
     chapter.add_argument('username')
     chapter.add_argument('--data-dir', default='/data')
+    staged = actions.add_parser('demo', help='ready an account for a demo run: story at the letter, starseeds, spare pieces')
+    staged.add_argument('command', choices=('prep', 'list'))
+    staged.add_argument('username')
+    staged.add_argument('--stars', type=int, default=0, help='prep: top the starseed balance up to at least this')
+    staged.add_argument('--copy-from', dest='source', help='prep: account to copy finished pieces from (see list)')
+    staged.add_argument('--pick', action='append', default=[], help='prep: a piece id (8+ characters) or a word of its name; repeat')
+    staged.add_argument('--data-dir', default='/data')
     talk = actions.add_parser('chat', help='list, delete or mute chat lines (moderation)')
     talk.add_argument('command', choices=('list', 'delete', 'mute'))
     talk.add_argument('values', nargs='*', help='delete: message ids; mute: USERNAME MINUTES')
@@ -404,6 +450,8 @@ def main(argv=None):
         return reports(args)
     if args.action == 'story':
         return story(args)
+    if args.action == 'demo':
+        return demo(args)
     if args.action == 'quests':
         return quests(args)
     if args.action == 'npc-homes':

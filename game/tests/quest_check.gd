@@ -172,7 +172,7 @@ func inside_the_observatory() -> void:
 	await wait_for(func() -> bool: return int(box.count) > before, 5.0)
 	expect(await press("맡겨 줘요") and not sent.sent.back()[1].has("place"), "another request's yes has no place")
 	sent.queue_free()
-	# The room itself at night: 하늘 at her telescope, the request on top, E reads on past it.
+	# The room itself at night: 하늘 at her telescope, the request on top, E reads on into its ask.
 	Engine.set_meta("interior_hour", 22.0)
 	Engine.set_meta("studio_session", {"token":str(api.token), "url":url, "room":"05_observatory"})
 	var room: Control = load("res://scenes/studio.tscn").instantiate()
@@ -184,13 +184,15 @@ func inside_the_observatory() -> void:
 		var top: Array = room.talk_choices[0] if not room.talk_choices.is_empty() else []
 		expect(top.size() == 3 and str(top[0]) == tr("✦ 부탁 들어주기") and str(top[2]) == "request", "her request is the first choice, marked as a request")
 		var ask: Array = Quests.lines_of(Quests.by_id(str(api.token), "haneul_stars"), "ask")
+		# E reads on and picks the highlighted (top) choice: the request only asks, and its own
+		# choices lead with '다음에요', so pressing on never takes it (RpgUi.dialogue_pick).
 		var asked := false
-		for i in 30:
+		for i in 40:
 			if not is_instance_valid(room.talk_box): break
 			if room.talk_lines == ask: asked = true
 			room.advance_talk()
-			await process_frame
-		expect(not asked and str(Quests.by_id(str(api.token), "haneul_stars").state) == "available" and str((await talk("stargazer"))[0]) == "✦ 부탁 들어주기", "E through her talk picks her own choice, not the request")
+			await create_timer(0.1).timeout
+		expect(asked and str(Quests.by_id(str(api.token), "haneul_stars").state) == "available" and str((await talk("stargazer"))[0]) == "✦ 부탁 들어주기", "E through her talk opens the highlighted request's ask but never takes it")
 		room.close_talk()
 	Engine.remove_meta("interior_hour")
 	room.queue_free()
@@ -230,18 +232,18 @@ func run() -> void:
 	for q in first.get("list", []): total += int(q.stars)
 	expect(total >= 75 and total <= 85 and first.list.all(func(q): return int(q.stars) >= 3 and int(q.stars) <= 8), "rewards are 3-8 each, %d in all (about two cheap crafts)" % total)
 
-	# Closed while the opening chapter runs, and after it until 모카's letter is read.
+	# Closed while the opening chapter runs until the chair is ordered (server/quests.py unlocked);
+	# 모카's own request waits for the chapter's end (this test gives the welcome chair, no craft).
 	expect(not first.get("unlocked", true) and (await talk("regular")).is_empty(), "no request while the chapter runs")
 	await api.post("/v1/story/step", api.mutation({"action":"read_letter"}))
 	await api.post("/v1/story/step", api.mutation({"action":"accept"}))
+	expect(not (await refresh()).get("unlocked", true) and (await talk("naru")).is_empty(), "still closed after 모카 asks, before a craft is ordered")
 	var me: Dictionary = (await api.request("/v1/me")).data
 	var chair: Dictionary = me.objects.filter(func(o): return str(o.name) == "환영의 나무 의자")[0]
 	var chapter: Dictionary = await api.post("/v1/story/gift", api.mutation({"object_id":chair.id, "version":chair.version}))
 	expect(chapter.ok, "the chapter's gift is given")
-	expect(not (await refresh()).get("unlocked", true) and (await talk("naru")).is_empty(), "still closed while 모카's letter waits")
-	await api.post("/v1/letters/read", api.mutation({"ids":[chapter.data.letters[0].id]}))
 	var opened := await refresh()
-	expect(opened.get("unlocked", false) and opened.list.all(func(q): return str(q.state) == "available"), "the letter read, every request is offered")
+	expect(opened.get("unlocked", false) and opened.list.all(func(q): return str(q.state) == "available"), "the chapter done, every request is offered (모카's letter need not be read)")
 	await brief_and_names(opened)
 	await inside_the_observatory()
 

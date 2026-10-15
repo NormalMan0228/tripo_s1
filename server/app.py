@@ -308,7 +308,10 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def get_life(request:Request):
         with db.read() as conn:
             user=auth(conn,request)
-            return homestead.public(life_state(conn,user['id']),clock())
+            state=life_state(conn,user['id'])
+            result=homestead.public(state,clock())
+            result['sell_stars']=homestead.star_status(state,clock(),settings.sell_stars_daily,settings.sell_coins_per_star)
+            return result
 
     @app.post('/v1/admin/grant')
     def admin_grant(body:AdminGrant,request:Request):
@@ -338,6 +341,16 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             state=life_state(conn,user['id'])
             try: result=homestead.act(state,body,clock())
             except homestead.Rejected as error: fail(str(error))
+            # Selling also pays starseeds (a daily allowance), through the ledger like every star.
+            if body.action=='sell':
+                stars=homestead.sell_stars(state,homestead.PRICES[body.item]*body.quantity,clock(),
+                                           settings.sell_stars_daily,settings.sell_coins_per_star)
+                if stars:
+                    money(conn,user['id'],stars,'sell_reward',str(body.request_id))
+                    result['message']=result['message'].replace('개를 받았어요.',f'개와 별씨 {stars}개를 받았어요.')
+                result['stars']=stars
+                result['shards']=conn.execute('SELECT shards FROM users WHERE id=?',(user['id'],)).fetchone()[0]
+            result['sell_stars']=homestead.star_status(state,clock(),settings.sell_stars_daily,settings.sell_coins_per_star)
             conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
                          (user['id'],json.dumps(state)))
             return result

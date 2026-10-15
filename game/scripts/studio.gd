@@ -25,6 +25,7 @@ const CraftTracker=preload("res://scripts/craft_tracker.gd")
 const CraftWords=preload("res://scripts/craft_words.gd")
 const Fx=preload("res://scripts/fx.gd")
 const NpcGifts=preload("res://scripts/npc_gifts.gd")
+const ShopSell=preload("res://scripts/shop_sell.gd")
 const AvatarLook=preload("res://scripts/avatar_look.gd")
 ## Visitors' and the host's walk in the home, drawn smoothly from the presence replies.
 const RemoteMotion=preload("res://scripts/remote_motion.gd")
@@ -2615,10 +2616,14 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	# Residents of a house take gifts from their own village's player.
 	if lines.is_empty() and NpcGifts.can_receive(id) and not visiting and not api.token.is_empty():
 		talk.choices.insert(maxi(0,talk.choices.size()-1),["선물하기","gift"])
+	# 단비 at the counter buys the bag's finds: leaf coins and a daily starseed allowance (shop_sell.gd).
+	if lines.is_empty() and id=="shopkeeper" and str(entry.state.get("activity",""))=="shopkeep" and not visiting and not api.token.is_empty():
+		talk.choices.insert(0,["물건 팔기","sell"])
 	# The resident's request (quests.gd) comes first, as in the village.
 	if lines.is_empty() and not visiting:
 		var request: Array=preload("res://scripts/quests.gd").room_choice(self,id)
-		# Marked: reading on with E or Space never takes or hands over a request (advance_talk).
+		# Marked "request". Keys pick it only once the choices are up (RpgUi.dialogue_ready), and
+		# taking a request still asks first, with '다음에요' leading.
 		if not request.is_empty(): talk.choices.insert(0,request+["request"])
 	talk_id=id;talk_lines=talk.lines;talk_choices=talk.choices;talk_page=0
 	if entry.pose=="stand" and is_instance_valid(hero):
@@ -2679,11 +2684,8 @@ func advance_talk() -> void:
 		sfx_player.stream=Interiors.sfx("click");sfx_player.play()
 		show_talk_page()
 	elif not talk_choices.is_empty():
-		# The resident's own first choice; a request (quests.gd, marked in open_talk) only by a click.
-		for choice in talk_choices:
-			if (choice as Array).size()<3 or str(choice[2])!="request":
-				pick_talk(choice)
-				return
+		# The highlighted choice, as in the village (RpgUi.dialogue_pick; W/S or the arrows move it).
+		RpgUi.dialogue_pick(talk_window)
 
 func close_talk() -> void:
 	if is_instance_valid(talk_box): talk_box.queue_free()
@@ -2700,6 +2702,9 @@ func run_choice(action: String) -> void:
 	match action:
 		"gift":
 			open_gift(id)
+			return
+		"sell":
+			open_sell(id)
 			return
 		"coffee":
 			message(tr("따뜻한 코코아를 받았어요. 달콤해요!"))
@@ -2838,6 +2843,33 @@ func use_gift(record: Dictionary) -> void:
 	var owner_name := Interiors.short_name(str(record.npc),float(resident_clock().hour)) if not str(record.npc).is_empty() else ""
 	say(tr("%s의 소중한 선물 · %s") % [owner_name,str(record.name)],record)
 	sfx_player.stream=Interiors.sfx("pop");sfx_player.play()
+
+## 단비's selling window at the counter (shop_sell.gd). E or Esc closes it, like the storage list.
+func open_sell(id: String) -> void:
+	close_talk()
+	talk_box=ShopSell.window(self,api,func(reply: Dictionary): sold(id,reply))
+	talk_window={};talk_lines=[];talk_choices=[]
+	for item in [name_panel,hint_chip,hint_label,bubble]:
+		if is_instance_valid(item): item.visible=false
+
+## A sale at the counter: sparkles over 단비, a coin chime, starseeds into the wallet line.
+func sold(id: String, reply: Dictionary) -> void:
+	var stars := int(reply.get("stars",0))
+	if npcs.has(id):
+		var resident: Dictionary=npcs[id]
+		pop_over(resident,"✦" if stars>0 else "♪")
+		if stars>0:
+			var at: Vector3=resident.holder.global_position
+			Fx.burst(stage,at+Vector3(0,1.5,0),"sparkle",18,Color(0,0,0,0),0.5)
+			Fx.glow(stage,at+Vector3(0,1.3,0),Color("ffd27a"),1.6,1.0)
+	if stars>0 and is_instance_valid(wallet):
+		wallet.text=tr("별씨 %d") % int(reply.get("shards",0))
+		wallet.pivot_offset=wallet.size*0.5
+		var bump := wallet.create_tween()
+		bump.tween_property(wallet,"scale",Vector2.ONE*1.2,0.08)
+		bump.tween_property(wallet,"scale",Vector2.ONE,0.14)
+	sfx_player.stream=Interiors.sfx("ding");sfx_player.play()
+	message(str(reply.get("message","")))
 
 ## E on the house's storage chest: what the residents keep in storage (names and pictures only),
 ## for the owner and visitors alike. E or Esc closes it.

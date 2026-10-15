@@ -102,6 +102,10 @@ class Settings:
     user_total_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_USER_TOTAL_REQUEST_LIMIT', '0')))
     # Stars a new live account starts with (judging servers let visitors craft right away).
     welcome_stars: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_WELCOME_STARS', '0')))
+    # Selling at the village shop also pays starseeds: one per this many leaf coins of sales, at
+    # most sell_stars_daily a day (the player's day; 0 = selling pays leaf coins only).
+    sell_stars_daily: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SELL_STARS_DAILY', '15')))
+    sell_coins_per_star: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SELL_COINS_PER_STAR', '3')))
     # Trial servers: most Tripo credits one craft may spend (0 = no cap). 10 allows the
     # cheapest craft only (one untextured H3 mesh from text).
     max_credits_per_craft: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_MAX_CREDITS_PER_CRAFT', '0')))
@@ -191,6 +195,8 @@ class Settings:
             raise ValueError('Invalid open sign-up limits')
         if not 0 <= self.user_total_generation_limit <= 1000 or not 0 <= self.welcome_stars <= 10000:
             raise ValueError('Invalid account craft limit or welcome stars')
+        if not 0 <= self.sell_stars_daily <= 1000 or not 1 <= self.sell_coins_per_star <= 1000:
+            raise ValueError('TRIPOTHON_SELL_STARS_DAILY must be 0-1000 and TRIPOTHON_SELL_COINS_PER_STAR 1-1000')
         if self.credit_reserve <= 0 or self.daily_generation_limit < 1 or self.user_daily_generation_limit < 1:
             raise ValueError('Generation budget must be positive')
         if not 60 <= self.studio_part_deadline <= 86400:
