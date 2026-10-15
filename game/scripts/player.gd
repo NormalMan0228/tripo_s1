@@ -311,6 +311,11 @@ func equip_socketed(previous: String, item: String) -> void:
 		var record := EquipSockets.item(previous)
 		var stow: Node3D = socket(str(record.get("stow",""))) if not str(record.get("stow","")).is_empty() else null
 		if stow:
+			# One item per stow socket: the one already there is put away.
+			for name in stowed.keys():
+				if is_instance_valid(stowed[name]) and stowed[name].get_parent() == stow:
+					drop_item(stowed[name])
+					stowed.erase(name)
 			move_item(tool_node, stow, EquipSockets.placement(record, true))
 			stowed[previous]=tool_node
 		else: drop_item(tool_node)

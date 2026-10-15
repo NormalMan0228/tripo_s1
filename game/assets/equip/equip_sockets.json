@@ -1,5 +1,5 @@
 {
- "about": "Equip sockets (scripts/equip_sockets.gd). sockets: per-socket tuning in metres of the rig's rest pose. items: hold = socket while in use, stow = socket while carried but not used ('' = put away), grip = the item-space point that sits on the socket origin, rot / stow_rot = turn in the socket frame (degrees x, y, z; the socket's +Y runs along the grip toward the tool head), scale = size factor. Crafted items get the same record from EquipSockets.estimate_grip().",
+ "about": "Equip sockets (scripts/equip_sockets.gd). sockets: per-socket tuning in metres of the rig's rest pose. items: hold = socket while in use, stow = socket while carried but not used ('' = put away), grip = the item-space point that sits on the socket origin, rot / stow_rot = turn in the socket frame (degrees x, y, z; the socket's +Y runs along the grip toward the tool head), scale = size factor. Crafted items get the same record from EquipSockets.estimate_grip(). handle: false = no handle to wrap the hand around (the contact check skips it).",
  "sockets": {
   "back": {
    "out": 0.13,
@@ -37,7 +37,7 @@
    "stow_rot": [
     0,
     0,
-    180
+    0
    ],
    "scale": 1.0
   },
@@ -57,7 +57,7 @@
    "stow_rot": [
     0,
     0,
-    180
+    0
    ],
    "scale": 1.0
   },
@@ -126,7 +126,7 @@
    "stow": "",
    "grip": [
     0,
-    0.12,
+    0.21,
     0
    ],
    "rot": [
@@ -139,7 +139,8 @@
     0,
     0
    ],
-   "scale": 1.0
+   "scale": 0.6,
+   "handle": false
   },
   "broom": {
    "hold": "hand_r",

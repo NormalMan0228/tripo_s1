@@ -104,29 +104,45 @@ func run() -> void:
 	print("EQUIP_SOCKETS_CHECK ", "FAIL" if failures > 0 else "PASS", " failures=", failures)
 	quit(1 if failures > 0 else 0)
 
-## Item vertices around the grip, in the hold socket's frame (metres): their spread around the
-## socket's +Y line is the handle at the palm.
+## The handle at the palm, in the hold socket's frame (metres): every mesh part that crosses the
+## socket's y = 0 plane within 4 cm. Detailed meshes give their vertices there; primitive parts (boxes,
+## cylinders: vertices only at their ends) give their bounds. The slimmest crossing part is the handle.
 func contact(item: String, node: Node3D, hold: Node3D) -> void:
-	var near := PackedVector3Array()
+	if not bool(EquipSockets.item(item).get("handle", true)):
+		print("  GRIP %s skipped (no handle in the data)" % item)
+		return
 	var into := hold.global_transform.affine_inverse()
+	var best := {}
 	for mesh_node in node.find_children("*", "MeshInstance3D", true, false):
 		var mesh := (mesh_node as MeshInstance3D).mesh
 		if mesh == null: continue
 		var to_socket := into*(mesh_node as MeshInstance3D).global_transform
-		for s in mesh.get_surface_count():
-			var vertices: PackedVector3Array = mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX]
+		var near := PackedVector2Array()
+		var vertices := PackedVector3Array()
+		for s in mesh.get_surface_count(): vertices.append_array(mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX])
+		if vertices.size() >= 64:
 			for v in vertices:
 				var p := to_socket*v
-				if absf(p.y) < 0.04: near.append(p)
-	if near.is_empty():
+				if absf(p.y) < 0.04: near.append(Vector2(p.x, p.z))
+		else:
+			var box := to_socket*mesh.get_aabb()
+			if box.position.y <= 0.04 and box.end.y >= -0.04:
+				near.append(Vector2(box.position.x, box.position.z))
+				near.append(Vector2(box.end.x, box.end.z))
+		if near.is_empty(): continue
+		var low := near[0]
+		var high := near[0]
+		for q in near:
+			low = Vector2(minf(low.x, q.x), minf(low.y, q.y))
+			high = Vector2(maxf(high.x, q.x), maxf(high.y, q.y))
+		var radius := maxf(high.x-low.x, high.y-low.y)*0.5
+		if best.is_empty() or radius < float(best.radius): best = {"radius":radius, "centre":(low+high)*0.5}
+	if best.is_empty():
 		expect(false, "%s: no item surface at the grip (the hand holds air)" % item)
 		return
-	var centre := Vector2.ZERO
-	for p in near: centre += Vector2(p.x, p.z)
-	centre /= near.size()
-	var radius := 0.0
-	for p in near: radius = maxf(radius, Vector2(p.x, p.z).distance_to(centre))
-	print("  GRIP %s axis_off=%.3f m radius=%.3f m points=%d" % [item, centre.length(), radius, near.size()])
+	var centre: Vector2 = best.centre
+	var radius: float = best.radius
+	print("  GRIP %s axis_off=%.3f m radius=%.3f m" % [item, centre.length(), radius])
 	expect(centre.length() <= AXIS_OFF+radius*0.5, "%s: handle axis %.3f m from the palm centre" % [item, centre.length()])
 	expect(radius >= R_MIN and radius <= R_MAX, "%s: handle radius %.3f m is graspable" % [item, radius])
 
@@ -154,7 +170,8 @@ func transitions() -> void:
 		player.equip(item)
 		await frames(2)
 		var node: Node3D = player.tool_node
-		watch.add("item_"+item, node, {"speed": 10.0})
+		# Jumps only: the hand's pose itself steps with the 60 Hz physics animation.
+		watch.add("item_"+item, node, {"speed": 10.0, "vertical": 8.0, "walking": func(): return false})
 		for step in ["put", "take", "swing", "put"]:
 			match step:
 				"put": player.equip("")
@@ -169,7 +186,7 @@ func transitions() -> void:
 				watch.frame(root.get_process_delta_time())
 	var result := watch.report()
 	MotionWatch.print_report("equip", result)
-	expect(int(result.counts.get("jump", 0)) == 0, "items never jump between hand and stow socket")
+	expect(result.pass, "items never jump between hand and stow socket")
 
 ## The rule (equip_sockets.gd estimate_grip) on the authored tools: their handles are at the low end
 ## of Y (the game holds them there); tools/equip_grip_estimate.py --selftest covers the shapes.
