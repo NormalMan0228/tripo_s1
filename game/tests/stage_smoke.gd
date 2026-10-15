@@ -247,7 +247,7 @@ func forest() -> void:
 	check(s.get("status") == "active" and (s.get("boss_night") == true) and absf(float(s.get("day_progress", 0.0))-0.82) < 0.01,
 		"the boss night holds (day_progress %.3f, status %s)" % [float(s.get("day_progress", 0.0)), s.get("status")])
 	check(map != null and float(map.get("night")) > 0.9, "the map stays dark on the boss night (night %.2f)" % (float(map.get("night")) if map else -1.0))
-	result["forest"] = {"stages":stages_seen, "boss":s.get("boss"), "boss_scale":scale, "elapsed":s.get("elapsed"), "hp":s.get("hp")}
+	result["forest"] = {"stages":stages_seen, "boss":s.get("boss"), "boss_height":tall, "elapsed":s.get("elapsed"), "hp":s.get("hp")}
 	await capture("forest_boss.png")
 	app().leave_run(false)
 	await wait_until(in_village, 60.0)

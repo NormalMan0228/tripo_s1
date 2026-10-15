@@ -772,5 +772,19 @@
     ]
    }
   }
+ },
+ "monsters_v3_cat23": {
+  "cap": 1000,
+  "approved": "2026-10-16 07:20 user via 총괄: \"A 한도 1,000 (추천)\" — 5 winged/floating humanoids: texture+rig+6 AI motions (150 each); 6 others: texture+rig, Blender procedural motion (30 each). Frost dragon colour: B1 (deep glacier teal).",
+  "spent": 10,
+  "monsters": {
+   "harpy": {
+    "task": "c7aa15d0-acfc-4e47-8588-0a5babb797f5",
+    "texture_2k": 10,
+    "credits": 10,
+    "date": "2026-10-16"
+   }
+  },
+  "note": "07:25 the rest stopped: Claude Code auto-mode permission check refused further paid clicks; waits for the user to allow it in this session."
  }
 }
