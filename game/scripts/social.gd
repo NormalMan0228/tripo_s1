@@ -7,6 +7,8 @@ const RemoteMotion = preload("res://scripts/remote_motion.gd")
 const UiSound = preload("res://scripts/rpg_ui.gd")
 ## The chat box and the 함께하기 drawer live in the social layer that outlives scenes.
 const SocialHud = preload("res://scripts/social_hud.gd")
+## What each walker carries (presence `held`, held_items.gd).
+const HeldItems = preload("res://scripts/held_items.gd")
 ## The village shares this player's spot four times a second. On an expedition the run carries the
 ## party's spots, and while a screen loads a slower heartbeat still says this player is here: a
 ## host who goes quiet for long (server/multiplayer.py HOST_GONE_SECONDS) has left, and the guests
@@ -172,12 +174,14 @@ func poll() -> void:
 	var body := spot("village" if app.screen == "village" else "away")
 	# The chat cursor and the place ride along (social_hud.gd), so chat arrives with the walk.
 	if layer: body.merge(layer.presence_extra("village" if app.screen == "village" else "expedition"))
+	if app.screen == "village": body.merge(HeldItems.presence_extra(layer))
 	# One kept-alive connection (api.post_kept): a new HTTPS connection per poll cost several round
 	# trips each time and made the answers late and uneven.
 	var response: Dictionary = await app.api.post_kept("/v1/social/presence", body, POLL_TIMEOUT)
 	pending = false
 	if token != app.api.token or epoch != app.world_epoch: return
 	if not response.ok and int(response.get("status", 0)) == 422:
+		if HeldItems.refused(response): return
 		# The newest groups (chat cursor, place) go first, then the 0.11.4 walk fields.
 		if layer and layer.presence_refused(response): return
 		if rich_presence:
@@ -277,6 +281,7 @@ func sync_peers(players: Array) -> void:
 		peers[id].motion.push_record(record, target)
 		AvatarLook.wear(peers[id].node, record.get("avatar", {}), version, true)
 		peers[id].node.sprinting = bool(record.get("sprinting", false))
+		HeldItems.show_on(peers[id].node, record.get("held", ""))
 		peers[id].label.text = str(record.username)+( tr(" · 연결 끊김") if not record.get("online", true) else "")+(tr(" · 관전") if record.get("hp", 100) <= 0 else "")
 	for id in peers.keys():
 		if not retained.has(id):

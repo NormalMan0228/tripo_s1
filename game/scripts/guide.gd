@@ -568,7 +568,7 @@ func resolve(key: String) -> Dictionary:
 				var gap := INF
 				var stage := 5 if key == "ripe" else 1
 				for plot in life.state.plots:
-					if Farm.stage(plot, life.now()) != stage: continue
+					if not (Farm.thirsty(plot) if key == "dry" else Farm.stage(plot, life.now()) == stage): continue
 					var p := Vector2(float(plot.x), float(plot.z))
 					if p.distance_to(here) < gap:
 						gap = p.distance_to(here)

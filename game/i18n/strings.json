@@ -10843,6 +10843,78 @@
   "%s·Space·클릭을 누르고 있으면 칸이 위로, 떼면 아래로": {
    "en": "Hold %s, Space or click to lift the zone; release to let it sink",
    "zh": "按住 %s、空格或鼠标，区域向上；松开则下沉"
+  },
+  "감자": {
+   "en": "Potato",
+   "zh": "土豆"
+  },
+  "감자 씨앗": {
+   "en": "Potato Seeds",
+   "zh": "土豆种子"
+  },
+  "토마토": {
+   "en": "Tomato",
+   "zh": "番茄"
+  },
+  "토마토 씨앗": {
+   "en": "Tomato Seeds",
+   "zh": "番茄种子"
+  },
+  "옥수수": {
+   "en": "Corn",
+   "zh": "玉米"
+  },
+  "옥수수 씨앗": {
+   "en": "Corn Seeds",
+   "zh": "玉米种子"
+  },
+  "무": {
+   "en": "Radish",
+   "zh": "萝卜"
+  },
+  "무 씨앗": {
+   "en": "Radish Seeds",
+   "zh": "萝卜种子"
+  },
+  "우산": {
+   "en": "Umbrella",
+   "zh": "雨伞"
+  },
+  "등불": {
+   "en": "Lantern",
+   "zh": "灯笼"
+  },
+  "부채": {
+   "en": "Fan",
+   "zh": "扇子"
+  },
+  "풍선": {
+   "en": "Balloon",
+   "zh": "气球"
+  },
+  "꽃다발": {
+   "en": "Bouquet",
+   "zh": "花束"
+  },
+  "과일 바구니": {
+   "en": "Fruit basket",
+   "zh": "水果篮"
+  },
+  "자랑 물고기": {
+   "en": "Prize fish",
+   "zh": "得意的鱼"
+  },
+  "보따리": {
+   "en": "Bundle",
+   "zh": "包袱"
+  },
+  "넣기": {
+   "en": "Put away",
+   "zh": "收起"
+  },
+  "가방에 재료가 있으면 들 수 있어요": {
+   "en": "You can carry this once it is in your bag",
+   "zh": "包里有材料就能拿着"
   }
  },
  "templates": []

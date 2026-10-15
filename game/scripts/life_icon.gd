@@ -39,7 +39,7 @@ func _draw() -> void:
 		_fish(Vector2(32,32),shadow)
 		return
 	match item:
-		"turnip","carrot","pumpkin","strawberry","sunflower": _crop(item,Vector2(32,34),1.0)
+		"turnip","carrot","pumpkin","strawberry","sunflower","radish","potato","tomato","corn": _crop(item,Vector2(32,34),1.0)
 		"bait":
 			for i in 5: blob(Vector2(16+i*8,34+sin(i*1.4)*6),Vector2(6,5),Color("d9897a"))
 			blob(Vector2(52,30),Vector2(4,4),Color("c26f62"))
@@ -122,6 +122,28 @@ func _crop(kind: String, c: Vector2, k: float) -> void:
 		"sunflower":
 			for i in 12: blob(c+Vector2.from_angle(TAU*i/12)*13*k,Vector2(6,6)*k,Color("f6c531"))
 			blob(c,Vector2(9,9)*k,Color("6a4325"))
+		"potato":
+			outline_blob(c+Vector2(-6,4)*k,Vector2(13,10)*k,Color("c49a62"),ink)
+			outline_blob(c+Vector2(7,-3)*k,Vector2(12,10)*k,Color("d2a970"),ink)
+			for e in [Vector2(-10,2),Vector2(-3,7),Vector2(4,-6),Vector2(11,0)]: blob(c+e*k,Vector2(1.6,1.6)*k,Color("8f6a40"),6)
+			blob(c+Vector2(3,-8)*k,Vector2(4,2)*k,Color(1,1,1,0.35))
+		"tomato":
+			outline_blob(c+Vector2(0,4)*k,Vector2(17,15)*k,Color("e5402f"),ink)
+			blob(c+Vector2(-7,-1)*k,Vector2(4,5)*k,Color(1,1,1,0.4))
+			for i in 5: _leaf(c+Vector2(0,-10)*k,-PI/2+TAU*i/5,9*k,3*k,Color("4f8f3a"))
+			draw_line(c+Vector2(0,-10)*k,c+Vector2(2,-16)*k,Color("4f8f3a"),2.5*k)
+		"corn":
+			_leaf(c+Vector2(0,20)*k,-PI/2-0.35,30*k,7*k,Color("8fbf5a"))
+			_leaf(c+Vector2(0,20)*k,-PI/2+0.35,30*k,7*k,Color("7aae4c"))
+			outline_blob(c+Vector2(0,-2)*k,Vector2(8,18)*k,Color("f3cf3f"),ink)
+			for row in 5:
+				for col in 2: blob(c+Vector2(-3+col*6,-14+row*6)*k,Vector2(2.2,2.2)*k,Color("f9e27a"),6)
+			_leaf(c+Vector2(0,20)*k,-PI/2+0.08,24*k,5*k,Color("6a9c3c"))
+		"radish":
+			for i in 4: _leaf(c+Vector2(0,-8)*k,-PI/2+(i-1.5)*0.38,24*k,5*k,Color("5fa64c").lerp(Color("86c063"),i*0.25))
+			draw_colored_polygon(PackedVector2Array([c+Vector2(-10,-6)*k,c+Vector2(10,-6)*k,c+Vector2(8,14)*k,c+Vector2(0,24)*k,c+Vector2(-8,14)*k]),ink)
+			draw_colored_polygon(PackedVector2Array([c+Vector2(-8.5,-5)*k,c+Vector2(8.5,-5)*k,c+Vector2(6.5,13.5)*k,c+Vector2(0,22)*k,c+Vector2(-6.5,13.5)*k]),Color("f4f6ee"))
+			draw_colored_polygon(PackedVector2Array([c+Vector2(-8.5,-5)*k,c+Vector2(8.5,-5)*k,c+Vector2(7.8,2)*k,c+Vector2(-7.8,2)*k]),Color("bfe08f"))
 
 func _fish(c: Vector2, dark: bool) -> void:
 	var look: Array=Art.FISH_LOOK[item]

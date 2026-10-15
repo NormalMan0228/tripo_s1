@@ -863,6 +863,8 @@ func build_world(survival: bool) -> bool:
 	player = AvatarLook.walker(profile.get("avatar",{}),int(profile.get("version",-1)))
 	player.visual_only=survival
 	world.add_child(player)
+	# The carried thing (held_items.gd, #64) comes along into the village.
+	if not survival: preload("res://scripts/held_items.gd").adopt(self, player)
 	LoadPace.done(0.88)
 	if not survival: await spawn_villagers()
 	if epoch!=world_epoch: return false
