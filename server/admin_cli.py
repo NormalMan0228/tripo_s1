@@ -46,6 +46,10 @@ invitation, so a 0.11.x host would see a knock as a party invitation, and accept
 the host into the knocker's village.
 
     ... python -m server.admin_cli knocks expire
+quests shows one player's residents' requests (server/quests.py): which are under way or done,
+when, and the starseeds each paid (the ledger's quest_reward rows). Read-only.
+
+    ... python -m server.admin_cli quests show USERNAME
 """
 from __future__ import annotations
 
@@ -331,6 +335,22 @@ def knocks(args):
         return 0
     finally:
         conn.close()
+def quests(args):
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    from . import quests as requests
+    with sqlite3.connect(database, timeout=30) as conn:
+        conn.row_factory = sqlite3.Row
+        user = conn.execute('SELECT id FROM users WHERE username=?', (args.username.lower(),)).fetchone()
+        if not user:
+            print('No such account.')
+            return 1
+        # A world from before the requests has no progress table yet (it starts empty).
+        conn.executescript(requests.SCHEMA)
+        print(json.dumps(requests.describe(conn, user['id']), ensure_ascii=False, indent=1))
+    return 0
 
 
 def main(argv=None):
@@ -371,6 +391,10 @@ def main(argv=None):
     knocked = actions.add_parser('knocks', help='end every open knock (before rolling the server back)')
     knocked.add_argument('command', choices=('expire',))
     knocked.add_argument('--data-dir', default='/data')
+    asked = actions.add_parser('quests', help="show one player's residents' requests and their rewards")
+    asked.add_argument('command', choices=('show',))
+    asked.add_argument('username')
+    asked.add_argument('--data-dir', default='/data')
     args = parser.parse_args(argv)
     if args.action == 'knocks':
         return knocks(args)
@@ -380,6 +404,8 @@ def main(argv=None):
         return reports(args)
     if args.action == 'story':
         return story(args)
+    if args.action == 'quests':
+        return quests(args)
     if args.action == 'npc-homes':
         return npc_homes(args)
     if args.action == 'library':

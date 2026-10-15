@@ -71,8 +71,12 @@ const GREETINGS := {"naru":"새로 온 제작자구나! 반가워!", "sora":"어
 
 ## The live module (tests and tools).
 static var current: Node
+## The residents' requests once the chapter is over (quests.gd, a child of this module): their
+## tracker lines and guide goals go through this module's ("story_quest:*", "story_quest_book").
+const Quests := preload("res://scripts/quests.gd")
 
 var app: Node
+var quests: Node
 ## server/story.py public() for this account ({} without the chapter or while visiting).
 var story: Dictionary = {}
 var busy := false
@@ -118,8 +122,16 @@ func setup(main: Node) -> void:
 	# Signed out (the title's village): no chapter.
 	if str(app.api.token).is_empty(): known = null
 	adopt(known)
+	quests = Quests.new()
+	add_child(quests)
+	quests.setup(main, self)
+
+## The residents' requests from the server (main.gd, with /v1/me).
+func adopt_quests(data) -> void:
+	if is_instance_valid(quests): quests.adopt(data)
 
 func leave() -> void:
+	if is_instance_valid(quests): quests.leave()
 	for entry in bubbles:
 		if is_instance_valid(entry.panel): entry.panel.queue_free()
 	bubbles.clear()
@@ -165,7 +177,9 @@ func hold_moka() -> void:
 # ------------------------------------------------------------------ objective and route guide
 
 ## The tracker's text with the chapter's lines ("▸ " lines are goals; the guide turns them into rows).
+## The residents' requests (quests.gd) sit above the base once the chapter is over.
 func objective(base: String) -> String:
+	if is_instance_valid(quests): base = quests.objective(base)
 	if story.is_empty(): return base
 	match step():
 		"letter": return "▸ "+tr("나의 집 · 책상 위 편지 읽기")+"\n"+tr("이삿날 아침, 편지가 와 있어요")
@@ -219,6 +233,8 @@ func stalled() -> bool:
 
 ## guide.gd: the goal key of a tracker line, "" when it is not the chapter's.
 func story_line_key(line: String) -> String:
+	var request: String = quests.line_key(line) if is_instance_valid(quests) else ""
+	if not request.is_empty(): return request
 	for entry in [["나의 집 · 책상 위 편지 읽기", "story_home"], ["카페 '빨간 지붕'에 인사하러 가기", "story_cafe"],
 			["완성! 모카에게 가져가기", "story_cafe"], ["C · 모카의 의자 만들기", "story_craft"],
 			["제작이 멈췄어요 · C로 다시 만들기", "story_craft"], ["그림이 나왔어요 · C로 확인하기", "story_craft"],
@@ -230,7 +246,12 @@ func story_line_key(line: String) -> String:
 ## at this island's signpost.
 func story_goal(key: String) -> Dictionary:
 	var goal := {}
+	if key.begins_with(Quests.KEY) or key == Quests.BOOK_KEY:
+		goal = quests.raw_goal(key) if is_instance_valid(quests) else {}
+		if goal.is_empty(): return {}
+		key = "quest"
 	match key:
+		"quest": pass
 		"story_home": goal = {"at":Town.HOME_DOOR, "name":tr("나의 집 · 책상 위 편지"), "key":key}
 		"story_cafe": goal = {"at":MOKA_AT+Vector2(1.3, 0.3), "name":tr("카페 '빨간 지붕' · 모카"), "key":key}
 		"story_mailbox":
@@ -242,11 +263,12 @@ func story_goal(key: String) -> Dictionary:
 	if here != there:
 		var sign := signpost(here)
 		if not sign.is_empty():
-			return {"at":sign.at, "name":tr("이정표 · %s(으)로") % tr(ISLANDS[there]), "key":key}
+			return {"at":sign.at, "name":tr("이정표 · %s(으)로") % tr(ISLANDS[there]), "key":str(goal.key)}
 	return goal
 
 ## guide.gd: a click on a chapter row that is not a place (the craft line opens the craft window).
 func story_row(key: String) -> bool:
+	if (key.begins_with(Quests.KEY) or key == Quests.BOOK_KEY) and is_instance_valid(quests): return quests.row(key)
 	if key != "story_craft" or not is_instance_valid(app): return false
 	app.open_craft()
 	return true
@@ -296,8 +318,9 @@ func steer_guide() -> void:
 		guide.arrived.connect(arrived)
 	var key := current_key()
 	var guided := str(guide.target.get("key", "")) if guide.active() else ""
-	# A goal the chapter no longer has (it moved on, or it is done) stops being guided.
-	if guided.begins_with("story_") and guided != key: guide.stop(false)
+	# A goal the chapter no longer has (it moved on, or it is done) stops being guided (the
+	# residents' requests guide their own, quests.gd).
+	if guided.begins_with("story_") and not guided.begins_with(Quests.KEY) and guided != key: guide.stop(false)
 	# The mailbox line is guided only when the player asks (a click): the gift scene stays calm.
 	if key == "story_mailbox":
 		guided_key = key
@@ -327,6 +350,9 @@ func arrived(key: String) -> void:
 	if not key.begins_with("story_") or not is_instance_valid(app) or is_instance_valid(app.get("village_modal")): return
 	var goal: Vector2 = {"story_home":Town.HOME_DOOR, "story_cafe":MOKA_AT}.get(key, Vector2.INF)
 	if key == "story_mailbox": goal = field_entry("mailbox").get("at", Vector2(-51.3, 22.6))
+	if key.begins_with(Quests.KEY) and is_instance_valid(quests):
+		quests.arrived(key)
+		goal = quests.raw_goal(key).get("at", Vector2.INF)
 	if goal == Vector2.INF: return
 	var here := island_of(walker_at())
 	var sign := signpost(here)

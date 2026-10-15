@@ -1509,6 +1509,8 @@ func change_room(value: String) -> void:
 func show_story() -> void:
 	if is_instance_valid(story_home): story_home.queue_free()
 	story_home=null
+	# A resident's request to come to this room (quests.gd: 하늘's observatory at night).
+	preload("res://scripts/quests.gd").entered_room(self,room)
 	if room!="home" or public_room or not visit_host.is_empty() or visiting or api.token.is_empty(): return
 	story_home=StoryHome.new()
 	add_child(story_home)
@@ -2598,6 +2600,11 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	# Residents of a house take gifts from their own village's player.
 	if lines.is_empty() and NpcGifts.can_receive(id) and not visiting and not api.token.is_empty():
 		talk.choices.insert(maxi(0,talk.choices.size()-1),["선물하기","gift"])
+	# The resident's request (quests.gd) comes first, as in the village.
+	if lines.is_empty() and not visiting:
+		var request: Array=preload("res://scripts/quests.gd").room_choice(self,id)
+		# Marked: reading on with E or Space never takes or hands over a request (advance_talk).
+		if not request.is_empty(): talk.choices.insert(0,request+["request"])
 	talk_id=id;talk_lines=talk.lines;talk_choices=talk.choices;talk_page=0
 	if entry.pose=="stand" and is_instance_valid(hero):
 		var look: Vector3=hero.global_position-entry.holder.global_position
@@ -2657,7 +2664,11 @@ func advance_talk() -> void:
 		sfx_player.stream=Interiors.sfx("click");sfx_player.play()
 		show_talk_page()
 	elif not talk_choices.is_empty():
-		pick_talk(talk_choices[0])
+		# The resident's own first choice; a request (quests.gd, marked in open_talk) only by a click.
+		for choice in talk_choices:
+			if (choice as Array).size()<3 or str(choice[2])!="request":
+				pick_talk(choice)
+				return
 
 func close_talk() -> void:
 	if is_instance_valid(talk_box): talk_box.queue_free()
