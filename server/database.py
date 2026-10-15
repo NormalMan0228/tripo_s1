@@ -12,7 +12,13 @@ CREATE TABLE IF NOT EXISTS sessions (
  created REAL NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS profiles (
  user_id TEXT PRIMARY KEY REFERENCES users(id), avatar TEXT NOT NULL,
- version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1));
+ version INTEGER NOT NULL DEFAULT 1 CHECK(version>=1),
+ needs_character_select INTEGER NOT NULL DEFAULT 1 CHECK(needs_character_select IN (0,1)));
+CREATE TABLE IF NOT EXISTS profile_avatar8_backup (
+ user_id TEXT PRIMARY KEY REFERENCES users(id), avatar TEXT NOT NULL, version INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS profile_edit_events (
+ user_id TEXT NOT NULL REFERENCES users(id), created REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS profile_edit_events_user ON profile_edit_events(user_id,created);
 CREATE TABLE IF NOT EXISTS homesteads (
  user_id TEXT PRIMARY KEY REFERENCES users(id), state TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS user_prefs (
@@ -142,6 +148,8 @@ class Database:
             db.execute("INSERT OR IGNORE INTO metadata VALUES ('mode',?)", (mode,))
             if db.execute("SELECT value FROM metadata WHERE key='mode'").fetchone()[0] != mode:
                 raise ValueError('Demo and live must use different database directories')
+            from .appearance import migrate as migrate_appearance
+            migrate_appearance(db)
 
     def connect(self):
         # check_same_thread off: a pooled connection serves one request at a time, on any thread.

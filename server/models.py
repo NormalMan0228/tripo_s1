@@ -54,19 +54,59 @@ class RunStart(Mutation):
     difficulty: Literal['relaxed','standard','veteran'] = 'standard'
     chapter_id: Literal['','first_fire','quiet_quarry','returning_light'] = ''
 
+# The 8 player characters (m1..m4, f1..f4). Field names are the released ones (presence, visits,
+# AvatarLook.wear, the wardrobe and saved profiles all read them); accent and straw are new.
+CHARACTERS = ('m1','m2','m3','m4','f1','f2','f3','f4')
+# The released models: Explorer B and Mira look feminine, Ru and Theo masculine.
+LEGACY_CHARACTERS = {'explorer_b':'f1','explorer':'m1','ranger':'f1','tinker':'m1'}
+HEX = r'^#[0-9a-fA-F]{6}$'
+
 class Avatar(Strict):
-    character: Literal['explorer_b','explorer','ranger','tinker'] = 'explorer_b'
-    hair: str = Field(default='#30595b',pattern=r'^#[0-9a-fA-F]{6}$')
-    coat: str = Field(default='#dba448',pattern=r'^#[0-9a-fA-F]{6}$')
-    pants: str = Field(default='#526552',pattern=r'^#[0-9a-fA-F]{6}$')
-    boots: str = Field(default='#765744',pattern=r'^#[0-9a-fA-F]{6}$')
-    skin: Literal['#e4b587','#f0cdb1','#bc865c','#895b43','#604431'] = '#e4b587'
-    headwear: Literal['none','cap','beret'] = 'none'
-    backpack: bool = True
+    character: Literal['m1','m2','m3','m4','f1','f2','f3','f4'] = 'f1'
+    hair: str = Field(default='#30595b',pattern=HEX)
+    skin: str = Field(default='#e4b587',pattern=HEX)
+    coat: str = Field(default='#dba448',pattern=HEX)
+    pants: str = Field(default='#526552',pattern=HEX)
+    boots: str = Field(default='#765744',pattern=HEX)
+    accent: str = Field(default='#765744',pattern=HEX)
+    headwear: Literal['none','cap','beret','straw'] = 'none'
+    backpack: bool = Field(default=True,strict=True)
+
+
+class AvatarPatch(Strict):
+    """A save from the game: any subset of the fields (omitted ones keep the saved look). The released
+    wardrobe (0.11.8) sends its old character ids, mapped here; only a NEW id completes the first
+    character selection (chooses_character)."""
+    character: Literal['m1','m2','m3','m4','f1','f2','f3','f4','explorer_b','explorer','ranger','tinker'] | None = None
+    hair: str | None = Field(default=None,pattern=HEX)
+    skin: str | None = Field(default=None,pattern=HEX)
+    coat: str | None = Field(default=None,pattern=HEX)
+    pants: str | None = Field(default=None,pattern=HEX)
+    boots: str | None = Field(default=None,pattern=HEX)
+    accent: str | None = Field(default=None,pattern=HEX)
+    headwear: Literal['none','cap','beret','straw'] | None = None
+    backpack: bool | None = Field(default=None,strict=True)
+
+    @field_validator('*')
+    @classmethod
+    def supplied_value_is_not_null(cls, value):
+        if value is None:
+            raise ValueError('avatar_field_must_not_be_null')
+        return value
+
+    def chooses_character(self):
+        return 'character' in self.model_fields_set and self.character in CHARACTERS
+
+    def resolve(self, previous=None):
+        value = Avatar.model_validate(previous or {}).model_dump()
+        for key in self.model_fields_set:
+            item = getattr(self, key)
+            value[key] = LEGACY_CHARACTERS.get(item, item) if key == 'character' else item
+        return Avatar.model_validate(value).model_dump()
 
 class AvatarEdit(Mutation):
     version: int = Field(ge=0)
-    avatar: Avatar
+    avatar: AvatarPatch
 
 class LifeAction(Mutation):
     version: int = Field(ge=0)

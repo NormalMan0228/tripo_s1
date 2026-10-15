@@ -140,10 +140,9 @@ LEGACY_POOLS = {
 }
 
 CHARACTERS = [
-    {'id':'explorer_b','name':'B · 여행자','description':'원래 얼굴과 손을 보존한 노란 재킷 여행자.'},
-    {'id':'explorer','name':'루 · 탐험가','description':'노란 우비를 입은 섬의 첫 탐험가.'},
-    {'id':'ranger','name':'미라 · 숲지기','description':'숲길을 좋아하는 구리빛 머리의 숲지기.'},
-    {'id':'tinker','name':'테오 · 정비사','description':'작은 물건을 고치는 붉은 재킷의 정비사.'},
+    {'id':f'{prefix}{number}','name':f'{label} {number}',
+     'description':'머리, 피부, 옷과 소품의 색을 골라 꾸밀 수 있어요.'}
+    for prefix,label in (('m','남성'),('f','여성')) for number in range(1,5)
 ]
 
 def public_catalog():
