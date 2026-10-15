@@ -19,7 +19,7 @@ from .client_policy import ClientPolicy, ClientGate, FILE_NAME as CLIENT_POLICY_
 from .database import Database
 from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction, PrefsUpdate
 from .provider import TripoProvider, ProviderError, validate_glb
-from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial
+from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial, last_spot
 from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
                        LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER, ADMIN_DAILY_SHARD_LIMIT)
 from .stored_assets import read_glb
@@ -82,8 +82,10 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         conn.execute('DELETE FROM sessions WHERE user_id=? AND token_hash NOT IN (SELECT token_hash FROM sessions '
                      'WHERE user_id=? ORDER BY expires DESC,rowid DESC LIMIT ?)',(user_id,user_id,MAX_SESSIONS_PER_USER))
         role = conn.execute('SELECT role FROM users WHERE id=?',(user_id,)).fetchone()[0]
-        # The saved look comes with the sign-in so the first walker the client draws already wears it.
-        return {'token':token,'mode':settings.mode,'role':role,'profile':profile(conn,user_id)}
+        # The saved look comes with the sign-in so the first walker the client draws already wears it,
+        # and where to pick up: the last spot in the player's own village or home, or waking in bed
+        # (server/last_spot.py; None on a first sign-in).
+        return {'token':token,'mode':settings.mode,'role':role,'profile':profile(conn,user_id),'resume':last_spot.resume(conn,user_id,now)}
 
     def money(conn,user_id,amount,reason,reference):
         conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',(uid(),user_id,amount,reason,reference,clock()))
@@ -664,6 +666,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.multiplayer=multiplayer
     from .home_access import HomeAccess
     app.state.home_access=HomeAccess(app,db,clock,auth,mutate,multiplayer.host_for)
+    app.state.last_spot=last_spot.LastSpot(app,db,clock,auth)
     # After the party tables: a new tutorial table records who went on expeditions before it.
     tutorial.ensure(db,clock())
     from .friends import Friends
