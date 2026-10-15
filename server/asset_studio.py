@@ -119,6 +119,16 @@ class StudioRequest(Mutation):
     # Named look and size the player picked (server/craft_styles.py).
     style: Literal[craft_styles.STYLE_IDS]=craft_styles.DEFAULT_STYLE
     size: Literal[craft_styles.SIZE_IDS]='auto'
+    # Or the box the player dragged: [width x, height y, depth z] in metres (wins over size).
+    dims: list[float]|None=Field(default=None,min_length=3,max_length=3)
+
+    @field_validator('dims')
+    @classmethod
+    def dims_box(cls,v):
+        if v is None:return v
+        if not all(math.isfinite(x) and craft_styles.DIMS_MIN-1e-9<=x<=craft_styles.DIMS_MAX+1e-9 for x in v):raise ValueError('invalid_dims')
+        step=craft_styles.DIMS_STEP
+        return [round(min(craft_styles.DIMS_MAX,max(craft_styles.DIMS_MIN,round(x/step)*step)),2) for x in v]
 
     @field_validator('image')
     @classmethod
@@ -834,12 +844,12 @@ class Studio:
                 if body.designer=='fixture':
                     plan,program=demo_design(body.prompt);provenance={'provider':'authored_fixture','validation':exercise(program,[p['id'] for p in plan['parts']])}
                 elif body.designer=='simple':
-                    plan=simple_plan(body.prompt,look['prop']);program={'version':1,'state':{},'functions':{},'events':{}}
+                    plan=simple_plan(body.prompt,look['prop'],body.dims);program={'version':1,'state':{},'functions':{},'events':{}}
                     provenance={'provider':'direct_prompt','validation':exercise(program,['whole'])}
                 else:
-                    style_text=craft_styles.designer_style(body.style,body.size)
+                    style_text=craft_styles.designer_style(body.style,body.size,body.dims)
                     # A text-only request made before (same words, style, size and motion): the learned design, no LLM call.
-                    learned=None if body.image else library.make_key('design',library.normalize(body.prompt),body.style,body.size,body.motion,style_text,archetypes.VERSION)
+                    learned=None if body.image else library.make_key('design',library.normalize(body.prompt),body.style,body.size,body.motion,style_text,archetypes.VERSION,*([body.dims] if body.dims else []))
                     with self.db.transaction() as conn:cached=library.find(conn,learned) if learned else None
                     if cached:
                         plan,program=cached['value']['plan'],cached['value']['program']
@@ -855,7 +865,7 @@ class Studio:
                         plan,program,provenance=await self.designer.generate(request_prompt,body.model,body.effort,body.image,style_text)
                 designed=(plan,program)
                 if body.motion=='static':
-                    plan=static_plan(plan,body.prompt,look['prop'])
+                    plan=static_plan(plan,body.prompt,look['prop'],body.dims)
                     program={'version':1,'state':{},'functions':{},'events':{}}
                 # Normalize generated designs through the exact same gates as local fixtures.
                 plan=validate_plan(plan);exercise(program,[p['id'] for p in plan['parts']])
@@ -869,6 +879,8 @@ class Studio:
                 provenance.update(geometry='procedural_proxy' if body.geometry=='proxy' else 'tripo',material=body.material,motion=body.motion)
                 # The game sizes the finished object by size_m (0 = the designer's own size).
                 provenance.update(style=body.style,size=body.size,size_m=craft_styles.meters(body.size))
+                # The dragged box: its longest side is the game's size_m, its sides were the designer's target.
+                if body.dims:provenance.update(dims=body.dims,size_m=max(body.dims))
                 parts={p['id']:{'state':'pending'} for p in plan['parts']}
                 # Role parts the game makes itself (clock hands, server/clock_hands.py): no Tripo credits.
                 for part_id,make in archetypes.primitive_parts(provenance.get('archetype'),plan).items():parts[part_id].update(primitive=True,make=make)
@@ -880,7 +892,7 @@ class Studio:
                     if cap and quote()>cap and len(plan['parts'])>1:
                         # Over the per-craft cap with its parts: one complete piece instead, with the type's
                         # whole-object behaviours, rather than no craft at all.
-                        plan=static_plan(plan,body.prompt,look['prop'])
+                        plan=static_plan(plan,body.prompt,look['prop'],body.dims)
                         program={'version':1,'state':{},'functions':{},'events':{}}
                         parts={p['id']:{'state':'pending'} for p in plan['parts']}
                         provenance['fallback']='single_piece_credit_cap'

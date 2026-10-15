@@ -10679,6 +10679,38 @@
   "우두머리의 밤": {
    "en": "The boss's night",
    "zh": "首领之夜"
+  },
+  "1 바닥을 드래그해 넓이 정하기": {
+   "en": "1 Drag on the floor to set width and depth",
+   "zh": "1 在地面上拖动，设定宽度和深度"
+  },
+  "2 위아래로 드래그해 높이 정하기": {
+   "en": "2 Drag up or down to set the height",
+   "zh": "2 上下拖动，设定高度"
+  },
+  "크기를 정했어요 · 위아래로 끌면 높이만 바뀌어요": {
+   "en": "Size set · drag up or down to change only the height",
+   "zh": "尺寸已设定 · 上下拖动只改变高度"
+  },
+  "가로 %s · 세로 %s · 높이 %s": {
+   "en": "Width %s · Depth %s · Height %s",
+   "zh": "宽 %s · 深 %s · 高 %s"
+  },
+  "다시 정하기": {
+   "en": "Set again",
+   "zh": "重新设定"
+  },
+  "직접 정하기": {
+   "en": "Custom",
+   "zh": "自定义"
+  },
+  "상자를 드래그해 가로·세로·높이를 정해요": {
+   "en": "Drag a box to set the width, depth and height",
+   "zh": "拖动方框来设定宽、深、高"
+  },
+  "가로×높이×세로 %s m": {
+   "en": "W×H×D %s m",
+   "zh": "宽×高×深 %s m"
   }
  },
  "templates": []

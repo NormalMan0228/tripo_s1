@@ -150,7 +150,12 @@ func run() -> void:
 	await create_timer(0.3).timeout
 	await capture("room-form")
 	# Named styles and sizes from the server, remembered for the next craft.
-	expect(panel.style_buttons.size() == 9 and panel.size_buttons.size() == 5 and panel.style_grid.visible, "style and size choices offered")
+	expect(panel.style_buttons.size() == 9 and panel.size_buttons.size() == 6 and panel.style_grid.visible, "style and size choices offered (5 sizes + 직접 정하기)")
+	# "직접 정하기" opens the drag box; a finished box goes out as dims, the size as auto.
+	panel.size_buttons["custom"].pressed.emit()
+	panel.size_box.set_dims(Vector3(1.2, 0.9, 0.6))
+	var boxed := panel._body()
+	expect(panel.size_box.visible and boxed.get("dims", []) == [1.2, 0.9, 0.6] and boxed.get("size") == "auto", "the dragged box is sent as dims")
 	panel.style_buttons["anime"].pressed.emit()
 	panel.size_buttons["large"].pressed.emit()
 	expect(panel.style_id == "anime" and panel.size_id == "large" and panel.style_buttons["anime"].button_pressed and not panel.style_buttons["rpg"].button_pressed, "picking a style and a size")

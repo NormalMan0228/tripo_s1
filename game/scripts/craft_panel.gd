@@ -15,6 +15,7 @@ const BuildMode = preload("res://scripts/build_mode.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const CraftTracker = preload("res://scripts/craft_tracker.gd")
 const CraftWords = preload("res://scripts/craft_words.gd")
+const CraftSizeBox = preload("res://scripts/craft_size_box.gd")
 ## The chosen look and size follow the account (cloud_prefs.gd syncs this section).
 const SETTINGS_SECTION := "craft"
 
@@ -70,6 +71,8 @@ var size_title: Label
 var size_row: HFlowContainer
 var style_buttons := {}
 var size_buttons := {}
+## "직접 정하기": the box the player drags (craft_size_box.gd), sent as dims when the server takes them.
+var size_box: CraftSizeBox
 var held_note: Label
 ## What the server's object library makes of the words (POST /v1/studio/kind): a type always built
 ## moving (a clock: its hands are free) and the Tripo meshes a moving craft of it needs.
@@ -89,6 +92,9 @@ func setup(place: Node, network: Node) -> void:
 	style_id = str(config.get_value(SETTINGS_SECTION, "style", style_id))
 	size_id = str(config.get_value(SETTINGS_SECTION, "size", size_id))
 	_build_form()
+	# The last dragged box, kept as text (account prefs hold no float lists).
+	var saved := str(config.get_value(SETTINGS_SECTION, "dims", "")).split_floats(",")
+	if saved.size() == 3: size_box.set_dims(Vector3(saved[0], saved[1], saved[2]))
 
 ## Opens on the crafting settings the session last read (at once) and reads them again behind, then
 ## shows what the session's craft is doing: the craft under way, the finished one, or the form.
@@ -202,7 +208,10 @@ func _build_form() -> void:
 	resized.connect(func() -> void: style_grid.columns = 3 if size.x > 480 else 2)
 	size_title = _label(form, tr("크기"), 15)
 	size_row = _row(form)
-	for control in [style_title, style_grid, size_title, size_row]: control.visible = false
+	size_box = CraftSizeBox.new()
+	form.add_child(size_box)
+	size_box.dims_changed.connect(_save_dims)
+	for control in [style_title, style_grid, size_title, size_row, size_box]: control.visible = false
 	var choices := GridContainer.new()
 	choices.columns = 2
 	# One column in a room's narrow drawer.
@@ -335,7 +344,8 @@ func _body() -> Dictionary:
 	var body := _base_body()
 	# Older servers do not know these fields (and refuse unknown ones).
 	if not style_buttons.is_empty(): body["style"] = style_id
-	if not size_buttons.is_empty(): body["size"] = size_id
+	if not size_buttons.is_empty(): body["size"] = "auto" if size_id == "custom" else size_id
+	if size_id == "custom" and info.has("dims") and size_box.has_box(): body["dims"] = size_box.value()
 	return body
 
 func _base_body() -> Dictionary:
@@ -665,7 +675,8 @@ func _show_quote(value: Dictionary) -> void:
 	var look := _entry("styles", str(quote.get("style", "")))
 	if not look.is_empty():
 		var chosen := _entry("sizes", str(quote.get("size", "auto")))
-		_label(status, tr("스타일 %s · 크기 %s") % [_name(look), _size_text(chosen) if not chosen.is_empty() else tr("자동")], 13, true)
+		var box := _dims_text(quote.get("dims", []))
+		_label(status, tr("스타일 %s · 크기 %s") % [_name(look), box if not box.is_empty() else _size_text(chosen) if not chosen.is_empty() else tr("자동")], 13, true)
 	if not concept.is_empty():
 		_label(status, tr("AI가 그린 그림이에요. 이 그림으로 3D를 만들까요?"), 15)
 		var picture := TextureRect.new()
@@ -788,15 +799,19 @@ func _fill_styles() -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.clip_text = true
 		style_buttons[id] = b
-	if _entry("sizes", size_id).is_empty(): size_id = "auto"
+	if _entry("sizes", size_id).is_empty() and not (size_id == "custom" and info.has("dims")): size_id = "auto"
 	var sizes_group := ButtonGroup.new()
 	for entry in sizes:
 		var id := str(entry.get("id", ""))
 		var b := _choice(size_row, _size_text(entry), sizes_group, func() -> void: _pick_size(id))
 		if float(entry.get("meters", 0)) <= 0.0: b.tooltip_text = tr("AI가 물건에 맞는 실제 크기로 정해요")
 		size_buttons[id] = b
+	if info.has("dims") and not sizes.is_empty():
+		size_buttons["custom"] = _choice(size_row, tr("직접 정하기"), sizes_group, func() -> void: _pick_size("custom"))
+		size_buttons["custom"].tooltip_text = tr("상자를 드래그해 가로·세로·높이를 정해요")
 	for control in [style_title, style_grid]: control.visible = true
 	for control in [size_title, size_row]: control.visible = not sizes.is_empty()
+	size_box.visible = size_buttons.has("custom") and size_id == "custom"
 	_show_choice(style_buttons, style_id)
 	_show_choice(size_buttons, size_id)
 
@@ -819,6 +834,7 @@ func _pick_style(id: String) -> void:
 func _pick_size(id: String) -> void:
 	size_id = id
 	_show_choice(size_buttons, id)
+	size_box.visible = id == "custom"
 	_save_choice()
 
 ## The chosen button stays pressed and turns gold.
@@ -835,6 +851,17 @@ func _save_choice() -> void:
 	config.set_value(SETTINGS_SECTION, "style", style_id)
 	config.set_value(SETTINGS_SECTION, "size", size_id)
 	config.save(I18n.settings_path())
+
+func _save_dims(d: Vector3) -> void:
+	var config := ConfigFile.new()
+	config.load(I18n.settings_path())
+	config.set_value(SETTINGS_SECTION, "dims", "%.2f,%.2f,%.2f" % [d.x, d.y, d.z])
+	config.save(I18n.settings_path())
+
+## provenance.dims [width, height, depth] as "가로×높이×세로 1.20×0.90×0.60 m" ("" without a box).
+func _dims_text(dims) -> String:
+	if not dims is Array or dims.size() != 3: return ""
+	return tr("가로×높이×세로 %s m") % ("%.2f×%.2f×%.2f" % [float(dims[0]), float(dims[1]), float(dims[2])])
 
 func _entry(list: String, id: String) -> Dictionary:
 	for entry in info.get(list, []):
