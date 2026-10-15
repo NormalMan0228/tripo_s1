@@ -662,6 +662,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     from .multiplayer import Multiplayer
     multiplayer=Multiplayer(app,db,settings,clock,auth,mutate,money,profile,assets)
     app.state.multiplayer=multiplayer
+    from .home_access import HomeAccess
+    app.state.home_access=HomeAccess(app,db,clock,auth,mutate,multiplayer.host_for)
     # After the party tables: a new tutorial table records who went on expeditions before it.
     tutorial.ensure(db,clock())
     from .friends import Friends
