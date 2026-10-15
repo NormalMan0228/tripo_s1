@@ -9,10 +9,11 @@ import hashlib
 import io
 import json
 import math
+import threading
 import uuid
 import unicodedata
 from typing import Literal
-from PIL import Image
+from PIL import Image, ImageOps, ImageCms
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from fastapi import Request, HTTPException
 from fastapi.responses import Response
@@ -57,48 +58,76 @@ CREATE TABLE IF NOT EXISTS furniture_locations (
 '''
 
 # Reference photos: what the craft window may send, and what the server keeps and passes on (Tripo's
-# upload and the LLM take 1 MB). Larger photos are scaled down here; every photo is re-encoded, which
-# also drops its metadata (camera, GPS).
+# upload and the LLM take 1 MB). The request body is only checked (check_image: format and size from
+# the header, cheap, before sign-in is known); queue() then scales it down and re-encodes it once
+# (reference_image), after sign-in, in the worker threads, one photo at a time. Re-encoding also drops
+# the metadata (camera, GPS) after applying the camera's rotation.
 IMAGE_UPLOAD_BYTES=6*1024*1024
 IMAGE_FIELD_CHARS=IMAGE_UPLOAD_BYTES*4//3+64
+IMAGE_MAX_SIDE=4096
+IMAGE_MAX_PIXELS=16_000_000
 IMAGE_KEPT_BYTES=1024*1024
 IMAGE_KEPT_SIDE=2048
 IMAGE_MIN_SIDE=16
+IMAGE_GATE=threading.BoundedSemaphore(1)
+SRGB=ImageCms.createProfile('sRGB')
 # The image codes the craft window words (app.py turns a refused photo into one of these).
 IMAGE_CODES=('invalid_image','image_too_large','image_too_small','image_unreadable')
 
-def reference_image(value):
-    """A checked reference photo as a PNG or JPEG data URL of at most IMAGE_KEPT_SIDE px and
-    IMAGE_KEPT_BYTES, or '' for none. Raises ValueError with one of IMAGE_CODES."""
-    if not value:return value
+def _photo_blob(value):
     if not value.startswith(('data:image/png;base64,','data:image/jpeg;base64,')):raise ValueError('image_unreadable')
     try:blob=base64.b64decode(value.split(',',1)[1],validate=True)
     except Exception:raise ValueError('image_unreadable') from None
     if len(blob)>IMAGE_UPLOAD_BYTES:raise ValueError('image_too_large')
+    return blob
+
+def check_image(value):
+    """A reference photo's format and size, read from its header only (no pixel is decoded).
+    Raises ValueError with one of IMAGE_CODES."""
+    if not value:return value
+    blob=_photo_blob(value)
+    try:
+        with Image.open(io.BytesIO(blob)) as im:kind,size=im.format,im.size
+    except Exception:raise ValueError('image_unreadable') from None
+    if kind not in ('PNG','JPEG'):raise ValueError('image_unreadable')
+    if max(size)>IMAGE_MAX_SIDE or size[0]*size[1]>IMAGE_MAX_PIXELS:raise ValueError('image_too_large')
+    if min(size)<IMAGE_MIN_SIDE:raise ValueError('image_too_small')
+    return value
+
+def reference_image(value):
+    """A checked reference photo as a PNG or JPEG data URL of at most IMAGE_KEPT_SIDE px and
+    IMAGE_KEPT_BYTES, upright and without metadata, or '' for none. Raises ValueError (IMAGE_CODES)."""
+    if not value:return value
+    check_image(value)
+    blob=_photo_blob(value)
     try:
         with Image.open(io.BytesIO(blob)) as im:
-            if im.format not in ('PNG','JPEG'):raise ValueError('image_unreadable')
-            # Decompression bombs: the header's size is checked before any pixel is decoded.
-            if max(im.size)>8192 or im.size[0]*im.size[1]>40_000_000:raise ValueError('image_too_large')
-            if min(im.size)<IMAGE_MIN_SIDE:raise ValueError('image_too_small')
+            # A large JPEG decodes straight at a reduced scale.
+            if im.format=='JPEG':im.draft('RGB',(IMAGE_KEPT_SIDE,IMAGE_KEPT_SIDE))
             im.load()
-            alpha=im.mode in ('RGBA','LA') or (im.mode=='P' and 'transparency' in im.info)
-            picture=im.convert('RGBA' if alpha else 'RGB')
+            picture=ImageOps.exif_transpose(im)
+            # A wide-gamut photo (Display P3, Adobe RGB) becomes sRGB: the saved file carries no profile.
+            icc=im.info.get('icc_profile')
+            if icc:
+                try:picture=ImageCms.profileToProfile(picture,ImageCms.ImageCmsProfile(io.BytesIO(icc)),SRGB,outputMode='RGBA' if 'A' in picture.mode else 'RGB')
+                except Exception:pass
+            alpha=picture.mode in ('RGBA','LA') or (picture.mode=='P' and 'transparency' in picture.info)
+            mode='RGBA' if alpha else 'RGB'
+            if picture.mode!=mode:picture=picture.convert(mode)
     except ValueError:raise
     except Exception:raise ValueError('image_unreadable') from None
-    side=IMAGE_KEPT_SIDE
+    if max(picture.size)>IMAGE_KEPT_SIDE:picture.thumbnail((IMAGE_KEPT_SIDE,IMAGE_KEPT_SIDE),Image.LANCZOS)
+    copy,quality=picture,90
     while True:
-        copy=picture.copy()
-        if max(copy.size)>side:copy.thumbnail((side,side),Image.LANCZOS)
         out=io.BytesIO()
-        if alpha:copy.save(out,'PNG',optimize=True);kind='png'
-        else:copy.save(out,'JPEG',quality=90 if side==IMAGE_KEPT_SIDE else 85,optimize=True);kind='jpeg'
-        if out.tell()<=IMAGE_KEPT_BYTES or side<=512:break
-        side=int(side*.75)
+        if alpha:copy.save(out,'PNG');kind='png'
+        else:copy.save(out,'JPEG',quality=quality);kind='jpeg'
+        if out.tell()<=IMAGE_KEPT_BYTES or max(copy.size)<=512:break
+        copy=copy.copy();copy.thumbnail((int(max(copy.size)*.75),)*2,Image.LANCZOS);quality=85
     if out.tell()>IMAGE_KEPT_BYTES:
         # A noisy transparent picture: kept as a JPEG on white.
         flat=Image.new('RGB',copy.size,'white');flat.paste(copy,mask=copy.split()[-1] if alpha else None)
-        out=io.BytesIO();flat.save(out,'JPEG',quality=85,optimize=True);kind='jpeg'
+        out=io.BytesIO();flat.save(out,'JPEG',quality=85);kind='jpeg'
     return 'data:image/'+kind+';base64,'+base64.b64encode(out.getvalue()).decode()
 
 class StudioRequest(Mutation):
@@ -133,7 +162,7 @@ class StudioRequest(Mutation):
     @field_validator('image')
     @classmethod
     def image_data(cls,v):
-        return reference_image(v)
+        return check_image(v)
 
 class KindQuery(BaseModel):
     model_config = ConfigDict(extra='forbid')
@@ -181,6 +210,10 @@ class Placement(Mutation):
     z: float=Field(default=0,ge=-130,le=130)
     # Facing in whole degrees; released clients send quarter turns only.
     rotation: int=Field(default=0,ge=0,le=359)
+
+# Learned designs (behaviour_library) made under older designer rules are not reused: 'safety1' is the
+# contract that refuses inappropriate requests instead of softening them (asset_contract.py SAFETY).
+DESIGN_RULES='safety1'
 
 def price(body):
     # Game economy quote, deliberately NOT advertised as the provider's credit price.
@@ -368,6 +401,14 @@ class Studio:
 
         @app.post('/v1/studio/jobs')
         def queue(body:StudioRequest,request:Request):
+            # The photo is scaled and re-encoded here, once: after sign-in, in this worker thread (queue is
+            # a plain def), one at a time. The stored request keeps the result (the worker reuses it).
+            if body.image:
+                with db.read() as conn:auth(conn,request)
+                with IMAGE_GATE:
+                    try:image=reference_image(body.image)
+                    except ValueError as error:fail(str(error),422)
+                body=body.model_copy(update={'image':image})
             # A clock is always built with its hands, even when asked for a still piece: the game makes
             # them (no credits, so it fits wherever the still piece fits). The price stays what was asked.
             asked=body
@@ -380,7 +421,7 @@ class Studio:
             # An inappropriate description is refused with its reason before anything is charged
             # (server/craft_moderation.py); the photo and subtler requests are judged by the designer.
             refused=craft_moderation.check_text(body.prompt)
-            if refused:fail('refused_'+refused,422)
+            if refused:fail(craft_moderation.refusal_detail(refused,request.headers.get('x-villagen-version','')[:40]),422)
             def create(conn,user):
                 if body.designer=='llm' and settings.studio_llm=='fixture':fail('llm_not_configured',503)
                 if body.geometry=='tripo' and not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
@@ -706,8 +747,11 @@ class Studio:
                     provenance['concept_skipped']='budget';return
         # A product-style render: the picture becomes Tripo's image reference, so believable shapes and
         # materials give a better model. Style words in the description (cute, anime...) still win.
-        prompt=('Concept art of ONLY this object, the whole object centred and fully visible, three-quarter view, plain '
-                'light-grey background, soft studio lighting. Style: '+craft_styles.style(body.style)['concept']+
+        # Tripo rebuilds only what the picture shows: the whole object, small enough to leave wide margins
+        # (an object touching the edge came back cut, task 73).
+        prompt=('Concept art of ONLY this object. A zoomed-out full shot: the ENTIRE object centred with wide empty margins '
+                '(at least 15% of the picture) on every side, nothing touching or cut by the picture edge, no floor. '
+                'Three-quarter view, plain light-grey background, soft studio lighting. Style: '+craft_styles.style(body.style)['concept']+
                 ', unless the description asks for another style. No text, no people. Object: '+str(part.get('prompt','')))[:1800]
         try:
             if body.geometry!='tripo':blob=fixture_concept(str(part.get('prompt','')))
@@ -849,7 +893,7 @@ class Studio:
                 else:
                     style_text=craft_styles.designer_style(body.style,body.size,body.dims)
                     # A text-only request made before (same words, style, size and motion): the learned design, no LLM call.
-                    learned=None if body.image else library.make_key('design',library.normalize(body.prompt),body.style,body.size,body.motion,style_text,archetypes.VERSION,*([body.dims] if body.dims else []))
+                    learned=None if body.image else library.make_key('design',library.normalize(body.prompt),body.style,body.size,body.motion,style_text,archetypes.VERSION,DESIGN_RULES,*([body.dims] if body.dims else []))
                     with self.db.transaction() as conn:cached=library.find(conn,learned) if learned else None
                     if cached:
                         plan,program=cached['value']['plan'],cached['value']['program']

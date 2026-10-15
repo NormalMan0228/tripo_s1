@@ -18,11 +18,17 @@ from server.tests.test_concept import Provider, Designer, world, run
 def test_word_list_refuses_by_category_and_spares_ordinary_words():
     assert check_text('나치 깃발 액자') == 'hate'
     assert check_text('잘린 머리 장식') == 'violence'
-    assert check_text('naked man statue') == 'sexual'
+    assert check_text('porno poster') == 'sexual'
     assert check_text('코카인 상자') == 'drugs'
     assert check_text('씨발 의자') == 'words'
+    assert check_text('잘린머리 장식') == 'violence' and check_text('나체 조각상') == 'sexual' and check_text('meth lab table') == 'drugs'
+    # Hangul matches at the start of a word only; ambiguous Latin words are left to the LLM designer.
     for fine in ('작은 버섯 모양 의자', '마약 방석 같은 푹신한 쿠션', '고어텍스 재킷 걸이', '대마법사의 지팡이', '완성기념 트로피',
-                 '내장형 서랍장', '해골 장식 촛대', '장난감 총 진열대', 'sexy red sofa', '다시 발견한 보물상자', '시발점 표지판'):
+                 '내장형 서랍장', '해골 장식 촛대', '장난감 총 진열대', 'sexy red sofa', '다시 발견한 보물상자', '시발점 표지판',
+                 '처음부터 끝까지 원목인 책상', '이음부를 금속으로 감싼 의자', '마음부자 저금통', '얼음부엉이 조각상', '참수리 조각상',
+                 '고어 문자가 새겨진 돌판', '시신경 모형', '바나나체어', '마나체스트', '마약 침대', '마약 담요', '도시체험관 모형',
+                 '성기사의 방패', 'white power strip', 'naked flame lamp', 'cock weathervane', 'balls of yarn basket',
+                 '녹음부스 책상', '방음부스', '소음경고 표지판', '바나나치즈케이크 모형', '자살방지 포스터', '자살 방지 안내판', 'Gore-Tex jacket hanger'):
         assert check_text(fine) == '', fine
 
 
@@ -43,8 +49,11 @@ def test_a_listed_word_is_refused_before_any_charge(tmp_path):
     with client as c:
         a = account(c, 'alice')
         shards = c.get('/v1/me', headers=a).json()['shards']
-        reply = c.post('/v1/studio/jobs', headers=a, json=mutation(prompt='나치 깃발', motion='static'))
+        # Games from 0.11.8 word the code; released ones print a sentence (it has a space).
+        reply = c.post('/v1/studio/jobs', headers={**a, 'x-villagen-version': '0.11.8'}, json=mutation(prompt='나치 깃발', motion='static'))
         assert reply.status_code == 422 and reply.json()['detail'] == 'refused_hate'
+        reply = c.post('/v1/studio/jobs', headers=a, json=mutation(prompt='나치 깃발', motion='static'))
+        assert reply.status_code == 422 and reply.json()['detail'] == '혐오를 담은 상징은 만들 수 없어요.'
         assert c.get('/v1/me', headers=a).json()['shards'] == shards
         assert c.get('/v1/studio', headers=a).json()['jobs'] == []
 
@@ -85,6 +94,9 @@ def test_designer_answers_refusal_json_without_a_repair_round():
         asyncio.run(Fake(Settings_()).generate('x', 'gpt-6-luna', 'high'))
     assert caught.value.code == 'refused_sexual' and calls == [1]
     assert refusal('{"refused":""}') == '' and refusal('not json') == ''
+    # An odd word next to a full design is not a refusal; alone it is.
+    assert refusal('{"refused":"N/A","plan":{},"program":{}}') == '' and refusal('{"refused":"N/A"}') == 'other'
+    assert refusal('{"refused":"other","plan":{},"program":{}}') == 'other'
 
 
 class BanningProvider(Provider):
@@ -143,8 +155,12 @@ def test_reference_photos_are_scaled_down_and_stripped():
     assert not picture.getexif()
     # Transparency stays a PNG.
     assert reference_image(_data_url((300, 200), 'PNG', 'RGBA')).startswith('data:image/png;')
+    # The camera's rotation is applied before the metadata goes.
+    raw = io.BytesIO(); data = Image.Exif(); data[0x0112] = 6
+    Image.new('RGB', (400, 200), 'orange').save(raw, 'JPEG', exif=data.tobytes())
+    assert _decode(reference_image('data:image/jpeg;base64,' + base64.b64encode(raw.getvalue()).decode())).size == (200, 400)
     for value, code in ((_data_url((10, 10)), 'image_too_small'), ('data:image/gif;base64,R0lGOD', 'image_unreadable'),
-                        ('data:image/png;base64,AAAA', 'image_unreadable'), (_data_url((9000, 100)), 'image_too_large')):
+                        ('data:image/png;base64,AAAA', 'image_unreadable'), (_data_url((5000, 100)), 'image_too_large')):
         with pytest.raises(ValueError) as caught:
             reference_image(value)
         assert str(caught.value) == code
@@ -161,3 +177,12 @@ def test_a_refused_photo_says_why(tmp_path):
         assert len(large) > 1_400_000
         reply = c.post('/v1/studio/jobs', headers=a, json=mutation(prompt='a cosy chest', designer='llm', motion='static', image=large))
         assert reply.status_code == 200, reply.text
+        # The stored request keeps the scaled photo; the worker reuses it as it is.
+        import sqlite3
+        stored = app.state.studio.db
+        with stored.read() as conn:
+            kept = json.loads(conn.execute('SELECT request FROM studio_jobs WHERE id=?', (reply.json()['id'],)).fetchone()[0])['image']
+        assert len(kept) < 1_400_000 and _decode(kept).size[0] <= 2048
+        # A photo is only looked at after sign-in.
+        anonymous = c.post('/v1/studio/jobs', json=mutation(prompt='a cosy chest', designer='llm', motion='static', image=large))
+        assert anonymous.status_code == 401

@@ -42,7 +42,11 @@ def refusal(raw):
     """The SAFETY refusal category in a designer's answer, or ''."""
     try:value=json.loads(raw)
     except (TypeError,ValueError):return ''
-    return category_of(value.get('refused')) if isinstance(value,dict) else ''
+    if not isinstance(value,dict):return ''
+    word=value.get('refused');category=category_of(word)
+    # An odd word ("N/A", "safe") next to a full design is not a refusal.
+    if category=='other' and str(word).strip().lower()!='other' and {'plan','program'}<=set(value):return ''
+    return category
 
 async def terminate_owned_process(proc):
     if proc.returncode is not None:return

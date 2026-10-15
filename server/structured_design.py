@@ -41,7 +41,8 @@ def prompt_for_structured(prompt,feedback='',style=None):
 def canonical(text):
     if len(text)>120000:raise ProgramError('design_too_large')
     value=json.loads(text)
-    if isinstance(value,dict) and value.get('refused')=='':value={k:v for k,v in value.items() if k!='refused'}
+    # A design next to a 'refused' field: a real refusal was raised before parsing (design_provider.refusal).
+    if isinstance(value,dict) and 'refused' in value and {'plan','program'}<=set(value): value={k:v for k,v in value.items() if k!='refused'}
     if not isinstance(value,dict) or set(value)!={'plan','program'}:raise ProgramError('invalid_design')
     program=value['program']
     if not isinstance(program,dict) or set(program)!={'version','state','functions','events'}:raise ProgramError('invalid_wire_program')

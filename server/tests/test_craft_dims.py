@@ -72,9 +72,10 @@ def test_without_a_box_nothing_changes(tmp_path):
     assert 'dims' not in prov and prov['size_m'] == 1.8
     assert '1.8 m on its longest side' in designer.styles[0] and 'wide (x)' not in designer.styles[0]
     assert 'proportions about' not in value['design']['parts'][0]['prompt'].lower()
-    # The learned-design key is the one older servers made, so the library keeps serving it.
+    # Without a box the key is the plain one of the current designer rules (DESIGN_RULES).
+    from server.asset_studio import DESIGN_RULES
     old = library.make_key('design', library.normalize('a reading chair'), 'rpg', 'large', 'static',
-                           craft_styles.designer_style('rpg', 'large'), archetypes.VERSION)
+                           craft_styles.designer_style('rpg', 'large'), archetypes.VERSION, DESIGN_RULES)
     assert prov['library_key'] == old
 
 

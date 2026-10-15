@@ -50,8 +50,8 @@ def prompt_for(text, feedback='', style=None):
 def parse_design(text):
     if len(text)>120000: raise ProgramError('design_too_large')
     value=json.loads(text)
-    # A designer that answered the SAFETY refusal field empty still designed the object.
-    if isinstance(value,dict) and value.get('refused')=='': value={k:v for k,v in value.items() if k!='refused'}
+    # A design next to a 'refused' field: a real refusal was raised before parsing (design_provider.refusal).
+    if isinstance(value,dict) and 'refused' in value and {'plan','program'}<=set(value): value={k:v for k,v in value.items() if k!='refused'}
     if not isinstance(value,dict) or set(value)!={'plan','program'}: raise ProgramError('invalid_design')
     plan=validate_plan(value['plan'])
     program=validate_program(value['program'],{p['id'] for p in plan['parts']})

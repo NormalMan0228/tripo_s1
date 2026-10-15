@@ -939,6 +939,14 @@ func _pick_size(id: String) -> void:
 	_show_choice(size_buttons, id)
 	size_box.visible = id == "custom"
 	_save_choice()
+	if size_box.visible: _reveal.call_deferred(size_box)
+
+## Scrolls the window so `control` (the size box under the size row) is in view.
+func _reveal(control: Control) -> void:
+	await get_tree().process_frame
+	var node := get_parent()
+	while node != null and not node is ScrollContainer: node = node.get_parent()
+	if node != null and is_instance_valid(control): (node as ScrollContainer).ensure_control_visible(control)
 
 ## The chosen button stays pressed and turns gold.
 func _show_choice(buttons: Dictionary, id: String) -> void:
