@@ -12,6 +12,7 @@ const Driver = preload("res://scripts/ix/ix_driver.gd")
 const IxRig = preload("res://scripts/ix/ix_rig.gd")
 const IxMath = preload("res://scripts/ix/ix_math.gd")
 const IxSources = preload("res://scripts/ix/ix_sources.gd")
+const Residents = preload("res://scripts/residents.gd")
 
 var server := preload("res://tests/qa_server.gd").url()
 var failures: Array[String] = []
@@ -83,6 +84,10 @@ func prompt_of(app: Node) -> String:
 func run() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--server="): server = arg.trim_prefix("--server=")
+	# The residents follow the wall clock (residents.gd) and the pond beside these spots is one of their
+	# leisure spots: a villager strolling by takes the E prompt first (main.gd puts people before
+	# furniture), so the prompt checks failed at some hours. Everyone is kept out of their plan here.
+	for entry in Residents.RESIDENTS: Residents.hold(str(entry.id), true)
 	var app = load("res://scripts/main.gd").new()
 	root.add_child(app)
 	await process_frame
