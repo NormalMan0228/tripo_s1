@@ -1,0 +1,7 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" uid="uid://bknownfixture" id="1"]
+[ext_resource type="Script" uid="uid://bfallbackfixture" path="res://script.gd" id="2"]
+
+[node name="Known" type="Node"]
+script = ExtResource("1")

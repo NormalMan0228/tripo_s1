@@ -1,0 +1,6 @@
+[gd_scene load_steps=3 format=3 uid="uid://bselfscene"]
+
+[ext_resource type="Script" uid="uid://borphanfixture" id="1"]
+[ext_resource type="Script" uid="uid://binvalidfallback" path="res://missing_fallback.gd" id="2"]
+
+[node name="Main" type="Node"]
