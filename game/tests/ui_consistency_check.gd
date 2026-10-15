@@ -8,11 +8,19 @@ extends SceneTree
 ##            files still waiting for their migration are in ALLOWLIST (U-WP-17)
 ##   runtime  every village window has one shade and a close key whose tooltip ends with its key
 ##            (U-WP-03)
+##   system   the pause pages, settings (also opened from pause), the version gate's blocking screen
+##            and the survival return question are night windows; pause + settings leave exactly
+##            one shade; the settings tabs are a tab_strip; the controls page keys follow a rebind
+##            (U-WP-07)
 ##   godot --headless --path game --script res://tests/ui_consistency_check.gd -- --qa
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const Main = preload("res://scripts/main.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const Stub = preload("res://tests/ui_stub_api.gd")
+const GameSettings = preload("res://scripts/game_settings.gd")
+const PauseMenu = preload("res://scripts/pause_menu.gd")
+const SettingsMenu = preload("res://scripts/settings_menu.gd")
+const VersionGate = preload("res://scripts/version_gate.gd")
 var failures := 0
 var checks := 0
 
@@ -33,6 +41,7 @@ func run() -> void:
 	check_themes()
 	check_static()
 	await check_stack()
+	await check_system_menus()
 	await check_village_windows()
 	print("UI_CONSISTENCY ", JSON.stringify({"checks":checks, "failures":failures}))
 	quit(1 if failures else 0)
@@ -123,11 +132,12 @@ const TOKEN_HEXES := ["ffe08a","e9b552","fff2cf","c9d3c6","3b2a1c","2f2a1f","5d4
 	"3c2e1e","7a6446","b0452f","d8e3d4","c9a46a","ffd9a0","c8ec9f"]
 ## Files still waiting for their migration, with the most literals each may keep (the list only
 ## shrinks). They are on the presentation's object-creation path or hot files other tracks edit now:
-## main.gd/studio.gd (U-WP-04/09/11), craft_panel.gd (U-WP-05, frozen before the talk),
-## interaction_panel.gd and shape_panel.gd (U-WP-06).
-const LITERAL_ALLOWLIST := {"main.gd":4, "studio.gd":12, "craft_panel.gd":2, "interaction_panel.gd":1, "shape_panel.gd":2}
+## main.gd (U-WP-04/09), craft_panel.gd (the finished-craft accent 8a5a1c, kept for the talk).
+const LITERAL_ALLOWLIST := {"main.gd":4, "craft_panel.gd":1}
 ## Files already on the shared windows and tokens: no flat boxes or colour rects of their own.
-const MIGRATED := ["craft_window.gd", "village_life.gd", "life_icon.gd", "minimap.gd"]
+const MIGRATED := ["craft_window.gd", "village_life.gd", "life_icon.gd", "minimap.gd", "interaction_panel.gd", "shape_panel.gd"]
+## Files whose HUD and drawers are on the shared frames (U-WP-11): no flat boxes of their own.
+const FLAT_FREE := ["studio.gd"]
 
 func check_static() -> void:
 	var literal := RegEx.new()
@@ -146,6 +156,7 @@ func check_static() -> void:
 		if count > allowed: over.append("%s %d>%d" % [name, count, allowed])
 		elif count < allowed: shrunk.append("%s %d<%d" % [name, count, allowed])
 		if name in MIGRATED and (code.contains("StyleBoxFlat.new()") or code.contains("ColorRect.new()")): flat.append(name)
+		if name in FLAT_FREE and (code.contains("StyleBoxFlat.new()") or code.contains("RpgUi.style(")): flat.append(name)
 		for found in hotbar_key.search_all(code): keys.append("%s %s" % [name, found.get_string()])
 	expect(over.is_empty(), "no token colours written as literals outside rpg_ui.gd, the painter and the allowlist %s" % [over])
 	if not shrunk.is_empty(): print("NOTE the literal allowlist can shrink: ", shrunk)
@@ -222,6 +233,97 @@ func check_stack_bottom_first() -> void:
 	host.free()
 	await process_frame
 
+# ------------------------------------------------------------------ system menus
+
+## What the pause menu needs from its app: a screen name (no survival run, no walker).
+class MenuHost extends Control:
+	var screen := "village"
+
+func plates(node: Node, variation: String) -> Array:
+	return node.find_children("*", "Button", true, false).filter(func(b): return b.is_visible_in_tree() and b.theme_type_variation == variation)
+
+func caps_for(node: Node, action: String) -> Array:
+	return node.find_children("*", "Label", true, false).filter(func(l): return str(l.get_meta("key_action", "")) == action).map(func(l): return l.text)
+
+func check_system_menus() -> void:
+	GameSettings.reset_bindings()
+	var host := MenuHost.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(host)
+	var pause = PauseMenu.open(host)
+	await process_frame
+	var page: Dictionary = pause.win
+	expect(PauseMenu.is_open() and page.get("kind") == "night" and RpgUi.top_window().get("root") == page.get("root") and shades_under(pause) == 1
+		and pause.find_children("*", "ColorRect", true, false).is_empty(), "the pause menu is a night window on the stack over one shade (no colour rect)")
+	var gold := plates(pause, "MenuGoldButton")
+	expect(gold.size() == 1 and gold[0].text == I18n.t("계속하기") and plates(pause, "MenuNightButton").size() >= 3 and gold[0].focus_mode == Control.FOCUS_ALL,
+		"pause items are the kit 2 plates: gold 계속하기 first, night glass for the rest")
+	pause.show_settings()
+	await process_frame
+	var settings: Control = pause.sub
+	var shades := shades_under(pause)
+	expect(is_instance_valid(settings) and shades == 1 and settings.win.shade == page.shade and RpgUi.top_window().get("id") == "settings",
+		"pause + settings open together: exactly one shade node (%d), settings borrowed the pause shade" % shades)
+	var strip: Control = settings.tab_bar
+	var buttons: Dictionary = strip.get_meta("buttons", {}) if is_instance_valid(strip) else {}
+	expect(buttons.size() == SettingsMenu.TABS.size() and buttons.values().all(func(b): return b.theme_type_variation == "TabButton" and b.toggle_mode)
+		and str(strip.get_meta("selected", "")) == "graphics", "the settings tabs are a tab_strip (folder tabs, graphics picked)")
+	settings.show_tab("audio")
+	var audio_ok: bool = str(strip.get_meta("selected", "")) == "audio" and (buttons["audio"] as Button).button_pressed and settings.rows.get_child_count() > 2
+	settings.next_tab(1)
+	expect(audio_ok and str(strip.get_meta("selected", "")) == "controls" and settings.tab == "controls", "show_tab and PageDown move the strip with the page")
+	var looks := settings.find_children("*", "Button", true, false).filter(func(b): return b.is_visible_in_tree() and b.theme_type_variation in ["NightButton", "GoldButton", "PrimaryButton"])
+	expect(looks.size() > 10 and not settings.has_method("_theme") and not settings.has_method("_paint") and not settings.has_method("_box"),
+		"settings buttons are the shared night / gold / primary keys; no local theme or painter")
+	settings.close()
+	await process_frame
+	expect(pause.view == "main" and shades_under(pause) == 1 and RpgUi.top_window().get("root") == pause.win.get("root") and pause.win.card.visible,
+		"closing settings returns to the pause page on the same single shade")
+	pause.show_controls()
+	await process_frame
+	var hinted := {}
+	for action in ["social", "toggle_hud", "interact"]: hinted[action] = caps_for(pause, action)
+	var rows := pause.find_children("*", "HBoxContainer", true, false).filter(func(r): return r.has_meta("words")).size()
+	var texts: Array = pause.find_children("*", "Label", true, false).map(func(l): return l.text)
+	expect(hinted.social == ["K"] and hinted.toggle_hud == ["U"] and hinted.interact.size() >= 3 and "Enter" in texts and "1-9" in texts and "Space" in texts and rows >= 20,
+		"the controls page has key rows for Enter, K, U, 1-9 and E/Space/Enter (%s, %d rows)" % [hinted, rows])
+	GameSettings.rebind("social", 0, KEY_L)
+	await process_frame
+	await process_frame
+	expect(caps_for(pause, "social") == ["L"], "the controls page keys follow a rebind (K -> L: %s)" % [caps_for(pause, "social")])
+	GameSettings.reset_bindings()
+	await process_frame
+	pause.ask("?", Callable(), "?")
+	await process_frame
+	expect(shades_under(pause) == 1 and RpgUi.windows().size() == 1 and RpgUi.top_window().get("kind") == "night", "a question page replaces the page on the same shade")
+	PauseMenu.close()
+	await process_frame
+	expect(not PauseMenu.is_open() and RpgUi.windows().is_empty(), "closing the pause menu leaves the window stack empty")
+	host.queue_free()
+	await process_frame
+	# The version gate's blocking screen: a night window on layer 90 over a darker shade, without a
+	# close key, that Esc routing cannot close.
+	var gate = VersionGate.new()
+	root.add_child(gate)
+	await process_frame
+	gate._open_screen("server_maintenance")
+	await process_frame
+	var block: Dictionary = gate.screen.get_meta("rpg_window", {}) if is_instance_valid(gate.screen) else {}
+	var veil = block.get("shade")
+	var dark: bool = is_instance_valid(veil) and ((veil as TextureRect).texture as GradientTexture2D).gradient.colors[1].a >= 0.8
+	expect(gate.layer == 90 and block.get("kind") == "night" and block.get("close") == null and dark and shades_under(gate) == 1
+		and gate.screen.find_children("*", "ColorRect", true, false).is_empty(), "the blocking screen is a night window on layer 90 over one darker shade, without a close key")
+	expect(not RpgUi.close_top(block) and is_instance_valid(gate.screen) and not gate.screen.get_meta("rpg_closing", false), "Esc routing cannot close the blocking screen")
+	var first: Control = gate.screen
+	gate._open_screen("client_update_required")
+	await process_frame
+	expect(gate.screen != first and shades_under(gate) == 1 and RpgUi.windows().size() == 1, "a screen replacing another keeps one shade")
+	gate._close_screen()
+	await process_frame
+	expect(RpgUi.windows().is_empty() and shades_under(gate) == 0, "closing the screen clears the shade")
+	gate.queue_free()
+	await process_frame
+
 # ------------------------------------------------------------------ village windows
 
 func check_village_windows() -> void:
@@ -238,7 +340,7 @@ func check_village_windows() -> void:
 	await app.enter_village()
 	await create_timer(0.8).timeout
 	var openers := [["expedition", func(): await app.open_expedition(), "Esc"], ["story", func(): app.open_story(), "Esc"],
-		["wardrobe", func(): app.open_wardrobe(), "Esc"], ["map", func(): app.life.open_map(), "Esc"], ["storage", func(): app.life.open_storage(), "Esc"],
+		["wardrobe", func(): app.open_wardrobe(), "O"], ["map", func(): app.life.open_map(), "Tab"], ["storage", func(): app.life.open_storage(), "B"],
 		["shop", func(): app.life.open_shop(), "Esc"], ["log", func(): app.life.open_log(), "Esc"], ["admin", func(): app.open_admin(), "Esc"]]
 	for entry in openers:
 		await (entry[1] as Callable).call()
@@ -253,5 +355,27 @@ func check_village_windows() -> void:
 		if w.has("close"): (w.close as Button).pressed.emit()
 		await process_frame
 		expect(not is_instance_valid(app.village_modal) and RpgUi.windows().is_empty() and shades_under(app.ui) == 0, "%s: its close key closes it and clears the shade" % entry[0])
+	# The survival return question (a native dialog before): a night window over one shade; Esc keeps going.
+	var run_before: Dictionary = app.run
+	app.run = {"status":"active"}
+	var shades_before := shades_under(app)
+	app.confirm_return()
+	await process_frame
+	var ask: Dictionary = app.return_dialog.get_meta("rpg_window", {}) if is_instance_valid(app.return_dialog) else {}
+	var layer := app.get_node_or_null("ReturnQuestion") as CanvasLayer
+	expect(ask.get("kind") == "night" and ask.get("id") == "return_confirm" and shades_under(app) == shades_before + 1 and app.find_children("*", "ConfirmationDialog", true, false).is_empty()
+		and plates(app.return_dialog, "PrimaryButton").size() == 1 and layer != null and layer.layer == 50 and layer.is_ancestor_of(app.return_dialog),
+		"the survival return question is a night window with a primary button over one shade, on its own layer over the HUD")
+	expect(not app.world_movement_allowed(), "the walker waits while the question is open")
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	app._unhandled_input(esc)
+	await process_frame
+	expect(RpgUi.windows().is_empty() and str(app.run.get("status", "")) == "active", "Esc closes the question and the run goes on")
+	await create_timer(0.4).timeout
+	expect(app.get_node_or_null("ReturnQuestion") == null and shades_under(app) == shades_before, "its layer and shade go with it")
+	app.run = run_before
 	app.queue_free()
 	await create_timer(0.5).timeout

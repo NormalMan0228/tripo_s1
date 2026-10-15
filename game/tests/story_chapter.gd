@@ -11,6 +11,7 @@ extends SceneTree
 ## pick it up where it was) and gives a lamp (decoration: nobody sits); and the operator reset
 ## (python -m server.admin_cli story reset) puts the first account back at the letter.
 ## --capture saves artifacts/story-shot-*.png at each step (a window; tools/test.ps1 -Capture).
+const RpgUi = preload("res://scripts/rpg_ui.gd")
 const Transition = preload("res://scripts/transition.gd")
 const Town = preload("res://scripts/town.gd")
 const Residents = preload("res://scripts/residents.gd")
@@ -290,12 +291,12 @@ func run() -> void:
 	var lines := ""
 	if is_instance_valid(room.get("story_home")):
 		for label in room.story_home.card_lines.find_children("*", "Label", true, false): lines += (label as Label).text
-	expect(lines.contains(tr("C · 모카의 의자 만들기")), "signing in again, the home card picks the chapter up (make the chair)")
+	expect(lines.contains((tr("%s · 모카의 의자 만들기") % RpgUi.key_text("craft"))), "signing in again, the home card picks the chapter up (make the chair)")
 	room.leave()
 	town = await village()
 	story = chapter(town)
-	await wait_for(func() -> bool: return town.objective.text.contains(tr("C · 모카의 의자 만들기")), 10.0)
-	expect(town.objective.text.contains(tr("C · 모카의 의자 만들기")), "the village tracker picks it up too")
+	await wait_for(func() -> bool: return town.objective.text.contains((tr("%s · 모카의 의자 만들기") % RpgUi.key_text("craft"))), 10.0)
+	expect(town.objective.text.contains((tr("%s · 모카의 의자 만들기") % RpgUi.key_text("craft"))), "the village tracker picks it up too")
 	var lamp_id := await craft_by_api(other, "등불")
 	expect(not lamp_id.is_empty(), "a lamp was made")
 	await town.refresh_inventory()

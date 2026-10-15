@@ -62,18 +62,24 @@ def test_fishing_consumes_bait_and_timing_cannot_be_skipped(world):
     state=do(c,a,'cast').json(); t[0]=state['fishing']['ends_at']+.001
     assert do(c,a,'reel').json()['caught']==1
 
-def test_leaf_economy_never_mints_shards_and_enforces_costs(world):
+def test_leaf_economy_enforces_costs_and_selling_pays_a_capped_star_bonus(world):
     app,c,t=world; a=account(c,'villager')
     shards=c.get('/v1/me',headers=a).json()['shards']
     assert do(c,a,'gather',item='apple').json()['bag']['apple']==2
     assert do(c,a,'gather',item='apple').status_code==409
     assert do(c,a,'sell',item='apple',quantity=3).status_code==409
-    assert do(c,a,'sell',item='apple',quantity=2).json()['coins']==16
+    sold=do(c,a,'sell',item='apple',quantity=2).json()
+    # 4 leaf coins of sales: one starseed (3 coins each), one coin carried to the next sale.
+    assert sold['coins']==16 and sold['stars']==1 and sold['shards']==shards+1
+    assert sold['sell_stars']=={'today':1,'cap':15,'coins_per_star':3,'carry':1}
+    assert '별씨 1개' in sold['message']
     assert do(c,a,'buy',item='bait',quantity=16).json()['coins']==0
     assert do(c,a,'buy',item='bait').status_code==409
     assert do(c,a,'buy',item='shards').status_code==409
     assert do(c,a,'sell',item='turnip_seed').status_code==409
-    assert c.get('/v1/me',headers=a).json()['shards']==shards
+    # Buying never touches starseeds; only the one sale did.
+    assert c.get('/v1/me',headers=a).json()['shards']==shards+1
+    assert get(c,a)['sell_stars']['today']==1
     t[0]+=60
     assert do(c,a,'gather',item='apple').status_code==200
 
@@ -136,3 +142,34 @@ def test_village_state_survives_backup_restore_and_old_db_upgrade(world,tmp_path
         assert get(client,auth)['coins']==before['coins']
         assert get(client,auth)['plots'][0]['ready']
         assert do(client,auth,'harvest').json()['bag']['pumpkin']==2
+
+def test_selling_stars_stop_at_the_daily_cap_and_start_again_tomorrow():
+    from server import homestead
+    state={'star_coins':0}
+    now=1_000_000.0
+    assert homestead.sell_stars(state,7,now,15,3)==2 and state['star_coins']==1
+    assert homestead.sell_stars(state,2,now,15,3)==1 and state['star_coins']==0
+    assert homestead.sell_stars(state,100,now,15,3)==12 and state['star_today']==15
+    # At the cap the remainder is dropped and further sales pay coins only.
+    assert state['star_coins']==0 and homestead.sell_stars(state,30,now,15,3)==0
+    assert homestead.star_status(state,now,15,3)=={'today':15,'cap':15,'coins_per_star':3,'carry':0}
+    tomorrow=now+86400
+    assert homestead.star_status(state,tomorrow,15,3)['today']==0
+    assert homestead.sell_stars(state,3,tomorrow,15,3)==1 and state['star_today']==1
+    # Off: no starseeds at all.
+    assert homestead.sell_stars({'star_coins':0},300,now,0,3)==0
+
+def test_selling_stars_are_ledgered_once_and_replays_pay_nothing_more(world):
+    from server.tests.test_api import mutation
+    app,c,t=world; a=account(c,'trader')
+    shards=c.get('/v1/me',headers=a).json()['shards']
+    for _ in range(3):
+        do(c,a,'gather',item='apple'); t[0]+=60
+    bag=get(c,a)['bag']['apple']
+    payload=mutation(version=get(c,a)['version'],action='sell',item='apple',quantity=bag)
+    first=c.post('/v1/homestead',headers=a,json=payload).json()
+    assert c.post('/v1/homestead',headers=a,json=payload).json()==first
+    assert c.get('/v1/me',headers=a).json()['shards']==shards+first['stars']>shards
+    with app.state.db.transaction() as conn:
+        rows=conn.execute("SELECT amount FROM ledger WHERE reason='sell_reward'").fetchall()
+    assert [r[0] for r in rows]==[first['stars']]

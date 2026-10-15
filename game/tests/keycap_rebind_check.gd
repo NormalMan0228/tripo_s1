@@ -1,7 +1,9 @@
 extends SceneTree
 ## Key caps and key tooltips follow rebinding (U-WP-02). Builds the village HUD and a room HUD
 ## against recorded replies (tests/ui_stub_api.gd), rebinds 가방 (inventory) to J and checks the
-## hotbar cap shows J and its tooltip reads "가방  ·  J" in both, then resets to I. Also checks the
+## hotbar cap shows J and its tooltip reads "가방  ·  J" in both, then resets to I; rebinds 상호작용
+## (interact) to G and checks the prompt chip's key cap shows G in the village, on an expedition and
+## in a room (and the room's key cap over the door). Also checks the
 ## shared controls: the painted close icon, close_key, key_text, key_hint, button variants, badge
 ## and swatch. Headless:
 ##   godot --headless --path game --script res://tests/keycap_rebind_check.gd -- --qa
@@ -10,6 +12,7 @@ const RpgUi = preload("res://scripts/rpg_ui.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const GameSettings = preload("res://scripts/game_settings.gd")
 const Stub = preload("res://tests/ui_stub_api.gd")
+const Town = preload("res://scripts/town.gd")
 var failures := 0
 var checks := 0
 
@@ -135,8 +138,29 @@ func village() -> void:
 	GameSettings.reset_bindings()
 	await process_frame
 	expect(slot_keys(bag) == before, "reset restores I")
+	# The prompt chip: next to the expedition gate it offers the interact key, E, then G after a rebind.
+	app.player.position = Vector3(Town.GATE.x, app.player.position.y, Town.GATE.y)
+	await settle(0.4)
+	expect(app.hint.visible and prompt_key(app.hint) == "E", "the village prompt shows E (%s · '%s')" % [prompt_key(app.hint), app.hint.text])
+	GameSettings.rebind("interact", 0, KEY_G)
+	await settle(0.4)
+	expect(app.hint.visible and prompt_key(app.hint) == "G", "after rebinding 상호작용 to G the village prompt shows G (%s)" % prompt_key(app.hint))
+	GameSettings.reset_bindings()
+	# An expedition: next to a resource the prompt offers gathering with the same key.
+	await app.start_run("forest", "standard")
+	await settle(1.4)
+	expect(app.screen == "survival" and app.hint.visible and prompt_key(app.hint) == "E", "the expedition prompt shows E (%s · '%s')" % [prompt_key(app.hint), app.hint.text])
+	GameSettings.rebind("interact", 0, KEY_G)
+	await settle(0.3)
+	expect(app.hint.visible and prompt_key(app.hint) == "G" and not app.hint.text.contains("E "), "after the rebind the expedition prompt shows G (%s · '%s')" % [prompt_key(app.hint), app.hint.text])
+	GameSettings.reset_bindings()
 	app.queue_free()
 	await settle(0.5)
+
+## The key cap drawn on a prompt chip (RpgUi.prompt), "" while hidden.
+func prompt_key(chip: Label) -> String:
+	var cap: Label = chip.get_node_or_null("Key") if is_instance_valid(chip) else null
+	return cap.text if cap and cap.visible else ""
 
 func room() -> void:
 	Engine.set_meta("studio_session", {"token":"", "url":"http://gallery.invalid", "room":"01_cafe"})
@@ -152,6 +176,15 @@ func room() -> void:
 	GameSettings.reset_bindings()
 	await process_frame
 	expect(slot_keys(bag)[0] == "I", "and comes back to I")
+	# At the door the room's prompt and the key cap over the door offer the interact key.
+	var spec: Dictionary = studio.room_spec
+	studio.hero.position = Vector3(float(spec.get("door_x", 0.0)), 0.0, float(spec.size.y) * 0.5 - 0.7)
+	await settle(0.4)
+	expect(studio.hint_chip.visible and prompt_key(studio.hint_chip) == "E" and studio.hint_label.text == "E", "the room's prompt shows E at the door (%s · '%s')" % [prompt_key(studio.hint_chip), studio.hint_chip.text])
+	GameSettings.rebind("interact", 0, KEY_G)
+	await settle(0.4)
+	expect(studio.hint_chip.visible and prompt_key(studio.hint_chip) == "G" and studio.hint_label.text == "G", "after the rebind the room's prompt and door cap show G (%s, %s)" % [prompt_key(studio.hint_chip), studio.hint_label.text])
+	GameSettings.reset_bindings()
 	studio.queue_free()
 	Engine.remove_meta("studio_session")
 	await settle(0.5)

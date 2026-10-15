@@ -102,6 +102,10 @@ class Settings:
     user_total_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_USER_TOTAL_REQUEST_LIMIT', '0')))
     # Stars a new live account starts with (judging servers let visitors craft right away).
     welcome_stars: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_WELCOME_STARS', '0')))
+    # Selling at the village shop also pays starseeds: one per this many leaf coins of sales, at
+    # most sell_stars_daily a day (the player's day; 0 = selling pays leaf coins only).
+    sell_stars_daily: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SELL_STARS_DAILY', '15')))
+    sell_coins_per_star: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SELL_COINS_PER_STAR', '3')))
     # Trial servers: most Tripo credits one craft may spend (0 = no cap). 10 allows the
     # cheapest craft only (one untextured H3 mesh from text).
     max_credits_per_craft: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_MAX_CREDITS_PER_CRAFT', '0')))
@@ -129,6 +133,9 @@ class Settings:
     # Residents' requests (server/quests.py): their starseed rewards (quests.STARS) times this;
     # 0 turns the rewards off (the requests still run and pay nothing).
     quest_stars_scale: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_QUEST_STARS_SCALE', '1.0')))
+    # Treasure chests (server/treasure.py): their starseed rewards (treasure.STARS) times this;
+    # 0 turns the rewards off (the chests still open and pay nothing).
+    chest_stars_scale: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_CHEST_STARS_SCALE', '1.0')))
     # Friendship points for hearts 1..4 (each new heart brings a letter, the fourth a return gift).
     npc_levels: tuple = field(default_factory=lambda: tuple(int(v) for v in os.getenv('TRIPOTHON_NPC_LEVELS', '30,80,160,300').split(',')))
     session_seconds: int = 12 * 60 * 60
@@ -191,6 +198,8 @@ class Settings:
             raise ValueError('Invalid open sign-up limits')
         if not 0 <= self.user_total_generation_limit <= 1000 or not 0 <= self.welcome_stars <= 10000:
             raise ValueError('Invalid account craft limit or welcome stars')
+        if not 0 <= self.sell_stars_daily <= 1000 or not 1 <= self.sell_coins_per_star <= 1000:
+            raise ValueError('TRIPOTHON_SELL_STARS_DAILY must be 0-1000 and TRIPOTHON_SELL_COINS_PER_STAR 1-1000')
         if self.credit_reserve <= 0 or self.daily_generation_limit < 1 or self.user_daily_generation_limit < 1:
             raise ValueError('Generation budget must be positive')
         if not 60 <= self.studio_part_deadline <= 86400:
@@ -236,6 +245,8 @@ class Settings:
             raise ValueError('Invalid presence budget')
         if not (math.isfinite(self.quest_stars_scale) and 0 <= self.quest_stars_scale <= 5):
             raise ValueError('TRIPOTHON_QUEST_STARS_SCALE must be between 0 (off) and 5')
+        if not (math.isfinite(self.chest_stars_scale) and 0 <= self.chest_stars_scale <= 5):
+            raise ValueError('TRIPOTHON_CHEST_STARS_SCALE must be between 0 (off) and 5')
         if self.usage_key and len(self.usage_key) < 32:
             raise ValueError('The usage key must be at least 32 characters (ops/usage_key.sh makes one)')
         self.data_dir.mkdir(parents=True, exist_ok=True)

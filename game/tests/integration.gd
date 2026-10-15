@@ -72,7 +72,8 @@ func run_test() -> void:
 	expect(not app.paused and app.run.elapsed>paused_elapsed,"resume continues the same survival run")
 	app.confirm_return()
 	expect(is_instance_valid(app.return_dialog) and app.run.status=="active","early return requires deliberate confirmation")
-	app.return_dialog.canceled.emit()
+	# The night question window: its close key (like 계속 생존하기) keeps the run going.
+	(app.return_dialog.get_meta("rpg_window").close as Button).pressed.emit()
 	await process_frame
 	expect(app.sound.music[app.sound.music_index].stream!=null and app.sound.music[app.sound.music_index].playing and app.sound.music_mode=="forest","forest music is included and playing")
 	await create_timer(0.4).timeout

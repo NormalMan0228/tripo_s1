@@ -1,7 +1,7 @@
 """Residents' requests (부탁): one per village resident, each paying a few starseeds once.
 
-After the opening story chapter (server/story.py) is over and 모카's letter is read, or right away
-for an account that never had the chapter, every resident (the four cast villagers, 모카 and the
+Once the chair of the opening story chapter (server/story.py) is ordered (모카's own request after
+the chapter is done), or right away for an account that never had the chapter, every resident (the four cast villagers, 모카 and the
 fourteen day villagers / shadow folk) has one small request. The player hears it in the
 resident's usual conversation ("부탁 들어주기"), does it, and tells the resident; the starseeds
 come once per account, through the ledger like every other star (reason 'quest_reward', the quest
@@ -146,16 +146,27 @@ def reward(quest_id, scale):
     return max(0, amount)
 
 
-def unlocked(conn, user_id):
-    """Requests wait for the opening chapter: none without it, else after it is done and 모카's
-    letter has been read (the chapter's last line on the tracker)."""
-    row = conn.execute('SELECT step,letter_id FROM story_progress WHERE user_id=?', (user_id,)).fetchone()
-    if not row:
+# Requests the opening chapter holds back until it is done (모카 is busy with the chapter).
+STORY_HELD = ('moka_pie',)
+
+
+def unlocked(conn, user_id, quest_id=None):
+    """Requests wait for the opening chapter: all open without it or once it is done; while the
+    chair is being made (모카 asked and a craft was ordered since) every request but 모카's own opens,
+    so the wait has something to do. quest_id=None asks about the requests in general."""
+    row = conn.execute('SELECT step,requested_at FROM story_progress WHERE user_id=?', (user_id,)).fetchone()
+    if not row or row['step'] == 'done':
         return True
-    if row['step'] != 'done':
+    if row['step'] != 'craft' or quest_id in STORY_HELD:
         return False
-    letter = conn.execute('SELECT read_at FROM npc_letters WHERE id=?', (row['letter_id'],)).fetchone()
-    return not letter or letter['read_at'] is not None
+    return conn.execute('SELECT 1 FROM studio_jobs WHERE owner_id=? AND created>=? LIMIT 1',
+                        (user_id, row['requested_at'] or 0)).fetchone() is not None
+
+
+def held(conn, user_id):
+    """The requests still held back by the opening chapter (none once it is done or absent)."""
+    row = conn.execute('SELECT step FROM story_progress WHERE user_id=?', (user_id,)).fetchone()
+    return set(STORY_HELD) if row and row['step'] != 'done' else set()
 
 
 def life_state(conn, user_id):
@@ -335,8 +346,9 @@ def public(conn, user_id, settings):
     """Every request as the game shows it: {unlocked, scale, catalog, list}."""
     rows = {r['quest_id']: r for r in conn.execute('SELECT * FROM quest_progress WHERE user_id=?', (user_id,))}
     open_ = unlocked(conn, user_id)
+    waiting = held(conn, user_id)
     life = life_state(conn, user_id) if any(QUESTS[q]['kind'] in ('bring', 'catch') and r['state'] == 'active' for q, r in rows.items() if q in QUESTS) else None
-    listing = [entry(conn, user_id, quest_id, rows.get(quest_id), settings.quest_stars_scale, open_, life['bag'] if life else None, life)
+    listing = [entry(conn, user_id, quest_id, rows.get(quest_id), settings.quest_stars_scale, open_ and quest_id not in waiting, life['bag'] if life else None, life)
                for quest_id in QUESTS]
     fixed = [{k: v for k, v in item.items() if k not in LIVE} for item in listing]
     catalog = hashlib.sha1(json.dumps(fixed, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
@@ -402,7 +414,7 @@ class Quests:
 
             def apply(conn, user):
                 own_village(conn, user)
-                if not unlocked(conn, user['id']):
+                if not unlocked(conn, user['id'], quest_id):
                     fail('quests_locked')
                 row = conn.execute('SELECT state FROM quest_progress WHERE user_id=? AND quest_id=?', (user['id'], quest_id)).fetchone()
                 if row and row['state'] == 'done':
@@ -428,7 +440,7 @@ class Quests:
             def apply(conn, user):
                 own_village(conn, user)
                 # Closed again after a story reset (admin_cli story reset): nothing counts until they reopen.
-                if not unlocked(conn, user['id']):
+                if not unlocked(conn, user['id'], quest_id):
                     fail('quests_locked')
                 row = active(conn, user, quest_id)
                 if quest['kind'] not in ('visit', 'talk'):
@@ -457,7 +469,7 @@ class Quests:
 
             def apply(conn, user):
                 own_village(conn, user)
-                if not unlocked(conn, user['id']):
+                if not unlocked(conn, user['id'], quest_id):
                     fail('quests_locked')
                 row = active(conn, user, quest_id)
                 now = clock()

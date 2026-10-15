@@ -179,6 +179,8 @@ func hold_moka() -> void:
 ## The tracker's text with the chapter's lines ("▸ " lines are goals; the guide turns them into rows).
 ## The residents' requests (quests.gd) sit above the base once the chapter is over.
 func objective(base: String) -> String:
+	# The requests' own lines (they open once the chair is ordered) for the wait below.
+	var requests: String = quests.objective("") if is_instance_valid(quests) else ""
 	if is_instance_valid(quests): base = quests.objective(base)
 	if story.is_empty(): return base
 	match step():
@@ -187,9 +189,10 @@ func objective(base: String) -> String:
 		"craft":
 			if has_made(): return "▸ "+tr("완성! 모카에게 가져가기")+"\n"+tr("카페 '빨간 지붕' 테라스")
 			if confirming(): return "▸ "+tr("그림이 나왔어요 · C로 확인하기")+"\n"+tr("마음에 들면 제작을 맡겨요")
-			if crafting(): return "▸ "+tr("제작 중 · 완성되면 모카에게 가져가기")+"\n"+tr("그동안 마을을 둘러봐요")
+			# While it is made: what the wait can hold (starseeds from chests, the shop and requests).
+			if crafting(): return "▸ "+tr("제작 중 · 완성되면 모카에게 가져가기")+"\n"+tr("기다리는 동안 · 보물상자 · 사과 팔기 · 주민 부탁")+("\n"+requests if not requests.is_empty() else "")
 			if stalled(): return "▸ "+tr("제작이 멈췄어요 · C로 다시 만들기")+"\n"+tr("어떤 모습이든 네 상상대로")
-			return "▸ "+tr("C · 모카의 의자 만들기")+"\n"+tr("어떤 모습이든 네 상상대로")
+			return "▸ "+tr("%s · 모카의 의자 만들기") % preload("res://scripts/rpg_ui.gd").key_text("craft")+"\n"+tr("어떤 모습이든 네 상상대로")
 		"done":
 			if not bool(story.get("letter", {}).get("read", true)):
 				return "✦ "+tr("마을의 첫 선물 · 완료")+"\n▸ "+tr("우편함에서 모카의 편지 읽기")+"\n"+base

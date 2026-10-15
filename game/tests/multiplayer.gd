@@ -1,5 +1,6 @@
 extends SceneTree
 const Main = preload("res://scripts/main.gd")
+const SocialHud = preload("res://scripts/social_hud.gd")
 var apps: Array = []
 var names: Array[String] = []
 var failed := false
@@ -82,12 +83,16 @@ func run_test() -> void:
 		expect(apps[index].social.visiting() and apps[index].loaded.has(object_id), "visitor sees host furniture")
 		expect(not await apps[index].life.action("gather", {"item":"apple"}), "visitor cannot edit host life")
 	await apps[0].social.send_message("동료들과 같은 마을에서 만났어요")
-	await wait_seconds(.7)
-	expect(not apps[1].social.data.messages.is_empty(), "village conversation delivered")
+	var heard := func() -> bool: return SocialHud.of(apps[1].api).lines.any(func(l): return str(l.get("text", "")) == "동료들과 같은 마을에서 만났어요")
+	for attempt in 30:
+		if heard.call(): break
+		await wait_seconds(.1)
+	expect(heard.call(), "village conversation delivered to the other player's chat box")
 	await capture("village", 0)
 	await apps[1].social.open_menu()
+	await wait_seconds(.6)
 	await capture("invitation-panel", 1)
-	apps[1].close_village_modal()
+	SocialHud.of(apps[1].api).close_window()
 	await apps[0].social.perform("/v1/party")
 	await invitation(0, 1, "party")
 	await invitation(0, 2, "party")

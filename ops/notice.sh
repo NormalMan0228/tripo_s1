@@ -85,3 +85,11 @@ case "$command" in
     ;;
 esac
 "${compose[@]}" exec -T api python -m server.client_policy "$command" "${args[@]}"
+# A release that blocks older games (tools/deploy_school.py --block-older / --min-version) carries its
+# minimum in ops/release.json: the release notice applies it too, so nothing is typed on the VM.
+if [ "$command" = "release" ] && [ -f ops/release.json ]; then
+  wanted_min=$(sed -n 's/.*"min_version"[[:space:]]*:[[:space:]]*"\([0-9][0-9.]*\)".*/\1/p' ops/release.json | head -n 1)
+  if [ -n "$wanted_min" ]; then
+    "${compose[@]}" exec -T api python -m server.client_policy min "$wanted_min"
+  fi
+fi

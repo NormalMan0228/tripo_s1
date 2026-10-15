@@ -186,7 +186,10 @@ func _failure(code: int, data: Dictionary) -> Dictionary:
 		return {"ok":false,"error":reason,"status":code,"data":data}
 	var detail := str(data.get("detail","request_failed"))
 	if code == 401 and detail in SESSION_CODES and not token.is_empty(): session_lost.emit(detail)
-	return {"ok":false,"error":detail,"status":code}
+	var out := {"ok":false,"error":detail,"status":code}
+	# A refused presence poll names the fields the server did not take (SOCIAL_API.md 2.2).
+	if data.get("fields") is Array: out["fields"] = data.fields
+	return out
 
 func _seen(headers: PackedStringArray) -> void:
 	for line in headers:

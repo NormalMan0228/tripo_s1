@@ -462,6 +462,8 @@ static func room_done(room: Node, id: String, kind: String, reply: Dictionary) -
 		Fx.burst(room.stage, at+Vector3(0, 1.5, 0), "sparkle", 22, Color(0,0,0,0), 0.5)
 		Fx.glow(room.stage, at+Vector3(0, 1.3, 0), Color("ffd27a"), 2.0, 1.2)
 		if is_instance_valid(room.get("wallet")): room.wallet.text = t("별씨 %d") % int(reply.get("shards", 0))
+		# The room's character frame counts the reward up too.
+		if reply.has("shards") and room.has_method("show_stars"): room.show_stars(int(reply.shards))
 		room.message(t("부탁 완료 · %s · %s") % [title_of(entry), stars_text(stars)] if stars > 0 else t("부탁 완료 · %s") % title_of(entry))
 		var note := NpcGifts.letters_note(reply)
 		if not note.is_empty(): room.create_tween().tween_callback(func(): room.message(note)).set_delay(3.0)
@@ -482,7 +484,7 @@ static func reward_burst(app: Node, at: Vector3, stars: int) -> void:
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badge.add_theme_constant_override("separation", 3)
 	badge.add_child(RpgUi.icon(STAR_ICON, 38))
-	RpgUi.numbers(RpgUi.label(badge, "+%d" % stars, 28, Color("ffe08a")), 28)
+	RpgUi.numbers(RpgUi.label(badge, "+%d" % stars, 28, RpgUi.HOVER), 28)
 	app.ui.add_child(badge)
 	badge.size = badge.get_combined_minimum_size()
 	badge.position = from-badge.size*0.5
@@ -603,7 +605,7 @@ func adopt(data) -> void:
 		if data is Dictionary and data.get("states") is Array: fetch_full()
 		return
 	var open := 1 if open_for(token()) else 0
-	# 모카's letter was read while this login saw them closed: the residents' requests open (not on
+	# The chair was ordered (or the chapter ended) while this login saw them closed: the requests open (not on
 	# every login of an open account, and not when nobody has a request left).
 	if was_open == 0 and open == 1 and not story.visiting() and entries().any(func(item): return str(item.get("state", "")) == "available"):
 		get_tree().create_timer(1.2).timeout.connect(func(): if is_instance_valid(app): app.message(tr("마을 주민들이 부탁을 기다리고 있어요 · 머리 위 ! 를 찾아보세요")))
@@ -936,7 +938,7 @@ func report_signposts() -> void:
 			var now: Dictionary = result.data.get("quest", {})
 			var lift: Vector3 = spot.root.global_position if spot.get("root") is Node3D and is_instance_valid(spot.root) else Town.point(spot.at, 0.0)
 			Fx.burst(self, lift+Vector3(0, 1.6, 0), "sparkle", 14, Color(0,0,0,0), 0.4)
-			Fx.glow(self, lift+Vector3(0, 1.4, 0), Color("ffe08a"), 1.8, 1.0)
+			Fx.glow(self, lift+Vector3(0, 1.4, 0), RpgUi.HOVER, 1.8, 1.0)
 			RpgUi.sfx("confirm", -8.0)
 			if str(now.get("state", "")) != "ready":
 				app.message(tr("이정표 %d/%d · %s") % [int(now.get("have", 0)), int(now.get("need", 3)), str(spot.name)])

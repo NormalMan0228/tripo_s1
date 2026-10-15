@@ -14,6 +14,7 @@ const Detail = preload("res://scripts/world_detail.gd")
 const Loader = preload("res://scripts/model_loader.gd")
 const Daylight = preload("res://scripts/daylight.gd")
 const Residents = preload("res://scripts/residents.gd")
+const ControllerProfile = preload("res://scripts/controller_profile.gd")
 const DayFolk = preload("res://scripts/day_folk.gd")
 const BUILDINGS := "res://maps/archipelago/building_placements.json"
 const MANIFEST := "res://assets/interior/manifest.json"
@@ -2892,23 +2893,120 @@ static func nearest_free(records: Array, kinds: Array, at: Vector3, within: floa
 	return best
 
 ## A free standing point in front of a piece (or beside it), on the floor.
-static func stand_spot(record: Dictionary, f: Dictionary, records: Array, others: Array) -> Vector3:
+## With `entries` (where the walker comes onto this floor: the door, stair arrivals) the
+## point must also keep the way open: a standing resident never walls off a corner of
+## the floor, stands on an arrival or takes the only spot from which a piece is used.
+static func stand_spot(record: Dictionary, f: Dictionary, records: Array, others: Array, entries: Array = []) -> Vector3:
 	var front := Vector3(0,0,1).rotated(Vector3.UP,float(record.yaw))
 	var side := Vector3(1,0,0).rotated(Vector3.UP,float(record.yaw))
+	var way: Dictionary = {} if entries.is_empty() else way_map(f,records,entries)
+	var first_clear := Vector3.INF
 	for distance in [0.55,0.75,0.95,1.2,1.5]:
 		for lateral in [0.0,0.45,-0.45,0.9,-0.9]:
 			var at: Vector3=record.center+front*(float(record.half.y)+distance)+side*lateral
 			at.y=0
+			if not stand_clear(f,records,others,at): continue
+			if way.is_empty() or keeps_way(way,at): return at
+			if first_clear==Vector3.INF: first_clear=at
+	# Nothing in front keeps the way open: the nearest reachable floor spot that does, close by.
+	if not way.is_empty():
+		var near: Array=[]
+		for k in way.reached:
+			var cell: Vector3=way.reached[k]
+			var gap: float=Vector2(cell.x-record.center.x,cell.z-record.center.z).length()
+			if gap<2.2: near.append([gap,cell])
+		near.sort_custom(func(a,b): return a[0]<b[0])
+		for pair in near:
+			if stand_clear(f,records,others,pair[1]) and keeps_way(way,pair[1]): return pair[1]
+	return first_clear if first_clear!=Vector3.INF else spawn_point(f)
+
+static func stand_clear(f: Dictionary, records: Array, others: Array, at: Vector3) -> bool:
+	if not walkable(f,at): return false
+	for other in records:
+		if not other.solid: continue
+		var local: Vector3=(at-other.center).rotated(Vector3.UP,-float(other.yaw))
+		if absf(local.x)<float(other.half.x)+0.3 and absf(local.z)<float(other.half.y)+0.3: return false
+	for point in others:
+		if (point as Vector3).distance_to(at)<0.65: return false
+	return true
+
+const WAY_CELL := 0.2
+## A standing resident's footprint for the walker (studio.gd blocking_record: half 0.28 plus the body).
+const RESIDENT_REACH := 0.28+ControllerProfile.BODY_RADIUS*0.8
+
+static func in_resident(resident: Vector3, at: Vector3) -> bool:
+	return absf(at.x-resident.x)<RESIDENT_REACH and absf(at.z-resident.z)<RESIDENT_REACH
+
+## The walker's floor as the room's own walking sees it (studio.gd can_stand, on a
+## 0.2 m grid): {free: {key: point}, entries: [key], reached: {key: point} from the
+## entries, uses: [[key...] the reached spots each piece is used from]}.
+static func way_map(f: Dictionary, records: Array, entries: Array) -> Dictionary:
+	var size: Vector2=f.size
+	var free := {}
+	for x in range(-int(size.x*0.5/WAY_CELL),int(size.x*0.5/WAY_CELL)+1):
+		for z in range(-int(size.y*0.5/WAY_CELL),int(size.y*0.5/WAY_CELL)+1):
+			var at := Vector3(x*WAY_CELL,0,z*WAY_CELL)
 			if not walkable(f,at): continue
-			var clear := true
-			for other in records:
-				if not other.solid: continue
-				var local: Vector3=(at-other.center).rotated(Vector3.UP,-float(other.yaw))
-				if absf(local.x)<float(other.half.x)+0.3 and absf(local.z)<float(other.half.y)+0.3: clear=false;break
-			for point in others:
-				if (point as Vector3).distance_to(at)<0.65: clear=false
-			if clear: return at
-	return spawn_point(f)
+			var open := true
+			for record in records:
+				if not record.solid: continue
+				var local: Vector3=(at-record.center).rotated(Vector3.UP,-float(record.yaw))
+				if absf(local.x)<float(record.half.x)+ControllerProfile.BODY_RADIUS*0.8 and absf(local.z)<float(record.half.y)+ControllerProfile.BODY_RADIUS*0.8:
+					open=false;break
+			if open: free[way_key(Vector2i(x,z))]=at
+	var starts: Array=[]
+	for entry in entries: starts.append(way_key(Vector2i(roundi((entry as Vector3).x/WAY_CELL),roundi((entry as Vector3).z/WAY_CELL))))
+	var map := {"free":free,"entries":entries,"starts":starts}
+	map.reached=way_flood(map,Vector3.INF)
+	var uses: Array=[]
+	for record in records:
+		if not record.interactive or str(record.get("kind",""))=="resident": continue
+		# decor_candidates' reach, with the margin the walk check keeps.
+		var reach: float=(1.35 if record.mounted else 0.85)-0.1
+		var spots: Array=[]
+		for k in map.reached:
+			var local: Vector3=(map.reached[k]-record.center).rotated(Vector3.UP,-float(record.yaw))
+			if Vector2(maxf(0.0,absf(local.x)-float(record.half.x)),maxf(0.0,absf(local.z)-float(record.half.y))).length()<reach: spots.append(k)
+		if not spots.is_empty(): uses.append(spots)
+	map.uses=uses
+	return map
+
+static func way_key(cell: Vector2i) -> int:
+	return (cell.x+200)*1000+(cell.y+200)
+
+## The free cells reachable from the entries, with a resident standing at `resident`.
+static func way_flood(map: Dictionary, resident: Vector3) -> Dictionary:
+	var free: Dictionary=map.free
+	var reached := {}
+	var queue: Array[int]=[]
+	for k in map.starts:
+		if free.has(k) and not reached.has(k) and not (resident!=Vector3.INF and in_resident(resident,free[k])):
+			reached[k]=free[k];queue.append(k)
+	var head := 0
+	while head<queue.size():
+		var k: int=queue[head];head+=1
+		for step in [1000,-1000,1,-1]:
+			var next: int=k+step
+			if reached.has(next) or not free.has(next): continue
+			if resident!=Vector3.INF and in_resident(resident,free[next]): continue
+			reached[next]=free[next];queue.append(next)
+	return reached
+
+## Whether a resident standing at `at` leaves everything the walker could reach (way_map)
+## reachable: no entry covered, no corner cut off, every piece still usable from somewhere.
+static func keeps_way(map: Dictionary, at: Vector3) -> bool:
+	for entry in map.entries:
+		if in_resident(at,entry): return false
+	var after := way_flood(map,at)
+	for k in map.reached:
+		if not after.has(k) and not in_resident(at,map.reached[k]): return false
+	for spots in map.uses:
+		var still := false
+		for k in spots:
+			if after.has(k):
+				still=true;break
+		if not still: return false
+	return true
 
 ## What a resident says (and offers) when the walker talks to them.
 static func resident_talk(id: String, occupant: Dictionary, building: Dictionary, hour: float) -> Dictionary:
