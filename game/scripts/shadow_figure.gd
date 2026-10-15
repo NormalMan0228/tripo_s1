@@ -66,6 +66,8 @@ const WALK := "shadow/walk"
 const IDLE := "shadow/idle"
 const BASE_SCALE := 1.7
 const STEP_HEIGHT := 0.36
+## Walker capsule (0.32) + this body (0.28) + a hair: a resident never steps closer.
+const PLAYER_CLEAR := 0.62
 ## Fastest the drawn body rises or sinks onto a new floor height (m/s).
 const CLIMB_SPEED := 2.8
 ## Ground probes: terrain/rocks and decks/floors, never props or tree canopies.
@@ -1360,6 +1362,14 @@ func glide(delta: float) -> void:
 	var step_xz := horizontal*delta
 	if step_xz == Vector2.ZERO and ground_clock > 0 and absf(ground_y-position.y) < 0.01: return
 	var from := position
+	# Never into the walker's capsule: the kinematic step shoved the player's body out
+	# by up to a metre a tick (it jumped on screen). Only the sideways part is kept.
+	var player_at: Vector2 = folk.player_xz()
+	var away := Vector2(from.x, from.z)-player_at
+	if away.length() < PLAYER_CLEAR+step_xz.length() and away.length() > 0.001:
+		away = away.normalized()
+		var inward := step_xz.dot(away)
+		if inward < 0.0: step_xz -= away*inward
 	position.x += step_xz.x
 	position.z += step_xz.y
 	ground_clock -= 1

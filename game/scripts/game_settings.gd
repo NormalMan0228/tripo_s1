@@ -49,14 +49,14 @@ const BUS_UI := &"UI"
 const BUSES := [["Master","master"],["Music","music"],["SFX","sfx"],["Ambience","ambience"],["Voice","voice"],["UI","ui"]]
 
 const CATEGORIES := {
-	"graphics": ["preset","window_mode","render_scale","vsync","fps_cap","shadows","msaa","view_detail","night_grade","brightness"],
+	"graphics": ["preset","window_mode","render_scale","vsync","fps_cap","perf_overlay","shadows","msaa","view_detail","night_grade","brightness"],
 	"audio": ["master","music","sfx","ambience","voice","ui","mute_all","background_mute"],
 	"controls": ["zoom_speed","run_mode","zoom_invert"],
 	"gameplay": ["language","text_speed","nameplates","prompts","route_guide","minimap_rotate","clock_24h","reduce_shake"],
 	"accessibility": ["ui_scale","large_text","reduced_motion"],
 }
 const DEFAULTS := {
-	"preset": "medium", "window_mode": "windowed", "render_scale": 100, "vsync": true, "fps_cap": 0,
+	"preset": "medium", "window_mode": "windowed", "render_scale": 100, "vsync": true, "fps_cap": 0, "perf_overlay": false,
 	"shadows": "low", "msaa": "2x", "view_detail": "medium", "night_grade": true, "brightness": 100,
 	"master": 100, "music": 100, "sfx": 100, "ambience": 100, "voice": 100, "ui": 100,
 	"mute_all": false, "background_mute": false,
@@ -124,7 +124,7 @@ const ACTIONS := [
 ## them to the InputMap at start-up.
 const RUNTIME_ACTIONS := ["social"]
 ## Keys that cannot be bound (Esc opens the pause menu and cancels a rebind; F3/F9 are tools).
-const RESERVED_KEYS := [KEY_ESCAPE,KEY_F3,KEY_F9,KEY_ENTER,KEY_KP_ENTER]
+const RESERVED_KEYS := [KEY_ESCAPE,KEY_F2,KEY_F3,KEY_F9,KEY_ENTER,KEY_KP_ENTER]
 
 const BRIGHTNESS_SHADER := """
 shader_type canvas_item;

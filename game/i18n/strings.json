@@ -10681,5 +10681,13 @@
    "zh": "首领之夜"
   }
  },
- "templates": []
+ "templates": [],
+ "성능 표시": {
+  "en": "Performance overlay",
+  "zh": "性能显示"
+ },
+ "화면 구석에 프레임과 메모리 사용량을 보여 줘요. F2로도 켜고 꺼요.": {
+  "en": "Shows frame rate and memory use in a corner of the screen. F2 also turns it on and off.",
+  "zh": "在屏幕角落显示帧率和内存使用情况。也可以按 F2 开关。"
+ }
 }

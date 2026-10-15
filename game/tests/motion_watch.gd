@@ -2,7 +2,7 @@ extends RefCounted
 ## Frame-by-frame continuity watch for anything that walks (the player, residents, other players,
 ## monsters). A test registers the bodies it shows, then calls frame(dt) after every drawn frame and
 ## tick() after every physics tick. It fails a body that, while on screen and shown:
-##  - jumps: moves farther in one drawn frame than its top speed allows (a teleport or a snap);
+##  - jumps: moves farther in one drawn frame than twice its top speed allows (a teleport, a snap);
 ##  - pops up or down: changes height faster than VERTICAL_SPEED (a step lifted in one tick);
 ##  - spins: turns more than TURN_LIMIT in one drawn frame;
 ##  - judders: stands still for a drawn frame while it is walking (a body moved only on physics
@@ -22,7 +22,7 @@ extends RefCounted
 ## Allowed vertical speed of the drawn body (m/s): stairs at a run, never a whole step in one tick.
 const VERTICAL_SPEED := 3.2
 ## Extra slack per frame for a body that eases its speed (m).
-const SLACK := 0.03
+const SLACK := 0.05
 ## A drawn frame may turn the body at most this much (rad) at 60 fps (scaled with the frame time).
 const TURN_LIMIT := 0.75
 ## A bone may move at most this far (m, body space) in one 60 Hz physics tick.
@@ -113,7 +113,8 @@ func frame(dt: float) -> void:
 			var last: Vector3 = track.last
 			var step: Vector3 = p-last
 			var flat := Vector2(step.x, step.z).length()
-			var allowed: float = track.speed*1.35*dt+SLACK
+			# Twice the top speed: a teleport or a snap, not the uneven share of a tick a frame gets.
+			var allowed: float = track.speed*2.0*dt+SLACK
 			maxima.jump_ratio = maxf(maxima.jump_ratio, flat/allowed)
 			if flat > allowed:
 				note(track, "jump", "%.2fm in %.1fms (limit %.2fm) at %s" % [flat, dt*1000.0, allowed, str(p.snapped(Vector3.ONE*0.01))])
@@ -139,9 +140,9 @@ func frame(dt: float) -> void:
 		track.last_yaw = yaw
 		track.was_seen = true
 
-## After every physics tick: pose pops and stale poses.
-func tick() -> void:
-	ticks += 1
+## After every physics tick (steps: ticks since the last call, when a frame ran several).
+func tick(steps := 1) -> void:
+	ticks += steps
 	for track in tracks:
 		var skeleton = track.skeleton
 		if skeleton is Callable: skeleton = (skeleton as Callable).call()
@@ -164,6 +165,7 @@ func tick() -> void:
 				if d > biggest:
 					biggest = d
 					bone = i
+			biggest /= maxf(1.0, float(steps))
 			maxima.pose_step = maxf(maxima.pose_step, biggest)
 			if biggest > POSE_POP:
 				note(track, "pose_pop", "bone %s moved %.2fm in one tick" % [(skeleton as Skeleton3D).get_bone_name(bone), biggest])

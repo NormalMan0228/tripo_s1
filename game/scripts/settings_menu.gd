@@ -165,6 +165,7 @@ func _graphics() -> void:
 	_choice("window_mode", tr("화면 모드"))
 	_toggle("vsync", tr("수직 동기화"), tr("화면 찢어짐을 막아요. 끄면 입력이 조금 더 빨라질 수 있어요."))
 	_choice("fps_cap", tr("최대 프레임"))
+	_toggle("perf_overlay", tr("성능 표시"), tr("화면 구석에 프레임과 메모리 사용량을 보여 줘요. F2로도 켜고 꺼요."))
 	_toggle("night_grade", tr("밤 색감"), tr("해가 지면 마을에 푸른 밤빛을 입혀요."))
 	_slider("brightness", tr("밝기"), tr("어두운 곳이 잘 안 보이면 올려 주세요."))
 

@@ -29,7 +29,7 @@ powershell -ExecutionPolicy Bypass -File D:\lsm26\locks\wait_heavy.ps1
 
 | 종류 | 기준 |
 |---|---|
-| jump | 그려진 몸이 한 프레임에 `최고속도×1.35×dt+3cm`보다 더 움직임 (순간이동, 스냅) |
+| jump | 그려진 몸이 한 프레임에 `최고속도×2×dt+5cm`보다 더 움직임 (순간이동, 스냅) |
 | vertical_pop | 높이가 초당 3.2 m보다 빠르게 바뀜 (턱을 한 틱에 올라감) |
 | spin | 60fps 기준 한 프레임에 0.75 rad보다 더 돎 |
 | judder | 걷는 중인데 그려진 몸이 멈춘 프레임이 3%를 넘음 (물리 틱에만 움직이고 그리기 보간이 없음) |

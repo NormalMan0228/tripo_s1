@@ -353,9 +353,9 @@ func _physics_process(delta: float) -> void:
 			safe_position = position
 			has_safe_position = true
 		watch_trapped(delta, movement.length() > 0.1 and controls_enabled and not driven)
-	# A ledge climbed or dropped on the ground (not a fall, not a jump back to safety).
+	# A ledge climbed or dropped from the ground (not a fall, not a jump back to safety).
 	var rise := global_position.y-tick_from.y
-	if grounded and is_on_floor() and absf(rise) > 0.1 and absf(rise) < 0.8: step_lag -= rise
+	if grounded and absf(rise) > 0.06 and absf(rise) < 0.8: step_lag -= rise
 	elif absf(rise) >= 0.8: step_lag = 0.0
 	step_lag = move_toward(step_lag, 0.0, maxf(CLIMB_SPEED, absf(step_lag)*6.0)*delta)
 	locomotion_velocity=Vector2(get_real_velocity().x,get_real_velocity().z) if (controls_enabled or driven) and not visual_only else external_velocity
@@ -443,6 +443,11 @@ func step_up(delta: float) -> void:
 	if test_move(global_transform,lift): return
 	var raised := global_transform.translated(lift)
 	if test_move(raised,motion*2.0): return
+	# Only a real ledge: terrain or a building floor under the new spot, no higher than a step.
+	# Without it the walker hopped onto prop bases (a signboard) and slid off again.
+	var spot := global_position+lift+motion*2.0
+	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(spot+Vector3.UP*0.05, spot+Vector3.DOWN*(STEP_HEIGHT+0.2), 1|2))
+	if hit.is_empty() or hit.position.y < global_position.y+0.08 or hit.position.y > global_position.y+STEP_HEIGHT+0.02: return
 	global_position+=lift+motion*2.0
 	apply_floor_snap()
 

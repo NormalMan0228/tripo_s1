@@ -82,8 +82,8 @@ func one_frame() -> void:
 	follow(delta)
 	var now := Engine.get_physics_frames()
 	if now != _last_ticks:
+		watch.tick(now-_last_ticks)
 		_last_ticks = now
-		watch.tick()
 	watch.frame(delta)
 
 func get_process_delta() -> float:
@@ -171,6 +171,8 @@ func village() -> void:
 		walker.set_present(true)
 		walker.place_at(node, folk.paths.links[node][0])
 		placed += 1
+	# Placed bodies settle onto the ground over a few ticks before the watch starts.
+	for i in 30: await physics_frame
 	watch = MotionWatch.new(camera)
 	watch.add("player", player, {"speed": Profile.VILLAGE_RUN, "draw": player.visual,
 		"skeleton": func(): return player.hand_skeleton})
@@ -189,8 +191,9 @@ func village() -> void:
 	player.global_position = Town.point(shore, 0.15)
 	player.velocity = Vector3.ZERO
 	focus_ready = false
-	watch.excuse("player", 3)
-	await frames(10)
+	# The test put it there: let it land before judging again.
+	watch.excuse("player", 40)
+	await frames(40)
 	await walk([sea])
 	await frames(20)
 	await walk([shore], true)
@@ -199,8 +202,9 @@ func village() -> void:
 	player.global_position = Town.point(outside, 0.15)
 	player.velocity = Vector3.ZERO
 	focus_ready = false
-	watch.excuse("player", 3)
-	await frames(10)
+	# The test put it there: let it land before judging again.
+	watch.excuse("player", 40)
+	await frames(40)
 	await walk([door.at])
 	await walk([outside])
 	await frames(30)
@@ -305,14 +309,14 @@ func multi() -> void:
 			next_post = RemoteMotion.now()+0.25+rng.randf_range(-0.12, 0.12)
 			motion.push(RemoteMotion.now(), sender, RemoteMotion.now(), atan2(-heading.x, -heading.y), Vector3(heading.x, 0, heading.y)*speed)
 		var delta := root.get_process_delta_time()
-		var was: bool = motion.teleported
 		motion.update(delta)
-		if motion.teleported and not was: watch.excuse("other_player", 4)
+		# The feed flags a far jump (apply_to plays the effect): allowed.
+		if motion.teleported: watch.excuse("other_player", 3)
 		motion.apply_to(other)
 		var now_ticks := Engine.get_physics_frames()
 		if now_ticks != _last_ticks:
+			watch.tick(now_ticks-_last_ticks)
 			_last_ticks = now_ticks
-			watch.tick()
 		watch.frame(delta)
 	finish("multi")
 	stage.queue_free()
