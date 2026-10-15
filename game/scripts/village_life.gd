@@ -256,21 +256,12 @@ func open_plot(index: int) -> void:
 	app.close_village_modal()
 	seed_plot=index
 	seed_choices=[]
-	var root := Control.new()
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
-	panel.position=Vector2(250,500)
-	panel.custom_minimum_size=Vector2(780,0)
-	RpgUi.slide_in(panel,Vector2(0,24))
-	RpgUi.sfx("open",-10.0)
-	root.add_child(panel)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation",8)
-	panel.add_child(v)
-	RpgUi.label(v,tr("어떤 씨앗을 심을까요?"),22,RpgUi.GOLD)
-	RpgUi.divider(v,Color(RpgUi.GOLD,.55))
+	# The shared window (RpgUi.window), night glass over the world just above the hotbar, without a
+	# shade: the bed stays in view. It sits on the window stack (the chat box steps aside); Esc or
+	# the close key shuts it, and the keys 1-5 pick a seed (their caps sit on the slots).
+	var w := RpgUi.window(app.ui,tr("어떤 씨앗을 심을까요?"),{"kind":"night","place":"bottom","width":780,"modal":false,"scroll":false,
+		"on_close":app.close_village_modal,"id":"seed_picker"})
+	var v: VBoxContainer=w.body
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation",8)
 	v.add_child(row)
@@ -279,12 +270,13 @@ func open_plot(index: int) -> void:
 		if not crops.has(crop): continue
 		var count := int(state.bag.get(crop+"_seed",0))
 		var data: Dictionary=crops[crop]
+		var number := str(seed_choices.size()+1)
 		var b := Button.new()
 		b.custom_minimum_size=Vector2(146,112)
 		b.focus_mode=Control.FOCUS_NONE
 		b.disabled=count<1
 		b.name="Seed_"+crop
-		RpgUi.name_tip(b,"%s ×%d" % [tr(str(state.get("catalog",{}).get("names",{}).get(crop+"_seed",data.name))),count],str(seed_choices.size()+1))
+		RpgUi.name_tip(b,"%s ×%d" % [tr(str(state.get("catalog",{}).get("names",{}).get(crop+"_seed",data.name))),count],number)
 		for look in ["normal","hover","pressed","disabled"]:
 			b.add_theme_stylebox_override(look,RpgUi.frame({"normal":"slot_paper","hover":"slot_paper_hover","pressed":"slot_paper_hover","disabled":"slot_paper_empty"}[look]))
 		var stack := VBoxContainer.new()
@@ -296,9 +288,12 @@ func open_plot(index: int) -> void:
 		var icon := Icon.make(crop,46)
 		icon.size_flags_horizontal=Control.SIZE_SHRINK_CENTER
 		stack.add_child(icon)
-		for text in ["%d  %s ×%d" % [seed_choices.size()+1,tr(data.name),count],tr("%d초 · 수확 %d") % [int(data.seconds),int(data.get("yield",1))]]:
-			var l := RpgUi.label(stack,text,13 if text.begins_with(str(seed_choices.size()+1)) else 11,RpgUi.PAPER_INK,false)
-			l.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+		RpgUi.label(stack,"%s ×%d" % [tr(data.name),count],13,RpgUi.PAPER_INK,false).horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+		RpgUi.label(stack,tr("%d초 · 수확 %d") % [int(data.seconds),int(data.get("yield",1))],11,RpgUi.PAPER_INK,false).horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+		# The slot's number key, as on a hotbar slot.
+		var cap := RpgUi.keycap(b,number,12)
+		cap.position=Vector2(7,6)
+		if count<1: cap.modulate.a=0.5
 		var chosen: String=crop
 		b.pressed.connect(func():
 			app.sound.effect("click")
@@ -306,15 +301,20 @@ func open_plot(index: int) -> void:
 		row.add_child(b)
 		seed_choices.append(crop)
 	var foot := HBoxContainer.new()
+	foot.add_theme_constant_override("separation",14)
 	v.add_child(foot)
-	RpgUi.label(foot,tr("1~5 또는 클릭으로 고르기 · 씨앗은 씨앗 노점에서 살 수 있어요 · Esc 닫기"),12,RpgUi.GOLD,false).size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	RpgUi.key_hint(foot,"1-%d" % maxi(seed_choices.size(),1),tr("고르기"))
+	var stall := RpgUi.label(foot,tr("씨앗은 씨앗 노점에서 살 수 있어요"),12,RpgUi.SOFT,false)
+	stall.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	stall.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
 	if index>=int(state.get("catalog",{}).get("starter_plots",6)):
 		app.button(foot,tr("풀밭으로 되돌리기"),func():
 			app.close_village_modal()
 			Art.burst(app.world,bed_point(index),"leaf",14)
 			sfx.play("rustle")
 			await request("untill",{"plot":index}))
-	claim_hud(root)
+	app.village_modal=w.root
+	app.player.controls_enabled=false
 	mode="seeds"
 
 func plant(index: int, crop: String) -> void:

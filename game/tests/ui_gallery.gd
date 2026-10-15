@@ -10,6 +10,8 @@ const Stub = preload("res://tests/ui_stub_api.gd")
 const PauseMenu = preload("res://scripts/pause_menu.gd")
 const SettingsMenu = preload("res://scripts/settings_menu.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
+const ShapePanel = preload("res://scripts/shape_panel.gd")
+const InteractionPanel = preload("res://scripts/interaction_panel.gd")
 var app: Node
 var prefix := "ui-gallery-"
 var only: PackedStringArray = []
@@ -103,6 +105,29 @@ func tour(fixture: Dictionary) -> void:
 		await settle(0.6)
 		await capture("bag")
 		app.toggle_drawer()
+	var crafted: Dictionary = fixture["/v1/me"].objects[0] if not fixture["/v1/me"].get("objects", []).is_empty() else {"id":"gallery", "name":"의자"}
+	if wanted("shape"):
+		# The bag's 모양 바꾸기 drawer (night glass on the right, over the bag).
+		app.toggle_drawer()
+		await settle(0.4)
+		var shape := ShapePanel.new()
+		shape.setup(app.api, crafted, func(): return [], app.message)
+		app.ui.add_child(shape)
+		await settle(0.6)
+		await capture("shape")
+		shape.close()
+		app.toggle_drawer()
+	if wanted("interaction-editor"):
+		# The interaction editor on a recorded reply (no model: the stage stays empty).
+		app.api.data["/v1/objects/%s/interaction" % crafted.id] = {"spec":{"mode":"original"}, "moving":false, "listed":false, "parts":[],
+			"describe":{"left":3, "text_limit":200}, "runtime_version":1}
+		var editor := InteractionPanel.new()
+		editor.setup(app.api, crafted, null, {})
+		app.ui.add_child(editor)
+		await settle(1.0)
+		await capture("interaction-editor")
+		editor.close_panel()
+		await settle(0.3)
 	if wanted("craft"):
 		await app.open_craft()
 		await settle(0.5)
@@ -245,7 +270,7 @@ func tour(fixture: Dictionary) -> void:
 			await capture("results")
 	app.queue_free()
 	await settle(0.5)
-	if wanted("studio") or wanted("studio-talk"): await studio_tour()
+	if wanted("studio") or wanted("studio-talk") or wanted("studio-craft") or wanted("storage-chest"): await studio_tour()
 
 ## A public room (the café) with its resident: the studio HUD and its dialogue.
 func studio_tour() -> void:
@@ -265,5 +290,30 @@ func studio_tour() -> void:
 		await settle(1.2)
 		await capture("studio-talk")
 		studio.close_talk()
+	if wanted("storage-chest"):
+		# The storage chest of a residents' house, on a recorded reply.
+		var stub := Stub.new()
+		stub.data = {"/v1/social/npc-homes/gallery_home": {"stored": [{"name":"찻잔 세트", "npc":"", "tags":["cup"]},
+			{"name":"작은 화분", "npc":"", "tags":["plant"]}, {"name":"별빛 오르골", "npc":"", "tags":["music"]}]}}
+		studio.add_child(stub)
+		var network: Node = studio.api
+		studio.api = stub
+		studio.gift_home = "gallery_home"
+		await studio.open_storage({})
+		await settle(0.6)
+		await capture("storage-chest")
+		studio.close_talk()
+		studio.api = network
+		studio.gift_home = ""
+		stub.queue_free()
+		await settle(0.3)
+	if wanted("studio-craft"):
+		# The room's craft window (C): the same window as the village's.
+		studio.api.token = "gallery"
+		studio.open_craft()
+		await settle(0.8)
+		await capture("studio-craft")
+		studio.close_craft()
+		studio.api.token = ""
 	studio.queue_free()
 	await settle(0.5)
