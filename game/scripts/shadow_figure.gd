@@ -429,6 +429,11 @@ func attach(bone: String, offset: Vector3, basis := Basis.IDENTITY) -> Node3D:
 	holder.transform = rest.affine_inverse()*(figure.global_transform*Transform3D(basis, offset))
 	return holder
 
+## The shared equipment socket `name` (equip_sockets.gd: hand_r, hand_l, back, hip_r, hip_l, head) on
+## this resident's rig, or null. The same names as the player's sockets.
+func socket(name: String) -> Node3D:
+	return preload("res://scripts/equip_sockets.gd").socket(skeleton, name) if is_instance_valid(skeleton) else null
+
 func silhouette_mesh(parent: Node3D, mesh: Mesh, at: Vector3, rotation_degrees_value := Vector3.ZERO, size := Vector3.ONE) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh

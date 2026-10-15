@@ -54,6 +54,7 @@ func _init(view: Camera3D = null) -> void:
 ##  shown     Callable -> bool: the body is drawn (default: is_visible_in_tree)
 ##  walking   Callable -> bool: the body means to walk now (default: drawn speed > MOVING_MIN)
 ##  yaw_node  node whose global yaw is the facing (default: draw)
+##  vertical  allowed vertical speed (m/s, default VERTICAL_SPEED; a carried item swings faster)
 func add(label: String, body: Node3D, options: Dictionary) -> void:
 	var draw: Node3D = options.get("draw", body)
 	tracks.append({"label":label, "body":body, "draw":draw, "speed":float(options.speed),
@@ -61,7 +62,7 @@ func add(label: String, body: Node3D, options: Dictionary) -> void:
 		"walking":options.get("walking", Callable()), "yaw_node":options.get("yaw_node", draw),
 		"last":Vector3.INF, "last_yaw":NAN, "was_seen":false, "speed_now":0.0,
 		"pose":PackedVector3Array(), "stale":0, "moving_frames":0, "still_frames":0,
-		"seen_frames":0, "excused":0})
+		"seen_frames":0, "excused":0, "vertical":float(options.get("vertical", VERTICAL_SPEED))})
 
 ## Lets a body jump for the next `frame_count` frames (a door, a respawn, a scene cut the test made).
 func excuse(label: String, frame_count := 2) -> void:
@@ -76,6 +77,7 @@ func on_screen(point: Vector3) -> bool:
 	return true
 
 func shown(track: Dictionary) -> bool:
+	if not is_instance_valid(track.body) or not is_instance_valid(track.draw): return false
 	var body: Node3D = track.body
 	var draw: Node3D = track.draw
 	if not is_instance_valid(body) or not is_instance_valid(draw): return false
@@ -120,7 +122,7 @@ func frame(dt: float) -> void:
 				note(track, "jump", "%.2fm in %.1fms (limit %.2fm) at %s" % [flat, dt*1000.0, allowed, str(p.snapped(Vector3.ONE*0.01))])
 			var vspeed := absf(step.y)/dt
 			maxima.vertical_speed = maxf(maxima.vertical_speed, vspeed)
-			if absf(step.y) > VERTICAL_SPEED*dt+0.02:
+			if absf(step.y) > float(track.vertical)*dt+0.02:
 				note(track, "vertical_pop", "dy=%.2fm in %.1fms at %s" % [step.y, dt*1000.0, str(p.snapped(Vector3.ONE*0.01))])
 			if not is_nan(track.last_yaw):
 				var turn := absf(angle_difference(float(track.last_yaw), yaw))

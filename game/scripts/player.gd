@@ -81,6 +81,7 @@ var face_override := NAN
 var clip_override := ""
 var clip_blend := -1.0
 const Art = preload("res://scripts/art.gd")
+const LifeArt = preload("res://scripts/life_art.gd")
 
 func _ready() -> void:
 	Profile.ensure_input()
@@ -216,8 +217,12 @@ func _build_explorer() -> void:
 
 func equip(item: String) -> void:
 	if item==equipped: return
+	var previous := equipped
 	equipped=item
 	if is_instance_valid(finger_pose):finger_pose.holding=not item.is_empty()
+	if uses_sockets():
+		equip_socketed(previous, item)
+		return
 	if is_instance_valid(equipment):
 		if equipment.get_parent(): equipment.get_parent().remove_child(equipment)
 		equipment.queue_free()
@@ -250,6 +255,10 @@ func equip(item: String) -> void:
 		equipment.position=Vector3(0.43,0.77,-0.12)
 		tool=equipment
 	tool_node=tool
+	build_tool(item, tool)
+
+## The item's model under `tool` (its origin is the grip, +Y toward the tool head).
+func build_tool(item: String, tool: Node3D) -> void:
 	if item=="rod":
 		if ResourceLoader.exists("res://assets/fishing_rod.glb"):
 			tool.add_child((load("res://assets/fishing_rod.glb") as PackedScene).instantiate())
@@ -257,6 +266,13 @@ func equip(item: String) -> void:
 			return
 		Art.box(tool,Vector3(0,0.85,0),Vector3(0.045,2.9,0.045),Color("ac8758"))
 		Art.sphere(tool,Vector3(0.1,0.03,0),Vector3(0.18,0.18,0.12),Color("819f9d"))
+		return
+	if item=="hoe":
+		# The flat-bladed hoe (was dressed afterwards by village_life.gd dress_hoe(), which now sees the meta).
+		tool.set_meta("hoe",true)
+		LifeArt.part(tool,"rod",Vector3(0,0.2,0),Vector3(0.05,1.25,0.05),Color("9a744c"))
+		LifeArt.part(tool,"box",Vector3(0,0.82,0.11),Vector3(0.24,0.05,0.24),Color("b9c3c4"),Vector3(0.25,0,0),0.4)
+		LifeArt.part(tool,"box",Vector3(0,0.82,0.0),Vector3(0.07,0.08,0.07),Color("6b6f70"))
 		return
 	if item=="watering_can":
 		Art.sphere(tool,Vector3(0,-0.05,0),Vector3(0.45,0.45,0.4),Color("76acb0"))
@@ -273,8 +289,95 @@ func equip(item: String) -> void:
 	else:
 		Art.box(tool,Vector3(0.07,0.43,0),Vector3(0.32,0.23,0.12),Color("a8b8ae"))
 
+## ------------------------------------------------------------------ sockets
+## The explorer_b rig carries items on the shared sockets (equip_sockets.gd): the item in use on
+## hand_r, the ones put down on their stow socket (an axe or a rod on the back) until used again.
+## Moving between the hand and a stow socket eases over SOCKET_MOVE s instead of jumping.
+const EquipSockets = preload("res://scripts/equip_sockets.gd")
+const SOCKET_MOVE := 0.22
+## Items carried on a stow socket: name -> the item node.
+var stowed := {}
+
+func uses_sockets() -> bool:
+	return avatar.get("character","explorer_b")=="explorer_b" and is_instance_valid(hand_skeleton) and not EquipSockets.rig_of(hand_skeleton).is_empty()
+
+## The socket frame `name` (hand_r, hand_l, back, hip_r, hip_l, head) on this body, or null.
+func socket(name: String) -> Node3D:
+	return EquipSockets.socket(hand_skeleton, name) if is_instance_valid(hand_skeleton) else null
+
+func equip_socketed(previous: String, item: String) -> void:
+	# The item in hand goes to its stow socket, or away.
+	if not previous.is_empty() and is_instance_valid(tool_node):
+		var record := EquipSockets.item(previous)
+		var stow: Node3D = socket(str(record.get("stow",""))) if not str(record.get("stow","")).is_empty() else null
+		if stow:
+			# One item per stow socket: the one already there is put away.
+			for name in stowed.keys():
+				if is_instance_valid(stowed[name]) and stowed[name].get_parent() == stow:
+					drop_item(stowed[name])
+					stowed.erase(name)
+			move_item(tool_node, stow, EquipSockets.placement(record, true))
+			stowed[previous]=tool_node
+		else: drop_item(tool_node)
+	equipment=null
+	tool_node=null
+	if item.is_empty(): return
+	var record := EquipSockets.item(item)
+	var hold: Node3D = socket(str(record.get("hold","hand_r")))
+	if hold == null: hold = socket("hand_r")
+	var node: Node3D
+	if stowed.has(item) and is_instance_valid(stowed[item]):
+		node=stowed[item]
+		stowed.erase(item)
+		move_item(node, hold, EquipSockets.placement(record))
+	else:
+		node=Node3D.new()
+		node.name="Item_"+item
+		hold.add_child(node)
+		build_tool(item, node)
+		node.transform=EquipSockets.placement(record)
+	tool_node=node
+	equipment=node
+	tool_grip=node.basis
+
+## Puts a fresh copy of `item` straight onto its stow socket (a rebuilt body, a loaded save).
+func stow_new(item: String) -> void:
+	if not uses_sockets() or stowed.has(item) or item==equipped: return
+	var record := EquipSockets.item(item)
+	var stow: Node3D = socket(str(record.get("stow",""))) if not str(record.get("stow","")).is_empty() else null
+	if stow == null: return
+	var node := Node3D.new()
+	node.name="Item_"+item
+	stow.add_child(node)
+	build_tool(item, node)
+	node.transform=EquipSockets.placement(record, true)
+	stowed[item]=node
+
+## Moves an item onto another socket: it keeps where it is drawn, then eases into place.
+func move_item(node: Node3D, to: Node3D, target: Transform3D) -> void:
+	if node.has_meta("socket_tween"):
+		var running = node.get_meta("socket_tween")
+		if running is Tween and running.is_valid(): running.kill()
+	node.reparent(to, true)
+	if not node.is_inside_tree() or not is_inside_tree():
+		node.transform=target
+		return
+	var tween := node.create_tween()
+	tween.tween_property(node,"transform",target,SOCKET_MOVE).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	node.set_meta("socket_tween",tween)
+
+## Put away for good (no stow socket): shrinks out instead of vanishing in one frame.
+func drop_item(node: Node3D) -> void:
+	if not node.is_inside_tree():
+		node.queue_free()
+		return
+	var tween := node.create_tween()
+	tween.tween_property(node,"scale",Vector3.ONE*0.01,0.12)
+	tween.tween_callback(node.queue_free)
+
 func update_tool_pose() -> void:
 	if not is_instance_valid(tool_node) or not is_instance_valid(hand_skeleton): return
+	if uses_sockets(): return
 	if avatar.get("character","explorer_b") in ["explorer_b","haeru"]:
 		tool_node.basis=tool_grip
 		return
@@ -509,10 +612,13 @@ func apply_avatar(value: Dictionary) -> bool:
 	current_clip=""
 	left_leg=null
 	right_leg=null
+	var was_stowed: Array=stowed.keys()
+	stowed.clear()
 	_build_explorer()
 	apply_colors()
 	look_builds+=1
 	equip(old_tool)
+	for name in was_stowed: stow_new(name)
 	return true
 
 func apply_colors() -> void:
