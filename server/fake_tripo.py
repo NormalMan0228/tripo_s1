@@ -27,19 +27,19 @@ def _answer(data, status=200):
 
 
 def _task_id(kind, payload, now):
-    """fake-<m|i>-<t|u>-<box|ball>-<seconds>-<random>: model or image, textured, shape, start time."""
+    """Task IDs encode model/image/rig/animation, texture, shape and start time."""
     words = str(payload.get('prompt') or payload.get('input') or '')
     shape = 'box' if hashlib.sha256(words.encode()).digest()[0] % 2 == 0 else 'ball'
-    return '-'.join(('fake', 'i' if kind in IMAGE_ROUTES else 'm', 't' if payload.get('texture') else 'u',
+    return '-'.join(('fake', 'i' if kind in IMAGE_ROUTES else ('r' if kind == 'rig' else ('a' if kind == 'retarget' else 'm')), 't' if payload.get('texture') else 'u',
                      shape, str(int(now)), secrets.token_hex(6)))
 
 
 def _parse(task):
     parts = task.split('-')
-    if len(parts) != 6 or parts[0] != 'fake' or parts[1] not in 'mi' or parts[2] not in 'tu' \
+    if len(parts) != 6 or parts[0] != 'fake' or parts[1] not in ('m','i','r','a') or parts[2] not in 'tu' \
             or parts[3] not in ('box', 'ball') or not parts[4].isdigit():
         return None
-    return {'image': parts[1] == 'i', 'textured': parts[2] == 't', 'shape': parts[3], 'started': int(parts[4])}
+    return {'animated':parts[1] == 'a', 'image': parts[1] == 'i', 'textured': parts[2] == 't', 'shape': parts[3], 'started': int(parts[4])}
 
 
 def transport(seconds=0.0, clock=time.time):
@@ -55,6 +55,9 @@ def transport(seconds=0.0, clock=time.time):
             if path.startswith('/images/'):
                 from .asset_studio import fixture_concept
                 return httpx.Response(200, content=fixture_concept(name), headers={'content-type': 'image/jpeg'})
+            if task['animated']:
+                from .rigged_glb import fixture_rigged_glb
+                return httpx.Response(200, content=fixture_rigged_glb(), headers={'content-type':'model/gltf-binary'})
             return httpx.Response(200, content=fixture_glb('box' if task['shape'] == 'box' else 'sphere', task['textured']),
                                   headers={'content-type': 'model/gltf-binary'})
         if request.headers.get('authorization') != 'Bearer ' + FAKE_KEY:
@@ -63,7 +66,7 @@ def transport(seconds=0.0, clock=time.time):
             return _answer({'balance': 1000000, 'frozen': 0})
         if path.endswith('/files'):
             return _answer({'file_token': 'fake-file-' + secrets.token_hex(8)})
-        if '/generation/' in path and request.method == 'POST':
+        if ('/generation/' in path or path.endswith(('/animations/rig','/animations/retarget'))) and request.method == 'POST':
             try:
                 payload = json.loads(request.content or b'{}')
             except ValueError:

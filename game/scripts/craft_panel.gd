@@ -60,6 +60,8 @@ var surface: OptionButton
 var motion: OptionButton
 var mesh_model: OptionButton
 var refine: CheckButton
+## A moving character (task 67): a skeleton with idle and walk clips, when the server offers rigging.
+var animate_box: CheckButton
 var price_label: Label
 var concept_note: Label
 var ask: Button
@@ -249,8 +251,14 @@ func _build_form() -> void:
 	refine.text = tr("그림을 먼저 정리해서 만들기")
 	refine.tooltip_text = tr("Tripo 이미지 편집: 부품당 예상 5크레딧 추가. 이후 이미지→3D 요금 적용.")
 	choices.add_child(refine)
+	animate_box = CheckButton.new()
+	animate_box.text = tr("움직이는 캐릭터로 만들기")
+	animate_box.tooltip_text = tr("사람 모양 캐릭터에 뼈대를 넣고, 서 있는 동작과 걷는 동작을 붙여요.")
+	animate_box.visible = false
+	choices.add_child(animate_box)
 	for control in [surface, motion, mesh_model]: control.item_selected.connect(func(_i: int) -> void: _update_options())
 	refine.toggled.connect(func(_on: bool) -> void: _update_options())
+	animate_box.toggled.connect(func(_on: bool) -> void: _update_options())
 	picture_first = CheckButton.new()
 	picture_first.text = tr("AI 그림을 먼저 보고 만들기")
 	picture_first.tooltip_text = tr("끄면 그림 단계 없이 글로 바로 3D를 만들어요. (그림 1장 5크레딧 절약)")
@@ -446,12 +454,20 @@ func _update_options() -> void:
 	surface.set_item_disabled(0, not _fits(20))
 	if not _fits(20) and surface.selected == 0: surface.select(1)
 	var simple := _design() == "simple"
+	# A moving character: offered when the server rigs (/v1/studio rigging) and builds with Tripo. It is one
+	# still mesh with clips (the server makes it static), from words only.
+	animate_box.visible = _tripo() and not _rigging().is_empty()
+	if not animate_box.visible: animate_box.set_pressed_no_signal(false)
+	var animating := animate_box.visible and animate_box.button_pressed
+	if animating:
+		motion.select(0)
+		forced_motion = false
 	# Moving furniture needs two Tripo meshes, or one when the game makes every moving part (a clock).
 	var moving_meshes := int(kind_info.get("moving_meshes", 2))
-	motion.set_item_disabled(1, not _fits(10 * moving_meshes) or simple)
+	motion.set_item_disabled(1, not _fits(10 * moving_meshes) or simple or animating)
 	if (not _fits(10 * moving_meshes) or simple) and motion.selected == 1: motion.select(0)
-	# A photo is read by the LLM designer.
-	var photos := _llm() and _fits(20)
+	# A photo is read by the LLM designer (a moving character is made from words only).
+	var photos := _llm() and _fits(20) and not animating
 	for b in photo_buttons: b.disabled = not photos
 	if not photos and not image_data.is_empty():
 		_clear_image()
@@ -465,7 +481,7 @@ func _update_options() -> void:
 	var unit := (10 + (10 if photo else 0) + (10 if textured else 0)) if mesh_model.selected == 0 else (110 if textured else 100)
 	if photo and refine.button_pressed: unit += 5
 	# A clock is always made with its hands (free): the moving option is chosen for the player.
-	var forced := bool(kind_info.get("always_moving", false)) and not simple and not motion.is_item_disabled(1) and (not tripo or _fits(unit * moving_meshes))
+	var forced := bool(kind_info.get("always_moving", false)) and not simple and not animating and not motion.is_item_disabled(1) and (not tripo or _fits(unit * moving_meshes))
 	motion.set_item_disabled(0, forced)
 	if forced and motion.selected != 1:
 		motion.select(1)
@@ -475,16 +491,22 @@ func _update_options() -> void:
 		forced_motion = false
 	moving = motion.selected == 1
 	var least := unit * (moving_meshes if moving else 1)
+	# The skeleton and its clips (rig + idle + walk) come on top of the mesh.
+	var rig_credits := _rig_credits() if animating else 0
+	least += rig_credits
 	# The player may skip the picture step (69): built straight from the words, 5 credits less.
 	picture_first.visible = not photo and not moving
 	var concept := not photo and not moving and picture_first.button_pressed
-	var with_concept := (unit + 10 + CONCEPT_CREDITS) if mesh_model.selected == 0 else unit + CONCEPT_CREDITS
+	var with_concept := ((unit + 10 + CONCEPT_CREDITS) if mesh_model.selected == 0 else unit + CONCEPT_CREDITS) + rig_credits
 	var stars := (40 if textured else 20) + (10 if moving else 0)
 	var over := tripo and cap > 0 and least > cap
 	price_label.text = tr("별씨 %d · Tripo 약 %d크레딧") % [stars, with_concept if concept and _fits(with_concept) else least] if tripo else tr("별씨 %d") % stars
 	if over: price_label.text += tr(" · 한도 %d 크레딧을 넘어요") % cap
 	concept_note.visible = concept or forced or picture_first.visible
-	if forced:
+	if animating:
+		concept_note.visible = true
+		concept_note.text = tr("사람 모양 캐릭터만 만들 수 있어요(예: 로봇 캐릭터, 기사). 뼈대와 동작에 %d크레딧이 더 들어요.") % rig_credits
+	elif forced:
 		concept_note.text = tr("%s는 바늘이 실제 시각에 맞춰 움직이도록 만들어요. 바늘은 공방이 무료로 달아 드려요.") % tr(str(kind_info.get("names", {}).get("ko", "시계")))
 	elif concept:
 		concept_note.text = tr("사진이 없으면 AI가 먼저 그림을 그려 보여 드려요. 마음에 들면 그 그림으로 3D를 만들어요. (그림 1장 5크레딧)") if not tripo or _fits(with_concept) else tr("이번에는 그림 단계 없이 글로 만들어요. (1회 한도)")
@@ -501,7 +523,19 @@ func _body() -> Dictionary:
 	if not style_buttons.is_empty(): body["style"] = style_id
 	if not size_buttons.is_empty(): body["size"] = "auto" if size_id == "custom" else size_id
 	if size_id == "custom" and info.has("dims") and size_box.has_box(): body["dims"] = size_box.value()
+	# Only servers that rig know the field (older ones refuse unknown fields).
+	if animate_box.visible and animate_box.button_pressed and not _rigging().is_empty(): body["animate"] = true
 	return body
+
+## The server's rigging offer (/v1/studio "rigging"), {} when it has none.
+func _rigging() -> Dictionary:
+	var rigging = info.get("rigging", {})
+	return rigging if rigging is Dictionary and bool(rigging.get("enabled", false)) else {}
+
+## Tripo credits for a character's skeleton and clips (25 + 10 per clip by the server's offer).
+func _rig_credits() -> int:
+	var rigging := _rigging()
+	return int(rigging.get("rig_credits", 25)) + int(rigging.get("clip_credits", 10)) * maxi(1, (rigging.get("clips", ["idle", "walk"]) as Array).size())
 
 func _base_body() -> Dictionary:
 	var tripo := _tripo()
@@ -696,12 +730,12 @@ func _show_working(value: Dictionary) -> void:
 		percent.autowrap_mode = TextServer.AUTOWRAP_OFF
 		_label(root, tr("창을 닫아도 계속 만들어져요. 완성되면 알려 드릴게요."), 14, true)
 		working = {"root": root, "stages": stages, "title": title, "steps": steps, "bar": bar, "percent": percent}
-	var titles := {"design": tr("장인이 설계도를 그리고 있어요…"), "concept": tr("AI가 그림을 그리고 있어요…"), "mesh": tr("공방에서 3D로 빚고 있어요…")}
+	var titles := {"design": tr("장인이 설계도를 그리고 있어요…"), "concept": tr("AI가 그림을 그리고 있어요…"), "mesh": tr("공방에서 3D로 빚고 있어요…"), "rig": tr("캐릭터에 뼈대와 동작을 넣고 있어요…")}
 	working.title.text = tr("주문을 접수했어요") if str(value.get("state")) == "queued" and stage == "design" else str(titles.get(stage, tr("제작 중이에요…")))
 	_paint_steps(working.steps, stage, value)
 	var bar: ProgressBar = working.bar
 	var progress = value.get("progress")
-	var known := (progress is float or progress is int) and stage == "mesh"
+	var known := (progress is float or progress is int) and stage in ["mesh", "rig"]
 	bar.indeterminate = not known
 	working.percent.text = ("%d%%" % roundi(float(progress) * 100.0)) if known else ""
 	working.percent.visible = known
@@ -729,6 +763,7 @@ func _step_name(id: String) -> String:
 		"design": return tr("설계")
 		"concept": return tr("그림")
 		"mesh": return tr("3D 부품")
+		"rig": return tr("뼈대·동작")
 	return tr("완성")
 
 ## A row of numbered dots joined by lines; returns the pieces _paint_steps colours.
@@ -855,6 +890,8 @@ func _show_quote(value: Dictionary) -> void:
 		var chosen := _entry("sizes", str(quote.get("size", "auto")))
 		var box := _dims_text(quote.get("dims", []))
 		_label(status, tr("스타일 %s · 크기 %s") % [_name(look), box if not box.is_empty() else _size_text(chosen) if not chosen.is_empty() else tr("자동")], 13, true)
+	# Sides where the object reaches the picture's edge (server cut_edges): it would be built cut (task 73).
+	var cut := PackedStringArray()
 	if not concept.is_empty():
 		_label(status, tr("AI가 그린 그림이에요. 이 그림으로 3D를 만들까요?"), 15)
 		var picture := TextureRect.new()
@@ -863,6 +900,11 @@ func _show_quote(value: Dictionary) -> void:
 		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		status.add_child(picture)
 		_load_picture(picture, str(concept.get("url", "")))
+		var words := {"top": tr("위"), "bottom": tr("아래"), "left": tr("왼쪽"), "right": tr("오른쪽")}
+		for side in concept.get("edges", []):
+			if words.has(str(side)): cut.append(str(words[str(side)]))
+		if not cut.is_empty():
+			_label(status, tr("그림에서 물건의 %s 끝이 잘렸을 수 있어요. 잘린 채로 3D가 만들어지니 '다시 그리기'를 권해요.") % "·".join(cut), 14, false, RpgUi.ACCENT)
 	if not design.get("parts", []).is_empty():
 		_label(status, tr("AI가 이렇게 정리했어요 (Tripo에 보내는 문장)"), 13, false, _accent())
 		for part in design.parts:
@@ -877,10 +919,12 @@ func _show_quote(value: Dictionary) -> void:
 		var with_picture := maxi(reserved, ceili(_number(concept.get("estimate_with_concept")) * rate))
 		var with_text := maxi(reserved, ceili(_number(concept.get("estimate_text_only")) * rate))
 		_button(row, tr("이 그림으로 만들기 · 별씨 %d") % with_picture, func() -> void: confirm(true), "gold")
-		var redraw := _button(row, tr("다시 그리기 (+5크레딧)"), redraw_concept)
 		var draws := int(concept.get("draws", 1))
 		var next_total := int(_number(concept.get("estimate_with_concept"))) + CONCEPT_CREDITS
-		redraw.disabled = draws >= int(concept.get("max_draws", 4)) or (cap > 0 and next_total > cap)
+		var locked := draws >= int(concept.get("max_draws", 4)) or (cap > 0 and next_total > cap)
+		# A cut picture makes the redraw a step forward too.
+		var redraw := _button(row, tr("다시 그리기 (+5크레딧)"), redraw_concept, "gold" if not cut.is_empty() and not locked else "")
+		redraw.disabled = locked
 		if redraw.disabled: redraw.tooltip_text = tr("그림은 최대 %d장까지, 1회 한도 안에서 그릴 수 있어요.") % int(concept.get("max_draws", 4))
 		var text_row := _row(status)
 		_button(text_row, tr("그림 없이 글로 만들기 · 별씨 %d") % with_text, func() -> void: confirm(false))

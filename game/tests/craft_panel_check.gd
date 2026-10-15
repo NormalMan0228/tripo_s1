@@ -178,6 +178,23 @@ func run() -> void:
 	expect(panel.picture_first.visible and panel._body().get("concept") == false and panel.concept_note.text.contains("그림 단계 없이"), "text-only craft skips the picture when asked")
 	panel.picture_first.button_pressed = true
 	expect(panel._body().get("concept") == true, "and draws it again when asked")
+	# A moving character (67): offered when the server rigs and builds with Tripo; sent as animate, words only.
+	panel.info["rigging"] = {"enabled": true, "rig_type": "biped", "clips": ["idle", "walk"], "rig_credits": 25, "clip_credits": 10}
+	panel.geometry.select(1)
+	panel._update_options()
+	panel.animate_box.button_pressed = true
+	var animated := panel._body()
+	expect(panel.animate_box.visible and animated.get("animate") == true and animated.get("motion") == "static" and panel.photo_buttons[0].disabled
+		and panel.concept_note.text.contains("45"), "a moving character is offered with its skeleton credits and sent as animate")
+	expect(panel._step_name("rig") == "뼈대·동작" and panel._explain("animate_requires_character").contains("사람 모양"), "the rig step and its refusals are worded")
+	panel.animate_box.button_pressed = false
+	panel.info.erase("rigging")
+	panel.geometry.select(0)
+	panel._update_options()
+	expect(not panel.animate_box.visible and not panel._body().has("animate"), "servers without rigging never see the field")
+	panel.show_job({"id": "rig", "state": "failed", "error": "rig_failed", "reason": "rig"})
+	expect(labels(panel.status).contains("뼈대와 동작"), "a failed rig says why")
+	panel.show_job({})
 	# Photos: any size up to 20 MB is scaled down and re-encoded under 1 MB; bad files say why.
 	var big := Image.create(3000, 2000, false, Image.FORMAT_RGB8)
 	big.fill(Color(0.8, 0.5, 0.2))
@@ -206,6 +223,11 @@ func run() -> void:
 	expect(not turned.has("error") and turned.image.get_size() == Vector2i(800, 1600), "and a large one is re-encoded upright (%s)" % [turned.get("image", Image.new()).get_size()])
 	panel.prompt.text = ""
 	expect(CraftPanel.poll_pause(1) == 4.0 and CraftPanel.poll_pause(9) == 30.0, "failed polls back off up to 30 s")
+	# A picture that cuts the object at its edge (server cut_edges, task 73) is called out under it.
+	panel.show_job({"id": "edges", "state": "awaiting_confirmation", "cost": 20, "provenance": {}, "concept": {"url": "", "draws": 1, "max_draws": 4,
+		"estimate_with_concept": 25, "estimate_text_only": 20, "edges": ["right", "bottom"]}})
+	var cut_text := labels(panel.status)
+	expect("잘렸을" in cut_text and "오른쪽" in cut_text and "아래" in cut_text, "a picture cut at its edge warns and suggests a redraw")
 	panel.show_job({})
 	app.close_village_modal()
 	# A room opens the same window (C) and places the craft in the room.
