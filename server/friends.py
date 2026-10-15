@@ -188,6 +188,31 @@ class Roster:
             self.lock.release()
 
 
+class PollMeter:
+    """Server-side backpressure for the presence poll. Every poll is counted; every
+    METER_SECONDS the slow-down factor moves towards measured rate / budget (square root steps,
+    so it settles instead of swinging), between 1 and MAX_SLOWDOWN. The advised intervals are
+    the operator's (social_poll in /health) times the factor. In this process only (one worker)."""
+    METER_SECONDS = 2.0
+    MAX_SLOWDOWN = 4.0
+
+    def __init__(self, clock, budget):
+        self.clock, self.budget = clock, budget
+        self.lock = threading.Lock()
+        self.count, self.since, self.factor = 0, clock(), 1.0
+
+    def tick(self):
+        with self.lock:
+            self.count += 1
+            now = self.clock()
+            elapsed = now-self.since
+            if elapsed >= self.METER_SECONDS:
+                rate = self.count/elapsed
+                self.factor = min(self.MAX_SLOWDOWN, max(1.0, self.factor*math.sqrt(rate/self.budget)))
+                self.count, self.since = 0, now
+            return self.factor
+
+
 class Lookup(Mutation):
     """A player by user id (lists) or by user name (typed)."""
     user_id: uuid.UUID | None = None
@@ -231,6 +256,7 @@ class Friends:
     def __init__(self, app, db, settings, clock, auth, mutate, multiplayer):
         self.db, self.settings, self.clock = db, settings, clock
         self.roster = Roster(clock)
+        self.meter = PollMeter(clock, settings.presence_budget)
         mp = multiplayer
         from .chat import Window, refuse
         people_window = Window(PEOPLE_PER_MINUTE, 60)
@@ -357,7 +383,9 @@ class Friends:
             online = sum(1 for f in friend_ids(conn, user_id) if f in rows and not rows[f]['appear_offline'])
             requests = conn.execute("SELECT count(*) FROM social_requests WHERE to_id=? AND state='pending'", (user_id,)).fetchone()[0]
             knocks = conn.execute("SELECT count(*) FROM mp_invites WHERE recipient_id=? AND state='pending' AND expires>? AND kind='knock'", (user_id, now)).fetchone()[0]
-            block = {'v': mine['rev'], 'requests': requests, 'knocks': knocks, 'friends_online': online}
+            slow = self.meter.factor
+            block = {'v': mine['rev'], 'requests': requests, 'knocks': knocks, 'friends_online': online,
+                     'poll': {'together': round(self.settings.presence_together_seconds*slow, 2), 'alone': round(self.settings.presence_alone_seconds*slow, 2)}}
             if mine['chat_muted_until'] and mine['chat_muted_until'] > now:
                 block['muted_until'] = mine['chat_muted_until']
             return block
@@ -495,9 +523,11 @@ class Friends:
                     line = conn.execute('SELECT text FROM mp_messages WHERE id=? AND user_id=?', (body.message_id, them)).fetchone()
                     text = line['text'] if line else None
                 # What the reporter could have read from that player in the last hour, for the operator.
+                party = mp.party_for(conn, me)
+                rooms = ['village:'+mp.host_for(conn, me), 'global', 'dm:'+me] + (['party:'+party['id']] if party else [])
                 context = [dict(r) for r in conn.execute(
-                    "SELECT id,channel,room,text,created FROM mp_messages WHERE user_id=? AND created>? AND (room NOT LIKE 'dm:%' OR room=?) ORDER BY id DESC LIMIT 10",
-                    (them, now-3600, 'dm:'+me))]
+                    f"SELECT id,channel,room,text,created FROM mp_messages WHERE user_id=? AND created>? AND room IN ({','.join('?'*len(rooms))}) ORDER BY id DESC LIMIT 10",
+                    (them, now-3600, *rooms))]
                 for line in context:
                     line['room'] = line['room'].split(':')[0]
                 from .security import clean_text
@@ -594,4 +624,4 @@ class Friends:
         return {'social_features': list(FEATURES), 'global_chat': bool(s.global_chat), 'social_roster': s.social_roster,
                 'interaction_sync': 1, 'chat_max_length': 160,
                 'social_poll': {'presence_together': s.presence_together_seconds, 'presence_alone': s.presence_alone_seconds,
-                                'people': s.people_seconds}}
+                                'people': s.people_seconds, 'presence_budget': s.presence_budget}}

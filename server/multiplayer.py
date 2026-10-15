@@ -304,7 +304,10 @@ class Multiplayer:
 
         @app.post('/v1/social/presence')
         def presence(body: Presence, request: Request):
-            with db.write_then_read() as phase:
+            # Positions, visit times and resident moves: the next poll writes them again (no disk wait).
+            if hasattr(app.state, 'friends'):
+                app.state.friends.meter.tick()
+            with db.write_then_read(durable=False) as phase:
                 conn = phase.conn
                 user = auth(conn, request)
                 # A visit whose host is gone (or whose guest was away too long) ends here; a guest

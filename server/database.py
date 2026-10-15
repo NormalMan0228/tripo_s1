@@ -141,6 +141,9 @@ class Database:
         db.row_factory = sqlite3.Row
         db.execute('PRAGMA foreign_keys=ON')
         db.execute('PRAGMA busy_timeout=15000')
+        # Pooled connections stay open, so SQLite never deletes the WAL on a last close: shrink it
+        # back to this size whenever a checkpoint resets it.
+        db.execute('PRAGMA journal_size_limit=16777216')
         return db
 
     def checkout(self):
@@ -195,26 +198,37 @@ class Database:
         self.checkin(db)
 
     @contextmanager
-    def write_then_read(self):
+    def write_then_read(self, durable=True):
         """A write transaction that builds its reply after the commit, on the same connection.
 
         The caller writes under BEGIN IMMEDIATE, then calls phase.commit(): the writes are saved,
         SQLite's single writer slot is free again for everyone else, and the rest of the work reads
         one consistent snapshot (WAL readers never block writers). Without commit() it is an
-        ordinary transaction. Used by the 4 Hz presence poll (server/multiplayer.py)."""
+        ordinary transaction. Used by the 4 Hz presence poll (server/multiplayer.py).
+
+        durable=False commits without waiting for the disk (synchronous=NORMAL): after a power cut
+        the last moment of such writes may be missing, never half there. For data that the next
+        poll rewrites anyway (where everyone stands); the writer slot is then not held through a
+        disk flush."""
         db = self.checkout()
-        phase = Phases(db)
         try:
+            if not durable:
+                db.execute('PRAGMA synchronous=NORMAL')
             db.execute('BEGIN IMMEDIATE')
-            yield phase
-            db.commit()
-        except BaseException:
             try:
+                yield Phases(db)
+                db.commit()
+            except BaseException:
                 db.rollback()
-            finally:
-                self.checkin(db)
-            raise
-        self.checkin(db)
+                raise
+        finally:
+            # Back to the default before the connection serves anyone else.
+            if not durable:
+                try:
+                    db.execute('PRAGMA synchronous=FULL')
+                except sqlite3.Error:
+                    pass
+            self.checkin(db)
 
 
 class Phases:

@@ -10,8 +10,9 @@ alone in their village, in the workshop, or on a survival expedition, and poll p
 the game does (village/home 4 Hz, workshop heartbeat, survival input 5 Hz). Clients with chat v2
 send the cursor and the place, chat on the village, everyone and whisper channels, and a third of
 them keep the social window open (/v1/social/people every 5 s). Released clients (--legacy-share)
-use the old presence and messages. Reports latency per route, chat delivery time, the server
-process's CPU and memory, and database growth.
+use the old presence and messages. The players are spread over --workers processes, so the load
+generator is not the bottleneck. Reports latency per route, chat delivery time (each line carries
+its send time), the server process's CPU and memory, database file growth and the WAL's peak.
 
 The server is one uvicorn worker on port 8867 (the production command line, demo mode, WAL
 SQLite) with a temporary data directory that is deleted afterwards. Accounts, sessions, villages,
@@ -20,6 +21,7 @@ This measures this PC; docs/design/SOCIAL_API.md explains the t4g.small estimate
 """
 import argparse
 import asyncio
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -138,16 +140,25 @@ def start_server(server_root, data, port, extra_env):
     raise RuntimeError('isolated_server_not_ready')
 
 
-def stop_server(process):
+def stop_server(process, data=None):
+    """Ends the server's whole process tree (a venv python.exe is a launcher with a child), then
+    removes its data directory, retrying while Windows still holds the files."""
     pids = process_tree(process.pid)
-    process.terminate()
+    if sys.platform == 'win32':
+        subprocess.run(['taskkill', '/T', '/F', '/PID', str(process.pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for pid in pids[1:]:
+            subprocess.run(['taskkill', '/F', '/PID', str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+        process.terminate()
     try:
         process.wait(timeout=15)
     except subprocess.TimeoutExpired:
         process.kill()
-    if sys.platform == 'win32':
-        for pid in pids[1:]:
-            subprocess.run(['taskkill', '/F', '/PID', str(pid)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for _ in range(20):
+        if not data or not Path(data).exists():
+            break
+        shutil.rmtree(data, ignore_errors=True)
+        time.sleep(.25)
 
 
 # --- seeding -----------------------------------------------------------------------------------
@@ -176,10 +187,8 @@ def seed(database, users, legacy_share, friends_each, objects_each, seed_value):
         host, a, b = people[3*g:3*g+3]
         host['role'], a['role'], b['role'] = 'host', 'guest', 'guest_home'
         for guest in (a, b):
-            guest['host'] = host['id']
             conn.execute('INSERT INTO mp_visits VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id', (guest['id'], host['id'], now+3600))
-    rest = people[3*groups:]
-    for i, p in enumerate(rest):
+    for i, p in enumerate(people[3*groups:]):
         p['role'] = ('alone', 'alone', 'alone', 'workshop', 'survival')[i % 5]
     for p in people:
         p['legacy'] = rng.random() < legacy_share
@@ -200,71 +209,68 @@ def seed(database, users, legacy_share, friends_each, objects_each, seed_value):
     return people
 
 
-def database_size(data):
-    return sum(f.stat().st_size for f in Path(data).glob('world.sqlite3*'))
+def settled_size(data):
+    """The database file after a full checkpoint (everything written so far, no WAL left)."""
+    with closing(sqlite3.connect(Path(data)/'world.sqlite3', timeout=30)) as conn:
+        conn.execute('PRAGMA busy_timeout=30000')
+        conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+    return file_sizes(data)[0]
+
+
+def file_sizes(data):
+    main = Path(data)/'world.sqlite3'
+    wal = Path(data)/'world.sqlite3-wal'
+    return (main.stat().st_size if main.exists() else 0), (wal.stat().st_size if wal.exists() else 0)
 
 
 def row_counts(database):
-    with sqlite3.connect(database, timeout=30) as conn:
+    with closing(sqlite3.connect(database, timeout=30)) as conn:
         tables = {r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         return {t: conn.execute(f'SELECT count(*) FROM {t}').fetchone()[0]
                 for t in ('mp_messages', 'requests', 'audit', 'security_events', 'mp_invites', 'social_requests') if t in tables}
 
 
-# --- the classroom -----------------------------------------------------------------------------
-class Stats:
-    def __init__(self, started):
-        self.started = started
-        self.latency, self.status, self.errors = {}, {}, []
-        self.sent, self.arrivals = {}, []
-        self.rate_limited = 0
-
-    def record(self, route, ms, status):
-        if time.perf_counter()-self.started < WARMUP_SECONDS:
-            return
-        self.latency.setdefault(route, []).append(ms)
-        key = f'{route} {status}'
-        self.status[key] = self.status.get(key, 0)+1
-
-    def summary(self, seconds):
-        out = {}
-        for route, values in sorted(self.latency.items()):
-            ordered = sorted(values)
-            pick = lambda q: round(ordered[min(len(ordered)-1, int(len(ordered)*q))], 1)
-            out[route] = {'requests': len(ordered), 'per_second': round(len(ordered)/seconds, 1), 'p50_ms': pick(.5),
-                          'p95_ms': pick(.95), 'p99_ms': pick(.99), 'max_ms': round(ordered[-1], 1)}
-        return out
+# --- the classroom (one asyncio loop per worker process) ---------------------------------------
+TAG = re.compile(r'^load \S+ (\d+\.\d+) ')
 
 
-async def classroom(url, people, seconds, health, chat_every, adaptive, together_s, alone_s, people_s, seed_value):
-    features = set(health.get('social_features') or [])
-    chat2 = 'chat2' in features
-    global_chat = bool(health.get('global_chat'))
-    limits = httpx.Limits(max_connections=len(people)+20, max_keepalive_connections=len(people)+20)
-    started = time.perf_counter()
-    stats = Stats(started)
-    deadline = started+seconds+WARMUP_SECONDS
-    rng = random.Random(seed_value+1)
-    tag = re.compile(r'^load (\d+) ')
+async def classroom(url, people, settings, worker):
+    """One worker's share of the players. Times are wall-clock (time.time) so that a line sent
+    by one worker and read by another can be timed: its text carries the send time."""
+    started, seconds = settings['started'], settings['seconds']
+    measure_from, deadline = started+WARMUP_SECONDS, started+WARMUP_SECONDS+seconds
+    chat2, global_chat = settings['chat2'], settings['global_chat']
+    together_s, alone_s, adaptive = settings['together'], settings['alone'], settings['adaptive']
+    chat_every, people_s = settings['chat_every'], settings['people_every']
+    rng = random.Random(settings['seed']*100+worker)
+    latency, statuses, errors, arrivals = {}, {}, [], []
     counter = [0]
-    async with httpx.AsyncClient(base_url=url, timeout=10, limits=limits) as client:
+    rate_limited = [0]
+    # Idle connections are dropped before uvicorn's 5 s keep-alive ends (else a reused one can fail).
+    limits = httpx.Limits(max_connections=len(people)+10, max_keepalive_connections=len(people)+10, keepalive_expiry=4)
+    async with httpx.AsyncClient(base_url=url, timeout=15, limits=limits) as client:
 
         async def call(route, method, path, headers, body=None):
-            before = time.perf_counter()
+            before = time.time()
             try:
-                if method == 'GET':
-                    response = await client.get(path, headers=headers)
-                else:
-                    response = await client.post(path, headers=headers, json=body)
+                response = await (client.get(path, headers=headers) if method == 'GET' else client.post(path, headers=headers, json=body))
             except httpx.HTTPError as error:
-                stats.errors.append({'route': route, 'error': type(error).__name__})
+                errors.append({'route': route, 'error': type(error).__name__})
                 return None
-            stats.record(route, (time.perf_counter()-before)*1000, response.status_code)
+            if before >= measure_from:
+                latency.setdefault(route, []).append((time.time()-before)*1000)
+                key = f'{route} {response.status_code}'
+                statuses[key] = statuses.get(key, 0)+1
             if response.status_code == 429:
-                stats.rate_limited += 1
-            elif response.status_code != 200 and len(stats.errors) < 50:
-                stats.errors.append({'route': route, 'status': response.status_code, 'detail': response.text[:120]})
+                rate_limited[0] += 1
+            elif response.status_code == 404 and 'whisper_target_unavailable' in response.text:
+                pass  # a whisper to a friend who is not online: the server's right answer
+            elif response.status_code != 200 and len(errors) < 50:
+                errors.append({'route': route, 'status': response.status_code, 'detail': response.text[:120]})
             return response
+
+        async def nap(seconds_):
+            await asyncio.sleep(max(0, min(seconds_, deadline-time.time())))
 
         async def presence_loop(p):
             modern = chat2 and not p['legacy']
@@ -274,39 +280,35 @@ async def classroom(url, people, seconds, health, chat_every, adaptive, together
             in_village = role in ('host', 'guest', 'guest_home', 'alone')
             interval = (1.0 if modern else 3.0) if role == 'workshop' else 2.0 if role == 'survival' else together_s
             cursor = 0
-            await asyncio.sleep(rng.random()*interval)
-            while time.perf_counter() < deadline:
-                tick = time.perf_counter()
-                body = {'scene': scene, 'x': rng.uniform(-5, 5), 'z': rng.uniform(-5, 5), 'yaw': 0, 'vx': 0.5, 'vz': 0, 't': tick}
+            await nap(rng.random()*interval)
+            while time.time() < deadline:
+                tick = time.time()
+                body = {'scene': scene, 'x': rng.uniform(-5, 5), 'z': rng.uniform(-5, 5), 'yaw': 0, 'vx': .5, 'vz': 0, 't': tick % 1e6}
                 if modern:
                     body.update(since=cursor, place=place)
                 response = await call('presence', 'POST', '/v1/social/presence', p['headers'], body)
                 together = True
                 if response is not None and response.status_code == 200:
                     reply = response.json()
-                    space = reply.get('space') or {}
-                    together = len(space.get('players') or []) > 1
+                    together = len((reply.get('space') or {}).get('players') or []) > 1
                     block = reply.get('chat')
                     if block:
                         cursor = block['cursor']
-                        if not block['history']:
-                            now = time.perf_counter()
+                        if not block['history'] and time.time() >= measure_from:
                             for line in block['lines']:
-                                found = tag.match(line['text'])
-                                if found and line['user_id'] != p['id'] and int(found.group(1)) in stats.sent and now-started > WARMUP_SECONDS:
-                                    stats.arrivals.append((now-stats.sent[int(found.group(1))])*1000)
-                wait = (alone_s if adaptive and not together else together_s) if in_village else interval
-                await asyncio.sleep(max(0, tick+wait-time.perf_counter()))
+                                found = TAG.match(line['text'])
+                                if found and line['user_id'] != p['id']:
+                                    arrivals.append((time.time()-float(found.group(1)))*1000)
+                await nap(tick+((alone_s if adaptive and not together else together_s) if in_village else interval)-time.time())
 
         async def chat_loop(p):
             modern = chat2 and not p['legacy']
-            await asyncio.sleep(min(rng.uniform(0, chat_every), seconds))
-            while time.perf_counter() < deadline:
+            await nap(rng.uniform(0, chat_every))
+            while time.time() < deadline:
                 counter[0] += 1
-                number = counter[0]
-                text = f'load {number} 안녕 반가워요'
+                text = f'load {worker}-{counter[0]} {time.time():.3f} 안녕 반가워요'
                 if rng.random() < .02:
-                    text = f'load {number} 아 시발 렉'
+                    text = f'load {worker}-{counter[0]} {time.time():.3f} 아 시발 렉'
                 body = {'request_id': str(uuid.uuid4()), 'text': text}
                 if modern:
                     roll = rng.random()
@@ -316,30 +318,28 @@ async def classroom(url, people, seconds, health, chat_every, adaptive, together
                         body.update(channel='whisper', to=rng.choice(p['friend_names']))
                     else:
                         body['channel'] = 'local'
-                stats.sent[number] = time.perf_counter()
                 await call('messages', 'POST', '/v1/social/messages', p['headers'], body)
-                await asyncio.sleep(min(rng.expovariate(1/chat_every), max(0, deadline-time.perf_counter())))
+                await nap(rng.expovariate(1/chat_every))
 
         async def people_loop(p):
-            await asyncio.sleep(rng.uniform(0, people_s))
-            while time.perf_counter() < deadline:
-                tick = time.perf_counter()
+            await nap(rng.uniform(0, people_s))
+            while time.time() < deadline:
+                tick = time.time()
                 await call('people', 'GET', '/v1/social/people', p['headers'])
-                await asyncio.sleep(max(0, tick+people_s-time.perf_counter()))
+                await nap(tick+people_s-time.time())
 
         async def survival_loop(p):
             response = await call('runs_start', 'POST', '/v1/runs', p['headers'], {'request_id': str(uuid.uuid4()), 'difficulty': 'relaxed'})
             if response is None or response.status_code != 200:
                 return
-            run = response.json()['id']
-            sequence = 0
-            while time.perf_counter() < deadline:
-                tick = time.perf_counter()
+            run, sequence = response.json()['id'], 0
+            while time.time() < deadline:
+                tick = time.time()
                 sequence += 1
                 response = await call('survival_input', 'POST', '/v1/runs/'+run+'/input', p['headers'], {'sequence': sequence, 'dx': .3})
                 if response is not None and response.status_code == 200:
                     sequence = response.json().get('sequence', sequence)
-                await asyncio.sleep(max(0, tick+.2-time.perf_counter()))
+                await nap(tick+.2-time.time())
 
         tasks = []
         for p in people:
@@ -350,15 +350,28 @@ async def classroom(url, people, seconds, health, chat_every, adaptive, together
                 tasks.append(people_loop(p))
             if p['role'] == 'survival':
                 tasks.append(survival_loop(p))
-        await asyncio.gather(*tasks)
-    arrivals = sorted(stats.arrivals)
-    pick = lambda q: round(arrivals[min(len(arrivals)-1, int(len(arrivals)*q))]) if arrivals else None
-    return {'routes': stats.summary(seconds), 'statuses': stats.status, 'rate_limited_429': stats.rate_limited,
-            'errors': stats.errors[:20], 'error_count': len(stats.errors),
-            'chat_delivery_ms': {'deliveries': len(arrivals), 'p50': pick(.5), 'p95': pick(.95), 'max': pick(.999)}}
+        await asyncio.sleep(max(0, started-time.time()))
+        cpu_mark = None
+
+        async def mark():
+            nonlocal cpu_mark
+            await asyncio.sleep(max(0, measure_from-time.time()))
+            cpu_mark = time.process_time()
+        await asyncio.gather(mark(), *tasks)
+    return {'latency': latency, 'statuses': statuses, 'errors': errors, 'arrivals': arrivals,
+            'rate_limited': rate_limited[0], 'cpu': time.process_time()-(cpu_mark or 0)}
+
+
+def worker_main(url, people, settings, worker, queue):
+    queue.put(asyncio.run(classroom(url, people, settings, worker)))
+
+
+def percentile(ordered, q):
+    return round(ordered[min(len(ordered)-1, int(len(ordered)*q))], 1) if ordered else None
 
 
 def social_scenario(args):
+    import multiprocessing
     server_root = Path(args.server_root).resolve() if args.server_root else ROOT
     data = Path(tempfile.mkdtemp(prefix='villagen-load-'))
     env = {'VILLAGEN_GLOBAL_CHAT': 'on' if args.global_chat == 'on' else 'off'}
@@ -366,42 +379,70 @@ def social_scenario(args):
     try:
         process, url, health = start_server(server_root, data, args.port, env)
         people = seed(data/'world.sqlite3', args.users, args.legacy_share, args.friends, args.objects, args.seed)
-        size_before = database_size(data)
+        main_before = settled_size(data)
         tree = process_tree(process.pid)
-        wall = time.perf_counter()
-
-        async def run():
-            task = asyncio.create_task(classroom(url, people, args.seconds, health, args.chat_every, args.adaptive,
-                                                 args.together, args.alone, args.people_every, args.seed))
-            # The CPU window starts after the warm-up, like the latency figures.
-            await asyncio.sleep(WARMUP_SECONDS)
-            mark = (cpu_and_memory(tree)[0], time.perf_counter(), time.process_time())
-            return await task, mark
-        result, (cpu_mark, wall_mark, own_mark) = asyncio.run(run())
+        workers = max(1, min(args.workers, len(people)))
+        settings = {'started': time.time()+3, 'seconds': args.seconds, 'chat2': 'chat2' in (health.get('social_features') or []),
+                    'global_chat': bool(health.get('global_chat')), 'together': args.together, 'alone': args.alone,
+                    'adaptive': args.adaptive, 'chat_every': args.chat_every, 'people_every': args.people_every, 'seed': args.seed}
+        queue = multiprocessing.Queue()
+        procs = [multiprocessing.Process(target=worker_main, args=(url, people[w::workers], settings, w, queue)) for w in range(workers)]
+        for proc in procs:
+            proc.start()
+        time.sleep(max(0, settings['started']+WARMUP_SECONDS-time.time()))
+        cpu_mark, wall_mark = cpu_and_memory(tree)[0], time.time()
+        wal_peak = 0
+        while time.time() < settings['started']+WARMUP_SECONDS+args.seconds:
+            time.sleep(1)
+            wal_peak = max(wal_peak, file_sizes(data)[1])
         cpu_after, rss, peak = cpu_and_memory(tree)
-        measured = time.perf_counter()-wall_mark
+        measured = time.time()-wall_mark
+        results = [queue.get(timeout=120) for _ in procs]
+        for proc in procs:
+            proc.join(timeout=30)
+        latency, statuses, errors, arrivals, limited, generator_cpu = {}, {}, [], [], 0, 0
+        for r in results:
+            for route, values in r['latency'].items():
+                latency.setdefault(route, []).extend(values)
+            for key, count in r['statuses'].items():
+                statuses[key] = statuses.get(key, 0)+count
+            errors += r['errors']
+            arrivals += r['arrivals']
+            limited += r['rate_limited']
+            generator_cpu += r['cpu']
+        routes = {}
+        for route, values in sorted(latency.items()):
+            ordered = sorted(values)
+            routes[route] = {'requests': len(ordered), 'per_second': round(len(ordered)/args.seconds, 1), 'p50_ms': percentile(ordered, .5),
+                             'p95_ms': percentile(ordered, .95), 'p99_ms': percentile(ordered, .99), 'max_ms': round(ordered[-1], 1)}
+        arrivals.sort()
         roles = {}
         for p in people:
             roles[p['role']] = roles.get(p['role'], 0)+1
-        total = sum(r['requests'] for r in result['routes'].values())
+        total = sum(r['requests'] for r in routes.values())
+        wal_after = file_sizes(data)[1]
+        main_after = settled_size(data)
         return {
-            'environment': f'isolated localhost, {os.cpu_count()} logical CPUs ({sys.platform}); one uvicorn worker; not the VM',
+            'environment': f'isolated localhost, {os.cpu_count()} logical CPUs ({sys.platform}); one uvicorn worker; {workers} load processes; not the VM',
             'server': 'this checkout' if server_root == ROOT else str(server_root),
             'social_features': sorted(health.get('social_features') or []), 'global_chat': health.get('global_chat'),
             'users': args.users, 'roles': roles, 'legacy_clients': sum(p['legacy'] for p in people),
             'adaptive_presence': args.adaptive, 'presence_together_s': args.together, 'presence_alone_s': args.alone,
             'chat_every_s': args.chat_every, 'people_every_s': args.people_every, 'measured_seconds': round(measured, 1),
-            'requests_per_second': round(total/measured, 1),
+            'requests_per_second': round(total/args.seconds, 1),
             'server_cpu_percent_of_one_core': round((cpu_after-cpu_mark)/measured*100, 1),
             'server_cpu_ms_per_request': round((cpu_after-cpu_mark)*1000/max(1, total), 3),
             'server_memory_mb': round(rss/2**20, 1), 'server_peak_memory_mb': round(peak/2**20, 1),
-            'load_generator_cpu_percent': round((time.process_time()-own_mark)/measured*100, 1),
-            'database_bytes_before': size_before, 'database_bytes_after': database_size(data),
-            'database_growth_kb_per_minute': round((database_size(data)-size_before)/1024/((time.perf_counter()-wall)/60), 1),
-            'rows_after': row_counts(data/'world.sqlite3'), **result}
+            'load_generator_cpu_percent_per_process': round(generator_cpu/workers/max(1, args.seconds)*100, 1),
+            'database_file_bytes_before': main_before, 'database_file_bytes_after': main_after,
+            'database_growth_kb_per_minute': round((main_after-main_before)/1024/((args.seconds+WARMUP_SECONDS)/60), 1),
+            'wal_bytes_peak': wal_peak, 'wal_bytes_after': wal_after,
+            'rows_after': row_counts(data/'world.sqlite3'), 'routes': routes, 'statuses': statuses,
+            'rate_limited_429': limited, 'errors': errors[:20], 'error_count': len(errors),
+            'chat_delivery_ms': {'deliveries': len(arrivals), 'p50': percentile(arrivals, .5), 'p95': percentile(arrivals, .95), 'max': percentile(arrivals, .999)}}
     finally:
         if process:
-            stop_server(process)
+            stop_server(process, data)
         shutil.rmtree(data, ignore_errors=True)
 
 
@@ -480,7 +521,7 @@ def coop_scenario(args):
         return report
     finally:
         if process:
-            stop_server(process)
+            stop_server(process, data)
         shutil.rmtree(data, ignore_errors=True)
 
 
@@ -500,6 +541,7 @@ def main():
     parser.add_argument('--global-chat', choices=('on', 'off'), default='on')
     parser.add_argument('--server-root', help='run another checkout of the server (a baseline)')
     parser.add_argument('--port', type=int, default=PORT)
+    parser.add_argument('--workers', type=int, default=8, help='load generator processes (one asyncio loop each)')
     parser.add_argument('--seed', type=int, default=7)
     parser.add_argument('--output', help='JSON report path (default artifacts/multiplayer-load-<scenario>.json)')
     args = parser.parse_args()

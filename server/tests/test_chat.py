@@ -301,7 +301,7 @@ def test_new_presence_fields_and_the_422_that_names_them(world):
     w.visit(bravo, alice)
     sitting = {'k': 'seat', 'p': 'hold', 'c': 'sit_basic', 't0': 12.5, 'o': 'obj:1234', 's': 'seat_0', 'h': .05}
     reply = w.presence(bravo, since=0, place='village', ix=sitting)
-    assert set(reply['social']) == {'v', 'requests', 'knocks', 'friends_online'} and 'messages' not in reply
+    assert set(reply['social']) == {'v', 'requests', 'knocks', 'friends_online', 'poll'} and 'messages' not in reply
     seen = {p['username']: p for p in w.presence(alice, place='village')['village']['players']}
     assert seen['bravo']['ix'] == sitting and 'ix' not in seen['alice']
     w.presence(bravo)
@@ -317,4 +317,19 @@ def test_health_advertises_the_social_layer(world):
     assert health['multiplayer_protocol'] == 1
     assert set(health['social_features']) == {'chat2', 'place', 'people', 'friends', 'visit', 'report'}
     assert health['global_chat'] is True and health['interaction_sync'] == 1
-    assert health['social_poll'] == {'presence_together': .25, 'presence_alone': 1, 'people': 5}
+    assert health['social_poll'] == {'presence_together': .25, 'presence_alone': 1, 'people': 5, 'presence_budget': 60}
+
+
+def test_presence_advice_slows_clients_down_under_load_and_recovers(make_world):
+    w = make_world(presence_budget=10)
+    alice = w.player('alice')
+    assert w.presence(alice, since=0)['social']['poll'] == {'together': .25, 'alone': 1}
+    for _ in range(3):                     # 50 polls a second for three meter windows
+        for _ in range(100):
+            w.tick(.02)
+            advice = w.presence(alice, since=0)['social']['poll']
+    assert advice['together'] >= .25*3 and advice['alone'] <= 4 and advice['together'] <= 1
+    for _ in range(6):                     # one poll every two seconds
+        w.tick(2.01)
+        advice = w.presence(alice, since=0)['social']['poll']
+    assert advice == {'together': .25, 'alone': 1}
