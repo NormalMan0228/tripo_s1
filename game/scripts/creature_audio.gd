@@ -2,8 +2,17 @@ extends RefCounted
 ## Monster voices for the survival nights, plus the pooled one-shot engine that
 ## combat_audio.gd and hero_voice.gd share. Static helpers only (no autoload):
 ##   const CreatureAudio = preload("res://scripts/creature_audio.gd")
-##   CreatureAudio.play(app_or_node, species: String, event: String, at: Vector3, variant := "") -> bool
+##   CreatureAudio.play(app_or_node, species: String, event: String, at: Vector3, variant := "", kind := "", size := 0.0) -> bool
 ##   CreatureAudio.step(app_or_node, species: String, at: Vector3, speed := 1.0) -> bool
+##
+## Own voices (tools/sfx/gen_monsters.py): every staged expedition species of server/catalog.py has
+## its own takes, res://assets/sfx/creatures/<species>_<event>_<n>.wav (4 per event, the species' map
+## baked in, so no region layer plays under them), and the bosses also <boss>_roar_<n> and
+## <boss>_intro_<n>. play() resolves the family with voice_name(species, kind, event): the species'
+## own takes when it has them (for the event or its FALLBACK event), otherwise the stand-in `kind`
+## exactly as before (region pools and region layer; `size`, the species' height in metres, pitches
+## the stand-in a little: bigger is lower, at most SIZE_PITCH). Voice limits and throttles key on
+## the resolved name.
 ##
 ## Sounds (tools/make_creature_sfx.py, then tools/sfx/gen_combat.py), one pool per
 ## species x event x region, picked through sfx_bank.gd shuffle bags (every take once per cycle,
@@ -33,6 +42,10 @@ extends RefCounted
 ##   "death"   killed / removed with hp <= 0                            (alias "die")
 ##   "charge"  the boar's committed dash (phase windup -> charge); other species: windup takes
 ##   "dazed"   the boar stunned after its dash (charge -> recover); other species: hurt takes
+##   "roar"    a boss's roar (every third wind-up, and once as its health falls past half); alert
+##             takes for a species without roars
+##   "intro"   a boss's arrival sting, once when it appears; always flat (not positional), so the
+##             whole field hears the boss arrive; alert takes for a species without intros
 ## variant: region colouring
 ##   "forest" / "moss"  leaf-and-moss rustle, twig snaps
 ##   "quarry" / "ember" warm crackle, ember flare on strike/death
@@ -65,8 +78,12 @@ const DIR := "res://assets/sfx/creatures/"
 const SPECIES := ["wolf", "boar", "brute", "wisp", "shroom"]
 const EVENTS := ["idle", "alert", "windup", "strike", "hurt", "death"]
 ## Species-specific cues; a species without takes for one uses its FALLBACK event's takes.
-const EXTRA := ["charge", "dazed"]
-const FALLBACK := {"charge": "windup", "dazed": "hurt"}
+const EXTRA := ["charge", "dazed", "roar", "intro"]
+const FALLBACK := {"charge": "windup", "dazed": "hurt", "roar": "alert", "intro": "alert"}
+## Stand-in heights (shadow_beast.gd procedural bodies): a stand-in voicing a species of another
+## size is pitched by (HEIGHT/size)^0.25, clamped to 1 +- SIZE_PITCH. Own voices are not pitched.
+const HEIGHT := {"wolf": 1.3, "boar": 1.1, "brute": 2.4, "wisp": 1.3, "shroom": 1.0}
+const SIZE_PITCH := 0.08
 const REGIONS := ["forest", "quarry", "frost"]
 const SPECIES_ALIASES := {"beast": "wolf", "shadow": "wolf", "shadow_beast": "wolf", "golem": "brute", "guardian": "brute",
 	"imp": "wisp", "ember": "wisp", "fire": "wisp", "mushroom": "shroom", "spore": "shroom"}
@@ -77,11 +94,13 @@ const REGION_ALIASES := {"forest": "forest", "moss": "forest", "quarry": "quarry
 ## Level (dB) at the hero for each event; the files are levelled, these set the mix.
 ## Door sounds play at -22.5 dBFS (file) -9 dB; a close strike lands ~3 dB above a door.
 const EVENT_DB := {"idle": -15.0, "alert": -11.0, "windup": -12.0, "strike": -10.0, "hurt": -11.5, "death": -10.5,
-	"charge": -10.5, "dazed": -12.0}
-const PRIORITY := {"idle": 1, "alert": 3, "windup": 3, "strike": 4, "hurt": 4, "death": 5, "charge": 4, "dazed": 3}
+	"charge": -10.5, "dazed": -12.0, "roar": -10.5, "intro": -11.0}
+const PRIORITY := {"idle": 1, "alert": 3, "windup": 3, "strike": 4, "hurt": 4, "death": 5, "charge": 4, "dazed": 3,
+	"roar": 4, "intro": 5}
 ## Region layer under a region-neutral take: [layer kind, chance]; level LAYER_DB below the take.
 const LAYER := {"idle": ["bed", 0.5], "alert": ["accent", 0.8], "windup": ["bed", 0.6], "strike": ["accent", 0.9],
-	"hurt": ["accent", 0.8], "death": ["accent", 1.0], "charge": ["accent", 0.7], "dazed": ["bed", 0.6]}
+	"hurt": ["accent", 0.8], "death": ["accent", 1.0], "charge": ["accent", 0.7], "dazed": ["bed", 0.6],
+	"roar": ["accent", 0.8], "intro": ["accent", 0.0]}
 const LAYER_DB := -5.0
 ## Footfalls: gait per species and its level at the hero (before distance falloff).
 const GAIT := {"wolf": "paw", "boar": "hoof", "brute": "stomp", "wisp": "flutter", "shroom": "squelch"}
@@ -116,12 +135,16 @@ static var step_tokens := STEP_BURST
 static var step_refill := -10.0
 static var alert_start := -10.0
 static var alert_count := 0
+static var own_voice := {}
 static var rng := RandomNumberGenerator.new()
 
-static func play(app_or_node, species: String, event: String, at: Vector3, variant := "") -> bool:
-	species = species_name(species)
+static func play(app_or_node, species: String, event: String, at: Vector3, variant := "", kind := "", size := 0.0) -> bool:
 	event = event_name(event)
+	species = voice_name(species, kind, event)
+	var size_scale := size_pitch(species, size)
 	var region := region_name(variant, app_or_node)
+	# A boss's arrival sting is for the whole field: flat, wherever the boss stands.
+	if event == "intro": at = Vector3.INF
 	var now := Time.get_ticks_msec()*0.001
 	if event == "idle":
 		if now-float(last_idle.get(species, -10.0)) < IDLE_GAP: return false
@@ -144,15 +167,15 @@ static func play(app_or_node, species: String, event: String, at: Vector3, varia
 			var delay := minf(0.3, (alert_count-1)*rng.randf_range(0.08, 0.12)+rng.randf_range(0.0, 0.04))
 			# The creature that called may die before its turn: after() holds it weakly.
 			return after(delay, app_or_node, func(target) -> void:
-				_voice(target, species, event, region, key, at, Time.get_ticks_msec()*0.001))
-	return _voice(app_or_node, species, event, region, key, at, now)
+				_voice(target, species, event, region, key, at, Time.get_ticks_msec()*0.001, size_scale))
+	return _voice(app_or_node, species, event, region, key, at, now, size_scale)
 
-static func _voice(app_or_node, species: String, event: String, region: String, key: String, at: Vector3, now: float) -> bool:
+static func _voice(app_or_node, species: String, event: String, region: String, key: String, at: Vector3, now: float, size_scale := 1.0) -> bool:
 	var list := pool_paths(species, event, region)
 	if list.is_empty(): return false
 	var path: String = list[SfxBank.bag_index("creature/"+key, list.size())]
 	var db: float = EVENT_DB[event]+SfxBank.db(1.0)
-	var pitch := SfxBank.pitch(0.07) if event == "idle" else SfxBank.pitch(0.05)
+	var pitch := (SfxBank.pitch(0.07) if event == "idle" else SfxBank.pitch(0.05))*size_scale
 	var tag := "creature/%s/%s" % [species, event]
 	var priority: int = PRIORITY[event]
 	# A species may hold MAX_PER_SPECIES voices; a more important call replaces its weakest one.
@@ -164,8 +187,9 @@ static func _voice(app_or_node, species: String, event: String, region: String, 
 	if not emit(app_or_node, SfxBank.stream(path), at, db, pitch, priority, tag): return false
 	last_take[key] = path
 	if event == "idle": last_idle[species] = now
-	# Region-neutral takes get the region's colour as a quiet layer (the old region takes have it baked in).
-	if not path.contains("_%s_" % region): _layer(app_or_node, region, event, at, db)
+	# Region-neutral takes get the region's colour as a quiet layer (the old region takes and the
+	# species' own voices have it baked in).
+	if species in SPECIES and not path.contains("_%s_" % region): _layer(app_or_node, region, event, at, db)
 	return true
 
 ## Moss / ember / ice layer for a region-neutral take; never steals a voice from a real call.
@@ -201,6 +225,27 @@ static func step(app_or_node, species: String, at: Vector3, speed := 1.0) -> boo
 	last_step[species] = now
 	step_tokens -= 1.0
 	return true
+
+## The family a call plays: the species' own takes when it has them for this event (or the event's
+## FALLBACK), else the stand-in `kind`, else species_name(species) as before (unknown -> "wolf").
+static func voice_name(species: String, kind := "", event := "idle") -> String:
+	var own := species.to_lower()
+	# An alias that is also a species ("imp") is that species once it has its own takes.
+	if not own.is_empty() and own not in SPECIES and has_own(own, event_name(event)): return own
+	return species_name(kind if not kind.is_empty() else species)
+
+## True when `name` has its own takes for `event` (or for the event's FALLBACK). Cached.
+static func has_own(name: String, event: String) -> bool:
+	var key := "%s/%s" % [name, event]
+	if own_voice.has(key): return own_voice[key]
+	var found := SfxBank.has(DIR+"%s_%s" % [name, event]) or (FALLBACK.has(event) and has_own(name, FALLBACK[event]))
+	own_voice[key] = found
+	return found
+
+## Pitch for a stand-in voicing a species `size` m tall (1.0 for own voices and unknown sizes).
+static func size_pitch(name: String, size: float) -> float:
+	if size <= 0.0 or not HEIGHT.has(name): return 1.0
+	return clampf(pow(float(HEIGHT[name])/size, 0.25), 1.0-SIZE_PITCH, 1.0+SIZE_PITCH)
 
 static func species_name(species: String) -> String:
 	species = species.to_lower()
