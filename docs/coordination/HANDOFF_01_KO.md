@@ -52,6 +52,7 @@ otes_0118_draft.txt).
 
 ## 주의
 
-- 공유 에셋 정션이 있는 worktree는 C:\Users\dd\AppData\Local\Temp\claude\C--lsm26-triphthonS1\3d7d7a09-3a2f-44bf-ab93-48415f8d8e6d\scratchpadm_wt.ps1로만 지웁니다(정션을 먼저 끊음).
+- 공유 에셋 정션이 있는 worktree는 C:\Users\dd\AppData\Local\Temp\claude\C--lsm26-triphthonS1\3d7d7a09-3a2f-44bf-ab93-48415f8d8e6d\scratchpad
+m_wt.ps1로만 지웁니다(정션을 먼저 끊음).
 - strings.json 충돌은 C:\Users\dd\AppData\Local\Temp\claude\C--lsm26-triphthonS1\3d7d7a09-3a2f-44bf-ab93-48415f8d8e6d\scratchpad\strings_merge.py로 JSON 합집합을 만들어 풉니다. 풀고 나서 중복 키를 검사합니다.
 - `.import` 줄바꿈 변화(수천 개)와 추적되지 않는 `.uid`는 커밋하지 않습니다.
