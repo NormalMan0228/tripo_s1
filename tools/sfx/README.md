@@ -10,6 +10,7 @@ synthesised with numpy/scipy (license-clean, no downloads, no AI models).
 | `sfx_qa.py` | QA: levels, clicks, DC, clipping, silence, loop seams, near-identical takes, contact sheet |
 | `game/scripts/sfx_bank.gd` | runtime take picker (shuffle bag, lazy cached loading, jitter) |
 | `game/tests/sfx_bank_check.gd` | headless test of the picker |
+| `gen_monsters.py` | own voices of the 29 staged expedition species, boss roars and intros (`creatures/<species>_<event>_<n>`); see "Expedition species" below |
 
 Python: `.tools\art-venv\Scripts\python.exe` (numpy, scipy, Pillow; no soundfile, no matplotlib).
 Generators of the six sound owners live next to these files (`tools/sfx/make_<key>.py`) and add a
@@ -795,3 +796,46 @@ Everything renders at 32 kHz and is resampled per family:
   - the `campfire()` loop with a watchdog;
   - `cue()`, `edge()`, `changed()`, `later()`, `depleted()`, `craft()`.
 - `audio_bank_check.gd` holds the minimum take counts and the playback checks.
+
+## Expedition species: own voices (`gen_monsters.py`)
+
+The staged species of `server/catalog.py` ENEMIES (the entries with a `map`) used to borrow the
+voice of their stand-in. `gen_monsters.py` gives each its own:
+
+```
+$env:SFX_BASE = 'merge-version-gate'
+.tools\art-venv\Scripts\python.exe tools\sfx\gen_monsters.py                         # all species (~2.5 min)
+.tools\art-venv\Scripts\python.exe tools\sfx\gen_monsters.py --only troll,dragon --events roar,intro
+.tools\art-venv\Scripts\python.exe tools\sfx\gen_monsters.py --list                  # map, tier, stand-in, reference level
+.tools\art-venv\Scripts\python.exe tools\sfx\gen_monsters.py --out "$SFXWORK\monsters\try"   # scratch trial
+.tools\art-venv\Scripts\python.exe tools\sfx\sfx_qa.py game\assets\sfx\creatures --base merge-version-gate
+```
+
+- `creatures/<species>_<event>_<n>.wav`: idle, alert, windup, strike, hurt, death, 4 takes each;
+  a boss (tier `boss`: treant, chimera, dragon) also `roar` (4, 2.3-2.9 s) and `intro` (3, 1.9-3.1 s,
+  a rumble/swell into the boss's signature cry). 22050 Hz mono.
+- Each species is a `Kit` subclass: its own call, bark, pain cry, breath, texture, signature, hit,
+  swish and fall (formant voices, rasp, chitter and bone trains, glass and metal modes, creaks,
+  hiss and rattle, wing beats, sand, cloth, ice crackle ...). The six `ev_<event>` functions give
+  four archetypes per event (a long call over its texture, a chatter of short calls, the texture
+  with the signature, a breath into a call; one rising call, call-and-answer, barks and a falling
+  call, a knock and a dipping call; ...), so the takes of a family differ in structure. A Kit can
+  replace an archetype (`custom()`), e.g. the goblin's and the hag's cackles, the harpy's preening
+  and hovering, the naga's rattle, the dragon's frost breath.
+- The map is baked in: `make_creature_sfx.region_layer()` (moss and twigs / ember warmth / ice
+  shimmer) and the map's room (`REGION_ROOM`, 0.85x; boss roars and intros 1.25x). These takes get
+  no runtime region layer.
+- Levels: each family matches the median st-rms of its stand-in's region-neutral takes for the same
+  event (= `CREATURE_DB`); roars and intros sit `BOSS_DB` (+2 dB) above the stand-in's alert.
+  Lengths: `PACE` scales idle/alert/death, tails are cut 34 dB under the peak (42 dB for roars and
+  intros) with a fade, and a take that still runs past `CAP[event]` is faded out by then.
+- Seeds come from `take_seed("<species>_<event>", n, "gen_monsters-v1")`: re-running renders the
+  same files. Stale higher-numbered takes of a family are removed (never a protected file).
+- QA (2026-10-16): `sfx_qa.py game\assets\sfx\creatures --base merge-version-gate` PASS, 0 FAIL (83 WARN, all on files that existed at the base); the 180 new families (717 files, 34,046,384 bytes) reach max sim 0.895, max xc 0.45, loudness spread <= 1.75 dB. Across species (every take of a species against every take of the others for the same event, and against the stand-in's takes; scratch `xsim.py`, the sfx_qa similarity) the pairs that reached 0.90 (harpy/wendigo alert and windup, cyclops/troll hurt, single falling pain cries of the big voices) were redesigned; the re-check of those events tops out at 0.88.
+- Runtime: `creature_audio.gd` `play(app, species, event, at, variant, kind, size)` resolves the
+  family with `voice_name()`: the species' own takes when it has them (charge / dazed through
+  windup / hurt, roar / intro through alert), else the stand-in `kind` exactly as before (region
+  pools, region layer, pitched by `size_pitch()`). `shadow_beast.gd` passes species, stand-in and
+  height; a boss plays its intro once when it appears (flat) and roars on every third wind-up and
+  once as its health falls past half. `game/tests/monster_voice_check.gd` checks the counts against
+  the catalog, the resolution and the boss flow.

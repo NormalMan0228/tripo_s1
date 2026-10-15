@@ -29,6 +29,9 @@ const RANGES := {
 }
 ## Files whose name starts with a key use its range instead of the group's (monster footfalls are short).
 const RANGE_PREFIX := {"step_": [0.08, 1.0, 0.95, -28.0, -14.0]}
+## Boss roars and arrival stings (tools/sfx/gen_monsters.py <boss>_roar_<n>, <boss>_intro_<n>) are
+## long and sit about 2 dB above the alerts: files whose name contains a key use its range.
+const RANGE_PART := {"_roar_": [1.2, 3.3, 0.95, -20.0, -12.0], "_intro_": [1.5, 3.4, 0.95, -20.0, -12.0]}
 ## Loops (name contains "_loop"): longer, bigger, no fade at the ends; the wrap must be continuous.
 const LOOP_RANGE := [0.5, 10.0, 0.95, -30.0, -12.0]
 const LOOP_MAX_BYTES := 450000
@@ -106,6 +109,8 @@ func check_files() -> void:
 			var fspec: Array = LOOP_RANGE if looped else spec
 			for prefix in RANGE_PREFIX:
 				if group != "voice" and name.begins_with(prefix): fspec = RANGE_PREFIX[prefix]
+			for part in RANGE_PART:
+				if group == "creatures" and name.contains(part): fspec = RANGE_PART[part]
 			longest = maxf(longest, m.seconds)
 			check(m.seconds >= fspec[0] and m.seconds <= fspec[1], "%s length %.2f s outside %.2f..%.2f" % [path, m.seconds, fspec[0], fspec[1]])
 			check(m.peak <= fspec[2], "%s peak %.3f" % [path, m.peak])
