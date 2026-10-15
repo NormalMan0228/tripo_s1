@@ -236,6 +236,13 @@ def plot_view(plot, now):
                 growth_rate=1.0 if plot['watered'] else DRY_GROWTH_RATE)
 
 
+def public_crops(raw, now):
+    """What a visitor sees of the host's farm (multiplayer.village): the plots only, grown to now,
+    never the private inventory or fishing state."""
+    life = public(json.loads(raw) if raw else initial(), now)
+    return {'version': life['version'], 'plots': life['plots'], 'server_time': now}
+
+
 def public(state, now):
     result=copy.deepcopy(normalise(state))
     result['server_time']=now

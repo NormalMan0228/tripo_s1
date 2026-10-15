@@ -90,3 +90,20 @@ def test_presence_carries_the_held_item_and_the_wallet(world):
     seen = {p['username']: p for p in poll(c, hs[1], scene='village', x=1, z=2)['village']['players']}
     assert 'held' not in seen['alice']
     assert c.post('/v1/social/presence', headers=hs[0], json={'scene': 'village', 'held': 'Big Sword!'}).status_code == 422
+
+
+def test_a_shut_home_keeps_its_pieces_too(world):
+    # Security audit M2: a guest sent out (or locked out, or left behind) cannot fetch the home's pieces.
+    app, c, now, hs, _ = world
+    own = c.get('/v1/me', headers=hs[0]).json()['objects'][0]
+    post(c, hs[0], '/v1/objects/'+own['id']+'/placement', version=1, room='home', x=2, z=-2)
+    route = '/v1/social/village/objects/'+own['id']+'/model'
+    invite(c, hs[0], hs[1], 'bravo', 'village')
+    poll(c, hs[0], scene='home', x=0, z=3)
+    poll(c, hs[1], scene='home', x=1, z=2)
+    assert c.get(route, headers=hs[1]).content[:4] == b'glTF'
+    guest_id = c.get('/v1/social', headers=hs[1]).json()['self_id']
+    post(c, hs[0], '/v1/home/eject', user_id=guest_id)
+    assert c.get(route, headers=hs[1]).status_code == 404
+    # The owner always reads their own pieces.
+    assert c.get(route, headers=hs[0]).content[:4] == b'glTF'

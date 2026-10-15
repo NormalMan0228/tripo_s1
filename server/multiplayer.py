@@ -591,9 +591,17 @@ class Multiplayer:
 
         def visible_object(conn, user_id, object_id):
             # Also the pieces the host's residents have put up in their homes (npc_homes.py), not the stored ones.
-            row = conn.execute("SELECT o.* FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.id=? AND o.owner_id=? AND (o.state='placed' AND COALESCE(l.room,'village') IN ('village','home') OR o.state='gifted' AND EXISTS(SELECT 1 FROM npc_items i WHERE i.object_id=o.id AND i.state='placed'))", (object_id, host_for(conn, user_id))).fetchone()
+            row = conn.execute("SELECT o.*,COALESCE(l.room,'village') AS room FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.id=? AND o.owner_id=? AND (o.state='placed' AND COALESCE(l.room,'village') IN ('village','home') OR o.state='gifted' AND EXISTS(SELECT 1 FROM npc_items i WHERE i.object_id=o.id AND i.state='placed'))", (object_id, host_for(conn, user_id))).fetchone()
             if not row:
                 fail('object_not_found', 404)
+            # A guest reads the host's home pieces only while the home is open to them (home_access.py):
+            # not after a lock kept them out, a send-out or the host walking away (security audit M2).
+            host = row['owner_id']
+            if row['state'] == 'placed' and row['room'] == 'home' and user_id != host:
+                spot = conn.execute('SELECT scene,host_id,seen FROM mp_presence WHERE user_id=?', (user_id,)).fetchone()
+                inside = bool(spot and spot['scene'] == 'home' and spot['host_id'] == host and clock()-spot['seen'] <= HOST_GONE_SECONDS)
+                if not home_access.state(conn, user_id, host, clock(), inside)['open']:
+                    fail('object_not_found', 404)
             return row
 
         @app.get('/v1/social/village/objects/{object_id}/model')
