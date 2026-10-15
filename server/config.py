@@ -97,11 +97,29 @@ class Settings:
     paid_enabled: bool = field(default_factory=lambda: os.getenv('TRIPO_ENABLE_PAID', 'false').lower() == 'true')
     registration_code: str = field(default_factory=lambda: configured_secret('TRIPOTHON_REGISTRATION_CODE'), repr=False)
     daily_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_DAILY_REQUEST_LIMIT', '5')))
-    user_daily_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_USER_DAILY_REQUEST_LIMIT', '2')))
+    user_daily_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_USER_DAILY_REQUEST_LIMIT', '5')))
     # Crafts one account may ever start (0 = no lifetime limit; the daily limits still apply).
     user_total_generation_limit: int = field(default_factory=lambda: int(os.getenv('TRIPO_USER_TOTAL_REQUEST_LIMIT', '0')))
     # Stars a new live account starts with (judging servers let visitors craft right away).
-    welcome_stars: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_WELCOME_STARS', '0')))
+    welcome_stars: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_WELCOME_STARS', '150')))
+    max_stars_per_craft: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_MAX_STARS_PER_CRAFT', '200')))
+    tester_welcome_stars: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_TESTER_WELCOME_STARS', '1500')))
+    tester_credit_budget: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_TESTER_CREDIT_BUDGET', '10000')))
+
+    def limits_for(self, user):
+        """Only an operator-set database flag grants tester limits; names grant nothing."""
+        tester = bool(user['is_tester']) if user is not None and 'is_tester' in user.keys() else False
+        return AccountLimits(
+            daily_generation_limit=0 if tester else self.daily_generation_limit,
+            user_daily_generation_limit=0 if tester or self.mode != 'live' else self.user_daily_generation_limit,
+            user_total_generation_limit=0 if tester or self.mode != 'live' else self.user_total_generation_limit,
+            welcome_stars=self.tester_welcome_stars if tester else self.welcome_stars,
+            max_stars_per_craft=self.max_stars_per_craft,
+            max_credits_per_craft=self.max_credits_per_craft if self.mode == 'live' else 0,
+            tripo_credit_budget=self.tripo_credit_budget,
+            tester_credit_budget=self.tester_credit_budget if tester else 0,
+            is_tester=tester)
+
     # Selling at the village shop also pays starseeds: one per this many leaf coins of sales, at
     # most sell_stars_daily a day (the player's day; 0 = selling pays leaf coins only).
     sell_stars_daily: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SELL_STARS_DAILY', '15')))
@@ -194,6 +212,10 @@ class Settings:
             raise ValueError('TRIPOTHON_STAGE_SECONDS is for demo and QA servers only')
         if self.mode == 'live' and len(self.registration_code) < 24:
             raise ValueError('Live mode requires a registration invitation code of at least 24 characters')
+        if not 1 <= self.max_stars_per_craft <= 10000:
+            raise ValueError('Invalid craft star cap')
+        if not 0 <= self.tester_welcome_stars <= 10000 or not 1 <= self.tester_credit_budget <= 10000000:
+            raise ValueError('Invalid tester limits')
         if not 0 <= self.max_credits_per_craft <= 100000:
             raise ValueError('Invalid craft credit cap')
         if not 0 <= self.tripo_credit_budget <= 10000000:
@@ -204,7 +226,9 @@ class Settings:
             raise ValueError('Invalid account craft limit or welcome stars')
         if not 0 <= self.sell_stars_daily <= 1000 or not 1 <= self.sell_coins_per_star <= 1000:
             raise ValueError('TRIPOTHON_SELL_STARS_DAILY must be 0-1000 and TRIPOTHON_SELL_COINS_PER_STAR 1-1000')
-        if self.credit_reserve <= 0 or self.daily_generation_limit < 1 or self.user_daily_generation_limit < 1:
+        # TRIPO_DAILY_REQUEST_LIMIT=0: no server-wide daily count (the main server, 2026-10-16: the
+        # Tripo credit budget is the limit); each account keeps its own daily limit.
+        if self.credit_reserve <= 0 or self.daily_generation_limit < 0 or self.user_daily_generation_limit < 1:
             raise ValueError('Generation budget must be positive')
         if not 60 <= self.studio_part_deadline <= 86400:
             raise ValueError('Invalid studio part deadline')
@@ -254,3 +278,16 @@ class Settings:
         if self.usage_key and len(self.usage_key) < 32:
             raise ValueError('The usage key must be at least 32 characters (ops/usage_key.sh makes one)')
         self.data_dir.mkdir(parents=True, exist_ok=True)
+
+
+@dataclass(frozen=True)
+class AccountLimits:
+    daily_generation_limit: int
+    user_daily_generation_limit: int
+    user_total_generation_limit: int
+    welcome_stars: int
+    max_stars_per_craft: int
+    max_credits_per_craft: int
+    tripo_credit_budget: int
+    tester_credit_budget: int
+    is_tester: bool

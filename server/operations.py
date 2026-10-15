@@ -2,7 +2,7 @@
 import json
 import re
 import time
-import uuid
+from .economy import change_shards
 
 
 class OperationError(Exception):
@@ -57,9 +57,7 @@ def refund_not_submitted(db,job_id,reference,verified=False):
         charge=conn.execute("SELECT amount FROM ledger WHERE user_id=? AND reason='generation_charge' AND reference=?",(job['owner_id'],job_id)).fetchone()
         if not charge or charge['amount']!=-job['cost']:
             raise OperationError('charge_ledger_mismatch')
-        conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',
-                     (str(uuid.uuid4()),job['owner_id'],job['cost'],'generation_refund',job_id,time.time()))
-        conn.execute('UPDATE users SET shards=shards+? WHERE id=?',(job['cost'],job['owner_id']))
+        change_shards(conn,job['owner_id'],job['cost'],'generation_refund',job_id,time.time())
         conn.execute("UPDATE jobs SET state='failed',error_code='operator_verified_not_submitted',updated=? WHERE id=?",(time.time(),job_id))
         audit(conn,'operator_refund_not_submitted',job_id,reference)
     return {'id':job_id,'state':'failed','action':'game_currency_refunded_once'}
@@ -82,8 +80,7 @@ def refund_studio_not_submitted(db,job_id,reference,verified=False):
         entries=conn.execute("SELECT amount FROM ledger WHERE user_id=? AND reference=? AND reason IN ('studio_charge','studio_quote_charge','studio_refund','studio_resume_charge','studio_resume_refund')",(job['owner_id'],job_id)).fetchall()
         outstanding=-sum(r['amount'] for r in entries)
         if outstanding!=job['cost'] or outstanding<=0:raise OperationError('charge_ledger_mismatch')
-        conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',(str(uuid.uuid4()),job['owner_id'],outstanding,'studio_refund',job_id,time.time()))
-        conn.execute('UPDATE users SET shards=shards+? WHERE id=?',(outstanding,job['owner_id']))
+        change_shards(conn,job['owner_id'],outstanding,'studio_refund',job_id,time.time())
         conn.execute("UPDATE studio_jobs SET state='failed',error='operator_verified_not_submitted',updated=? WHERE id=?",(time.time(),job_id))
         audit(conn,'studio_operator_refund_not_submitted',job_id,reference)
     return {'id':job_id,'state':'failed','action':'game_currency_refunded_once','amount':outstanding}

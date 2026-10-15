@@ -3851,6 +3851,11 @@ func open_studio(destination: String="workshop") -> void:
 			refuse(tr("친구의 공방은 들어갈 수 없어요. 친구 집에는 놀러 갈 수 있어요."))
 			return
 		if destination=="home":
+			# The host's home opens only while the host is inside (server/home_access.py).
+			var shut: String=preload("res://scripts/home_door.gd").refusal(social.data.get("home"))
+			if not shut.is_empty():
+				refuse(shut)
+				return
 			session.visit_host=str(social.data.get("host_id",""))
 			session.visit_name=str(social.data.get("host_name",tr("친구")))
 	if busy or api.token.is_empty(): return

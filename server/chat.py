@@ -8,13 +8,19 @@ Lines live chat_retention_hours (24 h) and are delivered for an hour at most.
 Delivery (deliver) runs in the presence reply's read phase, after the poll's write committed
 (Database.write_then_read): a UNION ALL of one index range per room, never the writer slot.
 """
+import hashlib
+import json
+import uuid
+from typing import Literal
 import logging
 import math
 import re
 import sqlite3
 import threading
 from collections import defaultdict, deque
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
+from .models import Mutation
+from .whisper_presence import nearby
 from .chat_filter import ChatFilter
 from .security import clean_text, record_event
 from . import friends as social
@@ -45,12 +51,23 @@ log = logging.getLogger(__name__)
 # audit row (servers before chat v2 wrote one per line) a day. Money and crafting rows stay.
 SOCIAL_OPERATIONS = ('social_message', 'social_invite', 'social_home', 'social_eject', 'social_visit',
                      'social_block', 'social_unblock', 'social_prefs', 'social_report',
-                     'friend_request', 'friend_remove')
-SOCIAL_PREFIXES = ('invite:', 'friend_answer:')
+                     'friend_request', 'friend_remove', 'whisper_request')
+SOCIAL_PREFIXES = ('invite:', 'friend_answer:', 'whisper_answer:')
 REQUEST_KEEP_SECONDS = 2 * 86400
 AUDIT_KEEP_SECONDS = 30 * 86400
 
+WHISPER_COOLDOWN = 600
+WHISPER_PENDING_LIMIT = 5
+
 SCHEMA = '''
+CREATE TABLE IF NOT EXISTS whisper_requests (
+ id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), friend_id TEXT NOT NULL REFERENCES users(id),
+ sender_id TEXT NOT NULL REFERENCES users(id), recipient_id TEXT NOT NULL REFERENCES users(id),
+ state TEXT NOT NULL CHECK(state IN ('pending','accepted','declined')),
+ created REAL NOT NULL, expires REAL NOT NULL, UNIQUE(user_id,friend_id));
+CREATE INDEX IF NOT EXISTS whisper_requests_sender ON whisper_requests(sender_id,state,expires);
+CREATE INDEX IF NOT EXISTS whisper_requests_recipient ON whisper_requests(recipient_id,state,expires);
+
 CREATE INDEX IF NOT EXISTS mp_messages_user ON mp_messages(user_id,id);
 CREATE INDEX IF NOT EXISTS mp_messages_created ON mp_messages(created);
 CREATE UNIQUE INDEX IF NOT EXISTS mp_messages_request ON mp_messages(user_id,request_id) WHERE request_id IS NOT NULL;
@@ -143,6 +160,13 @@ class Chat:
             if previous['text'] != checked.text:
                 refuse('request_id_reused', 409)
             return {'ok': True, 'id': previous['id'], 'channel': channel_of(previous), 'text': previous['text'], 'masked': checked.masked > 0}
+        previous_request = conn.execute('SELECT operation,fingerprint,response FROM requests WHERE user_id=? AND request_id=?',
+                                        (uid, str(body.request_id))).fetchone()
+        if previous_request:
+            fingerprint = hashlib.sha256(body.model_dump_json().encode()).hexdigest()
+            if previous_request['operation'] != 'whisper_request' or previous_request['fingerprint'] != fingerprint:
+                refuse('request_id_reused', 409)
+            return json.loads(previous_request['response'])
         if checked.blocked:
             refuse('message_blocked', 422)
         muted = social.muted_until(conn, uid)
@@ -188,6 +212,10 @@ class Chat:
             wait = self.everyone.take('global', now)
             if wait:
                 refuse('global_chat_busy', 429, wait)
+        if channel == 'whisper':
+            requested = self.request_whisper(conn, uid, to_id, body, now)
+            if requested is not None:
+                return requested
         line_id = conn.execute('INSERT INTO mp_messages(room,user_id,text,created,channel,to_id,request_id) VALUES (?,?,?,?,?,?,?)',
                                (room, uid, checked.text, now, channel, to_id, str(body.request_id))).lastrowid
         conn.execute('DELETE FROM mp_messages WHERE created<?', (now-self.settings.chat_retention_hours*3600,))
@@ -204,12 +232,74 @@ class Chat:
         return reply
 
     def whisper_target(self, conn, uid, name, now):
-        """Whispers go to friends who are online and visible; every other case is one answer."""
+        """Friends retain unlimited range; strangers need fresh shared-space presence."""
         target = conn.execute('SELECT id FROM users WHERE username=?', ((name or '').lower(),)).fetchone() if name else None
-        if (not target or target['id'] == uid or not social.are_friends(conn, uid, target['id'])
-                or social.blocked_between(conn, uid, target['id']) or not social.visible_online(conn, target['id'], now)):
+        if (not target or target['id'] == uid or social.blocked_between(conn, uid, target['id'])
+                or not social.visible_online(conn, target['id'], now)):
             refuse('whisper_target_unavailable', 404)
+        if not social.are_friends(conn, uid, target['id']):
+            if not social.visible_online(conn, uid, now) or not nearby(conn, uid, target['id'], now):
+                refuse('whisper_target_unavailable', 404)
         return target['id']
+
+    def request_whisper(self, conn, uid, target, body, now):
+        if social.are_friends(conn, uid, target):
+            return None
+        pair = tuple(sorted((uid, target)))
+        row = conn.execute('SELECT * FROM whisper_requests WHERE user_id=? AND friend_id=?', pair).fetchone()
+        if row and row['state'] == 'accepted' and row['expires'] > now:
+            return None
+        if row and now-row['created'] < WHISPER_COOLDOWN:
+            refuse('whisper_request_limited', 429, row['created']+WHISPER_COOLDOWN-now)
+        pending = conn.execute("SELECT count(*) FROM whisper_requests WHERE sender_id=? AND state='pending' AND expires>?", (uid,now)).fetchone()[0]
+        if pending >= WHISPER_PENDING_LIMIT:
+            refuse('whisper_pending_limit', 429, WHISPER_COOLDOWN)
+        ident, expires = str(uuid.uuid4()), now+WHISPER_COOLDOWN
+        conn.execute('''INSERT INTO whisper_requests VALUES (?,?,?,?,?,?,?,?)
+                        ON CONFLICT(user_id,friend_id) DO UPDATE SET id=excluded.id,sender_id=excluded.sender_id,
+                        recipient_id=excluded.recipient_id,state=excluded.state,created=excluded.created,expires=excluded.expires''',
+                     (ident,*pair,uid,target,'pending',now,expires))
+        # No text is queued: acceptance grants permission for a NEW send only.
+        reply = {'ok': True, 'channel': 'whisper', 'state': 'requested', 'request': {'id': ident, 'to_id': target, 'expires': expires}}
+        conn.execute('INSERT INTO requests VALUES (?,?,?,?,?,?)',
+                     (uid,str(body.request_id),'whisper_request',hashlib.sha256(body.model_dump_json().encode()).hexdigest(),json.dumps(reply),now))
+        return reply
+
+    def bind_routes(self, app, auth, mutate):
+        @app.get('/v1/social/whispers/requests')
+        def requests(request: Request):
+            with self.db.read() as conn:
+                user = auth(conn, request)
+                now, uid = self.clock(), user['id']
+                rows = conn.execute('''SELECT r.id,r.sender_id,r.recipient_id,r.state,r.created,r.expires,
+                                       s.username AS from_name,t.username AS to_name
+                                       FROM whisper_requests r JOIN users s ON s.id=r.sender_id
+                                       JOIN users t ON t.id=r.recipient_id
+                                       WHERE (r.sender_id=? OR r.recipient_id=?) AND r.expires>?
+                                       ORDER BY r.created''', (uid,uid,now)).fetchall()
+                return {'requests': [dict(r) for r in rows if not social.blocked_between(conn,r['sender_id'],r['recipient_id'])]}
+
+        @app.post('/v1/social/whispers/requests/{whisper_id}/{decision}')
+        def answer(whisper_id: str, decision: Literal['accept','decline'], body: Mutation, request: Request):
+            def apply(conn, user):
+                now = self.clock()
+                row = conn.execute('SELECT * FROM whisper_requests WHERE id=? AND recipient_id=? AND expires>?',
+                                   (whisper_id,user['id'],now)).fetchone()
+                if not row or social.blocked_between(conn,row['sender_id'],row['recipient_id']):
+                    refuse('whisper_request_unavailable', 404)
+                state = 'accepted' if decision == 'accept' else 'declined'
+                if row['state'] != 'pending':
+                    if row['state'] == state:
+                        return {'ok': True, 'state': state, 'expires': row['expires']}
+                    refuse('whisper_request_closed', 409)
+                expires = row['expires']
+                if decision == 'accept':
+                    sender = conn.execute('SELECT username FROM users WHERE id=?', (row['sender_id'],)).fetchone()[0]
+                    self.whisper_target(conn,user['id'],sender,now)
+                    expires = (int(now//86400)+1)*86400
+                conn.execute('UPDATE whisper_requests SET state=?,expires=? WHERE id=?', (state,expires,whisper_id))
+                return {'ok': True, 'state': state, 'expires': expires}
+            return mutate(request,body,'whisper_answer:'+whisper_id+':'+decision,apply)
 
     # --- delivery -----------------------------------------------------------------------------
     def rooms_for(self, village_room, party_room):
@@ -334,6 +424,7 @@ def prune(conn, now, retention_hours=24):
             args += [prefix, prefix+'￿']
         return f'({column} IN ({marks}) OR {prefixes})', args
 
+    run('whisper_requests', f'DELETE FROM whisper_requests WHERE rowid IN (SELECT rowid FROM whisper_requests WHERE expires<? AND created<? LIMIT {PRUNE_BATCH})', (now,now-WHISPER_COOLDOWN))
     run('mp_messages', 'DELETE FROM mp_messages WHERE created<?', (now-retention_hours*3600,))
     run('mp_message_removals', 'DELETE FROM mp_message_removals WHERE created<?', (now-REMOVAL_SECONDS,))
     where, args = operations('operation')
