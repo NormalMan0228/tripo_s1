@@ -89,7 +89,11 @@ func look_at_door(door: Dictionary, size: float, yaw_degrees: float) -> void:
 	var out: Vector2 = (at-Vector2(door.center)).normalized().rotated(deg_to_rad(yaw_degrees))
 	var leaf := Doors.door_leaf(String(door.id))
 	var focus: Vector3 = Town.point(at, 1.2)
-	if leaf: focus = leaf.global_transform*Vector3(-Doors.leaf_size(String(door.id)).x*0.5, 1.1, 0)
+	if leaf:
+		# The opening's middle: cut doors hang under a DoorFrame at the opening's lower left corner.
+		var opening := Doors.leaf_size(String(door.id))
+		var holder := leaf.get_parent() as Node3D
+		focus = holder.global_transform*Vector3(opening.x*0.5, minf(opening.y*0.45, 1.1), 0) if Doors.table()[String(door.id)].has("leaves") else leaf.global_transform*Vector3(-opening.x*0.5, 1.1, 0)
 	app.camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	app.camera.size = size
 	app.camera.position = focus+Vector3(out.x, 0, out.y)*10.0+Vector3(0, 3.0, 0)

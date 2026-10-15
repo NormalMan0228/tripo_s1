@@ -96,7 +96,11 @@ func check_map(map: Node3D, label: String, enabled: Array, report: Dictionary) -
 		# The leaf took the building's exterior material (restyled with it).
 		var restyled := true
 		for s in leaf.mesh.get_surface_count():
-			if not (leaf.get_surface_override_material(s) is ShaderMaterial): restyled = false
+			# The exterior shader, or for a door's own glass parts the dressing's lit pane material.
+			# (A cut door's back, edges and handle keep their own plain colour materials.)
+			var drawn := leaf.get_surface_override_material(s)
+			var own := leaf.mesh.surface_get_material(s) as StandardMaterial3D
+			if not (drawn is ShaderMaterial or (drawn is StandardMaterial3D and (drawn as StandardMaterial3D).emission_enabled) or (drawn == null and own != null and own.albedo_texture == null)): restyled = false
 		if not restyled: failures.append("%s %s: the leaf is not drawn with the building's exterior material" % [label, id])
 		var at: Vector2 = door.at
 		var out: Vector2 = (at-Vector2(door.center)).normalized()

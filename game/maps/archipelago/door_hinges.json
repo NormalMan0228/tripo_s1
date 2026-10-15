@@ -96,7 +96,43 @@
 		],
 		"opens": "in"
 	},
+	"11_purple_house": {
+		"leaves": [
+			{
+				"hinge": "left",
+				"reason": "handle"
+			}
+		],
+		"opens": "in"
+	},
+	"12_blue_house": {
+		"leaves": [
+			{
+				"hinge": "right",
+				"reason": "wall"
+			}
+		],
+		"opens": "in"
+	},
 	"13_shop": {
+		"leaves": [
+			{
+				"hinge": "right",
+				"reason": "handle"
+			}
+		],
+		"opens": "in"
+	},
+	"16_blue_cottage": {
+		"leaves": [
+			{
+				"hinge": "left",
+				"reason": "handle"
+			}
+		],
+		"opens": "in"
+	},
+	"17_lighthouse": {
 		"leaves": [
 			{
 				"hinge": "right",

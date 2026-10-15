@@ -157,6 +157,14 @@ static func attach(building: Node3D, id: String) -> void:
 			piece.mesh = load(String(entry.mesh)) as ArrayMesh
 			piece.set_meta("door_local_lift", frame.origin.y+pivot.position.y)
 			pivot.add_child(piece)
+		# The cut wall's edge, in the wall's colour, round the doorway (tools/door_cutter.gd REVEAL).
+		var path := String(table()[id].get("reveal", ""))
+		if ResourceLoader.exists(path):
+			var edge := MeshInstance3D.new()
+			edge.name = "DoorReveal"
+			edge.mesh = load(path) as ArrayMesh
+			edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			holder.add_child(edge)
 		var hole := MeshInstance3D.new()
 		hole.name = "DoorOpening"
 		hole.mesh = doorway
