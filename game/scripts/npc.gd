@@ -19,6 +19,8 @@ const SWAP_PATIENCE := 45.0
 static var pinned := false
 var model: Node3D
 var turn_target := 0.0
+## How fast it turns toward its target (per second, eased); talking turns it quicker (main.gd talk_after_turn).
+var talk_rate := 5.0
 var player: Node3D
 var anim_player: AnimationPlayer
 var app: Node
@@ -101,7 +103,7 @@ func _process(delta: float) -> void:
 	if not visible: return
 	if is_instance_valid(player) and player.global_position.distance_to(global_position) < 4.0:
 		face_point(player.global_position)
-	rotation.y = lerp_angle(rotation.y, turn_target, 1.0 - exp(-5.0 * delta))
+	rotation.y = lerp_angle(rotation.y, turn_target, 1.0 - exp(-talk_rate * delta))
 	if not is_instance_valid(anim_player): return
 	anim_clock += delta
 	anim_frame += 1
