@@ -142,7 +142,12 @@ func run() -> void:
 	await create_timer(0.6).timeout
 	check(same_angle(app.preview, 37), "ghost eases to 37°")
 	await capture("object-turn-village.png")
-	app.preview.position = TownLayout.furniture_point(4, 3)
+	# A villager walking through the spot blocks it for a moment: take the first free one nearby.
+	for spot in [Vector2i(4, 3), Vector2i(5, 3), Vector2i(4, 4), Vector2i(6, 3), Vector2i(3, 4), Vector2i(5, 5), Vector2i(6, 6)]:
+		app.preview.position = TownLayout.furniture_point(spot.x, spot.y)
+		await physics_frame
+		if app.placement_problem().is_empty(): break
+	check(app.placement_problem().is_empty(), "a free spot to place on: " + app.placement_problem())
 	await app.place_preview()
 	check(not is_instance_valid(app.turn_hud), "turn bar leaves with the ghost")
 	check(app.loaded.has(village_id) and same_angle(app.loaded[village_id], 37), "placed at 37°")
@@ -150,6 +155,8 @@ func run() -> void:
 	await app.refresh_inventory()
 	check(app.loaded.has(village_id) and same_angle(app.loaded[village_id], 37), "37° survives a reload")
 	shaped(app.loaded.get(village_id), village_shape, "village reloaded")
+	# Without the placed object the rest cannot run: report instead of stopping on a script error (a hang).
+	if not app.loaded.has(village_id): finish(); return
 	var collision_size := collision_extent(app.loaded[village_id])
 	check(near(collision_size, app.loaded[village_id].get_meta("size"), 0.03), "collision boxes follow the shape (%s)" % str(collision_size))
 	# Another PC reshapes it: the kept model follows in place (no reload).
