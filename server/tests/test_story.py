@@ -252,3 +252,30 @@ def test_the_offline_designer_makes_a_real_chair():
     plan, _ = __import__('server.archetypes', fromlist=['fixture_design']).fixture_design('나무 의자')
     assert plan['category'] == 'seat' and len(plan['parts']) == 6
     assert story.RETURN_GIFT['parts'] and story.SENDER == 'regular'
+
+
+def test_the_epilogue_daon_then_the_forest_gate_once_each_and_reset_clears_it(world, tmp_path, capsys):
+    app, c, now = world
+    h = account(c, 'epilogue')
+    assert state(c, h)['events'] == []
+    event = lambda name: c.post('/v1/story/step', headers=h, json=mutation(action='event', event=name))
+    # Not before 모카 has her gift.
+    assert event('forest_told').json()['detail'] == 'story_not_done'
+    step(c, h, 'read_letter')
+    step(c, h, 'accept')
+    chair = next(o for o in c.get('/v1/me', headers=h).json()['objects'] if o['name'] == '환영의 나무 의자')
+    assert give(c, h, chair).status_code == 200
+    assert event('forest_gate').json()['detail'] == 'story_event_order'
+    assert event('lava_cave').status_code == 422
+    assert event('forest_told').json()['story']['events'] == ['forest_told']
+    now[0] += 3
+    # A second report changes nothing; the gate comes after.
+    assert event('forest_told').json()['story']['events'] == ['forest_told']
+    assert event('forest_gate').json()['story']['events'] == ['forest_told', 'forest_gate']
+    assert c.get('/v1/me', headers=h).json()['story']['events'] == ['forest_told', 'forest_gate']
+    data = str(app.state.settings.data_dir)
+    assert admin_cli.main(['story', 'show', 'epilogue', '--data-dir', data]) == 0
+    assert [e['event'] for e in json.loads(capsys.readouterr().out)['events']] == ['forest_told', 'forest_gate']
+    assert admin_cli.main(['story', 'reset', 'epilogue', '--data-dir', data]) == 0
+    capsys.readouterr()
+    assert state(c, h)['events'] == [] and state(c, h)['step'] == 'letter'

@@ -79,9 +79,12 @@ static var current: Node
 ## The residents' requests once the chapter is over (quests.gd, a child of this module): their
 ## tracker lines and guide goals go through this module's ("story_quest:*", "story_quest_book").
 const Quests := preload("res://scripts/quests.gd")
+## The epilogue after the gift: 다온 runs up with news from the forest (story_forest.gd).
+const StoryForest := preload("res://scripts/story_forest.gd")
 
 var app: Node
 var quests: Node
+var forest: Node
 ## server/story.py public() for this account ({} without the chapter or while visiting).
 var story: Dictionary = {}
 var busy := false
@@ -130,6 +133,10 @@ func setup(main: Node) -> void:
 	quests = Quests.new()
 	add_child(quests)
 	quests.setup(main, self)
+	forest = StoryForest.new()
+	forest.name = "StoryForest"
+	forest.story = self
+	add_child(forest)
 
 ## The residents' requests from the server (main.gd, with /v1/me).
 func adopt_quests(data) -> void:
@@ -199,8 +206,15 @@ func objective(base: String) -> String:
 			if stalled(): return "▸ "+tr("제작이 멈췄어요 · C로 다시 만들기")+"\n"+tr("어떤 모습이든 네 상상대로")
 			return "▸ "+tr("%s · 모카의 의자 만들기") % preload("res://scripts/rpg_ui.gd").key_text("craft")+"\n"+tr("어떤 모습이든 네 상상대로")
 		"done":
+			# 다온's news first (the way on to the forest), then 모카's letter at the mailbox.
+			var lines := PackedStringArray()
+			if is_instance_valid(forest) and forest.active():
+				lines.append("▸ "+tr("숲의 돌문으로 가기"))
+				lines.append(tr("다온: 돌문 너머에서 이상한 소리가 나요"))
 			if not bool(story.get("letter", {}).get("read", true)):
-				return "✦ "+tr("마을의 첫 선물 · 완료")+"\n▸ "+tr("우편함에서 모카의 편지 읽기")+"\n"+base
+				lines.append("✦ "+tr("마을의 첫 선물 · 완료"))
+				lines.append("▸ "+tr("우편함에서 모카의 편지 읽기"))
+			if not lines.is_empty(): return "\n".join(lines)+("\n"+base if not base.is_empty() else "")
 	return base
 
 ## The village's first toast while the chapter runs ("" for the usual welcome).
@@ -246,7 +260,7 @@ func story_line_key(line: String) -> String:
 	for entry in [["나의 집 · 책상 위 편지 읽기", "story_home"], ["카페 '빨간 지붕'에 인사하러 가기", "story_cafe"],
 			["완성! 모카에게 가져가기", "story_cafe"], ["C · 모카의 의자 만들기", "story_craft"],
 			["제작이 멈췄어요 · C로 다시 만들기", "story_craft"], ["그림이 나왔어요 · C로 확인하기", "story_craft"],
-			["우편함에서 모카의 편지 읽기", "story_mailbox"]]:
+			["우편함에서 모카의 편지 읽기", "story_mailbox"], ["숲의 돌문으로 가기", "story_forest"]]:
 		if line == tr(entry[0]): return entry[1]
 	return ""
 
@@ -265,6 +279,7 @@ func story_goal(key: String) -> Dictionary:
 		"story_mailbox":
 			var box := field_entry("mailbox")
 			goal = {"at":box.get("at", Vector2(-51.3, 22.6)), "name":tr("나의 우편함"), "key":key}
+		"story_forest": goal = {"at":Town.GATE, "name":tr("숲의 돌문"), "key":key}
 		_: return {}
 	var here := island_of(walker_at())
 	var there := island_of(goal.at)
@@ -313,7 +328,7 @@ func current_key() -> String:
 	for line in objective("").split("\n"):
 		if line.begins_with("▸ "):
 			var key := story_line_key(line.trim_prefix("▸ "))
-			if key in ["story_home", "story_cafe", "story_mailbox"]: return key
+			if key in ["story_home", "story_cafe", "story_mailbox", "story_forest"]: return key
 	return ""
 
 ## A new chapter goal is guided at once (unless the player turned the guide off); a guided one
@@ -356,7 +371,7 @@ func steer_guide() -> void:
 ## At a signpost on the way: its travel choices open with the goal's island on top.
 func arrived(key: String) -> void:
 	if not key.begins_with("story_") or not is_instance_valid(app) or is_instance_valid(app.get("village_modal")): return
-	var goal: Vector2 = {"story_home":Town.HOME_DOOR, "story_cafe":MOKA_AT}.get(key, Vector2.INF)
+	var goal: Vector2 = {"story_home":Town.HOME_DOOR, "story_cafe":MOKA_AT, "story_forest":Town.GATE}.get(key, Vector2.INF)
 	if key == "story_mailbox": goal = field_entry("mailbox").get("at", Vector2(-51.3, 22.6))
 	if key.begins_with(Quests.KEY) and is_instance_valid(quests):
 		quests.arrived(key)
@@ -392,6 +407,7 @@ func _process(delta: float) -> void:
 		return
 	if busy or story.is_empty() or visiting(): return
 	if step() == "craft": tell_done()
+	if step() == "done" and is_instance_valid(forest): forest.tick(delta)
 	if waiting():
 		greet_wait -= delta
 		if greet_wait <= 0.0: greet_nearby()
@@ -550,6 +566,12 @@ func accept(open_window: bool) -> void:
 	app.message(tr("새 목표 · 모카의 의자 만들기"))
 	if open_window: app.open_craft()
 
+## The epilogue's events (server/story.py EVENTS: forest_told, forest_gate), once each.
+func post_event(event: String) -> Dictionary:
+	var result: Dictionary = await app.api.post("/v1/story/step", app.api.mutation({"action":"event", "event":event}))
+	if result.ok and result.data.get("story") is Dictionary: adopt(result.data.story)
+	return result
+
 func post_step(action: String, npc := "") -> Dictionary:
 	var body := {"action":action}
 	if not npc.is_empty(): body["npc"] = npc
@@ -624,6 +646,8 @@ func finale(reply: Dictionary) -> void:
 	var note := NpcGifts.letters_note(reply)
 	if not note.is_empty():
 		get_tree().create_timer(5.6).timeout.connect(func(): if is_instance_valid(app): app.message(note))
+	# A few calm seconds later 다온 comes running with news from the forest (story_forest.gd).
+	if is_instance_valid(forest): forest.arm()
 
 # ------------------------------------------------------------------ the terrace
 
