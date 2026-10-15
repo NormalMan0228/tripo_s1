@@ -10,6 +10,7 @@ const SPRAY_AT := Vector3(.996,0,-7.937)
 const LoadPace = preload("res://scripts/load_pace.gd")
 ## Generated data (simplified collision, tools/bake_archipelago.gd), used only while it matches the inputs.
 const IslandBake = preload("res://maps/archipelago/island_bake.gd")
+const GroundChunks = preload("res://maps/archipelago/ground_chunks.gd")
 var camera: Camera3D
 var spray: MultiMeshInstance3D
 var mist: MultiMeshInstance3D
@@ -32,7 +33,8 @@ static func resource_paths() -> Array:
 			paths.append(ROOT+"assets/prop_lods/"+String(spec.id)+".glb")
 		for spec in layout.get("bridges", []):
 			if spec.has("fitted_model"): paths.append(String(spec.fitted_model))
-	# The baked island last: what it uses is in by then, one piece at a time.
+	# The chunked ground, then the baked island (which holds it): what it uses is in by then, one piece at a time.
+	if IslandBake.ground_ready(): paths.append(IslandBake.GROUND)
 	if IslandBake.island_ready(): paths.append(IslandBake.ISLAND)
 	return paths
 
@@ -101,6 +103,7 @@ func _build_from_bake() -> bool:
 	(get_node("Buildings") as Node).restore(self)
 	(get_node("Environment") as Node).restore(self)
 	_create_water_spray()
+	_start_ground_lights()
 	LoadPace.mark("island lists restored")
 	span = LoadPace.narrow(0.85, 1.0)
 	var shared := {}
@@ -216,6 +219,9 @@ func _build_runtime() -> void:
 			stone.shader = load(ROOT+"rock_surface.gdshader")
 			stone.set_shader_parameter("rock_detail", load(ROOT+"assets/v5/rock_detail.png"))
 			m.material_override = stone
+	if IslandBake.ground_ready():
+		var chunks := await LoadPace.fetch(IslandBake.GROUND) as PackedScene
+		if chunks: _install_ground(terrain, chunks)
 	var props := load(ROOT+"environment_layout.gd").new() as Node3D
 	props.name = "Environment"
 	add_child(props)
@@ -224,6 +230,7 @@ func _build_runtime() -> void:
 	LoadPace.span = span
 	IslandBake.drop_collision()
 	_create_water_spray()
+	_start_ground_lights()
 	if LoadPace.covered:
 		# Under the card the map is finished before it shows: rock walls paced (in one go they held a
 		# frame), then the roots and ramps that wait a few physics steps (bury waits fewer than ramp).
@@ -234,6 +241,30 @@ func _build_runtime() -> void:
 	_bury_tree_roots.call_deferred(props)
 	_ramp_open_structures.call_deferred()
 	_wall_tall_rocks.call_deferred(terrain)
+
+## The chunked ground (ground_chunks.gd, generated/ground.scn) in place of the levelled ground meshes
+## and the ocean surface as the LODs it is drawn with in place of the model's: the map's third child
+## ("Ground"; the terrain stays the first). The model's nodes stay, emptied and hidden: the ground's
+## colliders hang under them and the collision keys name them.
+func _install_ground(terrain: Node3D, packed: PackedScene) -> void:
+	var ground := packed.instantiate() as Node3D
+	if ground == null: return
+	add_child(ground)
+	var emptied := terrain.find_children("*__ground", "MeshInstance3D", true, false)
+	if ground.has_node("Ocean"): emptied += terrain.find_children("Ocean__central_surface", "MeshInstance3D", true, false)
+	for m: MeshInstance3D in emptied:
+		for surface in m.get_surface_override_material_count(): m.set_surface_override_material(surface, null)
+		m.material_override = null
+		m.mesh = null
+		m.visible = false
+
+## The chunks draw on their own render layer, which five lamps leave out (GroundChunks.DARK_LAMPS);
+## GroundChunks.all_lamp_pools (the default) puts them on layer 1 too, so every lamp pools on the ground.
+func _start_ground_lights() -> void:
+	var ground := get_node_or_null("Ground")
+	if ground == null or not GroundChunks.all_lamp_pools: return
+	for chunk in ground.get_children():
+		if chunk.has_meta("island"): (chunk as VisualInstance3D).layers |= 1
 
 ## Walkers could climb the shore rocks a step at a time and wedge themselves in
 ## the gaps. Every rock cluster taller than ROCK_WALL_HEIGHT gets an invisible
