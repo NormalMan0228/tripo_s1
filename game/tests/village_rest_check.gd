@@ -152,10 +152,11 @@ func run() -> void:
 	await create_timer(0.3).timeout
 
 	# A bed: sits on its edge and lies back along it, the body itself upright; Esc gets it up.
-	var bed := await craft_and_place(app, "침대", 4, 7)
+	# Off the south road (big pieces may not stand on a road, build_rules.gd village_problem).
+	var bed := await craft_and_place(app, "침대", 8, 7)
 	check(not bed.is_empty() and str(app.loaded[bed].rest) == "lie", "a crafted bed stands in the village as a bed (%s)" % [str(app.loaded[bed].rest) if app.loaded.has(bed) else "not placed"])
 	if bed.is_empty(): finish(); return
-	app.player.position = Town.furniture_point(4, 8.4)
+	app.player.position = Town.furniture_point(8, 8.4)
 	await create_timer(0.4).timeout
 	check("눕기" in prompt_of(app), "next to it the prompt offers to lie down (%s)" % prompt_of(app))
 	await app.village_furniture_event(bed, "click")
