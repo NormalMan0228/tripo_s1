@@ -1,0 +1,89 @@
+# Villagen craft request word list (server/craft_moderation.py): a craft whose description names one
+# of these is refused before anything is charged, with the section as the reason the game shows.
+# One entry per line under a [category] header (sexual, violence, hate, drugs); `+phrase` allows a
+# phrase that starts with a listed word. Swear words come from chat_words.txt (category words, Korean
+# matches only). Everything else (a real person, subtler requests, the reference photo) is judged by
+# the LLM designer, and Tripo's own content check backs both up.
+#
+# Hangul entries match at the START of a word (spaces between words ignored: "잘린 머리" = 잘린머리),
+# never inside one, so 바나나체어 is not 나체 and 처음부터 is not 음부. Still left out because they
+# start ordinary words: 성기 (성기사), 참수 (참수리), 시신 (시신경), 고어 (고어 문자), 마약 alone
+# (마약 방석, 마약 침대...: the LLM judges it). Latin entries are whole words (plurals included),
+# `word*` also as a word's start, two words a phrase.
+
+[sexual]
+섹스
+성행위
+성관계
+딜도
+바이브레이터
+자위기구
+성인용품
+포르노
+야동
+음란물
+음란한
+나체
+알몸
+젖꼭지
+유두
+음경
+음부
+sex
+porn*
+nudes
+nsfw
+hentai
+dildo
+penis
+vagina
+genitals
+nipple
+boobs
+erotic
+
+[violence]
+시체
+잘린머리
+잘린손
+잘린목
+피투성이
+피범벅
+고문기구
+자살
++자살방지
++자살예방
+자해
+corpse
+gory
+beheaded
+decapitated
+dismembered
+suicide
+self harm
+torture device
+
+[hate]
+나치
+하켄크로이츠
+스와스티카
+욱일기
+히틀러
+kkk
+nazi
+swastika
+hitler
+
+[drugs]
+필로폰
+히로뽕
+코카인
+헤로인
+대마초
+엑스터시
+cocaine
+heroin
+meth
+methamphetamine
+marijuana
+cannabis
