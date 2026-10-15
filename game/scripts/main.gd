@@ -175,7 +175,8 @@ var field_map: Control
 var warmth_ring: MeshInstance3D
 var strike_markers: Dictionary = {}
 var repeat_action := 0.0
-var return_dialog: ConfirmationDialog
+## The survival "end the expedition?" window (its RpgUi.window root) while it is open.
+var return_dialog: Control
 var last_camp_warning := -100.0
 var canopy_elapsed := 0.0
 var paused := false
@@ -556,16 +557,15 @@ func login_ui(page := "menu") -> void:
 				seed_spin.create_tween().set_loops().tween_property(seed_spin,"rotation",TAU,2.4).from(0.0)
 			RpgUi.label(row,tr("최신 버전인지 확인하고 있어요…"),19,Color("f1e8d2")).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		"menu":
-			var entries := [RpgUi.menu_button(body,tr("게임 시작"),func(): login_ui("login")),
-				RpgUi.menu_button(body,tr("설정"),func(): login_ui("settings")),
-				RpgUi.menu_button(body,tr("게임 종료"),func(): get_tree().quit())]
+			# The UI kit 2 menu plates: gold for the way in, night glass for the others.
+			var entries := [RpgUi.menu_button(body,tr("게임 시작"),func(): login_ui("login"),300.0,"MenuGoldButton"),
+				RpgUi.menu_button(body,tr("설정"),func(): login_ui("settings"),300.0,"MenuNightButton"),
+				RpgUi.menu_button(body,tr("게임 종료"),func(): get_tree().quit(),300.0,"MenuNightButton")]
 			# Arrow keys / pad move between the entries; Enter starts.
-			entries[0].theme_type_variation = "GoldButton"
-			entries[0].add_theme_color_override("font_hover_color",RpgUi.PAPER_INK)
-			entries[0].add_theme_color_override("font_focus_color",RpgUi.PAPER_INK)
 			for entry in entries:
 				entry.focus_mode = Control.FOCUS_ALL
 				entry.focus_entered.connect(func(): RpgUi.sfx("hover"))
+				if entry.theme_type_variation=="MenuNightButton": entry.add_theme_color_override("font_focus_color",RpgUi.HOVER)
 			entries[0].grab_focus.call_deferred()
 		"settings":
 			# Tabbed settings (scripts/settings_menu.gd) over the title art.
@@ -2347,18 +2347,37 @@ func confirm_return() -> void:
 		leave_run()
 		return
 	if is_instance_valid(return_dialog): return
-	return_dialog=ConfirmationDialog.new()
-	return_dialog.title=tr("탐험을 마칠까요?")
-	return_dialog.dialog_text=tr("지금 돌아가면 이번 도전이 끝나고 완주 보상을 받을 수 없습니다.\n")+(tr("동료의 탐험은 계속되며, 나의 완주 보상은 포기합니다.") if coop_run else (tr("현재 탐험은 일시 정지되어 있습니다.") if paused else tr("이 창을 보는 동안에도 생존 시간은 흐릅니다.")))
-	return_dialog.ok_button_text=tr("탐험을 마치고 귀환")
-	return_dialog.cancel_button_text=tr("계속 생존하기")
-	return_dialog.confirmed.connect(func():
-		return_dialog.queue_free()
-		leave_run())
-	return_dialog.canceled.connect(return_dialog.queue_free)
-	return_dialog.theme=ui.theme
-	add_child(return_dialog)
-	return_dialog.popup_centered(Vector2i(560,180))
+	# A night window like the pause menu's questions: over the pause menu (its layer and shade) when
+	# asked from there, otherwise on a layer of its own over the HUD, toasts and chat (the pause
+	# menu's layer), which goes with it. Esc or 계속 생존하기 keeps going.
+	var host: Control
+	var own_layer: CanvasLayer
+	if PauseMenu.is_open() and is_instance_valid(PauseMenu.current.root): host=PauseMenu.current.root
+	else:
+		own_layer=CanvasLayer.new()
+		own_layer.name="ReturnQuestion"
+		own_layer.layer=50
+		add_child(own_layer)
+		host=Control.new()
+		host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		host.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		host.theme=ui.theme
+		own_layer.add_child(host)
+	var w := RpgUi.window(host,tr("탐험을 마칠까요?"),{"kind":"night","width":440,"place":"centre","scroll":false,"id":"return_confirm"})
+	return_dialog=w.root
+	if own_layer: return_dialog.tree_exited.connect(func(): if is_instance_valid(own_layer) and not own_layer.is_queued_for_deletion(): own_layer.queue_free())
+	var words := RpgUi.label(w.body,tr("지금 돌아가면 이번 도전이 끝나고 완주 보상을 받을 수 없습니다.\n")+(tr("동료의 탐험은 계속되며, 나의 완주 보상은 포기합니다.") if coop_run else (tr("현재 탐험은 일시 정지되어 있습니다.") if paused else tr("이 창을 보는 동안에도 생존 시간은 흐릅니다."))),16)
+	words.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	words.custom_minimum_size.x=380
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation",RpgUi.GAP)
+	w.body.add_child(row)
+	var leave := RpgUi.button(row,tr("탐험을 마치고 귀환"),func():
+		RpgUi.close_window(w,false)
+		leave_run(),"primary","lg",true)
+	var stay := RpgUi.button(row,tr("계속 생존하기"),func(): RpgUi.close_window(w),"night","lg",true)
+	for b in [leave,stay]: b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	stay.grab_focus.call_deferred()
 
 ## Esc in survival: the pause menu (scripts/pause_menu.gd). Opening it sets paused
 ## and clears the pending action exactly as before, so tick_run sends nothing.
@@ -2695,7 +2714,7 @@ func text_input_active() -> bool:
 func world_movement_allowed() -> bool:
 	if PauseMenu.is_open() or VersionGate.is_blocked(): return false
 	if is_instance_valid(painter) or is_instance_valid(interaction_panel): return false
-	if busy or text_input_active() or is_instance_valid(village_modal) or is_instance_valid(preview):return false
+	if busy or text_input_active() or is_instance_valid(village_modal) or is_instance_valid(preview) or is_instance_valid(return_dialog):return false
 	if is_instance_valid(right) and right.get_parent().visible:return false
 	if screen=="village":return true
 	return screen=="survival" and not paused and not results_shown and network_failures==0 and run.get("status","")=="active" and run.get("hp", 0)>0
@@ -2856,6 +2875,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	# (Interact moved to G -> KEY_E); Esc, Enter, F-keys and digits report themselves.
 	var key := GameSettings.canonical_key(event)
 	var press: bool = event is InputEventKey and event.pressed and not event.echo
+	# The return question over survival: Esc keeps surviving; nothing behind it reacts meanwhile.
+	if is_instance_valid(return_dialog):
+		if press and key==KEY_ESCAPE: RpgUi.close_top(return_dialog.get_meta("rpg_window",{}))
+		if event is InputEventKey or event is InputEventMouseButton: get_viewport().set_input_as_handled()
+		return
 	if is_instance_valid(village_modal):
 		if press and key==KEY_E and life.mode=="fish":
 			life.reel()

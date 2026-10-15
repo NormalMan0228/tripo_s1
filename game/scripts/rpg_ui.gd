@@ -851,7 +851,10 @@ static func tab_strip(parent: Node, entries: Array, on_select: Callable, kind :=
 		b.theme_type_variation = "TabButton"
 		b.custom_minimum_size = Vector2(0, 32)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		if kind == "night": b.self_modulate = Color(0.86, 0.9, 0.95)
+		if kind == "night":
+			b.self_modulate = Color(0.86, 0.9, 0.95)
+			# The cool tint dims the muted ink too much on glass: unpicked tabs read in full ink.
+			for item in ["font_color", "font_hover_color", "font_focus_color"]: b.add_theme_color_override(item, PAPER_INK)
 		if not str(entry.get("icon", "")).is_empty():
 			b.icon = icon_texture(str(entry.icon))
 			b.expand_icon = true
@@ -1753,6 +1756,7 @@ static func night_theme() -> Theme:
 	for item in ["font_color","font_pressed_color","font_hover_pressed_color","font_focus_color"]: t.set_color(item,"Button",INK)
 	t.set_color("font_hover_color","Button",HOVER)
 	t.set_color("font_disabled_color","Button",Color(INK,.45))
+	t.set_stylebox("focus","Button",frame("focus"))
 	for spec in [["GoldButton","btn_gold",PAPER_INK,false],["PrimaryButton","btn_green",INK,true],["NightButton","btn_night",INK,true]]:
 		t.set_type_variation(spec[0],"Button")
 		_buttons(t,spec[0],spec[1],spec[2],spec[3])
@@ -1843,6 +1847,8 @@ static func _night_coverage(t: Theme) -> void:
 		t.set_stylebox("grabber_area_highlight", type, frame("bar_fill", Color("f3c96a")))
 		t.set_icon("grabber", type, half("slider_grabber"))
 		t.set_icon("grabber_highlight", type, half("slider_grabber_hover"))
+		# Keyboard / pad focus (the settings sliders): the same bright edge as the buttons.
+		t.set_stylebox("focus", type, frame("focus"))
 	t.set_stylebox("background", "ProgressBar", frame("bar_bg"))
 	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", AMBER))
 	t.set_color("font_color", "ProgressBar", INK)
@@ -1886,10 +1892,11 @@ static func shade(parent: Control, dim := 0.0) -> TextureRect:
 ## One window: title (T_WINDOW), optional head controls, the close key, a rule, then the body.
 ## opts: kind "paper" | "night"; width (WINDOW_W.standard); place "top" (y WINDOW_TOP) | "centre" |
 ## "bottom" (above the hotbar); modal (true: a shade, shared with a modal window already open on the
-## same host, and the world under it takes no clicks); action (the GameSettings action that opens
-## it: the close key is named with its key; "" names Esc); icon (a picture before the title);
-## on_close (what the close key does; default close_window); scroll (true: the body scrolls once the
-## card would pass the screen's foot); id; dim (shade opacity for a darker shade).
+## same host or on a host around it, and the world under it takes no clicks); action (the
+## GameSettings action that opens it: the close key is named with its key; "" names Esc); icon (a
+## picture before the title); on_close (what the close key does; default close_window); scroll
+## (true: the body scrolls once the card would pass the screen's foot); id; dim (shade opacity for a
+## darker shade); closable (false: no close key, and Esc routing leaves it open: a blocking screen).
 ## Returns {root, shade, card, head, title, body, close, id, action, kind, modal}; free it with
 ## close_window(w). Opens with pop_in and the open sound and joins the window stack.
 static func window(host: Control, title: String, opts := {}) -> Dictionary:
@@ -1935,13 +1942,14 @@ static func window(host: Control, title: String, opts := {}) -> Dictionary:
 	heading_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	head.add_child(heading_label)
+	var closable := bool(opts.get("closable", true))
 	var w := {"root":root, "shade":veil, "card":card, "head":head, "title":heading_label, "body":column, "close":null,
-		"id":id, "action":action, "kind":kind, "modal":modal}
+		"id":id, "action":action, "kind":kind, "modal":modal, "closable":closable}
 	var on_close: Callable = opts.get("on_close", Callable())
 	var shut := func() -> void:
 		if on_close.is_valid(): on_close.call()
 		else: close_window(w)
-	w["close"] = close_key(head, shut, action)
+	if closable: w["close"] = close_key(head, shut, action)
 	divider(column, PAPER_LINE if kind != "night" else Color(GOLD, .55))
 	if bool(opts.get("scroll", true)):
 		var scroll := ScrollContainer.new()
@@ -2096,10 +2104,11 @@ static func closes_window(w: Dictionary, key: int) -> bool:
 	return not action.is_empty() and key != KEY_NONE and key == GameSettings.default_key(action)
 
 ## Closes window `w` (the top of the stack when empty) the way its close key does, so the owner's
-## clean-up (on_close) runs. False when nothing could be closed (no window, or a dialogue).
+## clean-up (on_close) runs. False when nothing could be closed (no window, a dialogue, or a
+## blocking screen without a close key).
 static func close_top(w := {}) -> bool:
 	if w.is_empty(): w = top_window()
-	if w.is_empty(): return false
+	if w.is_empty() or not bool(w.get("closable", true)): return false
 	var close = w.get("close")
 	if close is BaseButton and is_instance_valid(close):
 		(close as BaseButton).pressed.emit()
@@ -2142,13 +2151,15 @@ static func _windows_changed() -> void:
 		if callback.is_valid(): callback.call(open.size(), top_kind)
 		else: window_listeners.erase(callback)
 
-## The shade of a modal window already open on this host, so a window opened from another reuses it.
+## The shade of a modal window already open on this host, or on a host around it (settings opened
+## from the pause menu lives inside the pause layer), so a window opened from another reuses it.
 static func _modal_shade(host: Control) -> TextureRect:
 	for w in windows():
 		var root: Control = w.get("root")
 		var veil = w.get("shade")
-		if bool(w.get("modal", false)) and is_instance_valid(root) and root.get_parent() == host and is_instance_valid(veil) and veil is TextureRect:
-			return veil
+		if not bool(w.get("modal", false)) or not is_instance_valid(root) or not is_instance_valid(veil) or not (veil is TextureRect): continue
+		var under := root.get_parent()
+		if under == host or (under != null and under.is_ancestor_of(host)): return veil
 	return null
 
 # ------------------------------------------------------------------ dialogue
@@ -2453,16 +2464,18 @@ static func dialogue_more(d: Dictionary, waiting: bool) -> void:
 		for child in d.choices.get_children(): child.queue_free()
 
 ## Large title-menu button: night glass with a gold edge that warms on hover.
-static func menu_button(parent: Node, value: String, callback: Callable, width := 300.0) -> Button:
+static func menu_button(parent: Node, value: String, callback: Callable, width := 300.0, variant := "NightButton") -> Button:
 	var b := Button.new()
 	b.text = value
-	b.custom_minimum_size = Vector2(width, 52)
+	b.custom_minimum_size = Vector2(width, BTN_MENU)
 	b.focus_mode = Control.FOCUS_NONE
-	b.theme_type_variation = "NightButton"
+	b.theme_type_variation = variant
 	b.add_theme_font_override("font", FONT_STRONG)
 	b.add_theme_font_size_override("font_size", 19)
-	b.add_theme_color_override("font_hover_color", HOVER)
-	b.add_theme_color_override("font_focus_color", HOVER)
+	# The UI kit 2 plates ("MenuGoldButton", "MenuNightButton") bring their own hover ink.
+	if variant == "NightButton":
+		b.add_theme_color_override("font_hover_color", HOVER)
+		b.add_theme_color_override("font_focus_color", HOVER)
 	b.pressed.connect(callback)
 	hover_motion(b, 1.03)
 	parent.add_child(b)

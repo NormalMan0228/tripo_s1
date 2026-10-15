@@ -6,15 +6,14 @@ extends Control
 ## saves the draft through GameSettings.commit(); 닫기 with unapplied changes asks
 ## first and otherwise restores the saved values. Keyboard and gamepad: arrows/stick
 ## move focus, Enter/A picks, PageUp/PageDown or LB/RB switch tabs, Esc closes.
+## It is a night RpgUi.window (tabs: RpgUi.tab_strip): opened from the pause menu it borrows the
+## pause page's shade, so the screen darkens once.
 const GameSettings = preload("res://scripts/game_settings.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 
 const TABS := [["graphics","그래픽"],["audio","사운드"],["controls","조작"],["gameplay","게임플레이"],["accessibility","접근성"]]
-const SELECTED := Color(0.36,0.28,0.14,.95)
-const IDLE := Color(0.09,0.12,0.13,.78)
-const HOVER := Color(0.24,0.2,0.12,.92)
 const SOFT := RpgUi.SOFT
-const WARN := Color("ffb38a")
+const WARN := RpgUi.WARM
 
 signal closed
 
@@ -22,7 +21,10 @@ var on_close: Callable
 var draft: Dictionary = {}
 var draft_bindings: Dictionary = {}
 var tab := "graphics"
+## The window (RpgUi.window description) and its card.
+var win: Dictionary = {}
 var panel: PanelContainer
+## The tab strip (RpgUi.tab_strip) and its buttons by tab id.
 var tab_bar: HBoxContainer
 var tab_buttons: Dictionary = {}
 var scroll: ScrollContainer
@@ -30,6 +32,7 @@ var rows: VBoxContainer
 var status: Label
 var apply_button: Button
 var capture: Dictionary = {}
+## The unsaved-changes question (its window root) while it is open.
 var confirm: Control
 var refreshing := false
 ## The saved values the draft started from (to tell edited rows from untouched ones).
@@ -47,7 +50,6 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	theme = _theme()
 	draft = GameSettings.snapshot()
 	draft_bindings = GameSettings.bindings.duplicate(true)
 	base = draft.duplicate()
@@ -57,38 +59,16 @@ func _ready() -> void:
 	_build()
 
 func _build() -> void:
-	tab_buttons.clear()
-	var shade := ColorRect.new()
-	shade.color = Color(0.02,0.03,0.035,.62)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(shade)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
-	panel = PanelContainer.new()
-	var frame := RpgUi.panel_style("night")
-	frame.content_margin_left = 36; frame.content_margin_right = 36; frame.content_margin_top = 28; frame.content_margin_bottom = 26
-	panel.add_theme_stylebox_override("panel", frame)
-	panel.theme = RpgUi.night_theme()
-	RpgUi.pop_in(panel)
-	center.add_child(panel)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	panel.add_child(column)
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 18)
-	column.add_child(head)
-	RpgUi.label(head, tr("설정"), 28, RpgUi.GOLD)
-	tab_bar = HBoxContainer.new()
-	tab_bar.add_theme_constant_override("separation", 6)
-	tab_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tab_bar.alignment = BoxContainer.ALIGNMENT_END
-	head.add_child(tab_bar)
-	for entry in TABS:
-		var b := _button(tab_bar, tr(entry[1]), func(): show_tab(entry[0]), 17)
-		b.custom_minimum_size = Vector2(112, 42)
-		tab_buttons[entry[0]] = b
-	column.add_child(_rule())
+	# A modal window already open around this one (the pause page) lends its shade.
+	win = RpgUi.window(self, tr("설정"), {"kind":"night", "width":_size().x, "place":"centre", "scroll":false,
+		"on_close":request_close, "id":"settings"})
+	panel = win.card
+	var column: VBoxContainer = win.body
+	column.add_theme_constant_override("separation", RpgUi.GAP)
+	var entries := []
+	for entry in TABS: entries.append({"id":entry[0], "label":tr(entry[1])})
+	tab_bar = RpgUi.tab_strip(column, entries, show_tab, "night")
+	tab_buttons = tab_bar.get_meta("buttons")
 	scroll = ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
@@ -98,18 +78,18 @@ func _build() -> void:
 	rows.add_theme_constant_override("separation", 6)
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(rows)
-	column.add_child(_rule())
+	RpgUi.divider(column, Color(RpgUi.GOLD, .55))
 	var foot := HBoxContainer.new()
-	foot.add_theme_constant_override("separation", 10)
+	foot.add_theme_constant_override("separation", RpgUi.GAP)
 	column.add_child(foot)
-	_button(foot, tr("기본값으로"), reset_tab, 16).custom_minimum_size = Vector2(150, 44)
+	RpgUi.button(foot, tr("기본값으로"), reset_tab, "night", "lg", true).custom_minimum_size.x = 150
 	status = RpgUi.label(foot, "", 14, SOFT, false)
 	status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	apply_button = _button(foot, tr("적용"), apply, 17)
-	apply_button.custom_minimum_size = Vector2(130, 44)
-	_button(foot, tr("닫기"), request_close, 17).custom_minimum_size = Vector2(130, 44)
+	apply_button = RpgUi.button(foot, tr("적용"), apply, "primary", "lg", true)
+	apply_button.custom_minimum_size.x = 130
+	RpgUi.button(foot, tr("닫기"), request_close, "night", "lg", true).custom_minimum_size.x = 130
 	_fit()
 	show_tab(tab)
 
@@ -126,16 +106,27 @@ func _exit_tree() -> void:
 	GameSettings.unlisten(_on_saved)
 	if get_viewport() and get_viewport().size_changed.is_connected(_fit): get_viewport().size_changed.disconnect(_fit)
 
+## The window's size: up to 1000 x 660, 20 px clear of every screen edge.
+func _size() -> Vector2:
+	var view := get_viewport_rect().size
+	return Vector2(minf(1000.0, view.x-40.0), minf(660.0, view.y-40.0))
+
+## Keeps the card centred at its size when the screen or the interface scale changes.
 func _fit() -> void:
 	if not is_instance_valid(panel): return
-	var view := get_viewport_rect().size
-	panel.custom_minimum_size = Vector2(minf(1000.0, view.x-40.0), minf(660.0, view.y-40.0))
+	var want := _size()
+	panel.custom_minimum_size = want
+	panel.offset_left = -want.x*0.5; panel.offset_right = want.x*0.5
+	panel.offset_top = -want.y*0.5; panel.offset_bottom = want.y*0.5
 
 # ------------------------------------------------------------------ tabs
 func show_tab(id: String) -> void:
+	# Picking the strip's tab calls back here (on_select) with the strip already on `id`.
+	if is_instance_valid(tab_bar) and str(tab_bar.get_meta("selected", "")) != id:
+		RpgUi.select_tab(tab_bar, id)
+		if str(tab_bar.get_meta("selected", "")) == id: return
 	tab = id
 	capture = {}
-	for key in tab_buttons: _paint(tab_buttons[key], key == id)
 	for child in rows.get_children():
 		rows.remove_child(child)
 		child.queue_free()
@@ -152,7 +143,7 @@ func show_tab(id: String) -> void:
 	var owner := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
 	if owner and is_ancestor_of(owner):
 		var first := _first_focus(rows)
-		_focus.call_deferred(first if first else tab_buttons[id])
+		if first: _focus.call_deferred(first)
 
 func next_tab(step: int) -> void:
 	var index := 0
@@ -251,32 +242,32 @@ func _choice(key: String, text: String, hint := "") -> void:
 	for choice in GameSettings.CHOICES[key]:
 		var value = choice[0]
 		var label: String = choice[1] if key == "language" else tr(choice[1])
-		var b := _button(box, label, func(): set_draft(key, value), 15)
-		b.custom_minimum_size = Vector2(maxf(86.0, label.length()*14.0+30.0), 40)
+		var b := _choice_button(box, label, func(): set_draft(key, value))
+		b.custom_minimum_size.x = maxf(86.0, label.length()*14.0+30.0)
 		if key == "preset" and value == "custom": b.disabled = true
 		b.set_meta("value", value)
 	box.set_meta("key", key)
-	_paint_group(box)
+	_mark_group(box)
 
 func _choice_bool(key: String, text: String, off_label: String, on_label: String) -> void:
 	var box := _row(text)
 	for pair in [[false, off_label],[true, on_label]]:
 		var value: bool = pair[0]
-		var b := _button(box, pair[1], func(): set_draft(key, value), 15)
-		b.custom_minimum_size = Vector2(140, 40)
+		var b := _choice_button(box, pair[1], func(): set_draft(key, value))
+		b.custom_minimum_size.x = 140
 		b.set_meta("value", value)
 	box.set_meta("key", key)
-	_paint_group(box)
+	_mark_group(box)
 
 func _toggle(key: String, text: String, hint := "") -> void:
 	var box := _row(text, hint)
 	for pair in [[false, tr("끄기")],[true, tr("켜기")]]:
 		var value: bool = pair[0]
-		var b := _button(box, pair[1], func(): set_draft(key, value), 15)
-		b.custom_minimum_size = Vector2(96, 40)
+		var b := _choice_button(box, pair[1], func(): set_draft(key, value))
+		b.custom_minimum_size.x = 96
 		b.set_meta("value", value)
 	box.set_meta("key", key)
-	_paint_group(box)
+	_mark_group(box)
 
 func _slider(key: String, text: String, hint := "") -> void:
 	var box := _row(text, hint)
@@ -307,10 +298,10 @@ func _binding_row(action: String, text: String) -> void:
 	var box := _row(text)
 	for slot in 2:
 		var key: int = draft_bindings[action][slot]
-		var b := _button(box, GameSettings.key_name(key) if key != KEY_NONE else tr("비어 있음"), func(): start_capture(action, slot), 16)
-		b.custom_minimum_size = Vector2(150, 40)
+		var b := _choice_button(box, GameSettings.key_name(key) if key != KEY_NONE else tr("비어 있음"), func(): start_capture(action, slot))
+		b.custom_minimum_size.x = 150
 		b.name = "Bind_%s_%d" % [action, slot]
-		if key == KEY_NONE: b.add_theme_color_override("font_color", Color(1,1,1,.4))
+		if key == KEY_NONE: b.add_theme_color_override("font_color", Color(RpgUi.INK, .4))
 
 # ------------------------------------------------------------------ draft
 func set_draft(key: String, value, live := true) -> void:
@@ -329,17 +320,17 @@ func _refresh_rows() -> void:
 	for line in rows.get_children():
 		if not line is HBoxContainer or line.get_child_count() < 2: continue
 		var box: Node = line.get_child(1)
-		if box.has_meta("key"): _paint_group(box)
+		if box.has_meta("key"): _mark_group(box)
 		for child in box.get_children():
 			if child is HSlider:
 				var key := str(child.name).trim_prefix("Slider_")
 				if draft.has(key) and int(child.value) != int(draft[key]): child.value = float(draft[key])
 	refreshing = false
 
-func _paint_group(box: Node) -> void:
+func _mark_group(box: Node) -> void:
 	var key: String = box.get_meta("key")
 	for b in box.get_children():
-		if b is Button: _paint(b, b.get_meta("value") == draft.get(key))
+		if b is Button: _mark(b, b.get_meta("value") == draft.get(key))
 
 func dirty() -> bool:
 	var saved := GameSettings.snapshot()
@@ -379,11 +370,10 @@ func apply() -> void:
 	base = draft.duplicate()
 	draft_bindings = GameSettings.bindings.duplicate(true)
 	if language_changed:
-		# Every label on the panel was built in the old language.
-		for child in get_children():
-			remove_child(child)
-			child.queue_free()
+		# Every label on the panel was built in the old language: a new window takes over the shade.
+		var old := win
 		_build()
+		RpgUi.close_window(old, false)
 	else:
 		show_tab(tab)
 	_update_status(tr("설정을 저장했어요."))
@@ -393,40 +383,36 @@ func request_close() -> void:
 	if not dirty():
 		close()
 		return
-	confirm = Control.new()
-	confirm.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	confirm.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(confirm)
-	var dim := ColorRect.new()
-	dim.color = Color(0,0,0,.45)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	confirm.add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	confirm.add_child(center)
-	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", RpgUi.panel_style("night"))
-	center.add_child(card)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 14)
-	card.add_child(column)
-	RpgUi.label(column, tr("적용하지 않은 변경 사항이 있어요."), 19)
+	# A small window over the settings one, on the same shade.
+	var w := RpgUi.window(self, tr("닫기"), {"kind":"night", "width":540, "place":"centre", "scroll":false,
+		"on_close":cancel_close, "id":"settings_unsaved"})
+	confirm = w.root
+	RpgUi.label(w.body, tr("적용하지 않은 변경 사항이 있어요."), 19)
 	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 8)
-	column.add_child(buttons)
-	var first := _button(buttons, tr("적용하고 닫기"), func():
+	buttons.add_theme_constant_override("separation", RpgUi.GAP_S)
+	w.body.add_child(buttons)
+	var first := RpgUi.button(buttons, tr("적용하고 닫기"), func():
 		apply()
-		close(), 16)
-	_button(buttons, tr("버리고 닫기"), close, 16)
-	_button(buttons, tr("취소"), func():
-		confirm.queue_free()
-		confirm = null
-		apply_button.grab_focus(), 16)
-	for b in buttons.get_children(): b.custom_minimum_size = Vector2(150, 44)
+		close(), "primary", "lg", true)
+	RpgUi.button(buttons, tr("버리고 닫기"), close, "night", "lg", true)
+	RpgUi.button(buttons, tr("취소"), cancel_close, "night", "lg", true)
+	for b in buttons.get_children(): b.custom_minimum_size.x = 150
 	_focus.call_deferred(first)
+
+## Back from the unsaved-changes question to the settings.
+func cancel_close() -> void:
+	if not is_instance_valid(confirm): return
+	RpgUi.close_window(confirm.get_meta("rpg_window", {}))
+	confirm = null
+	if is_instance_valid(apply_button) and apply_button.is_visible_in_tree() and not apply_button.disabled: apply_button.grab_focus()
 
 func close() -> void:
 	GameSettings.end_preview()
+	# Leave the window stack before the owner reopens its page, so that page takes the shade back.
+	if is_instance_valid(confirm): RpgUi.close_window(confirm.get_meta("rpg_window", {}), false)
+	confirm = null
+	if not win.is_empty(): RpgUi.close_window(win, false)
+	win = {}
 	closed.emit()
 	if on_close.is_valid(): on_close.call()
 	queue_free()
@@ -437,7 +423,7 @@ func start_capture(action: String, slot: int) -> void:
 	var b := rows.find_child("Bind_%s_%d" % [action, slot], true, false) as Button
 	if b:
 		b.text = tr("키를 누르세요…")
-		_paint(b, true)
+		_mark(b, true)
 	_update_status(tr("%s: 새 키를 누르세요.") % tr(GameSettings.action_label(action)))
 
 func finish_capture(key: int) -> void:
@@ -481,8 +467,7 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
 			KEY_ESCAPE:
-				if is_instance_valid(confirm):
-					confirm.queue_free(); confirm = null
+				if is_instance_valid(confirm): cancel_close()
 				else: request_close()
 				get_viewport().set_input_as_handled()
 			KEY_PAGEUP:
@@ -502,37 +487,13 @@ func _is_navigation(event: InputEvent) -> bool:
 	return false
 
 # ------------------------------------------------------------------ look
-func _button(parent: Node, text: String, callback: Callable, size := 16) -> Button:
-	var b := RpgUi.menu_button(parent, text, callback, 0.0)
-	b.focus_mode = Control.FOCUS_ALL
-	b.add_theme_font_size_override("font_size", size)
-	b.custom_minimum_size = Vector2(0, 40)
-	_paint(b, false)
-	return b
+## A choice, toggle or key button: the shared night key; arrows and the pad reach it.
+func _choice_button(parent: Node, text: String, callback: Callable) -> Button:
+	return RpgUi.button(parent, text, callback, "night", "md", true)
 
-## Selected buttons glow gold; focus (keyboard/gamepad) gets a bright edge.
-func _paint(b: Button, selected: bool) -> void:
-	var look := "btn_gold_" if selected else "btn_night_"
-	for state in ["normal","hover","pressed","disabled"]:
-		b.add_theme_stylebox_override(state, RpgUi.frame(look + state if not (selected and state == "disabled") else "btn_gold_normal"))
-	b.add_theme_stylebox_override("focus", RpgUi.frame("focus"))
-	var ink := RpgUi.PAPER_INK if selected else RpgUi.INK
-	for item in ["font_color","font_focus_color","font_pressed_color","font_hover_pressed_color"]: b.add_theme_color_override(item, ink)
-	b.add_theme_color_override("font_hover_color", RpgUi.PAPER_INK if selected else RpgUi.HOVER)
-	b.add_theme_color_override("font_disabled_color", ink if selected else Color(1,1,1,.35))
-	b.add_theme_constant_override("outline_size", 0 if selected else 3)
-
-func _box(fill: Color, border: Color, width: int) -> StyleBoxFlat:
-	var box := RpgUi.style(fill, 9, border, width)
-	box.shadow_size = 0
-	box.content_margin_left = 12; box.content_margin_right = 12
-	box.content_margin_top = 6; box.content_margin_bottom = 6
-	return box
-
-func _rule() -> Control:
-	var holder := VBoxContainer.new()
-	RpgUi.divider(holder, Color(RpgUi.GOLD, .6))
-	return holder
+## The picked choice wears the gold key, the others the night one (theme variations, no local styles).
+func _mark(b: Button, selected: bool) -> void:
+	b.theme_type_variation = "GoldButton" if selected else "NightButton"
 
 func _first_focus(node: Node) -> Control:
 	for child in node.get_children():
@@ -540,39 +501,6 @@ func _first_focus(node: Node) -> Control:
 		var found := _first_focus(child)
 		if found: return found
 	return null
-
-func _theme() -> Theme:
-	var t := Theme.new()
-	var track := RpgUi.frame("bar_bg")
-	track.set_content_margin_all(3)
-	t.set_stylebox("slider", "HSlider", track)
-	t.set_stylebox("grabber_area", "HSlider", RpgUi.frame("bar_fill", RpgUi.AMBER))
-	t.set_stylebox("grabber_area_highlight", "HSlider", RpgUi.frame("bar_fill", Color("f3c96a")))
-	t.set_icon("grabber", "HSlider", RpgUi.half("slider_grabber"))
-	t.set_icon("grabber_highlight", "HSlider", RpgUi.half("slider_grabber_hover"))
-	t.set_icon("grabber_disabled", "HSlider", _knob(Color(1,1,1,.3)))
-	var focus := StyleBoxFlat.new()
-	focus.draw_center = false
-	focus.border_color = Color("fff0b8"); focus.set_border_width_all(2); focus.set_corner_radius_all(6)
-	focus.expand_margin_left = 6; focus.expand_margin_right = 6; focus.expand_margin_top = 2; focus.expand_margin_bottom = 2
-	t.set_stylebox("focus", "HSlider", focus)
-	t.set_stylebox("scroll", "VScrollBar", RpgUi.frame("scroll_track"))
-	t.set_stylebox("grabber", "VScrollBar", RpgUi.frame("scroll_grabber"))
-	t.set_stylebox("grabber_highlight", "VScrollBar", RpgUi.frame("scroll_grabber_hover"))
-	t.set_stylebox("grabber_pressed", "VScrollBar", RpgUi.frame("scroll_grabber_hover"))
-	return t
-
-static func _knob(color: Color) -> ImageTexture:
-	var size := 22
-	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
-	var c := Vector2(size, size)*0.5
-	for y in size:
-		for x in size:
-			var d := Vector2(x+0.5, y+0.5).distance_to(c)
-			var edge := clampf(size*0.5-d, 0.0, 1.0)
-			var ring := clampf(size*0.5-2.5-d, 0.0, 1.0)
-			image.set_pixel(x, y, Color(Color("3b2d1c").lerp(color, ring), edge))
-	return ImageTexture.create_from_image(image)
 
 ## Focus once the frame settles, if the control is still on screen.
 func _focus(control) -> void:
