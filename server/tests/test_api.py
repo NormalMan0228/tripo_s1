@@ -193,7 +193,7 @@ def test_live_transport_pipeline_without_spending(tmp_path):
     with TestClient(app,base_url='https://testserver') as c:
         body={'username':'alice','password':'Test-password-123','invitation':settings.registration_code}
         token=c.post('/v1/auth/register',json=body).json()['token']; h={'Authorization':'Bearer '+token}
-        assert c.get('/v1/me',headers=h).json()['shards']==0
+        assert c.get('/v1/me',headers=h).json()['shards']==150
         # Server-side test grant, deliberately not exposed as an endpoint.
         with app.state.db.transaction() as conn: conn.execute('UPDATE users SET shards=100')
         job=c.post('/v1/generations',headers=h,json=mutation(prompt='wooden stool')).json()

@@ -10,6 +10,7 @@ import zlib
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .asset_vm import ProgramError, name
+from .craft_styles import proportions
 
 
 class Part(BaseModel):
@@ -70,21 +71,31 @@ def validate_plan(data):
     return plan
 
 
-def simple_plan(request, prop='high-quality semi-realistic game prop with believable proportions and real materials, not toy-like'):
+def simple_plan(request, prop='high-quality semi-realistic game prop with believable proportions and real materials, not toy-like', dims=None):
     """The cheapest craft: the player's words go straight to Tripo as one static
-    mesh. No LLM design step, no moving parts."""
+    mesh. No LLM design step, no moving parts. dims: the box the player dragged
+    ([width, height, depth] m), named in the prompt and used as the part's size."""
     words=' '.join(request.split())[:300]
+    box=[float(v) for v in dims] if dims else [1.2,1.2,1.2]
+    shape=(', '+proportions(dims)) if dims else ''
     return validate_plan({'title':words[:60] or 'object','category':'decoration','parts':[{
-        'id':'whole','parent':'','prompt':('A single '+prop+', clean silhouette, no base plate: '+words)[:800],
-        'shape':'box','size':[1.2,1.2,1.2],'position':[0,.6,0],'color':'#c9a46e'}]})
+        'id':'whole','parent':'','prompt':('A single '+prop+', clean silhouette, no base plate'+shape+': '+words)[:800],
+        'shape':'box','size':box,'position':[0,box[1]/2,0],'color':'#c9a46e'}]})
 
 
-def static_plan(plan,request,prop='high-quality semi-realistic game prop with believable proportions and real materials'):
+def static_plan(plan,request,prop='high-quality semi-realistic game prop with believable proportions and real materials',dims=None):
     """Static furniture is one complete mesh, never separately billed hidden parts. Its box is the
-    designed parts' overall extent, so the game keeps the designer's real-world size."""
-    if len(plan['parts'])==1:return plan
+    designed parts' overall extent, so the game keeps the designer's real-world size. dims (the box
+    the player dragged) puts its proportions into the Tripo prompt."""
+    shape=(proportions(dims)[0].upper()+proportions(dims)[1:]+'. ') if dims else ''
+    if len(plan['parts'])==1:
+        part=dict(plan['parts'][0]);words=str(part.get('prompt',''))
+        # simple_plan names the box already.
+        if not shape or proportions(dims) in words:return plan
+        part['prompt']=(shape+words)[:800]
+        return {**plan,'parts':[part]}
     first=plan['parts'][0]
-    prompt=('Complete assembled static furniture, '+prop+'. '+request+' Visual components: '+
+    prompt=('Complete assembled static furniture, '+prop+'. '+shape+request+' Visual components: '+
             '; '.join(p['prompt'] for p in plan['parts']))[:800]
     return validate_plan({'title':plan['title'],'category':plan['category'],'parts':[{
         'id':'whole','parent':'','prompt':prompt,'shape':first['shape'],

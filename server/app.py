@@ -17,12 +17,15 @@ from fastapi.responses import JSONResponse, Response
 from .config import Settings, ROOT, server_version
 from .client_policy import ClientPolicy, ClientGate, FILE_NAME as CLIENT_POLICY_FILE
 from .database import Database
+from . import economy
 from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction, PrefsUpdate
 from .provider import TripoProvider, ProviderError, validate_glb
-from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial
+from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial, last_spot
 from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
-                       LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER, ADMIN_DAILY_SHARD_LIMIT)
+                       LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER)
 from .stored_assets import read_glb
+from .studio_pricing import mesh_credits
+from .account_limits import daily_counts, reserve_tester_credits, record_tester_bill
 
 def uid(): return str(uuid.uuid4())
 def digest(s): return hashlib.sha256(s.encode()).hexdigest()
@@ -66,6 +69,14 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         # Signed in before a maintenance began (or an operator's logout-all): the game returns to its title.
         floor = client_policy.session_floor()
         if floor and row['session_created'] <= floor: fail('session_reset',401)
+        if row['daily_utc_offset'] is None:
+            offset = homestead.UTC_OFFSET.get()
+            conn.execute('UPDATE users SET daily_utc_offset=? WHERE id=? AND daily_utc_offset IS NULL', (offset, row['id']))
+            # Read back the winner if two first requests raced.
+            offset = conn.execute('SELECT daily_utc_offset FROM users WHERE id=?', (row['id'],)).fetchone()[0]
+        else:
+            offset = row['daily_utc_offset']
+        homestead.DAILY_OFFSET.set(offset)
         return row
 
     def purge_sessions(conn):
@@ -82,13 +93,14 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         conn.execute('DELETE FROM sessions WHERE user_id=? AND token_hash NOT IN (SELECT token_hash FROM sessions '
                      'WHERE user_id=? ORDER BY expires DESC,rowid DESC LIMIT ?)',(user_id,user_id,MAX_SESSIONS_PER_USER))
         role = conn.execute('SELECT role FROM users WHERE id=?',(user_id,)).fetchone()[0]
-        # The saved look comes with the sign-in so the first walker the client draws already wears it.
-        return {'token':token,'mode':settings.mode,'role':role,'profile':profile(conn,user_id)}
+        # The saved look comes with the sign-in so the first walker the client draws already wears it,
+        # and where to pick up: the last spot in the player's own village or home, or waking in bed
+        # (server/last_spot.py; None on a first sign-in).
+        return {'token':token,'mode':settings.mode,'role':role,'profile':profile(conn,user_id),'resume':last_spot.resume(conn,user_id,now)}
 
     def money(conn,user_id,amount,reason,reference):
-        conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',(uid(),user_id,amount,reason,reference,clock()))
-        if conn.execute('UPDATE users SET shards=shards+? WHERE id=? AND shards+?>=0',
-                        (amount,user_id,amount)).rowcount != 1: fail('insufficient_shards')
+        economy.change_shards(conn,user_id,amount,reason,reference,clock(),
+                              sell_daily=settings.sell_stars_daily,offset=homestead.DAILY_OFFSET.get() or 0)
 
     def own(conn,user_id,object_id,version=None):
         # A piece given to a village resident (npc_homes.py) is no longer the player's to use.
@@ -145,11 +157,15 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                     # The global worker serializes balance checks and provider submissions.
                     available = await provider.balance()
                     if available < settings.credit_reserve: raise ProviderError('insufficient_provider_credit')
+                    with db.transaction() as conn:
+                        limits=settings.limits_for(conn.execute('SELECT * FROM users WHERE id=?',(job['owner_id'],)).fetchone())
+                        reserve_tester_credits(conn,limits,job_id+':legacy',mesh_credits(settings.tripo_model,False,False))
                     task = await provider.submit(job['prompt'])
                     with db.transaction() as conn:
                         conn.execute("UPDATE jobs SET state='generating',provider_task=?,updated=? WHERE id=?",(task,clock(),job_id))
                     job['provider_task'] = task
                 result = await provider.task(job['provider_task'])
+                with db.transaction() as conn:record_tester_bill(conn,job_id+':legacy',result.get('credits_consumed'))
                 if result.get('status') in ('queued','running'): return
                 if result.get('status') in ('failed','cancelled'): raise ProviderError('generation_failed')
                 if result.get('status') != 'success': raise ProviderError('upstream_schema',uncertain=True)
@@ -239,6 +255,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         # Security headers (nosniff, no-store, ...) are set by SecurityHeadersMiddleware.
         return await call_next(request)
 
+    @app.exception_handler(economy.EconomyRejected)
+    async def economy_rejected(request, error):
+        # The failed request's transaction has rolled back; evidence must survive it.
+        with db.transaction() as conn:
+            economy.flag(conn,error.user_id,error.detail,error.evidence,clock())
+        return JSONResponse({'detail':error.detail},status_code=error.status_code)
+
     @app.exception_handler(RequestValidationError)
     async def validation_error(request,exc):
         # Crafting has its own wording (a too short or too long description), not the login form's.
@@ -247,7 +270,16 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             # drops just those and keeps polling (server/multiplayer.py Presence).
             fields=sorted({str(e['loc'][1]) for e in exc.errors() if len(e.get('loc',()))>1 and e['loc'][0]=='body'})
             return JSONResponse({'detail':'invalid_request','fields':fields},422)
-        return JSONResponse({'detail':'invalid_craft_request' if request.url.path.startswith('/v1/studio/') else 'invalid_request'},422)
+        if request.url.path.startswith('/v1/studio/'):
+            # A refused reference photo says why (too large, too small, not a picture), not the description's words.
+            from .asset_studio import IMAGE_CODES
+            for error in exc.errors():
+                if tuple(error.get('loc',()))[-1:]==('image',):
+                    code=str((error.get('ctx') or {}).get('error') or '')
+                    if error.get('type')=='string_too_long':code='image_too_large'
+                    return JSONResponse({'detail':code if code in IMAGE_CODES else 'invalid_image'},422)
+            return JSONResponse({'detail':'invalid_craft_request'},422)
+        return JSONResponse({'detail':'invalid_request'},422)
 
     @app.exception_handler(ProviderError)
     async def protected_asset_error(request,exc):
@@ -258,9 +290,10 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def health():
         data=health_fields()
         # School servers spend from a fixed Tripo budget; the update script prints this line.
-        if settings.tripo_credit_budget:
+        limits=settings.limits_for(None)
+        if limits.tripo_credit_budget:
             from .asset_studio import tripo_credits_committed
-            with db.transaction() as conn:data['tripo_budget']={'used':round(tripo_credits_committed(conn)),'total':settings.tripo_credit_budget}
+            with db.transaction() as conn:data['tripo_budget']={'used':round(tripo_credits_committed(conn)),'total':limits.tripo_credit_budget}
         return data
 
     # The game's light check (about once a minute) and the download information: no database work.
@@ -319,10 +352,6 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         def grant(conn,user):
             if user['role']!='admin': fail('admin_only',403)
             if body.shards:
-                day=int(clock()//86400)*86400
-                granted=conn.execute("SELECT COALESCE(SUM(amount),0) FROM ledger WHERE user_id=? AND reason='admin_grant' AND created>=?",
-                                     (user['id'],day)).fetchone()[0]
-                if granted+body.shards>ADMIN_DAILY_SHARD_LIMIT: fail('admin_grant_limit',429)
                 money(conn,user['id'],body.shards,'admin_grant',str(body.request_id))
             record_event(conn,'admin_grant',user['id'],{'shards':body.shards,'coins':body.coins,'request_id':str(body.request_id)},clock())
             if body.coins:
@@ -400,8 +429,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             new_object(conn,user_id,'starter','환영의 나무 의자')
             # The opening story chapter starts with a letter on the desk at home (server/story.py).
             if settings.story_enabled: app.state.story.begin(conn,user_id,clock())
+            limits=settings.limits_for(None)
             if settings.mode=='demo': money(conn,user_id,80,'demo_welcome',user_id)
-            elif settings.welcome_stars: money(conn,user_id,settings.welcome_stars,'live_welcome',user_id)
+            elif limits.welcome_stars: money(conn,user_id,limits.welcome_stars,'live_welcome',user_id)
             record_event(conn,'register',user_id,{'username':body.username.lower(),'ip':client_ip(request)},clock())
             return session(conn,user_id)
 
@@ -597,11 +627,18 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             if settings.mode=='live' and conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled')").fetchone():fail('provider_busy')
             if settings.mode=='live' and not (settings.tripo_key and settings.paid_enabled): fail('live_generation_disabled',503)
             if conn.execute("SELECT 1 FROM jobs WHERE owner_id=? AND state IN ('queued','submitting','generating','downloading','unknown')",(user['id'],)).fetchone(): fail('generation_pending')
-            count=conn.execute('SELECT count(*) FROM jobs WHERE created>=?',(int(clock()//86400)*86400,)).fetchone()[0]
-            if count >= settings.daily_generation_limit: fail('daily_generation_limit',429)
+            count=daily_counts(conn,int(clock()//86400)*86400)
+            limits=settings.limits_for(user)
+            if limits.daily_generation_limit and count >= limits.daily_generation_limit: fail('daily_generation_limit',429)
+            if limits.user_daily_generation_limit and daily_counts(conn,int(clock()//86400)*86400,user['id'])>=limits.user_daily_generation_limit:fail('user_daily_generation_limit',429)
+            if 25 > limits.max_stars_per_craft: fail('craft_star_limit_exceeded',403)
             # One live job globally avoids overlapping credit reservations. Unknown holds the lock.
             if settings.mode=='live' and conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone(): fail('provider_busy')
-            job_id=uid(); money(conn,user['id'],-25,'generation_charge',job_id)
+            job_id=uid()
+            if settings.mode=='live':
+                try:reserve_tester_credits(conn,limits,job_id+':legacy',mesh_credits(settings.tripo_model,False,False))
+                except ProviderError as error:fail(error.code,429)
+            money(conn,user['id'],-25,'generation_charge',job_id)
             conn.execute('INSERT INTO jobs(id,owner_id,prompt,state,cost,provider_reserve,created,updated) VALUES (?,?,?,?,?,?,?,?)',
                          (job_id,user['id'],body.prompt.strip(),'queued',25,settings.credit_reserve,clock(),clock()))
             return {'id':job_id,'state':'queued','mode':settings.mode}
@@ -656,14 +693,16 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             return {'ok':True}
         return mutate(request,body,'market:'+listing_id+':'+action,transfer)
 
-    from .asset_studio import Studio
+    from .asset_studio import Studio,IMAGE_FIELD_CHARS
     studio=Studio(app,db,settings,clock,provider,auth,mutate,money,own,new_object,assets,designer,profile)
     app.state.studio=studio
     from .multiplayer import Multiplayer
     multiplayer=Multiplayer(app,db,settings,clock,auth,mutate,money,profile,assets)
     app.state.multiplayer=multiplayer
+    multiplayer.chat.bind_routes(app,auth,mutate)
     from .home_access import HomeAccess
     app.state.home_access=HomeAccess(app,db,clock,auth,mutate,multiplayer.host_for)
+    app.state.last_spot=last_spot.LastSpot(app,db,clock,auth)
     # After the party tables: a new tutorial table records who went on expeditions before it.
     tutorial.ensure(db,clock())
     from .friends import Friends
@@ -689,10 +728,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             if scope['type']!='http':return await self.inner(scope,receive,send)
             value=dict(scope.get('headers') or []).get(b'x-villagen-utc-offset',b'').decode('latin-1')
             token=homestead.UTC_OFFSET.set(homestead.offset_from(value))
+            daily_token=homestead.DAILY_OFFSET.set(None)
             try:await self.inner(scope,receive,send)
-            finally:homestead.UTC_OFFSET.reset(token)
+            finally:
+                homestead.UTC_OFFSET.reset(token)
+                homestead.DAILY_OFFSET.reset(daily_token)
     app.add_middleware(PlayerTimeZone)
-    app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':1500000},
+    app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':IMAGE_FIELD_CHARS+16384},
                        pattern_limits=[(object_paint.UPLOAD_PATH,object_paint.BODY_LIMIT)])
     # Before everything else: maintenance (503) and too-old games (426) stop here; every reply,
     # 413/429 included, carries the notice version.

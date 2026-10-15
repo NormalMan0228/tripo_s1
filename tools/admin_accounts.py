@@ -23,6 +23,7 @@ from argon2 import PasswordHasher
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from server import homestead  # noqa: E402
 from server.database import Database  # noqa: E402
+from server.economy import change_shards  # noqa: E402
 
 STARSEEDS = 100000
 LEAF_COINS = 10000
@@ -57,8 +58,7 @@ def main() -> None:
                              (str(uuid.uuid4()), user_id, user_id, "starter", "환영의 나무 의자", now))
                 top_up = STARSEEDS
             if top_up:
-                conn.execute("INSERT INTO ledger VALUES (?,?,?,?,?,?)", (str(uuid.uuid4()), user_id, top_up, "admin_seed", user_id, now))
-                conn.execute("UPDATE users SET shards=shards+? WHERE id=?", (top_up, user_id))
+                change_shards(conn, user_id, top_up, 'admin_seed', str(uuid.uuid4()), now)
             state_row = conn.execute("SELECT state FROM homesteads WHERE user_id=?", (user_id,)).fetchone()
             state = json.loads(state_row["state"]) if state_row else homestead.initial()
             state["coins"] = max(state.get("coins", 0), LEAF_COINS)

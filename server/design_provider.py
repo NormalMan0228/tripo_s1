@@ -9,8 +9,11 @@ import httpx
 from .asset_contract import prompt_for, parse_design
 from .asset_vm import exercise_extended,HOST_LIMITS
 from .provider import ProviderError
+from .craft_moderation import Refused, category_of
 from .structured_design import SCHEMA,prompt_for_structured,parse_structured
 
+# Gemini finish reasons that mean its safety check stopped the answer.
+SAFETY_STOPS=('SAFETY','PROHIBITED_CONTENT','BLOCKLIST','SPII','IMAGE_SAFETY','IMAGE_PROHIBITED_CONTENT')
 MODELS=('gpt-6-luna','gpt-5.6-terra','gpt-6-sol','gpt-6-astra')
 EFFORTS=('low','medium','high','xhigh')
 
@@ -26,6 +29,24 @@ class DesignFailure(ProviderError):
         super().__init__('llm_invalid_design')
         self.attempts=attempts
         self.usage=usage_total(attempts)
+
+class DesignRefused(DesignFailure):
+    """The designer refused the request (asset_contract.py SAFETY): the craft ends as refused_<category>,
+    never repaired into a softened design. Its tokens were still spent."""
+    def __init__(self,attempts,category):
+        super().__init__(attempts)
+        self.category=category_of(category) or 'other'
+        self.code='refused_'+self.category
+
+def refusal(raw):
+    """The SAFETY refusal category in a designer's answer, or ''."""
+    try:value=json.loads(raw)
+    except (TypeError,ValueError):return ''
+    if not isinstance(value,dict):return ''
+    word=value.get('refused');category=category_of(word)
+    # An odd word ("N/A", "safe") next to a full design is not a refusal.
+    if category=='other' and str(word).strip().lower()!='other' and {'plan','program'}<=set(value):return ''
+    return category
 
 async def terminate_owned_process(proc):
     if proc.returncode is not None:return
@@ -56,6 +77,10 @@ class DesignProvider:
                 raw,usage=await self._gemini(prompt,image,feedback,style)
             else:raw,usage=await self._openai(prompt,model,effort,image,feedback,style)
             entry={'usage':usage};attempts.append(entry)
+            refused=refusal(raw)
+            if refused:
+                entry['refused']=refused
+                raise DesignRefused(attempts,refused)
             try:
                 plan,program,report=(parse_structured(raw) if self.settings.studio_design_format=='structured' else parse_design(raw))
                 report['publication']=exercise_extended(program,{p['id'] for p in plan['parts']})
@@ -93,7 +118,10 @@ class DesignProvider:
                         'text':{'format':{'type':'json_schema','name':'furniture_design','strict':True,'schema':SCHEMA} if structured else {'type':'json_object'}}})
             if response.status_code!=200 or len(response.content)>500000:raise ProviderError('llm_request_failed')
             body=response.json()
-            if body.get('status')!='completed':raise ProviderError('llm_incomplete')
+            if any(c.get('type')=='refusal' for item in body.get('output',[]) for c in item.get('content',[]) or []):raise Refused('other')
+            if body.get('status')!='completed':
+                if (body.get('incomplete_details') or {}).get('reason')=='content_filter':raise Refused('other')
+                raise ProviderError('llm_incomplete')
             raw=''.join(c.get('text','') for item in body.get('output',[]) for c in item.get('content',[]) if c.get('type')=='output_text')
             return raw,body.get('usage',{})
         except ProviderError:raise
@@ -135,6 +163,9 @@ class DesignProvider:
                     self.gemini_model=name
                     reply=response.json()
                     candidates=reply.get('candidates') or []
+                    # Gemini's own safety check stopped the description or the photo.
+                    if (reply.get('promptFeedback') or {}).get('blockReason') or (candidates and candidates[0].get('finishReason') in SAFETY_STOPS):
+                        raise Refused('other')
                     if not candidates or candidates[0].get('finishReason') not in (None,'STOP','MAX_TOKENS'):
                         raise ProviderError('llm_incomplete')
                     raw=''.join(p.get('text','') for p in candidates[0].get('content',{}).get('parts',[]) if not p.get('thought'))

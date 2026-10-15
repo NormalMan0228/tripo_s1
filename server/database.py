@@ -124,9 +124,17 @@ class Database:
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript(SCHEMA)
             widen_object_states(db)
+            from .economy import SCHEMA as ECONOMY_SCHEMA
+            db.executescript(ECONOMY_SCHEMA)
+            if 'daily_utc_offset' not in [r[1] for r in db.execute('PRAGMA table_info(users)')]:
+                db.execute('ALTER TABLE users ADD COLUMN daily_utc_offset INTEGER CHECK(daily_utc_offset BETWEEN -720 AND 840)')
             # Accounts are players unless an operator promotes them (tools/admin_accounts.py).
             if 'role' not in [r[1] for r in db.execute('PRAGMA table_info(users)')]:
                 db.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'player'")
+            if 'is_tester' not in [r[1] for r in db.execute('PRAGMA table_info(users)')]:
+                db.execute('ALTER TABLE users ADD COLUMN is_tester INTEGER NOT NULL DEFAULT 0 CHECK(is_tester IN (0,1))')
+            # Deliberately independent of accounts/jobs: deletion must not replenish paid credits.
+            db.execute('CREATE TABLE IF NOT EXISTS tester_credit_spend (reference TEXT PRIMARY KEY, credits REAL NOT NULL CHECK(credits>=0))')
             # When each session signed in: maintenance ends the ones from before it (client_policy.py).
             # Sessions saved before this column count as older than any maintenance.
             if 'created' not in [r[1] for r in db.execute('PRAGMA table_info(sessions)')]:

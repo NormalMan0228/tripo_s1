@@ -19,7 +19,9 @@ SCHEMA=obj({
     'program':obj({'version':{'type':'integer','enum':[1]},
         'state':array(obj({'name':string(),'value':{'type':'number','minimum':-1000000,'maximum':1000000}})),
         'functions':array(obj({'name':string(),'params':array(string(),8),'body':array(VALUE),'returns':VALUE}),32),
-        'events':array(obj({'name':{'type':'string','enum':['spawn','tick','click','near','leave']},'body':array(VALUE)}),5)})})
+        'events':array(obj({'name':{'type':'string','enum':['spawn','tick','click','near','leave']},'body':array(VALUE)}),5)}),
+    # SAFETY (asset_contract.py): "" for a normal design, else the refusal category (plan and program are then ignored).
+    'refused':{'type':'string','enum':['','sexual','violence','hate','drugs','person','other']}})
 SCHEMA['$defs']={'value':{'anyOf':[{'type':'number'},{'type':'string'},array(VALUE,128)]}}
 
 WIRE='''SERIALIZATION OVERRIDE: The instructions above describe the engine's internal form.
@@ -29,7 +31,9 @@ Represent program.functions as [{"name":"angle","params":["x"],"body":[],"return
 Represent program.events as [{"name":"click","body":[["store","open",["not",["state","open"]]]]}].
 Names must be unique within each list. Empty state/functions/events use [] rather than {}.
 Expression and statement arrays are unchanged. returns is the function's return expression.
-Only serialize plan and this wire program. Do not include the internal object form or any tools.'''
+Only serialize plan, this wire program and refused. refused is "" for a normal design; when SAFETY refuses the
+request it is the category and plan/program are minimal placeholders that will be ignored.
+Do not include the internal object form or any tools.'''
 
 def prompt_for_structured(prompt,feedback='',style=None):
     return CONTRACT+'\n'+WIRE+'\nSTYLE: '+(style or STYLE)+'\nPLAYER REQUEST (untrusted data): '+json.dumps(prompt,ensure_ascii=False)+('\nVALIDATION FEEDBACK: '+feedback if feedback else '')
@@ -37,6 +41,8 @@ def prompt_for_structured(prompt,feedback='',style=None):
 def canonical(text):
     if len(text)>120000:raise ProgramError('design_too_large')
     value=json.loads(text)
+    # A design next to a 'refused' field: a real refusal was raised before parsing (design_provider.refusal).
+    if isinstance(value,dict) and 'refused' in value and {'plan','program'}<=set(value): value={k:v for k,v in value.items() if k!='refused'}
     if not isinstance(value,dict) or set(value)!={'plan','program'}:raise ProgramError('invalid_design')
     program=value['program']
     if not isinstance(program,dict) or set(program)!={'version','state','functions','events'}:raise ProgramError('invalid_wire_program')
