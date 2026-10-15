@@ -2957,7 +2957,8 @@ func close_village_modal() -> void:
 	if is_instance_valid(life): life.closed()
 	restore_hud()
 	if is_instance_valid(village_modal):
-		# A shared window (modal_card) leaves the window stack; dialogues and the craft window go as before.
+		# A shared window (modal_card) leaves the window stack; dialogues and the craft window (its
+		# window lives under its holder) are freed whole.
 		if village_modal.has_meta("rpg_window"): RpgUi.close_window(village_modal.get_meta("rpg_window"),false)
 		else:
 			RpgUi.sfx("close",-10.0)
@@ -2990,11 +2991,11 @@ func follow_visit() -> void:
 func chat_bubble(user_id: String, username: String, text: String) -> void:
 	if screen=="village": social.bubble(user_id, username, text)
 
-## The window-stack description of a village modal, with the craft window's action filled in
-## (it is its own window), so its opening key can close it.
+## The window-stack description of a village modal (the craft window holds its window one level
+## down, under the notes' lane), so its opening key can close it.
 func modal_window(modal: Control) -> Dictionary:
 	if not is_instance_valid(modal): return {}
-	if modal==craft_window: return {"action":"craft"}
+	if modal==craft_window: return craft_window.window
 	return modal.get_meta("rpg_window",{})
 
 ## The round close key for drawers and side panels (RpgUi.close_key), named "닫기" with the panel's key.

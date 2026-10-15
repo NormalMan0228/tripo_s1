@@ -1697,10 +1697,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		return
 	var focus := get_viewport().gui_get_focus_owner()
 	var typing: bool = focus is LineEdit or focus is TextEdit
-	# The craft window takes the keys while open; Esc closes it (also while typing), and so does C
-	# when no field is being typed in, as in the village.
+	# The craft window (on the window stack, as in the village) takes the keys while open; Esc closes
+	# it (also while typing), and so does its own key C when no field is being typed in.
 	if is_instance_valid(craft_window):
-		if event.physical_keycode==KEY_ESCAPE or (key==KEY_C and not typing):
+		if event.physical_keycode==KEY_ESCAPE or (not typing and RpgUi.closes_window(craft_window.window,key)):
 			close_craft()
 			get_viewport().set_input_as_handled()
 		return
