@@ -148,21 +148,41 @@ static func placement(record: Dictionary, stowed := false) -> Transform3D:
 	var grip: Array = record.get("grip", [0, 0, 0])
 	return Transform3D(basis, -(basis*Vector3(float(grip[0]), float(grip[1]), float(grip[2]))))
 
-## Grip guess for a crafted item (any Node3D with meshes): its longest bounding-box axis is the
-## handle line and the thinner end the handle; the grip sits GRIP_IN of the length in from that end.
-## Returns an item record (hold hand_r, stow back) in the json's format, plus "length" and "radius".
+## Grip guess for an item model (a crafted object; tools/equip_grip_estimate.py is the same rule):
+## the longest bounding-box axis is the handle line, and the handle end is
+##   1. the end nearer a part named like a handle (HANDLE_WORDS; crafted items are named parts),
+##   2. else the end holding the model's origin when that lies in an end zone (modelled standing on the
+##      handle: a rod's butt below its reel),
+##   3. else the end opposite a tip (one end narrowing to a point: a spear point, a rod tip),
+##   4. else the thinner end.
+## The grip sits GRIP_IN of the length in from the handle end. Returns an item record (hold hand_r,
+## stow back) in the json's format, plus axis, handle_end, rule, length and radius.
 const GRIP_IN := 0.12
+const END_ZONE := 0.2
+const TIP_ZONE := 0.03
+const TIP := 0.3
+const HANDLE_WORDS := ["handle", "grip", "shaft", "hilt", "stick", "pole", "손잡이", "자루"]
+
 static func estimate_grip(root: Node3D) -> Dictionary:
 	var points := PackedVector3Array()
+	var handle_points := PackedVector3Array()
 	for mesh_node in root.find_children("*", "MeshInstance3D", true, false):
 		var mesh := (mesh_node as MeshInstance3D).mesh
 		if mesh == null: continue
+		var named := false
+		var walk: Node = mesh_node
+		while walk and walk != root.get_parent():
+			for word in HANDLE_WORDS:
+				if word in str(walk.name).to_lower(): named = true
+			walk = walk.get_parent()
 		var into := root.global_transform.affine_inverse()*(mesh_node as MeshInstance3D).global_transform
 		for s in mesh.get_surface_count():
-			var arrays := mesh.surface_get_arrays(s)
-			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var vertices: PackedVector3Array = mesh.surface_get_arrays(s)[Mesh.ARRAY_VERTEX]
 			var step := maxi(1, vertices.size()/4000)
-			for i in range(0, vertices.size(), step): points.append(into*vertices[i])
+			for i in range(0, vertices.size(), step):
+				var p := into*vertices[i]
+				points.append(p)
+				if named: handle_points.append(p)
 	if points.is_empty(): return {}
 	var box := AABB(points[0], Vector3.ZERO)
 	for p in points: box = box.expand(p)
@@ -170,34 +190,55 @@ static func estimate_grip(root: Node3D) -> Dictionary:
 	var low := box.position[axis]
 	var length := box.size[axis]
 	if length < 0.001: return {}
-	# Spread across the axis near each end: the thinner end is the handle.
-	var spread := [0.0, 0.0]
-	var centre := [Vector3.ZERO, Vector3.ZERO]
-	var counts := [0, 0]
-	for p in points:
-		var t := (p[axis]-low)/length
-		var end := 0 if t < 0.2 else (1 if t > 0.8 else -1)
-		if end < 0: continue
-		centre[end] += p
-		counts[end] += 1
-	for end in 2: centre[end] = centre[end]/maxf(1.0, counts[end])
-	for p in points:
-		var t := (p[axis]-low)/length
-		var end := 0 if t < 0.2 else (1 if t > 0.8 else -1)
-		if end < 0: continue
-		var off: Vector3 = p-centre[end]
-		off[axis] = 0.0
-		spread[end] = maxf(spread[end], off.length())
-	var handle := 0 if spread[0] <= spread[1] else 1
-	var direction := 1.0 if handle == 0 else -1.0
-	var grip: Vector3 = centre[handle]
+	var ends := [zone(points, axis, low, length, 0.0, END_ZONE), zone(points, axis, low, length, 1.0-END_ZONE, 1.0)]
+	var rule := "thinner"
+	var handle := 0 if float(ends[0].spread) <= float(ends[1].spread) else 1
+	var tips := [float(zone(points, axis, low, length, 0.0, TIP_ZONE).spread) < TIP*float(ends[0].spread),
+		float(zone(points, axis, low, length, 1.0-TIP_ZONE, 1.0).spread) < TIP*float(ends[1].spread)]
+	if tips[0] != tips[1]:
+		handle = 1 if tips[0] else 0
+		rule = "tip"
+	var origin_t := (0.0-low)/length
+	if origin_t >= 0.0 and origin_t <= END_ZONE:
+		handle = 0
+		rule = "origin"
+	elif origin_t <= 1.0 and origin_t >= 1.0-END_ZONE:
+		handle = 1
+		rule = "origin"
+	if not handle_points.is_empty():
+		var mid := 0.0
+		for p in handle_points: mid += p[axis]
+		mid /= handle_points.size()
+		handle = 0 if mid-low < length*0.5 else 1
+		rule = "named"
+	var grip: Vector3 = ends[handle].centre
 	grip[axis] = low+length*(GRIP_IN if handle == 0 else 1.0-GRIP_IN)
-	# Turn the long axis (pointing from the handle to the head) onto the socket's +Y.
+	# Turn the long axis (from the handle toward the head) onto the socket's +Y.
 	var along := Vector3.ZERO
-	along[axis] = direction
+	along[axis] = 1.0 if handle == 0 else -1.0
 	var turn := Quaternion(along, Vector3.UP).get_euler()
 	var rot := [snappedf(rad_to_deg(turn.x), 0.1), snappedf(rad_to_deg(turn.y), 0.1), snappedf(rad_to_deg(turn.z), 0.1)]
-	var rotated := Basis.from_euler(turn)*grip
 	return {"hold":"hand_r", "stow":"back", "grip":[snappedf(grip.x, 0.001), snappedf(grip.y, 0.001), snappedf(grip.z, 0.001)],
-		"rot":rot, "stow_rot":rot, "scale":1.0, "estimated":true, "length":snappedf(length, 0.001), "radius":snappedf(spread[handle], 0.001),
-		"grip_turned":[snappedf(rotated.x, 0.001), snappedf(rotated.y, 0.001), snappedf(rotated.z, 0.001)]}
+		"rot":rot, "stow_rot":rot, "scale":1.0, "estimated":true, "axis":"xyz"[axis], "handle_end":"low" if handle == 0 else "high",
+		"rule":rule, "length":snappedf(length, 0.001), "radius":snappedf(float(ends[handle].spread), 0.001)}
+
+## Centre and sideways spread (largest distance from the centre across the axis) of the points whose
+## position along the axis is between lo and hi (fractions of the length).
+static func zone(points: PackedVector3Array, axis: int, low: float, length: float, lo: float, hi: float) -> Dictionary:
+	var centre := Vector3.ZERO
+	var count := 0
+	for p in points:
+		var t := (p[axis]-low)/length
+		if t >= lo and t <= hi:
+			centre += p
+			count += 1
+	if count == 0: return {"centre":Vector3.ZERO, "spread":0.0}
+	centre /= count
+	var spread := 0.0
+	for p in points:
+		var t := (p[axis]-low)/length
+		if t < lo or t > hi: continue
+		var off := p-centre
+		off[axis] = 0.0
+		spread = maxf(spread, off.length())
+	return {"centre":centre, "spread":spread}
