@@ -89,7 +89,8 @@ def test_preview_accepts_side_limit_and_downsizes():
         assert max(im.size) <= 1024
 
 
-@pytest.mark.parametrize('size', [(2049, 16), (16, 2049), (15, 32), (32, 15)])
+# The photo path accepts up to IMAGE_MAX_SIDE (4096) and shrinks it (aigen #68/75).
+@pytest.mark.parametrize('size', [(4097, 16), (16, 4097), (15, 32), (32, 15)])
 def test_reference_dimension_limits(size):
     with pytest.raises(ValidationError):
         StudioRequest(**mutation(prompt='wooden chair', image=reference(picture(size=size), 'image/png')))

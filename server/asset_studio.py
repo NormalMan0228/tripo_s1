@@ -85,16 +85,21 @@ def _photo_blob(value):
     return blob
 
 def check_image(value):
-    """A reference photo's format and size, read from its header only (no pixel is decoded).
-    Raises ValueError with one of IMAGE_CODES."""
+    """A reference photo's format and size, then its pixels decoded once (a cut-off file fails), its
+    declared type matching the file (codex/secaudit M3). Raises ValueError with one of IMAGE_CODES."""
     if not value:return value
     blob=_photo_blob(value)
     try:
         with Image.open(io.BytesIO(blob)) as im:kind,size=im.format,im.size
     except Exception:raise ValueError('image_unreadable') from None
-    if kind not in ('PNG','JPEG'):raise ValueError('image_unreadable')
+    if kind!=('PNG' if value.startswith('data:image/png;') else 'JPEG'):raise ValueError('image_unreadable')
     if max(size)>IMAGE_MAX_SIDE or size[0]*size[1]>IMAGE_MAX_PIXELS:raise ValueError('image_too_large')
     if min(size)<IMAGE_MIN_SIDE:raise ValueError('image_too_small')
+    try:
+        with Image.open(io.BytesIO(blob)) as im:
+            if im.format=='JPEG':im.draft('RGB',(IMAGE_KEPT_SIDE,IMAGE_KEPT_SIDE))
+            im.load()
+    except Exception:raise ValueError('image_unreadable') from None
     return value
 
 def reference_image(value):
