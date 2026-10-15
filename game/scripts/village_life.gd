@@ -97,7 +97,8 @@ func request(kind: String, extra: Dictionary={}) -> Dictionary:
 	pending=false
 	if epoch!=app.world_epoch: return {}
 	if not response.ok:
-		deny()
+		# An already-watered bed is a soft refusal (-8 dB), before the message as every refusal.
+		deny(-8.0 if response.error=="life_already_watered" else -6.0)
 		app.message(errors.get(response.error,app.error_message(response.error)))
 		await refresh()
 		return {}
@@ -108,8 +109,8 @@ func request(kind: String, extra: Dictionary={}) -> Dictionary:
 ## Refusals and server errors: the soft UI deny (RpgUi.sfx, UI bus), the one sound of a refusal.
 ## Call it before the message: as a message kind it stands in for that toast's chime (main.refuse()
 ## does the same), so a refusal is heard once, never chime plus blip.
-func deny() -> void:
-	RpgUi.sfx("deny",-6.0)
+func deny(db := -6.0) -> void:
+	RpgUi.sfx("deny",db)
 
 ## Older call sites (shop, tree shaking, tests): message, sound and item feedback.
 func action(kind: String, extra: Dictionary={}) -> bool:
@@ -328,7 +329,7 @@ func open_plot(index: int) -> void:
 		app.button(foot,tr("풀밭으로 되돌리기"),func():
 			app.close_village_modal(false)
 			Art.burst(app.world,bed_point(index),"leaf",14)
-			sfx.play("rustle")
+			sfx.play("untill")
 			await request("untill",{"plot":index}))
 	app.village_modal=w.root
 	app.player.controls_enabled=false
@@ -377,11 +378,21 @@ func harvest(index: int) -> void:
 		preload("res://scripts/fx.gd").item_pop(app,at+Vector3(0,0.5,0),item,int(items[item]),delay)
 		delay += 0.12
 
-## A crop near the walker reached a new stage (farm.gd already popped it): a soft rustle, and a
-## twinkle when it is ready to harvest.
+## A crop near the walker reached a new stage (farm.gd already popped it, once per poll that
+## raised it): the sprout and ripe sounds (docs/sound/DEV_FEATURE_SFX_KO.md). Several beds rising
+## in one poll are staggered GROW_SOUND_GAP s apart instead of stacking.
+const GROW_SOUND_GAP := 0.15
+var grow_sound_next := 0.0
 func crop_grew(index: int, stage: int) -> void:
-	if stage>=5: preload("res://scripts/fx.gd").sound(app,"twinkle",farm.beds[index].root.global_position,1.0,-4.0)
-	else: sfx.play("rustle",1.1+0.05*stage,-8)
+	if stage!=2 and stage!=5: return
+	var kind := "life/ripe" if stage==5 else "life/sprout"
+	var db := -6.0 if stage==5 else -4.0
+	var at: Vector3=farm.beds[index].root.global_position
+	var t := Time.get_ticks_msec()*0.001
+	var start := maxf(t,grow_sound_next)
+	grow_sound_next=start+GROW_SOUND_GAP
+	if start<=t: preload("res://scripts/fx.gd").sound(app,kind,at,1.0,db)
+	else: get_tree().create_timer(start-t).timeout.connect(func(): if is_instance_valid(app): preload("res://scripts/fx.gd").sound(app,kind,at,1.0,db))
 
 func till(cell: Vector2) -> void:
 	var at := Town.point(cell,0.05)

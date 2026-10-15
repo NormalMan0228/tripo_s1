@@ -2456,6 +2456,8 @@ func update_run() -> void:
 		if is_instance_valid(return_dialog): return_dialog.queue_free()
 		show_results()
 	flame.visible=run.fire_remaining>0
+	# Campfire buff mode: the hero's empowered look while the fire's buffs are on (campfire_buff_fx.gd).
+	preload("res://scripts/campfire_buff_fx.gd").apply(self,run)
 	warmth_ring.visible=flame.visible
 	survival_audio(remaining)
 	if run.status=="active" and run.elapsed-last_camp_warning>12:
