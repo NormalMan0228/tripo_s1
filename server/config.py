@@ -147,6 +147,27 @@ class Settings:
     fake_tripo_seconds: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_FAKE_TRIPO_SECONDS', '0')))
     # /health shows it when set (the development server says "staging"); empty on production.
     environment: str = field(default_factory=lambda: os.getenv('TRIPOTHON_ENVIRONMENT', '').strip())
+    # Social layer (server/chat.py, server/friends.py, docs/design/SOCIAL_API.md).
+    # The server-wide "everyone" chat channel (rate limited, filtered); off: only village, party, whispers.
+    global_chat: bool = field(default_factory=lambda: os.getenv('VILLAGEN_GLOBAL_CHAT', 'on').lower() not in ('off', '0', 'false'))
+    # Who appears in the online roster (/v1/social/people): all players, friends only, or nobody.
+    social_roster: str = field(default_factory=lambda: os.getenv('VILLAGEN_SOCIAL_ROSTER', 'all').strip().lower())
+    # An operator's extra word list (same syntax as server/data/chat_words.txt); relative to data_dir.
+    chat_filter_extra: str = field(default_factory=lambda: os.getenv('VILLAGEN_CHAT_FILTER_EXTRA', '').strip())
+    # Chat lines one address may send per minute (a school shares one address: 120 players chatting
+    # every 20 s are 360 a minute, so keep it generous; each account has its own tighter limits).
+    chat_ip_per_minute: int = field(default_factory=lambda: int(os.getenv('VILLAGEN_CHAT_IP_PER_MINUTE', '600')))
+    # Hours a chat line is kept (history and reports read only this window).
+    chat_retention_hours: float = field(default_factory=lambda: float(os.getenv('VILLAGEN_CHAT_RETENTION_HOURS', '24')))
+    # Polling advice the server gives clients in /health (seconds): presence with other players
+    # around, presence alone, and the social window's roster refresh.
+    presence_together_seconds: float = field(default_factory=lambda: float(os.getenv('VILLAGEN_PRESENCE_TOGETHER', '0.25')))
+    presence_alone_seconds: float = field(default_factory=lambda: float(os.getenv('VILLAGEN_PRESENCE_ALONE', '1')))
+    people_seconds: float = field(default_factory=lambda: float(os.getenv('VILLAGEN_PEOPLE_SECONDS', '5')))
+    # Presence polls a second the server is meant to carry (all players together). Above it, the
+    # advice in every chat2 reply (social.poll) slows the clients down smoothly, up to 4 times.
+    # 60 keeps a t4g.small near its CPU baseline with a class of 60 (docs/design/SOCIAL_API.md, 9).
+    presence_budget: float = field(default_factory=lambda: float(os.getenv('VILLAGEN_PRESENCE_BUDGET', '60')))
 
     def validate(self):
         if self.mode not in ('demo', 'live'):
@@ -199,6 +220,17 @@ class Settings:
             raise ValueError('Invalid resident home seed')
         if not math.isfinite(self.studio_credit_rate) or not .1<=self.studio_credit_rate<=100:
             raise ValueError('Invalid reward currency conversion')
+        if self.social_roster not in ('all', 'friends', 'off'):
+            raise ValueError('VILLAGEN_SOCIAL_ROSTER must be all, friends or off')
+        if not 10 <= self.chat_ip_per_minute <= 100000:
+            raise ValueError('Invalid chat lines per address')
+        if not (math.isfinite(self.chat_retention_hours) and 1 <= self.chat_retention_hours <= 24 * 30):
+            raise ValueError('Invalid chat retention')
+        if not (math.isfinite(self.presence_together_seconds) and math.isfinite(self.presence_alone_seconds) and math.isfinite(self.people_seconds)
+                and .1 <= self.presence_together_seconds <= self.presence_alone_seconds <= 10 and 2 <= self.people_seconds <= 120):
+            raise ValueError('Invalid social polling advice')
+        if not (math.isfinite(self.presence_budget) and 5 <= self.presence_budget <= 5000):
+            raise ValueError('Invalid presence budget')
         if self.usage_key and len(self.usage_key) < 32:
             raise ValueError('The usage key must be at least 32 characters (ops/usage_key.sh makes one)')
         self.data_dir.mkdir(parents=True, exist_ok=True)

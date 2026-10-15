@@ -242,6 +242,11 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     @app.exception_handler(RequestValidationError)
     async def validation_error(request,exc):
         # Crafting has its own wording (a too short or too long description), not the login form's.
+        if request.url.path=='/v1/social/presence':
+            # Which optional presence groups this server refused (since/place/ix...), so a newer game
+            # drops just those and keeps polling (server/multiplayer.py Presence).
+            fields=sorted({str(e['loc'][1]) for e in exc.errors() if len(e.get('loc',()))>1 and e['loc'][0]=='body'})
+            return JSONResponse({'detail':'invalid_request','fields':fields},422)
         return JSONResponse({'detail':'invalid_craft_request' if request.url.path.startswith('/v1/studio/') else 'invalid_request'},422)
 
     @app.exception_handler(ProviderError)
@@ -272,6 +277,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         if build_commit: data['build']=build_commit
         if settings.environment: data['environment']=settings.environment
         if settings.fake_tripo: data['tripo_fake']=True
+        # Chat v2, friends and the roster (server/friends.py): one definition of the social flags.
+        if hasattr(app.state,'friends'): data.update(app.state.friends.health())
         public=client_policy.public()
         data['client'],data['notice']=public['client'],public['notice']
         return data
@@ -635,6 +642,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     from .multiplayer import Multiplayer
     multiplayer=Multiplayer(app,db,settings,clock,auth,mutate,money,profile,assets)
     app.state.multiplayer=multiplayer
+    from .friends import Friends
+    app.state.friends=Friends(app,db,settings,clock,auth,mutate,multiplayer)
     app.state.object_paint=object_paint.ObjectPaint(app,db,clock,auth,mutate,own,assets)
     app.state.object_shape=object_shape.ObjectShape(app,db,clock,mutate,own)
     from .npc_homes import NpcHomes
