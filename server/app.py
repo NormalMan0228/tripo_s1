@@ -20,12 +20,13 @@ from .database import Database
 from . import economy
 from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction, PrefsUpdate
 from .provider import TripoProvider, ProviderError, validate_glb
-from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial, last_spot
+from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial, last_spot, build_rules
 from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
                        LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER)
 from .stored_assets import read_glb
 from .studio_pricing import mesh_credits
-from .account_limits import daily_counts, reserve_tester_credits, record_tester_bill
+from .account_limits import daily_counts, record_tester_bill
+from . import tripo_budget
 
 def uid(): return str(uuid.uuid4())
 def digest(s): return hashlib.sha256(s.encode()).hexdigest()
@@ -41,6 +42,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         # Development servers: every Tripo call is answered in-process (server/fake_tripo.py).
         from .fake_tripo import transport as fake_tripo
         provider = TripoProvider(settings, fake_tripo(settings.fake_tripo_seconds))
+        provider._in_process_fake = True
     provider = provider or TripoProvider(settings)
     hasher = PasswordHasher(time_cost=2,memory_cost=19456,parallelism=1)
     dummy = hasher.hash(secrets.token_urlsafe(32))
@@ -59,6 +61,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             raise ValueError('Stored starter asset integrity check failed')
         # A crash between submit and saving its task id must never cause a second paid call.
         conn.execute("UPDATE jobs SET state='unknown',error_code='submission_interrupted' WHERE state='submitting'")
+        conn.execute("UPDATE tripo_job_holds SET credits=0 WHERE job_id IN (SELECT id FROM jobs WHERE state='unknown')")
 
     def auth(conn, request):
         value = request.headers.get('authorization','')
@@ -140,6 +143,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             state = 'unknown' if error.uncertain else 'failed'
             conn.execute('UPDATE jobs SET state=?,error_code=?,updated=? WHERE id=?',
                          (state,error.code,clock(),job_id))
+            tripo_budget.clear_hold(conn,job_id)
             if state=='failed': money(conn,job['owner_id'],job['cost'],'generation_refund',job_id)
 
     async def process_job(job_id):
@@ -159,13 +163,20 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                     if available < settings.credit_reserve: raise ProviderError('insufficient_provider_credit')
                     with db.transaction() as conn:
                         limits=settings.limits_for(conn.execute('SELECT * FROM users WHERE id=?',(job['owner_id'],)).fetchone())
-                        reserve_tester_credits(conn,limits,job_id+':legacy',mesh_credits(settings.tripo_model,False,False))
+                        attempt=tripo_budget.reserve_attempt(conn,limits,job_id,job['owner_id'],'legacy','',
+                            0 if getattr(provider,'_in_process_fake',False) else mesh_credits(settings.tripo_model,False,False),
+                            0,clock(),provider_key=getattr(provider,'fingerprint',''))
                     task = await provider.submit(job['prompt'])
                     with db.transaction() as conn:
+                        tripo_budget.record_task(conn,attempt,task,clock())
                         conn.execute("UPDATE jobs SET state='generating',provider_task=?,updated=? WHERE id=?",(task,clock(),job_id))
                     job['provider_task'] = task
                 result = await provider.task(job['provider_task'])
-                with db.transaction() as conn:record_tester_bill(conn,job_id+':legacy',result.get('credits_consumed'))
+                with db.transaction() as conn:
+                    attempt_row=conn.execute('SELECT attempt_id FROM tripo_attempts WHERE job_id=? AND task_id=?',
+                        (job_id,job['provider_task'])).fetchone()
+                    if attempt_row:tripo_budget.record_result(conn,attempt_row['attempt_id'],result,clock())
+                    else:record_tester_bill(conn,job_id+':legacy',result.get('credits_consumed'))
                 if result.get('status') in ('queued','running'): return
                 if result.get('status') in ('failed','cancelled'): raise ProviderError('generation_failed')
                 if result.get('status') != 'success': raise ProviderError('upstream_schema',uncertain=True)
@@ -181,6 +192,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 object_id = new_object(conn,job['owner_id'],asset_id,('샘플 · ' if settings.mode=='demo' else '')+job['prompt'][:32])
                 conn.execute("UPDATE jobs SET state='ready',asset_id=?,object_id=?,updated=? WHERE id=?",
                              (asset_id,object_id,clock(),job_id))
+                tripo_budget.clear_hold(conn,job_id)
         except ProviderError as error:
             # Safe failures only; raw requests/responses (and keys) never escape this boundary.
             if settings.mode=='live' and job.get('provider_task') and error.code in (
@@ -252,6 +264,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         while queue and queue[0] <= now-60: queue.popleft()
         if len(queue) >= (20 if is_auth else 1200): return JSONResponse({'detail':'rate_limited'},429)
         queue.append(now)
+        # Image parsing/decoding happens during validation, before route-level auth.
+        # Require a session first on the two upload endpoints.
+        if request.method=='POST' and (request.url.path=='/v1/studio/jobs' or object_paint.UPLOAD_PATH.fullmatch(request.url.path)):
+            try:
+                with db.read() as conn:auth(conn,request)
+            except HTTPException as error:
+                return JSONResponse({'detail':error.detail},error.status_code,headers=error.headers)
         # Security headers (nosniff, no-store, ...) are set by SecurityHeadersMiddleware.
         return await call_next(request)
 
@@ -270,7 +289,16 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             # drops just those and keeps polling (server/multiplayer.py Presence).
             fields=sorted({str(e['loc'][1]) for e in exc.errors() if len(e.get('loc',()))>1 and e['loc'][0]=='body'})
             return JSONResponse({'detail':'invalid_request','fields':fields},422)
-        return JSONResponse({'detail':'invalid_craft_request' if request.url.path.startswith('/v1/studio/') else 'invalid_request'},422)
+        if request.url.path.startswith('/v1/studio/'):
+            # A refused reference photo says why (too large, too small, not a picture), not the description's words.
+            from .asset_studio import IMAGE_CODES
+            for error in exc.errors():
+                if tuple(error.get('loc',()))[-1:]==('image',):
+                    code=str((error.get('ctx') or {}).get('error') or '')
+                    if error.get('type')=='string_too_long':code='image_too_large'
+                    return JSONResponse({'detail':code if code in IMAGE_CODES else 'invalid_image'},422)
+            return JSONResponse({'detail':'invalid_craft_request'},422)
+        return JSONResponse({'detail':'invalid_request'},422)
 
     @app.exception_handler(ProviderError)
     async def protected_asset_error(request,exc):
@@ -347,7 +375,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             record_event(conn,'admin_grant',user['id'],{'shards':body.shards,'coins':body.coins,'request_id':str(body.request_id)},clock())
             if body.coins:
                 state=life_state(conn,user['id'])
-                state['coins']=state.get('coins',0)+body.coins
+                economy.change_coins(conn,user['id'],state,body.coins,'admin_grant',str(body.request_id),clock())
                 state['version']=state.get('version',0)+1
                 conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
                              (user['id'],json.dumps(state)))
@@ -358,18 +386,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     @app.post('/v1/homestead')
     def edit_life(body:LifeAction,request:Request):
         def edit(conn,user):
+            if body.action in ('buy','sell'):
+                return app.state.shops.trade(conn,user,'farm_stall',body.action,body)
+            if body.action=='order':
+                return app.state.shops.order(conn,user,body)
             state=life_state(conn,user['id'])
             try: result=homestead.act(state,body,clock())
             except homestead.Rejected as error: fail(str(error))
-            # Selling also pays starseeds (a daily allowance), through the ledger like every star.
-            if body.action=='sell':
-                stars=homestead.sell_stars(state,homestead.PRICES[body.item]*body.quantity,clock(),
-                                           settings.sell_stars_daily,settings.sell_coins_per_star)
-                if stars:
-                    money(conn,user['id'],stars,'sell_reward',str(body.request_id))
-                    result['message']=result['message'].replace('개를 받았어요.',f'개와 별씨 {stars}개를 받았어요.')
-                result['stars']=stars
-                result['shards']=conn.execute('SELECT shards FROM users WHERE id=?',(user['id'],)).fetchone()[0]
             result['sell_stars']=homestead.star_status(state,clock(),settings.sell_stars_daily,settings.sell_coins_per_star)
             conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
                          (user['id'],json.dumps(state)))
@@ -403,8 +426,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         # Operator accounts are provisioned by tools/admin_accounts.py, never here.
         if reserved_username(body.username): fail('username_reserved',422)
         if not strong_password(body.password): fail('weak_password',422)
-        password_hash = hasher.hash(body.password)
-        with db.transaction() as conn:
+        def check_signup_limits(conn):
             if settings.mode=='live' and not invited:
                 # Open sign-up: a few accounts per address and a daily ceiling for everyone.
                 day = int(clock()//86400)*86400
@@ -413,6 +435,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 if conn.execute("SELECT count(*) FROM security_events WHERE kind='register' AND created>=? AND json_extract(detail,'$.ip')=?",
                                 (day,client_ip(request))).fetchone()[0] >= settings.signups_per_ip_day:
                     fail('too_many_registrations',429)
+        # Reject exhausted quotas before spending Argon2 CPU/memory. The second check
+        # under BEGIN IMMEDIATE still arbitrates sign-ups that race during hashing.
+        with db.read() as conn:
+            check_signup_limits(conn)
+        password_hash = hasher.hash(body.password)
+        with db.transaction() as conn:
+            check_signup_limits(conn)
             user_id = uid()
             try:
                 conn.execute('INSERT INTO users(id,username,password_hash,shards,created) VALUES (?,?,?,?,?)',(user_id,body.username.lower(),password_hash,0,clock()))
@@ -468,6 +497,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def me(request:Request):
         with db.read() as conn:
             user = auth(conn,request)
+        residency = app.state.village_residents.residents_for(user['id'])
+        with db.read() as conn:
             active = conn.execute("SELECT id,state FROM runs WHERE owner_id=? AND status='active'",(user['id'],)).fetchone()
             active_summary = None
             if active:
@@ -477,7 +508,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             pending_job = conn.execute("SELECT id FROM jobs WHERE owner_id=? AND state IN ('queued','submitting','generating','unknown') ORDER BY created LIMIT 1",(user['id'],)).fetchone()
             # The craft under way (asset_studio.py), so the village follows it again after a relaunch.
             craft = conn.execute("SELECT id,state FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled','unknown') ORDER BY created DESC LIMIT 1",(user['id'],)).fetchone()
-            return {'username':user['username'],'shards':user['shards'],'mode':settings.mode,'role':user['role'],
+            return {'residents':residency,'username':user['username'],'shards':user['shards'],'mode':settings.mode,'role':user['role'],
                 'generation_enabled': settings.mode=='demo' or bool(settings.legacy_generation_enabled and settings.tripo_key and settings.paid_enabled),
                 'studio_tripo_enabled': bool(settings.tripo_key and settings.paid_enabled),
                 'generation_cost':25,'profile':profile(conn,user['id']),'catalog':catalog.public_catalog(),'campaign':campaign.public(conn,user['id']),
@@ -488,7 +519,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 'pending_reward':{'id':pending_reward['id'],'reward':pending_reward['reward']+campaign.pending_bonus(conn,user['id'],json.loads(pending_reward['state']))} if pending_reward else None,
                 'pending_job':pending_job['id'] if pending_job else None,
                 'pending_craft':{'id':craft['id'],'state':craft['state']} if craft else None,
-                'objects':[{**obj_public(r),'room':r['room'],'studio':bool(r['studio']),'runtime_version':r['runtime_version'],'paint_version':r['paint_version'],'shape':object_shape.public(r['shape'])} for r in conn.execute("SELECT objects.*,COALESCE(furniture_locations.room,'village') AS room,CASE WHEN studio_assets.asset_id IS NULL THEN 0 ELSE 1 END AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+object_paint.version_column('objects.id')+" AS paint_version,"+object_shape.column('objects.id')+" AS shape FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id LEFT JOIN studio_assets ON studio_assets.asset_id=objects.asset_id WHERE owner_id=? AND state!='gifted' ORDER BY created",(user['id'],))],
+                'objects':[{**obj_public(r),'room':r['room'],'studio':bool(r['studio']),'runtime_version':r['runtime_version'],'paint_version':r['paint_version'],'shape':object_shape.public(r['shape']),**build_rules.public(r['mount'],r['state'])} for r in conn.execute("SELECT objects.*,COALESCE(furniture_locations.room,'village') AS room,CASE WHEN studio_assets.asset_id IS NULL THEN 0 ELSE 1 END AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+object_paint.version_column('objects.id')+" AS paint_version,"+object_shape.column('objects.id')+" AS shape,"+build_rules.column('objects.id')+" AS mount FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id LEFT JOIN studio_assets ON studio_assets.asset_id=objects.asset_id WHERE owner_id=? AND state!='gifted' ORDER BY created",(user['id'],))],
                 # Residents' home versions (npc_homes.py): a house the client has cached at this version is current.
                 'npc_homes':app.state.npc_homes.versions_for(user['id']),'npc_homes_host':user['id'],
                 # Unread letters from residents (the village mailbox raises its flag).
@@ -509,21 +540,25 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 conn.execute('UPDATE objects SET color=?,version=version+1 WHERE id=?',(body.color.lower(),object_id))
             elif body.action=='retrieve':
                 conn.execute("UPDATE objects SET state='inventory',x=NULL,z=NULL,version=version+1 WHERE id=?",(object_id,))
+                # Whatever stood on it goes to the bag too (server/build_rules.py).
+                retrieved = build_rules.retrieve(conn,object_id)
             else:
-                # Uniform 2x2 parcel; matches normalized 1.6m props on the client.
                 if row['state']!='inventory': fail('retrieve_before_moving')
                 if not homestead.village_inside(body.x, body.z): fail('outside_room')
-                reserved = homestead.village_reserved(body.x, body.z)
+                reserved = homestead.village_reserved(body.x, body.z, settings.resident_moves)
                 if reserved: fail(reserved)
                 other = conn.execute("SELECT x,z FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? AND state='placed' AND COALESCE(room,'village')='village'",(user['id'],)).fetchall()
                 if len(other)>=30: fail('village_full')
-                if any(abs(r['x']-body.x)<2 and abs(r['z']-body.z)<2 for r in other): fail('placement_overlap')
+                # Measured footprints (server/build_rules.py), a floor piece.
+                if build_rules.overlaps(conn,assets,user['id'],'village',row,body.x,body.z,body.rotation): fail('placement_overlap')
+                build_rules.mount(conn,object_id,'floor')
                 from . import room_budget
                 try:room_budget.check(conn,assets,user['id'],'village',object_id,row['asset_id'])
                 except ProviderError as error:fail(error.code,409 if error.code=='room_render_budget_exceeded' else 503)
                 conn.execute("UPDATE objects SET state='placed',x=?,z=?,rotation=?,version=version+1 WHERE id=?",
                              (body.x,body.z,body.rotation,object_id))
                 conn.execute("INSERT INTO furniture_locations VALUES (?,'village') ON CONFLICT(object_id) DO UPDATE SET room='village'",(object_id,))
+            if body.action=='retrieve': return {**obj_public(own(conn,user['id'],object_id)),'retrieved':retrieved}
             return obj_public(own(conn,user['id'],object_id))
         return mutate(request,body,'object:'+object_id,edit)
 
@@ -627,7 +662,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             if settings.mode=='live' and conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating','unknown')").fetchone(): fail('provider_busy')
             job_id=uid()
             if settings.mode=='live':
-                try:reserve_tester_credits(conn,limits,job_id+':legacy',mesh_credits(settings.tripo_model,False,False))
+                try:tripo_budget.hold_build(conn,limits,job_id,user['id'],0 if getattr(provider,'_in_process_fake',False) else mesh_credits(settings.tripo_model,False,False),clock())
                 except ProviderError as error:fail(error.code,429)
             money(conn,user['id'],-25,'generation_charge',job_id)
             conn.execute('INSERT INTO jobs(id,owner_id,prompt,state,cost,provider_reserve,created,updated) VALUES (?,?,?,?,?,?,?,?)',
@@ -637,7 +672,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
 
     @app.get('/v1/generations/{job_id}')
     def job(job_id:str,request:Request):
-        with db.transaction() as conn:
+        with db.read() as conn:
             user=auth(conn,request)
             row=conn.execute('SELECT id,state,object_id,error_code FROM jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
             if not row: fail('job_not_found',404)
@@ -684,7 +719,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             return {'ok':True}
         return mutate(request,body,'market:'+listing_id+':'+action,transfer)
 
-    from .asset_studio import Studio
+    from .asset_studio import Studio,IMAGE_FIELD_CHARS
     studio=Studio(app,db,settings,clock,provider,auth,mutate,money,own,new_object,assets,designer,profile)
     app.state.studio=studio
     from .multiplayer import Multiplayer
@@ -702,15 +737,25 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.object_shape=object_shape.ObjectShape(app,db,clock,mutate,own)
     from .npc_homes import NpcHomes
     app.state.npc_homes=NpcHomes(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
+    from .village_residents import VillageResidents
+    app.state.village_residents=VillageResidents(app,db,settings,clock,auth,multiplayer.host_for)
     from .story import Story
     app.state.story=Story(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
+    from .shops import Shops
+    app.state.shops=Shops(app,db,settings,clock,auth,mutate,money,assets)
     from .quests import Quests
     app.state.quests=Quests(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
+    from .quest_board import QuestBoard
+    app.state.quest_board=QuestBoard(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
+    from .dev_time import DevTime
+    app.state.dev_time=DevTime(app,db,clock,auth)
     from .treasure import Treasure
     app.state.treasure=Treasure(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
     from .interactions import Interactions
     app.state.interactions=Interactions(app,db,settings,clock,auth,mutate,own,money,studio)
     from .usage_report import UsageReport; app.state.usage_report=UsageReport(app,db,settings,clock)
+    from .migrations import migrate_polling_indexes
+    migrate_polling_indexes(db)
     class PlayerTimeZone:
         """The player's time zone header (minutes from UTC) -> homestead.UTC_OFFSET for this request,
         so night fish and the daily order follow the player's own clock."""
@@ -725,7 +770,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 homestead.UTC_OFFSET.reset(token)
                 homestead.DAILY_OFFSET.reset(daily_token)
     app.add_middleware(PlayerTimeZone)
-    app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':1500000},
+    app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':IMAGE_FIELD_CHARS+16384},
                        pattern_limits=[(object_paint.UPLOAD_PATH,object_paint.BODY_LIMIT)])
     # Before everything else: maintenance (503) and too-old games (426) stop here; every reply,
     # 413/429 included, carries the notice version.

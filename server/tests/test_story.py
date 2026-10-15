@@ -252,3 +252,87 @@ def test_the_offline_designer_makes_a_real_chair():
     plan, _ = __import__('server.archetypes', fromlist=['fixture_design']).fixture_design('나무 의자')
     assert plan['category'] == 'seat' and len(plan['parts']) == 6
     assert story.RETURN_GIFT['parts'] and story.SENDER == 'regular'
+
+
+def test_the_epilogue_daon_then_the_forest_gate_once_each_and_reset_clears_it(world, tmp_path, capsys):
+    app, c, now = world
+    h = account(c, 'epilogue')
+    assert state(c, h)['events'] == []
+    event = lambda name: c.post('/v1/story/step', headers=h, json=mutation(action='event', event=name))
+    # Not before 모카 has her gift.
+    assert event('forest_told').json()['detail'] == 'story_not_done'
+    step(c, h, 'read_letter')
+    step(c, h, 'accept')
+    chair = next(o for o in c.get('/v1/me', headers=h).json()['objects'] if o['name'] == '환영의 나무 의자')
+    assert give(c, h, chair).status_code == 200
+    assert event('forest_gate').json()['detail'] == 'story_event_order'
+    assert event('lava_cave').status_code == 422
+    assert event('forest_told').json()['story']['events'] == ['forest_told']
+    now[0] += 3
+    # A second report changes nothing; the gate comes after.
+    assert event('forest_told').json()['story']['events'] == ['forest_told']
+    assert event('forest_gate').json()['story']['events'] == ['forest_told', 'forest_gate']
+    assert c.get('/v1/me', headers=h).json()['story']['events'] == ['forest_told', 'forest_gate']
+    data = str(app.state.settings.data_dir)
+    assert admin_cli.main(['story', 'show', 'epilogue', '--data-dir', data]) == 0
+    assert [e['event'] for e in json.loads(capsys.readouterr().out)['events']] == ['forest_told', 'forest_gate']
+    assert admin_cli.main(['story', 'reset', 'epilogue', '--data-dir', data]) == 0
+    capsys.readouterr()
+    assert state(c, h)['events'] == [] and state(c, h)['step'] == 'letter'
+
+
+def test_epilogue_rescue_and_shop_unlock_share_the_completed_chapter(world):
+    app, c, now = world
+    app.state.settings.resident_moves = True
+    h = account(c, 'rescuer')
+    # Fetch directly so the gift route must initialize residency before setting done.
+    with app.state.db.read() as conn:
+        user = conn.execute("SELECT id FROM users WHERE username='rescuer'").fetchone()[0]
+        chair = dict(conn.execute('SELECT id,version FROM objects WHERE owner_id=? LIMIT 1', (user,)).fetchone())
+    assert c.get('/v1/shops/general_store', headers=h).json()['open'] is False
+    for event in story.EVENTS:
+        response = c.post('/v1/story/step', headers=h, json=mutation(action='event', event=event))
+        assert response.status_code == 409 and response.json()['detail'] == 'story_not_done'
+    assert give(c, h, chair).status_code == 200
+    assert c.get('/v1/village/residency', headers=h).json()['residents'][0]['state'] == 'away'
+    assert state(c, h)['flags'][story.DANBI_FLAG] is True
+    # The patch's shop flag is an unlock, while the residency timer starts at rescue.
+    assert c.get('/v1/shops/general_store', headers=h).json()['open'] is True
+    early = c.post('/v1/story/step', headers=h, json=mutation(action='event', event='danbi_rescued'))
+    assert early.json()['detail'] == 'story_event_order'
+    for index, event in enumerate(story.EVENTS):
+        body = mutation(action='event', event=event)
+        response = c.post('/v1/story/step', headers=h, json=body)
+        assert response.status_code == 200, response.text
+        assert response.json()['story']['events'] == list(story.EVENTS[:index + 1])
+        assert c.post('/v1/story/step', headers=h, json=body).json() == response.json()
+    resident = c.get('/v1/village/residency', headers=h).json()['residents'][0]
+    assert resident['state'] == 'arriving' and resident['memory']['met'] is True
+    now[0] = resident['due_at']
+    settled = c.get('/v1/village/residency', headers=h).json()
+    assert settled['residents'][0]['state'] == 'home'
+    assert [event['kind'] for event in settled['news']].count('moved_in') == 1
+
+
+@pytest.mark.parametrize('reader', ['server', 'operator'])
+def test_movein_story_event_timestamp_is_upgraded_without_losing_events(world, capsys, reader):
+    app, c, now = world
+    h = account(c, 'old_events')
+    with app.state.db.transaction() as conn:
+        user = conn.execute("SELECT id FROM users WHERE username='old_events'").fetchone()[0]
+        conn.execute("UPDATE story_progress SET step='done' WHERE user_id=?", (user,))
+        for event in story.EVENTS:
+            conn.execute('INSERT INTO story_events VALUES (?,?,?)', (user, event, now[0]))
+        conn.execute('ALTER TABLE story_events RENAME COLUMN at TO created')
+    if reader == 'operator':
+        assert admin_cli.main(['story', 'show', 'old_events', '--data-dir', str(app.state.settings.data_dir)]) == 0
+        assert [event['event'] for event in json.loads(capsys.readouterr().out)['events']] == list(story.EVENTS)
+    else:
+        restarted = create_app(app.state.settings, clock=lambda: now[0], worker_enabled=False)
+        with TestClient(restarted) as fresh:
+            assert state(fresh, h)['events'] == list(story.EVENTS)
+            assert state(fresh, h)['flags'][story.DANBI_FLAG] is True
+        restarted.state.db.close()
+    with app.state.db.read() as conn:
+        columns = {row[1] for row in conn.execute('PRAGMA table_info(story_events)')}
+        assert 'at' in columns and 'created' not in columns

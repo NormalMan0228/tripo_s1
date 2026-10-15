@@ -135,6 +135,8 @@ class Settings:
     signups_per_day: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_SIGNUPS_PER_DAY', '200')))
     legacy_generation_enabled: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_ENABLE_LEGACY_GENERATION', 'false').lower() == 'true')
     credit_reserve: int = field(default_factory=lambda: int(os.getenv('TRIPO_RESERVE_PER_JOB', '200')))
+    # Paid character rig/animation is opt-in until separately approved.
+    rig_anim_enabled: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_RIG_ANIM_ENABLED', 'false').lower() == 'true')
     # Seconds one submitted Tripo part may take (queued, running or unreachable) before the craft
     # fails and its starseeds come back; the task is never submitted again.
     studio_part_deadline: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_PART_DEADLINE', '1200')))
@@ -146,6 +148,10 @@ class Settings:
     npc_shuffle_min: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_SHUFFLE_MIN', '14400')))
     npc_shuffle_max: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_SHUFFLE_MAX', '86400')))
     npc_seed: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_NPC_SEED', '0')))
+    # Resident moves are opt-in until the client/map integration is ready.
+    resident_moves: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_RESIDENT_MOVES', 'off').lower() in ('on', '1', 'true'))
+    resident_arrive_seconds: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_RESIDENT_ARRIVE_SECONDS', '90')))
+    resident_leave_seconds: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_RESIDENT_LEAVE_SECONDS', '90')))
     # New accounts start the opening story chapter (server/story.py); off: they never see it.
     story_enabled: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_STORY', 'on').lower() not in ('off', '0', 'false'))
     # Residents' requests (server/quests.py): their starseed rewards (quests.STARS) times this;
@@ -165,6 +171,10 @@ class Settings:
     studio_credit_rate: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_STARS_PER_CREDIT','1')))
     llm_key: str = field(default_factory=lambda: configured_secret('OPENAI_API_KEY'), repr=False)
     gemini_key: str = field(default_factory=lambda: configured_secret('GEMINI_API_KEY'), repr=False)
+    # Shared UTC-day call budget for craft/interaction design, including failed calls,
+    # repairs and model retries. Testers use the same caps; 0 disables LLM calls.
+    llm_user_daily_call_limit: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_LLM_USER_DAILY_CALL_LIMIT', '20')))
+    llm_server_daily_call_limit: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_LLM_SERVER_DAILY_CALL_LIMIT', '1000')))
     # Tried in order; a model the key cannot use (404) falls through to the next.
     gemini_models: tuple = field(default_factory=lambda: tuple(m.strip() for m in os.getenv(
         'TRIPOTHON_GEMINI_MODELS', 'gemini-3.5-flash,gemini-3.8-flash,gemini-3.1-flash-lite').split(',') if m.strip()))
@@ -200,12 +210,18 @@ class Settings:
     presence_budget: float = field(default_factory=lambda: float(os.getenv('VILLAGEN_PRESENCE_BUDGET', '60')))
 
     def validate(self):
+        from .campfire import configured_mode
+        configured_mode()
         if self.mode not in ('demo', 'live'):
             raise ValueError('TRIPOTHON_MODE must be demo or live')
         if self.studio_llm not in ('fixture','codex','openai','gemini'):
             raise ValueError('Invalid studio LLM provider')
         if self.studio_design_format not in ('classic','structured'):
             raise ValueError('Invalid studio design format')
+        if (type(self.llm_user_daily_call_limit) is not int or type(self.llm_server_daily_call_limit) is not int
+                or not 0 <= self.llm_user_daily_call_limit <= 1000000
+                or not 0 <= self.llm_server_daily_call_limit <= 1000000):
+            raise ValueError('Invalid LLM daily call limits')
         if self.mode=='live' and self.studio_llm=='codex':
             raise ValueError('Codex subscription experiments are local development only')
         if self.mode == 'live' and self.day_seconds != 90:
@@ -254,6 +270,9 @@ class Settings:
         for low, high in ((self.npc_place_min, self.npc_place_max), (self.npc_shuffle_min, self.npc_shuffle_max)):
             if not (math.isfinite(low) and math.isfinite(high) and 0.5 <= low <= high <= 30 * 86400):
                 raise ValueError('Invalid resident home timing')
+        for delay in (self.resident_arrive_seconds, self.resident_leave_seconds):
+            if not math.isfinite(delay) or not 0 <= delay <= 30 * 86400:
+                raise ValueError('Invalid resident move timing')
         if len(self.npc_levels) != 4 or any(not 0 <= a < b for a, b in zip((0,) + tuple(self.npc_levels), self.npc_levels)):
             raise ValueError('Friendship hearts need four rising point thresholds')
         if not 0 <= self.npc_seed < 2**31:

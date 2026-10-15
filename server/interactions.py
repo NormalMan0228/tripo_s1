@@ -34,6 +34,7 @@ from .models import Mutation, Strict
 from .asset_vm import AssetVM, ProgramError, validate_program, exercise, exercise_extended, legacy, NAME, EVENTS
 from .provider import ProviderError
 from . import behaviour_library as library
+from . import llm_budget
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS object_interactions (
@@ -757,7 +758,8 @@ class Interactions:
             else:
                 # The studio's designer and its validation/repair loop; the plan comes back unchanged.
                 live = self.settings.mode == 'live'
-                result_plan, program, provenance = await self.studio.designer.generate(
+                result_plan, program, provenance = await llm_budget.generate(
+                    self.db, self.settings, self.clock, row['owner_id'], 'interaction_describe', design_id, self.studio.designer,
                     behaviour_request(row['text'], plan, original), 'gpt-6-luna', 'high', None, None)
                 if [p['id'] for p in result_plan['parts']] != [p['id'] for p in parts]:
                     raise InteractionError('design_changed_parts')

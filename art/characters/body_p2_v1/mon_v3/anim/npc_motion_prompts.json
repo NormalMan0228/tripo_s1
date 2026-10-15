@@ -1,0 +1,40 @@
+{
+ "boni": {
+  "name": "보니",
+  "src_id": "npc19",
+  "task": "0c805f8c-3bfe-48f4-82ae-12b0e261f9d5",
+  "clips": {
+   "idle": [
+    "A cheerful young craftswoman in a leather tool apron stands in place with her weight on one leg, rolls her shoulders, glances down to check the tools on her apron, taps her chin while thinking, then smiles and shifts her weight to the other leg. Seamless loop.",
+    4
+   ],
+   "walk": [
+    "A cheerful young craftswoman in a leather tool apron walking in place with a brisk, purposeful stride, arms swinging naturally, back straight, head up and looking around with interest. Walking in place, seamless loop.",
+    3
+   ],
+   "work": [
+    "A young craftswoman works in place at an unseen workbench: she raises her right hand and hammers down three firm strokes while her left hand steadies the piece, then grips with both hands and saws back and forth with steady strokes, then straightens up and wipes her brow. Seamless loop.",
+    6
+   ]
+  }
+ },
+ "sol": {
+  "name": "솔",
+  "src_id": "npc20",
+  "task": "dd015750-14cd-4db9-b712-a1e80f1509e3",
+  "clips": {
+   "idle": [
+    "A cheerful young gardener girl in an apron stands in place, rocking gently on her heels, brushing soil off her palms, then clasping her hands behind her back and tilting her head happily to look around. Seamless loop.",
+    4
+   ],
+   "walk": [
+    "A cheerful young gardener girl walking in place with a light, bouncy step, arms swinging loosely, a little spring in each step, head turning to enjoy the view. Walking in place, seamless loop.",
+    3
+   ],
+   "work": [
+    "A young gardener girl works in place: she holds an unseen watering can in both hands and tilts it in a slow sweep over the ground, then sets it down, crouches and pats the soil around a seedling with both hands, then stands back up and dusts off her hands. Seamless loop.",
+    6
+   ]
+  }
+ }
+}

@@ -84,8 +84,10 @@ def test_visitors_enter_the_host_home_but_not_the_workshop(world):
     route = '/v1/social/village/objects/'+own['id']+'/model'
     assert c.get(route, headers=hs[1]).status_code == 404
     invite(c, hs[0], hs[1], 'bravo', 'village')
-    assert c.get(route, headers=hs[1]).content[:4] == b'glTF'
+    # A home piece only while the home is open to the guest (its owner inside: home_access.py).
+    assert c.get(route, headers=hs[1]).status_code == 404
     host = c.post('/v1/social/presence', headers=hs[0], json={'scene': 'home', 'x': 0, 'z': 3}).json()
+    assert c.get(route, headers=hs[1]).content[:4] == b'glTF'
     guest = c.post('/v1/social/presence', headers=hs[1], json={'scene': 'home', 'x': 1, 'z': 2}).json()
     assert guest['village'] is None and guest['space']['scene'] == 'home'
     assert [o['id'] for o in guest['space']['objects']] == [own['id']]

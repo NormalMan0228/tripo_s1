@@ -21,8 +21,9 @@ const NODES := [
 	["flower_01","flower",82.4,-24.2],["flower_02","flower",39.7,-10.1],["flower_03","flower",-35.0,2.6],["flower_04","flower",79.0,45.4],
 	["flower_05","flower",37.8,50.2],["flower_06","flower",-27.4,29.8],["flower_07","flower",-9.1,19.1],["flower_08","flower",77.9,29.2],
 	["flower_09","flower",19.0,-15.4],["flower_10","flower",58.8,-33.9],["flower_11","flower",23.2,-43.2],["flower_12","flower",74.2,-17.0],
-	["herb_01","herb",-16.7,8.5],["herb_02","herb",30.7,47.7],["herb_03","herb",-53.9,-27.6],["herb_04","herb",59.6,33.4],
-	["herb_05","herb",-48.4,9.2],["herb_06","herb",-39.5,6.4],["herb_07","herb",-11.1,15.6],["herb_08","herb",-51.4,31.0],
+	# Herbs grow beside the shrubs, off the paths (2026-10-16, tests/life_move_herbs.gd).
+	["herb_01","herb",-13.6,6.7],["herb_02","herb",29.9,47.2],["herb_03","herb",-45.2,-25.3],["herb_04","herb",60.5,33.4],
+	["herb_05","herb",-44.6,8.2],["herb_06","herb",-41.3,7.5],["herb_07","herb",-11.6,17.3],["herb_08","herb",-54.5,29.2],
 ]
 const PROMPTS := {"rock":"돌 캐기","shell":"조개껍데기 줍기","flower":"들꽃 꺾기","mushroom":"버섯 따기","herb":"향초 뜯기","branch":"나뭇가지 줍기"}
 const PARTICLES := {"rock":"dust","shell":"sand","flower":"petal","mushroom":"spore","herb":"leaf","branch":"leaf"}

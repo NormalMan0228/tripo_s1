@@ -18,7 +18,7 @@ The server checks every condition it can see from its own data:
 and trusts the game only for what it cannot see, with limits:
   visit    standing at a place (a signpost, the lookout, a pier) or entering a room: one report per
            place, from a fixed list, at least VISIT_GAP seconds apart; night requests only while it
-           is night by the player's clock (homestead.night, the time zone header); a request taken
+           is night by the account's fixed reward clock (homestead.reward_night); a request taken
            while standing at its place (하늘 in her observatory) counts that place at once
   talk     passing a message on to another resident (that resident only, once).
 
@@ -163,10 +163,15 @@ def unlocked(conn, user_id, quest_id=None):
                         (user_id, row['requested_at'] or 0)).fetchone() is not None
 
 
-def held(conn, user_id):
+def held(conn, user_id, settings=None):
     """The requests still held back by the opening chapter (none once it is done or absent)."""
     row = conn.execute('SELECT step FROM story_progress WHERE user_id=?', (user_id,)).fetchone()
-    return set(STORY_HELD) if row and row['step'] != 'done' else set()
+    waiting = set(STORY_HELD) if row and row['step'] != 'done' else set()
+    if settings is not None:
+        from .village_residents import absent
+        missing = absent(conn, user_id, settings)
+        waiting.update(q for q, spec in QUESTS.items() if spec['npc'] in missing)
+    return waiting
 
 
 def life_state(conn, user_id):
@@ -346,10 +351,15 @@ def public(conn, user_id, settings):
     """Every request as the game shows it: {unlocked, scale, catalog, list}."""
     rows = {r['quest_id']: r for r in conn.execute('SELECT * FROM quest_progress WHERE user_id=?', (user_id,))}
     open_ = unlocked(conn, user_id)
-    waiting = held(conn, user_id)
+    waiting = held(conn, user_id, settings)
     life = life_state(conn, user_id) if any(QUESTS[q]['kind'] in ('bring', 'catch') and r['state'] == 'active' for q, r in rows.items() if q in QUESTS) else None
     listing = [entry(conn, user_id, quest_id, rows.get(quest_id), settings.quest_stars_scale, open_ and quest_id not in waiting, life['bag'] if life else None, life)
                for quest_id in QUESTS]
+    from .village_residents import absent
+    missing = absent(conn, user_id, settings)
+    for item in listing:
+        if item['npc'] in missing and item['state'] != 'done':
+            item['state'] = 'locked'
     fixed = [{k: v for k, v in item.items() if k not in LIVE} for item in listing]
     catalog = hashlib.sha1(json.dumps(fixed, sort_keys=True, separators=(',', ':')).encode()).hexdigest()[:16]
     return {'unlocked': open_, 'scale': settings.quest_stars_scale, 'catalog': catalog, 'list': listing}
@@ -373,6 +383,33 @@ def describe(conn, user_id):
     """Operator view (admin_cli quests show)."""
     return {'progress': [dict(r) for r in conn.execute('SELECT * FROM quest_progress WHERE user_id=? ORDER BY accepted', (user_id,))],
             'paid': [dict(r) for r in conn.execute("SELECT reference AS quest,amount,created FROM ledger WHERE user_id=? AND reason='quest_reward' ORDER BY created", (user_id,))]}
+
+
+def fulfill(conn, user_id, quest_id, row, now):
+    """Validate and hand over bag items inside the caller's transaction.
+
+    Shared by one-time requests and the daily board; client counts are never trusted.
+    """
+    quest = QUESTS[quest_id]
+    if quest['kind'] != 'bring':
+        if have(conn, user_id, quest_id, row) < quest['count']:
+            fail('quest_not_ready')
+        return {}
+    life = life_state(conn, user_id)
+    if have(conn, user_id, quest_id, row, life['bag']) < quest['count']:
+        fail('quest_not_ready')
+    left, taken = quest['count'], {}
+    for item in quest['items']:
+        n = min(left, int(life['bag'].get(item, 0)))
+        if n:
+            homestead.spend(life, item, n)
+            taken[item], left = n, left - n
+        if not left:
+            break
+    life['version'] = life.get('version', 0) + 1
+    conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
+                 (user_id, json.dumps(life)))
+    return {'taken': taken, 'homestead': homestead.public(life, now)}
 
 
 class Quests:
@@ -406,6 +443,8 @@ class Quests:
         def read(request: Request):
             with db.read() as conn:
                 user = auth(conn, request)
+            app.state.village_residents.residents_for(user['id'])
+            with db.read() as conn:
                 return {'quests': public(conn, user['id'], settings)}
 
         @app.post('/v1/quests/{quest_id}/accept')
@@ -414,7 +453,8 @@ class Quests:
 
             def apply(conn, user):
                 own_village(conn, user)
-                if not unlocked(conn, user['id'], quest_id):
+                app.state.village_residents.sync_in(conn, user['id'], clock())
+                if not unlocked(conn, user['id'], quest_id) or quest_id in held(conn, user['id'], settings):
                     fail('quests_locked')
                 row = conn.execute('SELECT state FROM quest_progress WHERE user_id=? AND quest_id=?', (user['id'], quest_id)).fetchone()
                 if row and row['state'] == 'done':
@@ -426,7 +466,7 @@ class Quests:
                     # Taken at its place (하늘 asks inside her observatory at night): that place counts
                     # now, by the report's rules (a night errand only while it is night).
                     progress = {}
-                    if quest['kind'] == 'visit' and body.place in quest['places'] and (not quest.get('night') or homestead.night(now)):
+                    if quest['kind'] == 'visit' and body.place in quest['places'] and (not quest.get('night') or homestead.reward_night(now)):
                         progress = {'places': [body.place], 'last': now}
                     conn.execute('INSERT INTO quest_progress(user_id,quest_id,state,accepted,baseline,progress) VALUES (?,?,?,?,?,?)',
                                  (user['id'], quest_id, 'active', now, json.dumps(baseline), json.dumps(progress)))
@@ -440,7 +480,8 @@ class Quests:
             def apply(conn, user):
                 own_village(conn, user)
                 # Closed again after a story reset (admin_cli story reset): nothing counts until they reopen.
-                if not unlocked(conn, user['id'], quest_id):
+                app.state.village_residents.sync_in(conn, user['id'], clock())
+                if not unlocked(conn, user['id'], quest_id) or quest_id in held(conn, user['id'], settings):
                     fail('quests_locked')
                 row = active(conn, user, quest_id)
                 if quest['kind'] not in ('visit', 'talk'):
@@ -450,9 +491,8 @@ class Quests:
                 state = json.loads(row['progress'])
                 places = state.get('places', [])
                 now = clock()
-                # A night errand counts only while it is night by the player's clock (the time zone
-                # header, as for night fish).
-                if quest.get('night') and body.place not in places and not homestead.night(now):
+                # Reward eligibility uses the account's fixed clock, never a new request header.
+                if quest.get('night') and body.place not in places and not homestead.reward_night(now):
                     fail('quest_not_night')
                 if body.place not in places and len(places) < quest['count']:
                     if now - float(state.get('last', 0)) < VISIT_GAP:
@@ -469,30 +509,12 @@ class Quests:
 
             def apply(conn, user):
                 own_village(conn, user)
-                if not unlocked(conn, user['id'], quest_id):
+                app.state.village_residents.sync_in(conn, user['id'], clock())
+                if not unlocked(conn, user['id'], quest_id) or quest_id in held(conn, user['id'], settings):
                     fail('quests_locked')
                 row = active(conn, user, quest_id)
                 now = clock()
-                extra = {}
-                if quest['kind'] == 'bring':
-                    life = life_state(conn, user['id'])
-                    if have(conn, user['id'], quest_id, row, life['bag']) < quest['count']:
-                        fail('quest_not_ready')
-                    # The hand-over: from the bag, cheapest kinds first.
-                    left, taken = quest['count'], {}
-                    for item in quest['items']:
-                        n = min(left, int(life['bag'].get(item, 0)))
-                        if n:
-                            homestead.spend(life, item, n)
-                            taken[item], left = n, left - n
-                        if not left:
-                            break
-                    life['version'] = life.get('version', 0) + 1
-                    conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
-                                 (user['id'], json.dumps(life)))
-                    extra = {'taken': taken, 'homestead': homestead.public(life, now)}
-                elif have(conn, user['id'], quest_id, row) < quest['count']:
-                    fail('quest_not_ready')
+                extra = fulfill(conn, user['id'], quest_id, row, now)
                 # Once per account: the ledger has at most one reward per request.
                 if conn.execute("SELECT 1 FROM ledger WHERE user_id=? AND reason='quest_reward' AND reference=?", (user['id'], quest_id)).fetchone():
                     fail('quest_already_done')

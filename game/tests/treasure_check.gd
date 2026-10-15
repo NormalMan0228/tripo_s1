@@ -96,7 +96,7 @@ func run() -> void:
 	api.token = signup.data.token
 	var start := await shards(api)
 	var listed: Dictionary = await api.request("/v1/chests")
-	expect(listed.ok and int(listed.data.chests.total) == 11 and listed.data.chests.opened.is_empty(), "the server lists eleven chests, none open")
+	expect(listed.ok and int(listed.data.chests.total) == 12 and listed.data.chests.opened.is_empty(), "the server lists twelve chests, none open")
 
 	# 1. Home: the chest glows against the back wall; the chip offers to open it.
 	var room: Node = await start_at_home(signup.data.token)
@@ -140,7 +140,7 @@ func run() -> void:
 		quit(1)
 		return
 	expect(await wait_for(func() -> bool: return chests.shown and chests.visible, 10.0), "the field chests show once /v1/me says which are open")
-	expect(chests.skipped.is_empty() and chests.chests.size() == 10, "ten field chests placed (skipped %s)" % str(chests.skipped))
+	expect(chests.skipped.is_empty() and chests.chests.size() == 11, "eleven field chests placed (skipped %s)" % str(chests.skipped))
 	var cafe: Dictionary = chests.chest_of("fields_cafe")
 	expect(not cafe.is_empty() and cafe.state == "closed", "the café chest is closed")
 	var front := Vector2(sin(cafe.root.rotation.y), cos(cafe.root.rotation.y))

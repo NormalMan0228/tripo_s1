@@ -15,6 +15,7 @@ const BuildMode = preload("res://scripts/build_mode.gd")
 const I18n = preload("res://scripts/i18n.gd")
 const CraftTracker = preload("res://scripts/craft_tracker.gd")
 const CraftWords = preload("res://scripts/craft_words.gd")
+const CraftSizeBox = preload("res://scripts/craft_size_box.gd")
 ## The chosen look and size follow the account (cloud_prefs.gd syncs this section).
 const SETTINGS_SECTION := "craft"
 
@@ -24,6 +25,11 @@ signal job_finished(job: Dictionary)
 signal new_craft
 
 const CONCEPT_CREDITS := 5
+## Reference photos: any picture up to PHOTO_FILE_BYTES is read, scaled to PHOTO_SIDE px and re-encoded
+## under PHOTO_SEND_BYTES before it is sent (the server takes 6 MB and keeps 1 MB, asset_studio.py).
+const PHOTO_FILE_BYTES := 20 * 1024 * 1024
+const PHOTO_SIDE := 1600
+const PHOTO_SEND_BYTES := 1024 * 1024
 const TERMINAL = CraftTracker.TERMINAL
 ## The server is still working: the window shows the steps and keeps them between polls.
 const WORKING := ["queued", "planning", "building", "submitting"]
@@ -47,10 +53,15 @@ var form: VBoxContainer
 var status: VBoxContainer
 var prompt: TextEdit
 var image_label: Label
+var image_preview: TextureRect
+## Text-only crafts: draw a concept picture first (5 credits) or build straight from the words (69).
+var picture_first: CheckButton
 var surface: OptionButton
 var motion: OptionButton
 var mesh_model: OptionButton
 var refine: CheckButton
+## A moving character (task 67): a skeleton with idle and walk clips, when the server offers rigging.
+var animate_box: CheckButton
 var price_label: Label
 var concept_note: Label
 var ask: Button
@@ -70,6 +81,8 @@ var size_title: Label
 var size_row: HFlowContainer
 var style_buttons := {}
 var size_buttons := {}
+## "직접 정하기": the box the player drags (craft_size_box.gd), sent as dims when the server takes them.
+var size_box: CraftSizeBox
 var held_note: Label
 ## What the server's object library makes of the words (POST /v1/studio/kind): a type always built
 ## moving (a clock: its hands are free) and the Tripo meshes a moving craft of it needs.
@@ -89,6 +102,9 @@ func setup(place: Node, network: Node) -> void:
 	style_id = str(config.get_value(SETTINGS_SECTION, "style", style_id))
 	size_id = str(config.get_value(SETTINGS_SECTION, "size", size_id))
 	_build_form()
+	# The last dragged box, kept as text (account prefs hold no float lists).
+	var saved := str(config.get_value(SETTINGS_SECTION, "dims", "")).split_floats(",")
+	if saved.size() == 3: size_box.set_dims(Vector3(saved[0], saved[1], saved[2]))
 
 ## Opens on the crafting settings the session last read (at once) and reads them again behind, then
 ## shows what the session's craft is doing: the craft under way, the finished one, or the form.
@@ -112,6 +128,11 @@ func _show_tracked() -> void:
 	elif not tracker.done.is_empty():
 		job_id = ""
 		show_job(tracker.done)
+	elif not tracker.failed.is_empty():
+		# Failed while the window was closed (the slot's badge said so): why, once, on top of the form.
+		job_id = ""
+		show_job(tracker.failed)
+		tracker.failed = {}
 	else:
 		job_id = ""
 		_show_form()
@@ -168,12 +189,13 @@ func _llm() -> bool:
 # ------------------------------------------------------------------ form
 
 func _build_form() -> void:
-	form = VBoxContainer.new()
-	form.add_theme_constant_override("separation", 9)
-	add_child(form)
+	# The status sits above the form: a failed craft says why on top of the form it returns to.
 	status = VBoxContainer.new()
 	status.add_theme_constant_override("separation", 9)
 	add_child(status)
+	form = VBoxContainer.new()
+	form.add_theme_constant_override("separation", 9)
+	add_child(form)
 	_label(form, tr("어떤 물건을 만들까요?"), 20)
 	prompt = TextEdit.new()
 	prompt.custom_minimum_size = Vector2(0, 92)
@@ -191,10 +213,19 @@ func _build_form() -> void:
 	var photo := _row(form)
 	photo_buttons.append(_button(photo, tr("사진·그림 추가"), func() -> void: _file_dialog().popup_centered_ratio(0.7)))
 	photo_buttons.append(_button(photo, tr("제거"), func() -> void:
-		image_data = ""
-		image_label.text = tr("참고 이미지 없음")
+		_clear_image()
 		_update_options()))
-	image_label = _label(form, tr("참고 그림을 추가할 수 있어요"), 13, true)
+	var picked := HBoxContainer.new()
+	picked.add_theme_constant_override("separation", 8)
+	form.add_child(picked)
+	image_preview = TextureRect.new()
+	image_preview.custom_minimum_size = Vector2(72, 72)
+	image_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image_preview.visible = false
+	picked.add_child(image_preview)
+	image_label = _label(picked, tr("참고 그림을 추가할 수 있어요"), 13, true)
+	image_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	style_title = _label(form, tr("스타일"), 15)
 	style_grid = GridContainer.new()
 	style_grid.columns = 3
@@ -204,7 +235,10 @@ func _build_form() -> void:
 	resized.connect(func() -> void: style_grid.columns = 3 if size.x > 480 else 2)
 	size_title = _label(form, tr("크기"), 15)
 	size_row = _row(form)
-	for control in [style_title, style_grid, size_title, size_row]: control.visible = false
+	size_box = CraftSizeBox.new()
+	form.add_child(size_box)
+	size_box.dims_changed.connect(_save_dims)
+	for control in [style_title, style_grid, size_title, size_row, size_box]: control.visible = false
 	var choices := GridContainer.new()
 	choices.columns = 2
 	# One column in a room's narrow drawer.
@@ -219,8 +253,24 @@ func _build_form() -> void:
 	refine.text = tr("그림을 먼저 정리해서 만들기")
 	refine.tooltip_text = tr("Tripo 이미지 편집: 부품당 예상 5크레딧 추가. 이후 이미지→3D 요금 적용.")
 	choices.add_child(refine)
+	animate_box = CheckButton.new()
+	animate_box.text = tr("움직이는 캐릭터로 만들기")
+	animate_box.tooltip_text = tr("사람 모양 캐릭터에 뼈대를 넣고, 서 있는 동작과 걷는 동작을 붙여요.")
+	animate_box.visible = false
+	choices.add_child(animate_box)
 	for control in [surface, motion, mesh_model]: control.item_selected.connect(func(_i: int) -> void: _update_options())
 	refine.toggled.connect(func(_on: bool) -> void: _update_options())
+	animate_box.toggled.connect(func(_on: bool) -> void: _update_options())
+	picture_first = CheckButton.new()
+	picture_first.text = tr("AI 그림을 먼저 보고 만들기")
+	picture_first.tooltip_text = tr("끄면 그림 단계 없이 글로 바로 3D를 만들어요. (그림 1장 5크레딧 절약)")
+	var prefs := ConfigFile.new()
+	prefs.load(I18n.settings_path())
+	picture_first.button_pressed = str(prefs.get_value(SETTINGS_SECTION, "picture_first", "on")) != "off"
+	picture_first.toggled.connect(func(_on: bool) -> void:
+		_save_choice()
+		_update_options())
+	form.add_child(picture_first)
 	concept_note = _label(form, "", 13, true)
 	# Developer choices; players get the server's own setup (see apply_info).
 	dev_box = VBoxContainer.new()
@@ -251,22 +301,141 @@ func _file_dialog() -> FileDialog:
 		file_dialog = FileDialog.new()
 		file_dialog.access = FileDialog.ACCESS_FILESYSTEM
 		file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-		file_dialog.filters = PackedStringArray(["*.png,*.jpg,*.jpeg ; Reference image"])
+		file_dialog.filters = PackedStringArray(["*.png,*.jpg,*.jpeg,*.webp,*.bmp ; Reference image"])
 		add_child(file_dialog)
 		file_dialog.file_selected.connect(pick_image)
 	return file_dialog
 
+## A picked photo: read (PNG, JPG, WebP, BMP up to 20 MB), scaled down and re-encoded so it always fits
+## what the server takes; a picture that cannot be used says why.
 func pick_image(path: String) -> void:
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null or file.get_length() > 1024 * 1024:
+	var picture := read_photo(path)
+	if picture.has("error"):
 		RpgUi.sfx("deny", -6.0)
-		_say(tr("이미지는 1MB 이하로 준비해 주세요"))
+		_say(CraftWords.refusal(str(picture.error)))
 		return
-	var bytes := file.get_buffer(file.get_length())
-	image_data = "data:image/" + ("png" if path.get_extension().to_lower() == "png" else "jpeg") + ";base64," + Marshalls.raw_to_base64(bytes)
+	image_data = str(picture.data)
 	image_label.text = path.get_file()
+	image_preview.texture = ImageTexture.create_from_image(picture.image)
+	image_preview.visible = true
+	RpgUi.pop_in(image_preview, 0.3, 0.6)
+	RpgUi.sfx("select")
 	if _llm(): designer.select(1)
 	_update_options()
+
+func _clear_image() -> void:
+	image_data = ""
+	image_label.text = tr("참고 이미지 없음")
+	image_preview.texture = null
+	image_preview.visible = false
+
+## {"data": data URL, "image": Image} or {"error": image_too_large / image_too_small / image_unreadable}.
+static func read_photo(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null: return {"error": "image_unreadable"}
+	if file.get_length() > PHOTO_FILE_BYTES: return {"error": "image_too_large"}
+	return decode_photo(file.get_buffer(file.get_length()))
+
+## By content, not the file name: a .png that is really a JPEG still loads. Godot's JPEG decoder ignores
+## the camera's EXIF rotation, so it is read here; a PNG or JPEG that already fits is sent as it is
+## (the server turns it upright and converts its colours), anything else is re-encoded upright.
+static func decode_photo(bytes: PackedByteArray) -> Dictionary:
+	var image := Image.new()
+	var loaded := ERR_FILE_UNRECOGNIZED
+	var orientation := 1
+	var kind := ""
+	if bytes.size() >= 4 and bytes[0] == 0x89 and bytes[1] == 0x50:
+		loaded = image.load_png_from_buffer(bytes)
+		kind = "png"
+	elif bytes.size() >= 3 and bytes[0] == 0xFF and bytes[1] == 0xD8:
+		loaded = image.load_jpg_from_buffer(bytes)
+		orientation = jpeg_orientation(bytes)
+		kind = "jpeg"
+	elif bytes.size() >= 12 and bytes.slice(0, 4).get_string_from_ascii() == "RIFF" and bytes.slice(8, 12).get_string_from_ascii() == "WEBP": loaded = image.load_webp_from_buffer(bytes)
+	elif bytes.size() >= 2 and bytes[0] == 0x42 and bytes[1] == 0x4D: loaded = image.load_bmp_from_buffer(bytes)
+	if loaded != OK or image.is_empty(): return {"error": "image_unreadable"}
+	if mini(image.get_width(), image.get_height()) < 16: return {"error": "image_too_small"}
+	if not kind.is_empty() and bytes.size() <= PHOTO_SEND_BYTES and maxi(image.get_width(), image.get_height()) <= PHOTO_SIDE:
+		upright(image, orientation)
+		return {"data": "data:image/%s;base64,%s" % [kind, Marshalls.raw_to_base64(bytes)], "image": image}
+	return encode_photo(image, orientation)
+
+## A JPEG's EXIF Orientation (1..8), or 1 when it has none.
+static func jpeg_orientation(bytes: PackedByteArray) -> int:
+	var at := 2
+	while at + 4 <= bytes.size() and bytes[at] == 0xFF:
+		var marker: int = bytes[at + 1]
+		var length: int = (bytes[at + 2] << 8) | bytes[at + 3]
+		if marker == 0xDA or marker == 0xD9 or length < 2: break
+		var end := at + 2 + length
+		if marker == 0xE1 and length >= 16 and end <= bytes.size() and bytes.slice(at + 4, at + 8).get_string_from_ascii() == "Exif":
+			var tiff := at + 10
+			var little: bool = bytes[tiff] == 0x49
+			var ifd := tiff + _exif_int(bytes, tiff + 4, 4, little)
+			if ifd < tiff or ifd + 2 > end: return 1
+			for i in _exif_int(bytes, ifd, 2, little):
+				var entry := ifd + 2 + i * 12
+				if entry + 12 > end: break
+				if _exif_int(bytes, entry, 2, little) == 0x0112:
+					var value := _exif_int(bytes, entry + 8, 2, little)
+					return value if value >= 1 and value <= 8 else 1
+			return 1
+		at = end
+	return 1
+
+static func _exif_int(bytes: PackedByteArray, at: int, size: int, little: bool) -> int:
+	var value := 0
+	for i in size:
+		value = (value << 8) | bytes[at + (size - 1 - i if little else i)]
+	return value
+
+## Turns a decoded photo upright the way its EXIF Orientation says (as PIL's ImageOps.exif_transpose).
+static func upright(image: Image, orientation: int) -> void:
+	match orientation:
+		2: image.flip_x()
+		3: image.rotate_180()
+		4: image.flip_y()
+		5:
+			image.rotate_90(CLOCKWISE)
+			image.flip_x()
+		6: image.rotate_90(CLOCKWISE)
+		7:
+			image.rotate_90(COUNTERCLOCKWISE)
+			image.flip_x()
+		8: image.rotate_90(COUNTERCLOCKWISE)
+
+static func encode_photo(image: Image, orientation := 1) -> Dictionary:
+	if image.is_compressed(): image.decompress()
+	var alpha := image.detect_alpha() != Image.ALPHA_NONE
+	# Alpha that is 0 everywhere (some 32-bit BMPs) is unused: the picture is opaque.
+	if alpha and not image.get_used_rect().has_area():
+		image.convert(Image.FORMAT_RGB8)
+		alpha = false
+	var side := PHOTO_SIDE
+	while true:
+		var copy: Image = image.duplicate()
+		var longest := maxi(copy.get_width(), copy.get_height())
+		if longest > side:
+			var ratio := float(side) / float(longest)
+			copy.resize(maxi(1, roundi(copy.get_width() * ratio)), maxi(1, roundi(copy.get_height() * ratio)), Image.INTERPOLATE_LANCZOS)
+		# Turned after the resize: a quarter turn of a full-size photo is slow.
+		upright(copy, orientation)
+		var kind := "png" if alpha else "jpeg"
+		var data: PackedByteArray = copy.save_png_to_buffer() if alpha else copy.save_jpg_to_buffer(0.88)
+		if data.size() > PHOTO_SEND_BYTES and alpha:
+			# A large transparent picture: a JPEG on white, as the server keeps one.
+			copy.convert(Image.FORMAT_RGBA8)
+			var flat := Image.create(copy.get_width(), copy.get_height(), false, Image.FORMAT_RGBA8)
+			flat.fill(Color.WHITE)
+			flat.blend_rect(copy, Rect2i(Vector2i.ZERO, copy.get_size()), Vector2i.ZERO)
+			flat.convert(Image.FORMAT_RGB8)
+			copy = flat
+			data = copy.save_jpg_to_buffer(0.85)
+			kind = "jpeg"
+		if data.size() <= PHOTO_SEND_BYTES or side <= 512:
+			return {"data": "data:image/%s;base64,%s" % [kind, Marshalls.raw_to_base64(data)], "image": copy}
+		side = int(side * 0.75)
+	return {"error": "image_too_large"}
 
 func _tripo() -> bool:
 	return geometry.selected == 1
@@ -287,16 +456,23 @@ func _update_options() -> void:
 	surface.set_item_disabled(0, not _fits(20))
 	if not _fits(20) and surface.selected == 0: surface.select(1)
 	var simple := _design() == "simple"
+	# A moving character: offered when the server rigs (/v1/studio rigging) and builds with Tripo. It is one
+	# still mesh with clips (the server makes it static), from words only.
+	animate_box.visible = _tripo() and not _rigging().is_empty()
+	if not animate_box.visible: animate_box.set_pressed_no_signal(false)
+	var animating := animate_box.visible and animate_box.button_pressed
+	if animating:
+		motion.select(0)
+		forced_motion = false
 	# Moving furniture needs two Tripo meshes, or one when the game makes every moving part (a clock).
 	var moving_meshes := int(kind_info.get("moving_meshes", 2))
-	motion.set_item_disabled(1, not _fits(10 * moving_meshes) or simple)
+	motion.set_item_disabled(1, not _fits(10 * moving_meshes) or simple or animating)
 	if (not _fits(10 * moving_meshes) or simple) and motion.selected == 1: motion.select(0)
-	# A photo is read by the LLM designer.
-	var photos := _llm() and _fits(20)
+	# A photo is read by the LLM designer (a moving character is made from words only).
+	var photos := _llm() and _fits(20) and not animating
 	for b in photo_buttons: b.disabled = not photos
 	if not photos and not image_data.is_empty():
-		image_data = ""
-		image_label.text = tr("참고 이미지 없음")
+		_clear_image()
 	mesh_model.set_item_disabled(1, not _fits(100))
 	if not _fits(100) and mesh_model.selected == 1: mesh_model.select(0)
 	refine.disabled = image_data.is_empty() or not _fits(25)
@@ -307,7 +483,7 @@ func _update_options() -> void:
 	var unit := (10 + (10 if photo else 0) + (10 if textured else 0)) if mesh_model.selected == 0 else (110 if textured else 100)
 	if photo and refine.button_pressed: unit += 5
 	# A clock is always made with its hands (free): the moving option is chosen for the player.
-	var forced := bool(kind_info.get("always_moving", false)) and not simple and not motion.is_item_disabled(1) and (not tripo or _fits(unit * moving_meshes))
+	var forced := bool(kind_info.get("always_moving", false)) and not simple and not animating and not motion.is_item_disabled(1) and (not tripo or _fits(unit * moving_meshes))
 	motion.set_item_disabled(0, forced)
 	if forced and motion.selected != 1:
 		motion.select(1)
@@ -317,17 +493,27 @@ func _update_options() -> void:
 		forced_motion = false
 	moving = motion.selected == 1
 	var least := unit * (moving_meshes if moving else 1)
-	var concept := not photo and not moving
-	var with_concept := (unit + 10 + CONCEPT_CREDITS) if mesh_model.selected == 0 else unit + CONCEPT_CREDITS
+	# The skeleton and its clips (rig + idle + walk) come on top of the mesh.
+	var rig_credits := _rig_credits() if animating else 0
+	least += rig_credits
+	# The player may skip the picture step (69): built straight from the words, 5 credits less.
+	picture_first.visible = not photo and not moving
+	var concept := not photo and not moving and picture_first.button_pressed
+	var with_concept := ((unit + 10 + CONCEPT_CREDITS) if mesh_model.selected == 0 else unit + CONCEPT_CREDITS) + rig_credits
 	var stars := (40 if textured else 20) + (10 if moving else 0)
 	var over := tripo and cap > 0 and least > cap
 	price_label.text = tr("별씨 %d · Tripo 약 %d크레딧") % [stars, with_concept if concept and _fits(with_concept) else least] if tripo else tr("별씨 %d") % stars
 	if over: price_label.text += tr(" · 한도 %d 크레딧을 넘어요") % cap
-	concept_note.visible = concept or forced
-	if forced:
+	concept_note.visible = concept or forced or picture_first.visible
+	if animating:
+		concept_note.visible = true
+		concept_note.text = tr("사람 모양 캐릭터만 만들 수 있어요(예: 로봇 캐릭터, 기사). 뼈대와 동작에 %d크레딧이 더 들어요.") % rig_credits
+	elif forced:
 		concept_note.text = tr("%s는 바늘이 실제 시각에 맞춰 움직이도록 만들어요. 바늘은 공방이 무료로 달아 드려요.") % tr(str(kind_info.get("names", {}).get("ko", "시계")))
 	elif concept:
 		concept_note.text = tr("사진이 없으면 AI가 먼저 그림을 그려 보여 드려요. 마음에 들면 그 그림으로 3D를 만들어요. (그림 1장 5크레딧)") if not tripo or _fits(with_concept) else tr("이번에는 그림 단계 없이 글로 만들어요. (1회 한도)")
+	elif picture_first.visible:
+		concept_note.text = tr("그림 단계 없이 글로 바로 3D를 만들어요.")
 	# Live servers build only with Tripo; a local world makes free sample shapes.
 	var ready_to_build := tripo or not _live()
 	ask.disabled = busy or over or not ready_to_build
@@ -337,8 +523,21 @@ func _body() -> Dictionary:
 	var body := _base_body()
 	# Older servers do not know these fields (and refuse unknown ones).
 	if not style_buttons.is_empty(): body["style"] = style_id
-	if not size_buttons.is_empty(): body["size"] = size_id
+	if not size_buttons.is_empty(): body["size"] = "auto" if size_id == "custom" else size_id
+	if size_id == "custom" and info.has("dims") and size_box.has_box(): body["dims"] = size_box.value()
+	# Only servers that rig know the field (older ones refuse unknown fields).
+	if animate_box.visible and animate_box.button_pressed and not _rigging().is_empty(): body["animate"] = true
 	return body
+
+## The server's rigging offer (/v1/studio "rigging"), {} when it has none.
+func _rigging() -> Dictionary:
+	var rigging = info.get("rigging", {})
+	return rigging if rigging is Dictionary and bool(rigging.get("enabled", false)) else {}
+
+## Tripo credits for a character's skeleton and clips (25 + 10 per clip by the server's offer).
+func _rig_credits() -> int:
+	var rigging := _rigging()
+	return int(rigging.get("rig_credits", 25)) + int(rigging.get("clip_credits", 10)) * maxi(1, (rigging.get("clips", ["idle", "walk"]) as Array).size())
 
 func _base_body() -> Dictionary:
 	var tripo := _tripo()
@@ -347,7 +546,7 @@ func _base_body() -> Dictionary:
 		"mesh_model": "v3.1-20260211" if mesh_model.selected == 0 else "P2-20260801",
 		"model": models.get_item_text(models.selected), "effort": efforts.get_item_text(efforts.selected),
 		"image": image_data, "image_mode": "refine" if tripo and not image_data.is_empty() and refine.button_pressed else "original",
-		"concept": image_data.is_empty() and motion.selected == 0}
+		"concept": image_data.is_empty() and motion.selected == 0 and picture_first.button_pressed}
 
 ## Asks the server what the words name (after a short pause in typing) and updates the options.
 ## Older servers do not know the question: the form works as before.
@@ -419,10 +618,7 @@ func show_job(value: Dictionary) -> void:
 	_clear_status()
 	if state.is_empty() or state in ["failed", "cancelled"]:
 		_show_form()
-		if state == "failed":
-			# A Tripo part that never finished stops at its deadline (asset_studio.py overdue).
-			var words := tr("공방이 너무 오래 걸려 이번 제작을 멈췄어요. 맡긴 별씨는 돌려드렸어요.") if str(value.get("error", "")) == "generation_timeout" else tr("제작에 실패했어요. 맡긴 별씨는 돌려드렸어요.")
-			_label(status, words, 15, false, RpgUi.ACCENT)
+		if state == "failed": _show_failure(value)
 		return
 	form.visible = false
 	if state == "awaiting_confirmation":
@@ -449,6 +645,32 @@ func show_job(value: Dictionary) -> void:
 		_label(status, tr("공방이 Tripo에 보낸 요청이 닿았는지 확인하지 못했어요. 운영자가 확인하면 맡긴 별씨가 돌아와요. 그동안 새 물건을 만들 수 있어요."), 15)
 		_button(_row(status), tr("새로 만들기"), _start_over, "gold")
 	else: _show_working(value)
+
+## Why the craft failed, above the form it returns to: a refused (inappropriate) request or a failure,
+## with the reason the server gave (craft_words.gd failure()).
+func _show_failure(value: Dictionary) -> void:
+	var words: Dictionary = CraftWords.failure(value)
+	var card := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(RpgUi.ACCENT, 0.1)
+	box.border_color = Color(RpgUi.ACCENT, 0.55)
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(10)
+	box.set_content_margin_all(10)
+	card.add_theme_stylebox_override("panel", box)
+	status.add_child(card)
+	var lines := VBoxContainer.new()
+	lines.add_theme_constant_override("separation", 4)
+	card.add_child(lines)
+	_label(lines, str(words.title), 20, false, RpgUi.ACCENT)
+	_label(lines, str(words.why), 14)
+	if RpgUi.calm(): return
+	# A quick squeeze of the card says "no" without more words (scale is never re-sorted by the container).
+	await get_tree().process_frame
+	if not is_instance_valid(card): return
+	card.pivot_offset = card.size * 0.5
+	card.scale = Vector2(1.04, 1.04)
+	card.create_tween().tween_property(card, "scale", Vector2.ONE, 0.32).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _start_over() -> void:
 	job = {}
@@ -510,12 +732,12 @@ func _show_working(value: Dictionary) -> void:
 		percent.autowrap_mode = TextServer.AUTOWRAP_OFF
 		_label(root, tr("창을 닫아도 계속 만들어져요. 완성되면 알려 드릴게요."), 14, true)
 		working = {"root": root, "stages": stages, "title": title, "steps": steps, "bar": bar, "percent": percent}
-	var titles := {"design": tr("장인이 설계도를 그리고 있어요…"), "concept": tr("AI가 그림을 그리고 있어요…"), "mesh": tr("공방에서 3D로 빚고 있어요…")}
+	var titles := {"design": tr("장인이 설계도를 그리고 있어요…"), "concept": tr("AI가 그림을 그리고 있어요…"), "mesh": tr("공방에서 3D로 빚고 있어요…"), "rig": tr("캐릭터에 뼈대와 동작을 넣고 있어요…")}
 	working.title.text = tr("주문을 접수했어요") if str(value.get("state")) == "queued" and stage == "design" else str(titles.get(stage, tr("제작 중이에요…")))
 	_paint_steps(working.steps, stage, value)
 	var bar: ProgressBar = working.bar
 	var progress = value.get("progress")
-	var known := (progress is float or progress is int) and stage == "mesh"
+	var known := (progress is float or progress is int) and stage in ["mesh", "rig"]
 	bar.indeterminate = not known
 	working.percent.text = ("%d%%" % roundi(float(progress) * 100.0)) if known else ""
 	working.percent.visible = known
@@ -543,6 +765,7 @@ func _step_name(id: String) -> String:
 		"design": return tr("설계")
 		"concept": return tr("그림")
 		"mesh": return tr("3D 부품")
+		"rig": return tr("뼈대·동작")
 	return tr("완성")
 
 ## A row of numbered dots joined by lines; returns the pieces _paint_steps colours.
@@ -667,7 +890,10 @@ func _show_quote(value: Dictionary) -> void:
 	var look := _entry("styles", str(quote.get("style", "")))
 	if not look.is_empty():
 		var chosen := _entry("sizes", str(quote.get("size", "auto")))
-		_label(status, tr("스타일 %s · 크기 %s") % [_name(look), _size_text(chosen) if not chosen.is_empty() else tr("자동")], 13, true)
+		var box := _dims_text(quote.get("dims", []))
+		_label(status, tr("스타일 %s · 크기 %s") % [_name(look), box if not box.is_empty() else _size_text(chosen) if not chosen.is_empty() else tr("자동")], 13, true)
+	# Sides where the object reaches the picture's edge (server cut_edges): it would be built cut (task 73).
+	var cut := PackedStringArray()
 	if not concept.is_empty():
 		_label(status, tr("AI가 그린 그림이에요. 이 그림으로 3D를 만들까요?"), 15)
 		var picture := TextureRect.new()
@@ -676,6 +902,11 @@ func _show_quote(value: Dictionary) -> void:
 		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		status.add_child(picture)
 		_load_picture(picture, str(concept.get("url", "")))
+		var words := {"top": tr("위"), "bottom": tr("아래"), "left": tr("왼쪽"), "right": tr("오른쪽")}
+		for side in concept.get("edges", []):
+			if words.has(str(side)): cut.append(str(words[str(side)]))
+		if not cut.is_empty():
+			_label(status, tr("그림에서 물건의 %s 끝이 잘렸을 수 있어요. 잘린 채로 3D가 만들어지니 '다시 그리기'를 권해요.") % "·".join(cut), 14, false, RpgUi.ACCENT)
 	if not design.get("parts", []).is_empty():
 		_label(status, tr("AI가 이렇게 정리했어요 (Tripo에 보내는 문장)"), 13, false, _accent())
 		for part in design.parts:
@@ -690,10 +921,12 @@ func _show_quote(value: Dictionary) -> void:
 		var with_picture := maxi(reserved, ceili(_number(concept.get("estimate_with_concept")) * rate))
 		var with_text := maxi(reserved, ceili(_number(concept.get("estimate_text_only")) * rate))
 		_button(row, tr("이 그림으로 만들기 · 별씨 %d") % with_picture, func() -> void: confirm(true), "gold")
-		var redraw := _button(row, tr("다시 그리기 (+5크레딧)"), redraw_concept)
 		var draws := int(concept.get("draws", 1))
 		var next_total := int(_number(concept.get("estimate_with_concept"))) + CONCEPT_CREDITS
-		redraw.disabled = draws >= int(concept.get("max_draws", 4)) or (cap > 0 and next_total > cap)
+		var locked := draws >= int(concept.get("max_draws", 4)) or (cap > 0 and next_total > cap)
+		# A cut picture makes the redraw a step forward too.
+		var redraw := _button(row, tr("다시 그리기 (+5크레딧)"), redraw_concept, "gold" if not cut.is_empty() and not locked else "")
+		redraw.disabled = locked
 		if redraw.disabled: redraw.tooltip_text = tr("그림은 최대 %d장까지, 1회 한도 안에서 그릴 수 있어요.") % int(concept.get("max_draws", 4))
 		var text_row := _row(status)
 		_button(text_row, tr("그림 없이 글로 만들기 · 별씨 %d") % with_text, func() -> void: confirm(false))
@@ -790,15 +1023,19 @@ func _fill_styles() -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.clip_text = true
 		style_buttons[id] = b
-	if _entry("sizes", size_id).is_empty(): size_id = "auto"
+	if _entry("sizes", size_id).is_empty() and not (size_id == "custom" and info.has("dims")): size_id = "auto"
 	var sizes_group := ButtonGroup.new()
 	for entry in sizes:
 		var id := str(entry.get("id", ""))
 		var b := _choice(size_row, _size_text(entry), sizes_group, func() -> void: _pick_size(id))
 		if float(entry.get("meters", 0)) <= 0.0: b.tooltip_text = tr("AI가 물건에 맞는 실제 크기로 정해요")
 		size_buttons[id] = b
+	if info.has("dims") and not sizes.is_empty():
+		size_buttons["custom"] = _choice(size_row, tr("직접 정하기"), sizes_group, func() -> void: _pick_size("custom"))
+		size_buttons["custom"].tooltip_text = tr("상자를 드래그해 가로·세로·높이를 정해요")
 	for control in [style_title, style_grid]: control.visible = true
 	for control in [size_title, size_row]: control.visible = not sizes.is_empty()
+	size_box.visible = size_buttons.has("custom") and size_id == "custom"
 	_show_choice(style_buttons, style_id)
 	_show_choice(size_buttons, size_id)
 
@@ -821,7 +1058,16 @@ func _pick_style(id: String) -> void:
 func _pick_size(id: String) -> void:
 	size_id = id
 	_show_choice(size_buttons, id)
+	size_box.visible = id == "custom"
 	_save_choice()
+	if size_box.visible: _reveal.call_deferred(size_box)
+
+## Scrolls the window so `control` (the size box under the size row) is in view.
+func _reveal(control: Control) -> void:
+	await get_tree().process_frame
+	var node := get_parent()
+	while node != null and not node is ScrollContainer: node = node.get_parent()
+	if node != null and is_instance_valid(control): (node as ScrollContainer).ensure_control_visible(control)
 
 ## The chosen button stays pressed and turns gold.
 func _show_choice(buttons: Dictionary, id: String) -> void:
@@ -836,7 +1082,19 @@ func _save_choice() -> void:
 	config.load(I18n.settings_path())
 	config.set_value(SETTINGS_SECTION, "style", style_id)
 	config.set_value(SETTINGS_SECTION, "size", size_id)
+	if picture_first != null: config.set_value(SETTINGS_SECTION, "picture_first", "on" if picture_first.button_pressed else "off")
 	config.save(I18n.settings_path())
+
+func _save_dims(d: Vector3) -> void:
+	var config := ConfigFile.new()
+	config.load(I18n.settings_path())
+	config.set_value(SETTINGS_SECTION, "dims", "%.2f,%.2f,%.2f" % [d.x, d.y, d.z])
+	config.save(I18n.settings_path())
+
+## provenance.dims [width, height, depth] as "가로×높이×세로 1.20×0.90×0.60 m" ("" without a box).
+func _dims_text(dims) -> String:
+	if not dims is Array or dims.size() != 3: return ""
+	return tr("가로×높이×세로 %s m") % ("%.2f×%.2f×%.2f" % [float(dims[0]), float(dims[1]), float(dims[2])])
 
 func _entry(list: String, id: String) -> Dictionary:
 	for entry in info.get(list, []):

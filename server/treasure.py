@@ -1,7 +1,7 @@
 """Treasure chests (보물상자): starseeds found once per account, at home and around the islands.
 
-A new maker finds one chest in their own home (the ground floor, against the back wall) and ten
-more around the five islands, two per island, tucked behind a tree, under the windmill, on the
+A new maker finds one chest in their own home (the ground floor, against the back wall) and eleven
+more around the five islands, two per island plus a third in fields, tucked behind a tree, under the windmill, on the
 lighthouse rocks and so on (the game places them: game/scripts/treasure.gd CHESTS, the same ids).
 Pressing E next to one opens it: the lid swings open, warm light and sparkles, and the stars fly
 into the starseed counter. Each chest pays once per account, through the ledger like every other
@@ -13,7 +13,7 @@ walker stands (a chest is a short walk from a road, nothing else to check), with
   once                a second open is refused (chest_already_open), the ledger checked too
   CHEST_GAP           at least this many seconds between two opens (nobody walks faster)
 
-Rewards: STARS below (home 10, field chests 3-5, 45 in all). TRIPOTHON_CHEST_STARS_SCALE
+Rewards: STARS below (home 10, field chests 3-5, 48 in all). TRIPOTHON_CHEST_STARS_SCALE
 (server/config.py, default 1.0) multiplies them; 0 turns the rewards off (chests still open and
 pay nothing). Chests are independent of the opening story chapter: admin_cli story reset leaves
 them as they are.
@@ -34,6 +34,8 @@ STARS = {
     # 풍차 들판 (the café chest is a few steps from 모카's terrace: the demo opens it while a craft runs)
     'fields_cafe': 4,
     'fields_windmill': 3,
+    # a second one by the café, on the far side of its road (2026-10-16): the demo's wait there
+    'fields_terrace': 3,
     # 정원 언덕
     'garden_pond': 4,
     'garden_gazebo': 3,
@@ -57,7 +59,9 @@ def place_of(chest_id):
 
 
 assert all(place_of(c) in ISLANDS + ('home',) for c in STARS)
-assert all(sum(1 for c in STARS if place_of(c) == island) == 2 for island in ISLANDS)
+# Two chests per island; 풍차 들판 has a third by the café, where the demo waits for a craft.
+PER_ISLAND = {'square': 2, 'fields': 3, 'garden': 2, 'camp': 2, 'lighthouse': 2}
+assert all(sum(1 for c in STARS if place_of(c) == island) == PER_ISLAND[island] for island in ISLANDS)
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS chest_opened (

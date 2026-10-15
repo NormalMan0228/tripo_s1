@@ -1,5 +1,401 @@
 {
  "strings": {
+  "움직이는 캐릭터로 만들기": {
+   "en": "Make a moving character",
+   "zh": "制作会动的角色"
+  },
+  "사람 모양 캐릭터에 뼈대를 넣고, 서 있는 동작과 걷는 동작을 붙여요.": {
+   "en": "Adds a skeleton to a human-shaped character with standing and walking motions.",
+   "zh": "为人形角色加入骨骼，并加上站立和行走动作。"
+  },
+  "사람 모양 캐릭터만 만들 수 있어요(예: 로봇 캐릭터, 기사). 뼈대와 동작에 %d크레딧이 더 들어요.": {
+   "en": "Only human-shaped characters (e.g. a robot character, a knight). The skeleton and motions cost %d more credits.",
+   "zh": "仅限人形角色（例如：机器人角色、骑士）。骨骼和动作需额外 %d 积分。"
+  },
+  "캐릭터에 뼈대와 동작을 넣고 있어요…": {
+   "en": "Adding a skeleton and motions to the character…",
+   "zh": "正在为角色加入骨骼和动作…"
+  },
+  "뼈대·동작": {
+   "en": "Skeleton · motion",
+   "zh": "骨骼·动作"
+  },
+  "움직이는 캐릭터는 사람 모양만 만들 수 있어요. '로봇 캐릭터'처럼 적어 주세요.": {
+   "en": "Moving characters must be human-shaped. Try something like 'robot character'.",
+   "zh": "会动的角色只能是人形。请写成“机器人角色”这样。"
+  },
+  "움직이는 캐릭터는 사진 없이 글로만 만들 수 있어요.": {
+   "en": "Moving characters are made from words only, without a photo.",
+   "zh": "会动的角色只能用文字制作，不能用照片。"
+  },
+  "지금은 움직이는 캐릭터를 만들 수 없어요.": {
+   "en": "Moving characters can't be made right now.",
+   "zh": "现在无法制作会动的角色。"
+  },
+  "뼈대와 동작을 넣다가 실패했어요. 팔다리가 잘 보이는 사람 모양 캐릭터로 다시 맡겨 보세요.": {
+   "en": "Adding the skeleton and motions failed. Try a human-shaped character with clearly visible arms and legs.",
+   "zh": "加入骨骼和动作失败了。请换一个四肢清晰可见的人形角色再试。"
+  },
+  "그림에서 물건의 %s 끝이 잘렸을 수 있어요. 잘린 채로 3D가 만들어지니 '다시 그리기'를 권해요.": {
+   "en": "The object may be cut off at the %s edge of the picture. The 3D model would be built cut the same way, so 'Draw again' is recommended.",
+   "zh": "图中物品的%s边缘可能被裁掉了。3D 模型会照着裁掉的样子生成，建议点“重新画”。"
+  },
+  "위": {
+   "en": "top",
+   "zh": "上"
+  },
+  "아래": {
+   "en": "bottom",
+   "zh": "下"
+  },
+  "왼쪽": {
+   "en": "left",
+   "zh": "左"
+  },
+  "오른쪽": {
+   "en": "right",
+   "zh": "右"
+  },
+  "자기 위에 있는 물건 위로는 올릴 수 없어요.": {
+   "en": "You can't put it on something that sits on top of it.",
+   "zh": "不能放到压在它上面的物品上。"
+  },
+  "벽에 걸기에는 너무 높아요. 조금 아래로 내려 주세요.": {
+   "en": "Too high to hang on the wall. Move it down a little.",
+   "zh": "挂在墙上太高了，请稍微往下放。"
+  },
+  "여기서는 벽이나 천장에 걸 수 없어요.": {
+   "en": "You can't hang things on the wall or ceiling here.",
+   "zh": "这里不能挂在墙上或天花板上。"
+  },
+  "걸 벽을 골라 주세요.": {
+   "en": "Choose a wall to hang it on.",
+   "zh": "请选择要挂的墙。"
+  },
+  "이 방에는 더 놓을 수 없어요. 일부를 가방에 넣어 주세요.": {
+   "en": "This room is full. Put some pieces back in your bag.",
+   "zh": "这个房间放不下了，请把一些物品收回背包。"
+  },
+  "마을에는 더 놓을 수 없어요. 일부를 가방에 넣어 주세요.": {
+   "en": "The village is full. Put some pieces back in your bag.",
+   "zh": "村子里放不下了，请把一些物品收回背包。"
+  },
+  "성능 표시": {
+   "en": "Performance display",
+   "zh": "性能显示"
+  },
+  "화면 구석에 프레임과 메모리 사용량을 보여 줘요. F2로도 켜고 꺼요.": {
+   "en": "Shows frame rate and memory use in a corner of the screen. F2 also turns it on and off.",
+   "zh": "在屏幕角落显示帧率和内存用量。也可以按 F2 开关。"
+  },
+  "현관문": {
+   "en": "Front door",
+   "zh": "前门"
+  },
+  "열림": {
+   "en": "Open",
+   "zh": "开着"
+  },
+  "문 잠그기": {
+   "en": "Lock the door",
+   "zh": "锁门"
+  },
+  "잠금 풀기": {
+   "en": "Unlock",
+   "zh": "解锁"
+  },
+  "손님": {
+   "en": "Guests",
+   "zh": "访客"
+  },
+  "손님이 없어요": {
+   "en": "No guests",
+   "zh": "没有访客"
+  },
+  "내보내기": {
+   "en": "Send out",
+   "zh": "请出去"
+  },
+  "손님 내보내기": {
+   "en": "Send a guest out",
+   "zh": "请访客离开"
+  },
+  "%s님을 집 밖으로 안내할까요?": {
+   "en": "Show %s out of your home?",
+   "zh": "要请%s离开你的家吗？"
+  },
+  "10분 동안 다시 들어올 수 없어요.": {
+   "en": "They can't come back in for 10 minutes.",
+   "zh": "10分钟内无法再进来。"
+  },
+  "%s님이 집 밖으로 안내했어요": {
+   "en": "%s showed you out of the home",
+   "zh": "%s请你离开了家"
+  },
+  "%s님이 집을 나가서 함께 나왔어요": {
+   "en": "%s left home, so you came out too",
+   "zh": "%s出门了，你也一起出来了"
+  },
+  "%d분 뒤에 다시 들어갈 수 있어요.": {
+   "en": "You can go back in after %d min.",
+   "zh": "%d分钟后可以再进去。"
+  },
+  "%d분": {
+   "en": "%d min",
+   "zh": "%d分钟"
+  },
+  "부재중": {
+   "en": "Away",
+   "zh": "不在家"
+  },
+  "잠김": {
+   "en": "Locked",
+   "zh": "已上锁"
+  },
+  "안녕!": {
+   "en": "Hi!",
+   "zh": "你好！"
+  },
+  "먼저 책상 위 편지를 읽어 볼까요?": {
+   "en": "How about reading the letter on the desk first?",
+   "zh": "先读一读书桌上的信吧？"
+  },
+  "카페 '빨간 지붕' 주인 모카예요. 풍차 언덕 하숙집에서 지내며 커피를 내려요.": {
+   "en": "I'm Moka, owner of Café 'Red Roof'. I live at the Windmill Hill boarding house and brew coffee.",
+   "zh": "我是“红屋顶”咖啡馆的老板摩卡。我住在风车山坡的寄宿屋，每天煮咖啡。"
+  },
+  "풍차 옆 하숙집 다락방이 제 방이에요. 맷돌 소리가 거기까지 들려요.": {
+   "en": "My room is the attic of the boarding house by the windmill. I can hear the millstone from there.",
+   "zh": "风车旁寄宿屋的阁楼是我的房间。在那儿也能听见石磨声。"
+  },
+  "카페 '빨간 지붕' 주인이에요. 풍차 언덕 하숙집에서 지내며 커피를 내려요.": {
+   "en": "I own Café 'Red Roof'. I live at the Windmill Hill boarding house and brew coffee.",
+   "zh": "我是“红屋顶”咖啡馆的老板。我住在风车山坡的寄宿屋，每天煮咖啡。"
+  },
+  "풍차 언덕 하숙집": {
+   "en": "Windmill Hill Boarding House",
+   "zh": "风车山坡寄宿屋"
+  },
+  "일꾼들의 하숙집": {
+   "en": "The workers' boarding house",
+   "zh": "工人们的寄宿屋"
+  },
+  "방앗간과 카페, 씨앗 가게 일꾼들이 함께 사는 아늑한 집이에요.": {
+   "en": "A cosy house shared by the mill, café and seed-shop keepers.",
+   "zh": "磨坊、咖啡馆和种子店的店主们一起住的温馨小屋。"
+  },
+  "거실 겸 부엌": {
+   "en": "Living room and kitchen",
+   "zh": "客厅兼厨房"
+  },
+  "단비네 집": {
+   "en": "Danbi's house",
+   "zh": "丹比的家"
+  },
+  "단비의 새 보금자리": {
+   "en": "Danbi's new nest",
+   "zh": "丹比的新家"
+  },
+  "잡화점 주인 단비가 이사 온 아담한 집이에요.": {
+   "en": "The snug house Danbi, the general store owner, moved into.",
+   "zh": "杂货店老板丹比搬进来的小巧房子。"
+  },
+  "곧 새 이웃이 이사 와요": {
+   "en": "A new neighbour is moving in soon",
+   "zh": "新邻居即将搬来"
+  },
+  "옮기기": {
+   "en": "Move",
+   "zh": "移动"
+  },
+  "자리를 옮기고 방향도 바꿔요": {
+   "en": "Move it and change its facing",
+   "zh": "移动位置并改变朝向"
+  },
+  "그 자리에서 90° 돌려요": {
+   "en": "Turn it 90° where it stands",
+   "zh": "原地旋转90°"
+  },
+  "색칠": {
+   "en": "Paint",
+   "zh": "涂色"
+  },
+  "색이나 무늬를 칠해요": {
+   "en": "Paint a colour or pattern",
+   "zh": "涂上颜色或图案"
+  },
+  "넣기": {
+   "en": "Store",
+   "zh": "收起"
+  },
+  "가방(보관함)으로 거둬들여요": {
+   "en": "Put it back in your bag",
+   "zh": "收回到背包（仓库）"
+  },
+  "불러오는 중": {
+   "en": "Loading",
+   "zh": "加载中"
+  },
+  "바닥": {
+   "en": "Floor",
+   "zh": "地面"
+  },
+  "물건 위": {
+   "en": "On top",
+   "zh": "物品上"
+  },
+  "벽": {
+   "en": "Wall",
+   "zh": "墙"
+  },
+  "천장": {
+   "en": "Ceiling",
+   "zh": "天花板"
+  },
+  "얇고 납작한 물건만 벽에 걸 수 있어요.": {
+   "en": "Only thin, flat things can hang on a wall.",
+   "zh": "只有薄而平的物品才能挂在墙上。"
+  },
+  "천장에 달기에는 너무 커요.": {
+   "en": "Too big to hang from the ceiling.",
+   "zh": "太大了，无法挂在天花板上。"
+  },
+  "조명·모빌처럼 매다는 물건만 천장에 달 수 있어요.": {
+   "en": "Only hanging things like lights or mobiles go on the ceiling.",
+   "zh": "只有灯具、风铃这类悬挂物品才能挂在天花板上。"
+  },
+  "더 높이 쌓을 수 없어요.": {
+   "en": "It can't be stacked any higher.",
+   "zh": "无法再往上堆了。"
+  },
+  "아래 물건보다 커서 올릴 수 없어요.": {
+   "en": "It's bigger than the piece below.",
+   "zh": "比下面的物品大，放不上去。"
+  },
+  "문 앞은 비워 두세요.": {
+   "en": "Keep the doorway clear.",
+   "zh": "请让门前保持畅通。"
+  },
+  "다리 위에는 놓을 수 없어요.": {
+   "en": "Nothing can stand on a bridge.",
+   "zh": "桥上不能放东西。"
+  },
+  "큰 물건은 길 위에 놓을 수 없어요. 길가로 옮겨 주세요.": {
+   "en": "Big pieces can't block the road. Move it to the roadside.",
+   "zh": "大件物品不能放在路上，请移到路边。"
+  },
+  "받칠 물건을 찾지 못했어요.": {
+   "en": "The piece below is gone.",
+   "zh": "找不到下面的物品。"
+  },
+  "아래 물건 위에 올려 주세요.": {
+   "en": "Put it on top of the piece below.",
+   "zh": "请放在下面物品的上面。"
+  },
+  "여기서는 돌릴 수 없어요 · ": {
+   "en": "It can't turn here · ",
+   "zh": "这里无法旋转 · "
+  },
+  "물건 통과 켜기/끄기": {
+   "en": "Walk through objects on/off",
+   "zh": "穿过物品 开/关"
+  },
+  "CapsLock이 켜져 있어요": {
+   "en": "Caps Lock is on",
+   "zh": "大写锁定已开启"
+  },
+  "채팅창": {
+   "en": "Chat",
+   "zh": "聊天"
+  },
+  "%s님의 집 · E 들어가기": {
+   "en": "%s's house · E to enter",
+   "zh": "%s的家 · 按E进入"
+  },
+  "%s님의 마을": {
+   "en": "%s's village",
+   "zh": "%s的村庄"
+  },
+  "놀러 온 집 · 가구는 구경만 할 수 있어요": {
+   "en": "Visiting · you can look at the furniture but not move it",
+   "zh": "做客中 · 家具只能观看"
+  },
+  "새 대화 %d": {
+   "en": "%d new",
+   "zh": "新消息 %d"
+  },
+  "진행 중 %d": {
+   "en": "In progress %d",
+   "zh": "进行中 %d"
+  },
+  "새 부탁 %d": {
+   "en": "New %d",
+   "zh": "新委托 %d"
+  },
+  "완료 %d": {
+   "en": "Done %d",
+   "zh": "已完成 %d"
+  },
+  "지금 들어주고 있는 부탁이 없어요.": {
+   "en": "You are not helping anyone right now.",
+   "zh": "目前没有进行中的委托。"
+  },
+  "새 부탁이 없어요. 주민들과 이야기해 보세요.": {
+   "en": "No new requests. Try talking to the villagers.",
+   "zh": "没有新委托。和村民们聊聊吧。"
+  },
+  "아직 끝낸 부탁이 없어요.": {
+   "en": "No requests finished yet.",
+   "zh": "还没有完成的委托。"
+  },
+  "%s님이 귓속말을 나누고 싶어 해요": {
+   "en": "%s would like to whisper with you",
+   "zh": "%s想和你悄悄话"
+  },
+  "%s님이 귓속말을 청했어요.": {
+   "en": "%s asked to whisper.",
+   "zh": "%s请求悄悄话。"
+  },
+  "%s님이 귓속말 요청을 받아 주었어요. 이제 귓속말을 보낼 수 있어요.": {
+   "en": "%s accepted your whisper request. You can whisper now.",
+   "zh": "%s接受了悄悄话请求，现在可以发送了。"
+  },
+  "%s님이 지금은 귓속말을 받지 않아요.": {
+   "en": "%s is not taking whispers right now.",
+   "zh": "%s现在不接受悄悄话。"
+  },
+  "%s님과 귓속말을 나눌 수 있어요.": {
+   "en": "You can whisper with %s.",
+   "zh": "可以和%s悄悄话了。"
+  },
+  "%s님에게 귓속말 요청을 보냈어요. 받아 주면 다시 보내 주세요.": {
+   "en": "Whisper request sent to %s. Send again once they accept.",
+   "zh": "已向%s发送悄悄话请求。对方接受后请再发送。"
+  },
+  "귓속말을 받을 수 없는 상대예요. 같은 곳 8m 안에 있거나 접속 중인 친구에게 보낼 수 있어요.": {
+   "en": "They cannot receive whispers. Whisper to someone within 8 m here, or an online friend.",
+   "zh": "对方无法接收悄悄话。可以发给同一地点8米内的人或在线好友。"
+  },
+  "같은 사람에게는 잠시 뒤에 다시 청할 수 있어요.": {
+   "en": "You can ask the same person again a little later.",
+   "zh": "稍后才能再次向同一人请求。"
+  },
+  "답을 기다리는 귓속말 요청이 너무 많아요.": {
+   "en": "Too many whisper requests are waiting for an answer.",
+   "zh": "等待回复的悄悄话请求太多了。"
+  },
+  "만료되었거나 이미 처리된 귓속말 요청이에요.": {
+   "en": "That whisper request expired or was already answered.",
+   "zh": "该悄悄话请求已过期或已处理。"
+  },
+  "이미 답한 귓속말 요청이에요.": {
+   "en": "You already answered that whisper request.",
+   "zh": "已经回复过该悄悄话请求。"
+  },
+  "오늘 판매로 받을 별씨를 다 받았어요. 내일 다시 팔아 주세요.": {
+   "en": "You have received today's star-seeds from selling. Sell again tomorrow.",
+   "zh": "今天出售可获得的星种已领完。明天再来卖吧。"
+  },
   "문이 잠겨 있어요.": {
    "en": "The door is locked.",
    "zh": "门锁着。"
@@ -1095,6 +1491,10 @@
   "『작은 섬의 큰 모험』": {
    "en": "『A Big Adventure on a Small Island』",
    "zh": "《小岛上的大冒险》"
+  },
+  "가 볼게요": {
+   "en": "I'll go",
+   "zh": "我去看看"
   },
   "가게": {
    "en": "Shop",
@@ -2795,6 +3195,10 @@
   "다온 · 우편배달부": {
    "en": "Daon · Postman",
    "zh": "多温 · 邮递员"
+  },
+  "다온: 돌문 너머에서 이상한 소리가 나요": {
+   "en": "Daon: a strange sound beyond the stone gate",
+   "zh": "达温：石门那边有奇怪的声音"
   },
   "다온의 마음 배달": {
    "en": "Daon's Delivery of the Heart",
@@ -4572,6 +4976,10 @@
    "en": "It's tied firmly with rope",
    "zh": "用绳子牢牢系着"
   },
+  "방금 모카 씨를 도와준 제작자님이라면 뭔가 해낼 수 있을 거예요. 같이 가 봐 줄래요?": {
+   "en": "You just helped Moka, so I'm sure you can do something. Will you come and look with me?",
+   "zh": "你刚帮了摩卡，一定能做点什么。能和我一起去看看吗？"
+  },
   "방금 한 줄 떠올랐는데… 앗, 잊어버렸어요.": {
    "en": "A line just came to me… oh, I forgot it.",
    "zh": "刚想到一句……啊，忘了。"
@@ -5291,6 +5699,26 @@
   "숲에서 밤을 버티려면 따뜻한 수프가 최고야.": {
    "en": "Nothing beats a warm soup for getting through a night in the forest.",
    "zh": "想在森林里熬过夜晚，热汤最好不过了。"
+  },
+  "숲의 돌문": {
+   "en": "Forest stone gate",
+   "zh": "森林石门"
+  },
+  "숲의 돌문 · E로 탐험을 떠나요": {
+   "en": "Forest stone gate · E to set out on an expedition",
+   "zh": "森林石门 · 按 E 出发探险"
+  },
+  "숲의 돌문 너머에서 이상한 소리가 나요. 쿵… 쿵… 뭔가 커다란 게 움직이는 것 같아요!": {
+   "en": "There's a strange sound beyond the forest's stone gate. Thud… thud… something big seems to be moving!",
+   "zh": "森林石门那边传来奇怪的声音。咚……咚……好像有什么大家伙在动！"
+  },
+  "숲의 돌문으로 가기": {
+   "en": "Go to the forest's stone gate",
+   "zh": "前往森林石门"
+  },
+  "숲의 돌문으로! 금빛 길을 따라가요": {
+   "en": "To the forest's stone gate! Follow the golden path",
+   "zh": "去森林石门！跟着金色的路走"
   },
   "실례지만, 부탁 하나 드려도 되겠습니까?": {
    "en": "Pardon me, may I ask you a favour?",
@@ -8652,6 +9080,10 @@
    "en": "Get a little closer.",
    "zh": "再靠近一点。"
   },
+  "조금 이따가": {
+   "en": "A bit later",
+   "zh": "等一会儿"
+  },
   "조금 있다가요": {
    "en": "A little later",
    "zh": "等一下再说"
@@ -10316,6 +10748,10 @@
    "en": "Tolerance",
    "zh": "容差"
   },
+  "헉, 헉… 제작자님! 모카 씨 편지를 전하고 오는 길이었는데요…": {
+   "en": "Huff, huff… Maker! I was just on my way back from delivering Moka's letter…",
+   "zh": "呼、呼……制作者！我刚送完摩卡的信回来……"
+  },
   "헤헤": {
    "en": "hehe",
    "zh": "嘿嘿"
@@ -10688,98 +11124,99 @@
    "en": "The boss's night",
    "zh": "首领之夜"
   },
-  "CapsLock이 켜져 있어요": {
-   "en": "Caps Lock is on",
-   "zh": "大写锁定已开启"
+  "1 바닥을 드래그해 넓이 정하기": {
+   "en": "1 Drag on the floor to set width and depth",
+   "zh": "1 在地面上拖动，设定宽度和深度"
   },
-  "채팅창": {
-   "en": "Chat",
-   "zh": "聊天"
+  "2 위아래로 드래그해 높이 정하기": {
+   "en": "2 Drag up or down to set the height",
+   "zh": "2 上下拖动，设定高度"
   },
-  "%s님의 집 · E 들어가기": {
-   "en": "%s's house · E to enter",
-   "zh": "%s的家 · 按E进入"
+  "크기를 정했어요 · 위아래로 끌면 높이만 바뀌어요": {
+   "en": "Size set · drag up or down to change only the height",
+   "zh": "尺寸已设定 · 上下拖动只改变高度"
   },
-  "%s님의 마을": {
-   "en": "%s's village",
-   "zh": "%s的村庄"
+  "가로 %s · 세로 %s · 높이 %s": {
+   "en": "Width %s · Depth %s · Height %s",
+   "zh": "宽 %s · 深 %s · 高 %s"
   },
-  "놀러 온 집 · 가구는 구경만 할 수 있어요": {
-   "en": "Visiting · you can look at the furniture but not move it",
-   "zh": "做客中 · 家具只能观看"
+  "다시 정하기": {
+   "en": "Set again",
+   "zh": "重新设定"
   },
-  "새 대화 %d": {
-   "en": "%d new",
-   "zh": "新消息 %d"
+  "직접 정하기": {
+   "en": "Custom",
+   "zh": "自定义"
   },
-  "진행 중 %d": {
-   "en": "In progress %d",
-   "zh": "进行中 %d"
+  "상자를 드래그해 가로·세로·높이를 정해요": {
+   "en": "Drag a box to set the width, depth and height",
+   "zh": "拖动方框来设定宽、深、高"
   },
-  "새 부탁 %d": {
-   "en": "New %d",
-   "zh": "新委托 %d"
+  "가로×높이×세로 %s m": {
+   "en": "W×H×D %s m",
+   "zh": "宽×高×深 %s m"
   },
-  "완료 %d": {
-   "en": "Done %d",
-   "zh": "已完成 %d"
+  "그림이 너무 커요. 20MB 이하의 그림을 골라 주세요.": {
+   "en": "The picture is too large. Choose one under 20 MB.",
+   "zh": "图片太大了，请选择 20MB 以下的图片。"
   },
-  "지금 들어주고 있는 부탁이 없어요.": {
-   "en": "You are not helping anyone right now.",
-   "zh": "目前没有进行中的委托。"
+  "그림이 너무 작아요. 더 큰 그림을 골라 주세요.": {
+   "en": "The picture is too small. Choose a bigger one.",
+   "zh": "图片太小了，请选择更大的图片。"
   },
-  "새 부탁이 없어요. 주민들과 이야기해 보세요.": {
-   "en": "No new requests. Try talking to the villagers.",
-   "zh": "没有新委托。和村民们聊聊吧。"
+  "그림을 읽지 못했어요. PNG나 JPG 그림을 골라 주세요.": {
+   "en": "Couldn't read the picture. Choose a PNG or JPG.",
+   "zh": "无法读取图片，请选择 PNG 或 JPG 图片。"
   },
-  "아직 끝낸 부탁이 없어요.": {
-   "en": "No requests finished yet.",
-   "zh": "还没有完成的委托。"
+  "성적인 내용은 만들 수 없어요.": {
+   "en": "Sexual content can't be crafted.",
+   "zh": "无法制作含有色情内容的物品。"
   },
-  "%s님이 귓속말을 나누고 싶어 해요": {
-   "en": "%s would like to whisper with you",
-   "zh": "%s想和你悄悄话"
+  "잔인하거나 끔찍한 내용은 만들 수 없어요.": {
+   "en": "Cruel or gory content can't be crafted.",
+   "zh": "无法制作残忍或血腥的内容。"
   },
-  "%s님이 귓속말을 청했어요.": {
-   "en": "%s asked to whisper.",
-   "zh": "%s请求悄悄话。"
+  "혐오를 담은 상징은 만들 수 없어요.": {
+   "en": "Hate symbols can't be crafted.",
+   "zh": "无法制作带有仇恨意味的符号。"
   },
-  "%s님이 귓속말 요청을 받아 주었어요. 이제 귓속말을 보낼 수 있어요.": {
-   "en": "%s accepted your whisper request. You can whisper now.",
-   "zh": "%s接受了悄悄话请求，现在可以发送了。"
+  "마약과 관련된 물건은 만들 수 없어요.": {
+   "en": "Drug-related items can't be crafted.",
+   "zh": "无法制作与毒品有关的物品。"
   },
-  "%s님이 지금은 귓속말을 받지 않아요.": {
-   "en": "%s is not taking whispers right now.",
-   "zh": "%s现在不接受悄悄话。"
+  "실제 사람의 얼굴이나 모습은 만들 수 없어요.": {
+   "en": "Real people's faces or likenesses can't be crafted.",
+   "zh": "无法制作真实人物的脸或样貌。"
   },
-  "%s님과 귓속말을 나눌 수 있어요.": {
-   "en": "You can whisper with %s.",
-   "zh": "可以和%s悄悄话了。"
+  "욕설이 들어간 의뢰는 받을 수 없어요.": {
+   "en": "Requests with swear words can't be accepted.",
+   "zh": "含有脏话的委托无法接受。"
   },
-  "%s님에게 귓속말 요청을 보냈어요. 받아 주면 다시 보내 주세요.": {
-   "en": "Whisper request sent to %s. Send again once they accept.",
-   "zh": "已向%s发送悄悄话请求。对方接受后请再发送。"
+  "모두가 함께하는 마을에 어울리지 않아 만들 수 없어요.": {
+   "en": "This doesn't suit a village everyone shares, so it can't be crafted.",
+   "zh": "这不适合大家共享的村庄，无法制作。"
   },
-  "귓속말을 받을 수 없는 상대예요. 같은 곳 8m 안에 있거나 접속 중인 친구에게 보낼 수 있어요.": {
-   "en": "They cannot receive whispers. Whisper to someone within 8 m here, or an online friend.",
-   "zh": "对方无法接收悄悄话。可以发给同一地点8米内的人或在线好友。"
+  "맡긴 별씨는 돌려드렸어요.": {
+   "en": "Your starseeds were returned.",
+   "zh": "已退还托付的星籽。"
   },
-  "같은 사람에게는 잠시 뒤에 다시 청할 수 있어요.": {
-   "en": "You can ask the same person again a little later.",
-   "zh": "稍后才能再次向同一人请求。"
+  "만들 수 없는 의뢰예요": {
+   "en": "This request can't be crafted",
+   "zh": "无法制作的委托"
   },
-  "답을 기다리는 귓속말 요청이 너무 많아요.": {
-   "en": "Too many whisper requests are waiting for an answer.",
-   "zh": "等待回复的悄悄话请求太多了。"
+  "제작에 실패했어요": {
+   "en": "Crafting failed",
+   "zh": "制作失败"
   },
-  "만료되었거나 이미 처리된 귓속말 요청이에요.": {
-   "en": "That whisper request expired or was already answered.",
-   "zh": "该悄悄话请求已过期或已处理。"
+  "공방이 너무 오래 걸려 이번 제작을 멈췄어요.": {
+   "en": "The workshop took too long, so this craft was stopped.",
+   "zh": "工坊耗时过长，本次制作已停止。"
   },
-  "이미 답한 귓속말 요청이에요.": {
-   "en": "You already answered that whisper request.",
-   "zh": "已经回复过该悄悄话请求。"
+  "AI가 설계도를 완성하지 못했어요. 조금 더 구체적으로 적어 다시 맡겨 보세요.": {
+   "en": "The AI couldn't finish the design. Describe it more specifically and try again.",
+   "zh": "AI 未能完成设计图。请写得更具体一些后再试。"
   },
+<<<<<<< HEAD
   "오늘 판매로 받을 별씨를 다 받았어요. 내일 다시 팔아 주세요.": {
    "en": "You have received today's star-seeds from selling. Sell again tomorrow.",
    "zh": "今天出售可获得的星种已领完。明天再来卖吧。"
@@ -10891,7 +11328,96 @@
   "밀짚모자": {
    "en": "Straw hat",
    "zh": "草帽"
+=======
+  "AI 공방이 지금 붐벼요. 잠시 뒤 다시 맡겨 주세요.": {
+   "en": "The AI workshop is busy right now. Please try again shortly.",
+   "zh": "AI 工坊现在很忙，请稍后再试。"
+  },
+  "3D 모양을 빚다가 실패했어요. 표현을 바꿔 다시 맡겨 보세요.": {
+   "en": "Shaping the 3D model failed. Try different wording.",
+   "zh": "塑造 3D 模型失败了。请换个说法再试。"
+  },
+  "만든 모델이 너무 복잡해 마을에 놓을 수 없었어요. 더 단순한 물건으로 해 보세요.": {
+   "en": "The model was too complex to place in the village. Try a simpler object.",
+   "zh": "模型太复杂，无法放进村庄。请尝试更简单的物品。"
+  },
+  "참고 그림을 처리하지 못했어요. 다른 그림으로 해 보세요.": {
+   "en": "Couldn't process the reference picture. Try another one.",
+   "zh": "无法处理参考图片，请换一张试试。"
+  },
+  "공방 서버가 다시 시작되어 제작이 멈췄어요. 다시 맡겨 주세요.": {
+   "en": "The workshop server restarted and the craft stopped. Please request it again.",
+   "zh": "工坊服务器重启，制作已停止。请重新委托。"
+  },
+  "공방 설정 문제로 만들지 못했어요. 운영자에게 알려 주세요.": {
+   "en": "A workshop setup problem stopped the craft. Please tell an operator.",
+   "zh": "因工坊设置问题未能制作，请告知管理员。"
+  },
+  "공방 재료가 떨어졌어요. 운영자에게 알려 주세요.": {
+   "en": "The workshop ran out of materials. Please tell an operator.",
+   "zh": "工坊材料用完了，请告知管理员。"
+  },
+  "제작 한도를 넘어 멈췄어요.": {
+   "en": "Stopped for going over the crafting limit.",
+   "zh": "超出制作上限，已停止。"
+  },
+  "제작을 마치지 못했어요.": {
+   "en": "Couldn't finish the craft.",
+   "zh": "未能完成制作。"
+  },
+  "AI 그림을 먼저 보고 만들기": {
+   "en": "See the AI picture first",
+   "zh": "先看 AI 画的图再制作"
+  },
+  "끄면 그림 단계 없이 글로 바로 3D를 만들어요. (그림 1장 5크레딧 절약)": {
+   "en": "Off: build the 3D straight from your words, no picture step (saves 5 credits).",
+   "zh": "关闭后将跳过图片步骤，直接用文字制作 3D。（节省每张 5 积分）"
+  },
+  "그림 단계 없이 글로 바로 3D를 만들어요.": {
+   "en": "Builds the 3D straight from your words, no picture step.",
+   "zh": "跳过图片步骤，直接用文字制作 3D。"
+  },
+  "이 계정의 제작 예산을 모두 썼어요. 운영자에게 문의해 주세요.": {
+   "en": "This account's crafting budget is used up. Please contact an operator.",
+   "zh": "此账号的制作预算已用完，请联系管理员。"
+  },
+  "이 제작은 별씨 한도를 넘어요. 옵션을 줄여 다시 맡겨 주세요.": {
+   "en": "This craft is over the starseed limit. Choose fewer options and try again.",
+   "zh": "此次制作超出星籽上限。请减少选项后再试。"
+  },
+  "%s·Space·클릭을 누르고 있으면 초록 호가 시계 방향으로, 떼면 반대로": {
+   "en": "Hold %s, Space or click to turn the green arc clockwise; release to let it drift back",
+   "zh": "按住 %s、空格或鼠标，绿色弧线顺时针转动；松开则往回漂"
+  },
+  "%s·Space·클릭을 누르고 있으면 칸이 위로, 떼면 아래로": {
+   "en": "Hold %s, Space or click to lift the zone; release to let it sink",
+   "zh": "按住 %s、空格或鼠标，区域向上；松开则下沉"
+  },
+  "창문을 가려요. 옆으로 옮겨 주세요.": {
+   "en": "It covers a window. Move it aside.",
+   "zh": "挡住窗户了，请移到旁边。"
+  },
+  "벽에 걸린 다른 물건과 겹쳐요.": {
+   "en": "It overlaps something already on the wall.",
+   "zh": "与墙上的其他物品重叠。"
+  },
+  "새 이웃의 집터예요. 다른 곳에 놓아 주세요.": {
+   "en": "This lot is for a new neighbour. Put it somewhere else.",
+   "zh": "这是新邻居的宅基地，请放到别处。"
+  },
+  "다른 물건과 겹쳐요.": {
+   "en": "It overlaps another piece.",
+   "zh": "与其他物品重叠。"
+>>>>>>> merge-version-gate
   }
  },
- "templates": []
+ "templates": [],
+ "성능 표시": {
+  "en": "Performance overlay",
+  "zh": "性能显示"
+ },
+ "화면 구석에 프레임과 메모리 사용량을 보여 줘요. F2로도 켜고 꺼요.": {
+  "en": "Shows frame rate and memory use in a corner of the screen. F2 also turns it on and off.",
+  "zh": "在屏幕角落显示帧率和内存使用情况。也可以按 F2 开关。"
+ }
 }

@@ -9,7 +9,7 @@ from starlette.background import BackgroundTask
 from pydantic import Field
 from .models import Strict, Mutation, Input, RunStart
 from .stored_assets import read_glb
-from . import coop, homestead, object_paint, object_shape, interactions, tutorial, home_access, last_spot
+from . import coop, homestead, object_paint, object_shape, interactions, tutorial, home_access, last_spot, build_rules
 from . import friends as social_db
 from .chat import Chat
 
@@ -243,10 +243,10 @@ class Multiplayer:
             party = party_for(conn, user_id)
             if not party:
                 return None
-            members = [dict(r) for r in conn.execute('SELECT u.id,u.username,m.joined FROM mp_members m JOIN users u ON u.id=m.user_id WHERE m.party_id=? ORDER BY m.joined,u.id', (party['id'],))]
+            members = [dict(r) for r in conn.execute('SELECT u.id,u.username,m.joined,p.seen FROM mp_members m JOIN users u ON u.id=m.user_id LEFT JOIN mp_presence p ON p.user_id=m.user_id WHERE m.party_id=? ORDER BY m.joined,u.id', (party['id'],))]
             for member in members:
-                presence = conn.execute('SELECT seen FROM mp_presence WHERE user_id=?', (member['id'],)).fetchone()
-                member['online'] = bool(presence and clock()-presence['seen'] < coop.PRESENCE_SECONDS)
+                seen = member.pop('seen')
+                member['online'] = seen is not None and clock()-seen < coop.PRESENCE_SECONDS
             run = conn.execute('SELECT status FROM coop_runs WHERE id=?', (party['run_id'],)).fetchone() if party['run_id'] else None
             participant = conn.execute('SELECT withdrawn FROM coop_members WHERE run_id=? AND user_id=?', (party['run_id'], user_id)).fetchone() if run else None
             return dict(id=party['id'], leader_id=party['leader_id'], members=members, max_members=3,
@@ -291,7 +291,7 @@ class Multiplayer:
 
         def village(conn, user, scene='village', blocked=frozenset()):
             host = host_for(conn, user['id'])
-            objects = [object_shape.listed(dict(r)) for r in conn.execute("SELECT o.id,o.name,o.color,o.version,o.state,o.x,o.z,o.rotation,COALESCE(l.room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE asset_id=o.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=o.id) AS runtime_version," + object_paint.version_column('o.id') + " AS paint_version," + object_shape.column('o.id') + " AS shape FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village')=? ORDER BY o.id", (host, scene))]
+            objects = [build_rules.listed(object_shape.listed(dict(r))) for r in conn.execute("SELECT o.id,o.name,o.color,o.version,o.state,o.x,o.z,o.rotation,COALESCE(l.room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE asset_id=o.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=o.id) AS runtime_version," + object_paint.version_column('o.id') + " AS paint_version," + object_shape.column('o.id') + " AS shape," + build_rules.column('o.id') + " AS mount FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village')=? ORDER BY o.id", (host, scene))]
             players = []
             for row in conn.execute("SELECT p.*,u.username FROM mp_presence p JOIN users u ON u.id=p.user_id WHERE p.host_id=? AND p.scene=? AND p.seen>? AND (p.user_id=? OR EXISTS(SELECT 1 FROM mp_visits v WHERE v.user_id=p.user_id AND v.host_id=? AND v.expires>?))", (host, scene, clock()-VISIBLE_SECONDS, host, host, clock())):
                 if row['user_id'] in blocked:
@@ -305,11 +305,11 @@ class Multiplayer:
                 if row['held']:
                     player['held'] = row['held']
                 players.append(player)
-            row = conn.execute('SELECT state FROM homesteads WHERE user_id=?', (host,)).fetchone()
-            life = homestead.public(json.loads(row[0]) if row else homestead.initial(), clock())
-            # Visitors can see crops, not the host's private inventory or fishing outcome.
-            crops = {'version': life['version'], 'plots': life['plots'], 'server_time': clock()}
-            return dict(host_id=host, scene=scene, objects=objects, players=players, crops=crops if scene == 'village' else None)
+            crops = None
+            if scene == 'village':
+                row = conn.execute('SELECT state FROM homesteads WHERE user_id=?', (host,)).fetchone()
+                crops = homestead.public_crops(row[0] if row else None, clock())
+            return dict(host_id=host, scene=scene, objects=objects, players=players, crops=crops)
 
         @app.get('/v1/social')
         def social(request: Request):
@@ -591,9 +591,17 @@ class Multiplayer:
 
         def visible_object(conn, user_id, object_id):
             # Also the pieces the host's residents have put up in their homes (npc_homes.py), not the stored ones.
-            row = conn.execute("SELECT o.* FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.id=? AND o.owner_id=? AND (o.state='placed' AND COALESCE(l.room,'village') IN ('village','home') OR o.state='gifted' AND EXISTS(SELECT 1 FROM npc_items i WHERE i.object_id=o.id AND i.state='placed'))", (object_id, host_for(conn, user_id))).fetchone()
+            row = conn.execute("SELECT o.*,COALESCE(l.room,'village') AS room FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.id=? AND o.owner_id=? AND (o.state='placed' AND COALESCE(l.room,'village') IN ('village','home') OR o.state='gifted' AND EXISTS(SELECT 1 FROM npc_items i WHERE i.object_id=o.id AND i.state='placed'))", (object_id, host_for(conn, user_id))).fetchone()
             if not row:
                 fail('object_not_found', 404)
+            # A guest reads the host's home pieces only while the home is open to them (home_access.py):
+            # not after a lock kept them out, a send-out or the host walking away (security audit M2).
+            host = row['owner_id']
+            if row['state'] == 'placed' and row['room'] == 'home' and user_id != host:
+                spot = conn.execute('SELECT scene,host_id,seen FROM mp_presence WHERE user_id=?', (user_id,)).fetchone()
+                inside = bool(spot and spot['scene'] == 'home' and spot['host_id'] == host and clock()-spot['seen'] <= HOST_GONE_SECONDS)
+                if not home_access.state(conn, user_id, host, clock(), inside)['open']:
+                    fail('object_not_found', 404)
             return row
 
         @app.get('/v1/social/village/objects/{object_id}/model')

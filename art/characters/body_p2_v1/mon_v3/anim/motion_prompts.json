@@ -1,0 +1,656 @@
+{
+ "monsters": [
+  {
+   "id": "goblin",
+   "seen": "Small, wiry green goblin, slightly hunched, with long arms ending in clawed hands and big bare feet. Wears a brown hood, rough leather shoulder pads and chest plate, and a leather belt with a loincloth. Large pointed ears stick out of the hood and glowing yellow eyes. Holds nothing in either hand: no weapon, no prop.",
+   "personality": "A cowardly, twitchy sneak that moves fast and low, darts in, and cringes when it gets hit.",
+   "height_m": 1.2,
+   "clips": {
+    "run": {
+     "prompt": "A small hunched goblin scurrying fast in place: body pitched low and forward, quick short strides on the balls of its feet, both arms swept back behind it with claws splayed, hooded head thrust forward and low. Running in place, seamless loop.",
+     "seconds": 1
+    },
+    "hurt": {
+     "prompt": "A hunched goblin is hit: it flinches back with a startled jolt, hunches its shoulders up and throws both clawed hands over its face, cowering for a moment, then peeks out and drops back into its hunched ready crouch. Stays on its feet.",
+     "seconds": 1
+    }
+   },
+   "notes": "Only run and hurt are new. The existing idle (weight shift), walk (sneaking quick steps), attack (crouch-lunge-slash) and death (stagger back, knees first, onto its back) are kept, and the other 17 monsters were made to differ from them. Run is the only arms-swept-back run in the roster. Hurt is the only hands-over-face cower. Hood and ears move rigidly with the Head bone."
+  },
+  {
+   "id": "werewolf",
+   "seen": "Lean, very muscular brown werewolf with a big fur mane over the neck and shoulders and a wolf head with bared fangs and yellow eyes. Long arms with large hooked claws, and digitigrade wolf legs with clawed paws. Wears torn brown cloth trousers to mid-shin. A large bushy tail at the back has no bone, so it follows the hips rigidly. From the side the upper body leans forward and the knees are bent. No weapon or prop.",
+   "personality": "A feral hunting predator: it stalks low and deliberate, then explodes into pounces and bites, and moves like a wolf on two legs.",
+   "height_m": 2.3,
+   "clips": {
+    "idle": {
+     "prompt": "A lean, muscular werewolf standing in place in a low predatory crouch on its toes: its chest heaves with heavy panting breaths, it lifts its muzzle and sniffs the air in short jerks, then lowers its head and rolls its broad shoulders, long clawed arms hanging loose. Seamless loop.",
+     "seconds": 3
+    },
+    "walk": {
+     "prompt": "A muscular werewolf prowling in place on its toes, hunched low: its head is held low and swings from side to side as it sniffs, heavy shoulders rolling with each padding step, long clawed arms hanging loose and swaying. Walking in place, seamless loop.",
+     "seconds": 2
+    },
+    "run": {
+     "prompt": "A feral werewolf sprinting in place in a deep forward lean: long powerful bounding strides, arms pumping low and fast with claws open, back arched and head thrust low and forward like a hunting wolf. Running in place, seamless loop.",
+     "seconds": 1
+    },
+    "attack": {
+     "prompt": "A feral werewolf rears up tall on its toes with both clawed hands raised beside its head, then pounces down and forward, clamping its claws onto an unseen foe's shoulders as its head snaps forward in a savage bite, then shoves off and drops back into its low crouch. Stays in place.",
+     "seconds": 2
+    },
+    "hurt": {
+     "prompt": "A muscular werewolf is struck: it recoils half a step with a yelp, then violently shakes its head and shoulders from side to side like a wet dog shaking itself off, and sinks back into its low predatory crouch with a snarl. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "A muscular werewolf is struck hard: it throws its head back in a final howl, then drops forward onto all fours, trembles, and rolls over onto its right side, curling up with its arms drawn in, then lies completely still on the ground.",
+     "seconds": 4
+    }
+   },
+   "notes": "Walk is a head-low sniffing prowl; the careful stalk now belongs only to the wendigo. Attack is a rear-up, downward pounce with a claw clamp and a head-snap bite. It has no crouch-lunge start, so it differs from the goblin. Impact is about 0.8-1.0 s, when the head snaps forward; the bite reads from the head and neck because there is no jaw bone. Hurt is a wet-dog shake. Death is a howl, a drop onto all fours, then a roll onto the RIGHT side and a curl. The tail is rigid on Hips: check in Blender that it does not sink into the ground in the deep run lean, the all-fours phase or the side-lying death, and trim or re-weight it if it does."
+  },
+  {
+   "id": "troll",
+   "seen": "Huge pot-bellied green-grey troll with warty skin, a big round belly and very long, thick arms with oversized clawed hands that hang to its knees. Small head set low on hunched shoulders, two big lower tusks, yellow eyes and small pointed ears. Wears a cord harness with tied-on bones across the chest and bone-and-cord bands on both forearms. Short, thick legs with big clawed feet. From the side the posture is strongly slouched, with the head forward. No weapon: the bones are decorations tied to its body, not held.",
+   "personality": "A slow, dim, lazy brute: heavy waddling mass, clumsy flailing charges and big two-fisted smashes.",
+   "height_m": 2.5,
+   "clips": {
+    "idle": {
+     "prompt": "A huge pot-bellied troll standing in place, slouched, long arms hanging to its knees: it breathes slowly and heavily, scratches its round belly with its right hand, then lazily scratches the back of its head and lets the arm drop. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A huge pot-bellied troll lumbering in place with a wide-legged waddle: its whole body rocks side to side with each heavy step, belly swaying, long arms swinging loosely with hands near its knees, head slouched forward. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "A huge pot-bellied troll charging in place in a clumsy, heavy jog: big thudding strides, belly bouncing, long arms flailing up and out at its sides, head thrust forward and low. Running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "A huge pot-bellied troll clasps both fists together and heaves them high above its head, leaning back, then brings them crashing down in a heavy two-handed hammer smash in front of it, then straightens back into its slouched stance. Stays in place.",
+     "seconds": 3
+    },
+    "hurt": {
+     "prompt": "A huge pot-bellied troll is hit in the belly: it folds forward around its belly with both hands pressed to it, staggers half a step back, then slowly straightens up into its slouched stance. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "A huge pot-bellied troll is struck hard: it wobbles dazed, sways forward and back, its knees buckle, and it topples forward, falling flat on its belly with its long arms splayed out to the sides, then lies still face-down.",
+     "seconds": 4
+    }
+   },
+   "notes": "The troll keeps three concepts that others gave up for it: the side-to-side waddle walk, the overhead two-handed hammer-fist attack (the only clasped-fists overhead smash) and the belly-fold hurt. The attack has a long wind-up, with impact about 1.2-1.4 s. The hurt now says 'belly' instead of 'gut', which is too close to the filtered 'guts'. The death is a dazed wobble, then a belly flop face-down. It is NOT the only forward fall: the lizardman, minotaur, mummy king, shardling, draugr and frost hag also end face-down, each by a different path. The big hands may push into the belly in the smash, the belly fold and the belly scratch; check in Blender. The bone decorations are rigid on Spine and ForeArm."
+  },
+  {
+   "id": "cyclops",
+   "seen": "Reference files are cyclops2_front/left/right/back.jpg; there is no cyclops_front.jpg. Massive brown-skinned one-eyed brute with one huge orange slit-pupil eye, a heavy brow, a wide fanged mouth and a bald head. Very broad shoulders and chest with scars, and a diagonal leather strap across the chest. Thick forearms wrapped in layered leather bracers trimmed with fur, and big clawed hands. Wears a leather belt with a fur-edged loincloth, plus fur and leather wraps on its shins and clawed feet. Wide, heavy stance with the arms bowed out. No weapon or prop.",
+   "personality": "A proud, aggressive pit-brawler giant: it stomps, swaggers, charges in with its guard up and throws huge punches.",
+   "height_m": 3.3,
+   "clips": {
+    "idle": {
+     "prompt": "A massive one-eyed cyclops brute standing in place in a wide, heavy stance: it pounds its right fist into its open left palm twice, then rolls its thick neck from side to side and flexes its huge shoulders, breathing heavily, arms bowed out. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A massive one-eyed cyclops swaggering in place with heavy stomping steps: chest pushed out and head held high, thick arms bowed out wide from its body with fists clenched, each shoulder swinging forward with its step, the whole body shuddering at every footfall. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "A massive one-eyed cyclops running in place like a brawler charging in: torso upright, chest pushed out, both fists raised in a guard in front of its chin, wide-legged thudding strides that jolt its whole body, shoulders swaying. Running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "A massive one-eyed cyclops draws its right fist back to its shoulder, steps in with its left foot, then drives a huge straight right punch forward at an unseen foe with its whole body weight behind it, arm fully extended, then pulls back into its wide stance. Stays in place.",
+     "seconds": 3
+    },
+    "hurt": {
+     "prompt": "A massive one-eyed cyclops is rocked by a hit: its upper body jolts backward, both arms swing out wide for balance and it takes one heavy step back, then it hunches forward again with fists clenched in anger. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "A massive one-eyed cyclops is struck hard: it clutches its eye with both hands and rears back, then topples straight backward as stiff as a felled giant without bending its knees, arms flung wide, landing flat on its back and lying completely still on the ground.",
+     "seconds": 4
+    }
+   },
+   "notes": "FBX: mon_cyclops_p2.fbx, built from the cyclops2 refs. Walk is a chest-out swagger with bowed arms, so it is no longer the frost knight's march. Run is an upright brawler with its fists up in a guard; the bull charge belongs to the minotaur. Attack is a straight right power punch with a step-in, replacing the horizontal haymaker that repeated the wendigo's and lizardman's sweeps. Impact is about 1.0-1.1 s, at full extension. Death: it clutches its eye, then topples stiffly straight back with no stagger steps and no knee bend, so it differs from the goblin's stagger and knees-first fall. It is the only felled-giant backward topple in the roster. Watch the palm-pound idle: the claws on the left hand may cut into the right fist; fix in Blender if needed."
+  },
+  {
+   "id": "treant",
+   "seen": "Ancient tree giant with a bark body and a canopy of leafy branches growing from the head and shoulders. Glowing green eyes and a carved bark face with a beard-like trunk. Very long, thick branch-like arms with gnarled wooden fingers and moss patches. Legs are thick trunks with root-like spreading feet. Upright, wide stance. No weapon or prop. The leafy crown and shoulder branches have no bones, so they move rigidly with Head and Spine2.",
+   "personality": "A slow, colossal and ancient forest boss: every motion is heavy, stiff and deliberate, like a living tree creaking in the wind.",
+   "height_m": 5,
+   "clips": {
+    "idle": {
+     "prompt": "An ancient towering tree giant standing rooted in place: its whole trunk-like body sways slowly from side to side like a tree in the wind, its long branch arms drift and creak, and its gnarled fingers slowly curl and uncurl. Very slow, heavy and calm. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "An ancient towering tree giant trudging in place with stiff, heavy steps: each root-like leg lifts slowly from the hip with barely bent knees and plants down with great weight, upper body rocking gently, long branch arms hanging and swaying. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "An ancient towering tree giant running in place with a stiff, toppling stride: torso pitched forward as if falling, long straight-kneed strides catching it each step, branch arms swinging stiffly forward and back with locked elbows, heavy footfalls. Running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "An ancient towering tree giant slowly twists its trunk to the right and swings both long branch arms far back, then sweeps them together in a huge, low horizontal arc across its front from right to left, body turning with the swing, then slowly creaks back to its stance. Stays in place.",
+     "seconds": 3
+    },
+    "hurt": {
+     "prompt": "An ancient towering tree giant is hit: its trunk-like body jolts and twists stiffly to the right, its left branch arm swinging across, it shudders for a moment, then slowly creaks back upright into its rooted stance. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "An ancient towering tree giant is struck down: its limbs stiffen and shudder, it leans slowly to its left, then topples sideways as stiff as a falling tree, crashing down onto its side with branch arms splayed, and lies still on the ground.",
+     "seconds": 4
+    }
+   },
+   "notes": "Attack is a huge, low two-arm horizontal sweep from right to left; the glacier giant keeps the stomp. Impact is about 1.3-1.5 s, mid-sweep, and it suits a frontal-arc AoE VFX. Run is a stiff, toppling stride with straight knees and locked elbows; the alternating big-arc arm swing belongs to the ice golem. Death is a rigid felled-tree topple onto the LEFT side and the only stiff sideways topple. The crown and shoulder branches are rigid on Head/Spine2, so check them in Blender for clipping during the attack twist, the deep run lean and the side-lying death. If they tear, re-weight the crown branches to Head or Neck."
+  },
+  {
+   "id": "skeleton",
+   "seen": "Lanky undead skeleton knight in rusty, pitted plate: cracked open-face helmet over a grinning skull with glowing blue eyes, big round pauldrons, cross-strapped breastplate, exposed spine, armored tassets over a torn cloth loincloth, knee cops and bandage-wrapped greaves, bare bony toes. Long bony arms wrapped in rags, hands with long hooked claw fingers held out wide. Wide, knock-kneed crouch. Holds NO weapon or shield: attacks with bony claws only.",
+   "personality": "Stiff, jerky, marionette-like undead: every motion snaps and rattles as if the joints are barely held together, so it twitches rather than flows.",
+   "height_m": 1.7,
+   "clips": {
+    "idle": {
+     "prompt": "A lanky armored skeleton warrior in rusty plate stands in place in a wide crouch, long bony arms hanging forward. Its head twitches in small jerky snaps left and right, clawed fingers flex open and shut, shoulders rattle and jerk unevenly. Stiff undead rhythm, feet planted, seamless loop.",
+     "seconds": 3
+    },
+    "walk": {
+     "prompt": "A lanky armored skeleton warrior walking in place with a stiff, jerky marionette gait: knees snap up sharply, long bony arms dangle and swing loosely, head bobs and tilts with each step, torso hunched forward. Walking in place, seamless loop.",
+     "seconds": 2
+    },
+    "run": {
+     "prompt": "A lanky armored skeleton warrior running in place in a frantic, jerky sprint: torso pitched forward, knees pumping high and stiff, long bony arms flailing wildly and loosely at its sides like a broken puppet's, wrists flopping, skull bobbing. Running in place, seamless loop.",
+     "seconds": 1
+    },
+    "attack": {
+     "prompt": "A lanky armored skeleton warrior in a wide crouch jerks both bony clawed arms high overhead, then rakes them down together in a fast crossing X-shaped slash in front of its chest toward an unseen foe, rattling stiffly, then snaps back into its crouched ready stance.",
+     "seconds": 2
+    },
+    "hurt": {
+     "prompt": "A lanky armored skeleton warrior is struck on the left side: its torso jolts sharply to the right, skull knocked sideways, arms jerking out stiffly, one leg buckling for a moment, then it snaps jerkily back upright into its wide crouched stance.",
+     "seconds": 1
+    },
+    "death": {
+     "prompt": "A lanky armored skeleton warrior is struck and its joints give way: head drops, knees buckle, arms go limp, and it collapses straight down in place into a loose heap, slumping onto its side with limbs splayed, then lies completely still on the ground.",
+     "seconds": 3
+    }
+   },
+   "notes": "Attack is an overhead double-claw X rake, with impact about 0.8 s. Run is a high-knee sprint with the arms flailing loosely at the sides like a broken puppet; they are no longer swept back like the goblin's. Hurt is a sideways jolt with a leg buckle. For comparison: the lizardman does a tucked hop back, the minotaur's head is knocked back before two hoof stamps, and the mummy king brushes off the hit in disdain. Death is an in-place loose heap that ends on its side, the only straight-down crumple in the roster. The cloth loincloth and arm rags have no bones and move only with the hips and forearms."
+  },
+  {
+   "id": "lizardman",
+   "seen": "Muscular, broad-shouldered reptile humanoid with olive scaly skin, pale plated belly, a crest of large conical spikes on the head running down the spine, short blunt snout with small fangs. Crossed leather chest harness with metal buckles, thick leather bracers on both forearms. Clawed three-finger hands with dark talons held open at the sides, digitigrade-ish clawed feet with big toe talons. Side view shows a long spiked tail (no bone: rigid with hips) and a forward-leaning, knees-bent posture. Holds NO weapon or shield: claws only.",
+   "personality": "Quick, twitchy, feral predator: low to the ground, light on its feet, reptile head jerks and springy hops instead of heavy steps.",
+   "height_m": 1.7,
+   "clips": {
+    "idle": {
+     "prompt": "A muscular lizardman in a leather harness crouches low in place on bent clawed legs, feet planted, clawed hands open at hip height. It does three quick up-and-down head bobs like a lizard's display, freezes perfectly still for a beat, then darts its head sharply to look the other way and freezes again. Seamless loop.",
+     "seconds": 3
+    },
+    "walk": {
+     "prompt": "A muscular lizardman walking in place with a quick reptile gait: low crouch, light steps on clawed feet, its torso swaying in an S-shaped wiggle so the opposite shoulder swings forward with each step, while its head stays perfectly level and steady. Walking in place, seamless loop.",
+     "seconds": 2
+    },
+    "run": {
+     "prompt": "A muscular lizardman sprinting in place like a running raptor: torso pitched almost horizontal, clawed hands tucked up close to its chest, long springy strides with knees lifting high, head thrust forward and held level. Running in place, seamless loop.",
+     "seconds": 1
+    },
+    "attack": {
+     "prompt": "A muscular lizardman crouches low, then whirls around in one fast full spin on the balls of its feet, its right clawed hand raking out wide at the end of the turn toward an unseen foe, then stops facing forward and drops back into its low crouched ready stance. Stays in place.",
+     "seconds": 2
+    },
+    "hurt": {
+     "prompt": "A muscular lizardman is hit: it jerks its head back, tucks both clawed arms in tight to its body and skitters backward in one quick light hop on bent legs, then darts forward again into its low crouched ready stance. Stays on its feet.",
+     "seconds": 1
+    },
+    "death": {
+     "prompt": "A muscular lizardman is struck hard and spins half around, staggers two stumbling steps, then pitches forward and falls flat onto its chest with arms sprawled out, legs kicking weakly once, then lies face down completely still on the ground.",
+     "seconds": 3
+    }
+   },
+   "notes": "Idle is a head-bob display, then freeze-and-dart, with the feet planted and 'in place' stated. Walk is an S-shaped torso wiggle with a dead-level head. Run is a raptor sprint with the claws tucked at the chest. Attack is a fast full spin ending in a right claw rake. Impact is about 0.8-0.9 s, at the end of the turn. Check that it ends facing forward; if it overshoots, trim it or rotate the root in Blender. The death also starts with a half-spin, but that echo stays inside this one monster. Hurt is a tucked hop back, the only hop-back hurt. The tail is rigid on Hips, so the prompts never mention it; check for leg clipping in the horizontal run and the spin."
+  },
+  {
+   "id": "minotaur",
+   "seen": "Huge bull-headed brute: long upward-curving horns, angry yellow eyes, bared teeth with tusks, goatee. Thick brown fur mantle over the shoulders and upper back, crossed iron-studded leather chest straps, heavy iron cuffs on both forearms. Massive arms with clawed fingertips, bare muscular torso, thick legs ending in cloven hooves. Side view: strongly hunched forward, head thrust ahead of the chest, knees bent. No tail visible. Holds NO weapon: fists, horns and body only.",
+   "personality": "A raging bull in a giant's body: slow, ponderous and heavy, breathing hard, every motion driven by the head and shoulders with the horns leading.",
+   "height_m": 3.2,
+   "clips": {
+    "idle": {
+     "prompt": "A massive hunched minotaur with heavy shoulders stands in place with head lowered, horns pointed forward, chest heaving with slow deep breaths. It rolls its huge shoulders, flexes its fists, and scrapes one hoof backward twice like an angry bull. Heavy, slow, seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A massive hunched minotaur walking in place with a heavy, menacing plod: horned head low and thrust ahead, dipping with each pounding hoof step, thick arms bent and swinging short at its sides with fists clenched, breath heaving. Slow, weighty, walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "A massive minotaur charging like a bull, running in place: head lowered with horns aimed forward, torso pitched forward, thick legs pounding hard in powerful strides, fists pumping, shoulders driving. Aggressive heavy charge, running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "A massive hunched minotaur lowers its horned head, draws its shoulders back and bends its knees to wind up, then drives forward in one short lunge step, thrusting its head and horns forward and upward in a violent ram at an unseen foe, then steps back to its stance.",
+     "seconds": 3
+    },
+    "hurt": {
+     "prompt": "A massive hunched minotaur is hit: its horned head is knocked back and up and it rocks on its heels, then it lowers its horns again, stamps one hoof down hard twice in fury and settles back into its heavy hunched stance. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "A massive minotaur is struck hard: it lowers its horned head and lurches forward in a last stumbling charge of two heavy steps, then its legs fold under it and it crashes down chest-first, arms sprawled ahead, and lies completely still on the ground.",
+     "seconds": 4
+    }
+   },
+   "notes": "Walk is a menacing plod with the head dipping at each step; the side-to-side rock belongs to the troll. The minotaur keeps the bull-charge run. Attack is a horn ram with a lunge step and a heavy wind-up, with impact about 1.1-1.3 s. The horns are skinned to Head, so the ram reads through Head/Neck rotation. Hurt: the horned head is knocked back, then it stamps a hoof twice in fury; there is no gut fold. Death is a last stumbling charge forward, the legs fold, and it crashes chest-first (FRONT); it is no longer a backward fall. The root moves forward about 1 m, so zero Hips XZ in Blender if the game snaps the body. The idle hoof scrape may slide the foot, which is acceptable because the game drives the root. The fur mantle rides on the spine and shoulders."
+  },
+  {
+   "id": "mummy_king",
+   "seen": "Bulky, broad pharaoh mummy: golden striped nemes headdress with uraeus cobra and a big golden broad collar (usekh) over the shoulders, golden false beard, dark withered skull face with glowing green eyes. The whole body is wrapped in thick sand-colored bandages; very wide shoulders, thick arms, large mitten-like bandaged hands with fingers, stocky bandaged legs and feet. Arms held slightly out from the sides. Holds NO staff, crook, flail or weapon: hands only.",
+   "personality": "An ancient king, regal and deliberate: stiff, rigid, slow undead weight, moving as if the wrappings bind its joints, never hurried except when it lurches to chase.",
+   "height_m": 3,
+   "clips": {
+    "idle": {
+     "prompt": "A bulky mummy king in a golden pharaoh headdress stands in place, tall and regal, chin raised, arms held slightly out from its sides. It slowly turns its head left then right as if surveying its kingdom, fingers curling and uncurling slowly, chest rising faintly. Stiff, slow, seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A bulky mummy king walking in place with a slow, stiff-legged undead march: both arms raised and stretched straight forward, torso upright and rigid, chin held high, knees barely bending, heavy deliberate footfalls. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "A bulky mummy king running in place with a fast lurching undead stride: stiff knees lifting high, torso rocking side to side, both arms reaching forward and clawing the air alternately, heavy pounding steps. Faster and more aggressive, running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "A bulky mummy king steps forward and seizes an unseen foe by the neck with its right hand, slowly lifts it high in front of its golden headdress with the arm straight, holds it for a beat, then hurls it down to its side and returns to its regal stance. Stays in place.",
+     "seconds": 3
+    },
+    "hurt": {
+     "prompt": "A bulky mummy king is struck in the chest but barely flinches: its body jolts once, it slowly turns its head toward the blow, then brushes its chest with one hand in royal disdain and lowers the arm back into its tall regal stance. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "A bulky mummy king is struck and goes rigid: it sinks slowly to its knees, both arms rising toward the sky and trembling, then it tips forward stiffly and falls flat on its face with arms stretched ahead, lying completely still on the ground.",
+     "seconds": 4
+    }
+   },
+   "notes": "Walk is an arms-forward rigid march with the chin held high. The foot drag was removed because it is the draugr's signature. Attack is a one-handed neck seize, then a lift high and a hurl aside, with impact at the grab, about 0.9-1.0 s. The double-palm thrust from the other review was not used, because it repeats the frost hag's two-palm cast. One straight arm clips the golden collar less than two raised arms, but still check the upper arm against the collar. Hurt: it barely flinches and brushes its chest in disdain. Death: it kneels with both arms raised to the sky, then falls rigidly forward face-down. 'Stiff as a statue' was removed so it does not echo the shardling's statue topple. The collar and headdress are rigid with Spine2/Head."
+  },
+  {
+   "id": "ghoul",
+   "seen": "Gaunt, emaciated grey-green undead humanoid in a permanent crouch: knees bent and splayed, torso hunched forward, bald skull-like head with red eyes and a big fanged mouth, visible ribs, very long arms hanging wide to knee height ending in long hooked claws. Only clothing is a torn brown leather loincloth. Bare feet. Holds nothing (no weapon, no prop).",
+   "personality": "Twitchy, skittish scavenger: fast, jerky, low to the ground, all nervous energy and sudden springs, never still.",
+   "height_m": 1.6,
+   "clips": {
+    "idle": {
+     "prompt": "A gaunt, hunched ghoul squats low in place on splayed knees, raises one clawed hand to its mouth and gnaws at its claws in quick nervous nibbles, then snaps its head up to glance around and drops the hand, then gnaws at the other hand the same way. Seamless loop.",
+     "seconds": 3
+    },
+    "walk": {
+     "prompt": "A gaunt, hunched ghoul walking in place with a bow-legged creep: knees bowed far apart, short hitching steps on its bare toes, torso jerking with each step, head twitching side to side, long arms dangling and swinging out of rhythm. Walking in place, seamless loop.",
+     "seconds": 2
+    },
+    "run": {
+     "prompt": "A gaunt ghoul running in place in a frantic scramble, bent nearly double, rapid short strides, long arms swinging low and loose so its claws nearly brush the ground, head jerking from side to side. Running in place, seamless loop.",
+     "seconds": 1
+    },
+    "attack": {
+     "prompt": "A gaunt, crouching ghoul darts both long clawed arms forward at an unseen foe, hooks its claws in, then yanks back hard toward its chest, hunching and twisting as it pulls, then lets go and settles back into its hunched ready stance. Stays in place.",
+     "seconds": 2
+    },
+    "hurt": {
+     "prompt": "A gaunt, crouching ghoul is struck: it is knocked down into a very low squat, one clawed hand dropping to touch down beside its feet to catch itself, then it springs back up into its hunched crouch with claws raised, twitching. Stays on its feet.",
+     "seconds": 1
+    },
+    "death": {
+     "prompt": "A gaunt ghoul is struck down: it convulses and falls backward onto its back, its long limbs thrashing and twitching in the air above it, then they slowly curl inward, twitch once more, and it lies completely still on the ground.",
+     "seconds": 4
+    }
+   },
+   "notes": "Idle is nervous claw-gnawing: the hand goes to the mouth and the head makes the nibbles, so no jaw bone is needed. The sniffing idle belongs to the werewolf. Walk is a bow-legged creep and run is a bent-double scramble with the claws nearly brushing the ground. Attack: both claws dart forward, hook in and yank back, with impact about 0.5-0.7 s when the claws hook in. There is no hop, so root drift is minimal. Hurt: it is knocked into a low squat with one hand touching down, then springs back up. Death: it falls onto its BACK with its limbs thrashing in the air, then curls in. The loincloth is rigid on Hips, which is fine for all clips."
+  },
+  {
+   "id": "ice_shardling",
+   "seen": "Compact, chunky ice-crystal elemental golem made of faceted translucent blue shards. Big crown of crystal spikes on the head and large spike clusters rising from both shoulders and the upper back, glowing white eyes, a jagged crystal 'tooth' grin. Broad chest, thick blocky legs with crystal feet, forearms bristling with shards and ending in hooked crystal claws (3 big talons). Wide planted stance, arms held out from the body. Holds nothing.",
+   "personality": "Rigid, grinding, mechanical: moves as stiff blocks with locked joints and heavy stomps, like a living statue of ice - small but dense.",
+   "height_m": 1.4,
+   "clips": {
+    "idle": {
+     "prompt": "A squat, heavy ice crystal golem stands in place in a wide planted stance, knees locked, arms held out from its body. It hitches its spiky shoulders up stiffly and drops them with a hard jolt, twice, like grinding blocks settling, then slowly clenches and opens its crystal claws once. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A squat ice crystal golem walking in place with short, choppy stomping steps, knees barely bending, torso locked and leaning slightly forward, both arms held rigidly out from its sides without swinging, each stomp jolting its spiky shoulders. Walking in place, seamless loop.",
+     "seconds": 2
+    },
+    "run": {
+     "prompt": "A squat ice crystal golem running in place like a wind-up toy: tiny fast stomping steps on stiff knees, torso upright and locked, short arms jerking up and down in small rigid pumps out at its sides, spiky head jolting with each stomp. Running in place, seamless loop.",
+     "seconds": 1
+    },
+    "attack": {
+     "prompt": "A squat ice crystal golem crouches stiffly, then makes a short stiff hop upward with both legs held together and lands heavily on both feet at once in a ground-shaking stomp, arms flung outward by the landing, pauses, then settles back into its wide planted stance. Stays in place.",
+     "seconds": 2
+    },
+    "hurt": {
+     "prompt": "A squat ice crystal golem is hit: its whole body jolts rigidly as one block, arms jerking out stiffly, it skids half a step back without bending its knees, freezes for a beat, then stiffly resets into its wide stance. Stays on its feet.",
+     "seconds": 1
+    },
+    "death": {
+     "prompt": "A squat ice crystal golem is hit hard: every limb locks rigid, it shudders in small stiff jerks, then tips forward like a toppled statue and falls flat face-down without bending, arms still locked, lying completely still on the ground.",
+     "seconds": 3
+    }
+   },
+   "notes": "Idle is a stiff shoulder hitch-and-drop; the scanning turn belongs to the mummy king. Walk is short choppy stomps with the arms held rigid and no side-to-side rock. Run is a wind-up-toy stomp with small rigid arm pumps out at the sides, kept away from the torso to avoid shard clipping. Attack is a stiff, locked-leg hop that slams down on both feet at once. The shoulder ram belongs to the frost knight; the other review's rising uppercut was not used because the ice golem now uppercuts. Impact is about 0.8-0.9 s, on landing; it suits a small frost burst VFX. Check foot penetration on landing. Hurt is the only rigid-block skid. Death is a rigid statue topple face-down. The shoulder and head spikes may poke through the floor, so raise the Hips a few cm on the last frames in Blender if needed."
+  },
+  {
+   "id": "draugr",
+   "seen": "Stocky, barrel-chested undead Viking warrior with pale icy-blue skin and glowing white eyes. Rusty iron horned helmet with nose guard, long braided icy-blue beard with leather ties, shaggy brown fur mantle over the shoulders and a long fur/leather cape down the back, rusty chainmail shirt with leather belt and a jagged leather skirt, leather bracers. Short thick legs, bare feet, big empty hands hanging at the sides - holds no weapon or shield.",
+   "personality": "Stiff, jerky undead soldier with a brawler's pride: slow, heavy, rigid joints that snap rather than flow, still fighting with fists and feet.",
+   "height_m": 1.7,
+   "clips": {
+    "idle": {
+     "prompt": "A stocky undead Viking warrior in a horned helmet and fur cape stands stiffly upright in place, fists half clenched at its sides; its head slowly droops forward, then jerks back upright, one shoulder twitching, chest rising in a slow stiff breath. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A stocky undead Viking warrior walking in place with a stiff lurching limp, the right leg dragging a little each step, the left arm swinging stiffly while the right arm hangs limp, torso tilting jerkily with every step. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "A stocky undead Viking warrior running in place with a lopsided limping run: the stiff right leg swinging out in an awkward half hop, the left arm pumping hard, the right arm hanging limp, horned head bobbing unevenly. Running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "A stocky undead Viking warrior shifts his weight onto his right leg, lifts his left knee high, then drives a heavy, stiff front kick straight forward into an unseen foe, stamps the foot back down and jerks back into his upright stance, fists clenched. Stays in place.",
+     "seconds": 2
+    },
+    "hurt": {
+     "prompt": "A stocky undead Viking warrior is struck on the helmet: its head snaps hard to one side and its torso twists with the blow, feet staying planted, then it turns its head back to the front in slow stiff jerks, fists clenching. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "A stocky undead Viking warrior is struck down: he pitches forward and catches himself on both hands, holds there for a moment with trembling arms and bowed horned head, then his arms give way and he collapses flat on his face, lying completely still.",
+     "seconds": 4
+    }
+   },
+   "notes": "Run is a lopsided limping run that matches the dragging-leg walk; the stiff fist-pumping jog was too close to the frost knight's. Attack is a stiff LEFT front kick, the only kick in the roster. It uses the left leg so it does not contradict the dragging right leg. Impact is about 0.8 s, at full extension. The grab-and-head-strike was dropped because it repeated the werewolf's grab-and-bite. Hurt is the helmet hit with the head snapping to one side; the draugr keeps it and the frost knight changed. Death: it pitches forward, catches itself on both hands, holds there trembling, then collapses face-down. The ice golem's fist-catch death was changed so this stays the only catch-then-collapse. The cape is skinned to the spine, so check cape/leg intersection. The beard is rigid with Head/Neck and can clip the chainmail when the head bows; a small Neck offset in Blender fixes it."
+  },
+  {
+   "id": "yeti",
+   "seen": "Massive white-furred ape-like yeti with layered shaggy fur over the whole body, two short curved grey horns, blue-grey ape face with small tusks and a fur beard. Huge rounded shoulders and chest, long heavy arms hanging to mid-thigh ending in big blue-grey hands with dark claws, thick legs with big flat bare feet. Upright but slightly hunched gorilla posture. Holds nothing.",
+   "personality": "Territorial heavyweight: slow, ponderous ape mannerisms, every movement carries huge mass and momentum, short bursts of brute power.",
+   "height_m": 2.4,
+   "clips": {
+    "idle": {
+     "prompt": "A massive white-furred horned yeti stands in place in a heavy hunch, breathing slowly; it lifts its left forearm in front of its face and lazily picks through the fur with its right fingers like a grooming ape, then lowers the arm, glances around and grooms the other forearm. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A massive white-furred yeti walking in place with a gorilla-like gait: leaning far forward, long heavy arms reaching down so its big fists swing forward low near the ground with each step, huge shoulders heaving, head held low. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "A massive white-furred yeti running in place in a gorilla-like charge: leaning far forward, both huge arms swinging forward together with each bounding stride as if pulling itself along, shoulders heaving, head low. Running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "A massive white-furred yeti spreads both huge arms wide, lunges one heavy step forward and clamps them shut around an unseen foe in a crushing bear hug, squeezing hard for a beat with its shoulders hunched, then lets go and steps back into its stance. Stays in place.",
+     "seconds": 3
+    },
+    "hurt": {
+     "prompt": "A massive white-furred yeti is hit: it rocks back a half step with a huff, then rears up slightly and thumps its broad chest once with both fists in anger, then drops back into its heavy hunched stance. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "A massive white-furred yeti is struck down: it staggers back a heavy step, drops down heavily into a sitting slump, sways for a moment with its head drooping, then tips over backward and lies flat on its back, arms limp, completely still.",
+     "seconds": 4
+    }
+   },
+   "notes": "Idle is ape grooming of the forearm fur; the fist-into-palm belongs to the cyclops. Walk is a forward-leaning gorilla gait with the fists low. Run is a gorilla charge with both arms swinging forward together, so the ice golem keeps the alternating big-arc run. Attack: the arms spread wide, it lunges, then a crushing bear hug, replacing the overhead smash that repeated the troll's. Impact is about 1.0-1.1 s, when the arms clamp shut. Check that the hands and claws do not pass through each other or the chest fur. Hurt is one angry two-fist chest thump. Death is a heavy sitting slump, then a tip onto its BACK, the only sit-first death. The idle groom must loop: if Tripo ends mid-gesture, cross-fade the last 0.3 s to frame 0 in Blender."
+  },
+  {
+   "id": "wendigo",
+   "seen": "Very tall, emaciated grey humanoid with a bleached deer skull for a head, large branching antlers and glowing yellow eye sockets. Neck juts forward from a strongly hunched upper back with a ridge of vertebra bumps; protruding ribs, thin waist. Extremely long thin arms hanging past the knees, ending in long fingers with black hooked claws; leather bands with bones tied around both upper arms and a bone sticking up from the left shoulder. Long thin legs, bare clawed feet. Holds nothing.",
+   "personality": "Eerie stalking predator: slow, deliberate, unnaturally patient movement broken by sudden whip-fast reaches of its overly long limbs.",
+   "height_m": 2.6,
+   "clips": {
+    "idle": {
+     "prompt": "A tall, emaciated wendigo with a deer skull head and antlers stands hunched in place, neck jutting forward; it slowly tilts its head to one side at an eerie angle, then the other, long clawed arms hanging and swaying, fingers twitching one by one. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A tall, emaciated wendigo walking in place with slow stalking strides, lifting each long leg high and placing it carefully, torso hunched forward, long clawed hands raised in front at chest height, head steady and forward. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "A tall, emaciated wendigo running in place with an eerie gliding stride: long legs taking huge reaching steps with deeply bent knees, upper body hunched and held perfectly level and still, long arms hanging limp and swaying, antlered head locked forward. Running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "A tall, emaciated wendigo stands tall without stepping, draws its long right arm across its chest to its left shoulder, then whips it outward in one huge backhand claw sweep at full reach toward an unseen foe, then slowly draws the arm back into its hunched stance.",
+     "seconds": 3
+    },
+    "hurt": {
+     "prompt": "A tall, emaciated wendigo is hit: its whole body jerks in a burst of rapid, unnatural twitches, long limbs spasming and its antlered head jerking at odd angles, then it goes still and slowly straightens back into its hunched, looming stance. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "A tall, emaciated wendigo is struck down: it rears up arching its back, long arms thrown upward, staggers sideways, then its long legs buckle and it collapses onto its side in a sprawl of limbs, and lies completely still on the ground.",
+     "seconds": 4
+    }
+   },
+   "notes": "The wendigo keeps the eerie head-tilt idle and the careful high-step stalk walk. Run is a level-bodied glide with limp arms; bounding belongs to the werewolf and arms-back to the goblin. Attack is a no-step, full-reach backhand claw sweep, with impact about 0.9-1.0 s. It no longer repeats the cyclops, lizardman or goblin step-in swings. Hurt is a burst of spasming twitches. There is no waist fold, so there is no antler/chest clipping and no overlap with the troll's belly fold. Death: it arches and rears up, then sprawls onto its SIDE. The 2.6 m height includes the antlers. The antlers are rigid on Head and may clip the floor in the side death; if they intersect, add a small Head/Neck roll offset on the final frames in Blender."
+  },
+  {
+   "id": "frost_hag",
+   "seen": "Hunched, thin old witch in a long hooded grey-blue fur/feather robe tied with a belt, shaggy feathered shoulder mantle, icicle-shard necklace and two icicle strands hanging from the hood. Glowing white eyes, hooked nose. Holds NOTHING: both arms hang forward-out from wide sleeves with long bony clawed hands and icicle nails. Bare clawed bird-like feet; robe covers legs to the shin.",
+   "personality": "A crooked, sly spellcaster: creeps and hobbles low, always working her clawed fingers, and fights by casting frost from her hands rather than brawling.",
+   "height_m": 2,
+   "clips": {
+    "idle": {
+     "prompt": "A hunched old frost witch in a heavy hooded fur robe stands in place with knees bent, one long clawed hand making slow circular stirring motions in the air in front of her, the other claw curled at her chest, her hunched shoulders shaking in a silent cackle. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A hunched old frost witch in a hooded fur robe walking in place with a crooked hobbling shuffle: back bowed, knees bent, one clawed hand raised before her face with fingers weaving slowly, the other claw curled at her side, head poking forward with each small step. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "A hunched old frost witch in a hooded robe running in place in a hurried shuffle: quick short steps, one clawed hand clutching the front of her robe at her chest, the other arm flapping out to the side, head bobbing forward with each step. Running in place, seamless loop.",
+     "seconds": 1
+    },
+    "attack": {
+     "prompt": "A hunched old frost witch in a hooded robe draws both clawed hands to her chest and crouches, then thrusts both palms forward with fingers splayed to hurl a burst of frost magic at an unseen foe, holds the cast for a moment, then hunches back to her stance.",
+     "seconds": 2
+    },
+    "hurt": {
+     "prompt": "A hunched old frost witch in a hooded robe is struck: she shrieks and twists half away from the blow, hunching her back toward it with both claws clutched to her chest, then whips back around to face forward, glaring, and hunches into her stance again. Stays on her feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "Mortally struck, a hunched old frost witch in a hooded robe stretches one trembling claw toward an unseen foe as if casting a last curse, holds it for a moment, then her arm drops and she crumples forward face-down and lies completely still on the ground.",
+     "seconds": 4
+    }
+   },
+   "notes": "She holds no weapon or staff. Idle: one claw stirs slow circles in the air while she cackles silently; the head tilt belongs to the wendigo. Walk is a crooked hobble with one hand raised and weaving, keeping her head-poke. Run is a hurried shuffle with one claw clutching her robe and the other arm flapping, no longer the goblin's arms-back scurry. Attack is a two-palm forward frost cast, the only casting attack. Impact is about 0.8 s, at full palm extension, so spawn the frost projectile or cone VFX then. Hurt: she turns half away and shields herself with her back (2 s, because the turn away and back needs it). Death: a last-curse reach with one claw, then she crumples face-down (FRONT); the side-curled heap belongs to the skeleton. The robe hides most leg motion, so walk and run rely on the torso and arms. The hood icicles and necklace are rigid with Head/Spine2."
+  },
+  {
+   "id": "frost_knight",
+   "seen": "Bulky undead knight in thick frosted ice plate armour: closed great-helm with a T-slit and glowing blue eyes, huge rounded pauldrons crowned with large ice spikes, icicles hanging from the chest plate and belt, armoured gauntlets with open hands, plated tassets and boots, long tattered icy cape behind (side view shows it hanging from the shoulders to the calves). Holds NOTHING in either hand: no sword or shield.",
+   "personality": "A dead knight still bound to duty: rigid sentry posture, relentless marching, puppet-like jerks when hit, and it uses its massive spiked shoulder armour as the weapon.",
+   "height_m": 2.4,
+   "clips": {
+    "idle": {
+     "prompt": "A towering undead frost knight in spiked ice plate armor stands guard in place at rigid attention, both armored hands resting one over the other in front of its waist as if on the pommel of an unseen planted sword; its grip slowly tightens and loosens and its helmeted head slowly lifts and lowers. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A towering undead frost knight in heavy spiked ice armor walking in place with a stiff, rigid march, knees lifting mechanically, arms barely swinging, torso upright and unbending, slightly jerky heavy steps. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "Charging hard, a towering undead frost knight in heavy spiked ice armor runs in place in a relentless charge: torso pitched forward and locked rigid, both arms held straight and stiff at its sides with no swing, knees driving up in fast heavy pounding strides. Running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "A towering undead frost knight in spiked ice armor lowers his spiked left shoulder and plants his feet, then lunges one heavy step forward and rams his shoulder into an unseen foe with full weight, jolts stiffly at impact, then steps back upright. Stays in place.",
+     "seconds": 2
+    },
+    "hurt": {
+     "prompt": "A towering undead frost knight in ice armor is struck: its torso jerks back and it staggers one stiff step backward, arms dangling, then it is yanked upright and forward again as if pulled by strings, stepping back into its rigid stance. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "A towering undead frost knight in heavy ice armor is struck: it sinks slowly onto one knee, bows its helmeted head with one fist pressed to its chest like a final oath, holds the pose for a moment, then slumps over onto its side and lies still on the ground.",
+     "seconds": 4
+    }
+   },
+   "notes": "The gauntlets are empty. Idle: a sentry at attention with the hands stacked as if on a sword pommel. Only the hand pose is generated, not a prop. Check the hands at the waist against the belt icicles. Walk is the rigid march, which it keeps. Run is a forward-locked charge with the arms held straight at the sides, no swing (2 s, since 1 s would look frantic for its weight). Attack is a spiked left-pauldron shoulder charge with a lunge, the only shoulder ram. Impact is about 0.8-0.9 s. Hurt: it staggers back a step, then is yanked upright as if by strings. The rigid-block skid belongs to the shardling and the head snap to the draugr. Death: it sinks onto ONE knee with a fist on its chest like a final oath, then slumps onto its SIDE. It is no longer a face-down death. The strings-cut heap was not used because it repeats the skeleton. The cape is skinned to the spine and moves rigidly, so torso twists stay small. If the wide pauldrons clip into the helm when the shoulder lowers, a weight-paint fix in Blender is cheaper than regenerating."
+  },
+  {
+   "id": "ice_golem",
+   "seen": "Massive blocky construct of faceted pale-blue ice slabs, with a glowing cyan hexagonal crystal core in the chest and ice-crystal spikes on the shoulders and forearms. Small square head with glowing eyes. Very long heavy arms with oversized boulder forearms and chunky block fingers reaching to the knees. Short thick pillar legs and wide slab feet. Holds NOTHING.",
+   "personality": "A slow, mechanical, enormously heavy construct: grinding deliberate steps, pendulum arms, and every action delivered with crushing slab weight.",
+   "height_m": 3.2,
+   "clips": {
+    "idle": {
+     "prompt": "A massive blocky ice golem with huge boulder fists stands heavily in place on wide feet; it slowly raises its right fist to chest height and turns it over as if inspecting it, flexing the block fingers, lowers it with a heavy drop, then does the same with its left fist. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A massive blocky ice golem walking in place with slow, deliberate stomps and a short pause between steps, torso held level and steady, its huge boulder fists swinging forward and back like heavy pendulums in big alternating arcs. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "A massive blocky ice golem running in place in a heavy rumbling charge: shoulders hunched forward, huge fists pumping alternately in big arcs, knees driving up, thunderous pounding steps. Running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "A massive blocky ice golem swings its huge right boulder fist far back behind its hip, then swings it forward and upward in a massive underhand pendulum uppercut through an unseen foe in front, its torso rising with the blow, then lets the arm swing back down and settles. Stays in place.",
+     "seconds": 3
+    },
+    "hurt": {
+     "prompt": "A massive blocky ice golem is struck in the chest, its heavy torso rocks back and one huge fist rises to cover its chest core, it shifts one foot back to keep balance, then slowly settles forward into its stance. Stays on its feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "A massive blocky ice golem is struck hard: it sways and staggers, drops heavily onto one knee, then topples over sideways and crashes down onto its left side, and lies completely still on the ground with its huge fists resting on the ground.",
+     "seconds": 4
+    }
+   },
+   "notes": "Idle: it lifts each boulder fist to chest height in turn and inspects it; both reviews agreed on this. Chest height, not face height, keeps it apart from the yeti's groom and keeps the forearm away from the small head. Walk: deliberate stomps with a pause and pendulum fists, torso steady, no side-to-side rock. Run keeps the alternating big-arc fists, because the yeti now swings both arms together. Attack is an underhand pendulum uppercut from behind the hip; the cyclops throws the straight punch. Impact is about 1.1-1.3 s, at the top of the swing. Check the forearm against the hip and thigh on the back-swing. It is NOT a two-handed strike; the troll keeps the overhead smash. Hurt: one fist covers the chest core, which can glow-flash via a material parameter; kept because the yeti changed. Death: it reels, and the weight of its swinging fists drags it around and over onto its SIDE. The fist-catch was dropped because the draugr catches itself on its hands, and the sit-down because the yeti sits. It is not an on-back death any more. Check the shoulder spikes against the floor on the last frames. The huge forearms may clip the torso when the arms swing close; widen the arm rest pose in Blender instead of regenerating."
+  },
+  {
+   "id": "glacier_giant",
+   "seen": "Huge, heavily muscled bare-chested frost giant with grey-blue skin, a crown of large ice crystals on the head, a long beard and moustache made of icicles reaching the belly, and a scowling heavy brow. Brown leather pauldrons trimmed with white fur and clusters of ice crystals, leather bracers with crystals and fur cuffs on the forearms, a wide leather belt with a hexagonal ice gem buckle, a fur-trimmed leather loincloth, leather wraps and fur at the shins, bare feet. Holds NOTHING: big open hands.",
+   "personality": "A proud, kingly brute of the glacier: slow and self-assured, chest out, fists on his hips, and fighting with ground-shaking stomps and wide grappling charges rather than precise blows.",
+   "height_m": 3.6,
+   "clips": {
+    "idle": {
+     "prompt": "A huge muscular frost giant with an ice crystal crown and long icy beard stands proud in place with both fists planted on his hips, elbows wide, chest heaving with slow deep breaths, chin raised high, then he puffs his chest out further and slowly settles. Seamless loop.",
+     "seconds": 4
+    },
+    "walk": {
+     "prompt": "A huge muscular frost giant with a long icy beard walking in place with a slow, proud stride: chest out, chin raised, both fists planted on his hips, broad shoulders rolling with each heavy step, bare feet landing with weight. Walking in place, seamless loop.",
+     "seconds": 3
+    },
+    "run": {
+     "prompt": "A huge muscular frost giant with a long icy beard running in place in a roaring charge: head held high, chest forward, both arms spread wide out to the sides like a grappler, long heavy strides with great bounding weight. Running in place, seamless loop.",
+     "seconds": 2
+    },
+    "attack": {
+     "prompt": "A huge muscular frost giant with a long icy beard raises his right knee high and lifts both fists beside his head, leaning back in a heavy wind-up, then drives his right foot down in a ground-shaking stomp with both arms flung out wide, then straightens back to his stance.",
+     "seconds": 3
+    },
+    "hurt": {
+     "prompt": "A huge muscular frost giant with a long icy beard is struck on the shoulder: he twists sideways with a grunt, grabs the shoulder with his other hand and takes a heavy step back, then lets go, puffs out his chest and squares up again, glaring. Stays on his feet.",
+     "seconds": 2
+    },
+    "death": {
+     "prompt": "Mortally struck, a huge muscular frost giant with a long icy beard: the blow twists him half around and he crashes down onto his back, then he raises one clenched fist toward the sky in a last proud gesture, holds it trembling, and lets the arm fall, lying completely still.",
+     "seconds": 4
+    }
+   },
+   "notes": "Idle: fists on his hips with a heaving chest. The beard-stroke was dropped, because the hand would pass through the rigid icicle beard on every loop. The weight shift was left out because it is the goblin's idle. Walk is a proud hands-on-hips stride; the kingly fist-swing swagger was not used because it repeats the cyclops swagger. Run: head high, arms spread wide like a grappler, not the minotaur's head-down bull charge. Attack is the one-foot STOMP and the only stomp, since the treant now sweeps. Impact is about 1.2-1.4 s, when the foot lands, for a radial frost shockwave. Hurt: he grabs the struck shoulder and steps back, then puffs out his chest. The head shake was removed because it echoes the werewolf's shake. Death: the blow twists him onto his BACK, then he raises one fist to the sky and lets it fall. The one-knee version was not used because the frost knight has the one-knee death. The crown and beard are rigid on Head, so check floor clipping while he lies on his back."
+  }
+ ],
+ "changes": [
+  "Checked by script on all 104 clips: lengths 209-318 chars, no banned word even as a substring (gut and headbutt also avoided), every idle/walk/run says 'in place' and 'seamless loop', every walk/run says 'walking/running in place', every duration is inside its range, and every death ends lying still.",
+  "goblin: run and hurt unchanged and still the only new clips. The existing idle, walk, attack and death were treated as fixed, and the other monsters were made to differ from them.",
+  "werewolf walk: reviewer A's head-low sniffing prowl replaces the careful stalk, which the wendigo keeps.",
+  "werewolf attack: reviewer B's rear-up downward pounce, so it no longer starts like the goblin's crouch-lunge. 'Arms spread wide' became 'hands raised beside its head' so it does not echo the yeti's bear-hug wind-up.",
+  "werewolf hurt: reviewer A's wet-dog shake replaces the head snap, which the draugr keeps.",
+  "werewolf death: reviewer B's drop onto all fours, roll onto the right side and curl (4 s), which removes the half-spin shared with the lizardman.",
+  "troll hurt: 'gut' changed to 'belly' (too close to the filtered 'guts'). Concept kept.",
+  "troll notes: corrected the 'only forward fall' claim.",
+  "cyclops walk: reviewer A's chest-out swagger with bowed arms replaces the march, which the frost knight keeps.",
+  "cyclops run: merged reviewers A and B into an upright brawler with fists in a guard, replacing the minotaur-like bull charge.",
+  "cyclops attack: reviewer A's straight right power punch (impact ~1.0-1.1 s) replaces the horizontal haymaker shared with the wendigo and lizardman.",
+  "cyclops death: kept the stiff back topple (reviewer A) and removed the stagger steps so it no longer echoes the goblin (reviewer B's concern). Reviewer B's one-knee death was not used because the frost knight now has the one-knee death.",
+  "treant run: reviewer A's stiff toppling stride with locked elbows replaces the alternating arm arcs, which the ice golem keeps.",
+  "treant attack: reviewer A's low two-arm horizontal sweep (impact ~1.3-1.5 s) replaces the foot stomp, which the glacier giant keeps.",
+  "skeleton idle: added 'in place'.",
+  "skeleton run: merged reviewers A and B so the arms flail loosely at the sides like a broken puppet, not swept back like the goblin.",
+  "skeleton notes: updated the hurt comparison line.",
+  "lizardman idle: merged reviewer A's head-bob display then freeze-and-dart with reviewer B's 'in place' and 'feet planted'.",
+  "lizardman walk: merged A and B into an S-shaped torso wiggle with a dead-level head.",
+  "lizardman run: merged A and B into a raptor sprint with claws tucked at the chest.",
+  "lizardman attack: chose reviewer A's full spin and claw rake (impact ~0.8-0.9 s). Reviewer B's rising slash was not used because it repeats the ice golem's new underhand uppercut.",
+  "lizardman hurt: merged A and B into a head-jerk, tucked arms and one hop back. B's 'drop even lower' was left out because it overlaps the ghoul's low-squat hurt.",
+  "minotaur idle: added 'in place'.",
+  "minotaur walk: reviewer B's head-dipping menacing plod replaces the side-to-side rock, which the troll keeps.",
+  "minotaur hurt: merged A and B into head knocked back, then two hoof stamps in fury, replacing the troll-like belly fold.",
+  "minotaur death: reviewer A's last stumbling charge, then a chest-first fall, replacing the backward topple the cyclops keeps.",
+  "minotaur notes: corrected the 'only backward fall' claim.",
+  "mummy_king idle: added 'in place'.",
+  "mummy_king walk: reviewer A dropped the foot drag, which is the draugr's signature.",
+  "mummy_king attack: chose reviewer A's one-hand neck seize and hurl (impact ~0.9-1.0 s). Reviewer B's double-palm thrust was not used because it repeats the frost hag's two-palm cast. Either change removes the troll hammer and the collar-clipping risk.",
+  "mummy_king hurt: chose reviewer A's disdainful brush-off over reviewer B's power-drain bow. Both fix the overlap with the cyclops' rock-back.",
+  "mummy_king death: 'stiff as a statue' became 'stiffly' so it does not echo the shardling's statue topple.",
+  "ghoul idle: reviewer A's nervous claw-gnawing replaces the sniff, which the werewolf keeps. Added 'in place'.",
+  "ghoul walk / run / attack / hurt / death: reviewer A's bow-legged creep, claws-low scramble, hook-and-yank (impact ~0.5-0.7 s), drop-to-squat hurt, and on-back thrashing death.",
+  "ice_shardling idle: reviewer A's shoulder hitch-and-drop. Added 'in place'.",
+  "ice_shardling walk and run: reviewer A's choppy rigid-arm stomp and wind-up-toy run.",
+  "ice_shardling attack: chose reviewer A's two-footed hop slam (impact ~0.8-0.9 s). Reviewer C's rising uppercut was not used because the ice golem now has the uppercut. Either change removes the overlap with the knight's shoulder ram.",
+  "draugr idle: added 'in place'.",
+  "draugr run and attack: reviewer A's limping run and left front kick (impact ~0.8 s).",
+  "draugr death: reviewer A's catch on both hands, then face-down collapse, replacing the knees-then-face-down death shared with the knight and mummy king.",
+  "yeti idle: reviewer A's forearm grooming replaces the fist-into-palm, which the cyclops keeps. Added 'in place'.",
+  "yeti walk, run, attack, hurt, death: reviewer A's gorilla lean, both-arms-together charge, bear hug (impact ~1.0-1.1 s), chest thump, and sit-slump then onto its back. These remove all yeti overlaps with the minotaur, troll, ice golem and cyclops.",
+  "wendigo idle: added 'in place'.",
+  "wendigo run, attack, hurt: reviewer A's level-bodied glide, no-step full-reach backhand (impact ~0.9-1.0 s), and spasm burst.",
+  "wendigo notes: rewrote the outdated group-variety line.",
+  "frost_hag idle: chose reviewer A's stirring claw and silent cackle over reviewer C's hand-rubbing, which brings the hands together like the cyclops palm-pound. Added 'in place'.",
+  "frost_hag walk: merged reviewer C's crooked hobble with one weaving raised hand and reviewer A's kept head-poke. C's 'lean to one side, arm hanging loose' was left out because it is the draugr's limp.",
+  "frost_hag run: chose reviewer A's robe-clutch shuffle. Reviewer C's bent-double scurry with hands under the chin repeats the ghoul's and lizardman's runs.",
+  "frost_hag hurt: merged A and C into a half turn away, shielding with her back, claws to her chest, then whipping back (2 s).",
+  "frost_hag death: chose reviewer A's last-curse reach, then face-down. Reviewer C's dizzy spin was not used because it echoes the lizardman's spin.",
+  "frost_knight idle: chose reviewer A's pommel-sentry pose. Reviewer C's puppet-twitch idle stays too close to the skeleton's jerky idle. Added 'in place'.",
+  "frost_knight run: merged A and C into a forward-locked charge with arms locked at the sides and no swing, 2 s. 'Upright' became 'pitched forward' so it differs from the shardling's upright wind-up-toy run.",
+  "frost_knight hurt: used reviewer C's stagger, then a string-yank upright. Reviewer A's rigid-block knockback was not used because it repeats the shardling's rigid-block skid.",
+  "frost_knight death: used reviewer A's one-knee final oath, then onto its side. Reviewer C's strings-cut heap was not used because it repeats the skeleton's straight-down heap.",
+  "frost_knight notes: corrected the 'only face-down death' claim.",
+  "ice_golem idle: merged A and C (both proposed inspecting its fists) into each fist in turn at chest height. Added 'in place'.",
+  "ice_golem walk: merged A and C into deliberate stomps with a pause, a steady torso and pendulum fists in big arcs, with no lateral rock.",
+  "ice_golem run: kept the original alternating big arcs (reviewer A), because the yeti now swings both arms together. Reviewer C's arms-together run was not used because it would repeat the new yeti run.",
+  "ice_golem attack: chose reviewer A's underhand pendulum uppercut (impact ~1.1-1.3 s). Reviewer C's piston punch was not used because the cyclops now throws the straight punch.",
+  "ice_golem hurt: kept the core-cover rock-back (reviewer A). Reviewer C's knee-buckle brace was not needed once the yeti's hurt became a chest thump.",
+  "ice_golem death: NEW concept: the weight of its swinging fists drags it around and over onto its side. Reviewer A's fist-catch repeats the draugr's hand-catch and reviewer C's sit-down repeats the yeti's sit-slump.",
+  "ice_golem notes: corrected the 'only vertical two-handed strike' and 'only on-back death' claims.",
+  "glacier_giant idle: used reviewer C's fists-on-hips idle, because a beard-stroking hand would clip through the rigid beard every loop. Added 'in place'. C's weight shift was replaced with a chest puff because the weight shift is the goblin's idle.",
+  "glacier_giant walk: chose reviewer A's hands-on-hips stride. Reviewer C's chest-out fist-swing swagger repeats the new cyclops swagger.",
+  "glacier_giant run: reviewer A's head-high grappler charge replaces the head-down bull run.",
+  "glacier_giant hurt: kept the shoulder grab (reviewer A) and replaced the angry head shake with reviewer C's proud chest-out recovery, which removes the yeti and werewolf echoes.",
+  "glacier_giant death: chose reviewer A's twist onto his back with a raised fist. Reviewer C's one-knee push-up fail repeats the knight's one-knee death and reviewer B's original cyclops proposal.",
+  "Fall directions after the merge. BACK: goblin, cyclops, ghoul, yeti, glacier giant. FRONT: troll, lizardman, minotaur, mummy king, shardling, draugr, frost hag. SIDE: werewolf, treant, skeleton, wendigo, frost knight, ice golem. Each path into the fall is different.",
+  "Blender checks to carry into the build: lizardman spin should end facing forward; minotaur death travels ~1 m forward (zero Hips XZ if needed); knight idle hands against the belt icicles; ice golem forearm against the hip in the uppercut and shoulder spikes in the side death; yeti hands in the bear hug; giant crown and beard against the floor; werewolf tail in the all-fours death; mummy upper arm against the collar in the neck lift.",
+  "2026-10-16 main session: reworded the openings of frost_hag death, frost_knight run, glacier_giant death so every prompt of a monster differs within its first 45 characters (Tripo action names keep only ~54).",
+  "2026-10-16 main session: ice_shardling attack reworded after Tripo rejected it twice (\"Input rejected due to content policy violation\", no charge).",
+  "2026-10-16 main session: ice_golem death regenerated (the first one stayed standing)."
+ ]
+}

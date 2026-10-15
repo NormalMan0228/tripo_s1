@@ -55,8 +55,18 @@ const ROOM_HEARTBEAT := 3.0
 const RestSeat=preload("res://scripts/rest_seat.gd")
 ## The opening story chapter at home: the welcome letter on the desk (story_home.gd).
 const StoryHome=preload("res://scripts/story_home.gd")
+## A new session opens in the attic bed: the eyes open, the walker gets up (bed_wake.gd).
+const BedWake=preload("res://scripts/bed_wake.gd")
+## The front door swings for whoever walks through it (room_door.gd).
+const RoomDoor=preload("res://scripts/room_door.gd")
+var front_door: Node
+var wake_up := false
+var bed_wake: Node
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
+## Build mode: the placed-object menu, 물건 통과 and the loading ring (scripts/build/).
+const RoomBuild=preload("res://scripts/build/room_build.gd")
+const LoadRing=preload("res://scripts/build/load_ring.gd")
 ## On ladder rungs the walker climbs with this clip (the explorer's crouched step) instead of the
 ## walk clip, which would march in place: the rise is straight up, nothing moves across.
 const LADDER_CLIP := "Legs_Crouch_Step"
@@ -320,10 +330,10 @@ func _ready() -> void:
 			session_version=int(session.profile.get("version",-1))
 		social_session=bool(session.get("multiplayer",false))
 		shared_presence=social_session and room=="home"
+		wake_up=bool(session.get("wake",false)) and room=="home" and visit_host.is_empty()
 		Engine.remove_meta("studio_session")
 	if not Interiors.has_interior(room): room="workshop"
 	public_room=Interiors.is_public(room)
-	veil.play_door("close",room)
 	tone_player=AudioStreamPlayer.new();tone_player.volume_db=-5;tone_player.bus=GameSettings.BUS_SFX;add_child(tone_player)
 	sfx_player=AudioStreamPlayer.new();sfx_player.volume_db=-8;sfx_player.bus=GameSettings.BUS_SFX;add_child(sfx_player)
 	# Indoor music (집 BGM) for the home and the other rooms: it swells in softly under the card.
@@ -347,6 +357,10 @@ func _ready() -> void:
 	set_process(true);set_process_unhandled_key_input(true)
 	LoadPace.done(1.0)
 	veil.fade_in()
+	if is_instance_valid(bed_wake) and not bed_wake.is_queued_for_deletion(): bed_wake.open_eyes()
+	# In through the front door as the card lifts; it shuts behind (no door for the wake-up in bed).
+	elif is_instance_valid(front_door) and is_instance_valid(front_door.hinge) and is_instance_valid(hero): front_door.walk_in(hero)
+	else: veil.play_door("close",room)
 	# The session's craft is told here now (any room: the home, the workshop, a friend's, a building).
 	if not api.token.is_empty(): craft_tracker()
 	show_story()
@@ -362,6 +376,8 @@ func _ready() -> void:
 		# Visitors only look around: no bag, room switching or editing (crafting goes on as anywhere).
 		set_dock_open(false);update_room_slots()
 		message(tr("%s님의 집에 놀러 왔어요. 가구는 구경만 할 수 있어요.") % visit_name)
+	# The owner's front door (lock, guests inside) in their own home while friends can visit.
+	preload("res://scripts/home_door_panel.gd").attach(self)
 	if api.token.is_empty():
 		message(tr("마을에서 로그인한 뒤 공방으로 들어오세요."))
 	else: await refresh()
@@ -481,6 +497,8 @@ func build_ui() -> void:
 	# Any angle: the arrows turn 15°, R 15° (Shift back, Alt/Ctrl 1°) and the wheel 5°.
 	turn_readout=ObjectTransform.turn_bar(rotate_row,rotate_placement)
 	grid_toggle=CheckButton.new();grid_toggle.text=tr("격자");grid_toggle.button_pressed=true;grid_toggle.focus_mode=Control.FOCUS_NONE;rotate_row.add_child(grid_toggle)
+	# 바닥 / 벽 / 천장 (scripts/build/room_build.gd); 바닥 also puts pieces on top of others.
+	RoomBuild.surface_row(self,tools)
 	var confirm_row := row(tools)
 	place_button=RpgUi.button(confirm_row,tr("여기에 놓기"),commit_place,"primary");place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	# One sound for the press: the button's own press kind is the cancel (not a click and a cancel);
@@ -734,6 +752,7 @@ func message_text(value: String) -> String:
 	value=value.replace("room_render_budget_exceeded",tr("꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요."))
 	if not BuildMode.developer():
 		var words := {"insufficient_shards":tr("별씨가 부족해요. 탐험 보상을 모아 보세요."),"stale_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"stale_runtime_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"not_found":tr("물건을 찾을 수 없어요. 보관함을 새로고침해 주세요."),"unauthorized":tr("다시 로그인해 주세요."),"geometry_disabled":tr("지금은 새 가구 제작을 준비하고 있어요."),"placement_overlap":tr("다른 가구와 겹쳐요."),"placement_out_of_bounds":tr("벽과 출입문에서 떨어진 곳에 놓아 주세요."),"model_download_failed":tr("가구를 읽지 못했어요. 잠시 뒤 다시 골라 주세요.")}
+		words.merge(RoomBuild.BuildRules.server_words())
 		var pattern := RegEx.new();pattern.compile("[a-z][a-z0-9]*_[a-z0-9_]+")
 		# Only known codes, or a reply that is nothing but a code, are rewritten;
 		# player names such as host_841 stay as they are.
@@ -791,6 +810,9 @@ func build_stage() -> void:
 			seat.walk_off=walk_allowed
 		seat.hero=hero
 		place_hero_at_door()
+		if wake_up:
+			bed_wake=BedWake.new();add_child(bed_wake)
+			if not await bed_wake.lie_down(self): bed_wake.queue_free()
 
 ## A furniture's words and the interact key's cap drawn over the room view, pinned to 3D points:
 ## the night pill of the toasts and prompt, and the key cap of the hotbar (key from the bindings).
@@ -863,6 +885,7 @@ func build_room() -> void:
 	apply_daylight(true)
 	if is_instance_valid(bubble): bubble.visible=false
 	if is_instance_valid(hint_label): hint_label.visible=false
+	front_door=RoomDoor.bind(self,front_door,floor_roots[0] if not floor_roots.is_empty() else null,room)
 	update_camera(0.0,true)
 
 ## Shows one floor; player-made furniture and visitors live on the ground floor.
@@ -1148,7 +1171,7 @@ func reload_placed() -> void:
 		if obj.state!="placed" or obj.room!=room:continue
 		if placed.has(obj.id):
 			var existing: Node3D=placed[obj.id]
-			existing.position=Vector3(obj.x,0.07,obj.z);existing.rotation_degrees.y=obj.rotation
+			existing.position=Vector3(obj.x,0.07+float(obj.get("y",0.0)),obj.z);existing.rotation_degrees.y=obj.rotation
 			if existing.get_meta("studio",false) and obj.get("runtime_version")!=null and existing.runtime_version!=obj.runtime_version:
 				# A visitor reads the host's state through the guest route (the owner route refused it, so
 				# every change of the host's furniture state freed and reloaded the model).
@@ -1182,7 +1205,7 @@ func reload_placed() -> void:
 			if item:item.queue_free()
 			return
 		if item:
-			furniture.add_child(item);item.position=Vector3(obj.x,0.07,obj.z);item.rotation_degrees.y=obj.rotation;placed[obj.id]=item
+			furniture.add_child(item);item.position=Vector3(obj.x,0.07+float(obj.get("y",0.0)),obj.z);item.rotation_degrees.y=obj.rotation;placed[obj.id]=item
 
 func select_item(index: int) -> void:
 	if pending or index>=data.objects.size():return
@@ -1194,7 +1217,8 @@ func select_item(index: int) -> void:
 	if not item:refuse(tr("에셋을 읽을 수 없습니다"));return
 	inspected=item;preview_stage.add_child(item);item.position=Vector3.ZERO
 	var preview_size: Vector3=item.get_meta("size",Vector3.ONE)
-	preview_camera.size=maxf(1.5,preview_size.y*1.5)
+	# The whole object in view, however wide or tall (preview_frame.gd); a lid swings open above it.
+	preload("res://scripts/preview_frame.gd").fit(preview_camera,preview_size)
 	if item.get_meta("studio",false) and item.pivots.has("lid"):preview_camera.size=maxf(1.9,preview_camera.size)
 	detail.text=selected.name+"\n"+(tr("배치됨 · ")+{"home":tr("내 집"),"workshop":tr("공방"),"village":tr("마을")}.get(selected.room,tr("다른 공간")) if selected.state=="placed" else tr("보관 중"))
 	part_choice.clear();part_choice.add_item(tr("전체 색칠"))
@@ -1472,7 +1496,9 @@ func begin_place() -> void:
 	ObjectTransform.show_angle(turn_readout,placement_rotation)
 	if is_instance_valid(ghost):ghost.queue_free()
 	ghost=null
+	var ring := LoadRing.start(self)
 	var loaded := await load_item(selected.duplicate(true))
+	LoadRing.finish(ring)
 	if placement_request!=placement_epoch or not placement_mode or selected.get("id")!=object_id:
 		if loaded:loaded.queue_free()
 		return
@@ -1494,6 +1520,7 @@ func begin_place() -> void:
 					translucent.albedo_color.a=.62
 					mesh.set_surface_override_material(index,translucent)
 		place_at=ghost.position
+		RoomBuild.begin(self)
 	else:
 		placement_mode=false;refuse(tr("가구를 불러오지 못했어요. 다시 선택해 주세요."));return
 	# The ghost is up: a lift, and the green/red flip (_process) only sounds on a real change.
@@ -1503,7 +1530,7 @@ func begin_place() -> void:
 
 ## Turns the ghost by any whole number of degrees; it eases there (_process).
 func rotate_placement(degrees: int) -> void:
-	if not placement_mode or pending:return
+	if not placement_mode or pending or RoomBuild.surface(self)=="wall":return
 	placement_rotation=ObjectTransform.wrap_degrees(placement_rotation+degrees)
 	soft_tick("rotate",-8.0)
 	ObjectTransform.show_angle(turn_readout,placement_rotation)
@@ -1523,7 +1550,8 @@ func cancel_placement() -> void:
 	if placed.has(selected.get("id")) and is_instance_valid(placed[selected.id]):placed[selected.id].visible=true
 
 func view_input(event: InputEvent) -> void:
-	if placement_mode and event is InputEventMouseMotion:
+	# On a piece, a wall or the ceiling (room_build.gd); a plain floor spot keeps the code below.
+	if placement_mode and event is InputEventMouseMotion and not RoomBuild.follow(self,event.position):
 		var origin := camera.project_ray_origin(event.position)
 		var direction := camera.project_ray_normal(event.position)
 		if absf(direction.y)>0.001:
@@ -1534,6 +1562,7 @@ func view_input(event: InputEvent) -> void:
 			if is_instance_valid(ghost):ghost.position=place_at
 	if placement_mode and event is InputEventMouseButton and event.pressed and ObjectTransform.wheel_turn(event)!=0:
 		rotate_placement(ObjectTransform.wheel_turn(event));view_container.accept_event();return
+	if not placement_mode and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_RIGHT:RoomBuild.right_click(self,event.position)
 	if placement_mode and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:await commit_place()
 	# A click on a player-made piece within reach uses it, like E.
 	elif not placement_mode and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT and resting.is_empty() and not pending:
@@ -1578,17 +1607,18 @@ func preview_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and event.button_mask&MOUSE_BUTTON_MASK_LEFT and is_instance_valid(inspected):
 		inspected.rotation.y+=event.relative.x*.012
 	if event is InputEventMouseButton and event.pressed:
-		if event.button_index==MOUSE_BUTTON_WHEEL_UP:preview_camera.size=maxf(1.5,preview_camera.size-.2)
-		if event.button_index==MOUSE_BUTTON_WHEEL_DOWN:preview_camera.size=minf(4.0,preview_camera.size+.2)
+		if event.button_index==MOUSE_BUTTON_WHEEL_UP:preview_camera.size=maxf(0.6,preview_camera.size-.2)
+		if event.button_index==MOUSE_BUTTON_WHEEL_DOWN:preview_camera.size=minf(8.0,preview_camera.size+.2)
 
 func commit_place() -> void:
 	if pending or selected.is_empty():return
 	var blocked := placement_problem(place_at)
 	if not blocked.is_empty():RpgUi.sfx("deny",-6.0);message(blocked);return
 	pending=true
-	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation({"version":selected.version,"room":room,"x":place_at.x,"z":place_at.z,"rotation":placement_rotation}))
+	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation(RoomBuild.placement_body(self,{"version":selected.version,"room":room,"x":place_at.x,"z":place_at.z,"rotation":placement_rotation})))
 	pending=false
 	if not reply.ok:RpgUi.sfx("deny",-6.0);message(tr("여기에는 놓을 수 없어요 · ")+reply.error);await refresh();return
+	RoomBuild.adopt_reply(self,reply.data)
 	adopt_ghost()
 	# Set down: a soft thunk under the arrival's own pop and twinkle (Fx.arrive).
 	RpgUi.sfx("place",-8.0)
@@ -1612,7 +1642,7 @@ func adopt_ghost() -> void:
 			for index in own.size():mesh.set_surface_override_material(index,own[index])
 			mesh.remove_meta("placing_materials")
 	item.reparent(furniture)
-	item.position=Vector3(place_at.x,0.07,place_at.z);item.rotation_degrees.y=placement_rotation
+	item.position=Vector3(place_at.x,0.07+float(item.get_meta("build_y",0.0)),place_at.z);item.rotation_degrees.y=placement_rotation
 	placed[id]=item
 	Fx.arrive(furniture,item,null,not moved)
 
@@ -1633,7 +1663,31 @@ func interact_selected() -> void:
 	if response.ok:
 		inspected.accept_event(response.data)
 		if placed.has(selected.id):placed[selected.id].accept_event(response.data)
+		if response.data.get("commands") is Array: use_cue(placed.get(selected.id),response.data.commands)
 	else:refuse(response.error)
+
+## A crafted piece's program run by a click (light, tint or a move): one soft cue at the piece, the
+## room twin of main.gd use_cue() (twinkle for light, pluck for a tint, pop for a move), at most one
+## every 250 ms per piece; seats and beds stay quiet (their settle sound covers it).
+func use_cue(item, commands: Array) -> void:
+	if not item is Node3D or not is_instance_valid(item) or commands.is_empty() or str(item.get("rest")) in ["sit","lie"]: return
+	var now := Time.get_ticks_msec()
+	if now-int(item.get_meta("use_cue_at",-100000))<250: return
+	var light := -1.0
+	var tint := false
+	var move := false
+	for c in commands:
+		if not c is Dictionary: continue
+		var op := str(c.get("op",""))
+		if op=="emission": light=maxf(light,float(c.get("value",0.0)))
+		elif op=="hue": tint=true
+		elif op.begins_with("rotate_") or op.begins_with("offset_"): move=true
+	if light<0.0 and not tint and not move: return
+	item.set_meta("use_cue_at",now)
+	var at: Vector3=item.global_position if item.is_inside_tree() else Vector3.INF
+	if light>=0.0: Fx.sound(self,"twinkle",at,1.1 if light>0.05 else 0.85,-9.0)
+	elif tint: Fx.sound(self,"pluck",at,1.15,-10.0)
+	else: Fx.sound(self,"pop",at,0.9,-10.0)
 
 func paint(color: String, reset := false) -> void:
 	if pending or selected.is_empty() or not is_instance_valid(inspected):return
@@ -1727,11 +1781,11 @@ func share_presence() -> void:
 	if not response.ok or not is_inside_tree(): return
 	# The room's chat arrives with the walk (social_hud.gd).
 	if hub and is_instance_valid(hub): hub.ingest(response.data)
+	preload("res://scripts/home_door_panel.gd").feed(self,response.data)
 	# The host walked out, locked us out or sent us out: back to the host's village (home_access).
 	var shut: String=preload("res://scripts/home_door.gd").refusal(response.data.get("home")) if not visit_host.is_empty() else ""
 	if not shut.is_empty():
-		message(shut)
-		leave()
+		preload("res://scripts/home_door_panel.gd").show_refusal(self,response.data.get("home"),visit_name)
 		return
 	var space = response.data.get("space")
 	if not space is Dictionary: return
@@ -1772,17 +1826,22 @@ func share_presence() -> void:
 			var plate := Art.label3d(body,str(record.username),Vector3(0,2.05,0),Color("f0dfba"))
 			Art.style_nameplate(plate)
 			peers[record.id]={"node":body,"motion":RemoteMotion.new()}
+			# Someone who just came in walks in through the front door (not those already here).
+			if peer_baseline and level==0 and is_instance_valid(front_door): front_door.arrive(peers[record.id])
 		AvatarLook.wear(peers[record.id].node,record.get("avatar",{}),version,true)
 		SocialHud.host_crown(peers[record.id].node,str(record.id)==str(space.get("host_id","")))
 		if int(peers[record.id].get("floor",-1))!=level:
 			# Changing floors is a jump, not a glide across the room.
 			peers[record.id].motion.reset()
 		peers[record.id].motion.push_record(record,Vector3(record.x,0,record.z),arrival)
+		peers[record.id]["goal"]=Vector3(record.x,0,record.z)
 		peers[record.id]["floor"]=level
 		peers[record.id].node.visible=level==floor_index
 	for id in peers.keys():
 		if not present.has(id):
-			if is_instance_valid(peers[id].node): peers[id].node.queue_free()
+			# Gone from the home: seen on this floor, they walk out through the door.
+			var out: bool=int(peers[id].get("floor",0))==0 and floor_index==0 and is_instance_valid(front_door) and front_door.depart(peers[id])
+			if is_instance_valid(peers[id].node) and not out: peers[id].node.queue_free()
 			peers.erase(id)
 	peer_sounds(before)
 
@@ -1805,7 +1864,7 @@ func update_peers(delta: float) -> void:
 	for entry in peers.values():
 		if not is_instance_valid(entry.node): continue
 		entry.motion.update(delta)
-		entry.motion.apply_to(entry.node)
+		if not (is_instance_valid(front_door) and front_door.walk_peer_in(entry,delta)): entry.motion.apply_to(entry.node)
 		# Visitors on this floor walk audibly: quieter, their own voices, falling off with distance.
 		if is_instance_valid(world_audio) and entry.node.visible and entry.node.is_inside_tree():
 			world_audio.stride("peer%d" % entry.node.get_instance_id(),entry.node.global_position,delta,floor_surface(entry.node.global_position),false,PEER_STEP_DB)
@@ -1848,12 +1907,17 @@ func logged_out(_reason: String) -> void:
 func leave() -> void:
 	var veil := Transition.of(get_tree())
 	if veil.veil.modulate.a > 0.5 or leaving: return
+	# The welcome letter first (story_home.gd): the door stays shut until it is read.
+	if visit_host.is_empty() and is_instance_valid(story_home) and story_home.keeps_door_shut():
+		story_home.hold_at_door()
+		return
 	leaving=true
 	stand_up(false)
 	# The walker keeps walking out through the doorway while the veil falls.
 	if floor_index==0 and is_instance_valid(hero):
 		walk_out=Vector3(float(room_spec.get("door_x",0.0)),0,float(room_spec.size.y)*0.5+1.6)
-	veil.play_door("open",room)
+	if floor_index==0 and is_instance_valid(front_door) and is_instance_valid(front_door.hinge): front_door.hold("walker",5.0)
+	else: veil.play_door("open",room)
 	veil.loading(tr("%s님의 마을") % visit_name if not visit_host.is_empty() else tr("다섯 섬 마을"),"","village")
 	# The room's sound goes with the light: the beds fade with the veil, the music fades across the
 	# scene change while the village's own track comes in (no hard cut).
@@ -1913,6 +1977,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	# HUD key (U): fold every HUD panel at once (or open them all again), as in the village.
 	if key==KEY_U:
 		RpgUi.toggle_all_folds()
+		return
+	if key==KEY_V:
+		RoomBuild.toggle_pass(self)
 		return
 	# The village's keys: C the craft window, I the bag (here the drawer with the bag).
 	if key==KEY_C:
@@ -2285,6 +2352,7 @@ func _process(delta: float) -> void:
 	if cue_time>3.5:cue_time=0;resident_cues()
 	if leaving:
 		walk_out_step(delta)
+	elif is_instance_valid(front_door) and front_door.guiding(delta): pass
 	elif not placement_mode and not travelling and not is_instance_valid(talk_box) and not is_instance_valid(craft_window) and not PauseMenu.is_open() and not VersionGate.is_blocked():
 		var focus := get_viewport().gui_get_focus_owner()
 		if not (focus is TextEdit or focus is LineEdit) and not is_instance_valid(painter) and not is_instance_valid(interaction_panel):walk(delta)
@@ -2465,7 +2533,11 @@ func can_stand(at: Vector3, stuck := false) -> bool:
 func movement_blocked(at: Vector3) -> bool:
 	if not blocking_record(at).is_empty(): return true
 	if floor_index!=0: return false
+	# 물건 통과 (V): the walker passes through placed pieces.
+	RoomBuild.PassThrough.load_pref()
+	if RoomBuild.PassThrough.on: return false
 	for id in placed:
+		if RoomBuild.off_floor(self,id):continue
 		var item: Node3D=placed[id]
 		var size: Vector3=item.get_meta("size",Vector3(1.6,1.6,1.6))
 		var local := (at-item.position).rotated(Vector3.UP,-item.rotation.y)
@@ -2486,6 +2558,7 @@ func blocking_record(at: Vector3) -> Dictionary:
 func placement_problem(at: Vector3) -> String:
 	if public_room:return tr("이곳에는 가구를 놓을 수 없어요.")
 	if floor_index!=0:return tr("가구는 1층에만 놓을 수 있어요.")
+	if placement_mode and RoomBuild.surface(self)!="floor":return RoomBuild.problem(self,at)
 	if absf(at.x)>4 or absf(at.z)>4:return tr("벽에서 한 칸 안쪽에 놓아 주세요.")
 	if absf(at.x)<1.5 and at.z>2.5:return tr("출입문 앞은 비워 주세요.")
 	if room=="workshop" and at.x < -1.8 and at.z < -1.5:return tr("고정 작업대와 겹쳐요.")
@@ -2494,9 +2567,6 @@ func placement_problem(at: Vector3) -> String:
 		var half: Vector2=record.world_half
 		if absf(record.center.x-at.x)<half.x+0.75 and absf(record.center.z-at.z)<half.y+0.75:return tr("방에 원래 있던 가구와 겹쳐요.")
 	if is_instance_valid(hero) and absf(hero.position.x-at.x)<1.15 and absf(hero.position.z-at.z)<1.15:return tr("캐릭터가 서 있는 곳은 비워 주세요.")
-	for obj in data.get("objects",[]):
-		if obj.id==selected.get("id") or obj.state!="placed" or obj.room!=room:continue
-		if absf(obj.x-at.x)<2 and absf(obj.z-at.z)<2:return tr("다른 가구에서 두 칸 이상 떨어뜨려 주세요.")
 	# The ghost's real footprint at its angle and shape: inside the walls, clear of the furniture.
 	if placement_mode and is_instance_valid(ghost):
 		var size: Vector3=ghost.get_meta("size",Vector3.ONE)
@@ -2505,7 +2575,7 @@ func placement_problem(at: Vector3) -> String:
 		if absf(at.x)+half.x>walls.x+0.05 or absf(at.z)+half.y>walls.y+0.05:return tr("벽에 닿아요. 조금 안쪽으로 옮기거나 돌려 보세요.")
 		for id in placed:
 			var item: Node3D=placed[id]
-			if id==selected.get("id") or not is_instance_valid(item):continue
+			if id==selected.get("id") or not is_instance_valid(item) or RoomBuild.off_floor(self,id):continue
 			if ObjectTransform.footprints_overlap(Vector2(at.x,at.z),Vector2(size.x,size.z),placement_rotation,Vector2(item.position.x,item.position.z),Vector2(item.get_meta("size",Vector3.ONE).x,item.get_meta("size",Vector3.ONE).z),item.rotation_degrees.y):
 				return tr("다른 가구와 겹쳐요.")
 	return ""

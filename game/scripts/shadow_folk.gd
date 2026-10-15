@@ -20,6 +20,7 @@ const Town = preload("res://scripts/town.gd")
 const Minimap = preload("res://scripts/minimap.gd")
 const Residents = preload("res://scripts/residents.gd")
 const LoadPace = preload("res://scripts/load_pace.gd")
+const AnimLod = preload("res://scripts/anim_lod.gd")
 const LAYOUT := "res://maps/archipelago/environment_layout.json"
 ## Bridge deck centre lines (environment_layout.json), used if the manifest is missing.
 const BRIDGES := [[Vector2(-11,-36),Vector2(15,-36)],[Vector2(57,-7),Vector2(57,14)],[Vector2(-9,27),Vector2(16,27)],[Vector2(-25,58),Vector2(2,73)]]
@@ -261,11 +262,15 @@ func _process(delta: float) -> void:
 		clock = 1.0
 		refresh_schedule()
 	var camera = app.get("camera")
-	var eye: Vector3 = camera.global_position if is_instance_valid(camera) and camera.is_inside_tree() else Vector3(player_xz().x, 10, player_xz().y)
+	# On screen: every frame (the orthographic camera is ~47 m back, so its distance
+	# kept residents in plain view at 3-8 frames). Off screen: by distance from the walker.
+	var frustum := AnimLod.planes(camera if camera is Camera3D else null)
+	var focus := player_xz()
+	var fraction := clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0)
 	for walker in walkers:
 		if not walker.present and walker.state == "hidden": continue
-		var d: float = eye.distance_to(walker.global_position)
-		walker.anim_stride = 1 if d < 26.0 else (3 if d < 50.0 else 8)
+		walker.anim_stride = AnimLod.stride(frustum, walker.global_position, Vector3(focus.x, 0, focus.y))
+		if walker.visible: walker.draw(fraction)
 	# A closed conversation lets the shadow go back to what it was doing.
 	var modal = app.get("village_modal")
 	for walker in walkers:
@@ -709,8 +714,8 @@ func greeting(id: String) -> Array:
 		"lamplighter": return [tr("등불지기예요. 길이 어두워지면 제가 먼저 걸어요."), tr("어두운 길이 무서우면 저를 따라와요.")]
 		"gardener": return [tr("향초 냄새 좋죠? 그림자도 냄새는 맡아요."), tr("유리 온실 옆 향초밭은 제 자랑이에요.")]
 		"scout": return [tr("돌문 너머 숲에서 막 돌아왔어요. 그림자라서 아무도 못 알아보더라고요."), tr("탐험을 떠날 생각이에요? 몇 가지 알려 줄까요?")]
-		"regular": return [tr("카페 '빨간 지붕' 주인이에요. 뒷방에서 살면서 커피를 내려요."), tr("그림자 블렌드는 쓴맛 대신 향이 짙답니다.")]
-		"miller": return [tr("풍차 방앗간지기예요. 풍차가 돌면 밀가루가 눈처럼 날려요."), tr("방앗간 위층 작은 방이 제 집이에요. 맷돌 소리가 자장가죠.")]
+		"regular": return [tr("카페 '빨간 지붕' 주인이에요. 풍차 언덕 하숙집에서 지내며 커피를 내려요."), tr("그림자 블렌드는 쓴맛 대신 향이 짙답니다.")]
+		"miller": return [tr("풍차 방앗간지기예요. 풍차가 돌면 밀가루가 눈처럼 날려요."), tr("풍차 옆 하숙집 다락방이 제 방이에요. 맷돌 소리가 거기까지 들려요.")]
 		"shopkeeper": return [tr("잡화점 주인이에요. 동그란 안경 너머로 다 보인답니다."), tr("가게 뒤쪽 방에서 살아요. 손님이 없으면 장부 정리를 하죠.")]
 		"kid": return [tr("헤헤, 깜짝 놀랐지?"), tr("나 술래잡기 엄청 잘한다? 따라올 수 있으면 따라와 봐!")]
 		"stroller": return [tr("밤 산책 중이에요. 이 시간엔 그림자들이 다 나와요."), tr("낮에는 나무 그늘 속에서 낮잠을 자요.")]

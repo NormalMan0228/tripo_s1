@@ -34,6 +34,11 @@ var variant := ""
 var species := ""
 var behavior := ""
 var size_hint := 0.0
+## The map's boss (server enemy "boss"): an arrival sting instead of the alert, a roar on every
+## ROAR_EVERY-th wind-up and once as its health falls past half (creature_audio.gd "intro" / "roar").
+var boss := false
+const ROAR_EVERY := 3
+var windups := 0
 var animator: AnimationPlayer
 var clip := ""
 var monster: Node3D  ## monster.gd instance when the Tripo GLB is used
@@ -55,7 +60,7 @@ var stride_left := 0.5
 ## Per-creature minimum seconds between two of the same call (a phase that flickers between two
 ## snapshots, rapid hits); the pack-wide limits (idle gap, voices per species, 40 ms merge, staggered
 ## alerts, step budget) live in creature_audio.gd.
-const VOICE_GAP := {"windup": 0.5, "strike": 0.3, "hurt": 0.3, "charge": 0.6, "dazed": 0.6}
+const VOICE_GAP := {"windup": 0.5, "strike": 0.3, "hurt": 0.3, "charge": 0.6, "dazed": 0.6, "roar": 4.0, "intro": 30.0}
 var voice_at := {}
 
 func _ready() -> void:
@@ -74,6 +79,7 @@ func from_enemy(enemy: Dictionary) -> void:
 	species=str(enemy.get("species",kind))
 	behavior=str(enemy.get("behavior",""))
 	size_hint=float(enemy.get("height",0.0))
+	boss=bool(enemy.get("boss",false))
 
 func build() -> void:
 	if built: return
@@ -235,10 +241,11 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 	if Vector2(direction.x,direction.z).length()>0.001: target_angle=atan2(direction.x,direction.z)
 	if not alerted:
 		alerted=true
-		voice("alert")
+		voice("intro" if boss else "alert")
 	if phase=="windup" and previous!="windup":
-		voice("windup")
-		if monster: monster.play("attack",0.08,1.0,true)
+		windups+=1
+		if not (boss and windups%ROAR_EVERY==0 and voice("roar")): voice("windup")
+		if monster: monster.play("attack",0.08,monster.attack_speed(float(state.get("windup",0.0))),true)
 	if previous=="windup" and phase in ["recover","charge"]:
 		# A blow that interrupts the wind-up (hp drops in the same snapshot) cancels the strike call.
 		if phase=="charge": voice("charge")
@@ -248,7 +255,9 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 	if state.hp<last_hp:
 		flash=0.16
 		hurt_left=0.0
-		voice("hurt")
+		# A boss roars once as its health falls past half (that hit's hurt call gives way).
+		var half := float(state.get("max_hp",0.0))*0.5
+		if not (boss and half>0.0 and last_hp>half and state.hp<=half and voice("roar")): voice("hurt")
 		if monster:
 			monster.hit_flash()
 			if phase not in ["windup","charge"]:
@@ -289,12 +298,14 @@ func die() -> void:
 	tween.parallel().tween_property(body,"scale",Vector3(0.8,0.6,0.8),0.9)
 	tween.tween_callback(queue_free)
 
-func voice(event: String) -> void:
-	if audio==null or not is_inside_tree(): return
+## One call through creature_audio.gd: the species' own voice when it has one, else the stand-in
+## (kind) pitched by the species' height. True when a sound started.
+func voice(event: String) -> bool:
+	if audio==null or not is_inside_tree(): return false
 	var now := Time.get_ticks_msec()*0.001
-	if now-float(voice_at.get(event,-10.0))<float(VOICE_GAP.get(event,0.0)): return
+	if now-float(voice_at.get(event,-1000.0))<float(VOICE_GAP.get(event,0.0)): return false
 	voice_at[event]=now
-	audio.call("play",self,kind,event,global_position,variant)
+	return bool(audio.call("play",self,species if species!="" else kind,event,global_position,variant,kind,size_hint))
 
 ## One footfall per STRIDE metres travelled while actually moving; creature_audio.gd throttles by
 ## distance, species gap, voice count and a pack-wide rate.

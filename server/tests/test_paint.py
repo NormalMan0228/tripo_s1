@@ -133,11 +133,11 @@ def test_visitors_read_paint_only_where_they_may_see_the_model(world):
     assert c.post(own + '/placement', headers=hs[0], json=mutation(version=3, room='workshop', x=2, z=2)).status_code == 200
     assert c.get(guest + '/model', headers=hs[1]).status_code == 404
     assert c.get(guest + '/paint', headers=hs[1]).status_code == 404
-    # The home is visible to guests again.
+    # In the home: guests read its pieces only while the home is open to them (its owner inside).
     assert c.post(own + '/placement', headers=hs[0], json=mutation(version=4, room='home', x=2, z=-2)).status_code == 200
-    assert c.get(guest + '/paint', headers=hs[1]).content == blob
-    # Guests come into the home only while its owner is there (server/home_access.py).
+    assert c.get(guest + '/paint', headers=hs[1]).status_code == 404
     c.post('/v1/social/presence', headers=hs[0], json={'scene': 'home', 'x': 0, 'z': 3})
+    assert c.get(guest + '/paint', headers=hs[1]).content == blob
     home = c.post('/v1/social/presence', headers=hs[1], json={'scene': 'home', 'x': 1, 'z': 2}).json()['space']
     assert [o['paint_version'] for o in home['objects']] == [1]
 

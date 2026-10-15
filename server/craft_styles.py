@@ -86,6 +86,9 @@ SIZES = [
     {'id': 'huge', 'meters': 2.4, 'names': {'ko': '아주 크게', 'en': 'Extra large', 'zh': '特大'}},
 ]
 SIZE_IDS = tuple(s['id'] for s in SIZES)
+# Or the player sets each side by dragging a box in the craft window: [width x, height y, depth z] in
+# metres, each DIMS_MIN..DIMS_MAX in DIMS_STEP steps (StudioRequest.dims).
+DIMS_MIN, DIMS_MAX, DIMS_STEP = .1, 3.0, .05
 
 
 def style(style_id):
@@ -96,11 +99,23 @@ def meters(size_id):
     return next((s['meters'] for s in SIZES if s['id'] == size_id), 0)
 
 
-def designer_style(style_id, size_id):
+def proportions(dims):
+    """The player's box for one-piece Tripo prompts ('' without one)."""
+    if not dims:
+        return ''
+    w, h, d = dims
+    return f'proportions about {w:g} m wide x {h:g} m tall x {d:g} m deep'
+
+
+def designer_style(style_id, size_id, dims=None):
     """The STYLE section of the LLM designer prompt (trusted server text)."""
     text = ('Villagen: a sunny island village in a modern fantasy RPG. Unless the player asks for another style, describe '
             'each object as ' + style(style_id)['llm'] + '. Readable at an orthographic camera distance. Avoid horror, '
             'realistic skin and razor edges.')
+    if dims:
+        w, h, d = dims
+        return text + (f' The finished object is about {w:g} m wide (x), {h:g} m tall (y) and {d:g} m deep (z); design every '
+                       "part's size and position so the assembled object matches these dimensions.")
     size = meters(size_id)
     if size:
         return text + f' The finished object is about {size:g} m on its longest side: scale every part, its proportions and detail for that size.'
@@ -110,4 +125,6 @@ def designer_style(style_id, size_id):
 def public():
     return {'styles': [{k: s[k] for k in ('id', 'names', 'hints')} for s in STYLES],
             'sizes': [{'id': s['id'], 'meters': s['meters'], 'names': s['names']} for s in SIZES],
-            'default_style': DEFAULT_STYLE}
+            'default_style': DEFAULT_STYLE,
+            # A newer game may send dims (the box the player drags) only when this is listed.
+            'dims': {'min': DIMS_MIN, 'max': DIMS_MAX}}

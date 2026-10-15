@@ -5,12 +5,13 @@ intent with a short lease, never a client-supplied position or elapsed time.
 """
 import math
 from copy import deepcopy
-from . import simulation, catalog, stages
+from . import simulation, catalog, stages, campfire
 
 PLAYER_FIELDS = (
     'x', 'z', 'hp', 'hunger', 'stamina', 'sprinting', 'sprint_recover_at',
     'inventory', 'last_action', 'last_attack', 'sequence', 'message',
     'harvested', 'kills', 'crafted', 'fires', 'terrain_effect',
+    'warmed_until', 'revive_progress', 'revive_rate',
 )
 PRESENCE_SECONDS = 10
 INTENT_SECONDS = .6
@@ -51,6 +52,7 @@ def advance(state, now):
     online = any(not p['withdrawn'] and now-p['last_seen'] < PRESENCE_SECONDS for p in players.values())
     dt = max(0., min(now-previous, .3)) if online else 0.
     if dt == 0:
+        campfire.advance_revives(state, now, 0., PRESENCE_SECONDS, INTENT_SECONDS, simulation.clear_swing)
         return
     for user_id, actor in players.items():
         if actor['withdrawn'] or actor['hp'] <= 0:
@@ -76,7 +78,7 @@ def advance(state, now):
             enemy['target_user'] = target_id
             actor = alive[target_id]
             view = actor_view(state, target_id)
-            warm = world['fire_until'] > world['elapsed'] and math.hypot(actor['x'], actor['z']) < 4
+            warm = campfire.in_radius(world, actor)
             simulation.advance_enemy(view, enemy, dt, day, warm)
             simulation.protect(view)
             actor['hp'] = max(0., view['hp'])
@@ -88,6 +90,7 @@ def advance(state, now):
                            for a in [*players.values(), *world['enemies']] if not a.get('withdrawn'))
             if node['kind'] not in ('tree', 'stone') or not occupied:
                 node['quantity'] = 4
+    campfire.advance_revives(state, now, dt, PRESENCE_SECONDS, INTENT_SECONDS, simulation.clear_swing)
     finish(state)
 
 
@@ -134,12 +137,15 @@ def apply_input(state, user_id, body, now):
 def public(state, user_id, now):
     actor = state['players'][user_id]
     data = simulation.public_state(actor_view(state, user_id))
+    data.update(campfire.public_actor(state['world'], actor))
     data.update(coop=True, self_id=user_id,
                 status='abandoned' if actor['withdrawn'] else state['world']['status'],
                 reward=0 if actor['withdrawn'] else state['world'].get('reward', 0),
                 players=[dict(id=key, username=p['username'], avatar=p['avatar'], x=p['x'], z=p['z'],
                               hp=p['hp'], sprinting=p['sprinting'], online=now-p['last_seen'] < PRESENCE_SECONDS,
-                              withdrawn=p['withdrawn'], t=now) for key, p in state['players'].items()])
+                              withdrawn=p['withdrawn'], t=now, **campfire.public_actor(state['world'], p))
+                         for key, p in state['players'].items()])
     if actor['hp'] <= 0 and data['status'] == 'active':
-        data['message'] = '쓰러졌습니다. 동료가 생존하는 동안 관전합니다.'
+        data['message'] = ('쓰러졌습니다. 동료가 가까이 멈춰 서면 구조할 수 있어요. 모닥불 곁에서는 더 빨라요.'
+                           if campfire.mode(state['world']) == 'buff' else '쓰러졌습니다. 동료가 생존하는 동안 관전합니다.')
     return data

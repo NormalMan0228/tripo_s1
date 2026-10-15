@@ -123,6 +123,10 @@ class Database:
         with closing(self.connect()) as db:
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript(SCHEMA)
+            from .tripo_budget import SCHEMA as TRIPO_SCHEMA
+            from .llm_budget import SCHEMA as LLM_SCHEMA
+            db.executescript(TRIPO_SCHEMA)
+            db.executescript(LLM_SCHEMA)
             widen_object_states(db)
             from .economy import SCHEMA as ECONOMY_SCHEMA
             db.executescript(ECONOMY_SCHEMA)

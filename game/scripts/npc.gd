@@ -107,11 +107,8 @@ func _process(delta: float) -> void:
 	if not is_instance_valid(anim_player): return
 	anim_clock += delta
 	anim_frame += 1
-	var stride := 1
-	var camera := get_viewport().get_camera_3d()
-	if camera:
-		var d := camera.global_position.distance_to(global_position)
-		stride = 1 if d < 22.0 else (3 if d < 45.0 else 6)
+	var focus := player.global_position if is_instance_valid(player) else global_position
+	var stride: int = preload("res://scripts/anim_lod.gd").stride(preload("res://scripts/anim_lod.gd").planes(get_viewport().get_camera_3d()), global_position, focus)
 	if anim_frame % stride == 0:
 		anim_player.advance(anim_clock)
 		anim_clock = 0.0

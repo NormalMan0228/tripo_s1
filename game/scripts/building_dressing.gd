@@ -7,6 +7,7 @@ extends Node3D
 ##  - Wall lanterns beside every door (TownLayout.DOORS), lit at night with a halo, a
 ##    warm wash on the wall and a pool of light on the step.
 ##  - A soft contact shadow on the ground around each footprint.
+##  - Door leaves that open, cut from the buildings' own doors (maps/archipelago/building_doors.gd).
 ## Everything is attached to the kept map once (dress()); the module instance only
 ## follows the clock (update()). Nothing here collides, so doors and paths stay free.
 ## A few MultiMeshes hold all lanterns and glows, so the dressing adds ~7 draw calls.
@@ -15,6 +16,8 @@ const Town = preload("res://scripts/town.gd")
 ## Window lights follow who is home: a building whose people are all asleep or out
 ## keeps dark windows at night (residents.gd building_state().lights_on).
 const Residents = preload("res://scripts/residents.gd")
+## Door leaves that open (the 집·문·방문 session drives them: docs/coordination/DOOR_HOOKS_KO.md).
+const BuildingDoors = preload("res://maps/archipelago/building_doors.gd")
 const SHADER := "res://maps/archipelago/building_exterior.gdshader"
 const PLACEMENTS := "res://maps/archipelago/building_placements.json"
 const NODE_NAME := "BuildingDressing"
@@ -32,6 +35,7 @@ const TUNING := {
 	"14_stage":{"glow_energy":0.0},
 	"15_picnic_shelter":{"glow_energy":0.0},
 	"16_blue_cottage":{"glass_max_luma":.33},
+	"18_meadow_house":{"glass_max_luma":.33},
 	"17_lighthouse":{"glow_band":Vector2(.6,9.5)},
 	"09_town_hall":{"glow_band":Vector2(.6,6.0)},
 }
@@ -115,6 +119,8 @@ static func dress(host: Node3D) -> Node3D:
 	var shader: Shader = load(SHADER)
 	var shadows := SurfaceTool.new()
 	shadows.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# Door leaves first: they are restyled with their buildings below (same exterior material).
+	BuildingDoors.install(host)
 	for spec: Dictionary in manifest.buildings:
 		var building := buildings.get_node_or_null(String(spec.id)) as Node3D if buildings else null
 		if building == null: continue
@@ -246,6 +252,8 @@ static func _restyle(building: Node3D, id: String, shader: Shader, materials: Ar
 				# Windows sit below the eaves; dark teal fascia boards above must not glow.
 				material.set_shader_parameter("glow_band", Vector2(.6, height*.45))
 				for key in tune: material.set_shader_parameter(key, tune[key])
+				# A door leaf's origin is at its threshold: shade it by its height in the building.
+				if mesh.has_meta("door_local_lift"): material.set_shader_parameter("local_lift", float(mesh.get_meta("door_local_lift")))
 				mesh.set_surface_override_material(i, material)
 				materials.append(material)
 			elif source.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and source.albedo_color.b > source.albedo_color.r+.15 and source.roughness < .35 and float(tune.get("glow_energy", 1.0)) > 0.0:

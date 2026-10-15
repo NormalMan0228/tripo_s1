@@ -24,7 +24,7 @@ from typing import Literal
 from fastapi import HTTPException, Request
 from pydantic import Field
 from .models import Mutation
-from . import npc_homes, archetypes
+from . import npc_homes, archetypes, build_rules, village_residents
 
 CHAPTER = 'first_gift'
 STEPS = ('letter', 'cafe', 'craft', 'done')
@@ -42,7 +42,18 @@ RETURN_GIFT = {'title': '카페 머그잔', 'category': 'mug', 'parts': [
     ('handle', 'ellipsoid', [0.07, 0.12, 0.04], [0.13, 0.14, 0], '#c86f58'),
     ('coffee', 'ellipsoid', [0.17, 0.03, 0.17], [0, 0.245, 0], '#6b4226')]}
 
+# The chapter's epilogue, once 모카 has her gift: 다온 (the postman) runs up with news from the forest
+# ('forest_told'), and the player reaches the forest's stone gate, where the expedition starts
+# ('forest_gate'), then rescues 단비. Recorded once each; a reset clears them.
+EVENTS = ('forest_told', 'forest_gate', 'danbi_rescued')
+DANBI_FLAG = 'danbi_moved_in'
+
 SCHEMA = '''
+CREATE TABLE IF NOT EXISTS story_events (
+ user_id TEXT NOT NULL REFERENCES users(id), event TEXT NOT NULL, at REAL NOT NULL, PRIMARY KEY(user_id, event));
+CREATE TABLE IF NOT EXISTS story_flags (
+ user_id TEXT NOT NULL REFERENCES users(id), flag TEXT NOT NULL, created REAL NOT NULL,
+ PRIMARY KEY(user_id,flag));
 CREATE TABLE IF NOT EXISTS story_progress (
  user_id TEXT PRIMARY KEY REFERENCES users(id), chapter TEXT NOT NULL,
  step TEXT NOT NULL CHECK(step IN ('letter','cafe','craft','done')), run INTEGER NOT NULL DEFAULT 1,
@@ -54,8 +65,9 @@ ENDED = ('ready', 'failed', 'cancelled', 'unknown')
 
 
 class StoryStep(Mutation):
-    action: Literal['read_letter', 'accept', 'greet']
+    action: Literal['read_letter', 'accept', 'greet', 'event']
     npc: str = Field(default='', max_length=24, pattern=r'^[a-z_]*$')
+    event: str = Field(default='', max_length=24, pattern=r'^[a-z_]*$')
 
 
 class StoryGift(Mutation):
@@ -65,6 +77,22 @@ class StoryGift(Mutation):
 
 def fail(code, status=409):
     raise HTTPException(status, code)
+
+
+def migrate_events(conn):
+    """Keep saves from the move-in branch's timestamp spelling readable."""
+    columns = {row[1] for row in conn.execute('PRAGMA table_info(story_events)')}
+    if 'created' in columns and 'at' not in columns:
+        conn.execute('ALTER TABLE story_events RENAME COLUMN created TO at')
+
+
+def has_flag(conn, user_id, flag):
+    return conn.execute('SELECT 1 FROM story_flags WHERE user_id=? AND flag=?', (user_id, flag)).fetchone() is not None
+
+
+def move_in_danbi(conn, user_id, now):
+    """Server-owned shop unlock; residency is tracked separately by village_residents."""
+    conn.execute('INSERT OR IGNORE INTO story_flags VALUES (?,?,?)', (user_id, DANBI_FLAG, now))
 
 
 def begin(conn, user_id, now):
@@ -95,7 +123,8 @@ def public(conn, user_id):
     if not row:
         return None
     out = {'chapter': row['chapter'], 'step': row['step'], 'run': row['run'], 'greeted': json.loads(row['greeted']),
-           'terrace': TERRACE, 'sender': SENDER}
+           'terrace': TERRACE, 'sender': SENDER, 'flags': {DANBI_FLAG: has_flag(conn, user_id, DANBI_FLAG)},
+           'events': [r['event'] for r in conn.execute('SELECT event FROM story_events WHERE user_id=? ORDER BY at,rowid', (user_id,))]}
     if row['step'] == 'craft':
         # Pieces made since 모카 asked, newest first (in the bag or set down; listed and given ones are not).
         out['made'] = [{'id': r['id'], 'name': r['name'], 'version': r['version'], 'state': r['state']} for r in conn.execute(
@@ -113,15 +142,19 @@ def public(conn, user_id):
 
 def reset(conn, user_id, now):
     """Back to the first step for a rehearsal (or the first time, for an account made before the
-    chapter). Nothing is deleted but the terrace's placement: the piece on the café terrace goes
+    chapter). Nothing is deleted but the terrace's placement and the epilogue's events: the piece on the café terrace goes
     back to the player's bag; letters, return gifts and every other piece stay. The caller has the
-    tables (npc_homes.SCHEMA, SCHEMA) and the transaction."""
+    tables (npc_homes.SCHEMA, SCHEMA, village_residents.SCHEMA) and the transaction."""
+    # Preserve previous greetings before a chapter rehearsal clears its own list.
+    village_residents.migrate_memory(conn, user_id)
+    conn.execute('DELETE FROM story_flags WHERE user_id=? AND flag=?', (user_id, DANBI_FLAG))
     returned = []
     for item in conn.execute('SELECT object_id FROM npc_items WHERE host_id=? AND home_id=?', (user_id, TERRACE)).fetchall():
         conn.execute("UPDATE objects SET state='inventory',x=NULL,z=NULL,version=version+1 WHERE id=? AND owner_id=? AND state='gifted'",
                      (item['object_id'], user_id))
         returned.append(item['object_id'])
     conn.execute('DELETE FROM npc_items WHERE host_id=? AND home_id=?', (user_id, TERRACE))
+    conn.execute('DELETE FROM story_events WHERE user_id=?', (user_id,))
     conn.execute('UPDATE npc_homes SET version=version+1,updated=? WHERE host_id=? AND home_id=?', (now, user_id, TERRACE))
     row = conn.execute('SELECT run FROM story_progress WHERE user_id=?', (user_id,)).fetchone()
     if row:
@@ -137,7 +170,8 @@ def describe(conn, user_id):
     row = conn.execute('SELECT * FROM story_progress WHERE user_id=?', (user_id,)).fetchone()
     terrace = [dict(r) for r in conn.execute('SELECT i.object_id,o.name,i.state,i.slot FROM npc_items i JOIN objects o ON o.id=i.object_id '
                                              'WHERE i.host_id=? AND i.home_id=?', (user_id, TERRACE))]
-    return {'progress': dict(row) if row else None, 'terrace': terrace}
+    events = [dict(r) for r in conn.execute('SELECT event,at FROM story_events WHERE user_id=? ORDER BY at,rowid', (user_id,))]
+    return {'progress': dict(row) if row else None, 'terrace': terrace, 'events': events}
 
 
 class Story:
@@ -145,6 +179,11 @@ class Story:
         self.db, self.settings, self.clock = db, settings, clock
         with db.read() as conn:
             conn.executescript(SCHEMA)
+        with db.transaction() as conn:
+            migrate_events(conn)
+            # Existing completed chapters already meet the shop unlock transition.
+            conn.execute("INSERT OR IGNORE INTO story_flags SELECT user_id,?,COALESCE(completed,updated) "
+                         "FROM story_progress WHERE chapter=? AND step='done'", (DANBI_FLAG, CHAPTER))
 
         def progress(conn, user_id):
             row = conn.execute('SELECT * FROM story_progress WHERE user_id=?', (user_id,)).fetchone()
@@ -163,7 +202,26 @@ class Story:
             def apply(conn, user):
                 row = progress(conn, user['id'])
                 now = clock()
-                if body.action == 'read_letter' and row['step'] == 'letter':
+                if body.action == 'event':
+                    if not body.event:
+                        fail('story_event_required', 422)
+                    if body.event not in EVENTS:
+                        fail('unknown_story_event', 422)
+                    if host_for(conn, user['id']) != user['id']:
+                        fail('story_own_village_only')
+                    if row['step'] != 'done':
+                        fail('story_not_done')
+                    previous = {'forest_gate': 'forest_told', 'danbi_rescued': 'forest_gate'}.get(body.event)
+                    if previous and not conn.execute('SELECT 1 FROM story_events WHERE user_id=? AND event=?', (user['id'], previous)).fetchone():
+                        fail('story_event_order')
+                    # Initialize before changing the rescue flag (legacy saves stay legacy).
+                    village_residents.ensure(conn, user['id'], now, settings)
+                    added = conn.execute('INSERT OR IGNORE INTO story_events(user_id,event,at) VALUES (?,?,?)', (user['id'], body.event, now)).rowcount
+                    if body.event == village_residents.RESCUE_EVENT:
+                        if added:
+                            village_residents.remember(conn, user['id'], 'shopkeeper', now)
+                        app.state.village_residents.sync_in(conn, user['id'], now)
+                elif body.action == 'read_letter' and row['step'] == 'letter':
                     conn.execute("UPDATE story_progress SET step='cafe',updated=? WHERE user_id=?", (now, user['id']))
                 elif body.action == 'accept' and row['step'] in ('letter', 'cafe'):
                     # 모카 asked: what the player makes from now on is offered first.
@@ -171,6 +229,7 @@ class Story:
                 elif body.action == 'greet':
                     if body.npc not in GREETERS:
                         fail('unknown_resident', 422)
+                    village_residents.remember(conn, user['id'], body.npc, now)
                     greeted = json.loads(row['greeted'])
                     if body.npc not in greeted:
                         greeted.append(body.npc)
@@ -188,6 +247,9 @@ class Story:
                 if row['step'] == 'done':
                     fail('story_already_done')
                 now = clock()
+                # Classify new players before completing the chapter: only old saves
+                # should receive the compatibility resident who is already home.
+                village_residents.ensure(conn, user['id'], now, settings)
                 obj = conn.execute('SELECT * FROM objects WHERE id=? AND owner_id=?', (str(body.object_id), user['id'])).fetchone()
                 if not obj or obj['state'] == 'gifted':
                     fail('object_not_found', 404)
@@ -214,6 +276,8 @@ class Story:
                                 "AND state IN ('inventory','placed') AND version=?", (obj['id'], user['id'], body.version)).rowcount != 1:
                     fail('stale_object_version')
                 conn.execute('DELETE FROM furniture_locations WHERE object_id=?', (obj['id'],))
+                # Pieces that stood on it go back to the bag (server/build_rules.py).
+                build_rules.retrieve(conn, obj['id'])
                 # Out on the terrace at once (an earlier piece, if any, goes into 모카's storage).
                 conn.execute("UPDATE npc_items SET state='stored',slot=NULL WHERE host_id=? AND home_id=? AND state='placed'", (user['id'], TERRACE))
                 conn.execute('INSERT INTO npc_items(object_id,host_id,npc_id,home_id,state,slot,yaw,fresh,size,tags,gifted,placed_at) '
@@ -231,6 +295,7 @@ class Story:
                              (letter_id, user['id'], SENDER, 1 - row['run'], present, now))
                 conn.execute("UPDATE story_progress SET step='done',requested_at=COALESCE(requested_at,?),gift_object_id=?,sittable=?,"
                              'letter_id=?,completed=?,updated=? WHERE user_id=?', (now, obj['id'], int(seat), letter_id, now, now, user['id']))
+                move_in_danbi(conn, user['id'], now)
                 home = conn.execute('SELECT version FROM npc_homes WHERE host_id=? AND home_id=?', (user['id'], TERRACE)).fetchone()
                 placed = [item for item in npc_homes.placed_items(conn, user['id'], TERRACE) if item['id'] == obj['id']]
                 return {'story': public(conn, user['id']), 'object_id': obj['id'], 'name': obj['name'], 'sittable': seat,

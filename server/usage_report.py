@@ -18,6 +18,7 @@ import time
 from fastapi import HTTPException, Request
 from .asset_studio import billing, tripo_credits_committed
 from .interactions import DESCRIBE_DAILY_LIMIT
+from .tripo_budget import job_billing
 
 DAY = 86400
 HISTORY_DAYS = 14
@@ -74,6 +75,61 @@ def llm_run(provenance, default_provider):
     if provider == 'gemini' and not model.startswith('gemini'):
         model = ''
     return provider, model or 'unknown'
+
+
+def budget_safety_report(conn, now, include_accounts=False):
+    """Durable cost ledgers. Account identities are available only to the local CLI.
+
+    Charged is the actual bill reported by Tripo. Reserved/unknown are the remaining
+    conservative liability above that bill; unsubmitted holds cover future parts.
+    The legacy remainder is kept visible rather than presented as reconciled billing.
+    """
+    from .tripo_budget import committed_credits
+    today = int(now // DAY) * DAY
+    accounts = {}
+
+    def account(owner_id):
+        return accounts.setdefault(owner_id, {'owner_id': owner_id, 'tripo_committed': 0.0,
+                                              'tripo_charged': 0.0, 'llm_calls_today': 0})
+
+    tripo = {'charged': 0.0, 'reserved': 0.0, 'unknown': 0.0, 'unsubmitted': 0.0,
+             'attempts': dict.fromkeys(('unknown', 'reserved', 'charged', 'released'), 0)}
+    for row in conn.execute('SELECT * FROM tripo_attempts'):
+        tripo['attempts'][row['state']] += 1
+        if row['state'] == 'released':
+            continue
+        actual = float(row['actual_credits'] or 0)
+        liability = max(float(row['reserved_credits']), actual)
+        tripo['charged'] += actual
+        tripo['unknown' if row['state'] == 'unknown' else 'reserved'] += liability - actual
+        item = account(row['owner_id'])
+        item['tripo_committed'] += liability
+        item['tripo_charged'] += actual
+    for row in conn.execute('SELECT owner_id,credits FROM tripo_job_holds'):
+        tripo['unsubmitted'] += row['credits']
+        account(row['owner_id'])['tripo_committed'] += row['credits']
+    tripo['committed'] = committed_credits(conn)
+    tripo['tester_committed'] = committed_credits(conn, tester=True)
+    tripo['legacy_committed'] = max(0.0, tripo['committed'] - sum(tripo[key] for key in (
+        'charged', 'reserved', 'unknown', 'unsubmitted')))
+    llm = {'calls_today': 0, 'states_today': dict.fromkeys(('reserved', 'unknown', 'responded'), 0)}
+    for row in conn.execute('SELECT owner_id,state,count(*) AS calls FROM llm_call_reservations '
+                            'WHERE created>=? AND created<? GROUP BY owner_id,state', (today, today + DAY)):
+        llm['calls_today'] += row['calls']
+        llm['states_today'][row['state']] += row['calls']
+        account(row['owner_id'])['llm_calls_today'] += row['calls']
+    report = {'day_start_utc': today, 'tripo': tripo, 'llm': llm}
+    if include_accounts:
+        names = {row['id']: row['username'] for row in conn.execute('SELECT id,username FROM users')}
+        for owner_id, item in accounts.items():
+            item.update(username=names.get(owner_id), deleted=owner_id not in names)
+        report['top_10_tripo_accounts'] = sorted(
+            (item for item in accounts.values() if item['tripo_committed']),
+            key=lambda item: (-item['tripo_committed'], item['owner_id']))[:10]
+        report['top_10_llm_accounts_today'] = sorted(
+            (item for item in accounts.values() if item['llm_calls_today']),
+            key=lambda item: (-item['llm_calls_today'], item['owner_id']))[:10]
+    return report
 
 
 class UsageReport:
@@ -153,7 +209,8 @@ class UsageReport:
                 add_tokens(slot, used)
 
         with self.db.read() as conn:
-            for row in conn.execute('SELECT state,created,parts,provenance FROM studio_jobs'):
+            managed_jobs = {row[0] for row in conn.execute('SELECT job_id FROM tripo_job_holds')}
+            for row in conn.execute('SELECT id,state,created,parts,provenance FROM studio_jobs'):
                 created, state = row['created'], row['state']
                 for w in windows(created):
                     crafts[w] += 1
@@ -162,11 +219,16 @@ class UsageReport:
                 if isinstance(created, (int, float)) and created >= today:
                     today_ready += state == 'ready'
                     today_failed += state == 'failed'
-                try:
-                    bill = billing(loads(row['parts']))
-                except (AttributeError, TypeError):
-                    bill = {'known_tripo_credits': 0, 'billing_complete': False}
-                known = float(bill['known_tripo_credits'])
+                if row['id'] in managed_jobs:
+                    bill = job_billing(conn, row['id'])
+                    # Count each durable bill below, including deleted jobs and redraws.
+                    known = 0.0
+                else:
+                    try:
+                        bill = billing(loads(row['parts']))
+                    except (AttributeError, TypeError):
+                        bill = {'known_tripo_credits': 0, 'billing_complete': False}
+                    known = float(bill['known_tripo_credits'])
                 if not bill['billing_complete'] and state in FINISHED:
                     incomplete += 1
                 for w in windows(created):
@@ -177,6 +239,13 @@ class UsageReport:
                     day['failed'] += state == 'failed'
                     day['tripo_credits'] += known
                 count_llm(loads(row['provenance']), created, craft_runs)
+            for row in conn.execute("SELECT created,actual_credits FROM tripo_attempts WHERE state!='released'"):
+                actual = float(row['actual_credits'] or 0)
+                for w in windows(row['created']):
+                    credits[w] += actual
+                day = day_of(row['created'])
+                if day is not None:
+                    day['tripo_credits'] += actual
             if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='interaction_designs'").fetchone():
                 for row in conn.execute('SELECT state,created,provenance FROM interaction_designs'):
                     created = row['created']
@@ -191,17 +260,21 @@ class UsageReport:
             committed = tripo_credits_committed(conn)
             accounts_today = conn.execute('SELECT count(DISTINCT owner_id) FROM studio_jobs WHERE created>=?', (today,)).fetchone()[0]
             users = conn.execute('SELECT count(*), sum(created>=?) FROM users', (today,)).fetchone()
+            budget_safety = budget_safety_report(conn, now)
 
         budget = settings.tripo_credit_budget
         used = round(committed)
         return {
             'schema': 1, 'service': 'tripothon', 'generated': round(now), 'day_start_utc': today,
             'mode': settings.mode,
+            'budget_safety': budget_safety,
             'limits': {'daily_crafts': settings.daily_generation_limit,
                        'account_daily_crafts': settings.user_daily_generation_limit,
                        'account_total_crafts': settings.user_total_generation_limit,
                        'max_credits_per_craft': settings.max_credits_per_craft,
                        'tripo_credit_budget': budget, 'welcome_stars': settings.welcome_stars,
+                       'llm_account_daily_calls': settings.llm_user_daily_call_limit,
+                       'llm_server_daily_calls': settings.llm_server_daily_call_limit,
                        'describe_daily_per_account': DESCRIBE_DAILY_LIMIT,
                        'open_registration': bool(settings.mode == 'live' and settings.open_registration)},
             'budget': {'used': used, 'total': budget, 'remaining': max(0, budget - used)} if budget else None,

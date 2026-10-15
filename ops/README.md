@@ -65,41 +65,43 @@ API의 8765 포트는 외부에 게시하지 않는다. Caddy IP `172.30.72.2`�
 백업은 단일 DB 파일 복사가 아니라 SQLite 온라인 백업과 자산 해시 검사를 함께 수행한다. 아래 이름을 매번 새로 지정한다.
 
 ```bash
-docker compose --env-file ops/production.env -f ops/compose.yaml exec api python /app/tools/backup_server.py create --data-dir /data --destination /backups/snap-YYYYMMDD-HHMM
-docker compose --env-file ops/production.env -f ops/compose.yaml exec api python /app/tools/backup_server.py verify --snapshot /backups/snap-YYYYMMDD-HHMM
+sudo docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.gcp-free.yaml exec api python /app/tools/backup_server.py create --data-dir /data --destination /backups/snap-YYYYMMDD-HHMM
+sudo docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.gcp-free.yaml exec api python /app/tools/backup_server.py verify --snapshot /backups/snap-YYYYMMDD-HHMM
 ```
 
 백업 볼륨은 같은 호스트에 있으므로 암호화된 별도 저장소로 주기적으로 옮기고 복구를 연습해야 한다. 백업에는 비밀번호 해시와 사용자 자산이 포함된다. 복원 절차와 미확정 유료 작업의 수동 정합성 처리는 [`docs/DEPLOYMENT.md`](../docs/DEPLOYMENT.md)를 따른다. 과금 작업이 `unknown`이면 공급자 내역 확인 전 재제출하거나 임의 환불하지 않는다. 비밀 유출이 의심되면 공급자 키와 초대 코드를 교체하고 서버를 재시작하며, 해당 계정의 실제 사용 내역을 조사한다.
 
 운영 전에는 호스트 패치, 로그 보존/개인정보 정책, 백업 자동화, 부하 시험, 침투 시험이 남아 있다. 이 코드는 공개 대규모 서비스 보안 인증을 받은 상태가 아니다.
 
-## 학교 서버: 일반 계정과 테스터 한도
+## 메인 서버(옛 학교 서버): 일반 계정과 테스터 한도
 
-`ops/production.env`에 다음 값을 설정하고 API 컨테이너를 재생성한다. 기존 일반 계정에는 별을 소급 지급하지 않는다.
+`ops/production.env`에 다음 값을 설정하고 API 컨테이너를 재생성한다. 기존 일반 계정에는 별을 소급 지급하지 않는다. 값은 2026-10-16에 사용자가 정했다.
 
 ```dotenv
 TRIPO_USER_DAILY_REQUEST_LIMIT=5
-TRIPO_DAILY_REQUEST_LIMIT=5
+TRIPO_DAILY_REQUEST_LIMIT=0
 TRIPO_USER_TOTAL_REQUEST_LIMIT=0
 TRIPOTHON_WELCOME_STARS=150
 TRIPOTHON_MAX_STARS_PER_CRAFT=200
+TRIPOTHON_MAX_CREDITS_PER_CRAFT=200
 TRIPOTHON_TESTER_WELCOME_STARS=1500
 TRIPOTHON_TESTER_CREDIT_BUDGET=10000
+# TRIPOTHON_TRIPO_CREDIT_BUDGET = 지금까지 쓴 크레딧(/health tripo_budget.used) + API 키 잔액 합계의 90%
 ```
 
-일일 한도는 UTC 자정에 갱신하며, 일반 계정의 두 생성 API 요청을 합산한다. 실패·취소 요청도 횟수에 포함한다. `TRIPO_DAILY_REQUEST_LIMIT=5`는 기존 서버 전체 기본값을 유지한 것이므로 일반 계정 전체가 하루 5회를 공유한다. 이용 인원에 맞게 이 값만 높여도 계정별 5회 한도는 유지된다. 테스터는 일일·누적 횟수 한도에서 제외되며 일반 계정의 서버 일일 횟수도 소비하지 않는다. 동시 생성 제한과 잔액 검사는 그대로 적용한다.
+일일 한도는 UTC 자정에 갱신하며, 일반 계정의 두 생성 API 요청을 합산한다. 실패·취소 요청도 횟수에 포함한다. `TRIPO_DAILY_REQUEST_LIMIT=0`은 서버 전체 하루 횟수를 세지 않는다는 뜻이다(0.11.8 서버부터. 그 전 서버는 0이면 켜지지 않는다). 그러면 Tripo 크레딧 예산(`TRIPOTHON_TRIPO_CREDIT_BUDGET`)이 서버 전체의 한도가 되고, 계정별 하루 5회는 그대로 유지된다. 테스터는 일일·누적 횟수 한도에서 제외되며 일반 계정의 서버 일일 횟수도 소비하지 않는다. 동시 생성 제한과 잔액 검사는 그대로 적용한다. 서버 전체 예산은 테스터에게도 적용되므로, 예산이 테스터 합계 상한(10,000)보다 작으면 예산이 먼저 막는다.
 
 서버에서 운영자가 다음 명령을 실행한다. `create`는 비밀번호를 숨김 입력으로 받으므로 `exec -T`를 붙이지 않는다. `tripo2`부터 `tripo5`까지도 각각 실행한다.
 
 ```sh
-docker compose --env-file ops/production.env -f ops/compose.yaml exec api python -m server.admin_cli tester create tripo1
-docker compose --env-file ops/production.env -f ops/compose.yaml exec api python -m server.admin_cli tester list
+sudo docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.gcp-free.yaml exec api python -m server.admin_cli tester create tripo1
+sudo docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.gcp-free.yaml exec api python -m server.admin_cli tester list
 # 기존 계정은 소유자를 확인한 뒤 승격한다. 잔액과 비밀번호는 유지한다.
-docker compose --env-file ops/production.env -f ops/compose.yaml exec api python -m server.admin_cli tester grant tripo1
+sudo docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.gcp-free.yaml exec api python -m server.admin_cli tester grant tripo1
 ```
 
 새 테스터는 별 1,500개로 시작한다. 비밀번호 자동 입력이 필요하면 실행 시 프로세스 환경변수 `TRIPOTHON_TESTER_PASSWORD`를 전달하고 즉시 해제한다. 비밀번호를 env 파일·스크립트·명령 인자에 저장하지 않는다. 이름만 `tripo1`인 일반 가입 계정은 테스터가 아니며 게임 관리자 권한도 테스터 권한을 부여하지 못한다. CLI는 서버 파일 접근 권한이 있는 운영자 전용이다.
 
 다섯 계정의 Tripo 예산은 합계 10,000크레딧이며 날짜가 바뀌어도 초기화되지 않는다. 확정된 제작 견적과 제출 직전의 콘셉트 이미지 비용을 DB에 예약하고 실제 청구액이 더 크면 반영한다. 예산 초과 요청은 `tester_credit_budget_exhausted`로 거절한다. 실패·중단·계정 삭제에도 예약을 반환하지 않아 불확실한 청구가 한도를 우회하지 못한다. 따라서 표시된 사용량은 실제 청구보다 클 수 있다. 공급자가 견적보다 많이 청구한 경우 이미 발생한 초과분은 기록하고 이후 제출을 차단한다. 이 예산은 해당 서버 DB 기준이며 외부에서 직접 사용한 Tripo 비용은 포함하지 않는다.
 
-제작당 별 200개 한도는 최초 결제와 최종 견적 확인에 모두 적용하며 초과 시 `craft_star_limit_exceeded`를 반환한다. 기존 `TRIPOTHON_MAX_CREDITS_PER_CRAFT=10`(Tripo 크레딧 한도)과 `TRIPOTHON_TRIPO_CREDIT_BUDGET=0`(전체 서버 예산 미설정)은 별 한도와 별개이고 테스터에도 적용한다. 예를 들어 P2 제작도 허용하려면 운영자가 크레딧 한도를 별도로 조정해야 한다. 구버전 클라이언트에서는 새 오류 코드가 그대로 표시될 수 있다.
+제작당 별 200개 한도는 최초 결제와 최종 견적 확인에 모두 적용하며 초과 시 `craft_star_limit_exceeded`를 반환한다. Tripo 크레딧 한도 `TRIPOTHON_MAX_CREDITS_PER_CRAFT`(메인 서버 200: P2 제작 허용)와 전체 예산 `TRIPOTHON_TRIPO_CREDIT_BUDGET`은 별 한도와 별개이고 테스터에도 적용한다. 구버전 클라이언트에서는 새 오류 코드가 그대로 표시될 수 있다.

@@ -138,12 +138,16 @@ def pattern(terms):
 
 
 class ChatFilter:
-    def __init__(self, extra=None):
+    def __init__(self, extra=None, lines=None):
+        """`lines` (same syntax as the list files) replaces both files: the craft request filter
+        (server/craft_moderation.py) builds one filter per refusal category this way."""
         self.rules = Rules()
-        for path in (DEFAULT_LIST, extra):
+        for path in (() if lines is not None else (DEFAULT_LIST, extra)):
             if path:
                 for line in Path(path).read_text(encoding='utf-8-sig').splitlines():
                     self.rules.add(line)
+        for line in lines or ():
+            self.rules.add(line)
         if self.rules.count() > MAX_TERMS:
             raise ValueError('chat word list too long')
         r = self.rules
@@ -254,7 +258,7 @@ class ChatFilter:
         return joined
 
     # --- checking ---------------------------------------------------------------------------
-    def check(self, text):
+    def check(self, text, info=True):
         out = list(text)
         result = Checked(text)
         # (first, last) original index -> the match was split by a space; one entry per place.
@@ -300,7 +304,7 @@ class ChatFilter:
         result.masked = len(spans['mask'])
         result.split = sum(1 for split in spans['mask'].values() if split)
         masked = ''.join(out)
-        for rule in (PHONE, LINK):
+        for rule in ((PHONE, LINK) if info else ()):
             def hide(m):
                 result.info_masked += 1
                 return ''.join(c if c in '-. ' and rule is PHONE else '*' for c in m.group(0))

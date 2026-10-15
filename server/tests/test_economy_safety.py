@@ -208,3 +208,47 @@ def test_admin_api_rejects_non_integer_or_out_of_range_grants(world, amount):
     with w.db() as conn:
         assert economy.ledger_check(conn) == []
         assert conn.execute('SELECT count(*) FROM ledger').fetchone()[0] == 0
+
+
+@pytest.mark.parametrize('amount', [True, False, 1.0, -1.5, '3', None,
+                                  float('nan'), float('inf'), -float('inf'), 2**63, -(2**63)-1])
+def test_leaf_coin_helper_rejects_invalid_amount_without_mutating_state(amount):
+    state = {'coins': 12, 'bag': {'turnip': 2}}
+    with pytest.raises(economy.CoinRejected, match='invalid_coin_amount'):
+        economy.apply_coins(state, amount)
+    assert state == {'coins': 12, 'bag': {'turnip': 2}}
+
+
+@pytest.mark.parametrize('balance', [True, False, 1.0, '12', None, -1, 2**63,
+                                   float('nan'), float('inf')])
+def test_leaf_coin_helper_rejects_invalid_balance_without_repairing_it(balance):
+    state = {'coins': balance}
+    with pytest.raises(economy.CoinRejected, match='invalid_coin_balance'):
+        economy.apply_coins(state, 1)
+    assert state['coins'] is balance
+
+
+def test_leaf_coin_helper_checks_underflow_overflow_and_preserves_inventory():
+    state = {'coins': 12, 'bag': {'turnip': 2}}
+    assert economy.apply_coins(state, 3) == state['coins'] == 15
+    assert economy.apply_coins(state, -15) == state['coins'] == 0
+    with pytest.raises(economy.CoinRejected, match='life_not_enough_coins'):
+        economy.apply_coins(state, -1)
+    assert state['coins'] == 0
+    assert economy.apply_coins(state, 2**63-1) == 2**63-1
+    with pytest.raises(economy.CoinRejected, match='coin_balance_overflow'):
+        economy.apply_coins(state, 1)
+    assert state == {'coins': 2**63-1, 'bag': {'turnip': 2}}
+    assert economy.apply_coins(state, -(2**63)+1) == 0
+
+
+@pytest.mark.parametrize('amount', [False, float('nan'), float('inf'), -float('inf')])
+def test_starseed_helper_rejects_nonfinite_and_boolean_amounts(world, amount):
+    w = world
+    p = w.player('numeric_guard')
+    with w.db() as conn:
+        conn.execute('BEGIN IMMEDIATE')
+        with pytest.raises(economy.EconomyRejected, match='invalid_shard_amount'):
+            economy.change_shards(conn, p.id, amount, 'test', 'bad', w.now[0])
+        assert conn.execute('SELECT shards FROM users WHERE id=?', (p.id,)).fetchone()[0] == 0
+        assert conn.execute('SELECT count(*) FROM ledger WHERE user_id=?', (p.id,)).fetchone()[0] == 0

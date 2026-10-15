@@ -13,8 +13,8 @@ class ProviderError(Exception):
         self.code, self.uncertain = code, uncertain
         super().__init__(code)
 
-def validate_glb(blob, allow_textures=False, stats=None):
-    """Accept bounded static, embedded GLB only. Reject remote/local URI references."""
+def validate_glb(blob, allow_textures=False, stats=None, *, allow_rigged=False):
+    """Accept bounded embedded GLB; skins/animation require explicit opt-in."""
     def reject():
         raise ProviderError('invalid_model')
     def reference(items, value):
@@ -43,7 +43,8 @@ def validate_glb(blob, allow_textures=False, stats=None):
         for field in ('buffers','bufferViews','accessors','meshes','nodes','scenes','materials'):
             if not isinstance(doc.get(field,[]),list): reject()
         if doc.get('asset', {}).get('version') != '2.0': reject()
-        if doc.get('extensionsRequired') or doc.get('animations') or doc.get('skins'): reject()
+        if doc.get('extensionsRequired'): reject()
+        if not allow_rigged and (doc.get('animations') or doc.get('skins')): reject()
         def walk(v, depth=0):
             if depth > 32: reject()
             if isinstance(v, dict):
@@ -94,7 +95,7 @@ def validate_glb(blob, allow_textures=False, stats=None):
         parent_count = [0]*len(nodes)
         for node in nodes:
             if 'mesh' in node: reference(doc.get('meshes',[]),node['mesh'])
-            if 'skin' in node or 'camera' in node or 'weights' in node: reject()
+            if ('skin' in node and not allow_rigged) or 'camera' in node or 'weights' in node: reject()
             for field,length in (('translation',3),('rotation',4),('scale',3),('matrix',16)):
                 if field in node:
                     values=node[field]
@@ -133,8 +134,10 @@ def validate_glb(blob, allow_textures=False, stats=None):
                 try:
                     with Image.open(io.BytesIO(raw)) as im:
                         pixels+=im.width*im.height
-                        if im.format not in ('PNG','JPEG') or im.width>4096 or im.height>4096 or pixels>24000000:reject()
+                        expected='PNG' if image['mimeType']=='image/png' else 'JPEG'
+                        if im.format!=expected or im.width>4096 or im.height>4096 or pixels>24000000:reject()
                         im.verify()
+                    with Image.open(io.BytesIO(raw)) as im:im.load()
                 except ProviderError:raise
                 except Exception:reject()
             for texture in textures:reference(images,texture['source'])
@@ -152,11 +155,13 @@ def validate_glb(blob, allow_textures=False, stats=None):
             if not mesh['primitives'] or len(mesh['primitives'])>128: reject()
             for p in mesh['primitives']:
                 if p.get('mode',4) != 4 or 'targets' in p: reject()
-                if set(p['attributes'])-{'POSITION','NORMAL','TANGENT','TEXCOORD_0','COLOR_0'}:reject()
+                allowed={'POSITION','NORMAL','TANGENT','TEXCOORD_0','COLOR_0'}
+                if allow_rigged:allowed.update(('JOINTS_0','WEIGHTS_0'))
+                if set(p['attributes'])-allowed:reject()
                 position = reference(accessors,p['attributes']['POSITION'])
                 for name,index in p['attributes'].items():
                     attribute=reference(accessors,index)
-                    valid_types={'POSITION':('VEC3',),'NORMAL':('VEC3',),'TANGENT':('VEC4',),'TEXCOORD_0':('VEC2',),'COLOR_0':('VEC3','VEC4')}
+                    valid_types={'POSITION':('VEC3',),'NORMAL':('VEC3',),'TANGENT':('VEC4',),'TEXCOORD_0':('VEC2',),'COLOR_0':('VEC3','VEC4'),'JOINTS_0':('VEC4',),'WEIGHTS_0':('VEC4',)}
                     if attribute['type'] not in valid_types[name]:reject()
                     if name in ('NORMAL','TANGENT') and attribute['componentType']!=5126:reject()
                     if name in ('TEXCOORD_0','COLOR_0') and attribute['componentType'] not in (5121,5123,5126):reject()
@@ -179,6 +184,9 @@ def validate_glb(blob, allow_textures=False, stats=None):
                     if indices['type']!='SCALAR' or indices['count']%3: reject()
                     for i in range(indices['count']):
                         if struct.unpack_from('<'+fmt,parts[0x004E4942],start+i*v.get('byteStride',size))[0]>=position['count']: reject()
+        if allow_rigged:
+            from .rigged_glb import validate_rig
+            validate_rig(doc,parts[0x004E4942],stats)
         if stats is not None:stats.update(texture_pixels=pixels,vertices=instanced_vertices,draw_calls=instanced_primitives,bytes=len(blob))
         return doc
     except (KeyError, ValueError, TypeError, IndexError, AttributeError, RecursionError, OverflowError, struct.error):
@@ -194,7 +202,7 @@ def jpeg_preview(blob):
     from PIL import Image
     try:
         image = Image.open(io.BytesIO(blob))
-        if image.format not in ('PNG','JPEG','WEBP') or image.width*image.height > 4096*4096: raise ProviderError('invalid_image')
+        if image.format not in ('PNG','JPEG','WEBP') or max(image.size)>4096 or image.width*image.height > 4096*4096: raise ProviderError('invalid_image')
         image.load()
     except ProviderError: raise
     except Exception: raise ProviderError('invalid_image') from None
@@ -248,6 +256,8 @@ class TripoProvider:
         except ValueError: raise ProviderError('upstream_invalid_json', uncertain=method=='POST') from None
         if not isinstance(data,dict): raise ProviderError('upstream_schema',uncertain=method=='POST')
         if response.status_code >= 500: raise ProviderError('upstream_unavailable', uncertain=method=='POST')
+        # 2008: Tripo's content policy refused the prompt or picture (no task was made).
+        if data.get('code') == 2008: raise ProviderError('refused_other')
         if response.status_code >= 400 or data.get('code') != 0:
             raise ProviderError('upstream_rejected')
         if not isinstance(data.get('data'),dict): raise ProviderError('upstream_schema', uncertain=method=='POST')
@@ -316,7 +326,7 @@ class TripoProvider:
         except httpx.HTTPError: raise ProviderError('asset_download_failed') from None
         return jpeg_preview(b''.join(chunks))
 
-    async def download(self, url, allow_textures=False):
+    async def download(self, url, allow_textures=False, *, rigged=False):
         parsed = urlparse(url)
         host = parsed.hostname or ''
         if parsed.scheme != 'https' or parsed.port not in (None,443) or parsed.username or parsed.password:
@@ -335,5 +345,5 @@ class TripoProvider:
                         chunks.append(chunk)
         except httpx.HTTPError: raise ProviderError('asset_download_failed') from None
         blob = b''.join(chunks)
-        validate_glb(blob,allow_textures=allow_textures)
+        validate_glb(blob,allow_textures=allow_textures,allow_rigged=rigged)
         return blob
