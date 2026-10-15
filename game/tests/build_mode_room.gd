@@ -117,8 +117,9 @@ func hang() -> void:
 	if not reply.ok: check(false,"a second account");return
 	api.token=reply.data.token
 	var made: Array=[]
-	for prompt in ["picture frame","hanging lamp"]:
-		var queued: Dictionary=await api.post("/v1/studio/jobs",api.mutation({"prompt":prompt,"geometry":"proxy","designer":"fixture"}))
+	# A frame (designed fixture) and a chandelier (one simple box, its name makes it a hanging thing).
+	for order in [{"prompt":"picture frame","geometry":"proxy","designer":"fixture"},{"prompt":"chandelier","geometry":"proxy","designer":"simple","motion":"static","dims":[0.6,0.5,0.6]}]:
+		var queued: Dictionary=await api.post("/v1/studio/jobs",api.mutation(order))
 		if not queued.ok: print("CRAFT REFUSED ",queued.error);continue
 		for _i in 40:
 			var job: Dictionary=await api.request("/v1/studio/jobs/"+queued.data.id)
