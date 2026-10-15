@@ -10,6 +10,7 @@ plots inside the farm meadow, on its grid, apart from each other and under a cap
 import contextvars
 import copy
 import secrets
+from . import economy
 
 
 # Village furniture coordinates are metres from the town green; this box covers all
@@ -184,6 +185,12 @@ def night(now):
     hour=(now/3600+UTC_OFFSET.get()/60)%24
     return hour<6 or hour>=19
 
+def reward_night(now):
+    """Reward eligibility follows the fixed account offset, never a request header."""
+    offset=DAILY_OFFSET.get()
+    hour=(now/3600+(KST*60 if offset is None else offset)/60)%24
+    return hour<6 or hour>=19
+
 def spend(state, item, count=1):
     if state['bag'].get(item,0)<count: raise Rejected('life_missing_items')
     state['bag'][item]-=count
@@ -208,7 +215,7 @@ def tillable(state, x, z):
         if max(abs(plot['x']-x),abs(plot['z']-z))<1.7: raise Rejected('life_plot_overlap')
 
 def pick_fish(spot, now):
-    time='night' if night(now) else 'day'
+    time='night' if reward_night(now) else 'day'
     pool=[(fish,data) for fish,data in FISH.items() if spot in data['spots'] and data['time'] in ('any',time)]
     ticket=secrets.randbelow(sum(data['weight'] for _,data in pool))
     for fish,data in pool:
@@ -396,19 +403,18 @@ def act(state, body, now):
     elif action=='buy':
         if body.item not in SHOP: raise Rejected('life_invalid_item')
         cost=SHOP[body.item]*body.quantity
-        if state['coins']<cost: raise Rejected('life_not_enough_coins')
-        state['coins']-=cost; add(state,body.item,body.quantity)
+        economy.change_coins(state,-cost); add(state,body.item,body.quantity)
         result=f'{NAMES[body.item]} {body.quantity}개를 샀어요.'
     elif action=='sell':
         if body.item not in PRICES: raise Rejected('life_invalid_item')
         spend(state,body.item,body.quantity)
-        income=PRICES[body.item]*body.quantity; state['coins']+=income
+        income=PRICES[body.item]*body.quantity; economy.change_coins(state,income)
         result=f'{object_word(NAMES[body.item])} 팔고 잎전 {income}개를 받았어요.'
     elif action=='order':
         day=local_day(now)
         if state['order_day']==day: raise Rejected('life_order_completed')
         spend(state,'turnip',2); spend(state,'perch')
-        state['coins']+=20; state['order_day']=day
+        economy.change_coins(state,20); state['order_day']=day
         result='마을 식탁 배달 완료! 잎전 20개를 받았어요.'
     else: raise Rejected('life_unknown_action')
     state['version']+=1

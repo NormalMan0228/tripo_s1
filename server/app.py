@@ -356,7 +356,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             record_event(conn,'admin_grant',user['id'],{'shards':body.shards,'coins':body.coins,'request_id':str(body.request_id)},clock())
             if body.coins:
                 state=life_state(conn,user['id'])
-                state['coins']=state.get('coins',0)+body.coins
+                try: economy.change_coins(state,body.coins)
+                except economy.CoinRejected as error: fail(str(error))
                 state['version']=state.get('version',0)+1
                 conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
                              (user['id'],json.dumps(state)))
@@ -369,7 +370,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         def edit(conn,user):
             state=life_state(conn,user['id'])
             try: result=homestead.act(state,body,clock())
-            except homestead.Rejected as error: fail(str(error))
+            except (homestead.Rejected, economy.CoinRejected) as error: fail(str(error))
             # Selling also pays starseeds (a daily allowance), through the ledger like every star.
             if body.action=='sell':
                 stars=homestead.sell_stars(state,homestead.PRICES[body.item]*body.quantity,clock(),

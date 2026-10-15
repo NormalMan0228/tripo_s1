@@ -1,5 +1,6 @@
 """Tilling, foraging spots and the fishing fight added to the village life loop."""
 import pathlib, re
+import json
 from server import homestead
 from server.tests.test_api import world, account, mutation
 from server.tests.test_homestead import get, do
@@ -108,3 +109,32 @@ def test_shop_sells_every_seed_and_buys_every_find(world):
     assert every_drop|set(homestead.CROPS)|set(homestead.FISH)<=set(catalog['prices'])
     assert all(item in catalog['names'] for item in catalog['prices'])
     assert do(c,a,'buy',item='sunflower_seed',quantity=2).json()['bag']['sunflower_seed']==2
+
+
+def test_fishing_rewards_ignore_changes_to_the_display_time_zone(world, monkeypatch):
+    app, c, now = world
+    now[0] = 12 * 3600  # Korea 21:00 (night), forged UTC header 12:00 (day).
+    auth = account(c, 'fixed_fishing_time')
+    assert get(c, auth)['night']
+    shifted = {**auth, 'X-Villagen-UTC-Offset': '0'}
+    assert not get(c, shifted)['night']  # Display lighting still follows the request.
+    monkeypatch.setattr('server.homestead.secrets.randbelow', lambda upper: 44 if upper > 44 else 0)
+    cast = do(c, shifted, 'cast', spot='pond')
+    assert cast.status_code == 200, cast.text
+    with app.state.db.read() as conn:
+        state = json.loads(conn.execute('SELECT state FROM homesteads').fetchone()[0])
+    assert state['fishing']['catch'] == 'catfish'  # Night-only; the day pool would give koi.
+
+
+def test_reward_night_uses_zero_account_offset_and_safe_default():
+    display = homestead.UTC_OFFSET.set(540)
+    account_offset = homestead.DAILY_OFFSET.set(0)
+    try:
+        assert homestead.night(12 * 3600)
+        assert not homestead.reward_night(12 * 3600)
+        homestead.DAILY_OFFSET.set(None)
+        homestead.UTC_OFFSET.set(0)
+        assert homestead.reward_night(12 * 3600)
+    finally:
+        homestead.DAILY_OFFSET.reset(account_offset)
+        homestead.UTC_OFFSET.reset(display)

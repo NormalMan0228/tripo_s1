@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+import json
 from server.tests.test_api import world, account, mutation
 
 def get(c,a): return c.get('/v1/homestead',headers=a).json()
@@ -173,3 +174,20 @@ def test_selling_stars_are_ledgered_once_and_replays_pay_nothing_more(world):
     with app.state.db.transaction() as conn:
         rows=conn.execute("SELECT amount FROM ledger WHERE reason='sell_reward'").fetchall()
     assert [r[0] for r in rows]==[first['stars']]
+
+
+def test_buy_rejects_corrupt_leaf_balance_without_consuming_request_or_granting_items(world):
+    from server import homestead
+    app, c, now = world
+    auth = account(c, 'corrupt_buyer')
+    state = homestead.initial()
+    state['coins'] = '12'
+    with app.state.db.transaction() as conn:
+        user_id = conn.execute("SELECT id FROM users WHERE username='corrupt_buyer'").fetchone()[0]
+        conn.execute('INSERT INTO homesteads VALUES (?,?)', (user_id, json.dumps(state)))
+    body = mutation(version=0, action='buy', item='bait')
+    reply = c.post('/v1/homestead', headers=auth, json=body)
+    assert reply.status_code == 409 and reply.json()['detail'] == 'invalid_coin_balance'
+    with app.state.db.read() as conn:
+        assert json.loads(conn.execute('SELECT state FROM homesteads WHERE user_id=?', (user_id,)).fetchone()[0]) == state
+        assert conn.execute('SELECT count(*) FROM requests WHERE user_id=?', (user_id,)).fetchone()[0] == 0

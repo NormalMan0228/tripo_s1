@@ -1,4 +1,4 @@
-"""The only writer of starseed balances. Callers own the surrounding transaction."""
+"""Validated currency changes. Callers own the surrounding transaction."""
 import json
 import logging
 import uuid
@@ -20,6 +20,31 @@ class EconomyRejected(HTTPException):
     def __init__(self, user_id, code, detail, status=409):
         super().__init__(status, code)
         self.user_id, self.evidence = user_id, detail
+
+
+class CoinRejected(ValueError):
+    """Invalid leaf-coin changes leave the caller's homestead state untouched."""
+
+
+def change_coins(state, amount):
+    """Change account-owned leaf coins after strict integer and balance checks.
+
+    The caller persists state in the same idempotent transaction as its inventory
+    changes. Leaf coins live in homestead JSON, so they need the same explicit
+    bounds as SQLite-backed starseeds rather than Python's unbounded integers.
+    """
+    if type(amount) is not int or not -(2**63) <= amount < 2**63:
+        raise CoinRejected('invalid_coin_amount')
+    balance = state.get('coins')
+    if type(balance) is not int or not 0 <= balance < 2**63:
+        raise CoinRejected('invalid_coin_balance')
+    result = balance + amount
+    if result < 0:
+        raise CoinRejected('life_not_enough_coins')
+    if result >= 2**63:
+        raise CoinRejected('coin_balance_overflow')
+    state['coins'] = result
+    return result
 
 
 def flag(conn, user_id, code, detail, now):
