@@ -18,11 +18,12 @@ const LoadPace = preload("res://scripts/load_pace.gd")
 ## center/door are village x,z. The lot is LOT x LOT metres around the centre (empty ground within
 ## radius, clear of roads, doors, signposts and the other map points by 3 m or more). door is the
 ## standing point before the door of the model at this yaw and scale (teal_cottage.glb's door step
-## is at local (-3.15, 3.96)); sign is the lot sign's spot in plot-local metres (x right, z front).
+## is at local (-3.15, 3.96)); sign is the lot sign's spot in plot-local metres (x right, z front):
+## by the side path's end, west of the tree at (-20, 15.2) so its crown never hides the board.
 const PLOTS := {
 	"danbi_plot":{"center":Vector2(-23.5,9.0),"radius":5.0,"yaw":12.0,"room":"danbi_house","title":"단비네 집",
 		"model":"res://maps/archipelago/assets/buildings/teal_cottage.glb","scale":0.9,"tint":Color(1.0,0.84,0.72),
-		"door_local":Vector2(-3.15,3.96),"sign_local":Vector2(0.6,4.7),"sign_text":"곧 새 이웃이 이사 와요"},
+		"door_local":Vector2(-3.15,3.96),"sign_local":Vector2(-1.0,4.9),"sign_text":"곧 새 이웃이 이사 와요"},
 }
 const LOT := 8.0
 const STAKE_HEIGHT := 0.7
@@ -170,10 +171,10 @@ static func _build_lot(root: Node3D, id: String, space: PhysicsDirectSpaceState3
 	var sign_at := Vector2(spec.sign_local)
 	var sign_ground := _ground(space, to_world(id, sign_at), float(root.get_meta("ground")))
 	var post := BoxMesh.new()
-	post.size = Vector3(0.1, 1.15, 0.1)
+	post.size = Vector3(0.1, 1.2, 0.1)
 	wood.append_from(post, 0, Transform3D(Basis.IDENTITY, Vector3(sign_at.x, sign_ground+0.5, sign_at.y)))
 	var board := BoxMesh.new()
-	board.size = Vector3(1.3, 0.62, 0.06)
+	board.size = Vector3(1.5, 0.72, 0.06)
 	wood.append_from(board, 0, Transform3D(Basis.IDENTITY, Vector3(sign_at.x, sign_ground+1.05, sign_at.y+0.06)))
 	var wood_mesh := MeshInstance3D.new()
 	wood_mesh.name = "Stakes"
@@ -194,17 +195,17 @@ static func _build_lot(root: Node3D, id: String, space: PhysicsDirectSpaceState3
 	lot.add_child(string_mesh)
 	var sign := Node3D.new()
 	sign.name = "Sign"
-	sign.position = Vector3(sign_at.x, sign_ground+1.05, sign_at.y+0.1)
+	sign.position = Vector3(sign_at.x, sign_ground+1.05, sign_at.y+0.11)
 	lot.add_child(sign)
 	var label := Label3D.new()
 	label.name = "Text"
 	label.text = TranslationServer.translate(str(sign_texts.get(id, spec.sign_text)))
-	label.pixel_size = 0.0042
-	label.font_size = 40
+	label.pixel_size = 0.0045
+	label.font_size = 52
 	label.outline_size = 0
 	label.modulate = Color("4a3524")
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.width = 1.2/label.pixel_size
+	label.width = 1.4/label.pixel_size
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.double_sided = false
 	sign.add_child(label)
