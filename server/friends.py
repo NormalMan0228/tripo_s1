@@ -10,6 +10,7 @@ import json
 import math
 import threading
 import uuid
+from collections import defaultdict
 from typing import Literal
 from fastapi import Request, HTTPException
 from fastapi.responses import JSONResponse
@@ -189,27 +190,35 @@ class Roster:
 
 
 class PollMeter:
-    """Server-side backpressure for the presence poll. Every poll is counted; every
-    METER_SECONDS the slow-down factor moves towards measured rate / budget (square root steps,
+    """Server-side backpressure for the presence poll. Polls of signed-in chat2 clients (those
+    that follow the advice) are counted, each player at most at the base `together` rate, so one
+    account (or a script without one) cannot move the factor for everybody, and released clients'
+    fixed 4 Hz (which no advice slows) does not slow the few updated players. Every
+    METER_SECONDS the slow-down factor moves towards measured rate / budget (square-root steps,
     so it settles instead of swinging), between 1 and MAX_SLOWDOWN. The advised intervals are
     the operator's (social_poll in /health) times the factor. In this process only (one worker)."""
     METER_SECONDS = 2.0
     MAX_SLOWDOWN = 4.0
 
-    def __init__(self, clock, budget):
+    def __init__(self, clock, budget, together=0.25):
         self.clock, self.budget = clock, budget
+        self.per_user = max(1, math.ceil(self.METER_SECONDS/max(together, 0.01)))
         self.lock = threading.Lock()
         self.count, self.since, self.factor = 0, clock(), 1.0
+        self.users = defaultdict(int)
 
-    def tick(self):
+    def tick(self, user_id):
         with self.lock:
-            self.count += 1
+            if self.users[user_id] < self.per_user:
+                self.users[user_id] += 1
+                self.count += 1
             now = self.clock()
             elapsed = now-self.since
             if elapsed >= self.METER_SECONDS:
                 rate = self.count/elapsed
                 self.factor = min(self.MAX_SLOWDOWN, max(1.0, self.factor*math.sqrt(rate/self.budget)))
                 self.count, self.since = 0, now
+                self.users.clear()
             return self.factor
 
 
@@ -256,7 +265,7 @@ class Friends:
     def __init__(self, app, db, settings, clock, auth, mutate, multiplayer):
         self.db, self.settings, self.clock = db, settings, clock
         self.roster = Roster(clock)
-        self.meter = PollMeter(clock, settings.presence_budget)
+        self.meter = PollMeter(clock, settings.presence_budget, settings.presence_together_seconds)
         mp = multiplayer
         from .chat import Window, refuse
         people_window = Window(PEOPLE_PER_MINUTE, 60)

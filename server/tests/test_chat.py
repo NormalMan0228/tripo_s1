@@ -338,14 +338,33 @@ def test_health_advertises_the_social_layer(world):
 
 def test_presence_advice_slows_clients_down_under_load_and_recovers(make_world):
     w = make_world(presence_budget=10)
-    alice = w.player('alice')
-    assert w.presence(alice, since=0)['social']['poll'] == {'together': .25, 'alone': 1}
-    for _ in range(3):                     # 50 polls a second for three meter windows
-        for _ in range(100):
-            w.tick(.02)
-            advice = w.presence(alice, since=0)['social']['poll']
+    people = w.players(*('p%02d' % i for i in range(10)))
+    assert w.presence(people[0], since=0)['social']['poll'] == {'together': .25, 'alone': 1}
+    for step in range(240):                # ten players at 4 Hz (40 polls a second) for six seconds
+        w.tick(.025)
+        advice = w.presence(people[step % 10], since=0)['social']['poll']
     assert advice['together'] >= .25*3 and advice['alone'] <= 4 and advice['together'] <= 1
     for _ in range(6):                     # one poll every two seconds
         w.tick(2.01)
-        advice = w.presence(alice, since=0)['social']['poll']
+        advice = w.presence(people[0], since=0)['social']['poll']
     assert advice == {'together': .25, 'alone': 1}
+
+
+def test_presence_advice_ignores_strangers_one_greedy_account_and_released_clients(make_world):
+    w = make_world(presence_budget=10)
+    alice, bravo = w.players('alice', 'bravo')
+    # A script without an account: every poll is refused and none is counted.
+    for _ in range(300):
+        w.tick(.01)
+        response = w.client.post('/v1/social/presence', headers={'Authorization': 'Bearer nope'}, json={'since': 0})
+        assert response.status_code == 401
+    # One account polling at 50 Hz counts as one player at the advised 4 Hz.
+    for _ in range(300):
+        w.tick(.02)
+        w.presence(alice, since=0)
+    # Released clients (no since) ignore the advice: their fixed 4 Hz does not count either.
+    for _ in range(300):
+        w.tick(.02)
+        w.presence(bravo)
+    assert w.presence(alice, since=0)['social']['poll'] == {'together': .25, 'alone': 1}
+    assert w.app.state.friends.meter.factor == 1.0

@@ -300,11 +300,18 @@ advised `together` interval up to 0.5 s keeps walkers smooth; above that (a crow
 step more coarsely but stay correct. Chat latency is about one poll interval.
 
 ### 9.2 Backpressure
-The server counts presence polls. Every 2 s it moves a slow-down factor (1..4) towards
-`polls per second / VILLAGEN_PRESENCE_BUDGET` (square-root steps) and advises
+The server counts the presence polls of signed-in chat2 clients (the ones that follow the
+advice), each player at most at the base `together` rate (8 polls per 2 s window by default).
+Refused polls (no or a bad token), a single account polling faster, and released clients
+(no `since`) do not move it. Every 2 s it moves a slow-down factor (1..4) towards
+`counted polls per second / VILLAGEN_PRESENCE_BUDGET` (square-root steps) and advises
 `social_poll × factor` in every chat2 reply. Default budget: **60 polls/s**. Small groups keep
-4 Hz; a full class is slowed until the server carries about 60 polls a second. Released clients
-ignore the advice (they poll at their fixed 4 Hz).
+4 Hz; a full class is slowed until the server carries about 60 polls a second.
+
+Released clients ignore the advice (they poll at their fixed 4 Hz) and are not counted, so the
+budget has no effect on their load: until most of the class has updated, the deploy-day load is
+run B below (about 98 % of a core on the PC, more than one vCPU on the VM by the 1.7× estimate
+in 9.4), whatever the budget says.
 
 ### 9.3 Load test (tools/test_multiplayer_load.py)
 Isolated server on 127.0.0.1:8867 (production command line: one uvicorn worker, WAL SQLite, no

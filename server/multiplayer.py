@@ -305,11 +305,12 @@ class Multiplayer:
         @app.post('/v1/social/presence')
         def presence(body: Presence, request: Request):
             # Positions, visit times and resident moves: the next poll writes them again (no disk wait).
-            if hasattr(app.state, 'friends'):
-                app.state.friends.meter.tick()
             with db.write_then_read(durable=False) as phase:
                 conn = phase.conn
                 user = auth(conn, request)
+                # Backpressure counts signed-in clients that follow its advice (chat2) only.
+                if body.since is not None and hasattr(app.state, 'friends'):
+                    app.state.friends.meter.tick(user['id'])
                 # A visit whose host is gone (or whose guest was away too long) ends here; a guest
                 # still here keeps the visit going.
                 settle_visits(conn, user['id'])
