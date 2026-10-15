@@ -134,8 +134,8 @@ func contact(item: String, node: Node3D, hold: Node3D) -> void:
 func shoot(sheet: Image, cell: Vector2i, socket: Node3D, label: String, from_back := false) -> void:
 	if DisplayServer.get_name() == "headless": return
 	var at := socket.global_position
-	var facing := -player.visual.global_basis.z if not from_back else player.visual.global_basis.z
-	camera.global_position = at+facing*0.0+(-player.visual.global_basis.z if not from_back else player.visual.global_basis.z)*1.1+Vector3(0, 0.25, 0)+player.visual.global_basis.x*0.35
+	var facing: Vector3 = -player.visual.global_basis.z if not from_back else player.visual.global_basis.z
+	camera.global_position = at+facing*1.1+Vector3(0, 0.25, 0)+player.visual.global_basis.x*0.35
 	camera.look_at(at)
 	await frames(3)
 	await RenderingServer.frame_post_draw
