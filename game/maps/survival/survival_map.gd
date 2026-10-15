@@ -121,9 +121,15 @@ var rng_after_rim := 0
 ## Off (--no-monster-prefetch, false before start_run, or a build without the card: tools, headless
 ## tests), each loads at its first spawn.
 static var prefetch_monsters := not "--no-monster-prefetch" in OS.get_cmdline_user_args()
+## The most the card waits for the creature models after the build (ms; they take 0.1-0.25 s): a
+## slow disk or a stalled read leaves the rest to their first spawn instead of holding the card.
+const MONSTER_FEED_WAIT_MSEC := 1500
 var monster_scenes: Array[Resource] = []
 ## The creature models still to come in, the first one loading.
 var monster_feed: Array[String] = []
+## The ones the feed has asked LoadPace for. Each is asked once: one that failed on its worker is
+## dropped (LoadPace would only hand the same failed load back, and the card would wait for ever).
+var monster_asked := {}
 var stats := {"instances":0,"multimeshes":0,"props":0,"resource_visuals":0}
 
 static func layouts() -> Dictionary:
@@ -243,6 +249,7 @@ func build(run: Dictionary) -> void:
 func _start_monster_feed() -> void:
 	monster_scenes.clear()
 	monster_feed.clear()
+	monster_asked.clear()
 	if not prefetch_monsters or not LoadPace.covered: return
 	monster_feed = monster_paths(map_id)
 	var tree := Engine.get_main_loop() as SceneTree
@@ -259,9 +266,15 @@ func _feed_monsters() -> void:
 			if scene != null: monster_scenes.append(scene)
 			monster_feed.pop_front()
 			continue
-		LoadPace.want([path])
-		if LoadPace.pending(path): return
-		# Not readable: its first spawn tries again (monster.gd setup).
+		if not monster_asked.has(path):
+			monster_asked[path] = true
+			LoadPace.want([path])
+			if LoadPace.pending(path): return
+		# Not readable, or asked and gone without coming in (failed on its worker): its first spawn
+		# tries again (monster.gd setup). A failed threaded load stays with ResourceLoader until it
+		# is collected; collected here, that try reads the file afresh.
+		if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_FAILED:
+			ResourceLoader.load_threaded_get(path)
 		monster_feed.pop_front()
 	_stop_monster_feed()
 
@@ -269,21 +282,30 @@ func _stop_monster_feed() -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree.process_frame.is_connected(_feed_monsters): tree.process_frame.disconnect(_feed_monsters)
 
-## Before the batches: the card turns until the last creature model is in.
-func _finish_monster_feed() -> void:
-	while not monster_feed.is_empty() and LoadPace.covered and is_inside_tree():
-		var path: String = monster_feed[0]
-		if LoadPace.pending(path): await LoadPace.fetch(path)
-		else: await get_tree().process_frame
-	# Uncovered meanwhile: the rest load at their first spawn.
-	_stop_monster_feed()
-	monster_feed.clear()
-
-func _exit_tree() -> void:
-	# Leaving before they are in: the next place's loads go first.
+## The feed stops; the models not in yet load at their first spawn (monster.gd setup).
+func _drop_monster_feed() -> void:
 	_stop_monster_feed()
 	for path in monster_feed: LoadPace.queue.erase(path)
 	monster_feed.clear()
+	monster_asked.clear()
+
+## Before the batches: the card turns until the last creature model is in (_feed_monsters takes
+## each one, asks for the next and drops a failed one), for at most MONSTER_FEED_WAIT_MSEC.
+func _finish_monster_feed() -> void:
+	var until := Time.get_ticks_msec()+MONSTER_FEED_WAIT_MSEC
+	while not monster_feed.is_empty() and LoadPace.covered and is_inside_tree() and Time.get_ticks_msec() < until:
+		# Frames spent waiting for a worker's file read, counted as LoadPace.fetch counts them. Not
+		# fetch() itself: after a failed read its take() would read the file again on this thread.
+		LoadPace.frame_waited = true
+		await get_tree().process_frame
+		LoadPace.frame_waited = true
+		LoadPace.last_step = Time.get_ticks_usec()
+	# Uncovered meanwhile, out of the tree or out of time: the rest load at their first spawn.
+	_drop_monster_feed()
+
+func _exit_tree() -> void:
+	# Leaving before they are in: the next place's loads go first.
+	_drop_monster_feed()
 
 # ------------------------------------------------------------------ terrain
 ## Distance beyond the flat play square (negative inside). A square measure keeps the walkable
