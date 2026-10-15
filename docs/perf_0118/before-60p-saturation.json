@@ -1,0 +1,126 @@
+{
+  "elapsed_seconds": 30.374,
+  "process_cpu_seconds": 104.125,
+  "total": {
+    "requests": 5869,
+    "rps": 193.224,
+    "p50_ms": 172.169,
+    "p95_ms": 1207.307,
+    "max_ms": 5894.111,
+    "errors": 0,
+    "statuses": {
+      "200": 5869
+    },
+    "response_bytes": 34678423
+  },
+  "routes": {
+    "chat": {
+      "requests": 177,
+      "rps": 5.827,
+      "p50_ms": 142.108,
+      "p95_ms": 1280.413,
+      "max_ms": 3388.68,
+      "errors": 0,
+      "statuses": {
+        "200": 177
+      },
+      "response_bytes": 13029
+    },
+    "craft": {
+      "requests": 542,
+      "rps": 17.844,
+      "p50_ms": 81.376,
+      "p95_ms": 1194.534,
+      "max_ms": 3823.827,
+      "errors": 0,
+      "statuses": {
+        "200": 542
+      },
+      "response_bytes": 106232
+    },
+    "home": {
+      "requests": 352,
+      "rps": 11.589,
+      "p50_ms": 91.332,
+      "p95_ms": 161.686,
+      "max_ms": 292.843,
+      "errors": 0,
+      "statuses": {
+        "200": 352
+      },
+      "response_bytes": 3755136
+    },
+    "presence": {
+      "requests": 4446,
+      "rps": 146.375,
+      "p50_ms": 185.403,
+      "p95_ms": 1317.125,
+      "max_ms": 5894.111,
+      "errors": 0,
+      "statuses": {
+        "200": 4446
+      },
+      "response_bytes": 30765306
+    },
+    "village": {
+      "requests": 352,
+      "rps": 11.589,
+      "p50_ms": 65.696,
+      "p95_ms": 105.828,
+      "max_ms": 262.618,
+      "errors": 0,
+      "statuses": {
+        "200": 352
+      },
+      "response_bytes": 38720
+    }
+  },
+  "diagnostics": {
+    "presence": {
+      "status": 200,
+      "statements": {
+        "SELECT": 37,
+        "PRAGMA": 2,
+        "BEGIN": 2,
+        "INSERT": 1,
+        "COMMIT": 2
+      },
+      "begin_immediate": 1
+    },
+    "craft": {
+      "status": 200,
+      "statements": {
+        "SELECT": 3,
+        "BEGIN": 1,
+        "COMMIT": 1
+      },
+      "begin_immediate": 1
+    },
+    "sqlite": {
+      "journal_mode": "wal",
+      "busy_timeout": 15000,
+      "synchronous": 2
+    },
+    "object_plan": [
+      "SCAN objects USING INDEX sqlite_autoindex_objects_1"
+    ]
+  },
+  "config": {
+    "players": 60,
+    "seconds": 30.0,
+    "warmup": 3,
+    "interval": 0.0,
+    "history_users": 300,
+    "objects": 24,
+    "label": "before"
+  },
+  "environment": {
+    "python": "3.13.14",
+    "sqlite": "3.50.4",
+    "platform": "Windows-10-10.0.19045-SP0",
+    "cpu_count": 24,
+    "transport": "TestClient",
+    "worker_enabled": false
+  },
+  "database_bytes": 20504576
+}

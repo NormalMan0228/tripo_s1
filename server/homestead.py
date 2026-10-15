@@ -11,6 +11,8 @@ import contextvars
 import copy
 import secrets
 from . import economy
+import json
+from functools import lru_cache
 
 
 # Village furniture coordinates are metres from the town green; this box covers all
