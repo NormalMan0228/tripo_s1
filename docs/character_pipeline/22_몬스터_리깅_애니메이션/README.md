@@ -40,10 +40,34 @@
 
 ## 몬스터별 결과
 
-TABLE_PLACEHOLDER
+| id | 이름 | 맵·티어 | 게임 파일 | 키 m | 클립 길이 (초) | 타격 초 | 걷기/달리기 m/s | 최대 회전 °/프레임 | 경고 |
+|---|---|---|---|---|---|---|---|---|---|
+| goblin | 고블린 | forest · weak | assets/monsters/goblin_forest.glb | 1.2 | idle 2.33 walk 2.13 run 0.60 attack 1.97 hurt 0.97 death 2.97 | 1.0 | 1.64 / 1.908 | 24 | - |
+| werewolf | 늑대인간 | forest · mid | assets/monsters/werewolf_forest.glb | 1.9 | idle 1.47 walk 0.90 run 0.57 attack 1.97 hurt 1.97 death 3.97 | 0.933 | 0.047 / 4.826 | 21 | - |
+| troll | 트롤 | forest · mid | assets/monsters/troll_forest.glb | 2.8 | idle 1.80 walk 1.73 run 1.03 attack 2.97 hurt 1.97 death 3.97 | 1.7 | 0.185 / 4.044 | 23 | attack impact at 1.70 s - check |
+| cyclops | 사이클롭스 | forest · strong | assets/monsters/cyclops_forest.glb | 3.4 | idle 3.60 walk 2.97 run 1.10 attack 2.97 hurt 1.97 death 3.97 | 1.533 | 0.749 / 2.983 | 19 | - |
+| treant | 고목 트렌트 | forest · boss | assets/monsters/treant_forest.glb | 5.0 | idle 3.97 walk 2.07 run 1.17 attack 2.97 hurt 1.97 death 3.97 | 1.833 | 0.27 / 7.497 | 27 | attack impact at 1.83 s - check |
+| skeleton | 해골 병사 | quarry · weak | assets/monsters/skeleton_quarry.glb | 1.7 | idle 1.70 walk 0.90 run 0.53 attack 1.97 hurt 0.97 death 2.97 | 0.867 | 1.617 / 3.343 | 23 | - |
+| lizardman | 리자드맨 | quarry · weak | assets/monsters/lizardman_quarry.glb | 1.7 | idle 2.43 walk 0.90 run 0.90 attack 1.97 hurt 0.97 death 2.97 | 0.667 | 0.246 / 1.206 | 38 | idle: a bone turns 36 degrees in one frame (pop?); death: a bone turns 38 degree |
+| minotaur | 미노타우로스 | quarry · strong | assets/monsters/minotaur_quarry.glb | 2.9 | idle 2.20 walk 2.90 run 1.97 attack 2.97 hurt 1.97 death 3.97 | 1.0 | 0.054 / 0.137 | 21 | - |
+| mummy_king | 미라 왕 | quarry · strong | assets/monsters/mummy_king_quarry.glb | 2.3 | idle 3.97 walk 2.97 run 1.13 attack 2.97 hurt 1.97 death 3.97 | 2.0 | 0.854 / 2.958 | 27 | attack impact at 2.00 s - check |
+| ghoul | 구울 | frost · weak | assets/monsters/ghoul_frost.glb | 1.6 | idle 1.33 walk 1.67 run 0.80 attack 1.97 hurt 0.97 death 3.97 | 0.6 | 0.315 / 1.385 | 26 | clip pattern 'A gaunt, hunched ghoul walking in place with a bow-l' matched 2 ac |
+| ice_shardling | 얼음 조각병 | frost · weak | assets/monsters/ice_shardling_frost.glb | 1.4 | idle 1.80 walk 0.90 run 0.63 attack 1.97 hurt 0.97 death 2.97 | 1.0 | 0.008 / 1.616 | 25 | - |
+| draugr | 드라우그 | frost · weak | assets/monsters/draugr_frost.glb | 1.9 | idle 2.00 walk 1.33 run 1.43 attack 1.97 hurt 1.97 death 3.97 | 1.167 | 0.013 / 1.005 | 22 | - |
+| yeti | 예티 | frost · mid | assets/monsters/yeti_frost.glb | 2.6 | idle 3.80 walk 2.97 run 1.07 attack 2.97 hurt 1.97 death 3.97 | 2.467 | 1.078 / 3.86 | 26 | attack impact at 2.47 s - check |
+| wendigo | 웬디고 | frost · mid | assets/monsters/wendigo_frost.glb | 2.2 | idle 2.43 walk 2.70 run 0.83 attack 2.97 hurt 1.97 death 3.97 | 1.0 | 0.377 / 3.31 | 23 | - |
+| frost_hag | 서리 마녀 | frost · mid | assets/monsters/frost_hag_frost.glb | 1.8 | idle 2.20 walk 1.37 run 0.67 attack 1.97 hurt 1.97 death 3.97 | 1.767 | 0.022 / 2.929 | 37 | death: a bone turns 37 degrees in one frame (pop?); attack impact at 1.77 s - ch |
+| frost_knight | 서리 기사 | frost · mid | assets/monsters/frost_knight_frost.glb | 2.1 | idle 1.80 walk 2.00 run 0.73 attack 1.97 hurt 1.97 death 3.97 | 0.433 | 0.032 / 1.027 | 23 | - |
+| ice_golem | 얼음 골렘 | frost · strong | assets/monsters/ice_golem_frost.glb | 3.2 | idle 3.97 walk 2.97 run 1.33 attack 2.97 hurt 1.97 death 3.97 | 0.633 | 0.158 / 3.93 | 22 | - |
+| glacier_giant | 빙하 거인 | frost · strong | assets/monsters/glacier_giant_frost.glb | 3.6 | idle 2.83 walk 2.97 run 1.70 attack 2.97 hurt 1.97 death 3.97 | 2.4 | 1.329 / 0.206 | 19 | attack impact at 2.40 s - check |
+| boni | 보니 | 마을 공방 | assets/npc/boni.glb | 1.6 | idle 2.27 walk 1.83 work 5.97 | - | 1.576 / - | 17 | - |
+| sol | 솔 | 마을 정원 | assets/npc/sol.glb | 1.6 | idle 2.13 walk 1.67 work 5.77 | - | 1.723 / - | 18 | - |
+| chimera | 키메라 | quarry · boss | assets/monsters/chimera_quarry.glb | 3.0 | idle 2.20 walk 2.90 run 1.97 attack 2.97 hurt 1.97 death 3.97 | 1.0 | 0.056 / 0.142 | 21 | - |
+| dragon | 서리 용 | frost · boss | assets/monsters/dragon_frost.glb | 5.0 | idle 2.83 walk 2.97 run 1.70 attack 2.97 hurt 1.97 death 3.97 | 2.4 | 1.846 / 0.286 | 19 | attack impact at 2.40 s - check |
 
 - 키는 서버 카탈로그(`server/catalog.py` height)를 따릅니다. 하급 4종은 카탈로그에 키가 없어 설계 값을 씁니다.
-- 걷기/달리기 m/s는 제자리 클립에서 땅을 디딘 발이 뒤로 가는 속도입니다. `monster.gd`의 WALK_REF·RUN_REF로 쓰여 발 미끄러짐을 막습니다.
+- 걷기/달리기 m/s 칸은 빌드가 잰 "디딘 발이 뒤로 가는 속도"입니다. AI 동작은 제자리에서 걸어 발이 거의 미끄러지지 않으므로 값이 불안정합니다(0.01~7.5). 그래서 `monster.gd` WALK_REF·RUN_REF에는 키 기반 추정값(1.7 m에서 1.1 / 2.6 m/s)을 넣었습니다.
+- 타격 초는 첫 일격이 멈추는 순간입니다. `monster.gd` ATTACK_IMPACT와 `attack_speed()`로 공격 클립을 서버 준비 시간(windup)에 맞춰 0.6~1.8배속으로 재생합니다. 예티(2.47초)·빙하 거인(2.4초)처럼 준비 동작이 긴 종은 1.8배속으로도 0.2~0.3초 늦게 맞습니다.
 
 ## 게임 연결 (탐험 몬스터 교체)
 

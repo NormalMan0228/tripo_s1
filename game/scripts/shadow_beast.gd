@@ -245,7 +245,7 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 	if phase=="windup" and previous!="windup":
 		windups+=1
 		if not (boss and windups%ROAR_EVERY==0 and voice("roar")): voice("windup")
-		if monster: monster.play("attack",0.08,1.0,true)
+		if monster: monster.play("attack",0.08,monster.attack_speed(float(state.get("windup",0.0))),true)
 	if previous=="windup" and phase in ["recover","charge"]:
 		# A blow that interrupts the wind-up (hp drops in the same snapshot) cancels the strike call.
 		if phase=="charge": voice("charge")

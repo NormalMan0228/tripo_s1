@@ -545,7 +545,7 @@
  },
  "monsters_v3_anim": {
   "cap_category1": 3000,
-  "spent": 2740,
+  "spent": 2780,
   "monsters": {
    "goblin": {
     "task": "29151d3f-bcd0-4571-8d7f-64eb1026e91f",
@@ -718,11 +718,12 @@
     "task": "14e2b3d8-b10e-4936-879f-413886cdbc0e",
     "texture_2k": 10,
     "rig_humanoid": 20,
-    "ai_motions": 6,
-    "credits": 150,
+    "ai_motions": 7,
+    "credits": 170,
     "glb": "mon_v3/anim/game/ice_golem.glb",
     "fbx": "mon_v3/anim/src/ice_golem/",
-    "date": "2026-10-16"
+    "date": "2026-10-16",
+    "note": "death regenerated once (first one stayed standing), +20"
    },
    "glacier_giant": {
     "task": "11fa5e3d-9c60-4b04-a105-566735b7ca41",
@@ -735,7 +736,7 @@
     "date": "2026-10-16"
    }
   },
-  "balance_after": 10055,
+  "balance_after": 10035,
   "cap_history": [
    "2026-10-15 user: 2,600 (texture included)",
    "2026-10-16 user via 총괄: 3,000 (all 6 motions AI per monster)"

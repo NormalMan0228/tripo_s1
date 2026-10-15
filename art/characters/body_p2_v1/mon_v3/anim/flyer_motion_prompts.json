@@ -1,0 +1,160 @@
+{
+  "note": "2026-10-16 prep for category 2 (winged/floating humanoids). Not generated yet: waits for the user credit decision. Hover = build option (Blender), arms-in-wings rule for harpy.",
+  "monsters": [
+    {
+      "id": "harpy",
+      "seen": "harpy_front/left (re-checked on a contact sheet): eagle-headed bird beast that reads more bird-man than bird-woman. Hooked beak with jagged teeth, glowing yellow eyes, spiky orange feather crest, feathered ruff on the chest. It has NO separate arms or hands: two big brown/red feathered wings come straight off the shoulders where the arms would be. They are spread level in the front view and raised in the side view. Gold-trimmed leather chest straps and a short armored skirt with small horn spikes at the hips. Short red tail feathers behind. Lean, light build. Thin yellow bird legs with gold/leather greaves and big curled talon feet, and the side view shows bent knees. Because the Mixamo arm bones will sit inside the wings, every arm cue is a wide, wing-like spread, and the attack uses the talons.",
+      "personality": "Weak forest raider. A twitchy, shrill bird of prey: quick head twitches, always scanning, hit-and-run talon strikes. It is light and fast, so it moves in sharp bursts and recoils a lot. Attack concept: double-talon grasp (knees tucked, then both feet shoot forward together with talons spread). Hurt: knocked sideways like a bird thrown off balance, then levels out. Death concept: dead-bird drop (falls feet first, tips onto its back, legs curled up). [review] Idle: 'rising and lowering' became 'arms slowly beating up and down', so the AI does not add squats (Blender adds the bob). Attack: the word 'raking' was replaced by 'grasping' to keep clear of the skeleton X rake. Hurt: changed from a backward recoil to a sideways knock, because the wraith also recoils backward with its arms up. Death: reordered so 'lies still' comes last.",
+      "clips": {
+        "idle": {
+          "prompt": "A fierce winged harpy hovers in place: both arms spread wide out to the sides at shoulder height, slowly beating up and down, legs dangling with knees bent and talons curled, head tilting in quick bird-like twitches left and right, chest heaving. In place, seamless loop.",
+          "seconds": 3
+        },
+        "walk": {
+          "prompt": "A winged harpy glides slowly forward in place: torso leaned forward, arms spread wide and held out, body banking gently left then right, legs trailing loosely behind with knees bent, head stretched forward scanning the ground below. In place, seamless loop.",
+          "seconds": 3
+        },
+        "run": {
+          "prompt": "A winged harpy flies fast in a diving charge in place: torso pitched well forward, arms swept back behind its body in a V, legs tucked up tight under the hips, head and neck stretched forward, body rocking slightly with each beat. In place, seamless loop.",
+          "seconds": 2
+        },
+        "attack": {
+          "prompt": "A winged harpy hovering with arms spread wide leans back and pulls both knees up to its chest, then shoots both feet straight forward together, talons spread, in one fast grasping strike, holds it briefly, then lets its legs drop back down into its hover pose.",
+          "seconds": 3
+        },
+        "hurt": {
+          "prompt": "A hovering winged harpy is hit and knocked sideways: its body tilts hard to the left, the left arm dips low while the right arm flares up, legs flail loosely, then it shakes its head in quick twitches and levels out into its hover pose with arms spread wide.",
+          "seconds": 2
+        },
+        "death": {
+          "prompt": "A winged harpy is struck in mid-air: head snaps back and arms flail upward, then it drops straight down feet first, knees buckle as it lands, it tips over backward onto its back, curls both legs up toward its chest, lets its arms fall flat and lies still.",
+          "seconds": 4
+        }
+      }
+    },
+    {
+      "id": "imp",
+      "seen": "imp_front/left (re-checked): small, stocky red devil with an oversized bald head. Two curved horns, big pointed ears, glowing yellow eyes, a scowl with two small fangs. Medium bat wings come out of the upper back behind the shoulders, separate from the arms. Compact, muscular chibi body with a six-pack. A leather strap runs across the chest, plus a studded belt with a ragged leather loincloth. Long arms hang at its sides and end in clawed hands. Short thick legs with clawed feet. Correction: the side view shows a LONG thin tail with an arrowhead tip trailing behind (not a short one), but tails get no AI motion. The real arms and hands are free for gestures and throwing. It carries no prop, so the fireball is a VFX added later and the prompt only describes the throwing motion.",
+      "personality": "Weak desert pest. A cocky, mischievous, smug brat: fidgets, swings its legs, folds its arms, and flies in a jaunty, showy way. Quick, comic timing. Attack concept: one-arm overhand fireball pitch (wind-up, whip, follow-through, cocky shrug). Hurt: knocked backward with its arms windmilling, then shakes an angry fist. Death concept: doubles over, drops, takes a clumsy forward roll and ends splayed on its back like a starfish. [review] Idle: removed 'like a kid on a tall stool', which risked a sitting pose and a sit-down transition that would break the loop. Also removed 'smug look', since there is no face rig. Run: 'legs kicking' became 'legs trailing behind ... in a quick tight flutter' to avoid running steps. Attack: a pitch normally includes a forward stride, so the prompt adds 'legs dangling' and 'without stepping', and it says 'as if pitching a fireball'. Hurt: the two-hands-on-head clutch was replaced because the lich hurt also puts a hand on the head (its crown).",
+      "clips": {
+        "idle": {
+          "prompt": "A small cocky winged imp hovers in place: arms crossed over its chest, chin raised, short legs dangling and swinging back and forth from the knees one after the other, head tilting smugly from side to side, shoulders bobbing gently. In place, seamless loop.",
+          "seconds": 4
+        },
+        "walk": {
+          "prompt": "A small winged imp drifts slowly forward in place: hands clasped behind its back, chest puffed out, body leaning slightly forward, short legs dangling and swaying loosely from the knees, head bobbing smugly from side to side. In place, seamless loop.",
+          "seconds": 3
+        },
+        "run": {
+          "prompt": "A small winged imp zips forward in a fast flying charge in place: torso pitched forward, arms stretched straight back along its sides with claws spread, short legs trailing behind with knees bent in a quick tight flutter, head low and pushed forward. In place, seamless loop.",
+          "seconds": 2
+        },
+        "attack": {
+          "prompt": "A small winged imp hovering in place with legs dangling rears back, cocks its right arm behind its head and points its left arm forward to aim, then whips the right arm over in a hard overhand throw as if pitching a fireball, leaning in without stepping, then snaps upright with a cocky shrug.",
+          "seconds": 2
+        },
+        "hurt": {
+          "prompt": "A small hovering imp is hit and knocked backward: head snaps back, short legs kick up in front, both arms windmill wildly for balance, then it rights itself, shakes one clawed fist angrily and settles back into its hover pose with legs dangling.",
+          "seconds": 2
+        },
+        "death": {
+          "prompt": "A small winged imp clutches its belly with both hands and doubles over, drops out of the air, tumbles forward into a clumsy roll across the ground, then flops onto its back with arms and legs splayed out wide like a starfish and lies still.",
+          "seconds": 4
+        }
+      }
+    },
+    {
+      "id": "gargoyle",
+      "seen": "gargoyle_front/left (re-checked): heavy cracked-stone beast with a gray-brown granite surface and dark cracks all over. Horned head with two large curved horns, small inner horns and pointed ears. Glowing orange eyes and a wide mouth full of jagged teeth. Huge spiked stone shoulder pads, a broad chest and thick arms that hang low and end in large clawed hands. Stone belt with a shield buckle and a plate loincloth. Thick, slightly bent legs with blocky knees and big three-toed clawed feet. The side view shows a hunched, forward-leaning posture: the head juts forward, the back is rounded and the arms hang in front of the thighs. Large stone bat wings are mounted on the back, separate from the arms. Wide, dense, heavy build. No weapon or prop.",
+      "personality": "Mid-tier desert sentinel. A slow, ponderous, stubborn guardian statue come alive: heavy weight, small recoil, deliberate moves, rolls its shoulders. Attack concept: two-handed crushing clap (arms swing wide, then clap together in front of the chest). Death concept: drops into a squat, sits down hard, then slowly topples back flat like a toppled monument. [review] Attack: the clap moved from 'in front of its face' to 'in front of its chest', so it lands at player height while hovering 0.3-0.6 m up, and 'legs hanging' was added. The other clips were already compliant. The death ends with 'completely still'.",
+      "clips": {
+        "idle": {
+          "prompt": "A heavy stone gargoyle hovers in place, hunched forward: broad shoulders rolled in, thick arms hanging low in front with clawed hands open, knees bent and drawn up slightly, chest rising slowly with deep breaths, head turning slowly left and right. In place, seamless loop.",
+          "seconds": 4
+        },
+        "walk": {
+          "prompt": "A heavy stone gargoyle drifts slowly forward in place: hunched torso leaned forward, thick arms hanging low and swaying with each slow heave, shoulders rolling side to side, knees bent, feet hanging loose, head low and steady. In place, seamless loop.",
+          "seconds": 3
+        },
+        "run": {
+          "prompt": "A heavy stone gargoyle charges forward in fast flight in place: torso pitched forward, head lowered with horns leading, both arms bent and pulled back with elbows high and fists clenched, legs tucked up under the hips, shoulders rocking. In place, seamless loop.",
+          "seconds": 2
+        },
+        "attack": {
+          "prompt": "A heavy stone gargoyle hovering hunched with legs hanging spreads both thick arms wide to the sides, leans its chest forward, then swings both arms together and claps its huge clawed hands in front of its chest with crushing force, holds the clap, then lowers its arms back down.",
+          "seconds": 3
+        },
+        "hurt": {
+          "prompt": "A heavy stone gargoyle takes a hit and barely moves: torso rocks back a little, one forearm rises to guard its face, head shakes once, then it rolls its broad shoulders and sinks back into its low hunched hover pose.",
+          "seconds": 2
+        },
+        "death": {
+          "prompt": "A heavy stone gargoyle loses its flight and drops heavily into a deep squat, then sits down hard on the ground with legs out in front, slumps, and slowly topples backward to lie flat on its back, arms limp at its sides, completely still.",
+          "seconds": 4
+        }
+      }
+    },
+    {
+      "id": "frost_wraith",
+      "seen": "Front, left and right refs checked (front/left re-checked on a contact sheet). A pale icy-blue hooded ghost in one long tattered robe: a pointed hood with a black empty face and two glowing cyan slit eyes, a jagged icicle-edged capelet and collar, and wide bell sleeves. Long skeletal ice claws with hooked talons hang out of the sleeves, and the arms are held forward and out in an A-pose with the claws open. No legs or feet show: the robe ends in long dripping icicle tatters, and the side view is a slim, upright column with the claw reaching forward. Light, narrow build, about human height. No weapon or prop. The hood moves with the Head bone and the robe tatters follow the hidden legs, so the legs are kept together and hanging.",
+      "personality": "A silent, weak, eerie stalker. It drifts and sways like a sheet in cold wind, reaches out with its claws, then swoops in suddenly like a reaper, and flinches like something startled when hit. It is light and fast with no weight behind it. Attack concept: one-arm diagonal reaping slash from high right to low left. Death concept: falling sheet. The wind leaves it, it goes limp and sways side to side as it sinks, then settles on its side, hunched in on itself. [review] Death: the old self-hug curl (curled up on the ground) overlapped 'howl and curl', and its arms-around-the-chest ending would match the lich's folded-hands death, so it became the limp, swaying falling-sheet sink. Run: 'almost level' became 'far forward', so the model does not lie prone on the floor, and the duration went from 1 s to 2 s for a cleaner loop (play it faster in-engine if needed). Hurt: 1 s became 2 s, because a stretch-up plus a return to the hover in 1 s would likely be cut off. Idle: added 'arms drifting gently' in case finger bones are not animated. Attack: added 'legs hanging together', and the wind-up is now 'high behind its head'.",
+      "clips": {
+        "idle": {
+          "prompt": "A hooded ice wraith floats in place, legs hanging limp and close together with toes pointing down, body swaying slowly from side to side, head tilted low and turning slightly, both skeletal arms held forward and drifting gently, clawed fingers slowly curling and uncurling. In place, seamless loop.",
+          "seconds": 3
+        },
+        "walk": {
+          "prompt": "A hooded ice wraith glides slowly forward in place without taking any steps: torso leaning forward, head low, both clawed arms reaching ahead and drifting gently up and down in turn, legs hanging limp together and trailing slightly behind the body. Gliding in place, seamless loop.",
+          "seconds": 3
+        },
+        "run": {
+          "prompt": "A hooded ice wraith flies forward at high speed in place: body pitched far forward, hooded head pushed ahead, both arms swept straight back along its sides with claws trailing, legs held straight together and trailing behind, a quick ripple through its spine. Flying in place, seamless loop.",
+          "seconds": 2
+        },
+        "attack": {
+          "prompt": "A hooded ice wraith floating in place with legs hanging together rises tall and draws its right skeletal claw high behind its head, then swoops forward and down in one fast diagonal reaping slash from high right to low left across an unseen foe, body folding low after it, then floats back up into its hover.",
+          "seconds": 2
+        },
+        "hurt": {
+          "prompt": "A hooded ice wraith floating in place is struck: it jolts backward, stretching tall with both arms flung straight up and its hooded head tipped back, legs swinging forward, then sinks back and hunches forward into its hover pose, claws reaching ahead again.",
+          "seconds": 2
+        },
+        "death": {
+          "prompt": "A hooded ice wraith is struck down in the air: its head drops and both arms fall limp, then it sinks slowly, swaying from side to side like a falling sheet, knees folding under it as it reaches the ground, and it settles onto its side, hunched in on itself, completely still.",
+          "seconds": 4
+        }
+      }
+    },
+    {
+      "id": "lich",
+      "seen": "Front and left refs checked (re-checked on a contact sheet). A stylised skeleton king with a cream bone skull and a big grinning fanged jaw, glowing green eye sockets, and a tall dark iron spiked crown with rivets. It wears a rust-brown tattered robe with a heavy hood or cowl bunched around the shoulders, wide ragged sleeves, a riveted iron belt and a torn knee-length skirt. Long bony arms end in oversized skeletal hands with long, clawed fingers. Thin bare bone legs and large bony feet show below the robe. In the side view the skull juts forward of the chest with a slight stoop. Lean, about human height. No staff, weapon or prop. The crown moves with the Head bone.",
+      "personality": "A proud and contemptuous undead sorcerer-king, the strong frost caster. It holds itself upright and regal, always weaving magic with its hands, and gives judgement with a single pointing finger instead of brute force. When hit, its first thought is its crown. It moves slowly and deliberately, with some weight, but is never clumsy. Attack concept: judgement point. Hand drawn up beside the skull, then the arm flung straight out to point one finger at the foe (the frost spell VFX comes from the fingertip). Death concept: lying in state. Too proud to fall, it sinks down, lays itself out on its back and folds its hands on its chest like a tomb effigy. [review] Death: the old backward topple with arms flung wide repeated 'falls back' and 'arch and sprawl', so it became the lying-in-state concept. Attack: the overhead raise copied the wraith's wind-up, so the hand now draws up beside the skull before the point. Idle: 'fingers writhing' became 'hands slowly circling', because finger bones may not be animated. Walk: added a slight forward lean (walk rule), and 'rising and sinking' now applies only to the hands, so the body makes no knee bobs (Blender adds the bob). Hurt: 'glares' became 'raises its chin', since there is no face rig.",
+      "clips": {
+        "idle": {
+          "prompt": "A crowned skeletal lich hovers upright in place, legs dangling loosely with knees slightly bent and toes pointing down, chin raised in arrogance, both bony hands held low at its sides and slowly circling as if weaving a spell, skull turning slowly left then right. In place, seamless loop.",
+          "seconds": 4
+        },
+        "walk": {
+          "prompt": "A crowned skeletal lich glides forward in place without stepping, leaning slightly forward with chest out and chin high, both bony arms held a little out from its sides with palms down, hands gently rising and sinking, skull swaying slowly, legs dangling with knees softly bent. Gliding in place, seamless loop.",
+          "seconds": 3
+        },
+        "run": {
+          "prompt": "A crowned skeletal lich charges forward through the air in place: torso pitched forward, skull pushed out ahead, both bony arms spread back and out to the sides with fingers splayed, legs tucked up and bent beneath it, shoulders bobbing in a fast rhythm. Flying in place, seamless loop.",
+          "seconds": 2
+        },
+        "attack": {
+          "prompt": "A crowned skeletal lich hovering in place with legs dangling presses its left hand to its chest and draws its right hand up beside its skull, fingers clawed, leaning back, then flings the right arm straight forward to point one finger at an unseen foe, skull jutting forward, holds the point, then lowers the arm.",
+          "seconds": 3
+        },
+        "hurt": {
+          "prompt": "A crowned skeletal lich hovering in place is struck: its upper body rocks back and twists to the side as its right hand flies up to clutch the crown on its skull, then it straightens upright, slowly lowers the hand and raises its chin, back in its hover pose with legs dangling.",
+          "seconds": 2
+        },
+        "death": {
+          "prompt": "A crowned skeletal lich is struck in the air: it straightens proudly with chin raised, then sinks slowly down to the ground, lowers itself onto its back, lies out straight with legs together, folds both bony hands over its chest like a king on his tomb, and lies completely still.",
+          "seconds": 4
+        }
+      }
+    }
+  ]
+}

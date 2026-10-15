@@ -9,13 +9,15 @@ extends Node3D
 const DIR := "res://assets/monsters/"
 const VARIANTS := ["forest", "quarry", "frost"]
 const LOOPS := ["idle", "walk", "run"]
-## Ground speed (m/s) matching speed_scale 1.0 of the walk / run clips.
-## Mon_v3 species (Tripo P2, AI in-place clips): first estimate from height (1.1 / 2.6 m/s at 1.7 m),
-## to be replaced by the stride measured in tools/body_gen/build_game_monster.py (ground_speed_mps).
+## Ground speed (m/s) matching speed_scale 1.0 of the walk / run clips (mon_v3 species: estimate from
+## height, 1.1 / 2.6 m/s at 1.7 m; their AI clips walk in place, so there is no foot slide to measure).
 const WALK_REF := {"wolf": 1.1, "boar": 0.9, "brute": 0.75, "wisp": 1.0, "shroom": 0.8,
 	"goblin": 0.92, "werewolf": 1.16, "troll": 1.41, "cyclops": 1.56, "treant": 1.89, "skeleton": 1.1, "lizardman": 1.1, "minotaur": 1.44, "mummy_king": 1.28, "ghoul": 1.07, "ice_shardling": 1.0, "draugr": 1.16, "yeti": 1.36, "wendigo": 1.25, "frost_hag": 1.13, "frost_knight": 1.22, "ice_golem": 1.51, "glacier_giant": 1.6, "chimera": 1.46, "dragon": 1.89}
 const RUN_REF := {"wolf": 2.4, "boar": 2.6, "brute": 1.3, "wisp": 2.0, "shroom": 1.5,
 	"goblin": 2.18, "werewolf": 2.75, "troll": 3.34, "cyclops": 3.68, "treant": 4.46, "skeleton": 2.6, "lizardman": 2.6, "minotaur": 3.4, "mummy_king": 3.02, "ghoul": 2.52, "ice_shardling": 2.36, "draugr": 2.75, "yeti": 3.22, "wendigo": 2.96, "frost_hag": 2.68, "frost_knight": 2.89, "ice_golem": 3.57, "glacier_giant": 3.78, "chimera": 3.45, "dragon": 4.46}
+## Seconds into the attack clip where the blow lands (mon_v3 species, measured at build time):
+## attack_speed() plays the clip so that moment meets the server wind-up.
+const ATTACK_IMPACT := {"goblin": 1.0, "werewolf": 0.93, "troll": 1.7, "cyclops": 1.53, "treant": 1.83, "skeleton": 0.87, "lizardman": 0.67, "minotaur": 1.0, "mummy_king": 2.0, "ghoul": 0.6, "ice_shardling": 1.0, "draugr": 1.17, "yeti": 2.47, "wendigo": 1.0, "frost_hag": 1.77, "frost_knight": 0.43, "ice_golem": 0.63, "glacier_giant": 2.4, "chimera": 1.0, "dragon": 2.4}
 const RIM := {"forest": Color("86d39a"), "quarry": Color("ff9a52"), "frost": Color("a8dcff")}
 const OVERLAY_CODE := """
 shader_type spatial;
@@ -142,6 +144,13 @@ func play(clip_name: String, blend := 0.15, speed := 1.0, restart := false) -> v
 	clip = clip_name
 	player.play(clip_name, blend)
 	if restart: player.seek(0.0, true)
+
+## Clip speed that lands this species' blow at `windup` seconds (1.0 when unknown), kept
+## within 0.6-1.8x so the motion still reads.
+func attack_speed(windup: float) -> float:
+	var at: float = ATTACK_IMPACT.get(species, 0.0)
+	if at <= 0.0 or windup <= 0.05: return 1.0
+	return clampf(at / windup, 0.6, 1.8)
 
 func finished() -> bool:
 	return player == null or not player.is_playing() or (clip not in LOOPS and player.current_animation_position >= length(clip) - 0.02)
