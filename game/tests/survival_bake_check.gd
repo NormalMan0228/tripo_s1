@@ -5,14 +5,29 @@ extends SceneTree
 ## Fails when a bake is stale (layouts, survival_map.gd, survival_bake.gd or the prop models present
 ## changed since: run tools/bake_survival.py), when the baked build is not used, or when the two builds
 ## differ in any node (kind, place, visibility, shadows, materials and their parameters, meshes: the
-## generated ones array by array, MultiMesh instance transforms and custom data), in the rng state
-## after the build, in the map's stats or in its props. Each map is built for the layout with no
+## generated ones array by array, MultiMesh instance counts), in the instances the build puts into its
+## MultiMeshes (prop batches and grass, transforms and custom data exactly, recorded as they go in: a
+## headless run cannot read MultiMesh instances back), in the rng state after the build, in the map's
+## stats or in its props. Each map is built for the layout with no
 ## resource nodes and with a fixture of 12 nodes (the inside scatter then differs from the bake tool's
 ## build), and once with a moved obstacle, which must build without the bake.
 ## Prints SURVIVAL_BAKE_CHECK {...}.
 const Map = preload("res://maps/survival/survival_map.gd")
 const SurvivalBake = preload("res://maps/survival/survival_bake.gd")
 var failures: Array[String] = []
+## The map with a record of what goes into its MultiMeshes (test only; the build itself is unchanged).
+const RECORDER := """
+extends "res://maps/survival/survival_map.gd"
+var recorded := []
+func _finish_batches() -> void:
+	for key in batches: recorded.append("batch %s %d %d" % [key, batches[key].xforms.size(), hash(var_to_bytes(batches[key].xforms))])
+	super._finish_batches()
+func _grass_chunks() -> Dictionary:
+	var chunks: Dictionary = await super._grass_chunks()
+	for key in chunks: recorded.append("grass %s %d %d" % [key, chunks[key].size(), hash(var_to_bytes(chunks[key]))])
+	return chunks
+"""
+var recorder: GDScript
 var name_numbers := RegEx.create_from_string("@(\\w+)@\\d+")
 
 func _initialize() -> void:
@@ -29,12 +44,16 @@ func run() -> void:
 		failures.append("stale (%s): run tools/bake_survival.py" % ", ".join(stale))
 		finish(report)
 		return
+	recorder = GDScript.new()
+	recorder.source_code = RECORDER
+	recorder.reload()
 	var all := Map.layouts()
 	var total_differences := 0
 	for map_id in SurvivalBake.MAPS:
 		var spec: Dictionary = all.maps[map_id]
 		var entry := {}
 		var reference_nodes := []
+		var reference_recorded := []
 		# Warm-up: the props are read once, so both timed builds find them in the resource cache.
 		var warm := await build(map_id, reference(map_id, spec), false)
 		release(warm)
@@ -50,15 +69,18 @@ func run() -> void:
 				var a: String = runtime.nodes[i] if i < runtime.nodes.size() else "(none)"
 				var b: String = baked.nodes[i] if i < baked.nodes.size() else "(none)"
 				if a != b: differ.append("%s / %s" % [a.substr(0, 220), b.substr(0, 220)])
-			for key in ["rng", "report", "props"]:
+			for key in ["rng", "report", "props", "recorded"]:
 				if runtime[key] != baked[key]: differ.append("%s: %s / %s" % [key, str(runtime[key]).substr(0, 220), str(baked[key]).substr(0, 220)])
 			total_differences += differ.size()
 			if not differ.is_empty(): failures.append("%s %s: %d differences" % [map_id, fixture, differ.size()])
-			if fixture == "layout": reference_nodes = runtime.nodes
+			if fixture == "layout":
+				reference_nodes = runtime.nodes
+				reference_recorded = runtime.recorded
 			else:
 				# The comparison sees a change: the fixture's nodes move the inside scatter and the grass.
 				var seen := 0
 				for i in mini(runtime.nodes.size(), reference_nodes.size()): if runtime.nodes[i] != reference_nodes[i]: seen += 1
+				for i in mini(runtime.recorded.size(), reference_recorded.size()): if runtime.recorded[i] != reference_recorded[i]: seen += 1
 				entry["fixture_differences"] = seen
 				if seen == 0: failures.append("%s: the node description did not see the fixture's nodes" % map_id)
 			entry[fixture] = {"runtime_ms":runtime.ms, "baked_ms":baked.ms, "nodes":[runtime.nodes.size(), baked.nodes.size()],
@@ -108,7 +130,7 @@ func build(map_id: String, state: Dictionary, use_bake: bool) -> Dictionary:
 	viewport.own_world_3d = true
 	viewport.size = Vector2i(64, 64)
 	root.add_child(viewport)
-	var map: Node3D = Map.new()
+	var map: Node3D = recorder.new()
 	viewport.add_child(map)
 	var started := Time.get_ticks_usec()
 	await map.build(state)
@@ -121,7 +143,8 @@ func build(map_id: String, state: Dictionary, use_bake: bool) -> Dictionary:
 	var nodes := []
 	describe(map, map, nodes)
 	return {"viewport":viewport, "map":map, "ms":snappedf(ms, 0.1), "used_bake":map.baked != null, "rng":str(map.rng.state),
-		"report":JSON.stringify(map.report(), "", true), "props":props, "nodes":nodes, "has_ground":map.has_node("Ground")}
+		"report":JSON.stringify(map.report(), "", true), "props":props, "nodes":nodes, "has_ground":map.has_node("Ground"),
+		"recorded":map.recorded}
 
 func release(result: Dictionary) -> void:
 	(result.viewport as Node).queue_free()
@@ -179,12 +202,7 @@ func mesh(value: Mesh) -> String:
 			parts.append(material(value.surface_get_material(surface)))
 	return str(parts)
 
+## (Instance transforms are compared from the build's record: headless they read back as identity.)
 func multimesh(value: MultiMesh) -> String:
 	if value == null: return "none"
-	var transforms := PackedFloat32Array()
-	var custom := PackedColorArray()
-	for i in value.instance_count:
-		var xf := value.get_instance_transform(i)
-		transforms.append_array([xf.basis.x.x, xf.basis.x.y, xf.basis.x.z, xf.basis.y.x, xf.basis.y.y, xf.basis.y.z, xf.basis.z.x, xf.basis.z.y, xf.basis.z.z, xf.origin.x, xf.origin.y, xf.origin.z])
-		if value.use_custom_data: custom.append(value.get_instance_custom_data(i))
-	return str([value.instance_count, value.use_custom_data, hash(transforms), hash(custom), mesh(value.mesh)])
+	return str([value.instance_count, value.use_custom_data, value.transform_format, mesh(value.mesh)])

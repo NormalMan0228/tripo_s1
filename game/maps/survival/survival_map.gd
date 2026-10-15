@@ -1135,6 +1135,29 @@ func _grass() -> void:
 	mat.set_shader_parameter("high_color",Color(look.grass_high))
 	mat.set_shader_parameter("frost",float(look.snow))
 	materials.append(mat)
+	var chunks: Dictionary = await _grass_chunks()
+	for key in chunks:
+		await LoadPace.step("grass chunk")
+		var list: Array = chunks[key]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_custom_data = true
+		mm.mesh = blade
+		mm.instance_count = list.size()
+		for i in list.size():
+			mm.set_instance_transform(i,list[i][0])
+			mm.set_instance_custom_data(i,list[i][1])
+		var node := MultiMeshInstance3D.new()
+		node.multimesh = mm
+		node.material_override = mat
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(node)
+		stats.multimeshes += 1
+		stats.instances += list.size()
+
+## The grass tufts per CHUNK cell (Vector2i): [transform, custom data] in the order they are placed.
+## They draw from the map's rng after the inside scatter, so they change with the run's nodes.
+func _grass_chunks() -> Dictionary:
 	var chunks := {}
 	var total := int(look.grass)+int(look.rim_grass)
 	for i in total*2:
@@ -1158,24 +1181,7 @@ func _grass() -> void:
 		if not chunks.has(key): chunks[key] = []
 		var s := rng.randf_range(0.7,1.3)
 		chunks[key].append([Transform3D(Basis(Vector3.UP,rng.randf()*TAU).scaled(Vector3(s,s*rng.randf_range(0.8,1.25),s)),Vector3(p.x,y-0.02,p.y)),Color(rng.randf(),rng.randf(),0,0)])
-	for key in chunks:
-		await LoadPace.step("grass chunk")
-		var list: Array = chunks[key]
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.use_custom_data = true
-		mm.mesh = blade
-		mm.instance_count = list.size()
-		for i in list.size():
-			mm.set_instance_transform(i,list[i][0])
-			mm.set_instance_custom_data(i,list[i][1])
-		var node := MultiMeshInstance3D.new()
-		node.multimesh = mm
-		node.material_override = mat
-		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(node)
-		stats.multimeshes += 1
-		stats.instances += list.size()
+	return chunks
 
 func _tuft_mesh() -> ArrayMesh:
 	var st := SurfaceTool.new()
