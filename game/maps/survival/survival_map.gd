@@ -20,6 +20,7 @@ const GRASS_SHADER := preload("res://maps/survival/survival_grass.gdshader")
 const CHUNK := 12.0
 ## Under the loading card the build is paced over frames and the models load on worker threads.
 const LoadPace = preload("res://scripts/load_pace.gd")
+const Monster = preload("res://scripts/monster.gd")
 const LOD_ZOOM := 18.5
 const FAR := 64.0
 const RESOURCE_KINDS := ["tree","stone","berry","fiber"]
@@ -100,6 +101,11 @@ var dusk := 0.0
 var focus := Vector3.ZERO
 var follow_particles: Array[Node3D] = []
 var adopt_wait := 0.0
+## The night's creatures (every species in this map's variant) read on worker threads once the card
+## is gone, so the first spawn of a species finds its model in the resource cache (monster.gd setup).
+var monster_wait := 1.0
+var monster_pending: Array[String] = []
+var monster_scenes: Array[Resource] = []
 var stats := {"instances":0,"multimeshes":0,"props":0,"resource_visuals":0}
 
 static func layouts() -> Dictionary:
@@ -122,9 +128,21 @@ const MAP_PROPS := {
 
 static func resource_paths(map: String) -> Array:
 	var paths := []
-	for id in MAP_PROPS.get(map, MAP_PROPS.forest):
+	var placed: Array = MAP_PROPS.get(map, MAP_PROPS.forest)
+	for id in placed:
 		for path: String in prop_paths(id): if not path.is_empty(): paths.append(path)
+	# The resource models (dressed when the run's nodes arrive, right after the build) and the
+	# camp hearth; resource-only models without their LOD files, which they never show.
+	for kind in RESOURCE_MODELS.get(map, RESOURCE_MODELS.forest):
+		var id: String = RESOURCE_MODELS.get(map, RESOURCE_MODELS.forest)[kind][0]
+		if id in placed: continue
+		var path: String = prop_paths(id)[0]
+		if not path in paths: paths.append(path)
+	paths.append(CAMP)
 	return paths
+
+## The camp's hearth model (camp centre of every map).
+const CAMP := "res://assets/storybook_camp_v1.glb"
 
 ## A prop's model and its level-of-detail model ("" when it has none).
 static func prop_paths(id: String) -> Array:
@@ -162,6 +180,12 @@ func build(run: Dictionary) -> void:
 	for path: String in resource_paths(map_id): if LoadPace.pending(path): await LoadPace.fetch(path)
 	await LoadPace.step("survival features")
 	await _build_features()
+	# The resource models, prepared here under the card: main.gd dresses the run's nodes with them
+	# in the frame the expedition starts (update_run), which then only places nodes.
+	var models: Dictionary = RESOURCE_MODELS[map_id]
+	for kind in models:
+		await LoadPace.step("resource models")
+		_prop(models[kind][0],models[kind][0] in MAP_PROPS[map_id])
 	LoadPace.done(0.6)
 	span = LoadPace.narrow(0.6, 0.9)
 	await _build_scatter()
@@ -486,11 +510,14 @@ func _hazard_dressing(h: Dictionary) -> void:
 		add_child(sparks)
 
 # ------------------------------------------------------------------ props
-func _prop(id: String) -> Dictionary:
-	if props.has(id): return props[id]
-	var paths := prop_paths(id)
-	var path: String = paths[0]
-	var lod_path: String = paths[1]
+## `want_low` false skips the prop's LOD file (resource models, which never show it); a later call
+## that wants it loads it then.
+func _prop(id: String, want_low := true) -> Dictionary:
+	if props.has(id):
+		var known: Dictionary = props[id]
+		if want_low and known.get("low_skipped",false): _add_low(id,known)
+		return known
+	var path: String = prop_paths(id)[0]
 	var entry := {"ok":false}
 	if not ResourceLoader.exists(path):
 		props[id] = entry
@@ -500,40 +527,78 @@ func _prop(id: String) -> Dictionary:
 	var meshes := scene.find_children("*","MeshInstance3D",true,false)
 	if meshes.is_empty():
 		scene.free(); props[id] = entry; return entry
-	# Every mesh node of the GLB merged into one mesh (node transforms baked in), one converted
-	# material per surface, so a prop is one MultiMesh / one node however its GLB is split.
-	var high := ArrayMesh.new()
-	var converted := {}
-	for node in meshes:
-		var source := node as MeshInstance3D
-		var xf := _scene_transform(scene,source)
-		for surface in source.mesh.get_surface_count():
-			_append_surface(high,source.mesh,surface,xf)
-			var original: Material = source.get_surface_override_material(surface)
-			if original == null: original = source.mesh.surface_get_material(surface)
-			var key := original.get_instance_id() if original else 0
-			if not converted.has(key): converted[key] = _convert_material(original,id)
-			high.surface_set_material(high.get_surface_count()-1,converted[key])
-	scene.free()
-	var low: ArrayMesh = null
-	if lod_path != "" and ResourceLoader.exists(lod_path):
-		var lod_scene := (LoadPace.take(lod_path) as PackedScene).instantiate()
-		var lod_meshes := lod_scene.find_children("*","MeshInstance3D",true,false)
-		var candidate := ArrayMesh.new()
-		for node in lod_meshes:
+	var high: Mesh
+	var material: ShaderMaterial = null
+	var plain := _plain_mesh(scene,meshes) if path.begins_with(ASSETS) else null
+	if plain != null:
+		# A survival GLB is one node with one surface and no transform, imported without automatic
+		# LODs: its imported mesh is drawn as it is (no copy read back from the GPU), the converted
+		# material set on the nodes that draw it (material_override).
+		high = plain.mesh
+		material = _convert_material(_source_material(plain,0),id)
+	else:
+		# Every mesh node of the GLB merged into one mesh (node transforms baked in), one converted
+		# material per surface, so a prop is one MultiMesh / one node however its GLB is split.
+		# (Village props stay merged: their imports generate automatic LODs the copy leaves out.)
+		var merged := ArrayMesh.new()
+		var converted := {}
+		for node in meshes:
 			var source := node as MeshInstance3D
+			var xf := _scene_transform(scene,source)
 			for surface in source.mesh.get_surface_count():
-				_append_surface(candidate,source.mesh,surface,_scene_transform(lod_scene,source))
-		lod_scene.free()
-		# LOD files carry geometry only; they reuse the full prop's materials surface by surface.
-		if candidate.get_surface_count() == high.get_surface_count():
-			for surface in candidate.get_surface_count():
-				candidate.surface_set_material(surface,high.surface_get_material(surface))
-			low = candidate
-	entry = {"ok":true,"mesh":high,"low":low if low != null else high,"aabb":high.get_aabb()}
+				_append_surface(merged,source.mesh,surface,xf)
+				var original := _source_material(source,surface)
+				var key := original.get_instance_id() if original else 0
+				if not converted.has(key): converted[key] = _convert_material(original,id)
+				merged.surface_set_material(merged.get_surface_count()-1,converted[key])
+		high = merged
+	scene.free()
+	entry = {"ok":true,"mesh":high,"low":high,"aabb":high.get_aabb(),"material":material}
 	props[id] = entry
 	stats.props += 1
+	if want_low: _add_low(id,entry)
+	else: entry["low_skipped"] = true
 	return entry
+
+## The prop's level-of-detail mesh into entry.low (it stays the full mesh without a usable LOD file).
+func _add_low(id: String, entry: Dictionary) -> void:
+	entry.erase("low_skipped")
+	var lod_path: String = prop_paths(id)[1]
+	if lod_path == "" or not ResourceLoader.exists(lod_path): return
+	var high: Mesh = entry.mesh
+	var lod_scene := (LoadPace.take(lod_path) as PackedScene).instantiate()
+	var lod_meshes := lod_scene.find_children("*","MeshInstance3D",true,false)
+	var plain := _plain_mesh(lod_scene,lod_meshes) if entry.material != null else null
+	if plain != null:
+		if plain.mesh.get_surface_count() == high.get_surface_count(): entry.low = plain.mesh
+		lod_scene.free()
+		return
+	var candidate := ArrayMesh.new()
+	for node in lod_meshes:
+		var source := node as MeshInstance3D
+		for surface in source.mesh.get_surface_count():
+			_append_surface(candidate,source.mesh,surface,_scene_transform(lod_scene,source))
+	lod_scene.free()
+	# LOD files carry geometry only; they reuse the full prop's materials surface by surface.
+	if candidate.get_surface_count() == high.get_surface_count():
+		for surface in candidate.get_surface_count():
+			candidate.surface_set_material(surface,high.surface_get_material(surface))
+		entry.low = candidate
+
+## The scene's only mesh node when it can be drawn as imported: one surface, no node transform, no
+## skin or blend shapes (null otherwise).
+func _plain_mesh(scene: Node, meshes: Array) -> MeshInstance3D:
+	if meshes.size() != 1: return null
+	var node := meshes[0] as MeshInstance3D
+	if node.mesh == null or node.mesh.get_surface_count() != 1 or node.skin != null: return null
+	if node.mesh is ArrayMesh and (node.mesh as ArrayMesh).get_blend_shape_count() > 0: return null
+	if not _scene_transform(scene,node).is_equal_approx(Transform3D.IDENTITY): return null
+	return node
+
+func _source_material(node: MeshInstance3D, surface: int) -> Material:
+	var original: Material = node.get_surface_override_material(surface)
+	if original == null: original = node.mesh.surface_get_material(surface)
+	return original
 
 func _scene_transform(scene: Node, node: Node) -> Transform3D:
 	var xf := Transform3D.IDENTITY
@@ -649,6 +714,7 @@ func _finish_batches() -> void:
 			largest = maxf(largest,maxf(s.x,maxf(s.y,s.z)))
 		var node := MultiMeshInstance3D.new()
 		node.multimesh = mm
+		if entry.material: node.material_override = entry.material
 		node.set_meta("prop",b.id)
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if b.shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(node)
@@ -668,6 +734,7 @@ func _single(id: String, at: Vector3, yaw: float, scale: float, shadow := true) 
 	var node := MeshInstance3D.new()
 	node.name = id
 	node.mesh = entry.mesh
+	if entry.material: node.material_override = entry.material
 	node.position = at
 	node.rotation.y = yaw
 	node.scale = Vector3.ONE*scale
@@ -743,7 +810,7 @@ func _landmark(at: Vector3, text: String) -> void:
 	add_child(label)
 
 func _camp_center() -> void:
-	var hearth := load("res://assets/storybook_camp_v1.glb") as PackedScene
+	var hearth := LoadPace.take(CAMP) as PackedScene if ResourceLoader.exists(CAMP) else null
 	if hearth:
 		var node := hearth.instantiate()
 		node.name = "Hearth"
@@ -1104,21 +1171,23 @@ func dress_resource(root: Node3D, kind: String) -> void:
 		root.remove_child(child)
 		child.queue_free()
 	var pick: Array = models[kind]
-	var entry := _prop(pick[0])
+	var entry := _prop(pick[0],false)
 	if not entry.ok: return
 	var h := absi(hash(Vector2i(roundi(root.position.x*10.0),roundi(root.position.z*10.0))))
 	var model := MeshInstance3D.new()
 	model.name = "Model"
 	model.mesh = entry.mesh
+	if entry.material: model.material_override = entry.material
 	model.rotation.y = float(h%628)/100.0
 	model.scale = Vector3.ONE*float(pick[1])*(0.92+float(h%17)/100.0)
 	root.add_child(model)
 	if kind == "tree":
-		var stump_entry := _prop(models.stump[0])
+		var stump_entry := _prop(models.stump[0],false)
 		if stump_entry.ok:
 			var stump := MeshInstance3D.new()
 			stump.name = "Stump"
 			stump.mesh = stump_entry.mesh
+			if stump_entry.material: stump.material_override = stump_entry.material
 			stump.scale = Vector3.ONE*float(models.stump[1])
 			stump.visible = false
 			root.add_child(stump)
@@ -1177,6 +1246,28 @@ func _process(delta: float) -> void:
 	if adopt_wait <= 0.0:
 		adopt_wait = 0.15
 		_adopt_resources()
+	_prefetch_monsters(delta)
+
+func _prefetch_monsters(delta: float) -> void:
+	if monster_wait > 0.0:
+		if LoadPace.covered: return
+		monster_wait -= delta
+		if monster_wait > 0.0: return
+		for species in Monster.WALK_REF:
+			var path := Monster.resolved_path(species,map_id)
+			if path != "" and not path in monster_pending: monster_pending.append(path)
+		LoadPace.want(monster_pending)
+	if monster_pending.is_empty(): return
+	LoadPace.pump()
+	for path in monster_pending.duplicate():
+		if LoadPace.pending(path): continue
+		monster_pending.erase(path)
+		var scene := LoadPace.take(path)
+		if scene != null: monster_scenes.append(scene)
+
+func _exit_tree() -> void:
+	# Leaving before they are in: the next place's loads go first.
+	for path in monster_pending: LoadPace.queue.erase(path)
 
 func _bind() -> void:
 	if is_instance_valid(app): return
