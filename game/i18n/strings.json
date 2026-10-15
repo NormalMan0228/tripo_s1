@@ -10779,6 +10779,10 @@
   "이미 답한 귓속말 요청이에요.": {
    "en": "You already answered that whisper request.",
    "zh": "已经回复过该悄悄话请求。"
+  },
+  "오늘 판매로 받을 별씨를 다 받았어요. 내일 다시 팔아 주세요.": {
+   "en": "You have received today's star-seeds from selling. Sell again tomorrow.",
+   "zh": "今天出售可获得的星种已领完。明天再来卖吧。"
   }
  },
  "templates": []

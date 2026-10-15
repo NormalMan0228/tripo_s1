@@ -117,7 +117,8 @@ static func window(parent: Node, api: Node, sold: Callable) -> Control:
 					again.call(reply.data, again)
 				else:
 					RpgUi.sfx("deny", -8.0)
-					head.text = t("지금은 팔 수 없어요. 다시 해 볼게요.")
+					# The day's star-seeds from selling are used up (server/economy.py sell_reward_limit).
+					head.text = t("오늘 판매로 받을 별씨를 다 받았어요. 내일 다시 팔아 주세요.") if str(reply.get("error", "")) == "sell_reward_limit" else t("지금은 팔 수 없어요. 다시 해 볼게요.")
 					var fresh: Dictionary = await api.request("/v1/homestead")
 					if is_instance_valid(root) and fresh.ok: again.call(fresh.data, again))
 			row.add_child(sell)
