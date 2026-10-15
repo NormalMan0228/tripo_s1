@@ -19,10 +19,10 @@
 
 | 항목 | 바깥 문 | 실내 문 |
 |---|---|---|
-| 노드 | `Buildings/<id>/DoorLeaf` (맵 기준. 예: `Buildings/10_red_house/DoorLeaf`) | 방 1층 루트 아래 `FrontDoor` |
+| 노드 | `Buildings/<id>/DoorFrame/DoorLeaf` (맵 기준. 예: `Buildings/10_red_house/DoorFrame/DoorLeaf`) | 방 1층 루트 아래 `FrontDoor` |
 | 찾는 함수 | `BuildingDoors.door_leaf(id)` | `Interiors.front_door(root)` |
 | 경첩 축 | 노드 로컬 **+Y** | 노드 로컬 **+Y** |
-| 경첩 위치 | 노드 원점 = 밖에서 볼 때 문의 **오른쪽** 세로 모서리, 문턱 높이 | 노드 원점 = 같은 쪽(오른쪽) 모서리, 바닥 |
+| 경첩 위치 | 노드 원점 = 밖에서 볼 때 문의 **오른쪽** 세로 모서리, 문턱 높이. 벽 방향은 부모 `DoorFrame`이 가집니다 | 노드 원점 = 같은 쪽(오른쪽) 모서리, 바닥 |
 | 닫힌 상태 회전 | `rotation.y = 0` | `rotation.y = 0` |
 | 여는 방향 | **바깥쪽**(+각도) | **바깥쪽**(+각도), 바깥 문과 같습니다 |
 | 열린 각도 | `+108°` (`BuildingDoors.OPEN_DEGREES`) | `+108°` (`Interiors.FRONT_DOOR_OPEN_DEGREES`, 기본값은 열림) |
@@ -38,8 +38,8 @@
 | 함수 | 반환 | 설명 |
 |---|---|---|
 | `BuildingDoors.door_ids()` | `PackedStringArray` | 지금 맵에 설치된 문 id(테스트 중에는 `10_red_house`만) |
-| `BuildingDoors.door_leaf(id)` | `Node3D` | 경첩(`DoorLeaf`) |
-| `BuildingDoors.door_opening(id)` | `MeshInstance3D` | 어두운 문간(`DoorOpening`). `material_override`에 `inner_light`(0..1)가 있습니다 |
+| `BuildingDoors.door_leaf(id)` | `Node3D` | 경첩(`DoorFrame/DoorLeaf`) |
+| `BuildingDoors.door_opening(id)` | `MeshInstance3D` | 어두운 문간(`DoorFrame/DoorOpening`). `material_override`에 `inner_light`(0..1)가 있습니다 |
 | `BuildingDoors.set_door_open(id, amount)` | - | 0 = 닫힘, 1 = 108° 열림. 즉시 적용됩니다 |
 | `BuildingDoors.door_open(id)` | `float` | 지금 열린 정도 |
 | `BuildingDoors.leaf_mesh(id)` / `opening_mesh(id)` | `ArrayMesh` | 문 리소스 |

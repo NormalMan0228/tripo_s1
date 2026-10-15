@@ -3,20 +3,23 @@ extends RefCounted
 ## copied each Town.DOORS door's own faces out of its Tripo building GLB (outline, texcoords, normals
 ## kept) and made them a solid leaf THICKNESS deep (doors/<model>.res). The same leaf is the room's
 ## front door inside (interiors.gd front()): one door design, outside and in.
-## On a building (children of Buildings/<id>, made by install(); nothing collides, so walkability and
+## On a building (Buildings/<id>/DoorFrame, made by install(); nothing collides, so walkability and
 ## the map's points stay as they were):
-##   DoorLeaf      Node3D, the hinge: its origin on the door's right-hand edge seen from outside, at
-##                 the threshold. Rotates about its local +Y: rotation.y 0 closed, +OPEN_DEGREES open
-##                 (outward). Child "Mesh": the leaf, drawn with the building's exterior material.
-##   DoorOpening   MeshInstance3D, the dark doorway just in front of the painted door, hidden behind
-##                 the closed leaf; material_override's `inner_light` (0..1) lights it from inside.
+##   DoorFrame               Node3D on the wall: origin on the door's right-hand edge seen from
+##                           outside, at the threshold; x across, y up, z out of the wall.
+##   DoorFrame/DoorLeaf      Node3D, the hinge: rotates about its local +Y, rotation.y 0 closed,
+##                           +OPEN_DEGREES open (outward). Child "Mesh": the leaf, drawn with the
+##                           building's exterior material.
+##   DoorFrame/DoorOpening   MeshInstance3D, the dark doorway just in front of the painted door,
+##                           hidden behind the closed leaf; material_override's `inner_light` (0..1).
 ## API (static): door_ids(), door_leaf(id), door_opening(id), set_door_open(id, amount) (0 closed ..
 ## 1 open, at once: callers tween), door_open(id), leaf_mesh(id) / opening_mesh(id) (the resources).
 ## Docs for the 집·문·방문 session: docs/coordination/DOOR_HOOKS_KO.md.
 const RECTS := "res://maps/archipelago/door_leaves.json"
 const DOORS_DIR := "res://maps/archipelago/doors/"
-const LEAF := "DoorLeaf"
-const OPENING := "DoorOpening"
+const FRAME := "DoorFrame"
+const LEAF := "DoorFrame/DoorLeaf"
+const OPENING := "DoorFrame/DoorOpening"
 ## How far a fully open door swings out (the room's front door opens as far: interiors.gd).
 const OPEN_DEGREES := 108.0
 ## The closed leaf lies this far in front of the painted door, the opening between the two.
@@ -108,15 +111,19 @@ static func install(host: Node3D) -> void:
 
 static func attach(building: Node3D, id: String) -> void:
 	_buildings[id] = building
-	if building.has_node(LEAF): return
+	if building.has_node(FRAME): return
 	var mesh := leaf_mesh(id)
 	var doorway := opening_mesh(id)
 	if mesh == null or doorway == null: return
 	var frame := hinge_frame(id)
+	var holder := Node3D.new()
+	holder.name = FRAME
+	holder.transform = frame
+	building.add_child(holder)
 	var hinge := Node3D.new()
-	hinge.name = LEAF
-	hinge.transform = frame.translated_local(Vector3(0, 0, LEAF_LIFT))
-	building.add_child(hinge)
+	hinge.name = "DoorLeaf"
+	hinge.position = Vector3(0, 0, LEAF_LIFT)
+	holder.add_child(hinge)
 	var leaf := MeshInstance3D.new()
 	leaf.name = "Mesh"
 	leaf.mesh = mesh
@@ -125,12 +132,12 @@ static func attach(building: Node3D, id: String) -> void:
 	leaf.set_meta("door_local_lift", frame.origin.y)
 	hinge.add_child(leaf)
 	var opening := MeshInstance3D.new()
-	opening.name = OPENING
+	opening.name = "DoorOpening"
 	opening.mesh = doorway
-	opening.transform = frame.translated_local(Vector3(0, 0, OPENING_LIFT))
+	opening.position = Vector3(0, 0, OPENING_LIFT)
 	opening.material_override = _opening_material()
 	opening.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	building.add_child(opening)
+	holder.add_child(opening)
 
 static func _opening_material() -> ShaderMaterial:
 	if _opening_shader == null:
@@ -154,12 +161,12 @@ static func door_ids() -> PackedStringArray:
 		if _building(id) and _building(id).has_node(LEAF): ids.append(id)
 	return ids
 
-## The hinge (Buildings/<id>/DoorLeaf: rotation.y 0 closed .. OPEN_DEGREES open), or null.
+## The hinge (Buildings/<id>/DoorFrame/DoorLeaf: rotation.y 0 closed .. OPEN_DEGREES open), or null.
 static func door_leaf(id: String) -> Node3D:
 	var building := _building(id)
 	return building.get_node_or_null(LEAF) as Node3D if building else null
 
-## The doorway (Buildings/<id>/DoorOpening; material_override's `inner_light` 0..1), or null.
+## The doorway (Buildings/<id>/DoorFrame/DoorOpening; material_override's `inner_light` 0..1), or null.
 static func door_opening(id: String) -> MeshInstance3D:
 	var building := _building(id)
 	return building.get_node_or_null(OPENING) as MeshInstance3D if building else null

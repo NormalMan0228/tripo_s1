@@ -4,8 +4,9 @@ extends SceneTree
 ##   Godot --headless --path game --script res://tests/building_doors_check.gd
 ##  - door_leaves.json has a door for every Town.DOORS entry, each with its leaf and opening resources
 ##    (run tools/door_leaves.gd after a door, a building model or its placement changes);
-##  - every enabled door (BuildingDoors.ENABLED / ALL_DOORS) is on its building: Buildings/<id>/DoorLeaf
-##    (the hinge, a solid leaf THICKNESS deep under it) and Buildings/<id>/DoorOpening (inner_light);
+##  - every enabled door (BuildingDoors.ENABLED / ALL_DOORS) is on its building: Buildings/<id>/DoorFrame
+##    with DoorLeaf (the hinge, unturned while closed, a solid leaf THICKNESS deep under it) and
+##    DoorOpening (inner_light);
 ##    near the door point, facing out of the door, nothing of it collides; set_door_open swings the
 ##    hinge outward about +Y (0 closed .. 1 OPEN_DEGREES) and back; the leaf took the building's
 ##    exterior material (dressing restyle); both builds put the doors at the same place;
@@ -78,7 +79,7 @@ func check_map(map: Node3D, label: String, enabled: Array, report: Dictionary) -
 		if hinge == null or opening == null:
 			failures.append("%s %s: DoorLeaf or DoorOpening missing" % [label, id])
 			continue
-		if String(hinge.get_parent().name) != id or hinge.name != Doors.LEAF: failures.append("%s %s: leaf not at Buildings/<id>/DoorLeaf" % [label, id])
+		if String(hinge.get_parent().get_parent().name) != id or String(hinge.name) != "DoorLeaf" or hinge.transform != Transform3D(Basis.IDENTITY, hinge.position): failures.append("%s %s: leaf not at Buildings/<id>/DoorFrame/DoorLeaf, unturned" % [label, id])
 		places[id] = hinge.global_transform
 		var leaf := hinge.get_node("Mesh") as MeshInstance3D
 		var box := leaf.mesh.get_aabb()
