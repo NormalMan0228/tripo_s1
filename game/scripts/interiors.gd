@@ -1204,22 +1204,25 @@ static func front(root: Node3D, s: Dictionary) -> void:
 	var mat_color := col(t,"accent").darkened(0.15)
 	Art.box(root,Vector3(dx,0.03,hd-0.5),Vector3(1.35,0.02,0.72),mat_color.darkened(0.25))
 	Art.box(root,Vector3(dx,0.036,hd-0.5),Vector3(1.15,0.02,0.54),mat_color)
-	# A half-height cottage door stands open outward, hinged on the right post,
-	# low enough that it never hides the walker in the doorway.
+	# The front door stands open outward, hinged on the right post (seen from outside, as the camera
+	# sees the room). Where the building's own door leaf exists it is that very door (same size,
+	# same look: the back of it faces the room); otherwise a half-height cottage door, low enough
+	# that it never hides the walker in the doorway.
 	var hinge := Node3D.new()
 	hinge.name="FrontDoor"
 	root.add_child(hinge)
 	hinge.position=Vector3(dx+DOOR_HALF+0.02,0,hd+WALL+0.02)
 	hinge.rotation.y=deg_to_rad(FRONT_DOOR_OPEN_DEGREES)
-	var leaf_w := DOOR_HALF*2-0.16
-	var door_color := col(t,"accent").darkened(0.1) if s.theme!="lodge" else Color("7a5638")
-	Art.box(hinge,Vector3(-leaf_w*0.5,0.56,0),Vector3(leaf_w,1.02,0.07),door_color)
-	Art.box(hinge,Vector3(-leaf_w*0.5,1.08,0),Vector3(leaf_w+0.04,0.06,0.1),cut)
-	for z in [-0.045,0.045]:
-		Art.box(hinge,Vector3(-leaf_w*0.5,0.56,z),Vector3(leaf_w-0.28,0.66,0.02),door_color.lightened(0.14))
-		Art.box(hinge,Vector3(-leaf_w*0.5,0.56,z*1.2),Vector3(0.05,0.66,0.02),door_color.darkened(0.12))
-	for z in [-0.07,0.07]: Art.sphere(hinge,Vector3(-leaf_w+0.13,0.62,z),Vector3(0.07,0.07,0.07),Color("e3c06a"))
-	for y in [0.25,0.85]: Art.box(hinge,Vector3(-0.12,y,0.0),Vector3(0.24,0.05,0.09),Color("3a3430"))
+	if not building_door(hinge,s,dx):
+		var leaf_w := DOOR_HALF*2-0.16
+		var door_color := col(t,"accent").darkened(0.1) if s.theme!="lodge" else Color("7a5638")
+		Art.box(hinge,Vector3(-leaf_w*0.5,0.56,0),Vector3(leaf_w,1.02,0.07),door_color)
+		Art.box(hinge,Vector3(-leaf_w*0.5,1.08,0),Vector3(leaf_w+0.04,0.06,0.1),cut)
+		for z in [-0.045,0.045]:
+			Art.box(hinge,Vector3(-leaf_w*0.5,0.56,z),Vector3(leaf_w-0.28,0.66,0.02),door_color.lightened(0.14))
+			Art.box(hinge,Vector3(-leaf_w*0.5,0.56,z*1.2),Vector3(0.05,0.66,0.02),door_color.darkened(0.12))
+		for z in [-0.07,0.07]: Art.sphere(hinge,Vector3(-leaf_w+0.13,0.62,z),Vector3(0.07,0.07,0.07),Color("e3c06a"))
+		for y in [0.25,0.85]: Art.box(hinge,Vector3(-0.12,y,0.0),Vector3(0.24,0.05,0.09),Color("3a3430"))
 	for x in [-1,1]:
 		var lantern := Art.box(root,Vector3(dx+x*(DOOR_HALF+0.06),KNEE+0.42,hd+WALL*0.5),Vector3(0.14,0.18,0.14),Color("ffe2a0"))
 		lantern.material_override.emission_enabled=true
@@ -1230,9 +1233,27 @@ static func front(root: Node3D, s: Dictionary) -> void:
 	sign.font_size=26
 	sign.name="ExitSign"
 
+## The building's own door leaf (maps/archipelago/building_doors.gd, the one its outside swings) as the
+## room's front door: real size, centred in the doorway, the hinge (FrontDoor's origin) on its right-hand
+## edge, opening outward like outside. False when the building has none yet (front() keeps its box door).
+const BuildingDoors = preload("res://maps/archipelago/building_doors.gd")
+static func building_door(hinge: Node3D, s: Dictionary, dx: float) -> bool:
+	var id := str(s.get("building",""))
+	var mesh := BuildingDoors.leaf_mesh(id)
+	if mesh==null: return false
+	var size := BuildingDoors.leaf_size(id)
+	hinge.position.x=dx+size.x*0.5
+	var leaf := MeshInstance3D.new()
+	leaf.name="Mesh"
+	leaf.mesh=mesh
+	hinge.add_child(leaf)
+	hinge.set_meta("door_leaf",id)
+	return true
+
 ## The room's front door hinge ("FrontDoor", made by front()), or null when the room has none.
 ## Its rotation.y runs from 0 (closed in the doorway) to FRONT_DOOR_OPEN_DEGREES (open outward, the
-## default look). Hooks for the 집·문·방문 session: docs/coordination/DOOR_HOOKS_KO.md.
+## default look; the village doors open as far: BuildingDoors.OPEN_DEGREES). Hooks for the 집·문·방문
+## session: docs/coordination/DOOR_HOOKS_KO.md.
 const FRONT_DOOR_OPEN_DEGREES := 108.0
 static func front_door(root: Node3D) -> Node3D:
 	if root == null: return null
