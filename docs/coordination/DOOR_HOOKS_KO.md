@@ -81,14 +81,24 @@ if opening:
 - 기본 모습은 지금과 같은 **108° 열림**입니다.
 
 ## 4. 전체 적용과 다시 만들기
-- 문 리소스 만들기(14개 전부 약 10초):
+- **문 리소스 다시 만들기**: 저장소 루트 폴더(예: `D:\lsm26\wt\map`, 병합한 작업 폴더의 루트)에서 실행합니다.
   ```
+  powershell -ExecutionPolicy Bypass -File D:\lsm26\locks\wait_heavy.ps1
   .tools\godot\Godot_v4.7.2-stable_win64_console.exe --headless --path game --script res://../tools/door_leaves.gd
   ```
-  `Town.DOORS`의 모든 항목을 자동으로 처리합니다. 건물 GLB, 배치, `Town.DOORS`가 바뀌면 다시 실행합니다
-  (예: wt/mapinterior의 `18_meadow_house`를 병합한 뒤 한 번 다시 실행해야 합니다).
-- 모든 문에 적용: `building_doors.gd`의 `ALL_DOORS := true`.
-- 칠한 색으로 문을 못 찾는 문은 `RECT_OVERRIDES`에 직접 적습니다(카페, 천문대, 온실, 공방, 잡화점).
+  - 끝에 `DOOR_LEAVES doors=<문 개수> ms=<걸린 시간>`이 찍히면 성공입니다(14개 기준 약 14초). 문마다 `DOOR_LEAF <id> ...` 줄이 나옵니다.
+  - 결과물은 **git에 커밋하는 파일**입니다(베이크의 git-ignored `generated/`가 아닙니다). 베이크(`tools/bake_archipelago.py`)나
+    패키징이 다시 만들지 않으므로, 실행한 뒤 아래 파일을 커밋합니다.
+    - `game/maps/archipelago/door_leaves.json` (문 id → 모델, 리소스, 벽 기준 위치)
+    - `game/maps/archipelago/doors/<모델>.res`, `<모델>_opening.res` (문짝, 문간)
+  - `Town.DOORS`의 모든 항목을 자동으로 처리합니다. 건물 GLB, 배치(`building_placements.json`), `Town.DOORS`가 바뀌면 다시 실행합니다.
+    **wt/mapinterior(`18_meadow_house`)를 병합한 뒤 한 번 실행해야 `building_doors_check`가 통과합니다.**
+  - 확인: `.tools\godot\Godot_v4.7.2-stable_win64_console.exe --headless --path game --script res://tests/building_doors_check.gd`
+    → `BUILDING_DOORS_CHECK {... "passed":true}`.
+  - 맵 베이크(`island.scn`)에는 영향이 없습니다. 문은 마을 모듈이 실행 중에 붙이므로 다시 베이크할 필요가 없습니다.
+- 모든 문에 적용: `building_doors.gd`의 `ALL_DOORS := true`(지금은 `ENABLED = ["10_red_house"]`만).
+- 칠한 색으로 문을 못 찾는 문은 `RECT_OVERRIDES`에 직접 적습니다(카페, 천문대, 온실, 공방, 잡화점). 새 건물도 칠한 문을 못 찾으면
+  1.0 x 2.1 m 기본 문간으로 만들고 `no door paint found` 줄을 찍습니다. 그때는 `RECT_OVERRIDES`에 윤곽을 적습니다.
 
 ## 5. 검증
 - `game/tests/building_doors_check.gd`(헤드리스): 모든 `Town.DOORS`에 문 리소스가 있는지, 켜진 문의 노드 이름과 위치,
