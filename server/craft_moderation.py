@@ -164,6 +164,9 @@ REASONS = {
               'developer_provider_forbidden', 'live_generation_disabled', 'upstream_authentication'),
     'credit': ('insufficient_provider_credit', 'tripo_budget_exhausted', 'tester_credit_budget_exhausted'),
     'limit': ('craft_over_trial_limit', 'user_total_generation_limit', 'craft_star_limit_exceeded'),
+    # Character skeleton and clips (server/rig_pipeline.py, server/rigged_glb.py).
+    'rig': ('rig_failed', 'animation_failed', 'animation_static', 'animation_clip_mismatch', 'animation_skeleton_mismatch',
+            'rigging_disabled'),
 }
 _REASON_OF = {code: reason for reason, codes in REASONS.items() for code in codes}
 

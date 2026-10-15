@@ -10827,6 +10827,42 @@
   "이 제작은 별씨 한도를 넘어요. 옵션을 줄여 다시 맡겨 주세요.": {
    "en": "This craft is over the starseed limit. Choose fewer options and try again.",
    "zh": "此次制作超出星籽上限。请减少选项后再试。"
+  },
+  "움직이는 캐릭터로 만들기": {
+   "en": "Make a moving character",
+   "zh": "制作会动的角色"
+  },
+  "사람 모양 캐릭터에 뼈대를 넣고, 서 있는 동작과 걷는 동작을 붙여요.": {
+   "en": "Adds a skeleton to a human-shaped character with standing and walking motions.",
+   "zh": "为人形角色加入骨骼，并加上站立和行走动作。"
+  },
+  "사람 모양 캐릭터만 만들 수 있어요(예: 로봇 캐릭터, 기사). 뼈대와 동작에 %d크레딧이 더 들어요.": {
+   "en": "Only human-shaped characters (e.g. a robot character, a knight). The skeleton and motions cost %d more credits.",
+   "zh": "仅限人形角色（例如：机器人角色、骑士）。骨骼和动作需额外 %d 积分。"
+  },
+  "캐릭터에 뼈대와 동작을 넣고 있어요…": {
+   "en": "Adding a skeleton and motions to the character…",
+   "zh": "正在为角色加入骨骼和动作…"
+  },
+  "뼈대·동작": {
+   "en": "Skeleton · motion",
+   "zh": "骨骼·动作"
+  },
+  "움직이는 캐릭터는 사람 모양만 만들 수 있어요. '로봇 캐릭터'처럼 적어 주세요.": {
+   "en": "Moving characters must be human-shaped. Try something like 'robot character'.",
+   "zh": "会动的角色只能是人形。请写成“机器人角色”这样。"
+  },
+  "움직이는 캐릭터는 사진 없이 글로만 만들 수 있어요.": {
+   "en": "Moving characters are made from words only, without a photo.",
+   "zh": "会动的角色只能用文字制作，不能用照片。"
+  },
+  "지금은 움직이는 캐릭터를 만들 수 없어요.": {
+   "en": "Moving characters can't be made right now.",
+   "zh": "现在无法制作会动的角色。"
+  },
+  "뼈대와 동작을 넣다가 실패했어요. 팔다리가 잘 보이는 사람 모양 캐릭터로 다시 맡겨 보세요.": {
+   "en": "Adding the skeleton and motions failed. Try a human-shaped character with clearly visible arms and legs.",
+   "zh": "加入骨骼和动作失败了。请换一个四肢清晰可见的人形角色再试。"
   }
  },
  "templates": []
