@@ -134,8 +134,8 @@ def test_rate_limits(make_world):
         w.say(alice, 'b%d' % i)
     assert w.say(alice, 'burst', 429)['detail'] == 'message_rate_limited'  # 5 lines in 10 s
     w.tick(10)
-    w.say(alice, 'same')
-    assert w.say(alice, 'same', 429)['detail'] == 'message_repeated'
+    w.say(alice, 'same', channel='local')
+    assert w.say(alice, 'same', 429, channel='local')['detail'] == 'message_repeated'
     w.tick(30)
     w.say(alice, 'same')
     w.say(alice, 'to everyone', channel='global')
@@ -144,6 +144,27 @@ def test_rate_limits(make_world):
     for i in range(4):
         w.say(bravo, 'c%d' % i)
     assert w.say(bravo, 'over', 429)['detail'] == 'chat_ip_limited'
+
+
+def test_released_clients_repeat_their_greeting_and_get_a_code_they_know(world):
+    w = world
+    alice = w.player('alice')
+    # The 0.11.x greeting chip sends the same line every time: two friends greeted 10 s apart.
+    assert w.say(alice, '안녕하세요! 👋')['ok']
+    w.tick(10)
+    assert w.say(alice, '안녕하세요! 👋')['ok']
+    w.tick(10)
+    assert w.say(alice, 'Hello! 👋')['ok'] and w.say(alice, 'Hello! 👋')['ok']
+    # Other repeats without a channel answer message_rate_limited (released games translate it).
+    w.tick(10)
+    w.say(alice, '모여라')
+    w.tick(2)
+    response = w.client.post('/v1/social/messages', headers=alice.headers, json={'request_id': '00000000-0000-4000-8000-0000000000b1', 'text': '모여라'})
+    assert response.status_code == 429 and response.json()['detail'] == 'message_rate_limited' and int(response.headers['retry-after']) >= 28
+    # chat2 sends keep the precise code, the greeting included.
+    w.tick(31)
+    w.say(alice, '안녕하세요! 👋', channel='local')
+    assert w.say(alice, '안녕하세요! 👋', 429, channel='local')['detail'] == 'message_repeated'
 
 
 def test_the_whole_server_everyone_channel_has_a_ceiling(make_world):
@@ -238,6 +259,75 @@ def test_operators_remove_lines_and_mute(world):
     assert w.say(alice, 'hi')['ok']
     w.tick(chat_module.REMOVAL_SECONDS+1)
     assert 'removed' not in chat_of(w, bravo, since=cursor)
+
+
+def test_a_large_removal_announces_the_newest_lines(world):
+    w = world
+    alice = w.player('alice')
+    boss = w.player('teacher_z', role='admin')
+    with w.db() as conn:
+        ids = [conn.execute("INSERT INTO mp_messages(room,user_id,text,created,channel) VALUES (?,?,?,?,'local')",
+                            ('village:'+alice.id, alice.id, 'spam %d' % i, w.now[0])).lastrowid for i in range(250)]
+    for start in range(0, 250, 100):
+        w.call(boss, '/v1/admin/chat/delete', message_ids=ids[start:start+100])
+    removed = chat_of(w, alice, since=1)['removed']
+    assert len(removed) == chat_module.REMOVALS_SHOWN and removed[0] == ids[-1] and ids[0] not in removed
+    assert set(removed) == set(ids[-chat_module.REMOVALS_SHOWN:])
+
+
+def test_the_first_lines_on_an_empty_server_arrive_live(world):
+    w = world
+    alice, bravo = w.players('alice', 'bravo')
+    w.visit(bravo, alice)
+    first = chat_of(w, bravo, since=0)
+    assert first['history'] and first['lines'] == [] and first['cursor'] >= 1
+    assert not chat_of(w, bravo, since=first['cursor'])['history']
+    w.say(alice, 'first ever', channel='local')
+    block = chat_of(w, bravo, since=first['cursor'])
+    assert not block['history'] and texts(block) == ['first ever']
+
+
+def test_history_reads_only_the_last_hour_of_a_busy_room(world):
+    w = world
+    alice = w.player('alice')
+    room = 'village:'+alice.id
+    with w.db() as conn:
+        conn.executemany("INSERT INTO mp_messages(room,user_id,text,created,channel) VALUES (?,?,?,?,'local')",
+                         [(room, alice.id, 'old %d' % i, w.now[0]-7200+i*0.01) for i in range(20000)])
+        conn.executemany("INSERT INTO mp_messages(room,user_id,text,created,channel) VALUES (?,?,?,?,'local')",
+                         [(room, alice.id, 'new %d' % i, w.now[0]-60+i) for i in range(3)])
+    chat = w.app.state.multiplayer.chat
+    conn = w.db()
+    steps = [0]
+
+    def count():
+        steps[0] += 1
+    conn.set_progress_handler(count, 100)
+    block = chat.deliver(conn, alice.id, 0, [room], set())
+    old_cursor = chat.deliver(conn, alice.id, 5, [room], set())
+    conn.set_progress_handler(None, 0)
+    conn.close()
+    assert [line['text'] for line in block['lines']] == ['new 0', 'new 1', 'new 2'] and block['history']
+    assert [line['text'] for line in old_cursor['lines']] == ['new 0', 'new 1', 'new 2'] and not old_cursor['history']
+    # Bounded by id from the first line of the last hour, not a walk over 20 000 older lines
+    # (that walk took over 2 000 progress steps of 100 instructions).
+    assert steps[0] < 200
+
+
+def test_a_failed_retention_run_never_turns_a_committed_line_into_an_error(world, monkeypatch):
+    w = world
+    alice, bravo = w.players('alice', 'bravo')
+    w.visit(bravo, alice)
+    chat = w.app.state.multiplayer.chat
+
+    def locked(*args):
+        raise sqlite3.OperationalError('database is locked')
+    monkeypatch.setattr(chat_module, 'prune', locked)
+    chat.pruned_at = float('-inf')
+    sent = w.say(alice, 'still here', channel='local')
+    assert sent['ok'] and chat.pruned_at == w.now[0]
+    chat.pruned_at = float('-inf')
+    assert texts(chat_of(w, bravo)) == ['still here']
 
 
 def test_retention_keeps_social_tables_bounded(world):

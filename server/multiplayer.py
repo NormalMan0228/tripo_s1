@@ -5,6 +5,7 @@ import uuid
 from typing import Literal
 from fastapi import Request, HTTPException
 from fastapi.responses import Response, JSONResponse
+from starlette.background import BackgroundTask
 from pydantic import Field
 from .models import Strict, Mutation, Input, RunStart
 from .stored_assets import read_glb
@@ -335,9 +336,9 @@ class Multiplayer:
                     del reply['messages']
                     reply['chat'] = chat.deliver(conn, user['id'], body.since, chat.rooms_for(village_room, party_room), blocked)
                     reply['social'] = app.state.friends.presence_block(conn, user['id']) if hasattr(app.state, 'friends') else None
-            chat.maybe_prune()
             # Straight to JSON: FastAPI's generic encoder walks every value of this large reply first.
-            return JSONResponse(reply)
+            # Retention runs after the reply is sent and can never turn it into an error.
+            return JSONResponse(reply, background=BackgroundTask(chat.maybe_prune))
 
         @app.post('/v1/social/offline')
         def offline(request: Request):
@@ -442,8 +443,7 @@ class Multiplayer:
                 user = auth(conn, request)
                 legacy_room, village_room, party_room = chat_rooms(conn, user['id'])
                 reply = chat.post(conn, user, body, request.client.host if request.client else 'unknown', legacy_room, village_room, party_room)
-            chat.maybe_prune()
-            return reply
+            return JSONResponse(reply, background=BackgroundTask(chat.maybe_prune))
 
         @app.post('/v1/party')
         def create_party(body: Mutation, request: Request):

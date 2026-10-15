@@ -96,7 +96,9 @@ village, space, npc_homes`. Changes:
 
 Chat block rules:
 - `cursor`: send it back as `since` next time. It is the newest line id on the server, so after a
-  room change the old lines of the new room are not replayed. If you want the new room's recent
+  room change the old lines of the new room are not replayed. It is never 0 (line ids start at 2;
+  a server without any line yet answers `cursor: 1`), so the first lines on a fresh server arrive
+  live, not as history. If you want the new room's recent
   lines (joined a party, started a visit), send `since: 0` once.
 - `history: true` (since ≤ 0, or a cursor newer than the server's, e.g. after a restore): the newest
   ≤ 30 lines of your rooms from the last hour. Seed the log silently (no notices, bubbles or unread).
@@ -105,7 +107,8 @@ Chat block rules:
   `global` (when on), whispers to you and whispers you sent. Never older than 1 hour.
 - `channel`: `local` (village/visit), `party`, `global`, `whisper`. Lines from 0.11.x clients
   arrive as `local` or `party`.
-- `removed`: ids an operator deleted in the last 15 minutes; drop them from the log if shown.
+- `removed`: ids an operator deleted in the last 15 minutes (the newest 200, highest id first);
+  drop them from the log if shown.
 - Your own line arrives too: replace your pending echo by `id` (the send reply has the id).
 
 Social block: `v` changes on any friend/request/block/knock/privacy change touching you, so
@@ -153,7 +156,7 @@ triggered the automatic mute. Checks, in order:
 | 6 | `global` switched off | 403 `global_chat_off` |
 | 7 | whisper target not a friend / offline / appearing offline / blocked / unknown / self | 404 `whisper_target_unavailable` (always the same) |
 | 8 | under 1 s since your last line, or 5 lines in 10 s | 429 `message_rate_limited` + Retry-After |
-| 9 | the same text as one of your last 3 lines within 30 s | 429 `message_repeated` |
+| 9 | the same text as one of your last 3 lines within 30 s | 429 `message_repeated`; without `channel` (0.11.x) 429 `message_rate_limited` + Retry-After, and the released greeting chip (`안녕하세요! 👋`, `Hello! 👋`, `你好！👋`) is exempt |
 | 10 | `global` within 5 s of your last global line | 429 `global_chat_slow` + Retry-After |
 | 11 | more than 600 lines a minute from one address (a school shares one) | 429 `chat_ip_limited` |
 | 12 | more than 20 global lines in 10 s on the whole server | 429 `global_chat_busy` |
@@ -168,6 +171,10 @@ characters are cut to 12. Lists: `server/data/chat_words.txt` (syntax in its hea
 operator's `VILLAGEN_CHAT_FILTER_EXTRA` file (relative to the data directory), read at start-up.
 A chat line writes no `requests` or `audit` row: the line itself (with its `request_id`) is the
 idempotency record.
+
+Released games (0.11.4/0.11.5, no `channel`) translate only `message_rate_limited` of these
+codes; `message_blocked`, `chat_muted` and `chat_ip_limited` show their generic "try again later"
+error there (accepted: a muted or filtered 0.11.x student is not told why).
 
 Client slash commands are client-side only (`/w 이름 내용`, `/r`, `/p`, `/v`, `/g`).
 
@@ -384,8 +391,9 @@ New indexes: `mp_messages(user_id,id)`, `mp_messages(created)`, unique `mp_messa
 `coop_members(user_id)` and the social tables' own. All `CREATE … IF NOT EXISTS` and guarded `ALTER`s:
 an existing world upgrades in place, twice is harmless, nothing is rewritten.
 
-Bounded tables (pruned at most every 10 minutes, ≤ 5000 rows per table per run, from the chat and
-presence routes):
+Bounded tables (pruned at most every 10 minutes, ≤ 5000 rows per table per run, after a chat or
+presence reply was sent, as its background task: a failed run, e.g. SQLite busy behind a long
+writer, is logged and retried 10 minutes later and never changes a reply):
 
 | Table | Kept |
 |---|---|
@@ -402,7 +410,8 @@ presence routes):
 Load-safety rules in the code: the chat delivery and the roster never run inside the presence
 write transaction (`Database.write_then_read`: the poll's writes commit, then the reply is read
 from a snapshot); delivery is one `UNION ALL` of index ranges per room (`mp_messages(room,id)`,
-`(user_id,id)`); history ≤ 30, delivery ≤ 50 per reply; online list ≤ 200 per reply and rebuilt
+`(user_id,id)`), each starting at the first line of the last hour (one seek in
+`mp_messages(created)`), so history never walks the older lines of the 24 h retention; history ≤ 30, delivery ≤ 50 per reply; online list ≤ 200 per reply and rebuilt
 at most every 3 s (in-process, single uvicorn worker: move it to SQLite before adding workers);
 `/people` 60/min per player; the global channel's server-wide ceiling.
 

@@ -8,8 +8,10 @@ Lines live chat_retention_hours (24 h) and are delivered for an hour at most.
 Delivery (deliver) runs in the presence reply's read phase, after the poll's write committed
 (Database.write_then_read): a UNION ALL of one index range per room, never the writer slot.
 """
+import logging
 import math
 import re
+import sqlite3
 import threading
 from collections import defaultdict, deque
 from fastapi import HTTPException
@@ -31,6 +33,12 @@ REMOVAL_SECONDS = 900         # an operator's removal is announced to clients th
 RUN_LIMIT = 12                # a character repeated longer than this is cut (ㅋㅋㅋ… floods)
 PRUNE_SECONDS = 600           # retention runs at most this often, in batches
 PRUNE_BATCH = 5000
+REMOVALS_SHOWN = 200          # newest operator removals per reply
+# The released games' (0.11.x) greeting chip always sends the same line: exempt from the repeat
+# rule for sends without a channel (gap and burst limits still apply).
+LEGACY_GREETINGS = frozenset({'안녕하세요! 👋', 'Hello! 👋', '你好！👋'})
+
+log = logging.getLogger(__name__)
 
 # Idempotency records (requests) and audit rows of social operations: a retried request comes
 # within seconds, so two days is plenty; social audit rows stay 30 days, a legacy chat line's
@@ -65,6 +73,13 @@ def ensure_schema(conn):
         if name not in columns:
             conn.execute('ALTER TABLE mp_messages ADD COLUMN '+name+' TEXT')
     conn.executescript(SCHEMA)
+    # Line ids start at 2, so the cursor of a server without any line yet is 1, not 0 (since 0
+    # asks for history: the first lines ever would come as history and be seeded silently).
+    row = conn.execute("SELECT seq FROM sqlite_sequence WHERE name='mp_messages'").fetchone()
+    if row is None:
+        conn.execute("INSERT INTO sqlite_sequence(name,seq) VALUES ('mp_messages',1)")
+    elif not row[0] or row[0] < 1:
+        conn.execute("UPDATE sqlite_sequence SET seq=1 WHERE name='mp_messages'")
 
 
 class Window:
@@ -155,8 +170,13 @@ class Chat:
             refuse('message_rate_limited', 429, GAP_SECONDS-(now-recent[0]['created']))
         if len(recent) >= BURST_LINES and now-recent[BURST_LINES-1]['created'] < BURST_SECONDS:
             refuse('message_rate_limited', 429, BURST_SECONDS-(now-recent[BURST_LINES-1]['created']))
-        if any(r['text'] == checked.text and now-r['created'] < REPEAT_SECONDS for r in recent[:REPEAT_LINES]):
-            refuse('message_repeated', 429)
+        repeated = next((r for r in recent[:REPEAT_LINES] if r['text'] == checked.text and now-r['created'] < REPEAT_SECONDS), None)
+        if repeated:
+            if body.channel is not None:
+                refuse('message_repeated', 429)
+            # Released games know only message_rate_limited; their greeting chip is exempt.
+            if checked.text not in LEGACY_GREETINGS:
+                refuse('message_rate_limited', 429, REPEAT_SECONDS-(now-repeated['created']))
         if room == 'global':
             last = next((r['created'] for r in recent if r['room'] == 'global'), None)
             if last is not None and now-last < GLOBAL_GAP_SECONDS:
@@ -209,6 +229,10 @@ class Chat:
         row = conn.execute("SELECT seq FROM sqlite_sequence WHERE name='mp_messages'").fetchone()
         head = row[0] if row else 0
         history = since <= 0 or since > head
+        # The oldest line still delivered (one seek in the created index): every branch scans
+        # ids from there, never the rest of the 24 h retention.
+        first = conn.execute('SELECT id FROM mp_messages WHERE created>? ORDER BY created LIMIT 1', (now-DELIVERY_SECONDS,)).fetchone()
+        floor = first[0] if first else head+1
         columns = 'e.id,e.room,e.channel,e.user_id,e.to_id,e.text,e.created'
         branches, params = [], []
         wheres = [('e.room=?', (room,)) for room in rooms]
@@ -216,11 +240,11 @@ class Chat:
         wheres.append(("e.user_id=? AND e.room>='dm:' AND e.room<'dm;'", (user_id,)))
         for where, args in wheres:
             if history:
-                branches.append(f'SELECT * FROM (SELECT {columns} FROM mp_messages e WHERE {where} AND e.created>? ORDER BY e.id DESC LIMIT {HISTORY_LINES})')
-                params.extend((*args, now-DELIVERY_SECONDS))
+                branches.append(f'SELECT * FROM (SELECT {columns} FROM mp_messages e WHERE {where} AND e.id>=? AND e.created>? ORDER BY e.id DESC LIMIT {HISTORY_LINES})')
+                params.extend((*args, floor, now-DELIVERY_SECONDS))
             else:
                 branches.append(f'SELECT {columns} FROM mp_messages e WHERE {where} AND e.id>? AND e.created>?')
-                params.extend((*args, since, now-DELIVERY_SECONDS))
+                params.extend((*args, max(since, floor-1), now-DELIVERY_SECONDS))
         if history:
             sql = ' UNION ALL '.join(branches)+f' ORDER BY 1 DESC LIMIT {HISTORY_LINES*2}'
         else:
@@ -253,7 +277,8 @@ class Chat:
                 line['to_id'], line['to_name'] = r['to_id'], names.get(r['to_id'], '')
             lines.append(line)
         block = {'cursor': cursor, 'history': history, 'more': more, 'lines': lines}
-        removed = [r[0] for r in conn.execute('SELECT id FROM mp_message_removals WHERE created>? ORDER BY id LIMIT 200', (now-REMOVAL_SECONDS,))]
+        # The newest removed lines first: those are the ones most likely still on screen.
+        removed = [r[0] for r in conn.execute(f'SELECT id FROM mp_message_removals WHERE created>? ORDER BY id DESC LIMIT {REMOVALS_SHOWN}', (now-REMOVAL_SECONDS,))]
         if removed:
             block['removed'] = removed
         return block
@@ -276,6 +301,9 @@ class Chat:
 
     # --- retention ----------------------------------------------------------------------------
     def maybe_prune(self):
+        """Runs after the response was sent (a background task of the chat and presence routes):
+        a failure (a long writer holding SQLite's writer slot) never changes a committed request's
+        answer; the next run, PRUNE_SECONDS later, tries again."""
         now = self.clock()
         if now-self.pruned_at < PRUNE_SECONDS or not self.prune_lock.acquire(blocking=False):
             return None
@@ -283,6 +311,9 @@ class Chat:
             self.pruned_at = now
             with self.db.transaction() as conn:
                 return prune(conn, now, self.settings.chat_retention_hours)
+        except sqlite3.Error as error:
+            log.warning('social retention prune failed: %s', error)
+            return None
         finally:
             self.prune_lock.release()
 
