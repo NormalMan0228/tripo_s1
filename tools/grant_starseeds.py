@@ -4,12 +4,14 @@ import json
 import sqlite3
 import sys
 import time
-import uuid
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from server.economy import change_shards, EconomyRejected
 
 
 def grant(database: Path, username: str, amount: int, reference: str):
-    if not 1 <= amount <= 100000 or not reference or len(reference) > 120:
+    if type(amount) is not int or not 1 <= amount <= 100000 or not reference or len(reference) > 120:
         raise ValueError('invalid_grant_request')
     with sqlite3.connect(database, timeout=15) as conn:
         conn.execute('PRAGMA foreign_keys=ON')
@@ -27,11 +29,7 @@ def grant(database: Path, username: str, amount: int, reference: str):
                 raise ValueError('grant_reference_conflict')
             return {'username': username, 'amount': amount, 'balance': before, 'already_applied': True}
         now = time.time()
-        conn.execute(
-            'INSERT INTO ledger(id,user_id,amount,reason,reference,created) VALUES (?,?,?,?,?,?)',
-            (str(uuid.uuid4()), user_id, amount, 'operator_grant', reference, now),
-        )
-        conn.execute('UPDATE users SET shards=shards+? WHERE id=?', (amount, user_id))
+        change_shards(conn, user_id, amount, 'operator_grant', reference, now)
         conn.execute(
             'INSERT INTO audit(user_id,action,target,outcome,created) VALUES (?,?,?,?,?)',
             (user_id, 'operator_grant', reference, f'credited_{amount}_starseeds', now),
@@ -51,7 +49,7 @@ def main():
     args = parser.parse_args()
     try:
         print(json.dumps(grant(args.database, args.username, args.amount, args.reference)))
-    except (sqlite3.Error, OSError, ValueError, RuntimeError) as error:
+    except (sqlite3.Error, OSError, ValueError, RuntimeError, EconomyRejected) as error:
         print(json.dumps({'ok': False, 'error': str(error)}))
         return 1
     return 0

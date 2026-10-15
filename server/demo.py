@@ -74,8 +74,8 @@ def prep(conn, data_dir, user_id, now, stars=0, source_id=None, wanted=()):
     balance = conn.execute('SELECT shards FROM users WHERE id=?', (user_id,)).fetchone()[0]
     topped = max(0, stars - balance)
     if topped:
-        conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)', (str(uuid.uuid4()), user_id, topped, 'demo_topup', 'admin_cli', now))
-        conn.execute('UPDATE users SET shards=shards+? WHERE id=?', (topped, user_id))
+        from .economy import change_shards
+        change_shards(conn, user_id, topped, 'demo_topup', str(uuid.uuid4()), now)
     copied = []
     if source_id and wanted:
         assets = Path(data_dir) / 'assets'
