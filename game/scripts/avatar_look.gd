@@ -31,6 +31,11 @@ static func normalize(value) -> Dictionary:
 			if field is bool: look[key]=field
 		elif field is String and not field.is_empty():
 			look[key]=field
+	return look
+
+## The look a body wears: the saved look with a model it can show (model_id).
+static func shown(value) -> Dictionary:
+	var look := normalize(value)
 	look.character = model_id(str(look.character))
 	return look
 
@@ -48,6 +53,7 @@ static func for_server(value, v2: bool) -> Dictionary:
 	if v2: return look
 	for key in V2_ONLY: look.erase(key)
 	if look.headwear == "straw": look.headwear = "cap"
+	look.character = model_id(str(look.character))
 	if not look.skin in OLD_SKINS:
 		var want := Color(str(look.skin))
 		var best: String = OLD_SKINS[0]
@@ -74,7 +80,7 @@ static func resource_paths() -> Array:
 
 static func walker(look, version := -1) -> CharacterBody3D:
 	var body: CharacterBody3D = PlayerScript.new()
-	body.avatar = normalize(look)
+	body.avatar = shown(look)
 	body.look_version = version
 	return body
 
@@ -86,7 +92,7 @@ static func wear(body: Node, look, version := -1, animate := false) -> bool:
 	if not is_instance_valid(body): return false
 	if version>=0 and version<=int(body.look_version): return false
 	if version>=0: body.look_version = version
-	var changed: bool = body.apply_avatar(normalize(look))
+	var changed: bool = body.apply_avatar(shown(look))
 	if changed and animate and body.is_inside_tree() and body.get_parent() is Node3D and is_instance_valid(body.visual):
 		Fx.squash(body.visual, 0.12, 0.38)
 		Fx.burst(body.get_parent(), body.global_position+Vector3(0,1.1,0), "sparkle", 10, Color(0,0,0,0), 0.35)

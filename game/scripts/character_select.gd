@@ -149,9 +149,10 @@ func pick(id: String, sound := true) -> void:
 	for key in editor.find_children("*", "Button", true, false):
 		if key.has_meta("character") and key.get_meta("character") == model:
 			if sound: key.pressed.emit()
-			else:
-				editor.avatar.character = model
-				editor.refresh()
+	# A world with avatar_v2 keeps the card's own id (m1...f4; the body shows its stand-in until the
+	# model is in, AvatarLook.shown); an older world keeps the stand-in's id.
+	editor.avatar.character = id if v2 else model
+	editor.refresh()
 
 func _start() -> void:
 	RpgUi.sfx("confirm", -6.0)

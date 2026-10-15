@@ -2923,7 +2923,7 @@ func show_portrait() -> void:
 	if not portrait_view.drawn_key.is_empty():
 		frame.portrait.texture=portrait_view.get_texture()
 	else:
-		var path := "res://assets/ui/portrait_%s.png" % str(look.character)
+		var path := "res://assets/ui/portrait_%s.png" % str(AvatarLook.shown(look).character)
 		if ResourceLoader.exists(path): frame.portrait.texture=load(path)
 	portrait_view.show_look(look,int(profile.get("version",-1)))
 
