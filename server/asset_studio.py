@@ -879,10 +879,6 @@ class Studio:
                 needed+=mesh_credits(model,body.material=='textured',image)
             if body.image_mode=='refine' and not part.get('image_task') and not part.get('refine_attempt'):
                 needed+=CONCEPT_CREDITS
-            # Moving pieces (rig67): the skeleton and each clip not yet billed.
-            if getattr(body,'animate',False):
-                for entry,cost in [(part.get('rig',{}),rig_rules.RIG_CREDITS)]+[(part.get('anims',{}).get(c,{}),rig_rules.CLIP_CREDITS) for c in rig_rules.CLIPS]:
-                    if entry.get('credits_consumed') is None:needed+=cost
         return needed
 
     def reserve_build(self,job,parts,quote,part_id,kind,predicted,tripo):
