@@ -92,10 +92,12 @@ NPCS = {
 }
 # Letter writers who do not take ordinary gifts: 모카, the café owner, writes the story chapter's
 # thank-you letter (server/story.py) and keeps its gift on the café terrace.
-SENDERS = {'regular': {'name': '모카', 'personality': 'cheerful'}}
+SENDERS = {'regular': {'name': '모카', 'personality': 'cheerful'},
+           'shopkeeper': {'name': '단비', 'personality': 'cheerful'}}
 # A resident's thank-you letter for a finished request (server/quests.py) has this level: one per
 # resident, clear of the hearts (1..4) and the story chapter's runs (0 and below).
 QUEST_LETTER_LEVEL = 100
+MOVE_LETTER_LEVEL = 200
 
 # Item tags from the piece's name and its design title/category. English words match whole-word
 # prefixes ("lamp" matches "lamps", not "clamp"); Korean words match anywhere in the text.
@@ -431,6 +433,10 @@ def letters(conn, host_id, limit=50):
                   'gift': {'id': r['gift_object_id'], 'name': r['gift_name']} if r['gift_object_id'] else None}
         if r['level'] <= 0:
             letter['story'] = {'chapter': 'first_gift', 'object': r['about_name'] or '', 'sittable': r['about_mood'] == 'love'}
+        elif r['level'] >= MOVE_LETTER_LEVEL:
+            offset = r['level'] - MOVE_LETTER_LEVEL
+            letter['level'] = 0
+            letter['move'] = {'kind': 'out' if offset % 2 else 'back' if offset else 'in', 'npc': r['npc_id']}
         elif r['level'] >= QUEST_LETTER_LEVEL:
             # The resident's request is done (server/quests.py): its own thank-you words.
             letter['level'] = 0
@@ -737,6 +743,8 @@ class NpcHomes:
         def read_letters(request: Request):
             with db.read() as conn:
                 user = auth(conn, request)
+            app.state.village_residents.residents_for(user['id'])
+            with db.read() as conn:
                 return {'letters': letters(conn, user['id']), 'unread': unread_letters(conn, user['id'])}
 
         @app.post('/v1/letters/read')

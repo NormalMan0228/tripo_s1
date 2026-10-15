@@ -24,9 +24,10 @@ from typing import Literal
 from fastapi import HTTPException, Request
 from pydantic import Field
 from .models import Mutation
-from . import npc_homes, archetypes
+from . import npc_homes, archetypes, village_residents
 
 CHAPTER = 'first_gift'
+EVENTS = ('forest_told', 'forest_gate', 'danbi_rescued')
 STEPS = ('letter', 'cafe', 'craft', 'done')
 # 모카 · 카페 주인 (game/scripts/day_folk.gd, shadow_folk.gd 'regular').
 SENDER = 'regular'
@@ -43,6 +44,9 @@ RETURN_GIFT = {'title': '카페 머그잔', 'category': 'mug', 'parts': [
     ('coffee', 'ellipsoid', [0.17, 0.03, 0.17], [0, 0.245, 0], '#6b4226')]}
 
 SCHEMA = '''
+CREATE TABLE IF NOT EXISTS story_events (
+ user_id TEXT NOT NULL REFERENCES users(id), event TEXT NOT NULL, created REAL NOT NULL,
+ PRIMARY KEY(user_id,event));
 CREATE TABLE IF NOT EXISTS story_progress (
  user_id TEXT PRIMARY KEY REFERENCES users(id), chapter TEXT NOT NULL,
  step TEXT NOT NULL CHECK(step IN ('letter','cafe','craft','done')), run INTEGER NOT NULL DEFAULT 1,
@@ -54,7 +58,8 @@ ENDED = ('ready', 'failed', 'cancelled', 'unknown')
 
 
 class StoryStep(Mutation):
-    action: Literal['read_letter', 'accept', 'greet']
+    action: Literal['read_letter', 'accept', 'greet', 'event']
+    event: Literal['forest_told', 'forest_gate', 'danbi_rescued'] | None = None
     npc: str = Field(default='', max_length=24, pattern=r'^[a-z_]*$')
 
 
@@ -95,7 +100,8 @@ def public(conn, user_id):
     if not row:
         return None
     out = {'chapter': row['chapter'], 'step': row['step'], 'run': row['run'], 'greeted': json.loads(row['greeted']),
-           'terrace': TERRACE, 'sender': SENDER}
+           'terrace': TERRACE, 'sender': SENDER,
+           'events': [r[0] for r in conn.execute('SELECT event FROM story_events WHERE user_id=? ORDER BY created,event', (user_id,))]}
     if row['step'] == 'craft':
         # Pieces made since 모카 asked, newest first (in the bag or set down; listed and given ones are not).
         out['made'] = [{'id': r['id'], 'name': r['name'], 'version': r['version'], 'state': r['state']} for r in conn.execute(
@@ -115,7 +121,9 @@ def reset(conn, user_id, now):
     """Back to the first step for a rehearsal (or the first time, for an account made before the
     chapter). Nothing is deleted but the terrace's placement: the piece on the café terrace goes
     back to the player's bag; letters, return gifts and every other piece stay. The caller has the
-    tables (npc_homes.SCHEMA, SCHEMA) and the transaction."""
+    tables (npc_homes.SCHEMA, SCHEMA, village_residents.SCHEMA) and the transaction."""
+    # Preserve previous greetings before a chapter rehearsal clears its own list.
+    village_residents.migrate_memory(conn, user_id)
     returned = []
     for item in conn.execute('SELECT object_id FROM npc_items WHERE host_id=? AND home_id=?', (user_id, TERRACE)).fetchall():
         conn.execute("UPDATE objects SET state='inventory',x=NULL,z=NULL,version=version+1 WHERE id=? AND owner_id=? AND state='gifted'",
@@ -163,7 +171,22 @@ class Story:
             def apply(conn, user):
                 row = progress(conn, user['id'])
                 now = clock()
-                if body.action == 'read_letter' and row['step'] == 'letter':
+                if body.action == 'event':
+                    if body.event is None:
+                        fail('story_event_required', 422)
+                    if host_for(conn, user['id']) != user['id']:
+                        fail('story_own_village_only')
+                    previous = {'forest_gate': 'forest_told', 'danbi_rescued': 'forest_gate'}.get(body.event)
+                    if previous and not conn.execute('SELECT 1 FROM story_events WHERE user_id=? AND event=?', (user['id'], previous)).fetchone():
+                        fail('story_event_locked')
+                    # Initialize before changing the rescue flag (legacy saves stay legacy).
+                    village_residents.ensure(conn, user['id'], now, settings)
+                    added = conn.execute('INSERT OR IGNORE INTO story_events VALUES (?,?,?)', (user['id'], body.event, now)).rowcount
+                    if body.event == village_residents.RESCUE_EVENT:
+                        if added:
+                            village_residents.remember(conn, user['id'], 'shopkeeper', now)
+                        app.state.village_residents.sync_in(conn, user['id'], now)
+                elif body.action == 'read_letter' and row['step'] == 'letter':
                     conn.execute("UPDATE story_progress SET step='cafe',updated=? WHERE user_id=?", (now, user['id']))
                 elif body.action == 'accept' and row['step'] in ('letter', 'cafe'):
                     # 모카 asked: what the player makes from now on is offered first.
@@ -171,6 +194,7 @@ class Story:
                 elif body.action == 'greet':
                     if body.npc not in GREETERS:
                         fail('unknown_resident', 422)
+                    village_residents.remember(conn, user['id'], body.npc, now)
                     greeted = json.loads(row['greeted'])
                     if body.npc not in greeted:
                         greeted.append(body.npc)

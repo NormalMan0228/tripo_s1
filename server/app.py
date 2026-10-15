@@ -468,6 +468,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def me(request:Request):
         with db.read() as conn:
             user = auth(conn,request)
+        residency = app.state.village_residents.residents_for(user['id'])
+        with db.read() as conn:
             active = conn.execute("SELECT id,state FROM runs WHERE owner_id=? AND status='active'",(user['id'],)).fetchone()
             active_summary = None
             if active:
@@ -477,7 +479,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             pending_job = conn.execute("SELECT id FROM jobs WHERE owner_id=? AND state IN ('queued','submitting','generating','unknown') ORDER BY created LIMIT 1",(user['id'],)).fetchone()
             # The craft under way (asset_studio.py), so the village follows it again after a relaunch.
             craft = conn.execute("SELECT id,state FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled','unknown') ORDER BY created DESC LIMIT 1",(user['id'],)).fetchone()
-            return {'username':user['username'],'shards':user['shards'],'mode':settings.mode,'role':user['role'],
+            return {'residents':residency,'username':user['username'],'shards':user['shards'],'mode':settings.mode,'role':user['role'],
                 'generation_enabled': settings.mode=='demo' or bool(settings.legacy_generation_enabled and settings.tripo_key and settings.paid_enabled),
                 'studio_tripo_enabled': bool(settings.tripo_key and settings.paid_enabled),
                 'generation_cost':25,'profile':profile(conn,user['id']),'catalog':catalog.public_catalog(),'campaign':campaign.public(conn,user['id']),
@@ -513,7 +515,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 # Uniform 2x2 parcel; matches normalized 1.6m props on the client.
                 if row['state']!='inventory': fail('retrieve_before_moving')
                 if not homestead.village_inside(body.x, body.z): fail('outside_room')
-                reserved = homestead.village_reserved(body.x, body.z)
+                reserved = homestead.village_reserved(body.x, body.z, settings.resident_moves)
                 if reserved: fail(reserved)
                 other = conn.execute("SELECT x,z FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? AND state='placed' AND COALESCE(room,'village')='village'",(user['id'],)).fetchall()
                 if len(other)>=30: fail('village_full')
@@ -702,6 +704,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.object_shape=object_shape.ObjectShape(app,db,clock,mutate,own)
     from .npc_homes import NpcHomes
     app.state.npc_homes=NpcHomes(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
+    from .village_residents import VillageResidents
+    app.state.village_residents=VillageResidents(app,db,settings,clock,auth,multiplayer.host_for)
     from .story import Story
     app.state.story=Story(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
     from .quests import Quests

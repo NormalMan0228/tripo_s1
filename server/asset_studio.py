@@ -617,7 +617,9 @@ class Studio:
                     elif abs(body.x)>4 or abs(body.z)>4:fail('outside_room')
                     if body.room!='village' and abs(body.x)<1.5 and body.z>2.5:fail('door_area_reserved')
                     if body.room=='workshop' and body.x < -1.8 and body.z < -1.5:fail('workbench_area_reserved')
-                    if body.room=='village' and village_reserved(body.x,body.z):fail('reserved_area')
+                    if body.room=='village':
+                        reserved = village_reserved(body.x,body.z,settings.resident_moves)
+                        if reserved:fail('plot_reserved' if reserved == 'plot_reserved' else 'reserved_area')
                     others=conn.execute("SELECT x,z FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? AND objects.id!=? AND state='placed' AND COALESCE(room,'village')=?",(user['id'],object_id,body.room)).fetchall()
                     if len(others)>=30:fail('room_full')
                     if any(abs(o['x']-body.x)<2 and abs(o['z']-body.z)<2 for o in others):fail('placement_overlap')

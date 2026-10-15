@@ -22,12 +22,17 @@ def village_inside(x, z):
     return VILLAGE_X[0] <= x <= VILLAGE_X[1] and VILLAGE_Z[0] <= z <= VILLAGE_Z[1]
 
 
-def village_reserved(x, z):
+def village_reserved(x, z, resident_moves=False):
     """Outdoor furniture coordinates are relative to the island town green.
 
     The arrival spot and the walk up to the workshop (town hall) door stay clear.
     Returns an error code, or None when the parcel may be used.
     """
+    if resident_moves:
+        from .village_residents import plot_reserved
+        reserved = plot_reserved(x, z)
+        if reserved:
+            return reserved
     if abs(x) < 2 and abs(z) < 2:
         return 'spawn_area_reserved'
     if -3.5 < x < 3.5 and -12 < z < -6:

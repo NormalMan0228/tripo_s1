@@ -215,6 +215,42 @@ def npc_homes(args):
     return 0
 
 
+def residents(args):
+    """Local operator moves; no player mutation endpoint and no relationship reset."""
+    from . import village_residents as residency, npc_homes as homes, story as chapter
+    from .config import Settings
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    settings = Settings(data_dir=Path(args.data_dir))
+    # Validate the relevant configuration without reading or writing another world.
+    import math
+    if any(not math.isfinite(t) or not 0 <= t <= 30 * 86400
+           for t in (settings.resident_arrive_seconds, settings.resident_leave_seconds)):
+        raise ValueError('Invalid resident move timing')
+    if args.command != 'show' and not settings.resident_moves:
+        print('TRIPOTHON_RESIDENT_MOVES is disabled.')
+        return 1
+    with sqlite3.connect(database, timeout=30) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.execute('PRAGMA foreign_keys=ON')
+        user = conn.execute('SELECT id FROM users WHERE username=?', (args.username.lower(),)).fetchone()
+        if not user:
+            print('No such account.')
+            return 1
+        conn.executescript(homes.SCHEMA + chapter.SCHEMA + residency.SCHEMA)
+        conn.execute('BEGIN IMMEDIATE')
+        now = time.time()
+        residency.sync(conn, user['id'], now, settings)
+        if args.command != 'show':
+            action = residency.arrive if args.command == 'move-in' else residency.leave
+            action(conn, user['id'], args.npc, now, settings)
+        result = residency.brief(conn, user['id'], now, settings)
+    print(json.dumps(result, ensure_ascii=False, indent=1))
+    return 0
+
+
 def story(args):
     database = Path(args.data_dir) / 'world.sqlite3'
     if not database.is_file():
@@ -229,7 +265,8 @@ def story(args):
             return 1
         # A world from before the chapter (or resident gifts) gets the empty tables first.
         from .npc_homes import SCHEMA as HOMES
-        conn.executescript(HOMES + chapter.SCHEMA)
+        from .village_residents import SCHEMA as RESIDENTS
+        conn.executescript(HOMES + chapter.SCHEMA + RESIDENTS)
         if args.command == 'show':
             print(json.dumps(chapter.describe(conn, user['id']), ensure_ascii=False, indent=1))
             return 0
@@ -363,7 +400,8 @@ def demo(args):
             print(json.dumps(staging.pieces(conn, named[args.username]), ensure_ascii=False, indent=1))
             return 0
         from .npc_homes import SCHEMA as HOMES
-        conn.executescript(HOMES + chapter.SCHEMA)
+        from .village_residents import SCHEMA as RESIDENTS
+        conn.executescript(HOMES + chapter.SCHEMA + RESIDENTS)
         conn.execute('BEGIN IMMEDIATE')
         try:
             result = staging.prep(conn, args.data_dir, named[args.username], time.time(), args.stars,
@@ -515,6 +553,11 @@ def main(argv=None):
     learned.add_argument('--kind', choices=('describe', 'design'))
     learned.add_argument('--limit', type=int, default=50)
     learned.add_argument('--data-dir', default='/data')
+    moving = actions.add_parser('residents', help='show residency or start an operator move')
+    moving.add_argument('username')
+    moving.add_argument('command', choices=('show', 'move-in', 'move-out'), nargs='?', default='show')
+    moving.add_argument('npc', choices=('shopkeeper',), nargs='?', default='shopkeeper')
+    moving.add_argument('--data-dir', default='/data')
     homes = actions.add_parser('npc-homes', help="show one player's residents' homes and gifts")
     homes.add_argument('username')
     homes.add_argument('--data-dir', default='/data')
@@ -570,6 +613,8 @@ def main(argv=None):
         return chat(args)
     if args.action == 'reports':
         return reports(args)
+    if args.action == 'residents':
+        return residents(args)
     if args.action == 'story':
         return story(args)
     if args.action == 'demo':
