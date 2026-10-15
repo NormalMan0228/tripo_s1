@@ -152,7 +152,9 @@ static func choice(app: Node, npc: String, speaker: String, portrait: String, an
 		if is_instance_valid(anchor) and anchor.has_method("talk_to_player") and is_instance_valid(app.get("player")): anchor.talk_to_player(app.player.global_position)
 		app.open_dialogue(speaker, portrait, lines, choices if not choices.is_empty() else [[t("알겠어요"), Callable()]])
 	var done := func(kind: String, reply: Dictionary) -> void: village_done(app, anchor, kind, reply)
-	return choice_for(app.api, npc, say, done, true)
+	# The village knows the bag and the look a moment before the server's next answer.
+	var here: Node = village_of(app)
+	return choice_for(app.api, npc, say, done, true, Callable(here, "state_of") if here else Callable())
 
 ## The same inside a building (studio.gd open_talk), in that room's dialogue box.
 static func room_choice(room: Node, id: String) -> Array:
@@ -164,10 +166,10 @@ static func room_choice(room: Node, id: String) -> Array:
 
 ## say(lines, choices) opens the caller's dialogue box; done(kind, reply) plays its effects
 ## ("accepted", "completed", "guide", "wardrobe").
-static func choice_for(api: Node, npc: String, say: Callable, done: Callable, village: bool) -> Array:
+static func choice_for(api: Node, npc: String, say: Callable, done: Callable, village: bool, judge := Callable()) -> Array:
 	var entry := entry_for(str(api.token), npc)
 	if entry.is_empty(): return []
-	match str(entry.get("state", "")):
+	match str(judge.call(entry) if judge.is_valid() else entry.get("state", "")):
 		"available": return [t("✦ 부탁 들어주기"), func(): offer(api, entry, say, done)]
 		"active": return [t("부탁 이야기"), func(): remind(api, str(entry.id), say, done, village)]
 		"ready": return [t("✦ 부탁한 것 건네기") if str(entry.kind) == "bring" else t("✦ 부탁을 마쳤어요"), func(): hand_over(api, str(entry.id), say, done)]
