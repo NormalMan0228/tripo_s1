@@ -256,7 +256,7 @@ func field() -> void:
 		var count: Control = app.quick_counts[item]
 		chips.append(await hover(count) == t(Main.ITEM_NAMES[item]) and await hover(count.get_parent().get_child(0)) == t(Main.ITEM_NAMES[item]))
 	expect(chips.all(func(ok): return ok), "quick resource counts named on icon and number")
-	expect(await hover(app.day_track) == t("일곱 밤 중 지나온 날"), "day tracker named")
+	expect(await hover(app.day_track) == t("탐험 진행"), "day tracker named")
 	expect(await hover(app.field_map) == t("주변 지도"), "field map named")
 	expect(await hover(app.hp_bar.get_parent().get_parent().get_child(0)) == t("체력"), "health meter icon named")
 	app.toggle_drawer()
