@@ -9,19 +9,19 @@ def test_profile_is_owned_versioned_and_persistent(world):
     alice=account(c,'wardrobe_alice'); bob=account(c,'wardrobe_bob')
     initial=c.get('/v1/me',headers=alice).json()
     assert initial['profile']['version']==0
-    avatar=initial['profile']['avatar'] | {'character':'ranger','coat':'#285f83','headwear':'beret','backpack':False}
+    avatar=initial['profile']['avatar'] | {'character':'m2','coat':'#285f83','accent':'#a0b1c2','headwear':'beret','backpack':False}
     body=mutation(version=0,avatar=avatar)
     response=c.post('/v1/profile',headers=alice,json=body)
     assert response.status_code==200 and response.json()['version']==1
     assert c.post('/v1/profile',headers=alice,json=body).json()==response.json()
     assert c.post('/v1/profile',headers=alice,json=mutation(version=0,avatar=avatar)).status_code==409
-    assert c.get('/v1/me',headers=bob).json()['profile']['avatar']['character']=='explorer_b'
+    assert c.get('/v1/me',headers=bob).json()['profile']['avatar']['character']=='f1'
     assert c.post('/v1/profile',json=body).status_code==401
     assert c.post('/v1/profile',headers=alice,json=mutation(version=1,avatar=avatar|{'owner_id':'bob'})).status_code==422
     assert c.post('/v1/profile',headers=alice,json=mutation(version=1,avatar=avatar|{'character':'res://private.glb'})).status_code==422
     assert c.get('/v1/me',headers=alice).json()['profile']['avatar']==avatar
     assert c.get('/v1/studio',headers=alice).json()['profile']==response.json()
-    assert c.get('/v1/studio',headers=bob).json()['profile']['avatar']['character']=='explorer_b'
+    assert c.get('/v1/studio',headers=bob).json()['profile']['avatar']['character']=='f1'
 
 
 def test_expedition_choice_cannot_change_active_run_or_supply_reward(world):
