@@ -9,7 +9,7 @@ extends SceneTree
 ##    residents fill them with their own pieces).
 ##   Godot --headless --path game -s res://tests/interior_walk.gd [-- --room=01_cafe]
 const Interiors = preload("res://scripts/interiors.gd")
-const ROOMS := ["home","workshop","01_cafe","02_timber_house","03_teal_cottage","04_windmill","05_observatory","06_orange_cottage","07_greenhouse","11_purple_house","12_blue_house","13_shop","16_blue_cottage","17_lighthouse"]
+const ROOMS := ["home","workshop","01_cafe","02_timber_house","03_teal_cottage","04_windmill","05_observatory","06_orange_cottage","07_greenhouse","11_purple_house","12_blue_house","13_shop","16_blue_cottage","17_lighthouse","18_meadow_house","danbi_house"]
 const CELL := 0.2
 const STEP := 1.0/60.0
 var failures: Array[String] = []

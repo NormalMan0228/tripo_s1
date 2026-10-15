@@ -170,7 +170,8 @@ func find_focus() -> Dictionary:
 	for place in Town.PLACES:
 		if place.kind in ["farm","fish"]: continue
 		if p.distance_to(place.at)<2.3: return place
-	for door in Town.DOORS:
+	# Built plot houses (maps/archipelago/plots.gd) add their doors.
+	for door in Town.DOORS+preload("res://maps/archipelago/plots.gd").doors():
 		if p.distance_to(door.at)<1.9:
 			# Dark windows mean everyone inside is asleep or out: the door stays shut
 			# (residents.gd). The player's own rooms are always open.

@@ -205,7 +205,7 @@ func _bounds(node: Node3D) -> AABB:
 func _verify_and_capture() -> void:
 	var report := {"count": placed.size(), "metre_scale": true, "level_pad_vertices": touched_vertices, "buildings": [], "overlaps": []}
 	var bounds: Array[AABB] = []
-	var valid := placed.size() == 17
+	var valid: bool = placed.size() == int(manifest.buildings.size())
 	for i in placed.size():
 		var node := placed[i]
 		var box := _bounds(node)

@@ -48,9 +48,11 @@ const PLANS := {
 	"13_shop":[{"rooms":[["매장",0.6],["창고",0.4,"storeroom"]],"w":7.0,"d":6.0,"h":2.9,"door_z":0.2,"label":"1층"},{"rooms":[["주인 방",1.0]],"w":6.0,"d":5.0,"h":2.8,"theme":"owner_room","label":"다락"}],
 	"16_blue_cottage":[{"rooms":[["거실",0.58],["침실",0.42,"bedroom"]],"w":8.5,"d":7.5,"h":2.9,"door_z":0.3}],
 	"17_lighthouse":[{"rooms":[["창고",1.0]],"w":7.0,"d":6.0,"h":3.8,"shape":"round","label":"1층"},{"rooms":[["등대지기 방",1.0]],"w":7.0,"d":6.0,"h":3.4,"shape":"round","theme":"keeper","label":"2층"},{"rooms":[["등실",1.0]],"w":6.5,"d":6.0,"h":3.4,"shape":"round","theme":"lantern","label":"등실","balcony":true}],
+	"18_meadow_house":[{"rooms":[["거실 겸 부엌",1.0]],"w":7.6,"d":7.2,"h":2.9,"label":"1층"},{"rooms":[["다락 침실",1.0]],"w":7.0,"d":5.8,"h":2.8,"theme":"attic","label":"다락"}],
+	"danbi_house":[{"rooms":[["거실",0.58],["침실",0.42,"cottage_bedroom"]],"w":6.3,"d":6.0,"h":2.9,"door_z":0.2}],
 }
 ## What each building's windows look out on (its island's surroundings).
-const OUTLOOK := {"01_cafe":"meadow","02_timber_house":"meadow","03_teal_cottage":"meadow","04_windmill":"meadow","05_observatory":"garden","06_orange_cottage":"garden","07_greenhouse":"garden","09_town_hall":"town","10_red_house":"town","11_purple_house":"town","12_blue_house":"town","13_shop":"town","16_blue_cottage":"camp","17_lighthouse":"sea"}
+const OUTLOOK := {"01_cafe":"meadow","02_timber_house":"meadow","03_teal_cottage":"meadow","04_windmill":"meadow","05_observatory":"garden","06_orange_cottage":"garden","07_greenhouse":"garden","09_town_hall":"town","10_red_house":"town","11_purple_house":"town","12_blue_house":"town","13_shop":"town","16_blue_cottage":"camp","17_lighthouse":"sea","18_meadow_house":"meadow","danbi_house":"town"}
 const WINDOW_SHADER := """
 shader_type spatial;
 render_mode unshaded, cull_disabled, shadows_disabled;
@@ -86,6 +88,8 @@ const ROOMS := {
 	"13_shop":{"theme":"shop","name":"녹백색 줄무늬 차양 상점","kind":"마을 잡화점","flavour":"없는 게 없는 마을 잡화점이에요. 구경은 언제나 무료!","dims":[6.74,5.5,6.21]},
 	"16_blue_cottage":{"theme":"reading","name":"청색 지붕 크림색 주택","kind":"벽난로 오두막","flavour":"벽난로 옆 안락의자에서 책 읽기 좋은 오두막이에요.","dims":[9.11,6.8,9.1]},
 	"17_lighthouse":{"theme":"lighthouse","name":"빨간 등실 등대","kind":"바다를 지키는 등대","flavour":"둥근 벽을 따라 등실로 오르는 나선 계단이 있어요.","dims":[4.57,9.0,5.06],"height":3.8,"shape":"round"},
+	"18_meadow_house":{"theme":"kitchen","name":"풍차 언덕 하숙집","kind":"일꾼들의 하숙집","flavour":"방앗간과 카페, 씨앗 가게 일꾼들이 함께 사는 아늑한 집이에요.","dims":[8.05,6.26,8.09]},
+	"danbi_house":{"theme":"reading","name":"단비네 집","kind":"단비의 새 보금자리","flavour":"잡화점 주인 단비가 이사 온 아담한 집이에요.","dims":[6.89,5.58,6.98]},
 }
 
 ## floor: texture style; wall_tex: wall style; colours are hex strings.
@@ -660,6 +664,32 @@ static func layout(id: String, floor_index: int, f: Dictionary) -> Array:
 			l.append(it("lighthouse_lens",0,-0.55))
 			l.append(link(it("stair_hatch",-1.75,0.6,0.0,{"size":Vector3(1.2,0.95,1.2)}),1,Vector2.ZERO))
 			l.append(it("telescope",1.85,0.75,0.0,{"size":Vector3(0.9,1.6,0.9)}))
+		"18_meadow_house/0":
+			# The workplace owners' own house (residents.gd): a kitchen table, a seat, the stairs.
+			l.append(link(it("staircase",hw-0.78,-hd+1.4,0.0,{"size":Vector3(1.4,h,2.7),"variant":"left"}),1,Vector2.ZERO))
+			l.append(back("kitchen_counter",-hw+0.9,f))
+			l.append(back("cooking_stove",-hw+2.25,f))
+			l.append(it("dining_table",-1.0,0.9,90.0))
+			l.append(it("wooden_chair",-1.0-0.82,0.9,90.0))
+			l.append(it("wooden_chair",-1.0+0.82,0.9,-90.0))
+			l.append(wall("armchair",f,0,1,1.6))
+			l.append(it("floor_lamp",-hw+0.42,hd-0.95))
+		"18_meadow_house/1":
+			l.append(link(it("stair_hatch",hw-1.05,-hd+1.05,0.0,{"size":Vector3(1.5,0.95,1.8)}),0,Vector2.ZERO))
+			l.append(back("bed",-2.75,f))
+			l.append(back("side_table",-1.55,f))
+			l.append(back("bed",-0.35,f))
+			l.append(wall("bed",f,0,-1,1.4))
+			l.append(wall("wardrobe_closet",f,0,1,1.2))
+		"danbi_house/0":
+			# The plot house (maps/archipelago/plots.gd): bare like every home, the owner fills it.
+			l.append(back("kitchen_counter",r[0].x+0.9,f))
+			l.append(it("round_cafe_table",r[0].x+1.3,0.9))
+			l.append(it("wooden_chair",r[0].x+2.05,0.9,-90.0))
+			l.append(wall("armchair",f,0,-1,-0.6))
+			l.append(it("floor_lamp",r[0].y-0.45,-hd+0.42))
+			l.append(back("bed",r[1].x+0.85,f))
+			l.append(wall("wardrobe_closet",f,1,1,1.3))
 		"01_cafe/1":
 			owner_room(l,f,Vector2.ZERO,1.8,1.5)
 		"03_teal_cottage/1":
@@ -711,6 +741,9 @@ static func windows(id: String, floor_index: int, f: Dictionary) -> Array:
 		"17_lighthouse/0": list=[["arc",30.0],["arc",90.0],["arc",150.0]]
 		"17_lighthouse/1": list=[["arc",32.0]]
 		"17_lighthouse/2": list=[["arc",15.0],["arc",50.0],["arc",90.0],["arc",130.0],["arc",165.0]]
+		"18_meadow_house/0": list=[["back",-0.4,1.2],["left",1.4],["right",1.9,1.0]]
+		"18_meadow_house/1": list=[["back",0.9,0.8,"round"],["left",-0.5]]
+		"danbi_house/0": list=[["left",-0.8,1.0],["back",r[1].x+0.9,0.8],["right",0.3,0.9]]
 	var result: Array = []
 	for entry in list:
 		var width: float = entry[2] if entry.size()>2 else 1.4

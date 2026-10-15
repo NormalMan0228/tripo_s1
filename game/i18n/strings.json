@@ -10679,6 +10679,50 @@
   "우두머리의 밤": {
    "en": "The boss's night",
    "zh": "首领之夜"
+  },
+  "카페 '빨간 지붕' 주인 모카예요. 풍차 언덕 하숙집에서 지내며 커피를 내려요.": {
+   "en": "I'm Moka, owner of Café 'Red Roof'. I live at the Windmill Hill boarding house and brew coffee.",
+   "zh": "我是“红屋顶”咖啡馆的老板摩卡。我住在风车山坡的寄宿屋，每天煮咖啡。"
+  },
+  "풍차 옆 하숙집 다락방이 제 방이에요. 맷돌 소리가 거기까지 들려요.": {
+   "en": "My room is the attic of the boarding house by the windmill. I can hear the millstone from there.",
+   "zh": "风车旁寄宿屋的阁楼是我的房间。在那儿也能听见石磨声。"
+  },
+  "카페 '빨간 지붕' 주인이에요. 풍차 언덕 하숙집에서 지내며 커피를 내려요.": {
+   "en": "I own Café 'Red Roof'. I live at the Windmill Hill boarding house and brew coffee.",
+   "zh": "我是“红屋顶”咖啡馆的老板。我住在风车山坡的寄宿屋，每天煮咖啡。"
+  },
+  "풍차 언덕 하숙집": {
+   "en": "Windmill Hill Boarding House",
+   "zh": "风车山坡寄宿屋"
+  },
+  "일꾼들의 하숙집": {
+   "en": "The workers' boarding house",
+   "zh": "工人们的寄宿屋"
+  },
+  "방앗간과 카페, 씨앗 가게 일꾼들이 함께 사는 아늑한 집이에요.": {
+   "en": "A cosy house shared by the mill, café and seed-shop keepers.",
+   "zh": "磨坊、咖啡馆和种子店的店主们一起住的温馨小屋。"
+  },
+  "거실 겸 부엌": {
+   "en": "Living room and kitchen",
+   "zh": "客厅兼厨房"
+  },
+  "단비네 집": {
+   "en": "Danbi's house",
+   "zh": "丹比的家"
+  },
+  "단비의 새 보금자리": {
+   "en": "Danbi's new nest",
+   "zh": "丹比的新家"
+  },
+  "잡화점 주인 단비가 이사 온 아담한 집이에요.": {
+   "en": "The snug house Danbi, the general store owner, moved into.",
+   "zh": "杂货店老板丹比搬进来的小巧房子。"
+  },
+  "곧 새 이웃이 이사 와요": {
+   "en": "A new neighbour is moving in soon",
+   "zh": "新邻居即将搬来"
   }
  },
  "templates": []
