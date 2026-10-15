@@ -1627,7 +1627,7 @@ func leave() -> void:
 	if floor_index==0 and is_instance_valid(hero):
 		walk_out=Vector3(float(room_spec.get("door_x",0.0)),0,float(room_spec.size.y)*0.5+1.6)
 	veil.play_door("open",room)
-	veil.loading(tr("다섯 섬 마을"))
+	veil.loading(tr("다섯 섬 마을"),"","village")
 	await veil.fade_out()
 	if is_instance_valid(hero):
 		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO

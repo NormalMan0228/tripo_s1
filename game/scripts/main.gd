@@ -38,6 +38,7 @@ const VersionGate = preload("res://scripts/version_gate.gd")
 ## Loaded first of all as an autoload (project.godot): this is that same, cached copy.
 const PatchBoot = preload("res://scripts/patch_boot.gd")
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
+const Brand = preload("res://scripts/brand.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
@@ -493,6 +494,8 @@ func login_ui(page := "menu") -> void:
 	var art := TextureRect.new()
 	var hour: float = daylight.current_hour() if is_instance_valid(daylight) else Daylight.clock_hour()
 	art.texture = load(title_art_for(hour))
+	# 2560 px art shown smaller: mipmaps keep it smooth at any window size.
+	art.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
@@ -526,24 +529,12 @@ func login_ui(page := "menu") -> void:
 	ui.add_child(vignette)
 	ui.add_child(title_motes())
 	var heading := VBoxContainer.new()
-	heading.position = Vector2(84,64)
+	heading.position = Vector2(56,34)
 	heading.add_theme_constant_override("separation",0)
 	ui.add_child(heading)
-	# Villagen = village + generate: the name is the title, with the star seed beside it.
-	var name_row := HBoxContainer.new()
-	name_row.add_theme_constant_override("separation",14)
-	heading.add_child(name_row)
-	var seed := RpgUi.icon("res://assets/starseed.svg",58)
-	seed.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	name_row.add_child(seed)
-	var title := RpgUi.label(name_row,"Villagen",76)
-	title.add_theme_font_override("font",RpgUi.FONT_DISPLAY)
-	title.add_theme_constant_override("outline_size",10)
-	title.add_theme_color_override("font_outline_color",Color("2a1a0c"))
-	title.add_theme_constant_override("shadow_offset_y",5)
-	title.add_theme_color_override("font_shadow_color",Color(0,0,0,.35))
-	# The name and the gold rule only: no tagline under it (the user found extra lines cheap).
-	RpgUi.divider(heading,RpgUi.GOLD,380).size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	# Villagen = village + generate: the painted logo (a sprout and the star seed on the name),
+	# no tagline under it (the user found extra lines cheap).
+	heading.add_child(Brand.logo(420))
 	var body := VBoxContainer.new()
 	body.position = Vector2(92,300 if page=="menu" else 250)
 	body.add_theme_constant_override("separation",12)
@@ -714,7 +705,8 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		I18n.remember("server",host)
 		I18n.remember("username",username.strip_edges())
 	var veil := Transition.of(get_tree())
-	veil.loading(TownLayout.room_title("home") if get_tree().current_scene==self else tr("다섯 섬 마을"))
+	var at_home: bool = get_tree().current_scene==self
+	veil.loading(TownLayout.room_title("home") if at_home else tr("다섯 섬 마을"),"","room" if at_home else "village")
 	await veil.fade_out()
 	if get_tree().current_scene==self:
 		# A new session starts at home; walking out of the front door opens the village.
@@ -1910,7 +1902,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	run=snapshot.data
 	# Into the expedition under the same loading card as every other change of place.
 	var veil := Transition.of(get_tree())
-	veil.loading(region_name(str(run.get("map_id",map_id))),"run")
+	veil.loading(region_name(str(run.get("map_id",map_id))),"run",str(run.get("map_id",map_id)))
 	await veil.fade_out()
 	# The village's own per-frame work stops while the expedition is built under the card.
 	screen="loading"
@@ -2340,7 +2332,7 @@ func retry_run() -> void:
 	var difficulty: String=run.get("difficulty","standard")
 	# One fade for the whole retry: the village is rebuilt under the card, not shown.
 	var veil := Transition.of(get_tree())
-	veil.loading(region_name(region),"run")
+	veil.loading(region_name(region),"run",region)
 	await veil.fade_out()
 	await leave_run(false)
 	if screen=="village": await start_run(region,difficulty)
@@ -2450,7 +2442,7 @@ func show_results() -> void:
 func back_to_village(fade := true) -> void:
 	var veil := Transition.of(get_tree())
 	if fade:
-		veil.loading(tr("다섯 섬 마을"))
+		veil.loading(tr("다섯 섬 마을"),"","village")
 		await veil.fade_out()
 	await enter_village()
 	if fade: veil.fade_in()
@@ -3292,7 +3284,7 @@ func open_studio(destination: String="workshop") -> void:
 	var veil := Transition.of(get_tree())
 	veil.play_door("open",destination)
 	player.controls_enabled=false
-	veil.loading(tr("%s님의 집") % str(session.visit_name) if session.has("visit_name") else TownLayout.room_title(destination))
+	veil.loading(tr("%s님의 집") % str(session.visit_name) if session.has("visit_name") else TownLayout.room_title(destination),"","room")
 	await veil.fade_out()
 	leave_modules()
 	if is_instance_valid(town): town.release_map()

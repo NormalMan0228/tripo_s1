@@ -936,7 +936,7 @@ func travel(destination: Dictionary) -> void:
 		return
 	var veil := Transition.of(get_tree())
 	play("whoosh", Vector3.INF, -10.0)
-	veil.loading(tr(ISLANDS[destination.spec.island]))
+	veil.loading(tr(ISLANDS[destination.spec.island]),"",str(destination.spec.island))
 	await veil.fade_out()
 	if not is_instance_valid(app) or not is_instance_valid(app.player): return
 	stand_up(true)
