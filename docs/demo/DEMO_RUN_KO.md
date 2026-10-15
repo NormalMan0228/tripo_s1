@@ -43,12 +43,11 @@
 ## 3. 준비 체크리스트
 
 **서버 (시연 전날까지)**
-- [ ] 시연 서버를 정하고(학교 서버 권장) 패치를 올림.
-- [ ] **하루 제작 횟수 제한 확인** — 리허설로 다 쓰면 당일 주문이 막힙니다.
-  - `TRIPO_DAILY_REQUEST_LIMIT` (서버 전체, 기본 5) → 시연 날은 넉넉히(예: 50).
-  - `TRIPO_USER_DAILY_REQUEST_LIMIT` (계정당, 기본 2) → 의자 + 자유 제작 = 2회. 리허설과 같은 날이면 계정을 바꾸거나 4 이상.
-  - 횟수는 UTC 날짜로 셉니다(한국 시간 오전 9시에 초기화).
-- [ ] `TRIPOTHON_TRIPO_CREDIT_BUDGET` 남은 양이 시연 제작 2~6회에 충분한지.
+- [ ] 시연은 학교 서버 0.11.7 (2026-10-15 21:10 배포). **시연 전에는 서버 업데이트를 다시 돌리지 않습니다** — `update_online_server.sh`는 최신 브랜치를 받아 다시 빌드하고, `--announce`를 쓰면 접속한 사람을 모두 타이틀로 내보냅니다.
+- [ ] **하루 제작 횟수 확인 (읽기만)** — 학교 서버 설정은 `--per-day 3 --craft-day-limit 105`: 서버 전체 하루 **105회**, 계정당 하루 **3회**. 시연(의자 + 자유 제작 = 2회)에는 충분합니다.
+  - 실패·취소한 제작도 1회로 셉니다. 횟수는 UTC 날짜로 셉니다(한국 시간 **오전 9시**에 초기화).
+  - 그래서 **체험 계정으로 리허설하지 않기** — 리허설은 다른 계정으로. 오전 9시 이후 같은 계정으로 3번 만들면 그날은 더 못 만듭니다.
+- [ ] Tripo 예산: 브라우저로 `https://<학교 서버 주소>/health` → `"tripo_budget": {"used": …, "total": 4000}`. 제작 1번에 최대 35크레딧 → 시연 2~6회면 최대 210.
 
 **계정**
 - [ ] 쇼케이스 계정: 마을과 세트장을 미리 꾸며 둠(첫 15초 + 대표 세트장 1곳).
@@ -71,12 +70,32 @@
 .tools\server-venv\Scripts\python.exe -m server.admin_cli demo prep judge01 --stars 200 --copy-from showcase --pick 의자 --pick 시계 --pick 조명 --data-dir server-data
 ```
 
-**학교 서버 (EC2 Instance Connect 창에 한 줄씩)**
-```
+**학교 서버 (EC2 Instance Connect 브라우저 창에 붙여 넣기)**
+
+설정 확인(읽기만, 바꾸지 않음). 예상: `TRIPO_DAILY_REQUEST_LIMIT=105`, `TRIPO_USER_DAILY_REQUEST_LIMIT=3`, `TRIPOTHON_WELCOME_STARS=70` (판매·상자 줄이 없으면 기본값 15 · 1.0).
+```text
 cd ~/tripo_s1
-sudo docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.gcp-free.yaml exec -T api python -m server.admin_cli demo list showcase
-sudo docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.gcp-free.yaml exec -T api python -m server.admin_cli demo prep judge01 --stars 200 --copy-from showcase --pick 의자 --pick 시계 --pick 조명
+grep -E "TRIPO_DAILY_REQUEST_LIMIT|TRIPO_USER_DAILY_REQUEST_LIMIT|WELCOME_STARS|SELL_STARS|CHEST_STARS|CREDIT_BUDGET" ops/production.env
 ```
+
+쇼케이스 계정의 물건 목록(`SHOWCASE`를 그 아이디로):
+```text
+cd ~/tripo_s1
+sudo docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.gcp-free.yaml -f ops/compose.tripo.yaml -f ops/compose.gemini.yaml exec -T api python -m server.admin_cli demo list SHOWCASE
+```
+
+체험 계정 여러 개를 한 번에 준비(게임에서 로그아웃한 뒤, `SHOWCASE`와 물건 단어를 바꿔서):
+```text
+cd ~/tripo_s1
+for u in judge01 judge02 judge03; do sudo docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.gcp-free.yaml -f ops/compose.tripo.yaml -f ops/compose.gemini.yaml exec -T api python -m server.admin_cli demo prep $u --stars 200 --copy-from SHOWCASE --pick 의자 --pick 시계 --pick 조명; done
+```
+
+쇼케이스 계정이 없으면 복사 없이(이야기 처음 + 별씨만):
+```text
+cd ~/tripo_s1
+for u in judge01 judge02 judge03; do sudo docker compose --env-file ops/production.env -f ops/compose.yaml -f ops/compose.gcp-free.yaml -f ops/compose.tripo.yaml -f ops/compose.gemini.yaml exec -T api python -m server.admin_cli demo prep $u --stars 200; done
+```
+(새 계정에는 "환영의 나무 의자"가 원래 가방에 있어서, 생성이 늦으면 그것을 모카에게 건넬 수 있습니다.)
 
 - `--pick`은 물건 이름의 한 단어 또는 `demo list`에 나온 id 앞 8글자. 맞는 것이 없으면 아무것도 바꾸지 않고 멈춥니다.
 - `--stars`는 "최소 이만큼"입니다. 이미 더 많으면 그대로 둡니다(줄이지 않음). 원장에 `demo_topup`으로 남습니다.
