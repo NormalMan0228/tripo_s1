@@ -1,6 +1,6 @@
 extends Node
 ## Fishing from any shore: cast arc, bobber and ripples, nibbles, the bite, a reel
-## fight on a bar, and the catch card. The server (homestead.py) picks the fish,
+## fight on a bar or a ring, and the catch card. The server (homestead.py) picks the fish,
 ## the bite time and checks the hook window and the fight's minimum length; this
 ## script only stages it. village_life owns the HUD slot (app.village_modal) so the
 ## game's E (life.reel) and Esc keys reach us.
@@ -13,6 +13,13 @@ const RpgUi=preload("res://scripts/rpg_ui.gd")
 const PONDS := [[Vector2(51,-42.5),Vector2(12.5,9.5),1.35],[Vector2(-47,44.8),Vector2(16.5,12),1.18]]
 const FALLS := Vector2(-0.5,-9.0)
 const SPOT_NAMES := {"pond":"연못","sea":"바다","river":"폭포 웅덩이"}
+## Ring meter: panel centre on the 1280-wide HUD (beside the angler), panel size, channel
+## radius and width. The vertical gauge stands at the same spot.
+const RING_AT := Vector2(905,280)
+const GAUGE_SIZE := Vector2(120,300)
+const RING_SIZE := 260.0
+const RING_R := 88.0
+const RING_TRACK := 30.0
 var life: Node
 var app: Node
 var phase := ""
@@ -37,6 +44,9 @@ var trophy: Node3D
 var card: Control
 var card_clock := 0.0
 var auto_reel := false
+## Move keys end fishing in the ready/card phases, but only once they were let go after it began
+## (the walk up to the shore usually still holds one when E is pressed).
+var move_armed := false
 # reel fight
 var fish_x := 0.5
 var fish_goal := 0.5
@@ -53,6 +63,17 @@ var fight_time := 0.0
 var tick_clock := 0.0
 var splash_clock := 0.0
 var shadow_kind := "small"
+## Meter shape (shape_for): "lane", "gauge" (the lane stood upright: same physics) or "ring". On
+## the ring fish_x, fish_goal, zone_x and zone_v are in turns (1.0 = once round) and never wrap;
+## fish_gap() measures the short way round. Holding the reel pushes the zone right (lane), up
+## (gauge) or clockwise (ring).
+var meter_shape := "lane"
+var push := 2.4
+var pull := 2.0
+var zone_vmax := 1.3
+var fish_dir := -1.0
+var zone_inside := false
+var reel_held := false
 
 static func water_level(p: Vector2) -> float:
 	for pond in PONDS:
@@ -98,6 +119,7 @@ func begin(target: Dictionary) -> void:
 	life.sfx.play("rod_equip",1.0,-3)
 	rig_rod()
 	build_hud()
+	move_armed=false
 	phase="ready"
 	refresh_hud()
 
@@ -252,21 +274,48 @@ func reel_back() -> void:
 		phase="ready"
 		refresh_hud()
 
-func start_fight(fish: Dictionary) -> void:
-	phase="fight"
+## The server sends only the difficulty and shadow at the hook (not the species), so the shape
+## follows the difficulty alone: the same fish always fights on the same meter. 1 lane, 2 the
+## upright gauge, 3-5 the ring.
+static func shape_for(difficulty: int) -> String:
+	if difficulty>=3: return "ring"
+	return "gauge" if difficulty==2 else "lane"
+
+## The fight's numbers for a hooked fish, without effects (fishing_shapes_check drives step()).
+func setup_fight(fish: Dictionary) -> void:
 	var difficulty: int=int(fish.get("difficulty",1))
 	fight_min=float(fish.get("fight_min",2.0))
 	fill=0.7/(fight_min+0.45)
 	drain=0.09+0.035*difficulty
-	zone_w=0.28-0.025*difficulty
-	fish_speed=0.22+0.11*difficulty
+	meter_shape=shape_for(difficulty)
+	if meter_shape=="ring":
+		# Arc 72°/65°/58° for difficulty 3/4/5. Tuned with a reaction-delay player model so a ring
+		# fight lands about as often as the lane would at the same difficulty (a bit kinder at 3-4).
+		zone_w=0.26-0.02*difficulty
+		fish_speed=(0.22+0.11*difficulty)*0.7
+		push=2.0
+		pull=1.7
+		zone_vmax=0.9
+	else:
+		zone_w=0.28-0.025*difficulty
+		fish_speed=0.22+0.11*difficulty
+		push=2.4
+		pull=2.0
+		zone_vmax=1.3
 	shadow_kind=str(fish.get("shadow","small"))
 	progress=0.3
 	fight_time=0.0
 	fish_x=0.5
 	fish_goal=0.5
+	fish_dir=-1.0
 	zone_x=0.5-zone_w*0.5
 	zone_v=0.0
+	zone_inside=true
+	reel_held=false
+
+func start_fight(fish: Dictionary) -> void:
+	phase="fight"
+	setup_fight(fish)
 	if is_instance_valid(alert): alert.queue_free()
 	life.sfx.play("bite",1.2)
 	Art.burst(app.world,cast_at,"splash",18)
@@ -300,6 +349,7 @@ func update(delta: float) -> void:
 	if phase.is_empty(): return
 	var now: float=life.now()
 	var fish=life.state.get("fishing")
+	if phase in ["ready","card"] and walked_away(): return
 	if is_instance_valid(app.player): app.player.controls_enabled=false
 	if phase=="flying":
 		flight=minf(1.0,flight+delta/0.62)
@@ -348,6 +398,18 @@ func update(delta: float) -> void:
 		if is_instance_valid(trophy): trophy.rotation=Vector3(0,sin(card_clock*2.2)*0.35,sin(card_clock*3.1)*0.12)
 		if card_clock>7.0: dismiss_card()
 
+## A move key while ready to cast (or on the catch card) walks away: fishing ends as with Esc.
+func walked_away() -> bool:
+	# Typing in chat (WASD are letters there) never walks away.
+	if app.has_method("text_input_active") and app.text_input_active(): return false
+	if Input.get_vector("move_left","move_right","move_forward","move_back").length()<0.5:
+		move_armed=true
+		return false
+	if not move_armed: return false
+	if phase=="card": dismiss_card()
+	app.close_village_modal()
+	return true
+
 func show_bite() -> void:
 	life.sfx.play("bite")
 	Art.burst(app.world,cast_at,"splash",20)
@@ -367,25 +429,49 @@ func show_bite() -> void:
 	app.world.add_child(alert)
 	alert.create_tween().tween_property(alert,"scale",Vector3.ONE,0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
-func fight(delta: float) -> void:
-	fight_time+=delta
-	var hold := Input.is_action_pressed("interact") or Input.is_action_pressed("attack") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+## One frame of the reel fight's physics on either meter: the fish swims, the zone answers the
+## reel (auto_reel decides instead when set) and the line tension fills or drains. Returns whether
+## the reel was held.
+func step(delta: float, hold: bool) -> bool:
 	fish_clock-=delta
 	if fish_clock<=0:
 		fish_clock=randf_range(0.45,1.5)/(0.7+fish_speed)
-		fish_goal=clampf(fish_x+randf_range(-0.55,0.55),0.03,0.97)
+		if meter_shape=="ring": fish_goal=fish_x+randf_range(-0.4,0.4)
+		else: fish_goal=clampf(fish_x+randf_range(-0.55,0.55),0.03,0.97)
+	if absf(fish_goal-fish_x)>0.004: fish_dir=signf(fish_goal-fish_x)
 	fish_x=move_toward(fish_x,fish_goal,fish_speed*delta*(1.6 if absf(fish_goal-fish_x)>0.3 else 1.0))
-	if auto_reel: hold=fish_x>zone_x+zone_w*0.5+zone_v*0.15
-	zone_v=clampf(zone_v+(2.4 if hold else -2.0)*delta,-1.3,1.3)
+	if auto_reel: hold=auto_hold()
+	zone_v=clampf(zone_v+(push if hold else -pull)*delta,-zone_vmax,zone_vmax)
 	zone_x+=zone_v*delta
-	if zone_x<0:
-		zone_x=0
-		zone_v=absf(zone_v)*0.25
-	if zone_x>1.0-zone_w:
-		zone_x=1.0-zone_w
-		zone_v=-absf(zone_v)*0.25
-	var inside := fish_x>=zone_x and fish_x<=zone_x+zone_w
-	progress=clampf(progress+(fill if inside else -drain)*delta,0.0,1.0)
+	if meter_shape=="ring":
+		zone_inside=absf(fish_gap())<=zone_w*0.5
+	else:
+		if zone_x<0:
+			zone_x=0
+			zone_v=absf(zone_v)*0.25
+		if zone_x>1.0-zone_w:
+			zone_x=1.0-zone_w
+			zone_v=-absf(zone_v)*0.25
+		zone_inside=fish_x>=zone_x and fish_x<=zone_x+zone_w
+	progress=clampf(progress+(fill if zone_inside else -drain)*delta,0.0,1.0)
+	reel_held=hold
+	return hold
+
+## How far the fish is ahead of the zone's centre (minus `lead`), in the hold direction: along
+## the lane, or the short way round the ring (-0.5..0.5 turns).
+func fish_gap(lead := 0.0) -> float:
+	var gap := fish_x-(zone_x+zone_w*0.5)-lead
+	return wrapf(gap,-0.5,0.5) if meter_shape=="ring" else gap
+
+## auto_reel (tests, demo): hold while the fish is ahead of where the zone is heading.
+func auto_hold() -> bool:
+	return fish_gap(zone_v*0.15)>0
+
+func fight(delta: float) -> void:
+	fight_time+=delta
+	var hold := Input.is_action_pressed("interact") or Input.is_action_pressed("attack") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	hold=step(delta,hold)
+	var inside := zone_inside
 	if hold:
 		tick_clock-=delta
 		if tick_clock<=0:
@@ -492,7 +578,9 @@ func refresh_hud() -> void:
 		"hooking": status.text=tr("챔질!")
 		"fight":
 			status.text=tr("걸렸다! 물고기를 초록 칸 안에 두세요")
-			hint=tr("%s·Space·클릭을 누르고 있으면 칸이 오른쪽으로, 떼면 왼쪽으로") % preload("res://scripts/rpg_ui.gd").key_text("interact")
+			if meter_shape=="ring": hint=tr("%s·Space·클릭을 누르고 있으면 초록 호가 시계 방향으로, 떼면 반대로") % RpgUi.key_text("interact")
+			elif meter_shape=="gauge": hint=tr("%s·Space·클릭을 누르고 있으면 칸이 위로, 떼면 아래로") % RpgUi.key_text("interact")
+			else: hint=tr("%s·Space·클릭을 누르고 있으면 칸이 오른쪽으로, 떼면 왼쪽으로") % preload("res://scripts/rpg_ui.gd").key_text("interact")
 		"landing": status.text=tr("끌어올리는 중…")
 		"reeling": status.text=tr("줄을 감는 중…")
 		"card":
@@ -506,11 +594,31 @@ func build_meter() -> void:
 	meter=Control.new()
 	meter.position=Vector2(340,150)
 	meter.size=Vector2(600,104)
+	if meter_shape=="ring":
+		# Beside the angler (right of centre) so the ring never covers them.
+		meter.position=Vector2(RING_AT.x-RING_SIZE*0.5,RING_AT.y-RING_SIZE*0.5)
+		meter.size=Vector2(RING_SIZE,RING_SIZE)
+	elif meter_shape=="gauge":
+		meter.position=RING_AT-GAUGE_SIZE*0.5
+		meter.size=GAUGE_SIZE
 	meter.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	meter.draw.connect(draw_meter)
 	if is_instance_valid(hud): hud.add_child(meter)
+	if meter_shape!="lane":
+		meter.pivot_offset=meter.size*0.5
+		meter.scale=Vector2(0.7,0.7)
+		meter.modulate.a=0.0
+		var t := meter.create_tween().set_parallel(true)
+		t.tween_property(meter,"scale",Vector2.ONE,0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		t.tween_property(meter,"modulate:a",1.0,0.18)
 
 func draw_meter() -> void:
+	if meter_shape=="ring":
+		draw_ring()
+		return
+	if meter_shape=="gauge":
+		draw_gauge()
+		return
 	var w := 600.0
 	var font: Font = RpgUi.FONT_STRONG
 	meter.draw_style_box(RpgUi.panel_style("night_plain"),Rect2(0,0,w,104))
@@ -550,6 +658,131 @@ func draw_meter() -> void:
 	front.set_corner_radius_all(7)
 	if progress>0.02: meter.draw_style_box(front,Rect2(bar.position,Vector2(bar.size.x*progress,bar.size.y)))
 	meter.draw_string(font,Vector2(28,16),tr("긴장도"),HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color(RpgUi.GOLD,0.85))
+
+## Where `turns` sits on the ring: 0.5 (the start) at the top, growing clockwise.
+static func ring_angle(turns: float) -> float:
+	return (turns-0.5)*TAU-PI*0.5
+
+## A band along a circle from angle a0 to a1 (clockwise) with rounded ends that stay inside it.
+static func arc_band(c: Vector2, r: float, hw: float, a0: float, a1: float) -> PackedVector2Array:
+	var k := minf(hw*0.6/r,(a1-a0)*0.4)
+	var depth := k*r
+	var pts := PackedVector2Array()
+	for i in 25: pts.append(c+Vector2.from_angle(lerpf(a0+k,a1-k,i/24.0))*(r+hw))
+	var u := Vector2.from_angle(a1-k)
+	for i in range(1,8): pts.append(c+u*r+u*hw*cos(PI*i/8.0)+Vector2(-u.y,u.x)*depth*sin(PI*i/8.0))
+	for i in 25: pts.append(c+Vector2.from_angle(lerpf(a1-k,a0+k,i/24.0))*(r-hw))
+	u=Vector2.from_angle(a0+k)
+	for i in range(1,8): pts.append(c+u*r-u*hw*cos(PI*i/8.0)-Vector2(-u.y,u.x)*depth*sin(PI*i/8.0))
+	return pts
+
+## The ring meter: a round water channel the fish swims along, the green arc the reel turns
+## (a chevron shows which way it is moving) and the line tension filling the gauge inside.
+func draw_ring() -> void:
+	var c := Vector2(RING_SIZE,RING_SIZE)*0.5
+	var ms := Time.get_ticks_msec()*0.001
+	var half := RING_TRACK*0.5
+	meter.draw_style_box(RpgUi.panel_style("night_plain"),Rect2(0,0,RING_SIZE,RING_SIZE))
+	# Channel: dark rim, water, a shaded inner lip and a light outer lip.
+	meter.draw_arc(c,RING_R,0,TAU,96,Color("1d4f61"),RING_TRACK+4,true)
+	meter.draw_arc(c,RING_R,0,TAU,96,Color("2f7f9a"),RING_TRACK,true)
+	meter.draw_arc(c,RING_R-half+3,0,TAU,96,Color(0,0,0,0.16),4,true)
+	meter.draw_arc(c,RING_R+half-2,0,TAU,96,Color(1,1,1,0.1),2,true)
+	# Ripple marks drift the way the arc goes when the reel is let go (anticlockwise).
+	for i in 7:
+		var a := fposmod(i*0.9-ms*0.55,TAU)
+		meter.draw_arc(c,RING_R-8+(i%3)*8,a,a+0.16,6,Color(1,1,1,0.18),2,true)
+	var inside: bool=meter.get_meta("inside",false)
+	var mid := ring_angle(zone_x+zone_w*0.5)
+	var span := zone_w*TAU*0.5
+	if inside: meter.draw_colored_polygon(arc_band(c,RING_R,half+10,mid-span-0.03,mid+span+0.03),Color(0.6,1.0,0.5,0.14))
+	var band := arc_band(c,RING_R,half+5,mid-span,mid+span)
+	meter.draw_colored_polygon(band,Color(0.55,0.95,0.55,0.38 if inside else 0.22))
+	band.append(band[0])
+	meter.draw_polyline(band,Color("b8f59a") if inside else Color("8ccf7a"),3,true)
+	var speed := clampf(absf(zone_v)/zone_vmax,0.0,1.0)
+	if speed>0.15:
+		var way := signf(zone_v)
+		for k in 2:
+			var eu := Vector2.from_angle(mid+way*(span+0.1+k*0.09))
+			var ev := Vector2(-eu.y,eu.x)*way
+			var tip_at := c+eu*RING_R+ev*4
+			meter.draw_polyline(PackedVector2Array([tip_at-ev*6+eu*8,tip_at,tip_at-ev*6-eu*8]),Color(0.86,1.0,0.76,(0.35+0.6*speed)*(1.0-k*0.45)),3,true)
+	# The fish swims along the channel.
+	var u := Vector2.from_angle(ring_angle(fish_x))
+	draw_fish(c+u*(RING_R+sin(ms*25.0)*2.0),Vector2(-u.y,u.x)*fish_dir,10.0 if shadow_kind=="small" else 13.0,ms)
+	# Tension gauge round a little reel that turns with the arc.
+	var gauge := RING_R-half-17
+	meter.draw_arc(c,gauge,0,TAU,64,Color(0,0,0,0.35),9,true)
+	if progress>0.01:
+		var tint := Color("f3c552").lerp(Color("9de07a"),progress)
+		var a1 := -PI*0.5+TAU*progress
+		meter.draw_arc(c,gauge,-PI*0.5,a1,maxi(6,int(64*progress)),tint,9,true)
+		meter.draw_circle(c+Vector2(0,-gauge),4.5,tint,true,-1.0,true)
+		meter.draw_circle(c+Vector2.from_angle(a1)*gauge,4.5,tint,true,-1.0,true)
+	meter.draw_circle(c,22,Color("152634"),true,-1.0,true)
+	meter.draw_arc(c,22,0,TAU,40,Color(RpgUi.GOLD,0.85),2,true)
+	var spin := zone_x*TAU*1.5
+	for k in 3:
+		var d := Vector2.from_angle(spin+k*TAU/3)
+		meter.draw_line(c+d*6,c+d*17,Color(RpgUi.GOLD,0.7),3,true)
+	meter.draw_circle(c,5,RpgUi.GOLD,true,-1.0,true)
+	meter.draw_string(RpgUi.FONT_STRONG,Vector2(c.x-40,c.y+41),tr("긴장도"),HORIZONTAL_ALIGNMENT_CENTER,80,12,Color(RpgUi.GOLD,0.85))
+
+## A fish silhouette heading `ahead` (unit), tail wagging, a couple of bubbles behind it.
+func draw_fish(fc: Vector2, ahead: Vector2, r: float, ms: float) -> void:
+	var side := Vector2(-ahead.y,ahead.x)
+	var body := PackedVector2Array()
+	for i in 16: body.append(fc+ahead*cos(TAU*i/16)*r*1.4+side*sin(TAU*i/16)*r*0.7)
+	meter.draw_colored_polygon(body,Color("17313b"))
+	body.append(body[0])
+	meter.draw_polyline(body,Color("17313b"),1.2,true)
+	var tail_at := fc-ahead*r*1.2
+	var back := (-ahead).rotated(sin(ms*16.0)*0.3)
+	var fin := Vector2(-back.y,back.x)
+	var tail := PackedVector2Array([tail_at,tail_at+back*r+fin*r*0.8,tail_at+back*r-fin*r*0.8])
+	meter.draw_colored_polygon(tail,Color("17313b"))
+	tail.append(tail[0])
+	meter.draw_polyline(tail,Color("17313b"),1.2,true)
+	for k in 2:
+		var bubble := tail_at+back*r*(1.8+k*0.9)+side*sin(ms*6.0+k*2.0)*3.0
+		meter.draw_circle(bubble,2.6-k*0.8,Color(1,1,1,0.32-k*0.1),true,-1.0,true)
+
+## The upright gauge: the lane stood on end (hold lifts the zone, letting go lets it sink), with
+## bubbles rising in the water and the tension bar filling upward beside it.
+func draw_gauge() -> void:
+	var ms := Time.get_ticks_msec()*0.001
+	meter.draw_style_box(RpgUi.panel_style("night_plain"),Rect2(Vector2.ZERO,GAUGE_SIZE))
+	var tube := Rect2(22,34,46,GAUGE_SIZE.y-58)
+	var water := StyleBoxFlat.new()
+	water.bg_color=Color("2f7f9a")
+	water.set_corner_radius_all(14)
+	water.border_color=Color("1d4f61")
+	water.set_border_width_all(2)
+	meter.draw_style_box(water,tube)
+	for i in 6:
+		var y := tube.end.y-8-fmod(i*41.0+ms*28.0,tube.size.y-16)
+		meter.draw_circle(Vector2(tube.position.x+11+(i%3)*12,y),1.6+(i%2),Color(1,1,1,0.2),true,-1.0,true)
+	var inside: bool=meter.get_meta("inside",false)
+	var zone := Rect2(tube.position.x-4,tube.end.y-(zone_x+zone_w)*tube.size.y,tube.size.x+8,zone_w*tube.size.y)
+	var box := StyleBoxFlat.new()
+	box.bg_color=Color(0.55,0.95,0.55,0.38 if inside else 0.22)
+	box.border_color=Color("b8f59a") if inside else Color("8ccf7a")
+	box.set_border_width_all(3)
+	box.set_corner_radius_all(10)
+	meter.draw_style_box(box,zone)
+	var fc := Vector2(tube.get_center().x+sin(ms*25.0)*2.0,tube.end.y-fish_x*tube.size.y)
+	draw_fish(fc,Vector2(0,-fish_dir),9.0 if shadow_kind=="small" else 11.0,ms)
+	var bar := Rect2(tube.end.x+14,tube.position.y,14,tube.size.y)
+	var back := StyleBoxFlat.new()
+	back.bg_color=Color(0,0,0,0.35)
+	back.set_corner_radius_all(7)
+	meter.draw_style_box(back,bar)
+	var front := StyleBoxFlat.new()
+	front.bg_color=Color("f3c552").lerp(Color("9de07a"),progress)
+	front.set_corner_radius_all(7)
+	if progress>0.02: meter.draw_style_box(front,Rect2(bar.position.x,bar.end.y-bar.size.y*progress,bar.size.x,bar.size.y*progress))
+	meter.draw_string(RpgUi.FONT_STRONG,Vector2(0,24),tr("긴장도"),HORIZONTAL_ALIGNMENT_CENTER,GAUGE_SIZE.x,12,Color(RpgUi.GOLD,0.85))
 
 func build_card(reward: Dictionary) -> void:
 	if is_instance_valid(card): card.queue_free()

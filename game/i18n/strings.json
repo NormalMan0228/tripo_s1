@@ -10679,6 +10679,14 @@
   "우두머리의 밤": {
    "en": "The boss's night",
    "zh": "首领之夜"
+  },
+  "%s·Space·클릭을 누르고 있으면 초록 호가 시계 방향으로, 떼면 반대로": {
+   "en": "Hold %s, Space or click to turn the green arc clockwise; release to let it drift back",
+   "zh": "按住 %s、空格或鼠标，绿色弧线顺时针转动；松开则往回漂"
+  },
+  "%s·Space·클릭을 누르고 있으면 칸이 위로, 떼면 아래로": {
+   "en": "Hold %s, Space or click to lift the zone; release to let it sink",
+   "zh": "按住 %s、空格或鼠标，区域向上；松开则下沉"
   }
  },
  "templates": []
