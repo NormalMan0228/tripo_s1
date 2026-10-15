@@ -2,6 +2,7 @@ extends Control
 ## Flat 2D icon for a village-life item, drawn from simple shapes so every crop,
 ## fish and forage find has one. `shadow` draws an unknown fish as a silhouette.
 const Art=preload("res://scripts/life_art.gd")
+const RpgUi=preload("res://scripts/rpg_ui.gd")
 var item := ""
 var shadow := false
 
@@ -26,7 +27,7 @@ func outline_blob(c: Vector2, r: Vector2, color: Color, line: Color) -> void:
 func _draw() -> void:
 	var s := minf(size.x,size.y)/64.0
 	draw_set_transform(Vector2((size.x-64*s)*0.5,(size.y-64*s)*0.5),0,Vector2(s,s))
-	var ink := Color("3b2a1c")
+	var ink := RpgUi.PAPER_INK
 	var kind := item.trim_suffix("_seed")
 	if item.ends_with("_seed"):
 		draw_rect(Rect2(14,10,36,46),Color("f4e6c4"))
@@ -101,7 +102,7 @@ func _leaf(base: Vector2, angle: float, length: float, width: float, color: Colo
 	draw_colored_polygon(PackedVector2Array([base,base+dir*length*0.5+side*width,base+dir*length,base+dir*length*0.5-side*width]),color)
 
 func _crop(kind: String, c: Vector2, k: float) -> void:
-	var ink := Color("3b2a1c")
+	var ink := RpgUi.PAPER_INK
 	match kind:
 		"turnip":
 			for i in 3: _leaf(c+Vector2(0,-10)*k,-PI/2+(i-1)*0.5,22*k,6*k,Color("6aac5a"))

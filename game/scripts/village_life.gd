@@ -297,7 +297,7 @@ func open_plot(index: int) -> void:
 		icon.size_flags_horizontal=Control.SIZE_SHRINK_CENTER
 		stack.add_child(icon)
 		for text in ["%d  %s ×%d" % [seed_choices.size()+1,tr(data.name),count],tr("%d초 · 수확 %d") % [int(data.seconds),int(data.get("yield",1))]]:
-			var l := RpgUi.label(stack,text,13 if text.begins_with(str(seed_choices.size()+1)) else 11,Color("2f2a1f"),false)
+			var l := RpgUi.label(stack,text,13 if text.begins_with(str(seed_choices.size()+1)) else 11,RpgUi.PAPER_INK,false)
 			l.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 		var chosen: String=crop
 		b.pressed.connect(func():
@@ -498,8 +498,8 @@ func item_card(item: String, detail: String) -> PanelContainer:
 	var text := VBoxContainer.new()
 	text.add_theme_constant_override("separation",0)
 	row.add_child(text)
-	app.text(text,tr(state.catalog.names.get(item,item)),14).add_theme_color_override("font_color",Color("3b2a1c"))
-	app.text(text,detail,13).add_theme_color_override("font_color",Color("7a5a2c"))
+	app.text(text,tr(state.catalog.names.get(item,item)),14).add_theme_color_override("font_color",RpgUi.PAPER_INK)
+	app.text(text,detail,13).add_theme_color_override("font_color",RpgUi.PAPER_MUTED)
 	return card
 
 ## Fish log: every species with its water, time of day, count and best size.
@@ -533,15 +533,15 @@ func open_log() -> void:
 		art.custom_minimum_size=Vector2(150,76)
 		col.add_child(art)
 		var title: Label=app.text(col,tr(data.name) if caught else "???",15)
-		title.add_theme_color_override("font_color",Color("3b2a1c"))
+		title.add_theme_color_override("font_color",RpgUi.PAPER_INK)
 		var stars: String="★".repeat(int(data.rarity))
 		var waters := PackedStringArray()
 		for w in data.spots: waters.append(tr(Fishing.SPOT_NAMES.get(w,w)))
 		var info: Label=app.text(col,"%s  %s · %s" % [stars,"/".join(waters),tr(times.get(data.time,""))],12)
-		info.add_theme_color_override("font_color",Color("7a5a2c"))
+		info.add_theme_color_override("font_color",RpgUi.PAPER_MUTED)
 		var best: float=float(state.get("records",{}).get(kind,0))
 		var record: Label=app.text(col,tr("%d마리 · 최고 %.1fcm") % [caught,best] if caught else tr("아직 못 만났어요"),12)
-		record.add_theme_color_override("font_color",Color("5d4a35"))
+		record.add_theme_color_override("font_color",RpgUi.PAPER_MUTED)
 		grid.add_child(card)
 	app.text(v,tr("지금은 %s이에요. 밤에만 나오는 물고기도 있어요.") % (tr("밤") if state.get("night",false) else tr("낮")),13)
 

@@ -652,7 +652,7 @@ func glow_signs(at: Vector2) -> void:
 		for arm in entry.root.get_children():
 			if arm.get_meta("island", "") != island: continue
 			var tip: Vector3 = arm.global_transform*Vector3(0, 0, 0.75)
-			Fx.glow(self, tip, Color("ffe08a"), 1.2, 1.8)
+			Fx.glow(self, tip, RpgUi.HOVER, 1.2, 1.8)
 			Fx.burst(self, tip, "sparkle", 7, Color(0,0,0,0), 0.25)
 			Fx.wobble(arm, 0.06, Vector3.RIGHT, 3, 0.6)
 			Fx.sound(app, "twinkle", tip, 1.25, -9.0)

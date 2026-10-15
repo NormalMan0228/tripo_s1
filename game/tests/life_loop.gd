@@ -77,7 +77,7 @@ class StubApp extends Node3D:
 		if is_instance_valid(life): life.closed()
 		if is_instance_valid(village_modal): village_modal.queue_free()
 		village_modal=null
-	func modal_card(title: String) -> VBoxContainer:
+	func modal_card(title: String, _action := "") -> VBoxContainer:
 		close_village_modal()
 		village_modal=Control.new()
 		village_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

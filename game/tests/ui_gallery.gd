@@ -76,6 +76,8 @@ func tour(fixture: Dictionary) -> void:
 	app.add_child(stub)
 	app.social.enabled = false
 	await app.enter_village()
+	# The start card covers the screen until a sign-in lifts it (main._ready); lift it here.
+	preload("res://scripts/transition.gd").of(self).fade_in()
 	await settle(1.2)
 	app.message(tr("물결빛 마을에 오신 것을 환영해요! 다리를 건너 다섯 섬을 둘러보세요."))
 	await settle(0.6)

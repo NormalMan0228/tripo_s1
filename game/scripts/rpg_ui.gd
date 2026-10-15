@@ -18,6 +18,51 @@ const ACCENT := Color("b0452f")
 const LEAF := Color("4a7536")
 const SOFT := Color("d8e3d4")
 const OUTLINE := Color(0.07,0.05,0.03,0.92)
+## Design tokens (docs/design/UI_UNIFICATION.md 1.1). Every other script takes its colours,
+## type sizes and spacing from here; tests/ui_consistency_check.gd lints literal colours.
+## Hover / focus text on night glass and the star-seed count.
+const HOVER := Color("ffe08a")
+## Party, whisper and the teal ribbon.
+const TEAL := Color("70afa3")
+## Ornamented dividers on parchment.
+const PAPER_LINE := Color("c9a46a")
+## Presence dots.
+const ONLINE := Color("8fd16a")
+const AWAY := Color("e9b552")
+## The amber of meter fills, slider tracks and map markers (the same hue as AWAY).
+const AMBER := Color("e9b552")
+const OFFLINE := Color(1,1,1,.35)
+## Chat channels other than the village (INK) and the party (TEAL).
+const CHAT_GLOBAL := Color("c9b8ff")
+const CHAT_WHISPER := Color("f0a8c8")
+## The window shade: a radial fall from SHADE_IN at the centre to SHADE_OUT at the corners.
+const SHADE_IN := Color(0.03,0.05,0.06,.55)
+const SHADE_OUT := Color(0.02,0.03,0.04,.86)
+## Leaf-coin count and warm alert text on night glass.
+const LEAF_LIGHT := Color("c8ec9f")
+const WARM := Color("ffd9a0")
+## Type scale (sizes; fonts and colours per role in TYPE and text_style()). Paper titles are
+## PAPER_INK without an outline; night titles GOLD with one.
+const T_WINDOW := 26
+const T_SECTION := 17
+const T_BODY := 15
+const T_CAPTION := 13
+const T_SMALL := 12
+## Sizes on the 1280x800 design canvas.
+const BTN_SM := 32
+const BTN_MD := 40
+const BTN_LG := 44
+const BTN_MENU := 52
+const SLOT := 70
+const KEY := 22
+const CLOSE := 34
+const PAD := 16
+const GAP_S := 8
+const GAP := 10
+const GAP_L := 12
+const WINDOW_TOP := 92
+const WINDOW_W := {"small":560, "standard":760, "wide":1040}
+const DRAWER_W := 308
 
 const GameSettings = preload("res://scripts/game_settings.gd")
 const FONT_BODY: Font = preload("res://assets/fonts/ui_body.tres")
@@ -193,6 +238,7 @@ static func theme() -> Theme:
 	for spec in [["PrimaryButton","btn_green",INK,true],["GoldButton","btn_gold",PAPER_INK,false],["NightButton","btn_night",INK,true]]:
 		t.set_type_variation(spec[0], "Button")
 		_buttons(t, spec[0], spec[1], spec[2], spec[3])
+	_extra_buttons(t, false)
 	t.set_type_variation("ChoiceButton", "Button")
 	t.set_stylebox("pressed", "ChoiceButton", frame("btn_gold_normal"))
 	t.set_stylebox("hover_pressed", "ChoiceButton", frame("btn_gold_hover"))
@@ -263,13 +309,13 @@ static func theme() -> Theme:
 	tooltip_theme(t)
 	# Meters, sliders and scroll bars.
 	t.set_stylebox("background", "ProgressBar", frame("bar_bg"))
-	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", Color("e9b552")))
+	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", AMBER))
 	t.set_color("font_color", "ProgressBar", INK)
 	var track := frame("bar_bg")
 	track.set_content_margin_all(3)
 	for type in ["HSlider","VSlider"]:
 		t.set_stylebox("slider", type, track)
-		t.set_stylebox("grabber_area", type, frame("bar_fill", Color("e9b552")))
+		t.set_stylebox("grabber_area", type, frame("bar_fill", AMBER))
 		t.set_stylebox("grabber_area_highlight", type, frame("bar_fill", Color("f3c96a")))
 		t.set_icon("grabber", type, half("slider_grabber"))
 		t.set_icon("grabber_highlight", type, half("slider_grabber_hover"))
@@ -523,6 +569,27 @@ static func numbers(l: Label, size := 16) -> Label:
 	l.add_theme_font_size_override("font_size", size)
 	return l
 
+## Type roles: [font, size]. Colours depend on the surface (text_style()).
+const TYPE := {"window":[FONT_DISPLAY, T_WINDOW], "section":[FONT_STRONG, T_SECTION], "body":[FONT_BODY, T_BODY],
+	"caption":[FONT_BODY, T_CAPTION], "small":[FONT_BODY, T_SMALL]}
+
+## Gives a label one of the type roles on parchment ("paper") or night glass ("night"):
+## window titles are PAPER_INK on paper and GOLD with an outline on night; captions are
+## PAPER_MUTED / SOFT; the rest PAPER_INK / INK. Returns l.
+static func text_style(l: Label, role := "body", kind := "paper") -> Label:
+	var spec: Array = TYPE.get(role, TYPE.body)
+	var night := kind != "paper"
+	l.add_theme_font_override("font", spec[0])
+	l.add_theme_font_size_override("font_size", spec[1])
+	var color := PAPER_INK
+	if role == "caption": color = SOFT if night else PAPER_MUTED
+	elif night: color = GOLD if role == "window" else INK
+	l.add_theme_color_override("font_color", color)
+	if night and role == "window":
+		l.add_theme_color_override("font_outline_color", OUTLINE)
+		l.add_theme_constant_override("outline_size", 5)
+	return l
+
 ## A ribbon banner carrying a title (modal headers, results).
 static func ribbon(parent: Node, value: String, teal := false, size := 22) -> PanelContainer:
 	var band := PanelContainer.new()
@@ -541,7 +608,7 @@ static func ribbon(parent: Node, value: String, teal := false, size := 22) -> Pa
 	return band
 
 ## Thin ornamented rule with a centred diamond.
-static func divider(parent: Node, color := Color("c9a46a"), width := 0.0) -> Control:
+static func divider(parent: Node, color := PAPER_LINE, width := 0.0) -> Control:
 	var line := Control.new()
 	line.custom_minimum_size = Vector2(width, 12)
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -558,20 +625,222 @@ static func divider(parent: Node, color := Color("c9a46a"), width := 0.0) -> Con
 	parent.add_child(line)
 	return line
 
-## A little keyboard key cap ("E", "Tab", "Esc").
+## A little keyboard key cap ("E", "Tab", "Esc"). `key` may be an action id ("inventory"): the cap
+## then shows that action's key and relabels itself when the bindings change.
 static func keycap(parent: Node, key: String, size := 12) -> Label:
 	var cap := Label.new()
-	cap.text = key
+	cap.text = key_text(key)
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cap.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	cap.custom_minimum_size = Vector2(22, 22)
+	cap.custom_minimum_size = Vector2(KEY, KEY)
 	cap.add_theme_font_override("font", FONT_BOLD)
 	cap.add_theme_font_size_override("font_size", size)
 	cap.add_theme_color_override("font_color", Color("3a2614"))
 	cap.add_theme_stylebox_override("normal", frame("keycap"))
 	cap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if is_action(key): watch_key(cap, key)
 	parent.add_child(cap)
 	return cap
+
+# ------------------------------------------------------------------ keys
+
+## True for a GameSettings action id ("inventory", "interact"), false for a literal key ("Esc").
+static func is_action(id: String) -> bool:
+	for entry in GameSettings.ACTIONS:
+		if entry[0] == id: return true
+	return false
+
+## The key to show for an action id (its current primary binding: "I", or "J" after a rebind);
+## a literal key ("Esc", "Enter", "1-9", "F9") passes through.
+static func key_text(action_or_key: String) -> String:
+	return GameSettings.key_label(action_or_key) if is_action(action_or_key) else action_or_key
+
+## Controls that show an action's key join this group; KeyWatch relabels them on a rebind.
+const KEY_GROUP := &"rpg_action_key"
+
+## Makes c follow the key of `action`: a Label shows key_text(action); with `tip_name` the control's
+## tooltip reads "<tip_name>  ·  <key>" (name_tip). Relabelled whenever the bindings change.
+static func watch_key(c: Control, action: String, tip_name := "") -> void:
+	if tip_name.is_empty(): c.set_meta("key_action", action)
+	else:
+		c.set_meta("key_tip_action", action)
+		c.set_meta("key_tip_name", tip_name)
+	c.add_to_group(KEY_GROUP)
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null: return
+	# The one watcher: kept here from the moment it is queued, so the other calls in the same frame
+	# (a hotbar's slots and caps) find it before the deferred add has run.
+	if is_instance_valid(_key_watch) and not _key_watch.is_queued_for_deletion(): return
+	if tree.root.has_node("RpgUiKeys"):
+		_key_watch = tree.root.get_node("RpgUiKeys")
+		return
+	var watch := KeyWatch.new()
+	watch.name = "RpgUiKeys"
+	_key_watch = watch
+	tree.root.add_child.call_deferred(watch)
+
+## The key watcher (queued or under the root), so watch_key makes exactly one.
+static var _key_watch: Node
+
+## Relabels every key cap and key tooltip in the tree (KeyWatch calls it after a rebind).
+static func relabel_keys() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null: return
+	for node in tree.get_nodes_in_group(KEY_GROUP):
+		if node.has_meta("key_action") and node is Label:
+			(node as Label).text = key_text(str(node.get_meta("key_action")))
+		if node.has_meta("key_tip_action") and node is Control:
+			name_tip(node, str(node.get_meta("key_tip_name")), key_text(str(node.get_meta("key_tip_action"))))
+
+## One listener for all key caps: GameSettings.listen wants a plain method (no lambdas, see there).
+class KeyWatch extends Node:
+	func _enter_tree() -> void:
+		GameSettings.listen(_on_settings)
+	func _exit_tree() -> void:
+		GameSettings.unlisten(_on_settings)
+	func _on_settings(keys: Array[String]) -> void:
+		if "bindings" in keys: load("res://scripts/rpg_ui.gd").relabel_keys()
+
+## "[key] text": a key cap and its words ("[I] 가방"). kind "night" (cream, outlined) or "paper".
+static func key_hint(parent: Node, action_or_key: String, text: String, kind := "night") -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.name = "KeyHint"
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(row)
+	var cap := keycap(row, action_or_key, 12)
+	cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var words := label(row, text, 14, INK, true) if kind == "night" else caption(row, text, 14, PAPER_INK)
+	words.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.set_meta("words", words)
+	return row
+
+## The one close key: a flat 34 px painted "close" icon that lifts on hover, named "닫기 · Esc" (or
+## "닫기 · <the key that opened the window>" for an action, kept in step with rebinding).
+static func close_key(parent: Node, callback: Callable, action := "") -> Button:
+	var b := Button.new()
+	b.name = "Close"
+	b.icon = icon_texture("close")
+	b.expand_icon = true
+	b.flat = true
+	b.custom_minimum_size = Vector2(CLOSE, CLOSE)
+	b.focus_mode = Control.FOCUS_NONE
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.set_meta("rpg_close", true)
+	# A flat button still keeps its theme box's content margins, which shrank the icon to ~18 px.
+	var bare := StyleBoxEmpty.new()
+	bare.set_content_margin_all(2)
+	for state in ["normal","hover","pressed","hover_pressed","disabled","focus"]: b.add_theme_stylebox_override(state, bare)
+	var named := TranslationServer.translate("닫기")
+	if is_action(action):
+		name_tip(b, named, key_text(action))
+		watch_key(b, action, named)
+	else: name_tip(b, named, "Esc" if action.is_empty() else action)
+	hover_motion(b, 1.12)
+	b.pressed.connect(func(): if callback.is_valid(): callback.call())
+	parent.add_child(b)
+	return b
+
+const BUTTON_VARIANTS := {"normal":"", "primary":"PrimaryButton", "gold":"GoldButton", "night":"NightButton", "danger":"DangerButton", "ghost":"GhostButton"}
+const BUTTON_SIZES := {"sm":[BTN_SM, 13], "md":[BTN_MD, 15], "lg":[BTN_LG, 16], "menu":[BTN_MENU, 19]}
+
+## A text button in one of the shared looks: variant normal | primary | gold | night | danger |
+## ghost, size sm (32) | md (40) | lg (44) | menu (52). Hover lift with the hover and click sounds;
+## keyboard / pad focus only in menus (`menu`), never on the HUD.
+static func button(parent: Node, text: String, callback: Callable, variant := "normal", size := "md", menu := false) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.theme_type_variation = BUTTON_VARIANTS.get(variant, "")
+	var spec: Array = BUTTON_SIZES.get(size, BUTTON_SIZES.md)
+	b.custom_minimum_size.y = spec[0]
+	b.add_theme_font_size_override("font_size", spec[1])
+	if size == "menu": b.add_theme_font_override("font", FONT_STRONG)
+	b.focus_mode = Control.FOCUS_ALL if menu else Control.FOCUS_NONE
+	hover_motion(b, 1.03)
+	b.pressed.connect(func(): if callback.is_valid(): callback.call())
+	parent.add_child(b)
+	return b
+
+## The danger (red-tinted) and ghost (text-only until hovered) button looks for a theme.
+static func _extra_buttons(t: Theme, night: bool) -> void:
+	var base := "btn_night" if night else "btn_paper"
+	t.set_type_variation("DangerButton", "Button")
+	for state in ["normal","hover","pressed","disabled"]:
+		t.set_stylebox(state, "DangerButton", frame(base + "_" + state, Color(1.0, .74, .68)))
+	t.set_stylebox("hover_pressed", "DangerButton", frame(base + "_pressed", Color(1.0, .74, .68)))
+	t.set_stylebox("focus", "DangerButton", frame("focus"))
+	var danger_ink := INK if night else ACCENT
+	for item in ["font_color","font_hover_color","font_pressed_color","font_focus_color","font_hover_pressed_color"]:
+		t.set_color(item, "DangerButton", danger_ink)
+	t.set_color("font_disabled_color", "DangerButton", Color(danger_ink, .5))
+	t.set_type_variation("GhostButton", "Button")
+	var bare := StyleBoxEmpty.new()
+	bare.content_margin_left = 12; bare.content_margin_right = 12; bare.content_margin_top = 6; bare.content_margin_bottom = 6
+	for state in ["normal","disabled"]: t.set_stylebox(state, "GhostButton", bare)
+	t.set_stylebox("hover", "GhostButton", frame(base + "_hover", Color(1,1,1,.55)))
+	t.set_stylebox("pressed", "GhostButton", frame(base + "_pressed", Color(1,1,1,.7)))
+	t.set_stylebox("hover_pressed", "GhostButton", frame(base + "_pressed", Color(1,1,1,.7)))
+	t.set_stylebox("focus", "GhostButton", frame("focus"))
+	var ink := INK if night else PAPER_INK
+	for item in ["font_color","font_pressed_color","font_focus_color"]: t.set_color(item, "GhostButton", ink)
+	for item in ["font_hover_color","font_hover_pressed_color"]: t.set_color(item, "GhostButton", HOVER if night else ACCENT)
+	t.set_color("font_disabled_color", "GhostButton", Color(ink, .45))
+
+## A count pill (ACCENT) on the top-right corner of a slot or button; hidden at 0. Calling it
+## again on the same parent updates the same pill.
+static func badge(parent: Control, count: int) -> Label:
+	var pill: Label = parent.get_node_or_null("Badge")
+	if pill == null:
+		pill = Label.new()
+		pill.name = "Badge"
+		pill.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		pill.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		pill.add_theme_font_override("font", FONT_BOLD)
+		pill.add_theme_font_size_override("font_size", 11)
+		pill.add_theme_color_override("font_color", INK)
+		var dot := StyleBoxFlat.new()
+		dot.bg_color = ACCENT
+		dot.set_corner_radius_all(9)
+		dot.corner_detail = 8
+		dot.border_color = Color(OUTLINE, .6)
+		dot.set_border_width_all(1)
+		dot.content_margin_left = 5; dot.content_margin_right = 5
+		pill.add_theme_stylebox_override("normal", dot)
+		pill.custom_minimum_size = Vector2(18, 18)
+		pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		pill.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		pill.offset_left = -12; pill.offset_right = 6; pill.offset_top = -6; pill.offset_bottom = 12
+		pill.grow_horizontal = Control.GROW_DIRECTION_BOTH
+		parent.add_child(pill)
+	pill.text = str(count) if count < 100 else "99+"
+	pill.visible = count > 0
+	return pill
+
+## A round paint swatch ("#d98477") that lifts on hover; a gold rim marks the chosen one. Named
+## by its colour on hover.
+static func swatch(parent: Node, hex: String, selected: bool, callback: Callable) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(CLOSE, CLOSE)
+	b.focus_mode = Control.FOCUS_NONE
+	b.set_meta("hex", hex)
+	var colour := Color(hex)
+	for state in ["normal","hover","pressed"]:
+		var dot := StyleBoxFlat.new()
+		dot.bg_color = colour
+		dot.set_corner_radius_all(17)
+		dot.corner_detail = 12
+		var lit: bool = state != "normal" or selected
+		dot.set_border_width_all(3 if lit else 2)
+		dot.border_color = HOVER if lit else Color("6e4b2c")
+		dot.shadow_color = Color(0,0,0,.25)
+		dot.shadow_size = 3
+		dot.shadow_offset = Vector2(0,2)
+		b.add_theme_stylebox_override(state, dot)
+	name_tip(b, color_name(hex))
+	hover_motion(b, 1.15)
+	b.pressed.connect(func(): if callback.is_valid(): callback.call())
+	parent.add_child(b)
+	return b
 
 static func icon(path: String, size: float) -> TextureRect:
 	var image := TextureRect.new()
@@ -663,12 +932,12 @@ static func player_frame(ui: Control, portrait: String, fold_id := "") -> Dictio
 	var star_name := TranslationServer.translate("별씨")
 	var leaf_name := TranslationServer.translate("잎전")
 	coins.add_child(name_tip(icon("res://assets/starseed.svg", 24), star_name))
-	var stars := numbers(label(coins, "0", 17, Color("ffe08a")), 17)
+	var stars := numbers(label(coins, "0", 17, HOVER), 17)
 	stars.custom_minimum_size.x = 34
 	name_tip(stars, star_name)
 	var gap := Control.new(); gap.custom_minimum_size.x = 6; gap.mouse_filter = Control.MOUSE_FILTER_IGNORE; coins.add_child(gap)
 	coins.add_child(name_tip(icon("res://assets/ui/leaf.svg", 22), leaf_name))
-	var leaves := numbers(label(coins, "0", 17, Color("c8ec9f")), 17)
+	var leaves := numbers(label(coins, "0", 17, LEAF_LIGHT), 17)
 	leaves.custom_minimum_size.x = 34
 	name_tip(leaves, leaf_name)
 	var status := label(column, "", 12, SOFT)
@@ -684,11 +953,11 @@ static func player_frame(ui: Control, portrait: String, fold_id := "") -> Dictio
 			else: shell.self_modulate.a = 0.0 if shut else 1.0)
 	return {"panel":shell, "name":name, "stars":stars, "leaves":leaves, "status":status, "column":column, "portrait":face}
 
-## Square slots with an icon, a key cap and a caption on a glass tray. With a
+## Square slots with an icon, a key cap and a caption on a glass tray. A slot spec is
+## {icon, label, call, action ("inventory" or a literal key like "F9"), primary}; an action's key cap
+## and its "name  ·  key" tooltip follow rebinding. With a
 ## fold_id a chevron key at the tray's right end slides it below the screen.
 static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxContainer:
-	const SLOT := 70.0
-	const GAP := 10.0
 	var tray := PanelContainer.new()
 	var tray_style := panel_style("pill")
 	tray_style.set_content_margin_all(0)
@@ -716,7 +985,10 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 		b.custom_minimum_size = Vector2(SLOT, SLOT)
 		b.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		b.focus_mode = Control.FOCUS_NONE
-		name_tip(b, slot.label, str(slot.get("key", "")))
+		# "action": an action id ("inventory") or a literal key ("F9"); "key" is the older name.
+		var key_id := str(slot.get("action", slot.get("key", "")))
+		name_tip(b, slot.label, key_text(key_id))
+		if is_action(key_id): watch_key(b, key_id, slot.label)
 		b.theme_type_variation = "HudSlot"
 		if slot.get("primary", false):
 			b.add_theme_stylebox_override("normal", frame("slot_night_primary"))
@@ -732,8 +1004,8 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 		var caption_label := label(stack, slot.label, 12)
 		caption_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		caption_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		if not String(slot.get("key","")).is_empty():
-			var cap := keycap(b, slot.key, 11)
+		if not key_id.is_empty():
+			var cap := keycap(b, key_id, 11)
 			cap.position = Vector2(-7,-9)
 		b.pressed.connect(slot.call)
 		hover_motion(b, 1.08, Vector2(0.5, 1.0))
@@ -758,6 +1030,200 @@ static func show_slot(slot: Control, shown: bool) -> void:
 	tray.custom_minimum_size = Vector2(fitted, tray.custom_minimum_size.y)
 	tray.size = tray.custom_minimum_size
 	pin(tray, 0.5, 1.0, Vector2(640.0 - fitted * 0.5, float(bar.get_meta("tray_top"))))
+
+# ------------------------------------------------------------------ toasts
+
+## How long a toast stays: plain ones, and ones that carry action buttons.
+const TOAST_SECONDS := 4.5
+const TOAST_ACTION_SECONDS := 12.0
+const TOAST_MAX := 3
+## Chimes asked for so far (tests: the field's toasts stay silent).
+static var toast_chimes := 0
+## Each kind its own glyph: error and warn are painted badges ("!" in lacquer red, an amber
+## triangle), never the close key's art (tools/build_ui_icons.py --painted).
+const TOAST_ICONS := {"info":"res://assets/starseed.svg", "success":"res://assets/ui/leaf.svg", "warn":"res://assets/ui/icons/warn.png",
+	"error":"res://assets/ui/icons/alert.png", "social":"res://assets/ui/people.svg"}
+## How long an evicted toast (the oldest, when a 4th arrives) takes to fade, and a slot to close.
+const TOAST_EVICT_SECONDS := 0.15
+const TOAST_COLLAPSE_SECONDS := 0.15
+
+## The shared toast lane: a full-width column whose toasts stack centred from `y` on the design
+## canvas (top lane), or upward ending at `y` + 44 when y is in the lower half (the field's lane).
+## width > 0 gives every toast that width (the village's 520 px pills); 0 fits each to its text up
+## to max_width. opts.grow = "up" pins the lane's foot at `y` from the host's top and stacks
+## upward from there (notes just above a card that starts at y + a gap); the oldest leave while
+## the stack would rise past the host's top. opts.max caps the toasts shown at once (TOAST_MAX).
+static func toast_lane(host: Control, y := 94.0, width := 0.0, max_width := 640.0, opts := {}) -> VBoxContainer:
+	var lane := VBoxContainer.new()
+	lane.name = "ToastLane"
+	lane.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lane.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lane.add_theme_constant_override("separation", 6)
+	if str(opts.get("grow", "")) == "up":
+		lane.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+		lane.offset_top = 0.0
+		lane.offset_bottom = y
+		lane.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		lane.alignment = BoxContainer.ALIGNMENT_END
+		# The room above the foot is y: once laid out, the oldest leave while the rest would not fit
+		# (a note that wraps to two lines takes the room of two).
+		lane.sort_children.connect(func() -> void:
+			var shown := toasts(lane)
+			var tall := -float(lane.get_theme_constant("separation"))
+			for item in shown: tall += (item as Control).size.y + float(lane.get_theme_constant("separation"))
+			while shown.size() > 1 and tall > y:
+				var oldest: Control = shown.pop_front()
+				tall -= oldest.size.y + float(lane.get_theme_constant("separation"))
+				dismiss_toast(oldest, TOAST_EVICT_SECONDS))
+	else:
+		var top := y < CANVAS.y * 0.5
+		lane.alignment = BoxContainer.ALIGNMENT_BEGIN if top else BoxContainer.ALIGNMENT_END
+		if top: lane.offset_top = y
+		else: lane.offset_bottom = -(CANVAS.y - y - 44.0)
+	lane.set_meta("width", width)
+	lane.set_meta("max_width", max_width)
+	lane.set_meta("max", maxi(1, int(opts.get("max", TOAST_MAX))))
+	lane.theme = night_theme()
+	host.add_child(lane)
+	return lane
+
+## The toasts on a lane, oldest first (those already leaving are not counted).
+static func toasts(lane: Control) -> Array:
+	var out := []
+	if not is_instance_valid(lane): return out
+	for child in lane.get_children():
+		if child.has_meta("toast") and not child.get_meta("leaving", false): out.append(child)
+	return out
+
+## The toast on the lane that shows this text, or null.
+static func find_toast(lane: Control, text: String) -> Control:
+	for item in toasts(lane):
+		if str(item.get_meta("toast")) == text: return item
+	return null
+
+## A short line in a night pill with a kind icon (info: the star-seed glint, success, warn, error,
+## social), popping in with a soft chime. It leaves after 4.5 s (12 s with action buttons:
+## opts.actions = [{label, call}], pressing one runs it and dismisses the toast). At most three
+## stack on a lane (the lane's max; the oldest fades out quickly, then its slot closes); the same
+## text while it is still shown refreshes that toast instead of stacking. opts.sound = false keeps
+## it silent (the field, a window's own notes); it is silent with reduced motion too. Returns the
+## toast.
+static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Control:
+	if not is_instance_valid(lane) or text.is_empty(): return null
+	var same := find_toast(lane, text)
+	if same:
+		_toast_timer(same)
+		if not calm():
+			same.pivot_offset = Vector2(same.size.x * 0.5, 0)
+			var pulse := same.create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			pulse.tween_property(same, "scale", Vector2.ONE * 1.04, 0.08)
+			pulse.tween_property(same, "scale", Vector2.ONE, 0.18)
+		return same
+	var standing := toasts(lane)
+	while standing.size() >= int(lane.get_meta("max", TOAST_MAX)):
+		dismiss_toast(standing.pop_front(), TOAST_EVICT_SECONDS)
+	var pill := PanelContainer.new()
+	pill.name = "Toast"
+	pill.set_meta("toast", text)
+	pill.set_meta("kind", kind)
+	pill.add_theme_stylebox_override("panel", panel_style("pill"))
+	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var actions: Array = opts.get("actions", [])
+	pill.mouse_filter = Control.MOUSE_FILTER_STOP if not actions.is_empty() else Control.MOUSE_FILTER_IGNORE
+	var width: float = float(lane.get_meta("width", 0.0))
+	if width > 0.0: pill.custom_minimum_size.x = width
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pill.add_child(row)
+	var glint := icon(str(TOAST_ICONS.get(kind, TOAST_ICONS.info)), 24)
+	glint.name = "Kind"
+	glint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(glint)
+	var words := label(row, text, T_BODY, INK)
+	words.name = "Text"
+	words.add_theme_font_override("font", FONT_STRONG)
+	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	words.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var room := (width if width > 0.0 else float(lane.get_meta("max_width", 640.0))) - 96.0
+	if width > 0.0: words.custom_minimum_size.x = room
+	else: words.custom_minimum_size.x = minf(room, FONT_STRONG.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, T_BODY).x + 4.0)
+	words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	for entry in actions:
+		var run: Callable = entry.get("call", Callable())
+		var act := func() -> void:
+			if run.is_valid(): run.call()
+			dismiss_toast(pill)
+		var key := button(row, str(entry.get("label", "")), act, "night", "sm")
+		key.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	lane.add_child(pill)
+	pill.set_meta("life", TOAST_ACTION_SECONDS if not actions.is_empty() else float(opts.get("seconds", TOAST_SECONDS)))
+	_toast_timer(pill)
+	if not calm():
+		pill.modulate.a = 0.0
+		pill.scale = Vector2(0.92, 0.92)
+		var held: WeakRef = weakref(pill)
+		var start := func() -> void:
+			var node: Control = held.get_ref()
+			if node == null or not node.is_inside_tree() or node.get_meta("leaving", false): return
+			node.pivot_offset = Vector2(node.size.x * 0.5, 0)
+			var tw := node.create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(node, "scale", Vector2.ONE, 0.3)
+			tw.tween_property(node, "modulate:a", 1.0, 0.2)
+			node.set_meta("pop", tw)
+		start.call_deferred()
+		if bool(opts.get("sound", true)):
+			toast_chimes += 1
+			sfx("toast", -12.0)
+	return pill
+
+## (Re)starts a toast's stay, then fades it out and frees it.
+static func _toast_timer(pill: Control) -> void:
+	if pill.has_meta("timer"):
+		var old: Tween = pill.get_meta("timer")
+		if old and old.is_valid(): old.kill()
+	if not pill.is_inside_tree(): return
+	var tw := pill.create_tween()
+	tw.tween_interval(float(pill.get_meta("life", TOAST_SECONDS)))
+	tw.tween_callback(func(): dismiss_toast(pill))
+	pill.set_meta("timer", tw)
+
+## Fades a toast out (it keeps its slot meanwhile, no longer counted), then closes its slot so the
+## toasts around it glide together, and frees it. With reduced motion it goes at once.
+static func dismiss_toast(pill: Control, seconds := 0.3) -> void:
+	if not is_instance_valid(pill) or pill.get_meta("leaving", false): return
+	pill.set_meta("leaving", true)
+	if pill.has_meta("timer"):
+		var old: Tween = pill.get_meta("timer")
+		if old and old.is_valid(): old.kill()
+	if pill.has_meta("pop"):
+		var pop: Tween = pill.get_meta("pop")
+		if pop and pop.is_valid(): pop.kill()
+	if calm() or not pill.is_inside_tree():
+		if pill.get_parent(): pill.get_parent().remove_child(pill)
+		pill.queue_free()
+		return
+	var tw := pill.create_tween()
+	tw.tween_property(pill, "modulate:a", 0.0, seconds).set_trans(Tween.TRANS_SINE)
+	tw.tween_callback(func(): _collapse_toast(pill))
+
+## The empty slot of a faded toast shrinks to nothing, then the toast is freed.
+static func _collapse_toast(pill: Control) -> void:
+	if not is_instance_valid(pill): return
+	var tall := pill.size.y
+	for child in pill.get_children(): if child is CanvasItem: (child as CanvasItem).visible = false
+	pill.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	pill.custom_minimum_size = Vector2(0.0, tall)
+	var tw := pill.create_tween()
+	tw.tween_property(pill, "custom_minimum_size:y", 0.0, TOAST_COLLAPSE_SECONDS).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(pill.queue_free)
+
+## Clears a lane at once (a place that says "nothing to show").
+static func clear_toasts(lane: Control) -> void:
+	for item in toasts(lane):
+		item.set_meta("leaving", true)
+		item.queue_free()
 
 ## Floating interaction chip above the hotbar; hidden while empty. The leading
 ## "E  " of the text is drawn as a key cap.
@@ -1100,12 +1566,13 @@ static func night_theme() -> Theme:
 	for state in ["normal","hover","pressed","disabled"]: t.set_stylebox(state,"Button",frame("btn_night_"+state))
 	t.set_stylebox("hover_pressed","Button",frame("btn_night_pressed"))
 	for item in ["font_color","font_pressed_color","font_hover_pressed_color","font_focus_color"]: t.set_color(item,"Button",INK)
-	t.set_color("font_hover_color","Button",Color("ffe08a"))
+	t.set_color("font_hover_color","Button",HOVER)
 	t.set_color("font_disabled_color","Button",Color(INK,.45))
 	for spec in [["GoldButton","btn_gold",PAPER_INK,false],["PrimaryButton","btn_green",INK,true],["NightButton","btn_night",INK,true]]:
 		t.set_type_variation(spec[0],"Button")
 		_buttons(t,spec[0],spec[1],spec[2],spec[3])
-	t.set_color("font_hover_color","NightButton",Color("ffe08a"))
+	t.set_color("font_hover_color","NightButton",HOVER)
+	_extra_buttons(t,true)
 	t.set_type_variation("HudSlot","Button")
 	for state in ["normal","hover","pressed","hover_pressed","disabled"]:
 		t.set_stylebox(state,"HudSlot",frame({"normal":"slot_night","hover":"slot_night_hover","pressed":"slot_night_pressed","hover_pressed":"slot_night_pressed","disabled":"slot_night"}[state]))
@@ -1122,9 +1589,362 @@ static func night_theme() -> Theme:
 		t.set_color("font_color",type,INK)
 		t.set_color("caret_color",type,GOLD)
 		t.set_color("font_placeholder_color",type,Color(1,1,1,.42))
+	_night_coverage(t)
 	tooltip_theme(t)
 	_night_theme=t
 	return t
+
+## The control types the parchment theme styles, in night glass, so a night panel inside a
+## paper root (or the reverse) never shows the other surface's lists, tabs, menus or scroll
+## wells (tests/ui_consistency_check.gd keeps both themes covering NIGHT_TYPES).
+const THEMED_TYPES := ["Label","Button","LineEdit","TextEdit","CheckBox","CheckButton","ItemList","TabBar","TabContainer",
+	"OptionButton","PopupMenu","ScrollContainer","VScrollBar","HScrollBar","HSlider","VSlider","ProgressBar","TooltipPanel","TooltipLabel"]
+
+static func _night_coverage(t: Theme) -> void:
+	# Lists: a night well; the picked row glows gold, the hovered one lifts a little.
+	var well := frame("field_night")
+	well.set_content_margin_all(8)
+	t.set_stylebox("panel", "ItemList", well)
+	t.set_stylebox("focus", "ItemList", StyleBoxEmpty.new())
+	var picked := StyleBoxFlat.new()
+	picked.bg_color = Color(GOLD, .28)
+	picked.set_corner_radius_all(8)
+	picked.border_color = Color(GOLD, .7)
+	picked.set_border_width_all(1)
+	var hovered := StyleBoxFlat.new()
+	hovered.bg_color = Color(1,1,1,.1)
+	hovered.set_corner_radius_all(8)
+	for item in ["selected","selected_focus"]: t.set_stylebox(item, "ItemList", picked)
+	t.set_stylebox("hovered", "ItemList", hovered)
+	t.set_stylebox("cursor", "ItemList", StyleBoxEmpty.new())
+	t.set_stylebox("cursor_unfocused", "ItemList", StyleBoxEmpty.new())
+	for item in ["font_color","font_hovered_color"]: t.set_color(item, "ItemList", INK)
+	t.set_color("font_selected_color", "ItemList", HOVER)
+	t.set_constant("v_separation", "ItemList", 6)
+	# Drop-down menus: plain night glass.
+	var menu := frame("panel_night_plain")
+	menu.set_content_margin_all(10)
+	t.set_stylebox("panel", "PopupMenu", menu)
+	t.set_stylebox("hover", "PopupMenu", picked)
+	for item in ["font_color","font_accelerator_color"]: t.set_color(item, "PopupMenu", INK)
+	t.set_color("font_hover_color", "PopupMenu", HOVER)
+	t.set_color("font_disabled_color", "PopupMenu", Color(INK,.45))
+	t.set_constant("v_separation", "PopupMenu", 8)
+	t.set_icon("arrow", "OptionButton", half("arrow_down_light"))
+	t.set_constant("arrow_margin", "OptionButton", 12)
+	# Tabs: night keys, the chosen one gold.
+	for type in ["TabBar","TabContainer"]:
+		t.set_stylebox("tab_selected", type, frame("btn_gold_normal"))
+		t.set_stylebox("tab_hovered", type, frame("btn_night_hover"))
+		t.set_stylebox("tab_unselected", type, frame("btn_night_normal"))
+		t.set_color("font_selected_color", type, PAPER_INK)
+		t.set_color("font_unselected_color", type, INK)
+		t.set_color("font_hovered_color", type, HOVER)
+	t.set_stylebox("panel", "TabContainer", frame("panel_night_plain"))
+	# Scrolling, sliders and meters share the parchment pieces (they read on both surfaces).
+	t.set_stylebox("panel", "ScrollContainer", StyleBoxEmpty.new())
+	for type in ["VScrollBar","HScrollBar"]:
+		t.set_stylebox("scroll", type, frame("scroll_track"))
+		t.set_stylebox("scroll_focus", type, frame("scroll_track"))
+		t.set_stylebox("grabber", type, frame("scroll_grabber"))
+		t.set_stylebox("grabber_highlight", type, frame("scroll_grabber_hover"))
+		t.set_stylebox("grabber_pressed", type, frame("scroll_grabber_hover"))
+	var track := frame("bar_bg")
+	track.set_content_margin_all(3)
+	for type in ["HSlider","VSlider"]:
+		t.set_stylebox("slider", type, track)
+		t.set_stylebox("grabber_area", type, frame("bar_fill", AMBER))
+		t.set_stylebox("grabber_area_highlight", type, frame("bar_fill", Color("f3c96a")))
+		t.set_icon("grabber", type, half("slider_grabber"))
+		t.set_icon("grabber_highlight", type, half("slider_grabber_hover"))
+	t.set_stylebox("background", "ProgressBar", frame("bar_bg"))
+	t.set_stylebox("fill", "ProgressBar", frame("bar_fill", AMBER))
+	t.set_color("font_color", "ProgressBar", INK)
+	t.set_icon("checked", "CheckBox", half("check_on"))
+	t.set_icon("unchecked", "CheckBox", half("check_off"))
+	t.set_icon("radio_checked", "CheckBox", half("radio_on"))
+	t.set_icon("radio_unchecked", "CheckBox", half("radio_off"))
+
+# ------------------------------------------------------------------ windows
+
+## The window stack: instance ids of open window and drawer roots, bottom to top. Each root holds
+## its description in meta "rpg_window". Only ids live here (no callables, no nodes), so nothing
+## stale outlives a scene; entries whose root is gone are pruned on every read.
+static var _stack: Array[int] = []
+## Called with (open_count, top_kind) whenever the stack changes ("" when empty). Plain methods
+## only (listen_windows), like GameSettings.listen: a lambda held in a static list can crash the
+## engine on exit.
+static var window_listeners: Array[Callable] = []
+
+## A shared screen shade: the radial fall from SHADE_IN to SHADE_OUT (dim > 0 darkens it evenly to
+## that opacity, the blocked-client look), full-rect under `parent`, fading in over 0.2 s.
+static func shade(parent: Control, dim := 0.0) -> TextureRect:
+	var veil := TextureRect.new()
+	veil.name = "Shade"
+	var fall := GradientTexture2D.new()
+	fall.fill = GradientTexture2D.FILL_RADIAL
+	fall.fill_from = Vector2(0.5, 0.45)
+	fall.fill_to = Vector2(1.1, 1.1)
+	fall.gradient = Gradient.new()
+	if dim > 0.0: fall.gradient.colors = PackedColorArray([Color(SHADE_IN, dim * 0.85), Color(SHADE_OUT, dim)])
+	else: fall.gradient.colors = PackedColorArray([SHADE_IN, SHADE_OUT])
+	veil.texture = fall
+	veil.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	parent.add_child(veil)
+	if not calm():
+		veil.modulate.a = 0.0
+		veil.create_tween().tween_property(veil, "modulate:a", 1.0, 0.2)
+	return veil
+
+## One window: title (T_WINDOW), optional head controls, the close key, a rule, then the body.
+## opts: kind "paper" | "night"; width (WINDOW_W.standard); place "top" (y WINDOW_TOP) | "centre" |
+## "bottom" (above the hotbar); modal (true: a shade, shared with a modal window already open on the
+## same host, and the world under it takes no clicks); action (the GameSettings action that opens
+## it: the close key is named with its key; "" names Esc); icon (a picture before the title);
+## on_close (what the close key does; default close_window); scroll (true: the body scrolls once the
+## card would pass the screen's foot); id; dim (shade opacity for a darker shade).
+## Returns {root, shade, card, head, title, body, close, id, action, kind, modal}; free it with
+## close_window(w). Opens with pop_in and the open sound and joins the window stack.
+static func window(host: Control, title: String, opts := {}) -> Dictionary:
+	var kind := str(opts.get("kind", "paper"))
+	var width := float(opts.get("width", WINDOW_W.standard))
+	var place := str(opts.get("place", "top"))
+	var modal := bool(opts.get("modal", true))
+	var action := str(opts.get("action", ""))
+	var id := str(opts.get("id", ""))
+	var root := Control.new()
+	root.name = id.to_pascal_case() if not id.is_empty() else "Window"
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_STOP if modal else Control.MOUSE_FILTER_IGNORE
+	# Paper windows look the same in every place (a room's own theme is night glass).
+	root.theme = theme()
+	host.add_child(root)
+	var veil: TextureRect = null
+	if modal:
+		var under := _modal_shade(host)
+		veil = under if under else shade(root, float(opts.get("dim", 0.0)))
+	var card := PanelContainer.new()
+	card.name = "Card"
+	card.custom_minimum_size.x = width
+	card.add_theme_stylebox_override("panel", panel_style("night" if kind == "night" else "paper"))
+	if kind == "night": card.theme = night_theme()
+	root.add_child(card)
+	_place_card(card, width, place)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", GAP_S)
+	card.add_child(column)
+	var head := HBoxContainer.new()
+	head.name = "Head"
+	head.add_theme_constant_override("separation", GAP)
+	column.add_child(head)
+	if not str(opts.get("icon", "")).is_empty():
+		var art := icon(str(opts.icon), 30)
+		art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(art)
+	var heading_label := Label.new()
+	heading_label.name = "Title"
+	heading_label.text = title
+	text_style(heading_label, "window", kind)
+	heading_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(heading_label)
+	var w := {"root":root, "shade":veil, "card":card, "head":head, "title":heading_label, "body":column, "close":null,
+		"id":id, "action":action, "kind":kind, "modal":modal}
+	var on_close: Callable = opts.get("on_close", Callable())
+	var shut := func() -> void:
+		if on_close.is_valid(): on_close.call()
+		else: close_window(w)
+	w["close"] = close_key(head, shut, action)
+	divider(column, PAPER_LINE if kind != "night" else Color(GOLD, .55))
+	if bool(opts.get("scroll", true)):
+		var scroll := ScrollContainer.new()
+		scroll.name = "Scroll"
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		column.add_child(scroll)
+		var body := VBoxContainer.new()
+		body.name = "Body"
+		body.add_theme_constant_override("separation", GAP_S)
+		body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(body)
+		var top: float = float(WINDOW_TOP) if place == "top" else 40.0
+		var fit := func() -> void:
+			if not is_instance_valid(body) or not body.is_inside_tree(): return
+			var room := maxf(200.0, body.get_viewport().get_visible_rect().size.y - top - 140.0)
+			scroll.custom_minimum_size.y = minf(body.get_combined_minimum_size().y, room)
+		body.minimum_size_changed.connect(fit)
+		w["body"] = body
+	_push_window(root, w)
+	pop_in(card)
+	sfx("open", -8.0)
+	return w
+
+## Card placement on the design canvas: top centre at WINDOW_TOP growing down, the screen's centre,
+## or bottom centre above the hotbar growing up.
+static func _place_card(card: Control, width: float, place: String) -> void:
+	match place:
+		"centre", "center":
+			card.anchor_left = 0.5; card.anchor_right = 0.5; card.anchor_top = 0.5; card.anchor_bottom = 0.5
+			card.offset_left = -width * 0.5; card.offset_right = width * 0.5
+			card.offset_top = 0; card.offset_bottom = 0
+			card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+			card.grow_vertical = Control.GROW_DIRECTION_BOTH
+		"bottom":
+			card.anchor_left = 0.5; card.anchor_right = 0.5; card.anchor_top = 1.0; card.anchor_bottom = 1.0
+			card.offset_left = -width * 0.5; card.offset_right = width * 0.5
+			card.offset_top = -(CANVAS.y - 690.0); card.offset_bottom = -(CANVAS.y - 690.0)
+			card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+			card.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		_:
+			card.position = Vector2(CANVAS.x * 0.5 - width * 0.5, WINDOW_TOP)
+			pin(card, 0.5, 0.0)
+
+## A non-modal side panel in the window family (the bag, the social drawer). opts: side "right" |
+## "left"; width (DRAWER_W); top (20); kind; action ("inventory"); on_close; id. It slides in from
+## its side; no shade, the world stays live. Returns the same keys as window().
+static func drawer(host: Control, title: String, opts := {}) -> Dictionary:
+	var side := str(opts.get("side", "right"))
+	var width := float(opts.get("width", DRAWER_W))
+	var top := float(opts.get("top", 20.0))
+	var kind := str(opts.get("kind", "paper"))
+	var action := str(opts.get("action", "inventory"))
+	var id := str(opts.get("id", ""))
+	var root := Control.new()
+	root.name = id.to_pascal_case() if not id.is_empty() else "Drawer"
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.theme = theme()
+	host.add_child(root)
+	var card := PanelContainer.new()
+	card.name = "Card"
+	card.custom_minimum_size.x = width
+	card.add_theme_stylebox_override("panel", panel_style("night" if kind == "night" else "paper"))
+	if kind == "night": card.theme = night_theme()
+	root.add_child(card)
+	var left := side == "left"
+	card.position = Vector2(14.0 if left else CANVAS.x - 24.0 - width, top)
+	pin(card, 0.0 if left else 1.0, 0.0)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", GAP_S)
+	card.add_child(column)
+	var head := HBoxContainer.new()
+	head.name = "Head"
+	head.add_theme_constant_override("separation", GAP_S)
+	column.add_child(head)
+	var heading_label := Label.new()
+	heading_label.name = "Title"
+	heading_label.text = title
+	text_style(heading_label, "window", kind)
+	heading_label.add_theme_font_size_override("font_size", 22)
+	heading_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(heading_label)
+	var w := {"root":root, "shade":null, "card":card, "head":head, "title":heading_label, "body":column, "close":null,
+		"id":id, "action":action, "kind":"drawer", "surface":kind, "modal":false}
+	var on_close: Callable = opts.get("on_close", Callable())
+	var shut := func() -> void:
+		if on_close.is_valid(): on_close.call()
+		else: close_window(w)
+	w["close"] = close_key(head, shut, action)
+	divider(column, PAPER_LINE if kind != "night" else Color(GOLD, .55))
+	_push_window(root, w)
+	slide_in(card, Vector2(-40.0 if left else 40.0, 0.0))
+	sfx("open", -10.0)
+	return w
+
+## Closes a window or drawer: leaves the stack, plays the close sound and frees it (a short fade
+## first when animate; at once otherwise, so callers that test is_instance_valid see it gone).
+static func close_window(w: Dictionary, animate := true) -> void:
+	var root: Control = w.get("root") if w.has("root") and is_instance_valid(w.get("root")) else null
+	if root == null: return
+	if root.get_meta("rpg_closing", false): return
+	root.set_meta("rpg_closing", true)
+	_forget_window(root.get_instance_id())
+	_hand_over_shade(root, w)
+	sfx("close", -10.0)
+	if animate and not calm() and root.is_inside_tree():
+		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		for child in root.get_children(): if child is Control: (child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var tw := root.create_tween()
+		tw.tween_property(root, "modulate:a", 0.0, 0.12).set_trans(Tween.TRANS_SINE)
+		tw.tween_callback(root.queue_free)
+	else:
+		if root.get_parent(): root.get_parent().remove_child(root)
+		root.queue_free()
+
+## A modal shade shared with other windows lives under the window that made it: when that one
+## closes first, the shade moves to the lowest window still sharing it (under its card), so the
+## others keep their backdrop and no description points at a freed shade.
+static func _hand_over_shade(root: Control, w: Dictionary) -> void:
+	var veil = w.get("shade")
+	if not is_instance_valid(veil) or not (veil is TextureRect) or (veil as Node).get_parent() != root: return
+	for other in windows():
+		var keep: Control = other.get("root")
+		var theirs = other.get("shade")
+		if not is_instance_valid(theirs) or theirs != veil or not is_instance_valid(keep): continue
+		(veil as Node).reparent(keep, false)
+		keep.move_child(veil, 0)
+		return
+
+## The open windows and drawers, bottom to top (their descriptions).
+static func windows() -> Array:
+	var out := []
+	var kept: Array[int] = []
+	for id in _stack:
+		var node := instance_from_id(id) as Control
+		if node == null or not is_instance_valid(node) or node.is_queued_for_deletion() or node.get_meta("rpg_closing", false): continue
+		kept.append(id)
+		out.append(node.get_meta("rpg_window", {}))
+	_stack = kept
+	return out
+
+## The topmost open window or drawer ({} when none): Esc routing and chat suppression read it.
+static func top_window() -> Dictionary:
+	var open := windows()
+	return open.back() if not open.is_empty() else {}
+
+## The open modal windows (not drawers) on the stack.
+static func modal_open() -> bool:
+	return windows().any(func(w): return bool(w.get("modal", false)))
+
+## Adds a listener (a plain method) for stack changes: callback(open_count, top_kind).
+static func listen_windows(callback: Callable) -> void:
+	if callback.is_custom():
+		push_error("RpgUi.listen_windows wants a plain method, not a lambda or bound callable: %s" % callback)
+		return
+	if not callback in window_listeners: window_listeners.append(callback)
+
+static func unlisten_windows(callback: Callable) -> void:
+	window_listeners.erase(callback)
+
+## Puts any root (a window, a drawer, later the dialogue) on the stack with its description.
+static func _push_window(root: Control, w: Dictionary) -> void:
+	root.set_meta("rpg_window", w)
+	var id := root.get_instance_id()
+	if not id in _stack: _stack.append(id)
+	root.tree_exiting.connect(func(): _forget_window(id))
+	_windows_changed()
+
+static func _forget_window(id: int) -> void:
+	if not id in _stack: return
+	_stack.erase(id)
+	_windows_changed()
+
+static func _windows_changed() -> void:
+	var open := windows()
+	var top_kind := str((open.back() as Dictionary).get("kind", "")) if not open.is_empty() else ""
+	for callback in window_listeners.duplicate():
+		if callback.is_valid(): callback.call(open.size(), top_kind)
+		else: window_listeners.erase(callback)
+
+## The shade of a modal window already open on this host, so a window opened from another reuses it.
+static func _modal_shade(host: Control) -> TextureRect:
+	for w in windows():
+		var root: Control = w.get("root")
+		var veil = w.get("shade")
+		if bool(w.get("modal", false)) and is_instance_valid(root) and root.get_parent() == host and is_instance_valid(veil) and veil is TextureRect:
+			return veil
+	return null
 
 # ------------------------------------------------------------------ dialogue
 
@@ -1389,8 +2209,8 @@ static func dialogue_choices(d: Dictionary, entries: Array) -> Array:
 		b.theme_type_variation = "NightButton"
 		b.add_theme_font_override("font", FONT_STRONG)
 		b.add_theme_font_size_override("font_size", 17)
-		b.add_theme_color_override("font_hover_color", Color("ffe08a"))
-		b.add_theme_color_override("font_focus_color", Color("ffe08a"))
+		b.add_theme_color_override("font_hover_color", HOVER)
+		b.add_theme_color_override("font_focus_color", HOVER)
 		for state in ["normal","hover","pressed","disabled"]:
 			var box := frame("btn_night_" + state)
 			box.content_margin_left = 50
@@ -1433,8 +2253,8 @@ static func menu_button(parent: Node, value: String, callback: Callable, width :
 	b.theme_type_variation = "NightButton"
 	b.add_theme_font_override("font", FONT_STRONG)
 	b.add_theme_font_size_override("font_size", 19)
-	b.add_theme_color_override("font_hover_color", Color("ffe08a"))
-	b.add_theme_color_override("font_focus_color", Color("ffe08a"))
+	b.add_theme_color_override("font_hover_color", HOVER)
+	b.add_theme_color_override("font_focus_color", HOVER)
 	b.pressed.connect(callback)
 	hover_motion(b, 1.03)
 	parent.add_child(b)

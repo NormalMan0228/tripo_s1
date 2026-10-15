@@ -13,7 +13,7 @@ const TABS := [["graphics","그래픽"],["audio","사운드"],["controls","조�
 const SELECTED := Color(0.36,0.28,0.14,.95)
 const IDLE := Color(0.09,0.12,0.13,.78)
 const HOVER := Color(0.24,0.2,0.12,.92)
-const SOFT := Color("c9d3c6")
+const SOFT := RpgUi.SOFT
 const WARN := Color("ffb38a")
 
 signal closed
@@ -516,9 +516,9 @@ func _paint(b: Button, selected: bool) -> void:
 	for state in ["normal","hover","pressed","disabled"]:
 		b.add_theme_stylebox_override(state, RpgUi.frame(look + state if not (selected and state == "disabled") else "btn_gold_normal"))
 	b.add_theme_stylebox_override("focus", RpgUi.frame("focus"))
-	var ink := RpgUi.PAPER_INK if selected else Color("fff2cf")
+	var ink := RpgUi.PAPER_INK if selected else RpgUi.INK
 	for item in ["font_color","font_focus_color","font_pressed_color","font_hover_pressed_color"]: b.add_theme_color_override(item, ink)
-	b.add_theme_color_override("font_hover_color", RpgUi.PAPER_INK if selected else Color("ffe08a"))
+	b.add_theme_color_override("font_hover_color", RpgUi.PAPER_INK if selected else RpgUi.HOVER)
 	b.add_theme_color_override("font_disabled_color", ink if selected else Color(1,1,1,.35))
 	b.add_theme_constant_override("outline_size", 0 if selected else 3)
 
@@ -546,7 +546,7 @@ func _theme() -> Theme:
 	var track := RpgUi.frame("bar_bg")
 	track.set_content_margin_all(3)
 	t.set_stylebox("slider", "HSlider", track)
-	t.set_stylebox("grabber_area", "HSlider", RpgUi.frame("bar_fill", Color("e9b552")))
+	t.set_stylebox("grabber_area", "HSlider", RpgUi.frame("bar_fill", RpgUi.AMBER))
 	t.set_stylebox("grabber_area_highlight", "HSlider", RpgUi.frame("bar_fill", Color("f3c96a")))
 	t.set_icon("grabber", "HSlider", RpgUi.half("slider_grabber"))
 	t.set_icon("grabber_highlight", "HSlider", RpgUi.half("slider_grabber_hover"))
