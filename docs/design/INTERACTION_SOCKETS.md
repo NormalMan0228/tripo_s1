@@ -191,7 +191,7 @@ It loses points on three counts.
 | `sit` | Seat surface | Height 0.30-0.65 m. Params: `variant` (chair, stool, bench, sofa, armchair, throne, swing, rocker, saddle), `back`, `arms`, `width`, `depth` | seat_contact | sit / sit_low | sit |
 | `perch` | High seat; legs dangle, no foot plant | Height 0.65-1.10 m | seat_contact | perch | perch |
 | `sit_ground` | Floor or rug | Height < 0.15 m | seat_contact | sit_ground | sitg |
-| `lie` | Mattress top under the pelvis. +Z points out of the entry side (the side you sit on before lying back). | `head` ∈ {l, r} as seen from that sitting character (swapped under mirror); `length` ≥ 1.55; `width` ≥ 0.55; `recline_deg`; `sunk` | pelvis_lie | lie (Root tilt) | lie |
+| `lie` | Mattress top under the pelvis. +Z points out of the entry side (the side you sit on before lying back). | `head` ∈ {l, r} as seen from that sitting character (swapped under mirror); `length` ≥ 1.55; `width` ≥ 0.55 (v1 implementation: ≥ 1.3 / ≥ 0.45, ix_schema LIE_MIN_*, see ISS1_KO.md §11); `recline_deg`; `sunk` | pelvis_lie | lie (Root tilt) | lie |
 | `stand_use` | Floor at the user's feet | `work_height`, `work_point`, `kind` (counter, desk, wall, lever, crank, instrument) | root | reach envelope | use |
 | `reach` | Feet point (dynamic: plots, forage spots) | `target`, `band` (ground, low, mid, high) | root + grip_r | kneel / reach | reach, crouch |
 | `grip` | Handle centre; +Y along the handle | `hand` (r, l, any, both), `style`, `motion` | grip_r / grip_l | IK only | inside other sets |
@@ -232,7 +232,7 @@ It loses points on three counts.
 5. Seat count: n = clamp(floor(width/0.55), 1, 4).
 6. Hip point: front edge − fwd·clamp(depth·0.55, 0.12, 0.30), at height `t`, then snapped.
 
-**`lie`:** the largest top in 0.12-0.95 with length ≥ 1.3 and width ≥ 0.55.
+**`lie`:** the largest top in 0.12-0.95 with length ≥ 1.3 and width ≥ 0.45 (v1: 0.45 m is the shoulder width; a crafted hammock net is 0.49 m wide).
 - The head goes toward a taller box (headboard). Otherwise toward −Z, or −X when x > z (as today).
 - The pelvis sits at the centre shifted 0.10 toward the feet.
 - The entry side is the free long side, defaulting to +Z.

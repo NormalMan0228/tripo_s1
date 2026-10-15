@@ -31,6 +31,8 @@ func run() -> void:
 	warps()
 	procedural()
 	legs()
+	shaped_beds()
+	thresholds()
 	print("IX_MATH_CHECK ", JSON.stringify({"ok": failures.is_empty(), "passed": passes, "failures": failures, "worst": worst}))
 	quit(0 if failures.is_empty() else 1)
 
@@ -201,6 +203,41 @@ func procedural() -> void:
 	check(absf(angle_difference(yaw, PI)) < 1e-4, "a half turn at 10 rad/s finishes in 0.3 s")
 	check(IxMath.align_duration(1.2, PI) <= 0.4 and IxMath.align_duration(0.0, 0.0) >= 0.15, "align lasts 0.15-0.40 s")
 	check(IxMath.sit_variant(0.30) == "sit_low" and IxMath.sit_variant(0.45) == "sit" and IxMath.sit_variant(0.72) == "perch" and IxMath.sit_variant(0.05) == "sit_ground", "seat height picks the variant")
+
+## A bed whose length runs along z (entered from its long sides, yaw +-90), derived from its boxes
+## and resolved under non-uniform shape edits and a mirror: the length follows the bed's real z.
+func shaped_beds() -> void:
+	var Sources = load("res://scripts/ix/ix_sources.gd")
+	var boxes := [{"box": AABB(Vector3(-0.5, 0, -0.9), Vector3(1.0, 0.3, 1.8)), "part": ""},
+		{"box": AABB(Vector3(-0.46, 0.3, -0.82), Vector3(0.92, 0.16, 1.7)), "part": ""},
+		{"box": AABB(Vector3(-0.5, 0, -0.94), Vector3(1.0, 0.9, 0.08)), "part": ""}]
+	for k in [Vector3.ONE, Vector3(0.6, 1, 1), Vector3(-0.6, 1, 1), Vector3(1, 1, 0.8), Vector3(1.3, 1, 1.2)]:
+		var recs: Array = Sources.derive(boxes, "lie", k)
+		var lies := recs.filter(func(r): return str(r.type) == "lie")
+		check(lies.size() == 2, "bed along z at %s offers two lie sockets (%d)" % [str(k), lies.size()])
+		for r in lies:
+			check(absf(absf(float(r.yaw)) - 90.0) < 0.01, "bed along z is entered from its long sides (yaw %.0f)" % float(r.yaw))
+			var out := IxMath.resolve(Schema.normalize(r), {"xform": Transform3D.IDENTITY, "box": AABB(), "k": k})
+			var real := 1.7 * absf(k.z)
+			check(out.valid and absf(float(out.params.length) - real) < 0.02, "bed along z at %s: length %.2f m (real %.2f), %s" % [str(k), float(out.params.length), real, out.why])
+	# The bbox fallback for a bed along z keeps its length on z too.
+	var fallback: Array = Sources.bbox_fallback(Vector3(1.0, 0.5, 2.0), "lie")
+	var out_fb := IxMath.resolve(Schema.normalize(fallback[0]), {"xform": Transform3D.IDENTITY, "box": AABB(), "k": Vector3(0.6, 1, 1)})
+	check(absf(float(out_fb.params.length) - 2.0) < 0.01, "bbox bed along z, width 60%%: length stays 2.0 (%.2f)" % float(out_fb.params.length))
+	check(IxMath.length_along_x(0.0) and IxMath.length_along_x(180.0) and not IxMath.length_along_x(90.0) and not IxMath.length_along_x(-90.0) and not IxMath.length_along_x(270.0), "the length axis follows the entry yaw")
+
+## One set of thresholds: the perch line of sit_variant is the sit range's top, as resolve() retypes;
+## the lie limits come from the schema.
+func thresholds() -> void:
+	var top := float(Schema.HEIGHT_RANGE.sit[1])
+	check(IxMath.sit_variant(top - 0.01) == "sit" and IxMath.sit_variant(top + 0.01) == "perch", "perch starts above %.2f m in sit_variant (%s / %s)" % [top, IxMath.sit_variant(top - 0.01), IxMath.sit_variant(top + 0.01)])
+	for h in [0.66, 0.67]:
+		var r := IxMath.resolve(Schema.normalize({"id": "s", "type": "sit", "pos": [0, h, 0]}), {"xform": Transform3D.IDENTITY, "box": AABB(), "floor_y": 0.0})
+		check(str(r.type) == "sit" and IxMath.sit_variant(float(r.height)) == "sit", "a %.2f m seat is a sit both as a type and as the played variant" % h)
+	var narrow := IxMath.resolve(Schema.normalize({"id": "l", "type": "lie", "pos": [0, 0.45, 0], "params": {"length": 1.4, "width": 0.40}}), {"xform": Transform3D.IDENTITY, "box": AABB(), "floor_y": 0.0})
+	check(not narrow.valid and narrow.why == "narrow", "a 0.40 m wide surface is no bed (%s)" % narrow.why)
+	var fits := IxMath.resolve(Schema.normalize({"id": "l", "type": "lie", "pos": [0, 0.45, 0], "params": {"length": float(Schema.LIE_MIN_LENGTH), "width": float(Schema.LIE_MIN_WIDTH)}}), {"xform": Transform3D.IDENTITY, "box": AABB(), "floor_y": 0.0})
+	check(fits.valid, "a surface at the schema's lie limits is a bed (%s)" % fits.why)
 
 func legs() -> void:
 	var thigh := 0.38

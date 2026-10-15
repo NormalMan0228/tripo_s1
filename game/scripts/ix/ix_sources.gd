@@ -123,10 +123,21 @@ static func for_crafted(node: Node3D, hint := "") -> Array:
 					var local: Vector3 = (rest as Transform3D).affine_inverse() * (Vector3(one.pos) * k)
 					var carried: Dictionary = one.duplicate(true)
 					carried.pos = local
+					carried.yaw = carried_yaw(float(one.get("yaw", 0.0)), rest, k)
 					entry = {"rec": carried, "carrier": node.pivots[part], "box": AABB(), "node": node, "shape_node": node, "k_on_point": false, "floor_offset": 0.0}
 			entries.append(entry)
 	node.set_meta(CACHE_META, {"key": key, "entries": entries})
 	return entries
+
+## A whole-frame yaw (degrees, stored unmirrored) as the yaw in a part holder's frame, so resolving it
+## with the pivot's transform (which carries the holder chain's turn) gives the same direction back.
+static func carried_yaw(yaw_deg: float, rest: Transform3D, k: Vector3) -> float:
+	var yaw := deg_to_rad(yaw_deg)
+	var shaped := Vector3(sin(yaw) * (-1.0 if k.x < 0.0 else 1.0), 0.0, cos(yaw))
+	var local := rest.basis.inverse() * shaped
+	local.y = 0.0
+	if local.length_squared() < 1e-8: return yaw_deg
+	return rad_to_deg(atan2(local.x, local.z))
 
 ## The resolve context of an entry right now (the carrier may be moving).
 static func context(entry: Dictionary) -> Dictionary:
@@ -240,7 +251,7 @@ static func absolute_params(rec: Dictionary, box: AABB) -> void:
 	var p: Dictionary = rec.params
 	if p.has("width_frac"): p["width"] = box.size.x * float(p.width_frac)
 	if p.has("depth_frac"): p["depth"] = box.size.z * float(p.depth_frac)
-	if p.has("length_frac"): p["length"] = (box.size.z if str(p.get("head", "l")) in ["l", "r"] and absf(float(rec.yaw)) > 45.0 else box.size.x) * float(p.length_frac)
+	if p.has("length_frac"): p["length"] = (box.size.x if IxMath.length_along_x(float(rec.yaw)) else box.size.z) * float(p.length_frac)
 	for key in ["width_frac", "depth_frac", "length_frac"]: p.erase(key)
 
 # ------------------------------------------------------------------ derivation (pure)
@@ -264,7 +275,7 @@ static func derive(boxes: Array, hint: String, k := Vector3.ONE) -> Array:
 		var p: Dictionary = r.params
 		if p.has("width"): p.width = float(p.width) / ak.x
 		if p.has("depth"): p.depth = float(p.depth) / ak.z
-		if p.has("length"): p.length = float(p.length) / (ak.z if absf(float(r.yaw)) > 45.0 and absf(float(r.yaw)) < 135.0 else ak.x)
+		if p.has("length"): p.length = float(p.length) / (ak.x if IxMath.length_along_x(float(r.yaw)) else ak.z)
 		if k.x < 0.0:
 			# Records are stored unmirrored; the resolution mirrors them again.
 			r.yaw = -float(r.yaw)
@@ -416,10 +427,10 @@ static func derive_lie(tops: Array, shaped: Array) -> Array:
 		var r: Rect2 = top.rect
 		var long := maxf(r.size.x, r.size.y)
 		var short := minf(r.size.x, r.size.y)
-		if float(top.t) < 0.12 or float(top.t) > 1.05 or short < 0.45: continue
+		if float(top.t) < 0.12 or float(top.t) > 1.05 or short < float(Schema.LIE_MIN_WIDTH): continue
 		# A raised backrest at one end lengthens a lounger.
 		var ext := _backrest(r, float(top.t), shaped)
-		if long + float(ext.length) >= 1.3:
+		if long + float(ext.length) >= float(Schema.LIE_MIN_LENGTH):
 			pick = top.duplicate()
 			pick["ext"] = ext
 			break

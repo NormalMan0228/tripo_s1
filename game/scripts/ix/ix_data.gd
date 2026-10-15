@@ -35,21 +35,27 @@ const PROP_MODELS := {
 	# Back on -Z; a 0.49 m seat.
 	"32_cafe_chair": {"calibrated": true, "sockets": [
 		{"id": "seat_0", "type": "sit", "variant": "chair", "pos": [0.0, 0.49, 0.05], "yaw": 0, "snap": false, "params": {"back": true, "width": 0.42, "depth": 0.42}}]},
-	# Two benches (0.43 m) along the table's long sides, facing the 0.80 m top; entered from behind them.
+	# Two benches along the table's long sides, facing the 0.80 m top; entered from behind them. The
+	# model's benches and top are turned -19.3 degrees about Y in its own frame (bench centre lines
+	# fitted to its triangles: the -z bench through (0.243, -0.450) at 0.44 m, the +z one through
+	# (-0.310, 0.495) at 0.42 m), so the seats sit 0.40 m either side of each centre along the bench,
+	# face across it at -19.3 / 160.7 degrees, and are entered 0.62 m behind.
 	"25_picnic_table": {"calibrated": true, "sockets": [
-		{"id": "seat_0", "type": "sit", "variant": "bench", "pos": [-0.45, 0.43, -0.66], "yaw": 0, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
-			"approach": [{"pos": [-0.45, 0.0, -1.3], "yaw": 0, "from": "back"}]},
-		{"id": "seat_1", "type": "sit", "variant": "bench", "pos": [0.45, 0.43, -0.66], "yaw": 0, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
-			"approach": [{"pos": [0.45, 0.0, -1.3], "yaw": 0, "from": "back"}]},
-		{"id": "seat_2", "type": "sit", "variant": "bench", "pos": [-0.45, 0.43, 0.66], "yaw": 180, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
-			"approach": [{"pos": [-0.45, 0.0, 1.3], "yaw": 0, "from": "back"}]},
-		{"id": "seat_3", "type": "sit", "variant": "bench", "pos": [0.45, 0.43, 0.66], "yaw": 180, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
-			"approach": [{"pos": [0.45, 0.0, 1.3], "yaw": 0, "from": "back"}]}]},
+		{"id": "seat_0", "type": "sit", "variant": "bench", "pos": [-0.134, 0.44, -0.582], "yaw": -19.3, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
+			"approach": [{"pos": [0.071, 0.0, -1.167], "yaw": 0, "from": "back"}]},
+		{"id": "seat_1", "type": "sit", "variant": "bench", "pos": [0.620, 0.44, -0.318], "yaw": -19.3, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
+			"approach": [{"pos": [0.825, 0.0, -0.903], "yaw": 0, "from": "back"}]},
+		{"id": "seat_2", "type": "sit", "variant": "bench", "pos": [-0.688, 0.42, 0.363], "yaw": 160.7, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
+			"approach": [{"pos": [-0.893, 0.0, 0.948], "yaw": 0, "from": "back"}]},
+		{"id": "seat_3", "type": "sit", "variant": "bench", "pos": [0.068, 0.42, 0.627], "yaw": 160.7, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
+			"approach": [{"pos": [-0.137, 0.0, 1.212], "yaw": 0, "from": "back"}]}]},
 	# Lying along it, head on the raised back at -Z (about 30 degrees); entered from either long side.
+	# The point is the slatted cushion under the hips just in front of the backrest's hinge (0.30 m at
+	# z -0.20); the 0.46 m side rails at x +-0.30 are not the surface.
 	"29_beach_lounger": {"calibrated": true, "sockets": [
-		{"id": "lie_0", "type": "lie", "variant": "lounger", "group": "lie", "pos": [0.0, 0.46, -0.25], "yaw": 90, "snap": false,
+		{"id": "lie_0", "type": "lie", "variant": "lounger", "group": "lie", "pos": [0.0, 0.30, -0.20], "yaw": 90, "snap": false,
 			"params": {"head": "l", "length": 1.7, "width": 0.72, "recline_deg": 30.0}},
-		{"id": "lie_1", "type": "lie", "variant": "lounger", "group": "lie", "pos": [0.0, 0.46, -0.25], "yaw": -90, "snap": false,
+		{"id": "lie_1", "type": "lie", "variant": "lounger", "group": "lie", "pos": [0.0, 0.30, -0.20], "yaw": -90, "snap": false,
 			"params": {"head": "r", "length": 1.7, "width": 0.72, "recline_deg": 30.0}}]},
 }
 

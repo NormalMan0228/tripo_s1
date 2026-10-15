@@ -8,6 +8,7 @@ extends SceneTree
 const Driver = preload("res://scripts/ix/ix_driver.gd")
 const IxSources = preload("res://scripts/ix/ix_sources.gd")
 const IxMath = preload("res://scripts/ix/ix_math.gd")
+const Fx = preload("res://scripts/fx.gd")
 
 var server := preload("res://tests/qa_server.gd").url()
 var failures: Array[String] = []
@@ -69,6 +70,9 @@ func run() -> void:
 	watch = app.player
 	for id in ["26_bench", "32_cafe_chair", "25_picnic_table", "29_beach_lounger"]:
 		await prop_case(app, id)
+	await every_picnic_seat(app)
+	await rebuilt_while_seated(app)
+	watch = app.player
 	await talk_case(app)
 	check(biggest <= 0.08, "no tick moves the walker more than 0.08 m (max %.3f m)" % biggest)
 	finish()
@@ -91,7 +95,9 @@ func prop_case(app: Node, id: String) -> void:
 	app.player.global_position = Vector3(start.x, a.y + 0.3, start.z)
 	app.player.velocity = Vector3.ZERO
 	await create_timer(0.5).timeout
+	var shown: int = Fx.played
 	app.town.use_prop(app, entry)
+	check(Fx.played > shown, "%s: using it plays a visible cue (%d)" % [id, Fx.played - shown])
 	var seat: Node = app.seat
 	var held := await wait_until(func(): return is_instance_valid(seat) and is_instance_valid(seat.driver) and seat.driver.state == Driver.HOLD, 6.0)
 	var want := "lie" if id == "29_beach_lounger" else "sit"
@@ -108,6 +114,75 @@ func prop_case(app: Node, id: String) -> void:
 	check(up and not seat.resting() and not app.player.visual_only, "E gets the walker up from %s" % id)
 	check(d.spot_free(app.player.global_position), "%s: it stands on a free spot" % id)
 	await create_timer(0.4).timeout
+
+## Every seat of the picnic table, from behind its bench: the walker sits on that socket at the
+## model's real (turned) bench yaw and gets up again.
+func every_picnic_seat(app: Node) -> void:
+	var entries: Array = app.town.props.filter(func(e): return e.id == "25_picnic_table")
+	if entries.is_empty(): return
+	var node: Node3D = entries[0].node
+	var IxData = load("res://scripts/ix/ix_data.gd")
+	var authored := {}
+	for r in IxData.PROP_MODELS["25_picnic_table"].sockets: authored[r.id] = float(r.yaw)
+	var sockets := IxSources.resolve_all(IxSources.for_node(node)).filter(func(s): return s.valid)
+	var seated := 0
+	for s in sockets:
+		var a: Vector3 = s.approach[0].pos
+		var away := Vector3(a.x - s.origin.x, 0, a.z - s.origin.z).normalized()
+		app.player.global_position = Vector3(a.x, a.y + 0.3, a.z) + away * 0.4
+		app.player.velocity = Vector3.ZERO
+		await create_timer(0.4).timeout
+		var started: bool = app.village_seat().start({"node": node, "hint": "sit", "socket_id": s.id})
+		var d: Node = app.seat.driver
+		var held := false
+		if started: held = await wait_until(func(): return d.state == Driver.HOLD, 6.0)
+		var want := node.global_rotation.y + deg_to_rad(float(authored.get(s.id, 0.0)))
+		var error := absf(angle_difference(want, IxMath.yaw_of(app.player.facing)))
+		check(held and str(d.socket.id) == str(s.id) and error < deg_to_rad(3.0), "picnic table %s: seated on it facing along the bench's real yaw (%.1f deg off, %s %s)" % [s.id, rad_to_deg(error), str(d.phases), d.why])
+		if held: seated += 1
+		app.seat.stand()
+		await wait_until(func(): return not d.busy(), 3.0)
+		await create_timer(0.3).timeout
+	report["picnic_seats"] = seated
+	check(seated == 4, "all four picnic seats seat the walker (%d)" % seated)
+
+## The village world is rebuilt while the walker sits (a visit, going home, signing in again): the
+## seat lets go, E and Esc work again, and the new walker sits as before.
+func rebuilt_while_seated(app: Node) -> void:
+	var entries: Array = app.town.props.filter(func(e): return e.id == "26_bench")
+	if entries.is_empty(): return
+	var node: Node3D = entries[0].node
+	var s: Dictionary = IxSources.resolve_all(IxSources.for_node(node)).filter(func(x): return x.valid)[0]
+	var a: Vector3 = s.approach[0].pos
+	app.player.global_position = Vector3(a.x, a.y + 0.3, a.z)
+	await create_timer(0.4).timeout
+	app.town.use_prop(app, entries[0])
+	var old_seat: Node = app.seat
+	var held := await wait_until(func(): return old_seat.driver.state == Driver.HOLD, 6.0)
+	check(held, "seated on the bench before the rebuild")
+	await app.enter_village()
+	await wait_until(func(): return app.screen == "village" and is_instance_valid(app.player) and is_instance_valid(app.town) and not app.town.props.is_empty(), 30.0)
+	await create_timer(0.5).timeout
+	var resting: bool = is_instance_valid(app.seat) and app.seat.resting()
+	check(app.screen == "village" and not resting and not (is_instance_valid(old_seat) and old_seat.resting()), "after the rebuild nothing is seated (seat %s)" % ("kept" if is_instance_valid(app.seat) else "made fresh"))
+	check(Driver.claims.is_empty(), "and no seat stays claimed (%s)" % str(Driver.claims))
+	key(app, KEY_E)
+	await create_timer(0.2).timeout
+	check(not (is_instance_valid(app.seat) and app.seat.resting()), "E is not taken by a stale seat")
+	entries = app.town.props.filter(func(e): return e.id == "26_bench")
+	if entries.is_empty(): return
+	node = entries[0].node
+	s = IxSources.resolve_all(IxSources.for_node(node)).filter(func(x): return x.valid)[0]
+	a = s.approach[0].pos
+	app.player.global_position = Vector3(a.x, a.y + 0.3, a.z)
+	await create_timer(0.4).timeout
+	app.town.use_prop(app, entries[0])
+	var again := await wait_until(func(): return is_instance_valid(app.seat) and app.seat.driver.state == Driver.HOLD, 6.0)
+	check(again and app.seat.driver.actor == app.player, "the new walker sits on the bench again")
+	key(app, KEY_E)
+	var up := await wait_until(func(): return not app.seat.driver.busy(), 3.0)
+	check(up and not app.seat.resting(), "and E gets it up")
+	await create_timer(0.3).timeout
 
 func talk_case(app: Node) -> void:
 	var npc: Node3D

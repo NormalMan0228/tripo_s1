@@ -77,6 +77,8 @@ func run() -> void:
 	for id in EXPECT: check(seen.has(id), "fixture %s is exported" % id)
 	await one_piece_bed(stage)
 	rooms(stage)
+	prop_contacts(stage)
+	turned_part(stage, data)
 	print("IX_SOURCES_CHECK ", JSON.stringify({"ok": failures.is_empty(), "passed": passes, "failures": failures, "report": report}))
 	stage.queue_free()
 	await process_frame
@@ -144,6 +146,77 @@ func rooms(stage: Node3D) -> void:
 		if kind == "sofa": check(resolved.size() >= 2, "a sofa seats more than one")
 		if kind == "bed": check(not resolved.filter(func(r): return r.type == "lie" and r.valid).is_empty(), "a room bed can be lain on")
 		check(Sources.for_room(record) == Sources.for_room(record), "room sockets are cached on the piece")
+
+## Every authored map-prop socket (ix_data.gd PROP_MODELS) lies on the model's own triangles: a
+## vertical ray at its point meets the mesh within 3 cm of its height, and a seat's surface is still
+## there 0.18 m to either side along its width (so its yaw runs along the real bench).
+const PROP_GLBS := {"26_bench": "res://maps/archipelago/assets/environment/bench.glb", "25_picnic_table": "res://maps/archipelago/assets/environment/picnic_table.glb",
+	"32_cafe_chair": "res://maps/archipelago/assets/environment/cafe_chair.glb", "29_beach_lounger": "res://maps/archipelago/assets/environment/beach_lounger.glb"}
+
+func prop_contacts(stage: Node3D) -> void:
+	var IxData = load("res://scripts/ix/ix_data.gd")
+	for id in IxData.PROP_MODELS:
+		check(PROP_GLBS.has(id) and ResourceLoader.exists(PROP_GLBS.get(id, "")), "prop %s has a model to measure" % id)
+		if not PROP_GLBS.has(id) or not ResourceLoader.exists(PROP_GLBS[id]): continue
+		var model := (load(PROP_GLBS[id]) as PackedScene).instantiate() as Node3D
+		stage.add_child(model)
+		var tris := Sources.triangles(model)
+		var resolved := Sources.resolve_all(Sources.for_prop(model, id))
+		check(not resolved.is_empty(), "prop %s resolves its sockets" % id)
+		var worst := 0.0
+		var worst_side := 0.0
+		var missing: Array = []
+		for r in resolved:
+			var o: Vector3 = r.origin
+			var hit := Sources.ray_down(tris, o.x, o.z, o.y + 0.25, o.y - 0.25)
+			if is_nan(hit):
+				missing.append(r.id)
+				continue
+			worst = maxf(worst, absf(hit - o.y))
+			if r.type == "lie": continue
+			var side: Vector3 = (r.basis as Basis).x
+			for s in [-0.18, 0.18]:
+				var p: Vector3 = o + side * s
+				var h := Sources.ray_down(tris, p.x, p.z, o.y + 0.25, o.y - 0.25)
+				if is_nan(h): missing.append("%s%+.2f" % [r.id, s])
+				else: worst_side = maxf(worst_side, absf(h - o.y))
+		report["prop_" + id] = {"sockets": resolved.size(), "contact_m": snappedf(worst, 0.001), "along_width_m": snappedf(worst_side, 0.001), "missing": missing}
+		check(missing.is_empty() and worst <= 0.03, "prop %s: every socket is on the mesh within 3 cm (%.3f m, missing %s)" % [id, worst, str(missing)])
+		check(worst_side <= 0.04, "prop %s: the seat surface runs along each socket's width (%.3f m)" % [id, worst_side])
+		model.queue_free()
+
+## A seat carried by a part turned 90 degrees about Y keeps facing out of the seat in the whole's
+## frame (the yaw is converted into the part's frame, not added to the part's turn).
+func turned_part(stage: Node3D, data: Dictionary) -> void:
+	var arch: Dictionary = {}
+	for a in data.archetypes:
+		if a.id == "seat": arch = (a as Dictionary).duplicate(true)
+	check(not arch.is_empty(), "the seat fixture is there to turn")
+	if arch.is_empty(): return
+	for p in arch.parts:
+		if p.id == "seat": p.rotation = [0, 90, 0]
+	var node := build(arch)
+	check(node != null, "a seat turned 90 degrees about Y builds")
+	if node == null: return
+	stage.add_child(node)
+	node.position = Vector3(-10, 0.0, -4)
+	node.rotation_degrees.y = 25.0
+	var whole: Node3D = node.whole_root if "whole_root" in node and is_instance_valid(node.whole_root) else node
+	var entries := Sources.for_crafted(node, "sit")
+	var carried_entries := entries.filter(func(e): return e.carrier != whole)
+	check(not carried_entries.is_empty(), "its seat is carried by the turned part's pivot")
+	var sits := Sources.resolve_all(entries, ["sit"])
+	check(not sits.is_empty(), "the turned seat offers a seat")
+	if sits.is_empty(): return
+	# The back stood at -Z; turned +90 about Y it stands at -X, so the seat faces +X of the object.
+	var want := deg_to_rad(25.0 + 90.0)
+	var error := absf(angle_difference(want, float(sits[0].yaw)))
+	report["turned_part"] = {"yaw_deg": snappedf(rad_to_deg(float(sits[0].yaw)), 0.1), "want_deg": 115.0, "carried": carried_entries.size()}
+	check(error < 0.05, "the turned seat faces out of its back (%.1f vs 115.0 deg)" % rad_to_deg(float(sits[0].yaw)))
+	var front_ok := true
+	for a in sits[0].approach:
+		front_ok = front_ok and (Vector3(a.pos) - Vector3(sits[0].origin)).dot(IxMath.dir_of(want)) > -0.05
+	check(front_ok, "its approach spots are in front or beside, never behind the back")
 
 func build(arch: Dictionary) -> Node3D:
 	var parts: Array = []

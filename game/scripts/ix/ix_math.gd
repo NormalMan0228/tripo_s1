@@ -24,6 +24,8 @@ const WARP_LIMIT := 0.18
 const TURN_RATE := 10.0
 const STEP_LIMIT := 0.08
 const YAW_STEP_LIMIT := 0.35
+## A seat lower than this (inside the sit range) plays the low-seat legs.
+const SIT_LOW_BELOW := 0.38
 
 # ------------------------------------------------------------------ record -> point
 
@@ -113,8 +115,7 @@ static func resolve(rec: Dictionary, ctx: Dictionary) -> Dictionary:
 	if params.has("width"): params.width = float(params.width) * absf(scale.x)
 	if params.has("depth"): params.depth = float(params.depth) * absf(scale.z)
 	if params.has("length"):
-		var along_x := str(params.get("head", "l")) in ["l", "r"]
-		params.length = float(params.length) * absf(scale.x if along_x else scale.z)
+		params.length = float(params.length) * absf(scale.x if length_along_x(float(rec.get("yaw", 0.0))) else scale.z)
 	var floor_y: float = ctx.get("floor_y", NAN)
 	if is_nan(floor_y): floor_y = Transform3D(ctx.get("xform", Transform3D.IDENTITY)).origin.y
 	var height := origin.y - floor_y
@@ -133,6 +134,13 @@ static func resolve(rec: Dictionary, ctx: Dictionary) -> Dictionary:
 	out["approach"] = approach_points(rec, ctx, out)
 	return out
 
+## Whether a lying socket's length runs along the object's x (yaw degrees, the edge it is entered
+## from): entered from a long side facing +-x (|yaw| 45..135), the body lies along z. The same rule
+## as ix_sources.derive and absolute_params, so a shape edit scales the length on its real axis.
+static func length_along_x(yaw_deg: float) -> bool:
+	var a := absf(wrapf(yaw_deg, -180.0, 180.0))
+	return not (a > 45.0 and a < 135.0)
+
 ## Why a resolved socket cannot be offered ("" when it can).
 static func validity(resolved: Dictionary) -> String:
 	var kind := str(resolved.type)
@@ -143,8 +151,8 @@ static func validity(resolved: Dictionary) -> String:
 		if h > float(span[1]): return "high"
 	if kind == "lie":
 		var p: Dictionary = resolved.params
-		if float(p.get("length", 2.0)) < 1.3: return "short"
-		if float(p.get("width", 0.9)) < 0.42: return "narrow"
+		if float(p.get("length", 2.0)) < float(Schema.LIE_MIN_LENGTH): return "short"
+		if float(p.get("width", 0.9)) < float(Schema.LIE_MIN_WIDTH): return "narrow"
 	return ""
 
 # ------------------------------------------------------------------ repeat, approach
@@ -317,11 +325,12 @@ static func vertical(socket_y: float, floor_y: float, h_ref: float, limit := WAR
 	var dh := (socket_y - floor_y) - h_ref
 	return {"dh": dh, "clamped": clampf(dh, -limit, limit), "ok": absf(dh) <= limit + 1e-6}
 
-## The resting variant for a seat height: sit_low under 0.38 m, perch over 0.65 m, sit_ground under 0.15.
+## The resting variant for a seat height: sit_ground under the sit range, sit_low under 0.38 m, perch
+## above the sit range (the same bounds resolve() retypes a socket by, ix_schema HEIGHT_RANGE.sit).
 static func sit_variant(height: float) -> String:
-	if height < 0.15: return "sit_ground"
-	if height < 0.38: return "sit_low"
-	if height > 0.65: return "perch"
+	if height < float(Schema.HEIGHT_RANGE.sit[0]): return "sit_ground"
+	if height < SIT_LOW_BELOW: return "sit_low"
+	if height > float(Schema.HEIGHT_RANGE.sit[1]): return "perch"
 	return "sit"
 
 # ------------------------------------------------------------------ the legs (planar two-bone)
