@@ -3,7 +3,8 @@ extends Node3D
 ## standard: a sculpted basin terrain (flat, walkable play square; hills, cliffs and shores beyond it)
 ## with detail-mapped ground, authored landmarks on the server's obstacle circles, Tripo props in
 ## chunked MultiMeshes (LOD1 when the camera zooms out, no shadows for ground cover), per-map light
-## and haze through the stage's time of day (survival_daytime.gd), and Tripo resource visuals.
+## and haze through the stage's time of day (survival_daytime.gd), Tripo resource visuals, and on the
+## tutorial its guidance in the world (survival_guide.gd).
 ##
 ## Geometry that matters for play is server-authoritative (server/survival_maps.py); the client reads the
 ## exported copy (layouts.json) for dressing and the run state for obstacles, hazards and resources.
@@ -25,6 +26,8 @@ const Monster = preload("res://scripts/monster.gd")
 const SurvivalBake = preload("res://maps/survival/survival_bake.gd")
 ## The stage's time of day (day_progress as an hour of the village's sky, in this map's colours).
 const Daytime = preload("res://maps/survival/survival_daytime.gd")
+## The tutorial's goals shown in the world (beacons, sparkles, rings; no words).
+const TutorialGuide = preload("res://maps/survival/survival_guide.gd")
 const Daylight = preload("res://scripts/daylight.gd")
 const LOD_ZOOM := 18.5
 const FAR := 64.0
@@ -107,6 +110,7 @@ var dusk := 0.0
 var daytime := Daytime.new()
 ## The camp fire's light (main.gd flame), brighter into the evening.
 var fire_light: OmniLight3D
+var guide: Node3D
 var focus := Vector3.ZERO
 var follow_particles: Array[Node3D] = []
 var adopt_wait := 0.0
@@ -280,6 +284,10 @@ func build(run: Dictionary) -> void:
 	await _finish_monster_feed()
 	await LoadPace.step("survival batches")
 	_finish_batches()
+	# The tutorial's goals in the world, drawn from here so their shaders compile under the card.
+	if bool(state.get("tutorial",false)) or str(state.get("map_id","")) == "tutorial":
+		guide = TutorialGuide.new()
+		add_child(guide)
 	_advance_time(state,0.0)
 	_apply_grade(true)
 	set_process(true)
