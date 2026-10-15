@@ -444,6 +444,7 @@ def tester(args):
     from .models import strong_password
     from .security import record_event
     from .account_limits import tester_credits
+    from .economy import change_shards
 
     database = Path(args.data_dir) / 'world.sqlite3'
     if not database.is_file():
@@ -480,9 +481,8 @@ def tester(args):
                 return 1
             user_id, now = str(uuid.uuid4()), time.time()
             conn.execute('INSERT INTO users(id,username,password_hash,shards,created,is_tester) VALUES (?,?,?,?,?,1)',
-                         (user_id, args.username, password_hash, limits.welcome_stars, now))
-            conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',
-                         (str(uuid.uuid4()), user_id, limits.welcome_stars, 'tester_welcome', user_id, now))
+                         (user_id, args.username, password_hash, 0, now))
+            change_shards(conn,user_id,limits.welcome_stars,'tester_welcome',user_id,now)
             conn.execute('INSERT INTO objects(id,owner_id,creator_id,asset_id,name,created) VALUES (?,?,?,?,?,?)',
                          (str(uuid.uuid4()), user_id, user_id, 'starter', 'Welcome wooden chair', now))
             if settings.story_enabled:

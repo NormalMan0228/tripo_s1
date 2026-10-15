@@ -133,8 +133,10 @@ def validate_glb(blob, allow_textures=False, stats=None):
                 try:
                     with Image.open(io.BytesIO(raw)) as im:
                         pixels+=im.width*im.height
-                        if im.format not in ('PNG','JPEG') or im.width>4096 or im.height>4096 or pixels>24000000:reject()
+                        expected='PNG' if image['mimeType']=='image/png' else 'JPEG'
+                        if im.format!=expected or im.width>4096 or im.height>4096 or pixels>24000000:reject()
                         im.verify()
+                    with Image.open(io.BytesIO(raw)) as im:im.load()
                 except ProviderError:raise
                 except Exception:reject()
             for texture in textures:reference(images,texture['source'])
@@ -194,7 +196,7 @@ def jpeg_preview(blob):
     from PIL import Image
     try:
         image = Image.open(io.BytesIO(blob))
-        if image.format not in ('PNG','JPEG','WEBP') or image.width*image.height > 4096*4096: raise ProviderError('invalid_image')
+        if image.format not in ('PNG','JPEG','WEBP') or max(image.size)>4096 or image.width*image.height > 4096*4096: raise ProviderError('invalid_image')
         image.load()
     except ProviderError: raise
     except Exception: raise ProviderError('invalid_image') from None

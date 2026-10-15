@@ -82,8 +82,11 @@ class StudioRequest(Mutation):
             blob=base64.b64decode(v.split(',',1)[1],validate=True)
             if len(blob)>1024*1024:raise ValueError()
             with Image.open(io.BytesIO(blob)) as im:
-                if im.format not in ('PNG','JPEG') or max(im.size)>2048 or min(im.size)<16:raise ValueError()
+                expected='PNG' if v.startswith('data:image/png;') else 'JPEG'
+                if im.format!=expected or max(im.size)>2048 or min(im.size)<16:raise ValueError()
                 im.verify()
+            # verify() checks the container, but does not decode JPEG/PNG pixels.
+            with Image.open(io.BytesIO(blob)) as im:im.load()
         except Exception:raise ValueError('invalid_image') from None
         return v
 
@@ -498,6 +501,10 @@ class Studio:
                 quote=json.loads(row['provenance'] or '{}')
                 if row['state']!='awaiting_confirmation' or not quote.get('concept'):fail('cannot_redraw')
                 if int(quote['concept'].get('draws',1))>=MAX_CONCEPT_DRAWS:fail('concept_redraw_limit',429)
+                # Failed/uncertain pictures can still cost credits. Count accepted attempts
+                # durably under the mutation transaction, not only successful pictures.
+                attempts=int(quote.get('concept_redraw_attempts',max(0,int(quote['concept'].get('draws',1))-1)))
+                if attempts>=MAX_CONCEPT_DRAWS-1:fail('concept_redraw_limit',429)
                 asked=json.loads(row['request'])
                 if asked.get('geometry')=='tripo':
                     parts=json.loads(row['parts'] or '{}')
@@ -510,6 +517,7 @@ class Studio:
                     except ProviderError as error:fail(error.code,429)
                     if provider_busy(conn,job_id):fail('provider_busy')
                 quote['redraw']=True
+                quote['concept_redraw_attempts']=attempts+1
                 conn.execute("UPDATE studio_jobs SET state='queued',provenance=?,updated=? WHERE id=?",(json.dumps(quote),clock(),job_id))
                 return {'id':job_id,'state':'queued'}
             return mutate(request,body,'studio_redraw:'+job_id,edit)

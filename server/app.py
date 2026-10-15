@@ -252,6 +252,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         while queue and queue[0] <= now-60: queue.popleft()
         if len(queue) >= (20 if is_auth else 1200): return JSONResponse({'detail':'rate_limited'},429)
         queue.append(now)
+        # Image parsing/decoding happens during validation, before route-level auth.
+        # Require a session first on the two upload endpoints.
+        if request.method=='POST' and (request.url.path=='/v1/studio/jobs' or object_paint.UPLOAD_PATH.fullmatch(request.url.path)):
+            try:
+                with db.read() as conn:auth(conn,request)
+            except HTTPException as error:
+                return JSONResponse({'detail':error.detail},error.status_code,headers=error.headers)
         # Security headers (nosniff, no-store, ...) are set by SecurityHeadersMiddleware.
         return await call_next(request)
 
@@ -403,8 +410,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         # Operator accounts are provisioned by tools/admin_accounts.py, never here.
         if reserved_username(body.username): fail('username_reserved',422)
         if not strong_password(body.password): fail('weak_password',422)
-        password_hash = hasher.hash(body.password)
-        with db.transaction() as conn:
+        def check_signup_limits(conn):
             if settings.mode=='live' and not invited:
                 # Open sign-up: a few accounts per address and a daily ceiling for everyone.
                 day = int(clock()//86400)*86400
@@ -413,6 +419,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 if conn.execute("SELECT count(*) FROM security_events WHERE kind='register' AND created>=? AND json_extract(detail,'$.ip')=?",
                                 (day,client_ip(request))).fetchone()[0] >= settings.signups_per_ip_day:
                     fail('too_many_registrations',429)
+        # Reject exhausted quotas before spending Argon2 CPU/memory. The second check
+        # under BEGIN IMMEDIATE still arbitrates sign-ups that race during hashing.
+        with db.read() as conn:
+            check_signup_limits(conn)
+        password_hash = hasher.hash(body.password)
+        with db.transaction() as conn:
+            check_signup_limits(conn)
             user_id = uid()
             try:
                 conn.execute('INSERT INTO users(id,username,password_hash,shards,created) VALUES (?,?,?,?,?)',(user_id,body.username.lower(),password_hash,0,clock()))
