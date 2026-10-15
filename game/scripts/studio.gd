@@ -38,6 +38,9 @@ const RestSeat=preload("res://scripts/rest_seat.gd")
 const StoryHome=preload("res://scripts/story_home.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
+## On ladder rungs the walker climbs with this clip (the explorer's crouched step) instead of the
+## walk clip, which would march in place: the rise is straight up, nothing moves across.
+const LADDER_CLIP := "Legs_Crouch_Step"
 var api: Node
 var gate: CanvasLayer
 var viewport: SubViewport
@@ -845,11 +848,12 @@ func follow_path(points: Array[Vector3], speed: float, fade_at: float, veil: Can
 		var before: Vector3=hero.position
 		hero.position=points[segment].lerp(points[segment+1],clampf(along/maxf(lengths[segment],0.0001),0.0,1.0))
 		var step := Vector2(hero.position.x-before.x,hero.position.z-before.z)
+		if "clip_override" in hero: hero.clip_override=LADDER_CLIP if climbing_rungs else ""
 		if climbing_rungs:
-			# Hand over hand up the rungs: the stepping clip in place, facing the ladder.
+			# Hand over hand up the rungs, facing the ladder: the crouched stepping clip, not the
+			# walk clip marching in place (no walking pace is reported while nothing moves across).
 			hero.facing=face_ladder
-			hero.external_motion=Vector2(face_ladder.x,face_ladder.z)
-			hero.external_velocity=hero.external_motion*0.8
+			hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
 		elif step.length()<0.0005:
 			hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
 		else:
@@ -863,6 +867,7 @@ func follow_path(points: Array[Vector3], speed: float, fade_at: float, veil: Can
 		await get_tree().process_frame
 		if not is_instance_valid(hero): return
 	hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
+	if "clip_override" in hero: hero.clip_override=""
 
 ## Real-time light: windows, sunbeams, ambient, sun and room lamps follow the clock.
 func apply_daylight(force := false) -> void:
