@@ -1537,7 +1537,7 @@ func _exit_tree() -> void:
 func social_hub() -> Node:
 	if not social_session or api.token.is_empty(): return null
 	var hub := SocialHud.of(api)
-	if hub and hub.place != self and is_inside_tree(): hub.bind(self,"room",toast_lane)
+	if hub and hub.place != self and is_inside_tree(): hub.bind(self,"room",toast_lane if is_instance_valid(toast_lane) else null)
 	return hub
 
 ## Where this walker is, for the lists (social_hud.presence_extra).

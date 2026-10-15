@@ -46,7 +46,9 @@ func hub() -> Node:
 func install_hud(survival: bool) -> void:
 	if not feature_enabled() or not enabled: return
 	var layer := hub()
-	if layer: layer.bind(app, "survival" if survival else "village", app.toast_lane)
+	# The HUD's toast lane is laid after this (a freed one from the last HUD would not pass): the
+	# layer finds the place's current lane when it speaks.
+	if layer: layer.bind(app, "survival" if survival else "village", app.toast_lane if is_instance_valid(app.toast_lane) else null)
 	# The village's chip became the chat box's header (the 함께하기 key, K). On an expedition a
 	# compact chip keeps the party's health line under the day counter, with the same two keys.
 	if not survival: return
