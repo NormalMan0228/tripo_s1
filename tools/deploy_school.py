@@ -4,8 +4,13 @@
   python tools/deploy_school.py                 # the server's default wait (10 minutes unless changed
                                                 # with ops/install_auto_update.sh --announce N)
   python tools/deploy_school.py --dry-run       # show what would be pushed
+  python tools/deploy_school.py --block-older   # also make this version the minimum: older games
+                                                # cannot sign in and are sent to update (patch or
+                                                # installer); --min-version X sets another minimum
 
-Writes ops/release.json (version + wait), commits it, pushes the commit to dev and to school-release.
+Writes ops/release.json (version + wait, optional min_version), commits it, pushes the commit to dev
+and to school-release. After deploying, the server's `notice.sh release <version>` also applies
+min_version (ops/notice.sh).
 Uncommitted changes to tracked files (other than Godot's .import files) stop it, so only committed
 work is deployed. Follow the update on /health, or on the VM: sudo bash ops/install_auto_update.sh --status
 """
@@ -34,15 +39,23 @@ def main() -> None:
         if not value.isdigit() or int(value) > 1440:
             raise SystemExit("--announce needs whole minutes from 0 to 1440")
         announce = int(value)
+    minimum = None
+    if "--min-version" in args:
+        minimum = args[args.index("--min-version") + 1]
+        if not re.fullmatch(r"\d+(\.\d+){1,3}", minimum):
+            raise SystemExit("--min-version needs a version like 0.11.6")
     dirty = git("status", "--porcelain", "--untracked-files=no", "--", ".", ":!*.import", capture=True)
     if dirty:
         raise SystemExit("commit or drop these changes first:\n" + dirty)
     version = re.search(r'config/version="([^"]+)"', (ROOT / "game" / "project.godot").read_text(encoding="utf-8")).group(1)
     release = {"version": version}
     if announce is not None: release["announce_minutes"] = announce
+    if "--block-older" in args: minimum = version
+    if minimum is not None: release["min_version"] = minimum
     old = RELEASE.read_text(encoding="utf-8") if RELEASE.exists() else ""
     new = json.dumps(release, indent=2) + "\n"
     wait = f"{announce} min" if announce is not None else "server default"
+    if minimum is not None: wait += f", minimum game {minimum}"
     if dry:
         print(f"would deploy {version} ({git('rev-parse', '--short', 'HEAD', capture=True)}), maintenance in {wait}")
         return
