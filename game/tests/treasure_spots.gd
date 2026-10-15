@@ -124,15 +124,17 @@ func run() -> void:
 		if arg.begins_with("--probe="): probe(arg.substr(8))
 		if arg.begins_with("--grid="): grid(arg.substr(7))
 	check(chests.skipped.is_empty(), "every field chest found a spot (skipped: %s)" % str(chests.skipped))
-	check(chests.chests.size() == Treasure.FIELD.size() and Treasure.FIELD.size() == 10, "ten field chests placed (%d)" % chests.chests.size())
+	check(chests.chests.size() == Treasure.FIELD.size() and Treasure.FIELD.size() == 11, "eleven field chests placed (%d)" % chests.chests.size())
 	var per_island := {}
 	for chest in chests.chests: await check_chest(chest, per_island)
-	check(per_island.size() == 5 and per_island.values().all(func(n): return n == 2), "two chests on each of the five islands (%s)" % str(per_island))
+	check(per_island.size() == 5 and per_island.keys().all(func(k): return int(per_island[k]) == (3 if k == "fields" else 2)), "two chests on each island, three on 풍차 들판 by the café (%s)" % str(per_island))
 	var cafe: Dictionary = chests.chest_of("fields_cafe")
 	if not cafe.is_empty():
 		var walk: float = Vector2(cafe.at).distance_to(Story.MOKA_AT)
 		check(walk >= 3.0 and walk <= 14.0, "the café chest is a few steps from 모카's terrace (%.1f m)" % walk)
 	if "--capture" in args: await captures("--wide" in args)
+	for arg in args:
+		if arg.begins_with("--shots="): await shots(arg.substr(8))
 	report.append("RESULT %s (%d failures)" % ["PASS" if failures == 0 else "FAIL", failures])
 	var text := "\n".join(report)
 	print(text)
@@ -296,6 +298,38 @@ func captures(wide: bool) -> void:
 			await RenderingServer.frame_post_draw
 			tiles.append(tile(root.get_viewport().get_texture().get_image()))
 		save_sheet(tiles, "treasure-%s%s.png" % [pass_name, "-wide" if wide else ""])
+
+## Windowed: a marker at each point (x,z;x,z…) seen from the game camera, wide, by day ->
+## artifacts/spots.png (authoring: where gather spots or chests would stand).
+func shots(points: String) -> void:
+	daylight.override_hour = 13.0
+	daylight.refresh(true)
+	var tiles: Array[Image] = []
+	for pair in points.split(";", false):
+		var xz := pair.split(",")
+		var p := Vector2(float(xz[0]), float(xz[1]))
+		var mark := MeshInstance3D.new()
+		var ball := SphereMesh.new()
+		ball.radius = 0.3
+		ball.height = 0.6
+		mark.mesh = ball
+		var paint := StandardMaterial3D.new()
+		paint.albedo_color = Color("ff3fb4")
+		paint.emission_enabled = true
+		paint.emission = Color("ff3fb4")
+		mark.material_override = paint
+		root.add_child(mark)
+		mark.global_position = Vector3(p.x, ground(p, 1|2)+0.3, p.y)
+		app.player.global_position = Vector3(p.x+1.6, ground(p, 1|2)+0.05, p.y+1.2)
+		app.camera.size = 14.0
+		var focus: Vector3 = mark.global_position+Profile.CAMERA_FOCUS_OFFSET
+		app.camera.position = focus+Profile.CAMERA_OFFSET
+		app.camera.look_at(focus)
+		await frames(10)
+		await RenderingServer.frame_post_draw
+		tiles.append(tile(root.get_viewport().get_texture().get_image()))
+		mark.queue_free()
+	save_sheet(tiles, "spots.png")
 
 func tile(image: Image) -> Image:
 	var w := image.get_width()

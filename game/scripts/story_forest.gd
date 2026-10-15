@@ -38,9 +38,13 @@ var runner: Node3D
 var running := false
 var leaving := false
 var gate_pending := false
+## Seconds before the gate is reported again after a failed report.
+var gate_wait := 0.0
+## True while this node holds 다온's schedule (it releases only its own hold).
+var held := false
 
 func _exit_tree() -> void:
-	if is_instance_valid(runner): Residents.hold(RUNNER, false)
+	if held: Residents.hold(RUNNER, false)
 
 func arm() -> void:
 	if told(): return
@@ -61,7 +65,8 @@ func tick(delta: float) -> void:
 	if not is_instance_valid(story) or not is_instance_valid(story.app): return
 	# The dialogue closed (a choice or Esc): 다온 runs on toward the forest.
 	if is_instance_valid(runner) and not running and not leaving: leave(false)
-	if active() and not gate_pending and story.walker_at().distance_to(Town.GATE) < GATE_REACH: reach_gate()
+	gate_wait = maxf(0.0, gate_wait-delta)
+	if active() and not gate_pending and gate_wait <= 0.0 and story.walker_at().distance_to(Town.GATE) < GATE_REACH: reach_gate()
 	if not armed or running or told() or story.step() != "done": return
 	wait -= delta
 	if wait <= 0.0: run_in()
@@ -86,7 +91,9 @@ func run_in() -> void:
 	armed = false
 	if figure == null: return
 	running = true
+	# The terrace guest is never 다온 (story.gd GUESTS), so this hold is ours alone.
 	Residents.hold(RUNNER, true)
+	held = true
 	story.add_child(figure)
 	var hour: float = story.hour()
 	figure.set_day(DayFolk.is_day(RUNNER, hour), true)
@@ -109,6 +116,12 @@ func run_in() -> void:
 		running = false
 		return
 	figure.play_clip("idle")
+	# A window opened while he ran (the bag, a sign, a door): he waits until it closes.
+	while is_instance_valid(app) and is_instance_valid(app.get("village_modal")) and is_instance_valid(figure):
+		await get_tree().create_timer(0.25).timeout
+	if not is_instance_valid(figure) or not is_instance_valid(app) or str(app.get("screen")) != "village":
+		running = false
+		return
 	var look: Vector2 = story.walker_at()-Vector2(figure.position.x, figure.position.z)
 	figure.face(atan2(look.x, look.y))
 	app.player.face_point(figure.global_position)
@@ -141,7 +154,9 @@ func leave(go: bool) -> void:
 	if is_instance_valid(figure):
 		Fx.burst(story, figure.global_position+Vector3(0, 0.4, 0), "dust", 10, Color(0,0,0,0), 0.4)
 		figure.queue_free()
-	Residents.hold(RUNNER, false)
+	if held:
+		Residents.hold(RUNNER, false)
+		held = false
 	runner = null
 	leaving = false
 
@@ -150,6 +165,7 @@ func reach_gate() -> void:
 	gate_pending = true
 	var result: Dictionary = await story.post_event("forest_gate")
 	gate_pending = false
+	if not result.ok: gate_wait = 5.0
 	if not result.ok or not is_instance_valid(story) or not is_instance_valid(story.app): return
 	story.app.message(tr("숲의 돌문 · E로 탐험을 떠나요"))
 	RpgUi.sfx("confirm", -6.0)

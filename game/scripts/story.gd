@@ -16,7 +16,7 @@ extends Node3D
 ##     interior never show her twice; her words open by themselves when the walker arrives;
 ##   * greetings: a short speech bubble and a heart over each resident the first time the walker
 ##     comes near (once each, kept on the server);
-##   * the gift: the piece appears on the terrace's little deck at once, 모카 is delighted, a
+##   * the gift: the piece appears on the terrace at once, 모카 is delighted, a
 ##     passer-by walks over and sits on a seat, and a ribbon closes the chapter.
 ## Everyone (the owner and visitors) sees the terrace's piece; a seat has someone resting on it
 ## when the walker comes by in the daytime. Visitors see no chapter of their own here.
@@ -62,7 +62,8 @@ const ARRIVE := 3.4
 const GREET_REACH := 4.6
 const GREET_GAP := 3.0
 ## Residents who may sit on the terrace's seat (shadow folk with a daytime look).
-const GUESTS := ["gentleman", "stroller", "poet", "sweeper", "postman", "gardener", "miller", "shopkeeper", "kid"]
+## (Not 다온 the postman: he runs up after the gift with the forest news, story_forest.gd.)
+const GUESTS := ["gentleman", "stroller", "poet", "sweeper", "gardener", "miller", "shopkeeper", "kid"]
 ## Each resident's first words to the newcomer, in their own voice (shadow_folk.gd, day_folk.gd).
 const GREETINGS := {"naru":"새로 온 제작자구나! 반가워!", "sora":"어머, 새로 이사 온 분이죠? 반가워요!",
 	"moru":"새 이웃이군. 마을에 온 걸 환영해.", "haeru":"어서 와요! 이사 온 걸 환영해요.",
@@ -93,7 +94,6 @@ var moka_yaw := 0.0
 var guest: Node3D
 var guest_id := ""
 var guest_seated := false
-var deck: Node3D
 var piece: Node3D
 var piece_item: Dictionary = {}
 var piece_seat := false
@@ -688,9 +688,6 @@ func clear_piece() -> void:
 	piece_item = {}
 	piece_seat = false
 	release_guest()
-	if is_instance_valid(deck):
-		deck.queue_free()
-		deck = null
 
 func show_piece(item: Dictionary, fresh: bool) -> void:
 	var node: Node3D = await app.load_object(item, "/v1/social/village/objects/")
@@ -699,47 +696,14 @@ func show_piece(item: Dictionary, fresh: bool) -> void:
 		return
 	if node == null: return
 	clear_piece()
-	build_deck()
 	add_child(node)
-	node.position = Town.point(Vector2(float(item.get("x", TERRACE.x)), float(item.get("z", TERRACE.y))), 0.06)
+	# Straight on the grass (the round plank deck under it was removed, user 2026-10-16).
+	node.position = Town.point(Vector2(float(item.get("x", TERRACE.x)), float(item.get("z", TERRACE.y))), 0.0)
 	node.rotation_degrees.y = float(item.get("rotation", 0))
 	Loader.add_collision(node)
 	piece = node
 	piece_item = item
 	if fresh: Fx.arrive(self, node, app, true)
-
-## A round plank deck under the terrace's piece.
-func build_deck() -> void:
-	if is_instance_valid(deck): return
-	deck = Node3D.new()
-	deck.name = "TerraceDeck"
-	add_child(deck)
-	deck.position = Town.point(TERRACE, 0.0)
-	for layer in [[1.25, 0.05, Color("8a6446")], [1.12, 0.07, Color("c39a6b")]]:
-		var disc := CylinderMesh.new()
-		disc.top_radius = layer[0]
-		disc.bottom_radius = layer[0]
-		disc.height = layer[1]
-		disc.radial_segments = 12
-		disc.rings = 1
-		var mesh := MeshInstance3D.new()
-		mesh.mesh = disc
-		mesh.position.y = float(layer[1])*0.5-0.01
-		var material := StandardMaterial3D.new()
-		material.albedo_color = layer[2]
-		material.roughness = 0.85
-		mesh.material_override = material
-		deck.add_child(mesh)
-	for i in 4:
-		var plank := MeshInstance3D.new()
-		var bar := BoxMesh.new()
-		bar.size = Vector3(2.1, 0.012, 0.03)
-		plank.mesh = bar
-		plank.position = Vector3(0, 0.066, -0.75+i*0.5)
-		var line := StandardMaterial3D.new()
-		line.albedo_color = Color("9c7550")
-		plank.material_override = line
-		deck.add_child(plank)
 
 ## A resident sits on the terrace's seat: walking over from the café road the first time,
 ## already resting on later visits. Their plan is held meanwhile (residents.gd).
