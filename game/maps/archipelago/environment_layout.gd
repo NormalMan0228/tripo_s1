@@ -2,6 +2,7 @@ extends Node3D
 ## First review batch: four distinct Tripo bridges plus natural garden clusters.
 const LoadPace = preload("res://scripts/load_pace.gd")
 const IslandBake = preload("res://maps/archipelago/island_bake.gd")
+const GroundChunks = preload("res://maps/archipelago/ground_chunks.gd")
 var manifest: Dictionary
 var host: Node3D
 var prototypes: Dictionary = {}
@@ -333,6 +334,8 @@ func _light_lantern(prop: Node3D) -> void:
 	light.light_energy = .48
 	light.omni_range = 4.0
 	light.shadow_enabled = false
+	# Five lamps never lit the ground (ground_chunks.gd DARK_LAMPS): set before it is paired.
+	light.light_cull_mask = GroundChunks.lamp_cull_mask(String(prop.name), light.light_cull_mask)
 	prop.add_child(light)
 	var body := StaticBody3D.new()
 	body.collision_layer = 8

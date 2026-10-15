@@ -5,7 +5,7 @@ intent with a short lease, never a client-supplied position or elapsed time.
 """
 import math
 from copy import deepcopy
-from . import simulation, catalog
+from . import simulation, catalog, stages
 
 PLAYER_FIELDS = (
     'x', 'z', 'hp', 'hunger', 'stamina', 'sprinting', 'sprint_recover_at',
@@ -33,9 +33,9 @@ def actor_view(state, user_id):
     return {**world, **{k: v for k, v in actor.items() if k in PLAYER_FIELDS}}
 
 
-def spawn_enemies(world, day):
-    world['spawned_night'] = day
-    world['enemies'].extend(simulation.night_enemies(world, day))
+def members(state):
+    """Party members still on the expedition (the boss's health grows with them)."""
+    return sum(1 for p in state['players'].values() if not p['withdrawn'])
 
 
 def advance(state, now):
@@ -59,17 +59,16 @@ def advance(state, now):
         view = actor_view(state, user_id)
         # Reuse single-player movement, stamina, hunger and terrain rules, but
         # advance enemies and resource respawns exactly once below.
-        view.update(last_wall=now-dt, spawned_night=7, enemies=[], nodes=deepcopy(world['nodes']))
+        view.update(last_wall=now-dt, enemies=[], nodes=deepcopy(world['nodes']))
         intent = actor['intent'] if now-actor['intent']['at'] <= INTENT_SECONDS else {}
-        simulation.advance(view, now, intent.get('dx', 0), intent.get('dz', 0), intent.get('sprint', False))
+        simulation.advance(view, now, intent.get('dx', 0), intent.get('dz', 0), intent.get('sprint', False), solo=False)
         actor.update({key: view[key] for key in PLAYER_FIELDS if key in view})
     world['elapsed'] += dt
-    day = min(7, int(world['elapsed']/world['day_seconds'])+1)
-    night = world['elapsed'] % world['day_seconds']/world['day_seconds'] >= .65
+    clock = stages.clock(world)
+    day, night = clock['stage'], clock['night']
     alive = {key: p for key, p in players.items() if not p['withdrawn'] and p['hp'] > 0}
     if night and alive:
-        if world['spawned_night'] < day:
-            spawn_enemies(world, day)
+        simulation.spawn_due(world, clock, members(state))
         for enemy in world['enemies']:
             target_id = enemy.get('target_user')
             if enemy.get('phase') not in ('windup', 'charge') or target_id not in alive:
@@ -79,6 +78,7 @@ def advance(state, now):
             view = actor_view(state, target_id)
             warm = world['fire_until'] > world['elapsed'] and math.hypot(actor['x'], actor['z']) < 4
             simulation.advance_enemy(view, enemy, dt, day, warm)
+            simulation.protect(view)
             actor['hp'] = max(0., view['hp'])
     elif not night:
         world['enemies'] = []
@@ -97,8 +97,16 @@ def finish(state):
         return
     if not any(not p['withdrawn'] and p['hp'] > 0 for p in players.values()):
         world['status'] = 'lost'
-    elif world['elapsed'] >= world['day_seconds']*7:
+    elif world.get('boss_defeated') or stages.time_up(world):
         world['status'] = 'won'
+    elif world.get('tutorial'):
+        # The party's tutorial counts everyone's gathering, crafts, fires and kills together.
+        totals = {}
+        for actor in players.values():
+            for key, value in simulation.requirement_totals(actor).items():
+                totals[key] = totals.get(key, 0)+value
+        if simulation.requirements_met(totals):
+            world['status'] = 'won'
     if world['status'] != 'active':
         world['harvested'] = sum(p['harvested'] for p in players.values())
         world['kills'] = sum(p['kills'] for p in players.values())
@@ -118,6 +126,8 @@ def apply_input(state, user_id, body, now):
         actor['message'] = simulation.action(view, body.action, body.target)
         actor.update({key: view[key] for key in PLAYER_FIELDS if key in view and key != 'message'})
         state['world']['fire_until'] = view['fire_until']
+        if view.get('boss_defeated'):
+            state['world']['boss_defeated'] = True
     finish(state)
 
 

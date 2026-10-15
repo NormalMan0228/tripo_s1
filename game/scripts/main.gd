@@ -182,6 +182,10 @@ var survival_deny_at := 0
 var sprint_cue_at := -10.0
 var ward_cue_at := -100.0
 var day_track: Label
+## The boss night's health bar under the stage tracker (stage runs, run.boss), and the last hp seen.
+var boss_panel: Control
+var boss_meter: Dictionary = {}
+var boss_last_hp := -1.0
 var toast_lane: VBoxContainer
 var last_notice := ""
 var ambience: CPUParticles3D
@@ -1282,7 +1286,7 @@ func build_play_hud(survival: bool) -> void:
 	task_head.add_theme_constant_override("separation",6)
 	task_card.add_child(task_head)
 	task_head.add_child(RpgUi.name_tip(RpgUi.icon("res://assets/ui/book.svg",22),tr("목표")))
-	RpgUi.label(task_head,tr("✦  일곱 밤의 목표").trim_prefix("✦  "),15,RpgUi.GOLD)
+	RpgUi.label(task_head,tr("목표"),15,RpgUi.GOLD)
 	var task_body := VBoxContainer.new()
 	task_body.add_theme_constant_override("separation",8)
 	task_card.add_child(task_body)
@@ -1319,7 +1323,7 @@ func build_play_hud(survival: bool) -> void:
 	RpgUi.pin(tracker,0.5,0.0)
 	day_track=RpgUi.numbers(RpgUi.label(tracker,"",18,RpgUi.INK),18)
 	day_track.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	RpgUi.name_tip(day_track,tr("일곱 밤 중 지나온 날"))
+	RpgUi.name_tip(day_track,tr("탐험 진행"))
 	if preload("res://scripts/build_mode.gd").developer():
 		var debug_box := panel(Vector2(20,520),252,"night")
 		developer_panel=debug_box.get_parent()
@@ -1974,6 +1978,11 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		return
 	close_village_modal()
 	cancel_preview()
+	# The first expedition is the tutorial until it is cleared once (/v1/me tutorial_done; a run under
+	# way resumes as it is, a party goes where its leader chose).
+	if party_run_id.is_empty() and not bool(me.get("tutorial_done",true)):
+		map_id="tutorial"
+		chapter_id=""
 	busy=true
 	# The expedition's props read on a worker thread while the server answers and the card comes up,
 	# for the map the run is on: a run under way (resumed) stays on the map it began on. A co-op run's
@@ -2017,7 +2026,14 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	region_titles.add_theme_constant_override("separation",-2)
 	region_head.add_child(region_titles)
 	RpgUi.label(region_titles,region_name(run.get("map_id","forest")),23,RpgUi.INK)
-	RpgUi.label(region_titles,tr("%s · 일곱 밤 생존") % difficulty_name(run.get("difficulty","standard")),12,RpgUi.GOLD)
+	# The run's terms: its stages (and the boss of the last night), the tutorial; seven nights before stages.
+	var terms := [difficulty_name(run.get("difficulty","standard"))]
+	if bool(run.get("tutorial",false)): terms.append(tr("튜토리얼"))
+	elif run.has("stage_count"):
+		terms.append(tr("스테이지 %d") % int(run.stage_count))
+		if bool(run.get("has_boss",false)): terms.append(tr("우두머리"))
+	else: terms.append(tr("일곱 밤 생존"))
+	RpgUi.label(region_titles," · ".join(terms),12,RpgUi.GOLD)
 	RpgUi.divider(left,Color(RpgUi.GOLD,.55))
 	metrics=text(left,"",13)
 	metrics.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
@@ -2327,11 +2343,16 @@ func update_run() -> void:
 		social.sync_peers(run.get("players", []))
 		social.update_status()
 	var remaining := int(ceil(run.get("phase_remaining",0)))
-	metrics.text=tr("%s   ·   %s %d초") % [tr("달이 뜬 밤") if run.night else tr("탐험하기 좋은 낮"),tr("아침까지") if run.night else tr("밤까지"),remaining]
+	# A night that holds (the boss night, the tutorial's last night) has no clock: phase_remaining
+	# stays 0 until the boss falls or the goals are met.
+	if bool(run.get("boss_night",false)): metrics.text=tr("우두머리의 밤")
+	elif run.has("stage") and int(run.get("stage_remaining",0))<0: metrics.text=tr("달이 뜬 밤")
+	else: metrics.text=tr("%s   ·   %s %d초") % [tr("달이 뜬 밤") if run.night else tr("탐험하기 좋은 낮"),tr("아침까지") if run.night else tr("밤까지"),remaining]
 	if is_instance_valid(day_track):
-		var days := ""
-		for i in 7: days+=("● " if i<int(run.day) else "○ ")
-		day_track.text="DAY %02d   %s" % [run.day,days.strip_edges()]
+		day_track.text=stage_text()
+		# The boss night glows red; the clock reads ∞ until the boss falls.
+		day_track.add_theme_color_override("font_color",RpgUi.ACCENT.lightened(0.35) if bool(run.get("boss_night",false)) else RpgUi.INK)
+	update_boss_bar()
 	hp_bar.value=run.hp
 	CombatAudio.heartbeat(self,run.hp if run.status=="active" else 0.0)
 	if run.status=="active" and float(run.get("stamina",100.0))<5.0: HeroVoice.play(self,"tired")
@@ -2355,7 +2376,7 @@ func update_run() -> void:
 		inventory_slots[item].button.disabled=amount<=0
 	pack.text=tr("탐험 소지품  %d / 80") % total
 	if is_instance_valid(objective):
-		if run.status=="won": objective.text=tr("일곱 밤을 견뎌냈어요!\n귀환하여 %d 별씨를 받으세요.") % run.reward
+		if run.status=="won": objective.text=tr("탐험 성공!\n귀환하여 %d 별씨를 받으세요.") % run.reward
 		elif run.status!="active": objective.text=tr("이번 탐험은 여기까지예요.\n귀환 후 다시 도전할 수 있어요.")
 		elif run.hunger<35: objective.text=tr("먼저 배를 채우세요\nQ로 열매나 수프를 먹으세요.")
 		elif run.night: objective.text=tr("불빛 안에서 밤을 버티세요\nF · 목재 2개로 불 30초 연장\n\n붉은 원 = 적의 공격 예고\nShift로 피하거나 Space로 공격")
@@ -2440,6 +2461,7 @@ func update_run() -> void:
 			var root := preload("res://scripts/shadow_beast.gd").new()
 			root.kind=enemy.get("kind","wolf")
 			root.variant=enemy.get("variant","")
+			root.from_enemy(enemy)
 			world.add_child(root)
 			root.position=Vector3(enemy.x,0,enemy.z)
 			enemy_nodes[enemy.id]=root
@@ -2655,7 +2677,7 @@ func show_results() -> void:
 	# The run's ending is already heard (update_run: the level-up chime and then core/win, or the faint
 	# with core/lose), so the card pops in silently; only without those takes does it chime itself.
 	if not SfxBank.has("core/win" if won else "core/lose"): RpgUi.sfx("confirm" if won else "close",-6.0)
-	var band := RpgUi.ribbon(card,tr("일곱 밤을 견뎌냈어요") if won else tr("다시 피울 작은 불씨"),not won,24)
+	var band := RpgUi.ribbon(card,tr("탐험 성공") if won else tr("다시 피울 작은 불씨"),not won,24)
 	band.size_flags_horizontal=Control.SIZE_SHRINK_CENTER
 	var destination := "%s · %s" % [region_name(run.get("map_id","forest")),difficulty_name(run.get("difficulty","standard"))]
 	if preload("res://scripts/build_mode.gd").developer(): destination += tr(" · 보상 ×%.3f") % run.get("reward_multiplier",1.0)
@@ -3240,7 +3262,65 @@ func _unhandled_input(event: InputEvent) -> void:
 		else: click_furniture(event.position)
 
 func region_name(id: String) -> String:
-	return {"forest":tr("솔바람 숲"),"quarry":tr("노을 채석장"),"frost":tr("서리빛 분지")}.get(id,id)
+	var known: Dictionary={"forest":tr("솔바람 숲"),"quarry":tr("노을 채석장"),"frost":tr("서리빛 분지")}
+	# A map the catalog names (the tutorial, a renamed region) goes by that name.
+	for region in me.get("catalog",{}).get("maps",[]):
+		if region is Dictionary and str(region.get("id",""))==id and not str(region.get("name","")).is_empty(): return str(region.name)
+	return known.get(id,id)
+
+## The expedition's progress line: "스테이지 2/5  1:30" on staged maps (∞ on the boss night),
+## the seven-day dots on a server without stages.
+func stage_text() -> String:
+	if run.has("stage"):
+		var left := int(run.get("stage_remaining",-1))
+		var clock := "∞" if left<0 or bool(run.get("boss_night",false)) else "%d:%02d" % [left/60,left%60]
+		return tr("스테이지 %d/%d") % [int(run.stage),int(run.get("stage_count",1))]+"   "+clock
+	var days := ""
+	for i in 7: days+=("● " if i<int(run.get("day",1)) else "○ ")
+	return "DAY %02d   %s" % [int(run.get("day",1)),days.strip_edges()]
+
+## The boss's health under the stage tracker while run.boss is set: it shakes and flashes when hit,
+## and the toast lane steps down under it.
+func update_boss_bar() -> void:
+	var boss = run.get("boss")
+	if not boss is Dictionary or screen!="survival":
+		if is_instance_valid(boss_panel):
+			boss_panel.queue_free()
+			if is_instance_valid(toast_lane): toast_lane.position.y-=48
+		boss_panel=null
+		boss_last_hp=-1.0
+		return
+	var hp := float(boss.get("hp",0.0))
+	var top := maxf(1.0,float(boss.get("max_hp",1.0)))
+	if not is_instance_valid(boss_panel):
+		var plate := PanelContainer.new()
+		plate.name="BossBar"
+		plate.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
+		plate.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		plate.position=Vector2(400,66+(28 if is_instance_valid(ui.get_node_or_null("CoopLine")) else 0))
+		plate.custom_minimum_size=Vector2(480,0)
+		ui.add_child(plate)
+		boss_meter=RpgUi.meter(plate,str(boss.get("name",tr("우두머리"))),RpgUi.ACCENT,"crown")
+		(boss_meter.bar as ProgressBar).custom_minimum_size.y=16
+		(boss_meter.name as Label).add_theme_color_override("font_color",RpgUi.GOLD)
+		(boss_meter.name as Label).add_theme_font_size_override("font_size",15)
+		plate.size=Vector2(480,plate.get_combined_minimum_size().y)
+		RpgUi.pin(plate,0.5,0.0)
+		boss_panel=plate
+		if is_instance_valid(toast_lane): toast_lane.position.y+=48
+		RpgUi.pop_in(plate)
+	(boss_meter.bar as ProgressBar).max_value=top
+	(boss_meter.bar as ProgressBar).value=hp
+	(boss_meter.readout as Label).text="%d / %d" % [int(ceil(hp)),int(top)]
+	if boss_last_hp>=0.0 and hp<boss_last_hp and not RpgUi.calm():
+		# A hit: a short shake and a white flash on the bar.
+		var shake := boss_panel.create_tween()
+		var x := boss_panel.position.x
+		for step in [6.0,-5.0,3.0,0.0]: shake.tween_property(boss_panel,"position:x",x+step,0.04)
+		var flash := (boss_meter.bar as ProgressBar).create_tween()
+		(boss_meter.bar as ProgressBar).modulate=Color(1.8,1.8,1.8)
+		flash.tween_property(boss_meter.bar,"modulate",Color.WHITE,0.25)
+	boss_last_hp=hp
 
 func difficulty_name(id: String) -> String:
 	return {"relaxed":tr("산책"),"standard":tr("탐험"),"veteran":tr("개척")}.get(id,id)
@@ -3324,7 +3404,7 @@ func open_expedition() -> void:
 	if me.get("active_run_summary") is Dictionary:
 		await start_run()
 		return
-	var v := modal_card(tr("어느 곳에서 일곱 밤을 보낼까요?"))
+	var v := modal_card(tr("어디로 떠날까요?"))
 	button(v,tr("이야기 수첩 · 섬의 세 가지 기록"),open_story)
 	text(v,tr("지역과 난이도는 탐험을 시작하면 고정됩니다."),13)
 	var region_row := HBoxContainer.new()
@@ -3338,7 +3418,9 @@ func open_expedition() -> void:
 	diff_row.add_theme_constant_override("separation",10)
 	var estimate := text(v,"",15)
 	estimate.custom_minimum_size.y=60
-	var maps: Array=me.get("catalog",{}).get("maps",[])
+	var maps: Array=me.get("catalog",{}).get("maps",[]).duplicate()
+	# Left to right as the catalog orders them (the tutorial first), else as listed.
+	maps.sort_custom(func(a,b): return int(a.get("order",0))<int(b.get("order",0)))
 	var difficulties: Array=me.get("catalog",{}).get("difficulties",[])
 	var refresh := func():
 		var multiplier := 1.0
@@ -3354,18 +3436,78 @@ func open_expedition() -> void:
 		for b in region_row.get_children(): b.button_pressed=b.get_meta("id")==chosen_map
 		for b in diff_row.get_children(): b.button_pressed=b.get_meta("id")==chosen_difficulty
 	for region in maps:
-		var b := button(region_row,region.name,func(): chosen_map=region.id; refresh.call(),"choice")
-		b.set_meta("id",region.id)
-		b.toggle_mode=true
-		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size.y=90
+		map_card(region_row,region,func(): chosen_map=region.id; refresh.call())
 	for difficulty in difficulties:
 		var b := button(diff_row,difficulty.name,func(): chosen_difficulty=difficulty.id; refresh.call(),"choice")
 		b.set_meta("id",difficulty.id)
 		b.toggle_mode=true
 		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	button(v,tr("준비 완료 · 일곱 밤 시작"),func(): start_run(chosen_map,chosen_difficulty),"gold")
+	button(v,tr("준비 완료 · 출발하기"),func(): start_run(chosen_map,chosen_difficulty),"gold")
+	if not maps.is_empty() and not maps.any(func(m): return m.id==chosen_map): chosen_map=str(maps[0].id)
 	refresh.call()
+
+## The painted loading backdrop of a map (transition.gd BACKDROPS), for its card.
+const MAP_ART := {"tutorial":"res://assets/ui/loading/camp.jpg","forest":"res://assets/ui/loading/forest.jpg",
+	"quarry":"res://assets/ui/loading/quarry.jpg","frost":"res://assets/ui/loading/frost.jpg"}
+
+## One map as a picture card: its painting, its name, how many stages and whether a boss waits;
+## the tutorial wears a 처음 ribbon. A toggle in the row (meta "id").
+func map_card(row: Container, region: Dictionary, pick: Callable) -> Button:
+	var card := Button.new()
+	card.name="Map_"+str(region.id)
+	card.set_meta("id",region.id)
+	card.toggle_mode=true
+	card.focus_mode=Control.FOCUS_NONE
+	card.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	card.custom_minimum_size=Vector2(170,178)
+	card.add_theme_stylebox_override("normal",RpgUi.frame("card_frame"))
+	card.add_theme_stylebox_override("hover",RpgUi.frame("card_frame",Color(1.08,1.06,1.0)))
+	card.add_theme_stylebox_override("pressed",RpgUi.frame("card_frame",Color(1.25,1.12,0.78)))
+	card.add_theme_stylebox_override("hover_pressed",RpgUi.frame("card_frame",Color(1.25,1.12,0.78)))
+	card.add_theme_stylebox_override("focus",StyleBoxEmpty.new())
+	card.pressed.connect(func(): pick.call())
+	RpgUi.hover_motion(card,1.03)
+	row.add_child(card)
+	var column := VBoxContainer.new()
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	column.offset_left=10;column.offset_top=10;column.offset_right=-10;column.offset_bottom=-8
+	column.add_theme_constant_override("separation",4)
+	column.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	card.add_child(column)
+	var frame_box := Control.new()
+	frame_box.custom_minimum_size=Vector2(0,92)
+	frame_box.clip_contents=true
+	frame_box.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	column.add_child(frame_box)
+	var art := TextureRect.new()
+	var path: String=MAP_ART.get(str(region.id),"res://assets/ui/loading/village.jpg")
+	art.texture=load(path) if ResourceLoader.exists(path) else null
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	art.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	frame_box.add_child(art)
+	if bool(region.get("tutorial",false)):
+		var ribbon := RpgUi.label(frame_box,tr("처음"),13,RpgUi.INK)
+		ribbon.add_theme_stylebox_override("normal",RpgUi.panel_style("pill",4))
+		ribbon.position=Vector2(6,6)
+	var title := RpgUi.label(column,str(region.get("name",region.id)),16,RpgUi.PAPER_INK,false)
+	title.add_theme_font_override("font",RpgUi.FONT_STRONG)
+	title.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	if region.has("stages"):
+		var facts := HBoxContainer.new()
+		facts.alignment=BoxContainer.ALIGNMENT_CENTER
+		facts.add_theme_constant_override("separation",6)
+		facts.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		column.add_child(facts)
+		RpgUi.label(facts,tr("스테이지 %d") % int(region.stages),13,RpgUi.PAPER_MUTED,false)
+		if bool(region.get("has_boss",false)):
+			var crown := RpgUi.icon("crown",18)
+			RpgUi.name_tip(crown,tr("마지막 밤에 우두머리"))
+			crown.mouse_filter=Control.MOUSE_FILTER_PASS
+			facts.add_child(crown)
+	return card
 
 func open_story() -> void:
 	if screen!="village" or busy:return

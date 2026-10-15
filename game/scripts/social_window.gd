@@ -331,7 +331,13 @@ func start_row(main: Node) -> void:
 	row.add_theme_constant_override("separation", 6)
 	list.add_child(row)
 	var region := OptionButton.new()
-	for title in [tr("솔바람 숲"), tr("노을 채석장"), tr("서리빛 분지")]: region.add_item(title)
+	# The maps in the expedition window's order (server catalog: the tutorial first), else the three.
+	var maps: Array = []
+	for entry in main.get("me").get("catalog", {}).get("maps", []):
+		if entry is Dictionary: maps.append(entry)
+	maps.sort_custom(func(a, b): return int(a.get("order", 0)) < int(b.get("order", 0)))
+	if maps.is_empty(): maps = [{"id":"forest", "name":"솔바람 숲"}, {"id":"quarry", "name":"노을 채석장"}, {"id":"frost", "name":"서리빛 분지"}]
+	for entry in maps: region.add_item(preload("res://scripts/i18n.gd").server(str(entry.get("name", entry.id))))
 	region.focus_mode = Control.FOCUS_NONE
 	row.add_child(region)
 	var difficulty := OptionButton.new()
@@ -339,7 +345,7 @@ func start_row(main: Node) -> void:
 	difficulty.focus_mode = Control.FOCUS_NONE
 	row.add_child(difficulty)
 	var depart := func() -> void:
-		var result: Dictionary = await hub.act("/v1/party/runs", {"map_id":["forest", "quarry", "frost"][region.selected], "difficulty":["relaxed", "standard", "veteran"][difficulty.selected]})
+		var result: Dictionary = await hub.act("/v1/party/runs", {"map_id":str(maps[region.selected].id), "difficulty":["relaxed", "standard", "veteran"][difficulty.selected]})
 		if result.ok:
 			hub.close_window()
 			await main.start_run("forest", "standard", "", str(result.data.id))

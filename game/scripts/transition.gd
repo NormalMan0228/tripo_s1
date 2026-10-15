@@ -28,6 +28,7 @@ const BACKDROPS := {
 	"camp": "res://assets/ui/loading/camp.jpg",
 	"lighthouse": "res://assets/ui/loading/lighthouse.jpg",
 	"room": "res://assets/ui/loading/room.jpg",
+	"tutorial": "res://assets/ui/loading/camp.jpg",
 	"forest": "res://assets/ui/loading/forest.jpg",
 	"quarry": "res://assets/ui/loading/quarry.jpg",
 	"frost": "res://assets/ui/loading/frost.jpg",

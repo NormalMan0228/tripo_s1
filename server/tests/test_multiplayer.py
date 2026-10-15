@@ -203,7 +203,8 @@ def test_disconnect_stale_intent_restart_rewards_exactly_once(world):
     with TestClient(restarted) as second:
         assert second.get(route, headers=hs[0]).json()['id'] == run
         def near_win(state):
-            state['world'].update(elapsed=settings.day_seconds*7-.1, fire_until=10000)
+            # The boss fell (test_stages.py covers the blow itself); the next tick ends the run.
+            state['world'].update(boss_defeated=True, fire_until=10000)
             for actor in state['players'].values():
                 actor['last_seen'] = now[0]
         edit_state(app, run, near_win)
@@ -266,18 +267,18 @@ def test_shared_enemy_hits_target_once_and_defeated_player_spectates(world):
     route = '/v1/coop/runs/'+run
     ids = [c.get(route, headers=h).json()['self_id'] for h in hs[:3]]
     def windup(state):
-        state['world'].update(elapsed=40, spawned_night=1, fire_until=0)
+        state['world'].update(elapsed=60, spawned_night=1, fire_until=0)
         for index, actor_id in enumerate(ids):
             state['players'][actor_id].update(x=(index-1)*1.3, z=2)
         state['world']['enemies'] = [dict(id='strike', kind='wolf', x=-1.3, z=3.4, hp=30, max_hp=30,
-            phase='windup', phase_until=40.1, target_x=-1.3, target_z=2, target_user=ids[0], damage=8, impact=1.35)]
+            phase='windup', phase_until=60.1, target_x=-1.3, target_z=2, target_user=ids[0], damage=8, impact=1.35)]
     edit_state(app, run, windup)
     now[0] += .2
     views = [c.get(route, headers=h).json() for h in hs[:3]]
     assert views[0]['hp'] < views[1]['hp']-7.9
     assert views[1]['hp'] == views[2]['hp']
     assert all(s['enemies'][0]['phase'] == 'recover' for s in views)
-    assert all(s['elapsed'] == pytest.approx(40.2) for s in views)
+    assert all(s['elapsed'] == pytest.approx(60.2) for s in views)
     edit_state(app, run, lambda s: s['players'][ids[0]].update(hp=0))
     c.post(route+'/input', headers=hs[0], json={'sequence':1, 'dx':1, 'action':'eat'})
     now[0] += .2

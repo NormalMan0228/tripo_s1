@@ -139,7 +139,9 @@ class Settings:
     # Friendship points for hearts 1..4 (each new heart brings a letter, the fourth a return gift).
     npc_levels: tuple = field(default_factory=lambda: tuple(int(v) for v in os.getenv('TRIPOTHON_NPC_LEVELS', '30,80,160,300').split(',')))
     session_seconds: int = 12 * 60 * 60
-    day_seconds: float = 60.0
+    # Seconds of an expedition's first stage (server/stages.py: then 120, 150, ... at 90). Demo/QA
+    # servers may shorten it (TRIPOTHON_STAGE_SECONDS) for quick test runs; live servers keep 90.
+    day_seconds: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_STAGE_SECONDS', '90')))
     studio_llm: str = field(default_factory=lambda: os.getenv('TRIPOTHON_STUDIO_LLM', 'fixture'))
     studio_design_format: str = field(default_factory=lambda: os.getenv('TRIPOTHON_DESIGN_FORMAT','classic'))
     studio_credit_rate: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_STARS_PER_CREDIT','1')))
@@ -188,6 +190,8 @@ class Settings:
             raise ValueError('Invalid studio design format')
         if self.mode=='live' and self.studio_llm=='codex':
             raise ValueError('Codex subscription experiments are local development only')
+        if self.mode == 'live' and self.day_seconds != 90:
+            raise ValueError('TRIPOTHON_STAGE_SECONDS is for demo and QA servers only')
         if self.mode == 'live' and len(self.registration_code) < 24:
             raise ValueError('Live mode requires a registration invitation code of at least 24 characters')
         if not 0 <= self.max_credits_per_craft <= 100000:

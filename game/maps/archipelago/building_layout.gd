@@ -10,6 +10,7 @@ var placed: Array[Node3D] = []
 const OUTPUT := "res://../art/maps/archipelago_placement_v1/"
 const LoadPace = preload("res://scripts/load_pace.gd")
 const IslandBake = preload("res://maps/archipelago/island_bake.gd")
+const GroundChunks = preload("res://maps/archipelago/ground_chunks.gd")
 
 func install(owner_node: Node3D, terrain: Node3D) -> void:
 	host = owner_node
@@ -146,6 +147,8 @@ func _prepare_ground() -> void:
 		var rebuilt := ArrayMesh.new()
 		var to_world := ground.global_transform
 		var inverse := to_world.affine_inverse()
+		# The bake cuts the ground into chunks from the same floats (ground_chunks.gd).
+		var kept := []
 		for surface in ground.mesh.get_surface_count():
 			var arrays := ground.mesh.surface_get_arrays(surface)
 			var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
@@ -177,7 +180,9 @@ func _prepare_ground() -> void:
 			arrays[Mesh.ARRAY_NORMAL] = normals
 			rebuilt.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 			rebuilt.surface_set_material(surface, ground.mesh.surface_get_material(surface))
+			if GroundChunks.keep_arrays: kept.append(arrays)
 		ground.mesh = rebuilt
+		if GroundChunks.keep_arrays: ground.set_meta(GroundChunks.ARRAYS_META, kept)
 
 func _process(_delta: float) -> void:
 	if not OS.get_cmdline_user_args().has("--placement-capture"):

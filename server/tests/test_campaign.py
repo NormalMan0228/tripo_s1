@@ -13,7 +13,7 @@ def finish_fixture(app,run_id,complete=True):
     # Unit-test state fixture, separate from the real-time Godot playthrough.
     with app.state.db.transaction() as conn:
         state=json.loads(conn.execute('SELECT state FROM runs WHERE id=?',(run_id,)).fetchone()[0])
-        state.update(status='won',elapsed=420,harvested=50,fires=10,crafted={'axe':1,'spear':1,'soup':2} if complete else {})
+        state.update(status='won',elapsed=420,harvested=50,fires=10,boss_defeated=True,crafted={'axe':1,'spear':1,'soup':2} if complete else {})
         conn.execute("UPDATE runs SET state=?,status='won',reward=60 WHERE id=?",(json.dumps(state),run_id))
 
 def test_story_gates_authoritative_map_and_once_only_bonus(tmp_path):

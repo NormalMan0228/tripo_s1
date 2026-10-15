@@ -5,7 +5,9 @@ extends SceneTree
 ## Fails when the generated data is stale (layouts, build scripts or map assets changed since the bake:
 ## run tools/bake_archipelago.py), when the two maps differ in nodes (kind, place, visibility, mesh,
 ## materials, shadows, LOD bias, lights, collision layers and shapes) or when a probe of their
-## collision differs (rays from above on a 1 m grid, the walker's capsule standing there).
+## collision differs (rays from above on a 1 m grid, the walker's capsule standing there), or when either
+## map lacks the chunked ground as the bake made it (ground_chunks.gd: "Ground" the map's third child with
+## its chunks and ocean, the model's ground and ocean meshes emptied and hidden).
 ## Prints ISLAND_BAKE_CHECK {...}.
 const Map = preload("res://maps/archipelago/archipelago.gd")
 const IslandBake = preload("res://maps/archipelago/island_bake.gd")
@@ -49,6 +51,16 @@ func run() -> void:
 	report["probes"] = probes
 	report["probe_differences"] = probe_differences
 	if not probe_differences.is_empty(): failures.append("collision probes differ")
+	# The chunked ground, in both maps, as the bake made it.
+	var made: Dictionary = IslandBake.manifest().get("ground", {})
+	report["ground"] = {"made": [made.get("chunks", 0), made.get("tris_after", 0)], "runtime": runtime.ground, "baked": baked.ground}
+	for side in ["runtime", "baked"]:
+		var ground: Dictionary = report.ground[side]
+		if made.is_empty(): failures.append("the bake made no ground chunks")
+		elif ground.chunks != int(made.chunks) or ground.tris != int(made.tris_after): failures.append("%s map: %d chunks, %d triangles; the bake made %d, %d" % [side, ground.chunks, ground.tris, made.chunks, made.tris_after])
+		if ground.index != 2 or not ground.terrain_first: failures.append("%s map: the ground is child %d (terrain first: %s)" % [side, ground.index, ground.terrain_first])
+		if not ground.ocean: failures.append("%s map: no ocean under the ground" % side)
+		if ground.model_drawn > 0: failures.append("%s map: %d model ground or ocean meshes still drawn" % [side, ground.model_drawn])
 	finish(report)
 
 func finish(report: Dictionary) -> void:
@@ -100,10 +112,21 @@ func build(label: String) -> Dictionary:
 				continue
 			query.transform = Transform3D(Basis.IDENTITY, Vector3(x, hit.position.y+0.36+0.76, z))
 			probes.append([x, z, snappedf(hit.position.y, 0.0001), space.intersect_shape(query, 1).is_empty(), String(map.get_path_to(hit.collider)).get_slice("/", 1)])
+	var ground := {"index": -1, "chunks": 0, "tris": 0, "ocean": false, "model_drawn": 0, "terrain_first": String(map.get_child(0).name).begins_with("archipelago_terrain")}
+	var chunks := map.get_node_or_null("Ground")
+	if chunks:
+		ground.index = chunks.get_index()
+		ground.ocean = chunks.has_node("Ocean")
+		for chunk in chunks.get_children():
+			if not String(chunk.name).begins_with("Chunk_"): continue
+			ground.chunks += 1
+			ground.tris += (chunk as MeshInstance3D).mesh.surface_get_arrays(0)[Mesh.ARRAY_INDEX].size()/3
+	for m: MeshInstance3D in map.find_children("*__ground", "MeshInstance3D", true, false)+map.find_children("Ocean__central_surface", "MeshInstance3D", true, false):
+		if m.mesh != null or m.visible: ground.model_drawn += 1
 	print("BUILT %s in %d ms: %d nodes" % [label, ms, nodes.size()])
 	viewport.queue_free()
 	await process_frame
-	return {"ms": ms, "nodes": nodes, "probes": probes}
+	return {"ms": ms, "nodes": nodes, "probes": probes, "ground": ground}
 
 ## Names the engine makes ("@Node@12") and their readable stand-ins in the bake ("StaticBody3D2")
 ## compare as the node's class; same names under one parent are told apart by their order.
