@@ -446,7 +446,7 @@ static func fold_tip(id: String, shut: bool) -> String:
 ## falls back to a related kind below; an unknown kind stays silent. A message kind (deny, chat_in,
 ## toast_error ...) played right before a message also stands in for the generic toast chime that
 ## message raises in the same moment (main.gd message()): that chime is deduped like a repeat.
-## Kinds: hover click open close toast confirm deny tab select slider drawer_open drawer_close
+## Kinds: hover chip (the prompt chip tick; hover takes, its own gate) click open close toast confirm deny tab select slider drawer_open drawer_close
 ## count coin_gain chat_in chat_out whisper friend join leave notify toast_success toast_warn
 ## toast_error toast_social quest_accept quest_ready quest_complete star unlock rotate snap place
 ## lift cancel valid invalid paint brush fill undo redo layer swatch key_capture save
@@ -462,7 +462,7 @@ static func sfx(kind: String, volume_db := -4.0) -> void:
 
 const SfxBank = preload("res://scripts/sfx_bank.gd")
 ## A kind with no takes (not imported yet) plays this related kind instead (up to three hops).
-const SFX_FALLBACK := {"deny": "close", "tab": "click", "select": "click", "slider": "hover", "drawer_open": "open",
+const SFX_FALLBACK := {"chip": "hover", "deny": "close", "tab": "click", "select": "click", "slider": "hover", "drawer_open": "open",
 	"drawer_close": "close", "count": "hover", "coin_gain": "toast", "chat_in": "toast", "chat_out": "click",
 	"whisper": "chat_in", "friend": "toast", "join": "open", "leave": "close", "notify": "toast",
 	"toast_success": "confirm", "toast_warn": "toast", "toast_error": "deny", "toast_social": "chat_in",
@@ -1628,7 +1628,7 @@ static func prompt(ui: Control, y: float) -> Label:
 			var now := Time.get_ticks_msec()
 			if toggled and pill.is_visible_in_tree() and now - int(pill.get_meta("tick_at", -100000)) > PROMPT_TICK_MS:
 				pill.set_meta("tick_at", now)
-				sfx("hover", -14.0))
+				sfx("chip", -14.0))
 	ui.add_child(pill)
 	pin(pill, 0.5, 1.0)
 	# A new UI scale narrows the canvas and moves the chip: it keeps clear of the chat corner.

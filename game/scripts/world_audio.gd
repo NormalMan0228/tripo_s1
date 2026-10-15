@@ -51,8 +51,10 @@ const FALLOFF_START := 2.5
 ## make_world_ambience.py TARGET). "_muffled" twins play indoors. The clock and room tone files are
 ## quieter (about -30 and -33 dBFS RMS), hence their higher trims: indoors the beds stay within
 ## about 10 dB of each other (hearth about -40 dBFS in game, clock -45, the bare room tone -49).
+## Village open-air beds sit 4 dB under their first mix (2026-10-16 Movie Maker capture: the baked beds
+## raised the floor 6-7 dB over the old synth beds and buried the reel ticks and sand steps).
 const BED_DB := {
-	"birds": -17.0, "birds_far": -21.0, "insects": -20.0, "night": -19.0, "coast": -4.5, "wind": -8.0, "waterfall": -4.0,
+	"birds": -21.0, "birds_far": -25.0, "insects": -24.0, "night": -23.0, "coast": -8.5, "wind": -12.0, "waterfall": -8.0,
 	"room": -6.5, "forest": -10.0, "frost": -11.0, "quarry": -12.0, "ember": -6.5, "hearth": -5.0, "clock": -5.0,
 	"mill": -8.0, "cafe": -13.5, "sea_muffled": -15.0, "wind_muffled": -19.0, "waterfall_muffled": -14.0,
 }

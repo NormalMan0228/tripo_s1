@@ -391,7 +391,7 @@ func fight(delta: float) -> void:
 		if tick_clock<=0:
 			# Reel ratchet: uneven pawl spacing, brighter and quicker as the line tightens.
 			tick_clock=0.075*randf_range(0.8,1.2)*(1.0-0.2*progress)
-			life.sfx.play("tick",lerpf(0.93,1.08,progress),-3+2.0*progress+randf_range(-1.0,1.0))
+			life.sfx.play("tick",lerpf(0.93,1.08,progress),0.0+2.0*progress+randf_range(-1.0,1.0))
 	splash_clock-=delta
 	if splash_clock<=0:
 		splash_clock=randf_range(0.35,0.8)
