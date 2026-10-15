@@ -368,6 +368,7 @@ func request() -> void:
 	var length := prompt.text.strip_edges().length()
 	if length < 2 or length > 1500:
 		_say(_explain("invalid_craft_request"))
+		RpgUi.sfx("deny", -6.0)
 		return
 	busy = true
 	_update_options()
@@ -376,7 +377,9 @@ func request() -> void:
 	_update_options()
 	if not reply.ok:
 		_say(_explain(reply.error))
+		RpgUi.sfx("deny", -6.0)
 		return
+	RpgUi.sfx("craft_submit", -6.0)
 	job_id = str(reply.data.id)
 	job_started.emit(job_id)
 	_say(tr("설계를 준비하고 있어요. 다른 가구를 꾸미며 기다릴 수 있어요."))
@@ -635,6 +638,7 @@ func _paint_step(step: Dictionary, mode: String) -> void:
 	if step.line: step.line.color = gold if lit else muted
 	if step.has("pulse") and step.pulse.is_valid(): step.pulse.kill()
 	dot.scale = Vector2.ONE
+	if mode == "done" and before == "active": RpgUi.sfx("craft_step", -8.0)
 	if RpgUi.calm(): return
 	if mode == "active":
 		var pulse := dot.create_tween().set_loops()
@@ -713,8 +717,9 @@ func confirm(use_picture: bool) -> void:
 	busy = false
 	if not reply.ok:
 		_say(_explain(reply.error))
+		RpgUi.sfx("deny", -6.0)
 		return
-	RpgUi.sfx("click")
+	RpgUi.sfx("confirm", -6.0)
 	_say(tr("확인한 설계로 3D 메시를 만들고 있어요"))
 	tracker.follow(job_id)
 
@@ -725,7 +730,9 @@ func redraw_concept() -> void:
 	busy = false
 	if not reply.ok:
 		_say(_explain(reply.error))
+		RpgUi.sfx("deny", -6.0)
 		return
+	RpgUi.sfx("paint", -6.0)
 	tracker.follow(job_id)
 
 func cancel() -> void:
@@ -735,7 +742,9 @@ func cancel() -> void:
 	busy = false
 	if not reply.ok:
 		_say(_explain(reply.error))
+		RpgUi.sfx("deny", -6.0)
 		return
+	RpgUi.sfx("cancel", -6.0)
 	var cancelled := job_id
 	job_id = ""
 	tracker.cancelled(cancelled)
@@ -813,7 +822,7 @@ func _show_choice(buttons: Dictionary, id: String) -> void:
 		b.theme_type_variation = "GoldButton" if key == id else ""
 
 func _save_choice() -> void:
-	RpgUi.sfx("click")
+	RpgUi.sfx("select")
 	var config := ConfigFile.new()
 	config.load(I18n.settings_path())
 	config.set_value(SETTINGS_SECTION, "style", style_id)

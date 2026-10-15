@@ -1,88 +1,178 @@
 extends RefCounted
 ## Combat and survival one-shots: swings, impacts, dodges, crits, spawn/dissolve puffs,
-## the hero being hit, the low-HP heartbeat, campfire fuel and the night/dawn stings.
+## the hero being hit, the low-HP heartbeat, campfire fuel and loop, the night/dawn stings and
+## the survival status cues (hunger, cold, ember ground, night warning, depleted nodes, crafts).
 ## Static helpers only; pooled playback through creature_audio.gd (bus "SFX", else Master):
 ##   const CombatAudio = preload("res://scripts/combat_audio.gd")
 ##   CombatAudio.play(app, event: String, at := Vector3.INF, db := 0.0, pitch := 1.0) -> bool
 ##
-## Files: res://assets/sfx/combat/<event>_<n>.wav (tools/make_creature_sfx.py), 1-3 takes,
-## never the same take twice in a row, small pitch jitter.
+## Files: res://assets/sfx/combat/<event>_<n>.wav (tools/make_creature_sfx.py takes 1-3, then
+## tools/sfx/gen_combat.py: 5-14 structurally different takes per event; the team's recorded
+## harvest_tree/stone/fiber_1 plus takes derived from them). Takes come from sfx_bank.gd: every
+## take once per shuffle-bag cycle, never the same take twice in a row (with 6+ takes not one of
+## the last two), loaded on first use; pitch jitter per event and +-1 dB.
 ## events (at = world position for distance falloff/panning; omit for the hero's own sounds):
 ##   "swing_axe" / "swing_axe_heavy"       low, weighty whoosh with an air push
 ##   "swing_spear" / "swing_spear_heavy"   thin fast whoosh with a faint shaft whistle
 ##   "swing_fist" / "swing_fist_heavy"     short "fft" with a sleeve rustle (no weapon)
 ##   "hit_flesh"   thump + smack (wolf, boar)          "hit_stone"  crack + chips (brute)
 ##   "hit_wood"    hollow thock (trees, shields)       "hit_spirit" chime-swish + motes (wisp, shroom)
-##   "block"       weapon catches a blow: hard knock + scrape
-##   "dodge"       roll: cloth whoosh + ground skid
-##   "critical"    hit + bright "shing" + low boom + sparkles
-##   "spawn"       enemy appears: dark reverse swell into a smoky pop
-##   "dissolve"    enemy dies: falling shimmer, soft "fwoo", two fading notes
+##   "block"       a blow interrupts a telegraphed strike: hard knock + scrape
+##   "dodge"       sprint/dodge start: cloth whoosh + ground skid
+##   "whiff"       an enemy strike lands where the hero no longer is
+##   "critical"    hit + bright "shing" + low boom + sparkles (the kill blow)
+##   "spawn"       enemy appears: dark reverse swell into a smoky pop (a roster is staggered)
+##   "dissolve"    enemy dies: falling shimmer, soft "fwoo", fading notes (staggered too)
 ##   "player_hit"  the hero takes damage: soft punchy thump with a cartoon "bwom"
-##   "fuel"        logs on the campfire: two knocks, a flare, crackle burst
-##   "night"       sun-down sting: low minor swell, cold glints, far howl (2.2 s)
-##   "dawn"        morning relief: warm major arpeggio, pad, birds (2.2 s)
+##   "equip"       a new weapon in hand          "fuel"  logs on the campfire
+##   "sputter"     the campfire spits / is about to die     "campfire_loop.wav" (campfire())
+##   "night"       sun-down sting                "dawn"  morning relief
+##   "night_warn"  ten seconds of daylight left
+##   "cold" / "hunger" / "ember"   status cues (cue())
+##   "depleted_tree" / "_stone" / "_fiber" / "_berry"   a resource node is used up
+##   "craft_tool" / "craft_soup" / "craft_bandage"      survival recipes;  "bandage" = using one
 ##   "harvest_tree" / "harvest_stone" / "harvest_fiber" / "harvest_berry"  gathering hits
 ## aliases: swing->swing_fist, hit/impact->hit_flesh, parry->block, crit->critical,
 ##   enemy_spawn->spawn, enemy_death->dissolve, hurt/damage->player_hit, campfire->fuel,
-##   night_start->night, morning->dawn, chop->harvest_tree, mine->harvest_stone
+##   night_start->night, morning->dawn, chop->harvest_tree, mine->harvest_stone, miss->whiff,
+##   heal->bandage, starving->hunger, freezing->cold, burn->ember
 ## Helpers:
-##   CombatAudio.swing(app, weapon := "", heavy := false)   weapon "axe" / "spear" / "" (fist)
+##   CombatAudio.swing(app, weapon := "", heavy := false)   weapon "axe" / "spear" / "" (fist); every
+##       third swing of a quick combo is the heavy take
 ##   CombatAudio.impact(app, species, at, critical := false)  material from the species
-##   CombatAudio.harvest(app, node_kind, at := Vector3.INF)    "tree" / "stone" / "fiber" / "berry"
+##   CombatAudio.harvest(app, node_kind, at := Vector3.INF, tool := "axe")  "tree" / "stone" / "fiber" /
+##       "berry"; a tree without an axe is a hollow knock (hit_wood)
+##   CombatAudio.depleted(app, node_kind, at)                  the node is used up
+##   CombatAudio.craft(app, recipe)                            "axe"/"spear" -> tool, "soup", "bandage"
 ##   CombatAudio.heartbeat(app, hp, max_hp := 100.0)  call on every HP update: loops below 30 %,
 ##       louder and faster as HP falls, fades out above it or at 0 HP
+##   CombatAudio.campfire(app, seconds_left, at := Vector3.ZERO, night := false)  call on every run
+##       update: crackling loop at the fire while it burns (louder when low, sputters below 7 s);
+##       fades out when it goes out or when the calls stop (leaving the run)
+##   CombatAudio.cue(app, event, on, every := 0.0) -> bool   plays when `on` turns true, then every
+##       `every` s (+-15 %) while it stays true
+##   CombatAudio.edge(key, on) -> bool       true once when `on` turns true (state per key)
+##   CombatAudio.changed(key, value) -> bool true when value differs from the last call's (first: false)
+##   CombatAudio.later(app, event, delay, at := Vector3.INF, db := 0.0)  play() after delay s
 ##   CombatAudio.material_for(species) -> "hit_flesh" / "hit_stone" / "hit_spirit"
 const CreatureAudio = preload("res://scripts/creature_audio.gd")
+const SfxBank = preload("res://scripts/sfx_bank.gd")
 const DIR := "res://assets/sfx/combat/"
 ## event: [dB at the hero, priority, pitch jitter]
 const EVENTS := {
 	"swing_axe": [-13.0, 2, 0.05], "swing_axe_heavy": [-12.0, 2, 0.04], "swing_spear": [-13.0, 2, 0.05],
 	"swing_spear_heavy": [-12.0, 2, 0.04], "swing_fist": [-13.0, 2, 0.06], "swing_fist_heavy": [-12.0, 2, 0.05],
 	"hit_flesh": [-10.5, 4, 0.06], "hit_stone": [-10.5, 4, 0.05], "hit_wood": [-11.0, 4, 0.06], "hit_spirit": [-11.0, 4, 0.04],
-	"block": [-11.0, 4, 0.04], "dodge": [-13.0, 3, 0.05], "critical": [-9.5, 5, 0.02], "spawn": [-11.0, 3, 0.04],
-	"dissolve": [-11.0, 4, 0.03], "player_hit": [-10.0, 5, 0.04], "fuel": [-11.0, 3, 0.03],
-	"night": [-11.0, 6, 0.0], "dawn": [-11.0, 6, 0.0],
+	"block": [-11.0, 4, 0.04], "dodge": [-13.0, 3, 0.05], "whiff": [-12.5, 3, 0.05], "critical": [-9.5, 5, 0.02],
+	"spawn": [-11.0, 3, 0.04], "dissolve": [-11.0, 4, 0.03], "player_hit": [-10.0, 5, 0.04], "equip": [-13.0, 2, 0.04],
+	"fuel": [-11.0, 3, 0.03], "sputter": [-14.0, 1, 0.06], "night": [-11.0, 6, 0.0], "dawn": [-11.0, 6, 0.0],
+	"night_warn": [-11.5, 6, 0.0], "cold": [-13.0, 3, 0.04], "hunger": [-12.0, 3, 0.05], "ember": [-12.0, 3, 0.05],
+	"depleted_tree": [-11.5, 3, 0.04], "depleted_stone": [-11.5, 3, 0.04], "depleted_fiber": [-12.0, 3, 0.05], "depleted_berry": [-12.0, 3, 0.05],
+	"craft_tool": [-11.5, 3, 0.04], "craft_soup": [-11.5, 3, 0.04], "craft_bandage": [-12.0, 3, 0.04], "bandage": [-12.0, 3, 0.04],
 	"harvest_tree": [-12.0, 2, 0.06], "harvest_stone": [-12.0, 2, 0.05], "harvest_fiber": [-12.5, 2, 0.06], "harvest_berry": [-12.5, 2, 0.06],
 }
 const ALIASES := {"swing": "swing_fist", "punch": "swing_fist", "hit": "hit_flesh", "impact": "hit_flesh", "parry": "block",
 	"crit": "critical", "enemy_spawn": "spawn", "enemy_death": "dissolve", "death": "dissolve", "hurt": "player_hit",
 	"damage": "player_hit", "campfire": "fuel", "fire": "fuel", "night_start": "night", "dusk": "night", "morning": "dawn",
-	"dawn_relief": "dawn", "chop": "harvest_tree", "mine": "harvest_stone", "harvest": "harvest_tree"}
+	"dawn_relief": "dawn", "chop": "harvest_tree", "mine": "harvest_stone", "harvest": "harvest_tree", "miss": "whiff",
+	"heal": "bandage", "starving": "hunger", "freezing": "cold", "burn": "ember", "warning": "night_warn"}
 const MATERIAL := {"wolf": "hit_flesh", "boar": "hit_flesh", "brute": "hit_stone", "wisp": "hit_spirit", "shroom": "hit_spirit"}
+const RECIPE := {"axe": "craft_tool", "spear": "craft_tool", "soup": "craft_soup", "bandage": "craft_bandage"}
+## Minimum seconds between two plays of one event (sprints restarting, double crafts).
+const GAP := {"dodge": 0.35, "equip": 0.3, "whiff": 0.12, "sputter": 0.6, "block": 0.08}
+## Events a whole roster fires in one frame: spread over up to STAGGER_MAX s, at most GROUP_MAX
+## audible per burst (the rest would only add level, not information).
+const STAGGERED := ["spawn", "dissolve"]
+const STAGGER_WINDOW := 0.3
+const STAGGER_MAX := 0.25
+const GROUP_MAX := 4
+const COMBO_GAP := 1.1
 const HEART_START := 0.3
+const FIRE_LOW := 7.0
+const FIRE_DB := -17.0
 
 static var cache := {}
 static var last_take := {}
+static var last_time := {}
 static var heart: AudioStreamPlayer
 static var heart_tween: Tween
+static var fire: AudioStreamPlayer3D
+static var fire_tween: Tween
+static var fire_seen := -10.0
+static var fire_next_sputter := 0.0
 static var rng := RandomNumberGenerator.new()
+static var combo := 0
+static var combo_at := -10.0
+static var group_start := {}
+static var group_count := {}
+static var edges := {}
+static var values := {}
+static var cue_next := {}
 
 static func play(app, event: String, at := Vector3.INF, db := 0.0, pitch := 1.0) -> bool:
 	event = ALIASES.get(event, event)
 	if not EVENTS.has(event): return false
-	var list := streams(event)
-	if list.is_empty(): return false
-	var take := rng.randi() % list.size()
-	if list.size() > 1 and take == int(last_take.get(event, -1)): take = (take+1+rng.randi() % (list.size()-1)) % list.size()
+	var now := Time.get_ticks_msec()*0.001
+	if GAP.has(event) and now-float(last_time.get(event, -10.0)) < float(GAP[event]): return false
+	if event in STAGGERED: return _staggered(app, event, at, db, pitch, now)
+	return _emit(app, event, at, db, pitch, now)
+
+static func _emit(app, event: String, at: Vector3, db: float, pitch: float, now: float) -> bool:
+	var path := SfxBank.pick_path(DIR+event)
+	if path.is_empty(): return false
 	var spec: Array = EVENTS[event]
 	var jitter: float = spec[2]
-	if not CreatureAudio.emit(app, list[take], at, float(spec[0])+db, pitch*rng.randf_range(1.0-jitter, 1.0+jitter), int(spec[1]), "combat/"+event):
+	if not CreatureAudio.emit(app, SfxBank.stream(path), at, float(spec[0])+db+SfxBank.db(1.0), pitch*SfxBank.pitch(jitter), int(spec[1]), "combat/"+event):
 		return false
-	last_take[event] = take
+	last_take[event] = path
+	last_time[event] = now
 	return true
 
+## The first of a burst plays at once; the next ones of the same event within STAGGER_WINDOW s are
+## spread 60-250 ms apart (a pack appearing reads as a ripple, not one loud stacked hit).
+static func _staggered(app, event: String, at: Vector3, db: float, pitch: float, now: float) -> bool:
+	if now-float(group_start.get(event, -10.0)) > STAGGER_WINDOW:
+		group_start[event] = now
+		group_count[event] = 0
+	var index: int = group_count.get(event, 0)
+	group_count[event] = index+1
+	if index == 0: return _emit(app, event, at, db, pitch, now)
+	if index >= GROUP_MAX: return false
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null: return false
+	var delay := minf(STAGGER_MAX, index*rng.randf_range(0.06, 0.09)+rng.randf_range(0.0, 0.03))
+	var target = app
+	tree.create_timer(delay).timeout.connect(func() -> void:
+		if target is Object and not is_instance_valid(target): return
+		_emit(target, event, at, db-1.5*index, pitch, Time.get_ticks_msec()*0.001))
+	return true
+
+## play() after `delay` s (skipped when `app` is gone by then).
+static func later(app, event: String, delay: float, at := Vector3.INF, db := 0.0) -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null: return
+	var target = app
+	tree.create_timer(maxf(delay, 0.0)).timeout.connect(func() -> void:
+		if target is Object and not is_instance_valid(target): return
+		play(target, event, at, db))
+
+## Every take of an event, loaded (tests and warm-up; play() loads lazily).
 static func streams(event: String) -> Array:
+	event = ALIASES.get(event, event)
 	if cache.has(event): return cache[event]
 	var list := []
-	for n in range(1, 5):
-		var path := DIR+event+"_%d.wav" % n
-		if ResourceLoader.exists(path): list.append(load(path))
+	for path in SfxBank.paths(DIR+event):
+		var stream := SfxBank.stream(path)
+		if stream != null: list.append(stream)
 	cache[event] = list
 	return list
 
 static func swing(app, weapon := "", heavy := false) -> bool:
 	var kind := "axe" if weapon == "axe" else ("spear" if weapon == "spear" else "fist")
+	var now := Time.get_ticks_msec()*0.001
+	combo = combo+1 if now-combo_at < COMBO_GAP else 1
+	combo_at = now
+	if combo % 3 == 0: heavy = true
 	return play(app, "swing_"+kind+("_heavy" if heavy else ""))
 
 static func material_for(species: String) -> String:
@@ -93,8 +183,40 @@ static func impact(app, species: String, at: Vector3, critical := false) -> bool
 	if critical: ok = play(app, "critical", at) or ok
 	return ok
 
-static func harvest(app, node_kind: String, at := Vector3.INF) -> bool:
+## tool: the hero's tool; a tree worked without an axe knocks hollow (hit_wood) instead of the axe chop.
+static func harvest(app, node_kind: String, at := Vector3.INF, tool := "axe") -> bool:
+	if node_kind == "tree" and tool != "axe": return play(app, "hit_wood", at, -1.5)
 	var event: String = {"tree": "harvest_tree", "stone": "harvest_stone", "fiber": "harvest_fiber", "berry": "harvest_berry"}.get(node_kind, "harvest_fiber")
+	return play(app, event, at)
+
+static func depleted(app, node_kind: String, at := Vector3.INF) -> bool:
+	var kind: String = node_kind if node_kind in ["tree", "stone", "fiber", "berry"] else "fiber"
+	return play(app, "depleted_"+kind, at)
+
+static func craft(app, recipe: String) -> bool:
+	return play(app, RECIPE.get(recipe, "craft_tool"))
+
+## True once each time `on` turns true for `key`.
+static func edge(key: String, on: bool) -> bool:
+	var was: bool = edges.get(key, false)
+	edges[key] = on
+	return on and not was
+
+## True when `value` differs from the value of the previous call for `key` (false on the first call).
+static func changed(key: String, value) -> bool:
+	var had := values.has(key)
+	var before = values.get(key)
+	values[key] = value
+	return had and before != value
+
+## A status cue: plays when `on` turns true, then again every `every` s (+-15 %) while it stays on.
+static func cue(app, event: String, on: bool, every := 0.0, at := Vector3.INF) -> bool:
+	var key := "cue/"+event
+	var now := Time.get_ticks_msec()*0.001
+	var start := edge(key, on)
+	if not on: return false
+	if not start and (every <= 0.0 or now < float(cue_next.get(key, INF))): return false
+	cue_next[key] = now+every*rng.randf_range(0.85, 1.15) if every > 0.0 else INF
 	return play(app, event, at)
 
 ## Low-HP heartbeat loop on its own player: off at or above 30 % HP, then louder (-22 -> -9 dB)
@@ -126,16 +248,83 @@ static func heartbeat_playing() -> bool:
 static func _heart() -> bool:
 	if is_instance_valid(heart) and heart.is_inside_tree(): return true
 	if not CreatureAudio._ensure(): return false
-	var stream := load(DIR+"heartbeat_loop.wav") as AudioStreamWAV
+	var stream := _looped(DIR+"heartbeat_loop.wav")
 	if stream == null: return false
-	if stream.loop_mode == AudioStreamWAV.LOOP_DISABLED:
-		stream = stream.duplicate()
-		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-		stream.loop_begin = 0
-		stream.loop_end = int(round(stream.get_length()*stream.mix_rate))
 	heart = AudioStreamPlayer.new()
 	heart.name = "Heartbeat"
 	heart.stream = stream
 	heart.bus = CreatureAudio.bus("SFX")
 	CreatureAudio.holder.add_child(heart)
 	return heart.is_inside_tree()
+
+## The campfire's crackle while it burns: positioned at `at`, distance falloff like emit(), a little
+## louder in its last FIRE_LOW s with random sputters (and at night a quiet spit now and then).
+## Fades out when seconds_left reaches 0 or when no call came for 1.5 s (the run was left).
+static func campfire(app, seconds_left: float, at := Vector3.ZERO, night := false) -> void:
+	var now := Time.get_ticks_msec()*0.001
+	if seconds_left <= 0.0:
+		if campfire_playing() and fire.volume_db > -45.0: play(app, "sputter", at, 2.0)
+		_fire_fade()
+		return
+	if not _fire(): return
+	fire_seen = now
+	var target := FIRE_DB+(2.5 if seconds_left < FIRE_LOW else 0.0)
+	var ears := CreatureAudio.listener(app)
+	if ears != Vector3.INF: target += CreatureAudio.distance_db(ears.distance_to(at))
+	fire.global_position = at
+	if not fire.playing:
+		fire.volume_db = -45.0
+		fire.play(rng.randf_range(0.0, maxf(fire.stream.get_length()-0.1, 0.0)))
+	if fire_tween and fire_tween.is_valid(): fire_tween.kill()
+	fire_tween = fire.create_tween()
+	fire_tween.tween_property(fire, "volume_db", target, 0.35)
+	if seconds_left < FIRE_LOW or night:
+		if now >= fire_next_sputter:
+			if fire_next_sputter > 0.0: play(app, "sputter", at, -2.0 if seconds_left >= FIRE_LOW else 0.0)
+			fire_next_sputter = now+(rng.randf_range(1.2, 3.0) if seconds_left < FIRE_LOW else rng.randf_range(6.0, 14.0))
+	else:
+		fire_next_sputter = 0.0
+
+static func campfire_playing() -> bool:
+	return is_instance_valid(fire) and fire.playing
+
+static func _fire() -> bool:
+	if is_instance_valid(fire) and fire.is_inside_tree(): return true
+	if not CreatureAudio._ensure(): return false
+	var stream := _looped(DIR+"campfire_loop.wav")
+	if stream == null: return false
+	fire = AudioStreamPlayer3D.new()
+	fire.name = "Campfire"
+	fire.stream = stream
+	fire.attenuation_model = AudioStreamPlayer3D.ATTENUATION_DISABLED
+	fire.panning_strength = 0.5
+	fire.max_db = 6.0
+	fire.bus = CreatureAudio.bus("SFX")
+	CreatureAudio.holder.add_child(fire)
+	_fire_watch()
+	return fire.is_inside_tree()
+
+## Polls twice a second while the loop exists: no campfire() call for 1.5 s = the run was left.
+static func _fire_watch() -> void:
+	if not is_instance_valid(fire) or not fire.is_inside_tree(): return
+	if fire.playing and Time.get_ticks_msec()*0.001-fire_seen > 1.5: _fire_fade()
+	fire.get_tree().create_timer(0.5).timeout.connect(func() -> void: _fire_watch())
+
+static func _fire_fade() -> void:
+	if not campfire_playing() or not fire.is_inside_tree(): return
+	if fire_tween and fire_tween.is_valid(): fire_tween.kill()
+	fire_tween = fire.create_tween()
+	fire_tween.tween_property(fire, "volume_db", -50.0, 0.8)
+	fire_tween.tween_callback(fire.stop)
+	fire_next_sputter = 0.0
+
+## A WAV made to loop: the import may already loop it; otherwise a forward loop over the file.
+static func _looped(path: String) -> AudioStreamWAV:
+	var stream := SfxBank.stream(path) as AudioStreamWAV
+	if stream == null: return null
+	if stream.loop_mode == AudioStreamWAV.LOOP_DISABLED:
+		stream = stream.duplicate()
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = int(round(stream.get_length()*stream.mix_rate))
+	return stream

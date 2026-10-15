@@ -909,7 +909,7 @@ func show_fish(walker: Node) -> void:
 		return
 	var fish_name := tr("은빛 도미") if catch == "silverfish" else tr("강농어")
 	walker.smile(6.0)
-	effect("reward")
+	effect("errand")
 	if done_today.get("fisher", "") != today():
 		mark_done("fisher")
 		toast(t(walker, "낚시꾼 그림자가 엄지를 치켜세웠어요"))
@@ -1007,7 +1007,7 @@ func return_hoe(walker: Node) -> void:
 	mark_done("farmer")
 	walker.smile(8.0)
 	walker.pop("!", 1.6)
-	effect("reward")
+	effect("errand")
 	toast(t(walker, "농부 그림자가 하얗게 활짝 웃어요"))
 	say(walker, [tr("내 호미! 정말 고마워요."), t(walker, "이걸로 오늘 순무 한 고랑 더 일구겠네요. 그림자 농사도 손이 많이 가거든요.")])
 
@@ -1018,7 +1018,7 @@ func update_errands(delta: float) -> void:
 		if not target.is_empty() and target.cast == errands.letter and here.distance_to(target.at) < 3.0:
 			errands.erase("letter")
 			mark_done("postman")
-			effect("reward")
+			effect("errand")
 			toast(DayFolk.line("%s에게 편지를 전했어요 · \"그림자 우체부가 보냈구나!\"", persona_day("postman")) % target.title)
 			float_text(tr("편지 고마워요!"), target.node.global_position, Color("f5e5b7"))
 	if is_instance_valid(leader):

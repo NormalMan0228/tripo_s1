@@ -91,6 +91,8 @@ var reset_button: Button
 var chips: HFlowContainer
 var preview_timer: Timer
 var dragging := false
+## Slider detent ticks: when the last one played (ms).
+var detent_ms := -1000
 
 func setup(network: Node, object: Dictionary, borrowed: Node3D, extra := {}) -> void:
 	api = network
@@ -473,6 +475,7 @@ func _draw_glyph(c: Control, kind: String) -> void:
 # ---------------------------------------------------------------- opening and closing
 
 func _open() -> void:
+	RpgUi.sfx("open", -8.0)
 	if not is_instance_valid(model) or not model.has_method("start_program"):
 		_say(tr("물건을 불러오는 중이에요."))
 		model = await Assembly.fetch(api, str(obj.id))
@@ -578,6 +581,7 @@ func _pick_card(kind: String) -> void:
 			return
 	if choice.presets.size() >= MAX_PRESETS:
 		_say(tr("움직임은 %d개까지 함께 쓸 수 있어요.") % MAX_PRESETS)
+		RpgUi.sfx("deny", -8.0)
 		return
 	var target := "whole"
 	var axis := "x"
@@ -621,12 +625,14 @@ func _remove(index: int) -> void:
 	if index < 0 or index >= choice.presets.size(): return
 	choice.presets.remove_at(index)
 	focus = mini(index, choice.presets.size() - 1)
+	RpgUi.sfx("cancel", -8.0)
 	_refresh()
 	_changed()
 
 func _duplicate(index: int) -> void:
 	if choice.presets.size() >= MAX_PRESETS:
 		_say(tr("움직임은 %d개까지 함께 쓸 수 있어요.") % MAX_PRESETS)
+		RpgUi.sfx("deny", -8.0)
 		return
 	var copy: Dictionary = choice.presets[index].duplicate(true)
 	var used := []
@@ -639,10 +645,12 @@ func _duplicate(index: int) -> void:
 			if copy.kind == "clock": copy.hand = _hand_of(t)
 			choice.presets.append(copy)
 			focus = choice.presets.size() - 1
+			RpgUi.sfx("layer", -8.0)
 			_refresh()
 			_changed()
 			return
 	_say(tr("모든 부품에 이미 있어요."))
+	RpgUi.sfx("deny", -8.0)
 
 func _set_option(key: String, value) -> void:
 	if focus < 0 or focus >= choice.presets.size(): return
@@ -782,6 +790,7 @@ func _build_options(p: Dictionary) -> void:
 		slider.value_changed.connect(func(v: float):
 			shown.text = "%d°" % int(v)
 			if focus >= 0 and focus < choice.presets.size(): choice.presets[focus].angle = int(v)
+			_detent(int(v) == 0)
 			_changed())
 
 ## A row of toggles that sets one option of the focused preset.
@@ -815,7 +824,14 @@ func _slider_row(title: String, low: int, high: int, step: int, value: int, show
 	slider.value_changed.connect(func(v: float):
 		shown.text = shown_format % int(v)
 		if focus >= 0 and focus < choice.presets.size(): choice.presets[focus].angle = int(v)
+		_detent(int(v) == low or int(v) == high)
 		_changed())
+
+## A soft detent tick per slider step (a firmer snap at an end or zero), at most one per 40 ms.
+func _detent(firm: bool) -> void:
+	if Time.get_ticks_msec() - detent_ms < 40: return
+	detent_ms = Time.get_ticks_msec()
+	RpgUi.sfx("snap" if firm else "slider", -9.0 if firm else -11.0)
 
 func _update_describe() -> void:
 	if not is_instance_valid(describe_note): return
@@ -890,6 +906,7 @@ func _save() -> void:
 	_set_enabled(true)
 	if not reply.ok:
 		_say(_error(reply.error))
+		RpgUi.sfx("deny", -6.0)
 		return
 	info.runtime_version = reply.data.runtime.version
 	info.spec = reply.data.spec
@@ -899,7 +916,7 @@ func _save() -> void:
 		model.use_interaction(value if value is Dictionary else {}, reply.data.program, reply.data.runtime)
 		saved_state = model.vm.state.duplicate(true)
 	if options.get("saved") is Callable and options.saved.is_valid(): options.saved.call(reply.data)
-	RpgUi.sfx("confirm")
+	RpgUi.sfx("save")
 	_celebrate()
 	_say(tr("저장했어요! 이제 어디서나 이렇게 움직여요."))
 

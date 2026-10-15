@@ -3,9 +3,16 @@ extends RefCounted
 ## combat_audio.gd and hero_voice.gd share. Static helpers only (no autoload):
 ##   const CreatureAudio = preload("res://scripts/creature_audio.gd")
 ##   CreatureAudio.play(app_or_node, species: String, event: String, at: Vector3, variant := "") -> bool
+##   CreatureAudio.step(app_or_node, species: String, at: Vector3, speed := 1.0) -> bool
 ##
-## Sounds are pre-rendered by tools/make_creature_sfx.py into
-##   res://assets/sfx/creatures/<species>_<event>_<region>_<n>.wav   (2 takes each)
+## Sounds (tools/make_creature_sfx.py, then tools/sfx/gen_combat.py), one pool per
+## species x event x region, picked through sfx_bank.gd shuffle bags (every take once per cycle,
+## never twice in a row, with 6+ takes not one of the last two):
+##   res://assets/sfx/creatures/<species>_<event>_<n>.wav           7 region-neutral takes, each a
+##       different call (count, contour, length, extra layer); a region layer plays under them:
+##   res://assets/sfx/creatures/layer_<region>_<accent|bed>_<n>.wav  moss/twigs, embers, ice
+##   res://assets/sfx/creatures/<species>_<event>_<region>_<n>.wav  the original region takes (2)
+##   res://assets/sfx/creatures/step_<gait>_<n>.wav                 monster footfalls (step())
 ##
 ## species (unknown names fall back to "wolf"):
 ##   "wolf"   그림자 늑대  quadruped pack hunter: sniffs, low growls, howl/bark, jaw snap, yelp
@@ -17,13 +24,16 @@ extends RefCounted
 ## event:
 ##   "idle"    ambient breath/chitter while chasing or circling the fire (throttled: one per
 ##             species per IDLE_GAP s, at most MAX_IDLE at once, so a pack doesn't drone)
-##   "alert"   aggro call when it appears or first targets the player   (alias "aggro", "spawn")
+##   "alert"   aggro call when it appears or first targets the player   (alias "aggro", "spawn");
+##             alerts of a roster appearing together are staggered 80-300 ms apart
 ##   "windup"  attack anticipation, timed to the server wind-up: wolf .6 s, boar .8 s,
 ##             brute 1.1 s, wisp .85 s, shroom .8 s; call when phase becomes "windup"
 ##   "strike"  the blow lands (phase windup -> recover)                 (alias "attack")
 ##   "hurt"    hp went down                                             (alias "hit")
 ##   "death"   killed / removed with hp <= 0                            (alias "die")
-## variant: region colouring layered into every take
+##   "charge"  the boar's committed dash (phase windup -> charge); other species: windup takes
+##   "dazed"   the boar stunned after its dash (charge -> recover); other species: hurt takes
+## variant: region colouring
 ##   "forest" / "moss"  leaf-and-moss rustle, twig snaps
 ##   "quarry" / "ember" warm crackle, ember flare on strike/death
 ##   "frost"  / "ice"   crystalline shimmer, ice crack on strike/hurt/death
@@ -32,10 +42,11 @@ extends RefCounted
 ##   flat inside FALLOFF_START m, about -5 dB per doubling after, silent past AUDIBLE m.
 ##   When the viewport has a Camera3D the sound is panned (AudioStreamPlayer3D, attenuation
 ##   off); otherwise a flat player is used. Vector3.INF = not positional.
-## Returns true when a sound started. Takes never repeat back to back; pitch +-5 %.
+## Returns true when a sound started (or was scheduled, for a staggered alert). Pitch +-5 %, +-1 dB.
 ## Voices: MAX_VOICES pooled 3D players + MAX_VOICES flat players under root/GameSfx,
 ## MAX_PER_SPECIES at once per species; a full pool steals the lowest-priority, oldest voice
-## (death 5 > strike/hurt 4 > alert/windup 3 > idle 1) or drops the new sound if it ranks lower.
+## (death 5 > strike/hurt/charge 4 > alert/windup/dazed 3 > idle 1 > region layers/steps 0)
+## or drops the new sound if it ranks lower. Steps: at most MAX_STEPS at once, within STEP_RANGE m.
 ## Bus: "SFX" when the project has it, else "Master".
 ##
 ## Shared engine (used by combat_audio.gd / hero_voice.gd):
@@ -46,24 +57,41 @@ extends RefCounted
 ##   CreatureAudio.preload_all() warms every creature stream (call at run start to avoid hitches).
 ##   CreatureAudio.played: int counts sounds started (tests).
 
+const SfxBank = preload("res://scripts/sfx_bank.gd")
 const DIR := "res://assets/sfx/creatures/"
 const SPECIES := ["wolf", "boar", "brute", "wisp", "shroom"]
 const EVENTS := ["idle", "alert", "windup", "strike", "hurt", "death"]
+## Species-specific cues; a species without takes for one uses its FALLBACK event's takes.
+const EXTRA := ["charge", "dazed"]
+const FALLBACK := {"charge": "windup", "dazed": "hurt"}
 const REGIONS := ["forest", "quarry", "frost"]
 const SPECIES_ALIASES := {"beast": "wolf", "shadow": "wolf", "shadow_beast": "wolf", "golem": "brute", "guardian": "brute",
 	"imp": "wisp", "ember": "wisp", "fire": "wisp", "mushroom": "shroom", "spore": "shroom"}
-const EVENT_ALIASES := {"aggro": "alert", "notice": "alert", "spawn": "alert", "wind_up": "windup", "charge": "windup",
+const EVENT_ALIASES := {"aggro": "alert", "notice": "alert", "spawn": "alert", "wind_up": "windup", "dash": "charge",
 	"attack": "strike", "bite": "strike", "slam": "strike", "hit": "hurt", "damage": "hurt", "die": "death", "dead": "death",
-	"breath": "idle", "chase": "idle"}
+	"breath": "idle", "chase": "idle", "stun": "dazed", "stunned": "dazed"}
 const REGION_ALIASES := {"forest": "forest", "moss": "forest", "quarry": "quarry", "ember": "quarry", "frost": "frost", "ice": "frost"}
 ## Level (dB) at the hero for each event; the files are levelled, these set the mix.
 ## Door sounds play at -22.5 dBFS (file) -9 dB; a close strike lands ~3 dB above a door.
-const EVENT_DB := {"idle": -15.0, "alert": -11.0, "windup": -12.0, "strike": -10.0, "hurt": -11.5, "death": -10.5}
-const PRIORITY := {"idle": 1, "alert": 3, "windup": 3, "strike": 4, "hurt": 4, "death": 5}
+const EVENT_DB := {"idle": -15.0, "alert": -11.0, "windup": -12.0, "strike": -10.0, "hurt": -11.5, "death": -10.5,
+	"charge": -10.5, "dazed": -12.0}
+const PRIORITY := {"idle": 1, "alert": 3, "windup": 3, "strike": 4, "hurt": 4, "death": 5, "charge": 4, "dazed": 3}
+## Region layer under a region-neutral take: [layer kind, chance]; level LAYER_DB below the take.
+const LAYER := {"idle": ["bed", 0.5], "alert": ["accent", 0.8], "windup": ["bed", 0.6], "strike": ["accent", 0.9],
+	"hurt": ["accent", 0.8], "death": ["accent", 1.0], "charge": ["accent", 0.7], "dazed": ["bed", 0.6]}
+const LAYER_DB := -5.0
+## Footfalls: gait per species and its level at the hero (before distance falloff).
+const GAIT := {"wolf": "paw", "boar": "hoof", "brute": "stomp", "wisp": "flutter", "shroom": "squelch"}
+const STEP_DB := {"paw": -19.0, "hoof": -17.5, "stomp": -14.0, "flutter": -20.0, "squelch": -18.5}
+const MAX_STEPS := 2
+const STEP_RANGE := 18.0
+const STEP_GAP := 0.09
 const MAX_VOICES := 10
 const MAX_PER_SPECIES := 3
 const MAX_IDLE := 2
 const IDLE_GAP := 0.9
+const ALERT_WINDOW := 0.35
+const ALERT_GROUP_MAX := 4
 const FALLOFF_START := 2.5
 const AUDIBLE := 34.0
 
@@ -72,9 +100,13 @@ static var holder: Node3D
 static var pool3d: Array = []
 static var pool2d: Array = []
 static var cache := {}
+static var pools := {}
 static var last_take := {}
 static var last_idle := {}
 static var last_key := {}
+static var last_step := {}
+static var alert_start := -10.0
+static var alert_count := 0
 static var rng := RandomNumberGenerator.new()
 
 static func play(app_or_node, species: String, event: String, at: Vector3, variant := "") -> bool:
@@ -85,15 +117,37 @@ static func play(app_or_node, species: String, event: String, at: Vector3, varia
 	if event == "idle":
 		if now-float(last_idle.get(species, -10.0)) < IDLE_GAP: return false
 		if active("creature/", "idle") >= MAX_IDLE: return false
-	var list := streams(species, event, region)
+	var list := pool_paths(species, event, region)
 	if list.is_empty(): return false
 	var key := "%s_%s_%s" % [species, event, region]
 	# Two of the same call within 40 ms (two wolves hit together) read as one louder call.
 	if now-float(last_key.get(key, -10.0)) < 0.04: return false
-	var take := rng.randi() % list.size()
-	if list.size() > 1 and take == int(last_take.get(key, -1)): take = (take+1+rng.randi() % (list.size()-1)) % list.size()
-	var db: float = EVENT_DB[event]+rng.randf_range(-1.0, 1.0)
-	var pitch := rng.randf_range(0.93, 1.07) if event == "idle" else rng.randf_range(0.95, 1.05)
+	if not _audible(app_or_node, at): return false
+	last_key[key] = now
+	if event == "alert":
+		# A roster appearing together: the first calls at once, the next ones ripple after it.
+		if now-alert_start > ALERT_WINDOW:
+			alert_start = now
+			alert_count = 0
+		alert_count += 1
+		if alert_count > 1:
+			if alert_count > ALERT_GROUP_MAX: return false
+			var tree := Engine.get_main_loop() as SceneTree
+			if tree == null: return false
+			var delay := minf(0.3, (alert_count-1)*rng.randf_range(0.08, 0.12)+rng.randf_range(0.0, 0.04))
+			var target = app_or_node
+			tree.create_timer(delay).timeout.connect(func() -> void:
+				if target is Object and not is_instance_valid(target): return
+				_voice(target, species, event, region, key, at, Time.get_ticks_msec()*0.001))
+			return true
+	return _voice(app_or_node, species, event, region, key, at, now)
+
+static func _voice(app_or_node, species: String, event: String, region: String, key: String, at: Vector3, now: float) -> bool:
+	var list := pool_paths(species, event, region)
+	if list.is_empty(): return false
+	var path: String = list[SfxBank.bag_index("creature/"+key, list.size())]
+	var db: float = EVENT_DB[event]+SfxBank.db(1.0)
+	var pitch := SfxBank.pitch(0.07) if event == "idle" else SfxBank.pitch(0.05)
 	var tag := "creature/%s/%s" % [species, event]
 	var priority: int = PRIORITY[event]
 	# A species may hold MAX_PER_SPECIES voices; a more important call replaces its weakest one.
@@ -102,10 +156,40 @@ static func play(app_or_node, species: String, event: String, at: Vector3, varia
 		mine.sort_custom(func(a, b): return a.priority < b.priority or (a.priority == b.priority and a.started < b.started))
 		if int(mine[0].priority) > priority: return false
 		mine[0].node.stop()
-	if not emit(app_or_node, list[take], at, db, pitch, priority, tag): return false
-	last_take[key] = take
-	last_key[key] = now
+	if not emit(app_or_node, SfxBank.stream(path), at, db, pitch, priority, tag): return false
+	last_take[key] = path
 	if event == "idle": last_idle[species] = now
+	# Region-neutral takes get the region's colour as a quiet layer (the old region takes have it baked in).
+	if not path.contains("_%s_" % region): _layer(app_or_node, region, event, at, db)
+	return true
+
+## Moss / ember / ice layer for a region-neutral take; never steals a voice from a real call.
+static func _layer(app_or_node, region: String, event: String, at: Vector3, db: float) -> void:
+	var spec: Array = LAYER.get(event, ["bed", 0.5])
+	if rng.randf() > float(spec[1]): return
+	var path := SfxBank.pick_path(DIR+"layer_%s_%s" % [region, spec[0]])
+	if path.is_empty(): return
+	emit(app_or_node, SfxBank.stream(path), at, db+LAYER_DB+SfxBank.db(1.5), SfxBank.pitch(0.05), 0, "layer/"+region)
+
+## One monster footfall (call per stride from the creature's movement): paw / hoof / stomp /
+## squelch / flutter by species. Dropped when far away, when MAX_STEPS are sounding or when the same
+## species stepped within STEP_GAP s; priority 0, so steps never cut a voice.
+static func step(app_or_node, species: String, at: Vector3, speed := 1.0) -> bool:
+	species = species_name(species)
+	var gait: String = GAIT.get(species, "paw")
+	var now := Time.get_ticks_msec()*0.001
+	if now-float(last_step.get(species, -10.0)) < STEP_GAP: return false
+	if active("step/") >= MAX_STEPS: return false
+	if at != Vector3.INF:
+		var ears := listener(app_or_node)
+		if ears != Vector3.INF and ears.distance_to(at) > STEP_RANGE: return false
+	var path := SfxBank.pick_path(DIR+"step_"+gait)
+	if path.is_empty(): return false
+	var pace := clampf(speed/3.0, 0.0, 1.0)
+	if not emit(app_or_node, SfxBank.stream(path), at, float(STEP_DB[gait])+lerpf(-1.5, 1.0, pace)+SfxBank.db(1.5),
+			lerpf(0.97, 1.04, pace)*SfxBank.pitch(0.06), 0, "step/"+species):
+		return false
+	last_step[species] = now
 	return true
 
 static func species_name(species: String) -> String:
@@ -116,7 +200,7 @@ static func species_name(species: String) -> String:
 static func event_name(event: String) -> String:
 	event = event.to_lower()
 	event = EVENT_ALIASES.get(event, event)
-	return event if event in EVENTS else "idle"
+	return event if event in EVENTS or event in EXTRA else "idle"
 
 static func region_name(variant: String, app_or_node = null) -> String:
 	var region: String = REGION_ALIASES.get(variant.to_lower(), "")
@@ -126,23 +210,38 @@ static func region_name(variant: String, app_or_node = null) -> String:
 			region = REGION_ALIASES.get(str(app.run.get("map_id", "forest")), "forest")
 	return region if not region.is_empty() else "forest"
 
-## Every take for one sound, loaded once. A missing region falls back to the forest takes.
+## Every take path for one sound: the region-neutral takes plus the region's own takes (a region
+## without its own falls back to the forest ones; a species without an EXTRA cue to its FALLBACK).
+static func pool_paths(species: String, event: String, region: String) -> PackedStringArray:
+	var key := "%s_%s_%s" % [species, event, region]
+	if pools.has(key): return pools[key]
+	var list := SfxBank.paths(DIR+"%s_%s" % [species, event])
+	var own := SfxBank.paths(DIR+key)
+	if own.is_empty() and region != "forest": own = SfxBank.paths(DIR+"%s_%s_forest" % [species, event])
+	list.append_array(own)
+	if list.is_empty() and FALLBACK.has(event): list = pool_paths(species, FALLBACK[event], region)
+	pools[key] = list
+	return list
+
+## Every take for one sound, loaded once (tests / warm-up; play() loads lazily).
 static func streams(species: String, event: String, region: String) -> Array:
 	var key := "%s_%s_%s" % [species, event, region]
 	if cache.has(key): return cache[key]
 	var list := []
-	for n in range(1, 5):
-		var path := DIR+key+"_%d.wav" % n
-		if ResourceLoader.exists(path): list.append(load(path))
-	if list.is_empty() and region != "forest": list = streams(species, event, "forest")
+	for path in pool_paths(species, event, region):
+		var stream := SfxBank.stream(path)
+		if stream != null: list.append(stream)
 	cache[key] = list
 	return list
 
 static func preload_all() -> int:
 	var count := 0
 	for species in SPECIES:
-		for event in EVENTS:
+		for event in EVENTS+EXTRA:
 			for region in REGIONS: count += streams(species, event, region).size()
+	for gait in GAIT.values(): count += SfxBank.warm(DIR+"step_"+gait)
+	for region in REGIONS:
+		for kind in ["accent", "bed"]: count += SfxBank.warm(DIR+"layer_%s_%s" % [region, kind])
 	return count
 
 # ------------------------------------------------------------------ shared engine
@@ -175,6 +274,11 @@ static func listener(app_or_node) -> Vector3:
 static func distance_db(distance: float) -> float:
 	if distance <= FALLOFF_START: return 0.0
 	return -17.0*log(distance/FALLOFF_START)/log(10.0)
+
+static func _audible(app_or_node, at: Vector3) -> bool:
+	if at == Vector3.INF: return true
+	var ears := listener(app_or_node)
+	return ears == Vector3.INF or ears.distance_to(at) <= AUDIBLE
 
 static func emit(app_or_node, stream: AudioStream, at: Vector3, volume_db: float, pitch: float, priority: int, tag: String, bus_name := "SFX") -> bool:
 	if stream == null or not _ensure(): return false

@@ -59,6 +59,7 @@ func _ready() -> void:
 		b.toggle_mode=true
 		b.button_pressed=avatar.character==id
 		b.pressed.connect(func():
+			RpgUi.sfx("tab",-8.0)
 			avatar.character=id
 			var presets: Dictionary={"explorer":{"hair":"#30595b","coat":"#dba448","pants":"#526552","boots":"#765744"},"ranger":{"hair":"#a64e2c","coat":"#68765a","pants":"#45433f","boots":"#754b38"},"tinker":{"hair":"#343b53","coat":"#ad5545","pants":"#51566c","boots":"#b48b4b"}}
 			avatar.merge(presets.get(id,presets.explorer),true)
@@ -82,23 +83,29 @@ func _ready() -> void:
 			swatch.set_meta("part",key)
 			swatch.set_meta("color",color)
 			swatch.text="◆" if avatar[key]==color else "●"
-			swatch.pressed.connect(func(): avatar[key]=color; refresh())
+			swatch.pressed.connect(func(): avatar[key]=color; RpgUi.sfx("swatch",-8.0); refresh())
 			palette.add_child(swatch)
 	var hat := OptionButton.new()
 	for title in [tr("모자 없음"),tr("여행 모자"),tr("베레모")]: hat.add_item(title)
 	hat.select(["none","cap","beret"].find(avatar.headwear))
-	hat.item_selected.connect(func(index): avatar.headwear=["none","cap","beret"][index]; refresh())
+	hat.item_selected.connect(func(index): avatar.headwear=["none","cap","beret"][index]; RpgUi.sfx("select",-8.0); refresh())
 	controls.add_child(hat)
 	var pack := CheckButton.new()
 	pack.text=tr("여행 배낭")
 	pack.button_pressed=avatar.backpack
-	pack.toggled.connect(func(value): avatar.backpack=value; refresh())
+	pack.toggled.connect(func(value): avatar.backpack=value; RpgUi.sfx("lift" if value else "place",-9.0); refresh())
 	controls.add_child(pack)
 	var turn := HSlider.new()
 	turn.min_value=-180
 	turn.max_value=180
 	turn.tooltip_text=tr("미리보기 회전")
-	turn.value_changed.connect(func(value): actor.facing=Vector3(sin(deg_to_rad(value)),0,cos(deg_to_rad(value))))
+	turn.value_changed.connect(func(value):
+		actor.facing=Vector3(sin(deg_to_rad(value)),0,cos(deg_to_rad(value)))
+		# A ratchet tick per 30 degrees of turn.
+		var notch := int(round(value/30.0))
+		if notch!=int(turn.get_meta("notch",0)):
+			turn.set_meta("notch",notch)
+			RpgUi.sfx("rotate",-12.0))
 	controls.add_child(turn)
 	refresh()
 

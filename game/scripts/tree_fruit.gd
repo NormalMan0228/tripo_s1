@@ -20,6 +20,8 @@ const HANG := {"apple":[2,3],"pine":[2,3],"palm":[1,2]}
 ## Ground contact radius per item (m) and how big each looks.
 const RADIUS := {"apple":0.18,"pinecone":0.12,"coconut":0.2,"branch":0.06}
 const SIZE := {"apple":1.2,"pinecone":1.3,"coconut":1.2,"branch":1.2}
+## Pitch of an item's own sounds (detach, bounces, splash, grab): heavy coconut low, cones light.
+const VOICE := {"apple":1.0,"pinecone":1.22,"coconut":0.8,"branch":1.1}
 const NEAR := 26.0
 const TICK := 0.25
 const WALK_PICK := 0.8
@@ -89,6 +91,17 @@ func hang_count(tree: Dictionary) -> int:
 func life() -> Node:
 	if is_instance_valid(app) and "life" in app and is_instance_valid(app.life) and app.life.has_method("request"): return app.life
 	return null
+
+## A village-life sound (life_sfx.gd take family) at a world position, quieter with distance
+## from the walker. Silent without the life node (tests, survival).
+func life_sound(kind: String, at: Vector3, pitch := 1.0, db := 0.0) -> void:
+	var l := life()
+	if l == null or not "sfx" in l or not is_instance_valid(l.sfx) or not l.sfx.has_method("play_at"): return
+	if not is_instance_valid(app) or not "player" in app or not is_instance_valid(app.player): return
+	l.sfx.play_at(kind, at, app.player.global_position, pitch, db)
+
+func item_pitch(d: Dictionary) -> float:
+	return float(VOICE.get(String(d.item), 1.0))
 
 ## True when shakes and pick-ups go to the server (own village, state loaded).
 func online() -> bool:
@@ -431,6 +444,8 @@ func step_drops(delta: float) -> void:
 func fall(d: Dictionary, delta: float) -> void:
 	if float(d.wait) > 0.0:
 		d.wait = float(d.wait)-delta
+		# The stem lets go: twig snap and a leaf flutter as the item leaves the crown.
+		if float(d.wait) <= 0.0: life_sound("fruit_detach", d.pos, item_pitch(d)*randf_range(0.94, 1.06), -3.0)
 		return
 	var node: MeshInstance3D = d.node
 	var r: float = RADIUS.get(d.item, 0.12)
@@ -440,6 +455,9 @@ func fall(d: Dictionary, delta: float) -> void:
 	var g := ground_y(Vector2(next.x, next.z))
 	if is_nan(g) or g < 1.45 or g > float(d.ground)+0.6:
 		# Off the edge, into water or against a bank: stop sliding sideways.
+		if (is_nan(g) or g < 1.45) and not d.has("wet") and next.y-r <= float(d.ground)+0.35:
+			d.wet = true
+			life_sound("fruit_water", next, item_pitch(d), -4.0)
 		vel.x = 0.0
 		vel.z = 0.0
 		next = Vector3(d.pos.x, next.y, d.pos.z)
@@ -454,6 +472,9 @@ func fall(d: Dictionary, delta: float) -> void:
 			if int(d.bounces) == 0:
 				Fx.sound(app, "thud", next, randf_range(0.9, 1.15) if d.item != "coconut" else 0.75, -2.0)
 				Fx.burst(self, Vector3(next.x, g+0.05, next.z), "dust", 4, Color(0,0,0,0), 0.1)
+			else:
+				# Later hops: smaller, softer bounces (the first landing is the Fx thud).
+				life_sound("bounce", next, item_pitch(d)*randf_range(0.94, 1.08), -4.0+clampf(-vel.y-3.0, -4.0, 2.0)*2.0)
 			d.bounces = int(d.bounces)+1
 			vel.y = -vel.y*0.32
 			flat *= 0.6
@@ -533,6 +554,7 @@ func pick(d: Dictionary, by_hand := false) -> void:
 	if d.state != "rest" or not is_instance_valid(d.node): return
 	d.state = "take"
 	Fx.squash(d.node, 0.2, 0.25)
+	life_sound("grab", d.pos, item_pitch(d)*randf_range(0.95, 1.06), -2.0 if by_hand else -6.0)
 	if by_hand and is_instance_valid(app) and app.player.has_method("react"):
 		app.player.face_point(d.pos)
 		app.player.react("gather")

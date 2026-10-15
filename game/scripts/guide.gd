@@ -171,6 +171,8 @@ var hud_label: Label
 var rows_box: VBoxContainer
 var rows: Array = []
 var rows_text := ""
+## When the objective lines last turned a page (ms), so a burst of updates turns it once.
+var rows_page_ms := -10000
 var rows_key := "-"
 var rows_metres := -1
 var rows_shown := false
@@ -232,7 +234,7 @@ func stop(by_player := true) -> void:
 	if target.is_empty(): return
 	if by_player:
 		player_stopped = true
-		RpgUi.sfx("close", -10.0)
+		RpgUi.sfx("cancel", -10.0)
 	clear(true)
 
 func active() -> bool:
@@ -538,7 +540,7 @@ func arrive() -> void:
 		Fx.burst(self, at+Vector3(0, 0.9, 0), "sparkle", 22, Color(0,0,0,0), 0.6)
 		Fx.ring(self, at+Vector3(0, 0.06, 0), 2.8, Color(1.0, 0.88, 0.55, 0.85), 1.1)
 		Fx.glow(self, at+Vector3(0, 1.1, 0), Color("ffd27a"), 2.4, 1.1)
-	RpgUi.sfx("confirm", -4.0)
+	RpgUi.sfx("star", -4.0)
 	clear(true)
 	arrived.emit(key)
 
@@ -794,6 +796,10 @@ func sync_rows() -> void:
 			if row.panel.visible and row.far.visible: row.far.text = "%d m" % maxi(0, metres)
 		return
 	if text != rows_text:
+		# New objective lines (not the first fill or a rebuild): a soft page turn.
+		if not rows_text.is_empty() and rows_text != "\u0001" and not text.is_empty() and Time.get_ticks_msec() - rows_page_ms > 1500:
+			rows_page_ms = Time.get_ticks_msec()
+			RpgUi.sfx("page", -14.0)
 		rows_text = text
 		if rows.is_empty(): make_row()
 		var lines := text.split("\n")
@@ -856,7 +862,7 @@ func on_row(row: Dictionary) -> void:
 		return
 	var goal := resolve(key)
 	if goal.is_empty():
-		RpgUi.sfx("close", -8.0)
+		RpgUi.sfx("deny", -8.0)
 		return
 	set_target(goal, false)
 
@@ -890,7 +896,9 @@ func pick_on_map(at: Vector2, id: String) -> void:
 func mark_map(dropped: bool) -> void:
 	if is_instance_valid(map_view):
 		if "route" in map_view: map_view.route = route
-		if dropped and "pin_time" in map_view: map_view.pin_time = Time.get_ticks_msec()*0.001
+		if dropped and "pin_time" in map_view:
+			map_view.pin_time = Time.get_ticks_msec()*0.001
+			RpgUi.sfx("place", -10.0)
 		map_view.queue_redraw()
 	if not is_instance_valid(map_list): return
 	var key := str(target.get("key", ""))

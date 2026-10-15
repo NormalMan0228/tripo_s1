@@ -367,8 +367,32 @@ static func fold_tip(id: String, shut: bool) -> String:
 
 # ------------------------------------------------------------------ sound
 
-## Soft UI sounds on the "UI" bus (Master until that bus exists).
+## Soft UI sounds on the "UI" bus (Master until that bus exists). A kind is a take family,
+## ui/<kind>.wav plus ui/<kind>_<n>.wav (tools/sfx/gen_ui.py), played through a no-repeat shuffle
+## bag (sfx_bank.gd) with +-4 % pitch and +-1 dB jitter. A kind with no takes (not imported yet)
+## falls back to a related kind below; an unknown kind stays silent. A message kind (deny, chat_in,
+## toast_error ...) played right before a message also stands in for the generic toast chime that
+## message raises in the same moment (main.gd message()): that chime is deduped like a repeat.
+## Kinds: hover click open close toast confirm deny tab select slider drawer_open drawer_close
+## count coin_gain chat_in chat_out whisper friend join leave notify toast_success toast_warn
+## toast_error toast_social quest_accept quest_ready quest_complete star unlock rotate snap place
+## lift cancel valid invalid paint brush fill undo redo layer swatch key_capture save
+## craft_submit craft_step craft_done craft_fail page choice.
 static func sfx(kind: String, volume_db := -4.0) -> void:
+	const SfxBank = preload("res://scripts/sfx_bank.gd")
+	const FALLBACK := {"deny": "close", "tab": "click", "select": "click", "slider": "hover", "drawer_open": "open",
+		"drawer_close": "close", "count": "hover", "coin_gain": "toast", "chat_in": "toast", "chat_out": "click",
+		"whisper": "chat_in", "friend": "toast", "join": "open", "leave": "close", "notify": "toast",
+		"toast_success": "confirm", "toast_warn": "toast", "toast_error": "deny", "toast_social": "chat_in",
+		"quest_accept": "confirm", "quest_ready": "toast", "quest_complete": "confirm", "star": "toast",
+		"unlock": "confirm", "rotate": "slider", "snap": "slider", "place": "click", "lift": "click",
+		"cancel": "close", "valid": "hover", "invalid": "deny", "paint": "click", "fill": "click", "undo": "click",
+		"redo": "click", "layer": "click", "swatch": "hover", "key_capture": "click", "save": "confirm",
+		"craft_submit": "confirm", "craft_step": "toast", "craft_done": "confirm", "craft_fail": "deny",
+		"page": "click", "choice": "click"}
+	const FOR_TOAST := ["deny", "coin_gain", "chat_in", "chat_out", "whisper", "friend", "join", "leave", "notify",
+		"toast_success", "toast_warn", "toast_error", "toast_social", "quest_accept", "quest_ready", "quest_complete",
+		"unlock", "save", "craft_submit", "craft_done", "craft_fail", "invalid", "cancel", "paint", "place", "lift"]
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null or tree.root == null: return
 	# Headless runs (tests, tools) have a dummy audio driver that never finishes a playback, so a
@@ -380,28 +404,47 @@ static func sfx(kind: String, volume_db := -4.0) -> void:
 	# One press can reach both a button hook and an older sound.effect("click").
 	if Time.get_ticks_msec() - int(_last_played.get(kind, -1000)) < 60: return
 	_last_played[kind] = Time.get_ticks_msec()
+	if kind in FOR_TOAST: _last_played["toast"] = Time.get_ticks_msec()
+	var family := kind
+	for _hop in 3:
+		if family.is_empty() or SfxBank.has("ui/" + family): break
+		family = str(FALLBACK.get(family, ""))
+	if family.is_empty() or not SfxBank.has("ui/" + family): return
 	var host := tree.root.get_node_or_null("RpgUiSounds")
+	if host == null:
+		# A host made earlier this frame is still waiting for its deferred add: use it, not a second.
+		var waiting = tree.root.get_meta("rpg_ui_sounds", null)
+		if is_instance_valid(waiting) and not (waiting as Node).is_queued_for_deletion(): host = waiting
 	var fresh := host == null
 	if fresh:
 		host = Node.new()
 		host.name = "RpgUiSounds"
 		host.process_mode = Node.PROCESS_MODE_ALWAYS
-		for i in 4: host.add_child(AudioStreamPlayer.new())
+		for i in 6: host.add_child(AudioStreamPlayer.new())
 		tree.root.add_child.call_deferred(host)
-	# Loaded sounds live on the host node, freed with the tree; a static cache kept them
-	# alive past exit ("resources still in use").
+		tree.root.set_meta("rpg_ui_sounds", host)
+	# Take paths come from sfx_bank (cached strings, cleared by CleanExit); the loaded streams live
+	# on the host node, freed with the tree; a static stream cache kept them alive past exit
+	# ("resources still in use").
+	var path := SfxBank.pick_path("ui/" + family)
 	var sounds: Dictionary = host.get_meta("sounds", {})
-	if not sounds.has(kind):
-		var path := "res://assets/sfx/ui/%s.wav" % kind
-		sounds[kind] = load(path) if ResourceLoader.exists(path) else null
+	if not sounds.has(path):
+		sounds[path] = load(path) if ResourceLoader.exists(path) else null
 		host.set_meta("sounds", sounds)
-	if sounds[kind] == null: return
-	var voice: AudioStreamPlayer = host.get_child(_voice % host.get_child_count())
+	if sounds[path] == null: return
+	# A free player first (a fanfare is not cut by the next hover tick), else the oldest in turn.
+	var count := host.get_child_count()
+	var voice: AudioStreamPlayer = host.get_child(_voice % count)
+	for k in count:
+		var free_one: AudioStreamPlayer = host.get_child((_voice + k) % count)
+		if not free_one.playing:
+			voice = free_one
+			break
 	_voice += 1
 	voice.bus = "UI" if AudioServer.get_bus_index("UI") != -1 else "Master"
-	voice.stream = sounds[kind]
-	voice.volume_db = volume_db
-	voice.pitch_scale = randf_range(0.97, 1.03)
+	voice.stream = sounds[path]
+	voice.volume_db = volume_db + SfxBank.db(1.0)
+	voice.pitch_scale = SfxBank.pitch(0.04)
 	if fresh or not voice.is_inside_tree(): voice.play.call_deferred()
 	else: voice.play()
 

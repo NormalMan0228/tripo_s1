@@ -3,6 +3,8 @@ extends Node
 const AvatarLook = preload("res://scripts/avatar_look.gd")
 ## Other players' walk, drawn smoothly from the irregular replies (remote_motion.gd).
 const RemoteMotion = preload("res://scripts/remote_motion.gd")
+## RpgUi (rpg_ui.gd), for the chat, invite and arrival sounds.
+const UiSound = preload("res://scripts/rpg_ui.gd")
 ## The village shares this player's spot four times a second. On an expedition the run carries the
 ## party's spots, and while a screen loads a slower heartbeat still says this player is here: a
 ## host who goes quiet for long (server/multiplayer.py HOST_GONE_SECONDS) has left, and the guests
@@ -24,6 +26,10 @@ var changing := false
 var objects_pending := false
 var object_signature := ""
 var seen_message := 0
+## Invites counted at the last poll (-1: none read yet), so only a new one chimes.
+var seen_invites := -1
+## False until the first sync after a world change: the walkers already there arrive silently.
+var peer_baseline := false
 var status_label: Label
 var menu_messages: Label
 var last_failure := 0.0
@@ -92,11 +98,13 @@ func update_status() -> void:
 
 func reset_world() -> void:
 	peers.clear()
+	peer_baseline = false
 	object_signature = ""
 
 func reset_session() -> void:
 	data.clear()
 	seen_message = 0
+	seen_invites = -1
 	reset_world()
 
 func _process(delta: float) -> void:
@@ -167,10 +175,17 @@ func poll() -> void:
 	# The host's residents' home versions (npc_gifts.gd), so a cached house stays current.
 	preload("res://scripts/npc_gifts.gd").set_versions(data.get("npc_homes"), data.get("host_id", ""))
 	update_status()
+	# The first read after signing in is a backlog: shown, not sounded.
+	var backlog := seen_message == 0
+	var heard := false
 	for entry in data.get("messages", []):
 		if int(entry.id) > seen_message:
 			seen_message = int(entry.id)
+			if not backlog and not heard: heard = chat_sound(entry)
 			app.message(entry.username+": "+entry.text)
+	var invites: int = data.get("invites", []).size()
+	if seen_invites >= 0 and invites > seen_invites: UiSound.sfx("friend", -4.0)
+	seen_invites = invites
 	if app.screen == "village":
 		if not old_host.is_empty() and old_host != str(data.host_id):
 			changing = true
@@ -180,7 +195,9 @@ func poll() -> void:
 			return
 		announce_visit_end()
 		if data.get("village") is Dictionary:
+			var before := peers.keys()
 			sync_peers(data.village.players)
+			peer_sounds(before)
 			if visiting():
 				accept_crops()
 				await refresh_guest_objects()
@@ -189,6 +206,23 @@ func poll() -> void:
 			changing = true
 			await app.start_run("forest", "standard", "", str(party.run_id))
 			changing = false
+
+## The sound of one new chat line, played before its toast (it stands in for the toast chime): none
+## for a history line (a replayed backlog) or this player's own line (sending already sounded).
+func chat_sound(entry: Dictionary) -> bool:
+	if bool(entry.get("history", false)): return false
+	if str(entry.get("username", "")) == str(app.me.get("username", "")): return false
+	var whisper := bool(entry.get("whisper", false)) or str(entry.get("kind", "")) == "whisper"
+	UiSound.sfx("whisper" if whisper else "chat_in", -4.0)
+	return true
+
+## A soft chime when another player arrives in this village or leaves it.
+func peer_sounds(before: Array) -> void:
+	var settled := peer_baseline
+	peer_baseline = true
+	if not settled: return
+	if peers.keys().any(func(id): return not before.has(id)): UiSound.sfx("join", -6.0)
+	elif before.any(func(id): return not peers.has(id)): UiSound.sfx("leave", -6.0)
 
 func accept_crops() -> void:
 	if not data.get("village") is Dictionary: return
@@ -285,6 +319,7 @@ func _notification(what: int) -> void:
 func perform(path: String, payload: Dictionary = {}) -> Dictionary:
 	var result: Dictionary = await app.api.post(path, app.api.mutation(payload))
 	if not result.ok:
+		UiSound.sfx("deny", -4.0)
 		var messages := {"host_offline":tr("초대한 친구가 지금 마을에 없어요."), "party_full":tr("파티는 최대 3명입니다."), "village_full":tr("마을은 주인을 포함해 최대 3명입니다."), "already_in_party":tr("이미 파티에 참여 중입니다."), "party_leader_required":tr("파티장만 할 수 있습니다."), "party_members_not_in_village":tr("모두 마을에 접속한 뒤 출발해 주세요."), "member_has_solo_expedition":tr("개인 생존 탐험을 마친 뒤 파티로 출발해 주세요."), "party_needs_two_players":tr("동료를 초대해 2명 이상 모여 주세요."), "party_expedition_active":tr("진행 중인 협동 탐험으로 돌아가 주세요."), "leave_expedition_first":tr("탐험에서 귀환한 뒤 파티를 나갈 수 있습니다."), "invite_target_unavailable":tr("가입한 사용자 이름을 확인해 주세요."), "invitation_expired":tr("만료되었거나 이미 처리된 초대입니다."), "message_rate_limited":tr("메시지는 1초 간격으로 보낼 수 있습니다.")}
 		app.message(messages.get(result.error, app.error_message(result.error)))
 	return result
@@ -314,10 +349,10 @@ func open_menu() -> void:
 	invite_row.add_child(name_input)
 	app.button(invite_row, tr("내 마을로 초대"), func():
 		var result: Dictionary = await perform("/v1/social/invites", {"username":name_input.text, "kind":"village"})
-		if result.ok: app.message(tr("마을 초대를 보냈습니다.")))
+		if result.ok: invited(tr("마을 초대를 보냈습니다.")))
 	app.button(invite_row, tr("파티로 초대"), func():
 		var result: Dictionary = await perform("/v1/social/invites", {"username":name_input.text, "kind":"party"})
-		if result.ok: app.message(tr("파티 초대를 보냈습니다.")))
+		if result.ok: invited(tr("파티 초대를 보냈습니다.")))
 	for invitation in data.get("invites", []):
 		var row := HBoxContainer.new()
 		content.add_child(row)
@@ -379,6 +414,11 @@ func open_menu() -> void:
 	app.button(content, tr("초대 확인하기"), open_menu)
 	update_status()
 
+## An invite went out: a send sound with its toast.
+func invited(text: String) -> void:
+	UiSound.sfx("chat_out", -4.0)
+	app.message(text)
+
 func answer(invitation: Dictionary, decision: String) -> void:
 	if changing: return
 	changing = true
@@ -396,6 +436,7 @@ func answer(invitation: Dictionary, decision: String) -> void:
 		return
 	data.merge(response.data, true)
 	changing = false
+	UiSound.sfx("friend" if decision == "accept" else "cancel", -4.0)
 	app.close_village_modal()
 	if invitation.kind == "village" and decision == "accept":
 		data.erase("village")
@@ -419,4 +460,6 @@ func return_home() -> void:
 
 func send_message(value: String) -> void:
 	if not enabled or value.strip_edges().is_empty(): return
-	if (await perform("/v1/social/messages", {"text":value})).ok: await poll()
+	if (await perform("/v1/social/messages", {"text":value})).ok:
+		UiSound.sfx("chat_out", -4.0)
+		await poll()

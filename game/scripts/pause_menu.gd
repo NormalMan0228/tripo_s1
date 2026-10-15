@@ -74,6 +74,7 @@ func _ready() -> void:
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(shade)
 	show_main()
+	RpgUi.sfx("open", -6.0)
 	if not GameSettings.reduced_motion():
 		root.modulate.a = 0.0
 		root.create_tween().tween_property(root, "modulate:a", 1.0, 0.12)
@@ -83,6 +84,7 @@ func dismiss() -> void:
 		app.paused = false
 	paused_run = false
 	if current == self: current = null
+	if not is_queued_for_deletion(): RpgUi.sfx("close", -8.0)
 	queue_free()
 
 func _exit_tree() -> void:

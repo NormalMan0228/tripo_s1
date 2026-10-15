@@ -2115,7 +2115,14 @@ func tick_run() -> void:
 		HeroVoice.play(self,"hurt")
 		player.react("hurt")
 		floating_feedback("−%d" % int(ceil(run.hp-result.data.hp)),player.position,Color("ef9983"))
-	if result.data.status=="won" and run.get("status","")!="won": sound.effect("reward")
+	else:
+		# A telegraphed strike ended (windup -> recover) without hurting the hero or being interrupted: it missed.
+		for after in result.data.get("enemies",[]):
+			if str(after.get("phase",""))!="recover": continue
+			for before in run.get("enemies",[]):
+				if before.id==after.id and str(before.get("phase",""))=="windup" and float(after.hp)>=float(before.hp):
+					CombatAudio.play(self,"whiff",Vector3(float(after.get("target_x",after.x)),0,float(after.get("target_z",after.z))))
+	# A won run is voiced once by the hero's level-up chime in update_run (no reward jingle on top).
 	if not str(payload.action).is_empty():
 		var feedback: String=result.data.message
 		if feedback.contains("+"):
@@ -2124,32 +2131,46 @@ func tick_run() -> void:
 					player.equip("axe" if n.kind=="tree" and run.inventory.axe>0 else "")
 					player.face_point(Vector3(n.x,0,n.z))
 					resource_response(n)
-					CombatAudio.harvest(self,n.kind,Vector3(n.x,0,n.z))
+					CombatAudio.harvest(self,n.kind,Vector3(n.x,0,n.z),"axe" if run.inventory.axe>0 else "")
 			player.react("gather")
-			HeroVoice.play(self,"harvest")
+			if not HeroVoice.play(self,"harvest"): HeroVoice.play(self,"pickup")
 			floating_feedback(feedback,player.position,Color("ece1b4"))
 		elif feedback.contains("제작 완료"):
-			sound.effect("craft")
+			if not CombatAudio.craft(self,str(payload.target)): sound.effect("craft")
+			HeroVoice.play(self,"pickup",0.0,true)
 			player.react("craft")
 			floating_feedback(feedback,player.position,Color("b8dfb1"))
-		elif feedback.contains("먹었습니다") or feedback.contains("회복했습니다"):
+		elif feedback.contains("회복했습니다"):
+			if not CombatAudio.play(self,"bandage"): sound.effect("eat")
+			player.react("eat")
+		elif feedback.contains("먹었습니다"):
 			sound.effect("eat")
 			player.react("eat")
 			HeroVoice.play(self,"eat")
 		elif feedback.contains("피웠습니다"): CombatAudio.play(self,"fuel",Vector3.ZERO)
 		elif feedback.contains("공격!") or feedback=="가까운 적이 없습니다.":
-			CombatAudio.swing(self,"spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else "")
-			HeroVoice.play(self,"attack")
-			player.equip("spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else "")
+			var weapon: String="spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else ""
+			var struck_enemy := {}
+			var hp_left := 0.0
 			for enemy in run.enemies:
 				var hp_after := 0.0
 				for after in result.data.enemies:
 					if after.id==enemy.id: hp_after=after.hp
 				if hp_after<enemy.hp:
-					CombatAudio.impact(self,str(enemy.get("kind","wolf")),Vector3(enemy.x,0,enemy.z),hp_after<=0)
-					player.face_point(Vector3(enemy.x,0,enemy.z))
-					floating_feedback(str(int(enemy.hp-hp_after)),Vector3(enemy.x,0,enemy.z),Color("f3c980"))
+					struck_enemy=enemy
+					hp_left=hp_after
 					break
+			var kill: bool=not struck_enemy.is_empty() and hp_left<=0
+			CombatAudio.swing(self,weapon,kill)
+			HeroVoice.play(self,"attack_heavy" if kill or CombatAudio.combo%3==0 else "attack")
+			player.equip(weapon)
+			if not struck_enemy.is_empty():
+				var at := Vector3(struck_enemy.x,0,struck_enemy.z)
+				CombatAudio.impact(self,str(struck_enemy.get("kind","wolf")),at,kill)
+				# The blow cut a telegraphed strike short: the clash of a parry.
+				if str(struck_enemy.get("phase",""))=="windup" and not kill: CombatAudio.play(self,"block",at)
+				player.face_point(at)
+				floating_feedback(str(int(struck_enemy.hp-hp_left)),at,Color("f3c980"))
 			player.react("attack")
 			attack_sweep()
 	run=result.data
@@ -2274,10 +2295,12 @@ func update_run() -> void:
 		player.equip("spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else "")
 	message(run.message)
 	if run.status=="won": message(tr("생존 성공! 마을로 돌아가 %d 별씨를 받으세요.") % run.reward)
+	var dawn_now: bool=bool(run.night)!=prior_night and not bool(run.night)
 	if int(run.day)!=prior_day:
 		prior_day=int(run.day)
 		message(tr("%d일째 아침이에요. 숲을 둘러보고 다음 밤을 준비하세요.") % run.day)
-		sound.effect("reward")
+		# The dawn sting already marks the new morning; the reward jingle only plays without it.
+		if not dawn_now: sound.effect("reward")
 	if bool(run.night)!=prior_night:
 		prior_night=bool(run.night)
 		CombatAudio.play(self,"night" if run.night else "dawn")
@@ -2289,6 +2312,7 @@ func update_run() -> void:
 		show_results()
 	flame.visible=run.fire_remaining>0
 	warmth_ring.visible=flame.visible
+	survival_audio(remaining)
 	if run.status=="active" and run.elapsed-last_camp_warning>12:
 		if run.night and run.fire_remaining>0 and run.fire_remaining<7:
 			message(tr("모닥불이 곧 꺼져요. 야영지에서 F로 목재를 보태세요."))
@@ -2306,6 +2330,10 @@ func update_run() -> void:
 			# The survival map supplies Tripo trees, stone piles, berry bushes and grass
 			# (plus a stump for felled trees) per map, with the old shapes as fallback.
 			preload("res://scripts/biomes.gd").dress_resource(world,root,n.kind)
+		# A node that was full and is now used up: its last piece breaks off (not on first sight).
+		var spent: bool=n.quantity<=0
+		if spent and nodes[n.id].has_meta("full") and nodes[n.id].get_meta("full"): CombatAudio.depleted(self,str(n.kind),Vector3(n.x,0,n.z))
+		nodes[n.id].set_meta("full",not spent)
 		if n.kind=="tree":
 			for child in nodes[n.id].get_children(): child.visible=(n.quantity<=0) if child.name=="Stump" else (n.quantity>0)
 		else: nodes[n.id].visible=n.quantity>0
@@ -2349,6 +2377,25 @@ func update_run() -> void:
 			enemy_nodes.erase(id)
 			strike_markers[id].queue_free()
 			strike_markers.erase(id)
+
+## Survival sounds that follow the run state on every update: sprint/dodge start, hunger / cold /
+## ember-ground cues, the ten-second night warning, the campfire loop and a newly crafted weapon.
+func survival_audio(remaining: int) -> void:
+	var active: bool=run.get("status","")=="active"
+	if CombatAudio.edge("sprint",active and bool(run.get("sprinting",false))):
+		CombatAudio.play(self,"dodge")
+		HeroVoice.play(self,"dodge")
+	var hunger := float(run.get("hunger",100.0))
+	CombatAudio.cue(self,"hunger",active and hunger<30.0,10.0 if hunger<=0.0 else 26.0)
+	# Not on top of the night sting: the cold cue waits until it has rung out.
+	var settling: bool=Time.get_ticks_msec()*0.001-float(CombatAudio.last_time.get("night",-10.0))<3.0
+	CombatAudio.cue(self,"cold",active and bool(run.night) and not bool(run.get("warm",false)) and not settling,14.0)
+	CombatAudio.cue(self,"ember",active and str(run.get("terrain_effect",""))=="ember",2.5)
+	if CombatAudio.edge("night_warn",active and not bool(run.night) and remaining<=10 and remaining>0): CombatAudio.play(self,"night_warn")
+	CombatAudio.campfire(self,float(run.get("fire_remaining",0.0)) if active else 0.0,Vector3.ZERO,bool(run.night))
+	var weapon: String="spear" if int(run.inventory.get("spear",0))>0 else "axe" if int(run.inventory.get("axe",0))>0 else ""
+	# After the crafting sound: the new weapon settles into the hero's hand.
+	if CombatAudio.changed("weapon/"+run_id,weapon) and not weapon.is_empty(): CombatAudio.later(self,"equip",0.6)
 
 func resource_response(resource: Dictionary) -> void:
 	if not nodes.has(resource.id): return

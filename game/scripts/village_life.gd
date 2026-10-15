@@ -12,6 +12,8 @@ const Forage=preload("res://scripts/forage.gd")
 const Fishing=preload("res://scripts/fishing.gd")
 const RpgUi=preload("res://scripts/rpg_ui.gd")
 const CROP_ORDER := ["turnip","carrot","pumpkin","strawberry","sunflower"]
+## Sound.effect kind per shop/server action (sound.gd core take families).
+const ACTION_SOUNDS := {"harvest":"reward","sell":"sell","buy":"buy","order":"errand","reel":"reward"}
 var app: Node3D
 var state: Dictionary={}
 var synced_at := 0.0
@@ -92,19 +94,25 @@ func request(kind: String, extra: Dictionary={}) -> Dictionary:
 	if epoch!=app.world_epoch: return {}
 	if not response.ok:
 		app.message(errors.get(response.error,app.error_message(response.error)))
-		sfx.play("escape",1.3,-4)
+		deny()
 		await refresh()
 		return {}
 	accept(response.data)
 	last_reward=response.data.get("reward",{})
 	return response.data
 
+## Refusals and server errors: the soft deny of sound.gd (UI bus), else the old escape blip.
+func deny() -> void:
+	var sound = app.get("sound") if is_instance_valid(app) else null
+	if is_instance_valid(sound) and sound.has_method("effect"): sound.effect("error")
+	else: sfx.play("escape",1.3,-4)
+
 ## Older call sites (shop, tree shaking, tests): message, sound and item feedback.
 func action(kind: String, extra: Dictionary={}) -> bool:
 	var data: Dictionary=await request(kind,extra)
 	if data.is_empty(): return false
 	app.message(data.message)
-	app.sound.effect("reward" if kind in ["harvest","sell","order","reel"] else "gather")
+	app.sound.effect(ACTION_SOUNDS.get(kind,"gather"))
 	if kind in ["plant","water","harvest","gather"]: app.player.react("gather")
 	if kind=="gather" and data.get("reward",{}).has("items"): fly_items(data.reward.items,app.player.position+Vector3(0,1.2,0))
 	return true
@@ -217,7 +225,7 @@ func interact() -> void:
 		"gather":
 			await action("gather",{"item":place.id})
 		"bell":
-			app.sound.effect("reward")
+			sfx.play("bell")
 			app.floating_feedback(tr("종소리가 마을에 퍼집니다"),app.player.position,Color("f4d58e"))
 			app.message(tr("등대 종소리를 들으며 잠시 쉬어 가세요. Tab으로 다음 목적지를 고를 수 있어요."))
 		"view":
@@ -226,10 +234,9 @@ func interact() -> void:
 			app.camera.size=34
 			app.text(v,tr("다섯 섬과 다리가 한눈에 보여요.\nEsc를 누르면 산책으로 돌아갑니다."),16)
 
-## A locked door: two soft knocks and the reason as a toast instead of entering.
+## A locked door: a few soft knocks on the wood and the reason as a toast instead of entering.
 func knock(place: Dictionary) -> void:
-	sfx.play("rock",0.55,-3)
-	get_tree().create_timer(0.17).timeout.connect(func(): if is_instance_valid(sfx): sfx.play("rock",0.6,-5))
+	sfx.play("knock",1.0,-3)
 	app.message(str(place.get("message","")) if not str(place.get("message","")).is_empty() else tr("불이 꺼져 있어요. 다들 곤히 자고 있나 봐요."))
 
 # ------------------------------------------------------------------ farming
@@ -389,6 +396,9 @@ func gather_spot(spot: Dictionary) -> void:
 	app.player.react("gather")
 	forage.anticipate(spot)
 	sfx.play(Forage.SOUNDS[spot.kind],randf_range(0.95,1.08))
+	if Forage.LAYERS.has(spot.kind):
+		var layer: Array=Forage.LAYERS[spot.kind]
+		get_tree().create_timer(float(layer[1])).timeout.connect(func(): if is_instance_valid(sfx): sfx.play(layer[0],1.0,float(layer[2])))
 	var data := await request("gather",{"node":spot.id})
 	forage.finish(spot,not data.is_empty())
 	if data.is_empty(): return
@@ -429,6 +439,7 @@ func fly_items(items: Dictionary, from: Vector3, delay := 0.0) -> void:
 			t.parallel().tween_property(icon,"scale",Vector2.ONE*0.55,0.5)
 			t.tween_callback(func():
 				icon.queue_free()
+				if is_instance_valid(sfx): sfx.pocket()
 				if is_instance_valid(slot):
 					slot.pivot_offset=slot.size*0.5
 					var bump := slot.create_tween()

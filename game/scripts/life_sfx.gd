@@ -1,34 +1,98 @@
 extends Node
-## Small synthesized sounds for farming, fishing and foraging. They play on the
-## SFX bus (game_settings.gd), under Master, so the M mute silences them too.
+## Sounds for farming, fishing and foraging. Every kind is a take family
+## res://assets/sfx/life/<kind>_<n>.wav (tools/sfx/gen_life.py) picked through sfx_bank.gd: a
+## shuffle bag (no take repeats back to back) with a little pitch and volume jitter on every
+## play, multiplied with the caller's pitch. A kind without takes (not imported yet) falls back
+## to its old synthesized sound below. They play on the SFX bus (game_settings.gd), under
+## Master, so the M mute silences them too.
+const SfxBank = preload("res://scripts/sfx_bank.gd")
 const RATE := 22050
+const VOLUME := -13.0
+## Baked takes sit this far under the synth they replace (gen_life.py HEADROOM_DB).
+const BAKED_DB := 6.0
+const PITCH_JITTER := 0.04
+const DB_JITTER := 1.0
+## Recorded gathering sounds (shared with the expedition harvest), used for forage pick-ups:
+## take families whose _1 is the team recording.
+const SAMPLES := {"dig_stone":"res://assets/sfx/combat/harvest_stone","dig_grass":"res://assets/sfx/combat/harvest_fiber",
+	"chop_wood":"res://assets/sfx/combat/harvest_tree"}
+## Kinds that only exist as take families: the old synth (kind, pitch, dB) standing in for them.
+const STAND_IN := {"knock":["rock",0.55,-3.0],"bell":["catch",0.5,0.0],"thrash":["plop",0.8,0.0],"ripple":["plop",1.3,-8.0],
+	"whiz":["cast",1.3,-6.0],"windup":["cast",0.8,-6.0],"strike":["cast",1.4,-2.0],"reel_back":["tick",0.8,-4.0],
+	"fish_out":["plop",0.7,0.0],"rod_equip":["rock",0.8,-6.0],"pocket":["collect",1.5,-8.0],"fruit_detach":["rustle",1.4,-4.0],
+	"bounce":["rock",0.5,-4.0],"fruit_water":["plop",0.6,0.0],"grab":["rustle",0.8,-6.0]}
+## Pocket plips climb this pentatonic ladder (semitones) while items keep landing in the bag.
+const LADDER := [0,2,4,7,9,12,14,16]
+const LADDER_GAP := 0.9
 var streams := {}
 var voices: Array[AudioStreamPlayer]=[]
 var next := 0
+var ladder_step := 0
+var ladder_at := -10.0
 
 func _ready() -> void:
-	for i in 6:
+	for i in 8:
 		var p := AudioStreamPlayer.new()
-		p.volume_db=-13
+		p.volume_db=VOLUME
 		p.bus=&"SFX"
 		add_child(p)
 		voices.append(p)
 
 func play(kind: String, pitch := 1.0, volume := 0.0) -> void:
-	if not streams.has(kind): streams[kind]=make(kind)
-	var p := voices[next]
-	next=(next+1)%voices.size()
-	p.stream=streams[kind]
-	p.pitch_scale=pitch
-	p.volume_db=-13+volume
+	_play(kind,pitch,volume,PITCH_JITTER)
+
+## A sound at a world position heard from `listener` (the walker): -0.8 dB per metre past
+## 3 m like Fx.sound, nothing once it is 30 dB down.
+func play_at(kind: String, at: Vector3, listener: Vector3, pitch := 1.0, volume := 0.0) -> void:
+	var fall := clampf(listener.distance_to(at)-3.0,0.0,40.0)*0.8
+	if fall>=30.0: return
+	_play(kind,pitch,volume-fall,PITCH_JITTER)
+
+## An item lands in the bag: landings less than LADDER_GAP s apart climb a pentatonic ladder.
+func pocket(volume := -4.0) -> void:
+	var now := Time.get_ticks_msec()*0.001
+	ladder_step=mini(ladder_step+1,LADDER.size()-1) if now-ladder_at<LADDER_GAP else 0
+	ladder_at=now
+	_play("pocket",pow(2.0,float(LADDER[ladder_step])/12.0),volume,0.008)
+
+## The take for `kind` from its family (null when it has none): life/<kind>, or the recorded
+## harvest family for the SAMPLES kinds.
+func baked(kind: String) -> AudioStream:
+	return SfxBank.pick(SAMPLES[kind] if SAMPLES.has(kind) else "life/"+kind)
+
+func _play(kind: String, pitch: float, volume: float, spread: float) -> void:
+	if voices.is_empty(): return
+	var stream: AudioStream = baked(kind)
+	if stream!=null:
+		if not SAMPLES.has(kind): volume+=BAKED_DB
+	else:
+		var synth := kind
+		if STAND_IN.has(kind):
+			var stand: Array=STAND_IN[kind]
+			synth=stand[0]
+			pitch*=float(stand[1])
+			volume+=float(stand[2])
+		if not streams.has(synth): streams[synth]=make(synth)
+		stream=streams[synth]
+	var p := _voice()
+	p.stream=stream
+	p.pitch_scale=clampf(pitch*SfxBank.pitch(spread),0.25,4.0)
+	p.volume_db=VOLUME+volume+SfxBank.db(DB_JITTER)
 	p.play()
 
-## Recorded gathering sounds (shared with the expedition harvest), used for forage pick-ups.
-const SAMPLES := {"dig_stone":"res://assets/sfx/combat/harvest_stone_1.wav","dig_grass":"res://assets/sfx/combat/harvest_fiber_1.wav",
-	"chop_wood":"res://assets/sfx/combat/harvest_tree_1.wav"}
+## The next idle player of the ring, or the next one in turn when all are busy.
+func _voice() -> AudioStreamPlayer:
+	for k in voices.size():
+		var p := voices[(next+k)%voices.size()]
+		if not p.playing:
+			next=(next+k+1)%voices.size()
+			return p
+	var p := voices[next]
+	next=(next+1)%voices.size()
+	return p
 
 func make(kind: String) -> AudioStream:
-	if SAMPLES.has(kind) and ResourceLoader.exists(SAMPLES[kind]): return load(SAMPLES[kind])
+	if SAMPLES.has(kind) and ResourceLoader.exists(SAMPLES[kind]+"_1.wav"): return load(SAMPLES[kind]+"_1.wav")
 	var length: float={"hoe":0.26,"seed":0.3,"water":0.75,"pop":0.22,"collect":0.42,"cast":0.4,"plop":0.22,"nibble":0.09,
 		"bite":0.5,"tick":0.035,"catch":1.1,"escape":0.45,"rock":0.22,"rustle":0.32,"shell":0.2,"card":0.35}.get(kind,0.2)
 	var n := int(length*RATE)

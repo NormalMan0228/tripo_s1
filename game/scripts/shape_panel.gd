@@ -25,6 +25,9 @@ var reset_button: Button
 var size_readout: Label
 var busy := false
 var syncing := false
+## Slider detent ticks: the value each slider last ticked at, and when the last tick played (ms).
+var detents := {}
+var detent_ms := -1000
 
 static var _theme: Theme
 
@@ -143,8 +146,19 @@ func _unhandled_key_input(event: InputEvent) -> void:
 
 func changed(key: String, value) -> void:
 	if syncing: return
+	if key != "mirror": detent(key, int(value))
 	draft[key] = bool(value) if key == "mirror" else int(value)
 	refresh()
+
+## One soft tick per 5 % of slider travel (a firmer snap landing on 100 %), at most one per 40 ms.
+func detent(key: String, value: int) -> void:
+	var last := int(detents.get(key, int(draft.get(key, 100))))
+	var home := value == 100 and last != 100
+	if absi(value - last) < 5 and not home: return
+	if Time.get_ticks_msec() - detent_ms < 40: return
+	detents[key] = value
+	detent_ms = Time.get_ticks_msec()
+	RpgUi.sfx("snap" if home else "slider", -9.0 if home else -11.0)
 
 ## Sliders, numbers and every copy on screen follow the draft.
 func refresh() -> void:
@@ -187,9 +201,11 @@ func reset() -> void:
 		# Nothing saved to undo: only the sliders go back.
 		draft = ObjectTransform.DEFAULT.duplicate()
 		sync_controls()
+		RpgUi.sfx("undo", -9.0)
 		return
 	draft = ObjectTransform.DEFAULT.duplicate()
 	sync_controls()
+	RpgUi.sfx("undo", -9.0)
 	await send({"version": version, "reset": true})
 
 func send(body: Dictionary) -> bool:
@@ -201,6 +217,7 @@ func send(body: Dictionary) -> bool:
 	if not reply.ok:
 		var words := {"object_is_listed": tr("장터에 올린 물건은 모양을 바꿀 수 없어요."), "stale_shape_version": tr("다른 곳에서 모양이 바뀌었어요. 다시 열어 주세요."), "object_not_found": tr("물건을 찾을 수 없어요.")}
 		say.call(words.get(str(reply.error), tr("모양을 저장하지 못했어요.")))
+		RpgUi.sfx("deny", -6.0)
 		refresh()
 		return false
 	stored = ObjectTransform.shape_of(reply.data)
@@ -214,7 +231,7 @@ func send(body: Dictionary) -> bool:
 
 ## A short squash-and-settle on every copy and a chime instead of a sentence.
 func celebrate() -> void:
-	RpgUi.sfx("confirm", -6.0)
+	RpgUi.sfx("save", -6.0)
 	if RpgUi.calm(): return
 	for node in shown():
 		var frame := ObjectTransform.frame_of(node)
