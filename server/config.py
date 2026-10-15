@@ -165,6 +165,10 @@ class Settings:
     studio_credit_rate: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_STARS_PER_CREDIT','1')))
     llm_key: str = field(default_factory=lambda: configured_secret('OPENAI_API_KEY'), repr=False)
     gemini_key: str = field(default_factory=lambda: configured_secret('GEMINI_API_KEY'), repr=False)
+    # Shared UTC-day call budget for craft/interaction design, including failed calls,
+    # repairs and model retries. Testers use the same caps; 0 disables LLM calls.
+    llm_user_daily_call_limit: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_LLM_USER_DAILY_CALL_LIMIT', '20')))
+    llm_server_daily_call_limit: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_LLM_SERVER_DAILY_CALL_LIMIT', '1000')))
     # Tried in order; a model the key cannot use (404) falls through to the next.
     gemini_models: tuple = field(default_factory=lambda: tuple(m.strip() for m in os.getenv(
         'TRIPOTHON_GEMINI_MODELS', 'gemini-3.5-flash,gemini-3.8-flash,gemini-3.1-flash-lite').split(',') if m.strip()))
@@ -206,6 +210,10 @@ class Settings:
             raise ValueError('Invalid studio LLM provider')
         if self.studio_design_format not in ('classic','structured'):
             raise ValueError('Invalid studio design format')
+        if (type(self.llm_user_daily_call_limit) is not int or type(self.llm_server_daily_call_limit) is not int
+                or not 0 <= self.llm_user_daily_call_limit <= 1000000
+                or not 0 <= self.llm_server_daily_call_limit <= 1000000):
+            raise ValueError('Invalid LLM daily call limits')
         if self.mode=='live' and self.studio_llm=='codex':
             raise ValueError('Codex subscription experiments are local development only')
         if self.mode == 'live' and self.day_seconds != 90:
