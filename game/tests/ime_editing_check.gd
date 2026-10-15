@@ -142,7 +142,11 @@ func run() -> void:
 	var app: Node = Main.new()
 	root.add_child(app)
 	var deadline := Time.get_ticks_msec() + 60000
-	while app.screen != "login" and Time.get_ticks_msec() < deadline: await process_frame
+	# main.screen starts as "login" before _ready has built anything: wait for the title's own menu
+	# (after the village build and the launch version check), as a player sees it, then open the login
+	# page from it. Opening it earlier let _ready's login_ui("checking")/("menu") replace it.
+	while app.title_page != "menu" and Time.get_ticks_msec() < deadline: await process_frame
+	expect(app.title_page == "menu", "the title reaches its menu (page '%s')" % app.title_page)
 	app.login_ui("login")
 	await frames(10)
 	# The title's arrival veil takes clicks until it has faded.
