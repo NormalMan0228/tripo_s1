@@ -460,7 +460,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 # The opening story chapter (server/story.py), None for accounts without it.
                 'story':app.state.story.public_for(conn,user['id']),
                 # Residents' requests (server/quests.py brief: states only; the full list is /v1/quests).
-                'quests':app.state.quests.brief_for(conn,user['id'])}
+                'quests':app.state.quests.brief_for(conn,user['id']),
+                # Treasure chests already opened (server/treasure.py brief), so the game draws them open.
+                'chests':app.state.treasure.brief_for(conn,user['id'])}
 
     @app.post('/v1/objects/{object_id}')
     def edit_object(object_id:str,body:ObjectEdit,request:Request):
@@ -654,6 +656,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.story=Story(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
     from .quests import Quests
     app.state.quests=Quests(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
+    from .treasure import Treasure
+    app.state.treasure=Treasure(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
     from .interactions import Interactions
     app.state.interactions=Interactions(app,db,settings,clock,auth,mutate,own,money,studio)
     from .usage_report import UsageReport; app.state.usage_report=UsageReport(app,db,settings,clock)
