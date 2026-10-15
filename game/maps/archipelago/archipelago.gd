@@ -10,6 +10,7 @@ const SPRAY_AT := Vector3(.996,0,-7.937)
 const LoadPace = preload("res://scripts/load_pace.gd")
 ## Generated data (simplified collision, tools/bake_archipelago.gd), used only while it matches the inputs.
 const IslandBake = preload("res://maps/archipelago/island_bake.gd")
+const GroundChunks = preload("res://maps/archipelago/ground_chunks.gd")
 var camera: Camera3D
 var spray: MultiMeshInstance3D
 var mist: MultiMeshInstance3D
@@ -102,6 +103,7 @@ func _build_from_bake() -> bool:
 	(get_node("Buildings") as Node).restore(self)
 	(get_node("Environment") as Node).restore(self)
 	_create_water_spray()
+	_start_ground_lights()
 	LoadPace.mark("island lists restored")
 	span = LoadPace.narrow(0.85, 1.0)
 	var shared := {}
@@ -228,6 +230,7 @@ func _build_runtime() -> void:
 	LoadPace.span = span
 	IslandBake.drop_collision()
 	_create_water_spray()
+	_start_ground_lights()
 	if LoadPace.covered:
 		# Under the card the map is finished before it shows: rock walls paced (in one go they held a
 		# frame), then the roots and ramps that wait a few physics steps (bury waits fewer than ramp).
@@ -254,6 +257,14 @@ func _install_ground(terrain: Node3D, packed: PackedScene) -> void:
 		m.material_override = null
 		m.mesh = null
 		m.visible = false
+
+## The chunks draw on their own render layer, which five lamps leave out (GroundChunks.DARK_LAMPS);
+## --all-lamp-pools puts them on layer 1 too, so every lamp pools on the ground.
+func _start_ground_lights() -> void:
+	var ground := get_node_or_null("Ground")
+	if ground == null or not GroundChunks.all_lamp_pools: return
+	for chunk in ground.get_children():
+		if chunk.has_meta("island"): (chunk as VisualInstance3D).layers |= 1
 
 ## Walkers could climb the shore rocks a step at a time and wedge themselves in
 ## the gaps. Every rock cluster taller than ROCK_WALL_HEIGHT gets an invisible

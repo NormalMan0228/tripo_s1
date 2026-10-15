@@ -21,6 +21,24 @@ const FORMAT := 1
 const ARRAYS_META := "ground_chunk_arrays"
 static var keep_arrays := false
 
+## Lamp light on the ground. The Compatibility renderer lights an object with at most 8 omni lights.
+## Each island's ground was one object, so the lights beyond the first 8 over an island's (sea-wide)
+## ground box lit none of it: measured at night (tests/terrain_ab_capture.gd --lampsets, 2026-10-15,
+## two sessions alike) 34 of the 39 lights made a pool on the ground and the five DARK_LAMPS did not.
+## No chunk is reached by more than 8 lights, so in chunks every lamp would pool. To keep the night
+## as it was, the chunks draw on GROUND_LAYER alone and these lamps leave it out of their cull mask,
+## set as they are made (environment_layout.gd), before the renderer pairs them: changing a light's
+## mask later re-pairs it and reorders the lights of everything it reaches (roads, props).
+## --all-lamp-pools (or ALL_LAMP_POOLS): the chunks on layer 1 too, so these five pool as well.
+const GROUND_LAYER := 1 << 19
+const DARK_LAMPS := ["27_lamp_452", "27_lamp_464", "27_lamp_465", "27_lamp_466", "27_lamp_467"]
+const ALL_LAMP_POOLS := false
+static var all_lamp_pools := ALL_LAMP_POOLS or "--all-lamp-pools" in OS.get_cmdline_user_args()
+
+## The cull mask for a lamp of the prop named `prop_name` (its other bits as they are).
+static func lamp_cull_mask(prop_name: String, mask: int) -> int:
+	return mask & ~GROUND_LAYER if prop_name in DARK_LAMPS else mask
+
 ## The cell (column, row) a point falls in.
 static func cell_of(p: Vector3) -> Vector2i:
 	return Vector2i(floori((p.x-ORIGIN.x)/CELL), floori((p.z-ORIGIN.y)/CELL))
@@ -138,6 +156,7 @@ static func build(grounds: Array) -> Node3D:
 						"visibility_range_begin", "visibility_range_end", "visibility_range_fade_mode"]:
 					chunk.set(property, ground.get(property))
 				chunk.set_meta("island", island)
+				chunk.layers = GROUND_LAYER
 				root.add_child(chunk)
 				chunk.owner = root
 				cells_seen[cell] = true

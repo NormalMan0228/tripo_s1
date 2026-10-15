@@ -48,6 +48,15 @@ func run() -> void:
 	var check := GroundChunks.validate(chunks, grounds)
 	report["chunks"] = check
 	for line in check.failures: failures.append(line)
+	# Drawn as the ground was (shadows, LOD bias, transparency), on the chunks' own render layer.
+	var settings := 0
+	for chunk in chunks.get_children():
+		if not String(chunk.name).begins_with("Chunk_"): continue
+		var source: MeshInstance3D = grounds.filter(func(g): return String(g.name).begins_with(String(chunk.get_meta("island"))))[0]
+		for property in ["cast_shadow", "lod_bias", "transparency", "gi_mode", "visibility_range_end"]:
+			if chunk.get(property) != source.get(property): settings += 1
+		if chunk.layers != GroundChunks.GROUND_LAYER: settings += 1
+	if settings > 0: failures.append("%d chunk settings differ from the ground's" % settings)
 	var stats: Dictionary = chunks.get_meta("stats", {})
 	report["stats"] = {"tris_before": stats.get("tris_before"), "tris_after": stats.get("tris_after"), "chunks": stats.get("chunks"), "cells": stats.get("cells")}
 	var oceans := map.find_children("Ocean__central_surface", "MeshInstance3D", true, false)
