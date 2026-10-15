@@ -12,8 +12,9 @@
 - 문 리소스는 건물 모델마다 하나씩 있습니다: `game/maps/archipelago/doors/<모델>.res`(문짝),
   `<모델>_opening.res`(문간). 표는 `door_leaves.json`(문 id → 모델, 리소스, 벽 기준 위치)이고,
   같은 모델을 쓰는 건물은 같은 리소스를 씁니다.
-- **지금은 테스트로 `10_red_house`(나의 집) 하나만 켜져 있습니다**(`building_doors.gd`의 `ENABLED`).
-  사용자가 승인하면 `ALL_DOORS := true`로 바꿔 모든 문에 적용합니다.
+- **0.11.8에는 훅만 들어갑니다. 켜진 문이 없습니다**(`building_doors.gd`의 `ENABLED = []`). 게임 화면은 지금과 같고,
+  `door_leaf(id)`·`door_opening(id)`는 `null`, `door_ids()`는 빈 목록, 실내 `FrontDoor`는 지금의 반높이 문(108° 열림)입니다.
+  사용자가 문 윤곽을 직접 그리면 그 윤곽대로 잘라 문짝을 만든 뒤 켭니다. 그때 노드 이름, 경첩 축, 각도는 아래 표와 같습니다.
 
 ## 1. N3 `register(id, node, hinge_axis, open_angle)`에 넣을 값
 

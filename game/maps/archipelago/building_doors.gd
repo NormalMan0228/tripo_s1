@@ -25,9 +25,10 @@ const OPEN_DEGREES := 108.0
 ## The closed leaf lies this far in front of the painted door, the opening between the two.
 const LEAF_LIFT := 0.006
 const OPENING_LIFT := 0.002
-## Buildings whose door is made this way so far (a test before all of them: the rest keep their painted
-## door). ALL_DOORS true applies it to every door in door_leaves.json.
-const ENABLED := ["10_red_house"]
+## Buildings whose door is made this way. Empty for now: the user is drawing the door outlines the
+## leaves will be cut along, so every building keeps its painted door and every room its box door
+## (the hooks are here, they find no leaf). ALL_DOORS true applies it to every door in door_leaves.json.
+const ENABLED := []
 const ALL_DOORS := false
 ## Doors tools/door_leaves.gd cannot find by their wood paint: id -> [across from the door point, height
 ## above the pad, width, height, arch rise] in metres on the wall (the top `rise` a half ellipse). The
