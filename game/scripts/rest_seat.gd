@@ -1,12 +1,14 @@
 extends Node
 ## Sitting on and lying down on furniture, for rooms (studio.gd) and the village (main.gd): the walker
-## settles on a seat facing out, or lies on a bed head on the pillow, while Interiors.RestPose bends
-## the hips and knees; getting up puts it back where it stood. A crafted piece its owner marked as a
-## seat or a bed (상호작용 · 쉬기) works the same way in both places (crafted()).
+## settles on a seat facing out, or lies on a bed head on the pillow, while the ISS-1 pose layer
+## (ix/ix_pose.gd) bends the hips and knees; getting up puts it back where it stood, facing out of the
+## seat. A crafted piece its owner marked as a seat or a bed (상호작용 · 쉬기) works the same way in
+## both places (crafted()).
 ##
 ## In the village the walker is the player's own controller: its physics waits while it rests
 ## (visual_only), and walking (walk_off allows it) or being moved away by something else gets it up.
-const Interiors = preload("res://scripts/interiors.gd")
+const IxPose = preload("res://scripts/ix/ix_pose.gd")
+const IxRig = preload("res://scripts/ix/ix_rig.gd")
 
 var hero: Node3D
 ## "", "sit" or "lie".
@@ -22,20 +24,21 @@ var walk_off := Callable()
 var was_visual_only := true
 var furniture: Node3D
 var on_furniture := false
+## The way out of the seat (getting up faces it, not the camera).
+var front := Vector3.BACK
 
 func resting() -> bool:
 	return not mode.is_empty()
 
 func ensure_pose() -> bool:
-	if not is_instance_valid(hero) or not is_instance_valid(hero.hand_skeleton): return false
+	if not is_instance_valid(hero) or not "hand_skeleton" in hero or not is_instance_valid(hero.hand_skeleton): return false
 	if not is_instance_valid(pose) or pose.get_parent()!=hero.hand_skeleton:
-		pose=Interiors.RestPose.new()
-		hero.hand_skeleton.add_child(pose)
-	pose.body=hero.visual
-	return true
+		pose=IxPose.attach(hero)
+	if is_instance_valid(pose): pose.driven=false
+	return is_instance_valid(pose)
 
 func hip_height() -> float:
-	if not is_instance_valid(hero) or not is_instance_valid(hero.hand_skeleton): return 0.85
+	if not is_instance_valid(hero) or not "hand_skeleton" in hero or not is_instance_valid(hero.hand_skeleton): return 0.85
 	var skeleton: Skeleton3D=hero.hand_skeleton
 	var bone := skeleton.find_bone("L_Thigh")
 	if bone<0: return 0.85
@@ -61,7 +64,7 @@ func sit(record: Dictionary) -> void:
 	if not is_instance_valid(hero) or resting(): return
 	var size: Vector3=record.size
 	var yaw: float=record.yaw
-	var front := Vector3(0,0,1).rotated(Vector3.UP,yaw)
+	front = Vector3(0,0,1).rotated(Vector3.UP,yaw)
 	var seat_x := 0.0
 	if record.kind=="sofa":
 		var local: Vector3=(hero.position-record.center).rotated(Vector3.UP,-yaw)
@@ -81,6 +84,9 @@ func lie(record: Dictionary) -> void:
 	var yaw: float=record.yaw
 	var head := Vector3(0,0,-1).rotated(Vector3.UP,yaw)
 	hold("lie")
+	# Getting up faces away from the bed, toward where the walker stood.
+	var out: Vector3=back_to-Vector3(record.center.x,back_to.y,record.center.z)
+	front=out.normalized() if out.length()>0.05 else Vector3(1,0,0).rotated(Vector3.UP,yaw)
 	var feet: Vector3=record.center-head*(size.z*0.5-0.2)
 	hero.facing=Vector3(0,0,-1)
 	var down := Vector3(0,-1,0)
@@ -102,7 +108,8 @@ func stand(face_away := true) -> void:
 	if not resting() or not is_instance_valid(hero): return
 	release()
 	hero.position=Vector3(back_to.x,back_to.y if keep_height else 0.0,back_to.z)
-	if face_away: hero.facing=Vector3.BACK
+	# Up and facing out of the seat (it used to turn toward the camera, +Z, whatever the seat).
+	if face_away: hero.facing=front
 
 ## Up without moving (the walker was taken elsewhere).
 func release() -> void:
