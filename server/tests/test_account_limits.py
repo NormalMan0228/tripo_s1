@@ -284,3 +284,19 @@ def test_actual_overrun_is_recorded_before_next_part_is_submitted(tmp_path, monk
         status = c.get('/v1/studio/jobs/' + job, headers=h).json()
         assert status['error'] == 'tester_credit_budget_exhausted'
         assert len(provider.calls) == 1
+
+
+def test_no_server_wide_daily_limit_keeps_each_accounts_five(tmp_path):
+    # The main server (2026-10-16): TRIPO_DAILY_REQUEST_LIMIT=0 means no server-wide daily count; the
+    # Tripo credit budget is the limit, and every account still has its own five a day.
+    app, client, provider = world(tmp_path, daily_generation_limit=0)
+    with client as c:
+        for name in ('alice', 'bravo'):
+            h = register(c, app, name)
+            for _ in range(5):
+                job = craft(c, h).json()['id']
+                assert c.post('/v1/studio/jobs/' + job + '/cancel', headers=h, json=mutation()).status_code == 200
+            assert craft(c, h).json()['detail'] == 'user_daily_generation_limit'
+    Settings(data_dir=tmp_path, daily_generation_limit=0).validate()
+    with pytest.raises(ValueError):
+        Settings(data_dir=tmp_path, daily_generation_limit=-1).validate()

@@ -226,7 +226,9 @@ class Settings:
             raise ValueError('Invalid account craft limit or welcome stars')
         if not 0 <= self.sell_stars_daily <= 1000 or not 1 <= self.sell_coins_per_star <= 1000:
             raise ValueError('TRIPOTHON_SELL_STARS_DAILY must be 0-1000 and TRIPOTHON_SELL_COINS_PER_STAR 1-1000')
-        if self.credit_reserve <= 0 or self.daily_generation_limit < 1 or self.user_daily_generation_limit < 1:
+        # TRIPO_DAILY_REQUEST_LIMIT=0: no server-wide daily count (the main server, 2026-10-16: the
+        # Tripo credit budget is the limit); each account keeps its own daily limit.
+        if self.credit_reserve <= 0 or self.daily_generation_limit < 0 or self.user_daily_generation_limit < 1:
             raise ValueError('Generation budget must be positive')
         if not 60 <= self.studio_part_deadline <= 86400:
             raise ValueError('Invalid studio part deadline')
