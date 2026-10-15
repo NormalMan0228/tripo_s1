@@ -2,8 +2,8 @@ extends Node3D
 ## Survival expedition maps (솔바람 숲 / 노을 채석장 / 서리빛 분지) built to the island village's
 ## standard: a sculpted basin terrain (flat, walkable play square; hills, cliffs and shores beyond it)
 ## with detail-mapped ground, authored landmarks on the server's obstacle circles, Tripo props in
-## chunked MultiMeshes (LOD1 when the camera zooms out, no shadows for ground cover), per-map light,
-## haze and night grade, and Tripo resource visuals.
+## chunked MultiMeshes (LOD1 when the camera zooms out, no shadows for ground cover), per-map light
+## and haze through the stage's time of day (survival_daytime.gd), and Tripo resource visuals.
 ##
 ## Geometry that matters for play is server-authoritative (server/survival_maps.py); the client reads the
 ## exported copy (layouts.json) for dressing and the run state for obstacles, hazards and resources.
@@ -23,11 +23,15 @@ const LoadPace = preload("res://scripts/load_pace.gd")
 const Monster = preload("res://scripts/monster.gd")
 ## The map's static data baked ahead (ground, water, rim scatter; tools/bake_survival.py).
 const SurvivalBake = preload("res://maps/survival/survival_bake.gd")
+## The stage's time of day (day_progress as an hour of the village's sky, in this map's colours).
+const Daytime = preload("res://maps/survival/survival_daytime.gd")
+const Daylight = preload("res://scripts/daylight.gd")
 const LOD_ZOOM := 18.5
 const FAR := 64.0
 const RESOURCE_KINDS := ["tree","stone","berry","fiber"]
 
-## Per-map look. Colours are the day grade; night values blend in from run.day_progress.
+## Per-map look. The colours are the map's noon grade, the *_night values its night grade; the stage's
+## time of day (survival_daytime.gd) carries them through morning, golden hour, sunset and evening.
 const LOOK := {
 	"forest": {
 		"turf_low":"4f7d2d","turf_high":"92b145","soil":"6d5435","trail":"bfa275","rock":"8e8f80","accent":"3c6a2a",
@@ -100,6 +104,9 @@ var env: Environment
 var sun: DirectionalLight3D
 var night := 0.0
 var dusk := 0.0
+var daytime := Daytime.new()
+## The camp fire's light (main.gd flame), brighter into the evening.
+var fire_light: OmniLight3D
 var focus := Vector3.ZERO
 var follow_particles: Array[Node3D] = []
 var adopt_wait := 0.0
@@ -219,6 +226,7 @@ func build(run: Dictionary) -> void:
 	map_id = str(run.get("map_id","forest"))
 	if not LOOK.has(map_id): map_id = "forest"
 	look = LOOK[map_id]
+	daytime.setup(look)
 	var all := layouts()
 	spec = all.maps[map_id]
 	bounds = float(all.bounds)
@@ -272,6 +280,7 @@ func build(run: Dictionary) -> void:
 	await _finish_monster_feed()
 	await LoadPace.step("survival batches")
 	_finish_batches()
+	_advance_time(state,0.0)
 	_apply_grade(true)
 	set_process(true)
 	LoadPace.done(1.0)
@@ -1532,12 +1541,7 @@ func _process(delta: float) -> void:
 	if is_instance_valid(app) and app.get("run") is Dictionary and not (app.get("run") as Dictionary).is_empty():
 		run = app.get("run")
 	_want_night_species(run,delta)
-	var progress := float(run.get("day_progress",0.3))
-	var target_night := smoothstep(0.62,0.70,progress)*(1.0-smoothstep(0.95,1.0,progress))
-	if bool(run.get("night",false)): target_night = maxf(target_night,0.9)
-	var target_dusk := smoothstep(0.50,0.62,progress)*(1.0-smoothstep(0.66,0.72,progress))
-	night = lerpf(night,target_night,minf(1.0,delta*1.5)) if delta > 0.0 else target_night
-	dusk = lerpf(dusk,target_dusk,minf(1.0,delta*1.5)) if delta > 0.0 else target_dusk
+	_advance_time(run,delta)
 	if is_instance_valid(app) and app.get("player") is Node3D and is_instance_valid(app.get("player")):
 		focus = (app.get("player") as Node3D).global_position
 	var cam_pos := camera.global_position if is_instance_valid(camera) else Vector3(0,1000,0)
@@ -1593,28 +1597,57 @@ func _bind() -> void:
 		var lights := scene.find_children("*","DirectionalLight3D",true,false)
 		if not lights.is_empty(): sun = lights[0]
 
-func _haze() -> Color:
-	var day := Color(look.haze)
-	if dusk > 0.0: day = day.lerp(Color("f2b98c") if map_id != "frost" else Color("e0c4d8"),dusk*0.6)
-	return day.lerp(Color(look.haze_night),night)
+## The stage's hour from the run's day_progress (eased; delta <= 0 snaps): night and dusk for the
+## shaders, the colours _apply_grade sets.
+func _advance_time(run: Dictionary, delta: float) -> void:
+	daytime.advance(float(run.get("day_progress",0.3)),bool(run.get("night",false)),bool(run.get("boss_night",false)),delta)
+	night = daytime.night
+	dusk = daytime.dusk
 
-## Day / dusk / night grade for this map. main.gd lerps its own survival values every frame; this
-## node runs after it (process_priority) and sets the map's grade instead.
+func _haze() -> Color:
+	return daytime.haze
+
+## The map's grade at the stage's hour. main.gd lerps its own survival values every frame; this
+## node runs after it (process_priority) and sets the map's grade instead. The night colour grade
+## (daylight.gd's curve, a share of it) follows the graphics setting as in the village.
 func _apply_grade(_snap: bool) -> void:
 	if env == null or sun == null:
 		_bind()
 	if env != null:
 		env.background_mode = Environment.BG_COLOR
-		env.background_color = Color(look.background).lerp(Color(look.background_night),night)
+		env.background_color = daytime.background
 		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-		env.ambient_light_color = Color(look.ambient).lerp(Color(look.ambient_night),night)
-		env.ambient_light_energy = lerpf(float(look.ambient_energy),float(look.ambient_night_energy),night)
+		env.ambient_light_color = daytime.ambient_color
+		env.ambient_light_energy = daytime.ambient_energy
 		env.fog_enabled = false
+		# Stepped, so the curve's texture is redrawn a few times over an evening, not every frame.
+		var grade := snappedf(daytime.grade,1.0/32.0) if GameSettings.night_grade() else 0.0
+		env.adjustment_enabled = daytime.saturation < 0.995 or grade > 0.002
+		env.adjustment_saturation = daytime.saturation
+		Daylight._grade(env,grade)
 	if sun != null:
-		var day_sun := Color(look.sun).lerp(Color("ffb27a"),dusk*0.55)
-		sun.light_color = day_sun.lerp(Color(look.sun_night),night)
-		sun.light_energy = lerpf(float(look.sun_energy),float(look.sun_night_energy),night)
-		sun.rotation_degrees = Vector3(lerpf(float(look.sun_pitch),-58.0,night)+dusk*14.0,float(look.sun_yaw)+night*40.0,0)
+		sun.light_color = daytime.sun_color
+		sun.light_energy = daytime.sun_energy
+		sun.rotation_degrees = daytime.sun_rotation
+	# The camp fire burns brighter and reaches further as the light goes.
+	if not is_instance_valid(fire_light): fire_light = _find_fire_light()
+	if fire_light != null:
+		fire_light.light_energy = float(fire_light.get_meta("survival_base_energy"))*(1.0+FIRE_NIGHT_GAIN*night)
+		fire_light.omni_range = float(fire_light.get_meta("survival_base_range"))*(1.0+0.2*night)
+
+## Night multiplier on the camp fire's light (main.gd flame).
+const FIRE_NIGHT_GAIN := 0.6
+
+func _find_fire_light() -> OmniLight3D:
+	var flame = app.get(&"flame") if is_instance_valid(app) else null
+	if not is_instance_valid(flame) or not (flame is Node3D): return null
+	for child in (flame as Node3D).get_children():
+		if child is OmniLight3D:
+			if not child.has_meta("survival_base_energy"):
+				child.set_meta("survival_base_energy",child.light_energy)
+				child.set_meta("survival_base_range",child.omni_range)
+			return child
+	return null
 
 func report() -> Dictionary:
 	var out := stats.duplicate()
