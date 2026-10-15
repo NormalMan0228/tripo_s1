@@ -73,7 +73,7 @@
 | 불 지피기 / 불 소리 | `fuel`, `campfire_loop` (이미 연결) | |
 
 - 결계를 없앨 때 main.gd `survival_audio`의 **ward 신호음**(몬스터가 밀려날 때 나던 소리)도 같이 지우거나 `buff_warm`으로 바꿔 주세요.
-- `combat_audio.gd`의 EVENTS에 `buff_warm`(-12 dB), `buff_heal`(-15 dB), `buff_end`(-14 dB)를 넣어 두었습니다. 바로 `CombatAudio.play`로 부르면 됩니다.
+- `combat_audio.gd`의 EVENTS에 `buff_warm`(-12 dB), `buff_heal`(-21 dB), `buff_end`(-14 dB)를 넣어 두었습니다. 바로 `CombatAudio.play`로 부르면 됩니다.
 
 ## 6. 새 몬스터 29종 (N5)
 

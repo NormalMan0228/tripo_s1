@@ -68,7 +68,7 @@ const EVENTS := {
 	"spawn": [-11.0, 3, 0.04], "dissolve": [-11.0, 4, 0.03], "player_hit": [-10.0, 5, 0.04], "equip": [-13.0, 2, 0.04],
 	"fuel": [-11.0, 3, 0.03], "sputter": [-14.0, 1, 0.06], "night": [-11.0, 6, 0.0], "dawn": [-11.0, 6, 0.0],
 	"night_warn": [-11.5, 6, 0.0], "cold": [-13.0, 3, 0.04], "hunger": [-12.0, 3, 0.05], "ember": [-12.0, 3, 0.05],
-	"buff_warm": [-12.0, 3, 0.02], "buff_heal": [-15.0, 2, 0.03], "buff_end": [-14.0, 2, 0.02],
+	"buff_warm": [-12.0, 3, 0.02], "buff_heal": [-21.0, 2, 0.03], "buff_end": [-14.0, 2, 0.02],
 	"depleted_tree": [-11.5, 3, 0.04], "depleted_stone": [-11.5, 3, 0.04], "depleted_fiber": [-12.0, 3, 0.05], "depleted_berry": [-12.0, 3, 0.05],
 	"craft_tool": [-11.5, 3, 0.04], "craft_soup": [-11.5, 3, 0.04], "craft_bandage": [-12.0, 3, 0.04], "bandage": [-12.0, 3, 0.04],
 	"harvest_tree": [-12.0, 2, 0.06], "harvest_stone": [-12.0, 2, 0.05], "harvest_fiber": [-12.5, 2, 0.06], "harvest_berry": [-12.5, 2, 0.06],

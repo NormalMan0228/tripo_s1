@@ -12,7 +12,7 @@ Writes mono 16-bit WAVs (each family loudness-matched to a sibling that already 
   field/pin_<n>       a note pinned to the board: paper + tack press (5)              ~ field/paper
   ui/letter_send_<n>  a letter folded and sent: fold + soft whoosh (4)                ~ ui/page
   combat/buff_warm_<n>  stepping into the campfire's warmth: warm swell + glow chord (4) ~ combat/fuel
-  combat/buff_heal_<n>  a heal tick by the fire: soft rising sparkle (6)              ~ life/collect -6 dB
+  combat/buff_heal_<n>  a heal tick by the fire: soft rising sparkle (6)              ~ life/collect (played 6 dB down)
   combat/buff_end_<n>   the buff fading: soft falling shimmer (3)                     ~ combat/fuel -4 dB
 
   $env:SFX_BASE='merge-version-gate'; .tools/art-venv/Scripts/python.exe tools/sfx/gen_dev_features.py [--only a,b]
@@ -236,7 +236,7 @@ FAMILIES = [
     ("field", "pin", 5, pin, "field/paper.wav", 0.0),
     ("ui", "letter_send", 4, letter_send, "ui/page_1.wav", 0.0),
     ("combat", "buff_warm", 4, buff_warm, "combat/fuel_1.wav", 0.0),
-    ("combat", "buff_heal", 6, buff_heal, "life/collect_1.wav", -6.0),
+    ("combat", "buff_heal", 6, buff_heal, "life/collect_1.wav", 0.0),
     ("combat", "buff_end", 3, buff_end, "combat/fuel_1.wav", -4.0),
 ]
 
