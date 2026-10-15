@@ -1243,6 +1243,17 @@ static func building_door(hinge: Node3D, s: Dictionary, dx: float) -> bool:
 	if mesh==null: return false
 	var size := BuildingDoors.leaf_size(id)
 	hinge.position.x=dx+size.x*0.5
+	if BuildingDoors.hinge_side(id)=="left":
+		# Hung on the left post like outside: FrontDoor sits in a mount turned over about z, so it
+		# still opens outward with a positive rotation.y (the leaf's frame is turned the same way).
+		var mount := Node3D.new()
+		mount.name="FrontDoorMount"
+		hinge.get_parent().add_child(mount)
+		mount.position=Vector3(dx-size.x*0.5,0,hinge.position.z)
+		mount.basis=Basis(Vector3(-1,0,0),Vector3(0,-1,0),Vector3(0,0,1))
+		hinge.get_parent().remove_child(hinge)
+		mount.add_child(hinge)
+		hinge.position=Vector3.ZERO
 	var leaf := MeshInstance3D.new()
 	leaf.name="Mesh"
 	leaf.mesh=mesh

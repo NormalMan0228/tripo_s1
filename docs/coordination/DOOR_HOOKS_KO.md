@@ -101,6 +101,28 @@ if opening:
 - 칠한 색으로 문을 못 찾는 문은 `RECT_OVERRIDES`에 직접 적습니다(카페, 천문대, 온실, 공방, 잡화점). 새 건물도 칠한 문을 못 찾으면
   1.0 x 2.1 m 기본 문간으로 만들고 `no door paint found` 줄을 찍습니다. 그때는 `RECT_OVERRIDES`에 윤곽을 적습니다.
 
+## 4-1. 사용자 외곽선으로 자르기 (`tools/door_cutter.gd`, 사용자가 그린 윤곽용)
+- 입력: `artifacts/outline_tool/renders/<모델>__<면>.json`(렌더 정보: `origin_tl`, `u`, `v`, `view_dir`, `mpp`, 모델 좌표)과
+  `artifacts/outline_tool/outlines/<render_id>.json`(`polys: [{kind: door|window, hinge: left|right, pts: [[px,py],...]}]`).
+- 실행(저장소 루트):
+  ```
+  powershell -ExecutionPolicy Bypass -File D:\lsm26\locks\wait_heavy.ps1
+  .tools\godot\Godot_v4.7.2-stable_win64_console.exe --headless --path game --script res://../tools/door_cutter.gd
+  ```
+  (`-- --only=red_house__front`로 한 렌더만, `-- --renders=DIR --outlines=DIR`로 다른 폴더를 씁니다.)
+- 문(`door`): 윤곽 안에서 카메라가 보는 모든 면을 윤곽선을 따라 삼각형째 잘라 문짝으로 가져갑니다. 윤곽 밖 조각은 건물에 남습니다.
+  결과는 `doors/<모델>.res`(6 cm 두께 문짝), `<모델>_opening.res`(문간), `<모델>_cut.res`(건물에 남는 조각)이고,
+  `door_leaves.json`에 `frame`, `hinge`, `drop`(건물에서 뺄 삼각형)이 들어갑니다. 실행하면 `DOOR_CUT <render_id> door {...}` 줄의
+  `left_m2`(잘린 뒤 윤곽 안에 남아 보이는 건물 면적)가 **0**이어야 합니다.
+- 게임에서는 `building_doors.gd`가 켜진 문의 건물 렌더 메시에서 `drop` 삼각형을 빼고 `_cut.res` 조각을 붙입니다(콜리전은 그대로).
+  그래서 문을 열면 벽에 문 자국이 남지 않고 문간만 보입니다.
+- 경첩: 윤곽의 `hinge`가 `right`(기본)든 `left`든 **약속은 같습니다**: `DoorFrame/DoorLeaf`는 닫힘 0, 로컬 +Y 축,
+  바깥쪽 열림이 **양수**(+108°)입니다. 왼쪽 경첩 문은 `DoorFrame`이 뒤집혀(로컬 +Y가 아래) 있어서 같은 값으로 바깥쪽으로 열립니다.
+  실내도 같아서, 왼쪽 경첩 방은 `FrontDoorMount`(z축으로 뒤집힌 받침) 아래에 `FrontDoor`가 있고 `rotation.y` 0↔108°로 바깥쪽으로 열립니다.
+  `BuildingDoors.hinge_side(id)`가 `"right"`/`"left"`를 돌려줍니다.
+- 창문(`window`): 윤곽 안 유리 면을 `windows/<모델>_glass.res`로 모읍니다(9번 창문 작업용, 아직 게임에서 쓰지 않음).
+- 적용: 결과를 커밋하고 `building_doors.gd`의 `ENABLED`에 건물 id를 넣거나 `ALL_DOORS := true`로 켭니다.
+
 ## 5. 검증
 - `game/tests/building_doors_check.gd`(헤드리스): 모든 `Town.DOORS`에 문 리소스가 있는지, 켜진 문의 노드 이름과 위치,
   두께, 바깥쪽 열림, 콜리전 없음, 베이크 섬과 런타임 빌드의 위치가 같은지, 실내 `FrontDoor`가 같은 문짝인지 확인합니다.
