@@ -2488,7 +2488,7 @@ func pose_resident(entry: Dictionary) -> void:
 	var others: Array=[]
 	for other in npcs.values():
 		if other!=entry and int(other.floor)==level and other.pose=="stand": others.append(other.holder.position)
-	var at: Vector3=Interiors.stand_spot(record,f,decor_by_floor[level],others) if not record.is_empty() else Interiors.spawn_point(f)+Vector3(0.9,0,-0.6)
+	var at: Vector3=Interiors.stand_spot(record,f,decor_by_floor[level],others,floor_entries(level)) if not record.is_empty() else Interiors.spawn_point(f)+Vector3(0.9,0,-0.6)
 	holder.position=at
 	var look: Vector3=(record.center if not record.is_empty() else at+Vector3(0,0,1))-at
 	face_body(entry,atan2(look.x,look.z) if Vector2(look.x,look.z).length()>0.05 else 0.0)
@@ -2497,6 +2497,16 @@ func pose_resident(entry: Dictionary) -> void:
 		"size":Vector3(0.6,1.75,0.6),"half":Vector2(0.28,0.28),"world_half":Vector2(0.28,0.28),"top":1.75,"floor":level,"room":Interiors.room_at(f,at.x)}
 	decor_by_floor[level].append(talk)
 	entry.talk=talk
+
+## Where the walker comes onto a floor: the front door's spot on the ground floor, every
+## stair's arrival on the others (a standing resident keeps these and the way from them open).
+func floor_entries(level: int) -> Array:
+	var points: Array=[]
+	if level==0: points.append(Interiors.spawn_point(building_spec.floors[0]))
+	for f in building_spec.floors:
+		for item in f.get("furniture",[]):
+			if item.has("link") and int(item.link.to)==level: points.append(item.link.arrive)
+	return points
 
 func face_body(entry: Dictionary, yaw: float) -> void:
 	var body: Node3D=entry.body
