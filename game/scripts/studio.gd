@@ -1658,7 +1658,31 @@ func interact_selected() -> void:
 	if response.ok:
 		inspected.accept_event(response.data)
 		if placed.has(selected.id):placed[selected.id].accept_event(response.data)
+		if response.data.get("commands") is Array: use_cue(placed.get(selected.id),response.data.commands)
 	else:refuse(response.error)
+
+## A crafted piece's program run by a click (light, tint or a move): one soft cue at the piece, the
+## room twin of main.gd use_cue() (twinkle for light, pluck for a tint, pop for a move), at most one
+## every 250 ms per piece; seats and beds stay quiet (their settle sound covers it).
+func use_cue(item, commands: Array) -> void:
+	if not item is Node3D or not is_instance_valid(item) or commands.is_empty() or str(item.get("rest")) in ["sit","lie"]: return
+	var now := Time.get_ticks_msec()
+	if now-int(item.get_meta("use_cue_at",-100000))<250: return
+	var light := -1.0
+	var tint := false
+	var move := false
+	for c in commands:
+		if not c is Dictionary: continue
+		var op := str(c.get("op",""))
+		if op=="emission": light=maxf(light,float(c.get("value",0.0)))
+		elif op=="hue": tint=true
+		elif op.begins_with("rotate_") or op.begins_with("offset_"): move=true
+	if light<0.0 and not tint and not move: return
+	item.set_meta("use_cue_at",now)
+	var at: Vector3=item.global_position if item.is_inside_tree() else Vector3.INF
+	if light>=0.0: Fx.sound(self,"twinkle",at,1.1 if light>0.05 else 0.85,-9.0)
+	elif tint: Fx.sound(self,"pluck",at,1.15,-10.0)
+	else: Fx.sound(self,"pop",at,0.9,-10.0)
 
 func paint(color: String, reset := false) -> void:
 	if pending or selected.is_empty() or not is_instance_valid(inspected):return
