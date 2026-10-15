@@ -1,7 +1,7 @@
 """Account-owned village life. All growth, catches and exchanges use server time/state.
 
-Leaf coins never buy API-credit shards (starseeds). Selling at the shop also pays a small daily
-starseed allowance (sell_stars below; app.py grants it through the ledger, TRIPOTHON_SELL_STARS_DAILY).
+Shop sales convert each 3 leaf coins of proceeds into a bonus starseed, capped by
+TRIPOTHON_SELL_STARS_DAILY (15 by default), while still paying the leaf coins.
 Walking is cosmetic/local in the village; action ownership, inventory and timing
 are authoritative, but these endpoints do not claim to attest client proximity.
 The client checks roads, water and slopes before tilling; the server keeps tilled
@@ -68,6 +68,8 @@ KST = 9
 # The player's time zone in minutes from UTC (their PC's), set per request by app.py from the
 # X-Villagen-UTC-Offset header; released clients that do not send it keep Korea's +9 h.
 UTC_OFFSET = contextvars.ContextVar('utc_offset', default=KST * 60)
+# Auth supplies the immutable account offset; cosmetics still use UTC_OFFSET.
+DAILY_OFFSET = contextvars.ContextVar('daily_offset', default=None)
 
 
 def offset_from(value):
@@ -80,7 +82,8 @@ def offset_from(value):
 
 def local_day(now):
     """The player's calendar day (daily orders reset at their midnight)."""
-    return int((now + UTC_OFFSET.get() * 60) // 86400)
+    offset = DAILY_OFFSET.get()
+    return int((now + (UTC_OFFSET.get() if offset is None else offset) * 60) // 86400)
 
 # Gather node kinds: [item, chance in %, min, max] rolls, then respawn seconds.
 FORAGE = {

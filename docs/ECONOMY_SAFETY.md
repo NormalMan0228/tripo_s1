@@ -1,0 +1,9 @@
+# Economy accounting and review
+
+All starseed changes use `server.economy.change_shards`: welcome/rewards, admin grants, market transfers, generation/studio charges and refunds, operator refunds, demo preparation, and scripts in `tools/` (account provisioning, manual grants, review allowances, and studio recovery). Account creation starts at zero. The helper requires a transaction and atomically writes the balance and ledger using a savepoint; duplicate references cannot pay twice. It rejects non-integer amounts and balances that would overflow SQLite's signed 64-bit integer range. Demo and account-provisioning top-ups use a fresh operation reference so later rehearsals work.
+
+Daily order and selling counters use `users.daily_utc_offset`, pinned on the first authenticated request (missing/invalid headers default to +540). Subsequent headers only affect cosmetic day/night. No public timezone-change API exists; travel/DST does not reset counters. Existing accounts pin on first use after migration.
+
+Run `python -m server.admin_cli ledger-check --data-dir PATH` locally against a world. Exit 0 means balances reconcile; exit 1 means mismatches or a missing database. JSON lists mismatches and persistent `economy_flags`. It never repairs balances. An empty ledger against a nonzero legacy balance is reported, not silently blessed with an opening entry.
+
+Admin/sale grants beyond caps and invalid balances are rejected. HTTP rejection evidence is saved after rollback, so failed business mutations cannot erase it. Ten paid sales within ten minutes spanning a pinned day boundary are flagged for review, not banned; legitimate midnight activity may trigger this heuristic. Flags retain first/last times and counts, and also write warning logs and normal 90-day security events. Operator callers receive validation exceptions; run ledger-check for a persistent reconciliation record.

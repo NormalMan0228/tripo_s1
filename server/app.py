@@ -17,11 +17,12 @@ from fastapi.responses import JSONResponse, Response
 from .config import Settings, ROOT, server_version
 from .client_policy import ClientPolicy, ClientGate, FILE_NAME as CLIENT_POLICY_FILE
 from .database import Database
+from . import economy
 from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction, PrefsUpdate
 from .provider import TripoProvider, ProviderError, validate_glb
 from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial
 from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
-                       LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER, ADMIN_DAILY_SHARD_LIMIT)
+                       LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER)
 from .stored_assets import read_glb
 
 def uid(): return str(uuid.uuid4())
@@ -66,6 +67,14 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         # Signed in before a maintenance began (or an operator's logout-all): the game returns to its title.
         floor = client_policy.session_floor()
         if floor and row['session_created'] <= floor: fail('session_reset',401)
+        if row['daily_utc_offset'] is None:
+            offset = homestead.UTC_OFFSET.get()
+            conn.execute('UPDATE users SET daily_utc_offset=? WHERE id=? AND daily_utc_offset IS NULL', (offset, row['id']))
+            # Read back the winner if two first requests raced.
+            offset = conn.execute('SELECT daily_utc_offset FROM users WHERE id=?', (row['id'],)).fetchone()[0]
+        else:
+            offset = row['daily_utc_offset']
+        homestead.DAILY_OFFSET.set(offset)
         return row
 
     def purge_sessions(conn):
@@ -86,9 +95,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         return {'token':token,'mode':settings.mode,'role':role,'profile':profile(conn,user_id)}
 
     def money(conn,user_id,amount,reason,reference):
-        conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',(uid(),user_id,amount,reason,reference,clock()))
-        if conn.execute('UPDATE users SET shards=shards+? WHERE id=? AND shards+?>=0',
-                        (amount,user_id,amount)).rowcount != 1: fail('insufficient_shards')
+        economy.change_shards(conn,user_id,amount,reason,reference,clock(),
+                              sell_daily=settings.sell_stars_daily,offset=homestead.DAILY_OFFSET.get() or 0)
 
     def own(conn,user_id,object_id,version=None):
         # A piece given to a village resident (npc_homes.py) is no longer the player's to use.
@@ -239,6 +247,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         # Security headers (nosniff, no-store, ...) are set by SecurityHeadersMiddleware.
         return await call_next(request)
 
+    @app.exception_handler(economy.EconomyRejected)
+    async def economy_rejected(request, error):
+        # The failed request's transaction has rolled back; evidence must survive it.
+        with db.transaction() as conn:
+            economy.flag(conn,error.user_id,error.detail,error.evidence,clock())
+        return JSONResponse({'detail':error.detail},status_code=error.status_code)
+
     @app.exception_handler(RequestValidationError)
     async def validation_error(request,exc):
         # Crafting has its own wording (a too short or too long description), not the login form's.
@@ -319,10 +334,6 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         def grant(conn,user):
             if user['role']!='admin': fail('admin_only',403)
             if body.shards:
-                day=int(clock()//86400)*86400
-                granted=conn.execute("SELECT COALESCE(SUM(amount),0) FROM ledger WHERE user_id=? AND reason='admin_grant' AND created>=?",
-                                     (user['id'],day)).fetchone()[0]
-                if granted+body.shards>ADMIN_DAILY_SHARD_LIMIT: fail('admin_grant_limit',429)
                 money(conn,user['id'],body.shards,'admin_grant',str(body.request_id))
             record_event(conn,'admin_grant',user['id'],{'shards':body.shards,'coins':body.coins,'request_id':str(body.request_id)},clock())
             if body.coins:
@@ -662,6 +673,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     from .multiplayer import Multiplayer
     multiplayer=Multiplayer(app,db,settings,clock,auth,mutate,money,profile,assets)
     app.state.multiplayer=multiplayer
+    multiplayer.chat.bind_routes(app,auth,mutate)
     # After the party tables: a new tutorial table records who went on expeditions before it.
     tutorial.ensure(db,clock())
     from .friends import Friends
@@ -687,8 +699,11 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             if scope['type']!='http':return await self.inner(scope,receive,send)
             value=dict(scope.get('headers') or []).get(b'x-villagen-utc-offset',b'').decode('latin-1')
             token=homestead.UTC_OFFSET.set(homestead.offset_from(value))
+            daily_token=homestead.DAILY_OFFSET.set(None)
             try:await self.inner(scope,receive,send)
-            finally:homestead.UTC_OFFSET.reset(token)
+            finally:
+                homestead.UTC_OFFSET.reset(token)
+                homestead.DAILY_OFFSET.reset(daily_token)
     app.add_middleware(PlayerTimeZone)
     app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':1500000},
                        pattern_limits=[(object_paint.UPLOAD_PATH,object_paint.BODY_LIMIT)])

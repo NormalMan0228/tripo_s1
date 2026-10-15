@@ -154,7 +154,7 @@ triggered the automatic mute. Checks, in order:
 | 4 | muted (auto or operator) | 403 `chat_muted` + Retry-After |
 | 5 | `party` without a party | 409 `not_in_party` |
 | 6 | `global` switched off | 403 `global_chat_off` |
-| 7 | whisper target not a friend / offline / appearing offline / blocked / unknown / self | 404 `whisper_target_unavailable` (always the same) |
+| 7 | whisper target offline / appearing offline / blocked / unknown / self, or a non-friend outside the shared scene's 8 m range | 404 `whisper_target_unavailable` (always the same) |
 | 8 | under 1 s since your last line, or 5 lines in 10 s | 429 `message_rate_limited` + Retry-After |
 | 9 | the same text as one of your last 3 lines within 30 s | 429 `message_repeated`; without `channel` (0.11.x) 429 `message_rate_limited` + Retry-After, and the released greeting chip (`안녕하세요! 👋`, `Hello! 👋`, `你好！👋`) is exempt |
 | 10 | `global` within 5 s of your last global line | 429 `global_chat_slow` + Retry-After |
@@ -177,6 +177,69 @@ codes; `message_blocked`, `chat_muted` and `chat_ip_limited` show their generic 
 error there (accepted: a muted or filtered 0.11.x student is not told why).
 
 Client slash commands are client-side only (`/w 이름 내용`, `/r`, `/p`, `/v`, `/g`).
+
+### Non-friend whisper consent
+
+Friends keep the existing online/visibility/block checks and have no distance limit or consent
+prompt. Non-friends must both have fresh presence in the same host instance, scene, place and
+floor, within **8 m in 3D**, when requesting, accepting, and sending each subsequent message.
+The current presence contract identifies shared `village` and `home` spaces; other spaces
+without a shared-instance identity are unavailable. Coordinates are client-reported presence,
+not server-authoritative movement validation.
+
+Use the normal authenticated `POST /v1/social/messages` payload:
+
+```json
+{"request_id":"<new UUID>","channel":"whisper","to":"username","text":"Hello"}
+```
+
+Without current consent this returns HTTP 200 with a **request**, not a chat line:
+
+```json
+{"ok":true,"channel":"whisper","state":"requested","request":{"id":"<whisper UUID>","to_id":"<recipient UUID>","expires":1781235600}}
+```
+
+No text is saved or delivered from that first attempt. Show a waiting state; after acceptance
+the sender must send a new message with a new `request_id`. Do not display the request as a
+delivered chat line. Existing chat filtering, mute and IP limits still apply.
+
+Poll authenticated `GET /v1/social/whispers/requests` to obtain incoming and outgoing requests:
+
+```json
+{"requests":[{"id":"<whisper UUID>","sender_id":"<sender UUID>","recipient_id":"<recipient UUID>","state":"pending","created":1781235000,"expires":1781235600,"from_name":"alice","to_name":"bravo"}]}
+```
+
+The list contains only this account's unexpired, unblocked pairs. `state` is `pending`,
+`accepted`, or `declined`. Only show accept/decline controls for pending rows whose
+`recipient_id` is the current user. These notifications are obtained from this endpoint,
+not from the presence reply's chat lines.
+
+The receiver calls either:
+
+- `POST /v1/social/whispers/requests/{whisper_id}/accept`
+- `POST /v1/social/whispers/requests/{whisper_id}/decline`
+
+Both require bearer authentication and `{"request_id":"<new UUID>"}`. Response:
+`{"ok":true,"state":"accepted","expires":1781308800}` (or `"declined"`). Consent is
+bidirectional for the pair until **next UTC midnight**, survives reconnects/server restart,
+and is revoked by blocking even if the pair is later unblocked. Pending requests expire after
+10 minutes. Declining keeps the original pending expiry; it does not extend the cooldown.
+
+Each unordered pair can create at most one request per 10 minutes, including ignored/declined
+requests and requests sent in the opposite direction. A sender can have at most five pending
+requests across all recipients. Requests and answers are idempotent when retried with the
+same `request_id` and payload; a retry returns the original response, so poll the list for the
+current state. Expired rows and social idempotency records follow bounded retention.
+
+| Status | Code | UI behavior |
+|---|---|---|
+| 429 | `whisper_request_limited` | Pair cooldown; honor `Retry-After` seconds. |
+| 429 | `whisper_pending_limit` | Five pending requests; wait for answers/expiry (`Retry-After` is 600 seconds). |
+| 404 | `whisper_target_unavailable` | Unavailable or no longer nearby; do not disclose block/offline details. |
+| 404 | `whisper_request_unavailable` | Missing/expired/blocked request, or caller is not its recipient. |
+| 409 | `whisper_request_closed` | Already answered with the other decision; refresh the list. |
+| 409 | `request_id_reused` | The mutation UUID was used for another payload/operation. |
+
 
 ---
 

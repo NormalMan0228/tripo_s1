@@ -498,6 +498,8 @@ class Friends:
                     if conn.execute('SELECT count(*) FROM social_blocks WHERE user_id=?', (me,)).fetchone()[0] >= BLOCK_LIMIT:
                         fail('block_list_full')
                     conn.execute('INSERT INTO social_blocks VALUES (?,?,?)', (me, them, now))
+                # Blocking revokes consent even if the account is later unblocked.
+                conn.execute("UPDATE whisper_requests SET state='declined' WHERE (sender_id=? AND recipient_id=?) OR (sender_id=? AND recipient_id=?)", (me,them,them,me))
                 # Everything between the two ends: friendship, requests, invitations, knocks, visits.
                 conn.execute('DELETE FROM social_friends WHERE (user_id=? AND friend_id=?) OR (user_id=? AND friend_id=?)', (me, them, them, me))
                 conn.execute("UPDATE social_requests SET state='cancelled',updated=? WHERE state IN ('pending','suppressed') AND ((from_id=? AND to_id=?) OR (from_id=? AND to_id=?))", (now, me, them, them, me))

@@ -124,6 +124,10 @@ class Database:
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript(SCHEMA)
             widen_object_states(db)
+            from .economy import SCHEMA as ECONOMY_SCHEMA
+            db.executescript(ECONOMY_SCHEMA)
+            if 'daily_utc_offset' not in [r[1] for r in db.execute('PRAGMA table_info(users)')]:
+                db.execute('ALTER TABLE users ADD COLUMN daily_utc_offset INTEGER CHECK(daily_utc_offset BETWEEN -720 AND 840)')
             # Accounts are players unless an operator promotes them (tools/admin_accounts.py).
             if 'role' not in [r[1] for r in db.execute('PRAGMA table_info(users)')]:
                 db.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'player'")

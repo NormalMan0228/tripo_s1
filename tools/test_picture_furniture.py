@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from fastapi.testclient import TestClient
 from server.app import create_app
+from server.economy import change_shards
 from server.config import Settings,read_tripo_key
 from server.design_provider import DesignProvider
 from server.provider import ProviderError
@@ -40,8 +41,7 @@ async def main():
             with app.state.db.transaction() as conn:
                 user=conn.execute('SELECT id FROM users WHERE username=?',(credentials['username'],)).fetchone()[0]
                 if not conn.execute("SELECT 1 FROM ledger WHERE user_id=? AND reason='picture_test_allowance'",(user,)).fetchone():
-                    conn.execute('UPDATE users SET shards=shards+100 WHERE id=?',(user,))
-                    conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',(str(uuid.uuid4()),user,100,'picture_test_allowance',kind,time.time()))
+                    change_shards(conn,user,100,'picture_test_allowance',kind,time.time())
             if record.exists():
                 prior=json.loads(record.read_text());job=prior['id']
                 if prior['state'] in ('ready','failed','unknown','cancelled'):continue

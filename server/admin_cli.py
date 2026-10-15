@@ -416,6 +416,22 @@ def chests(args):
     return 0
 
 
+def ledger_check(args):
+    from . import economy
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    with sqlite3.connect(database, timeout=30) as conn:
+        conn.executescript(economy.SCHEMA)
+        conn.execute('BEGIN IMMEDIATE')
+        mismatches = economy.ledger_check(conn, time.time())
+        flags = [dict(zip(('user_id','code','detail','first_seen','last_seen','occurrences'), r))
+                 for r in conn.execute('SELECT user_id,code,detail,first_seen,last_seen,occurrences FROM economy_flags ORDER BY last_seen DESC')]
+    print(json.dumps({'ok': not mismatches, 'mismatches': mismatches, 'flags': flags}, ensure_ascii=False, indent=1))
+    return 1 if mismatches else 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     actions = parser.add_subparsers(dest='action', required=True)
@@ -469,7 +485,11 @@ def main(argv=None):
     found.add_argument('command', choices=('show',))
     found.add_argument('username')
     found.add_argument('--data-dir', default='/data')
+    ledger = actions.add_parser('ledger-check', help='compare starseed balances with the ledger and flag discrepancies')
+    ledger.add_argument('--data-dir', default='/data')
     args = parser.parse_args(argv)
+    if args.action == 'ledger-check':
+        return ledger_check(args)
     if args.action == 'knocks':
         return knocks(args)
     if args.action == 'chat':
