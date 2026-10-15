@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 from scipy import signal as ss
 
-sys.path.insert(0, r"D:\lsm26\wt\monstersfx\tools\sfx")
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
 import sfxlib as L  # noqa: E402
 
 SR = 48000
