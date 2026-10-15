@@ -33,6 +33,7 @@ const THICKNESS := 0.05
 const CELL := 0.02
 ## A piece belongs to what the camera sees when it lies this close to the front-most surface there.
 const SURFACE_BAND := 0.08
+const REMOVE_DEPTH := 0.6
 const EDGE_STEP := 0.03
 ## Hinge sides and opening directions as decided (or set by the user: "override": true).
 const HINGES := "res://maps/archipelago/door_hinges.json"
@@ -205,21 +206,23 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 		for tri: Dictionary in model.tris:
 			var outward: Vector3 = -((tri.p[1] as Vector3)-(tri.p[0] as Vector3)).cross((tri.p[2] as Vector3)-(tri.p[0] as Vector3))
 			# Facing the camera: the outward normal (Godot winds front faces clockwise) points to +z.
-			if outward.dot(-into) <= 0.0: continue
+			# The others are kept too: relief sides inside a door outline go with it.
+			var faces_camera := outward.dot(-into) > 0.0
 			var a: Vector3 = project.call(tri.p[0])
 			var b: Vector3 = project.call(tri.p[1])
 			var c: Vector3 = project.call(tri.p[2])
 			if absf((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y)) < 1e-9: continue
-			facing.append([tri, [a, b, c], Rect2(Vector2(minf(a.x, minf(b.x, c.x)), minf(a.y, minf(b.y, c.y))), Vector2.ZERO).expand(Vector2(maxf(a.x, maxf(b.x, c.x)), maxf(a.y, maxf(b.y, c.y))))])
+			facing.append([tri, [a, b, c], faces_camera, Rect2(Vector2(minf(a.x, minf(b.x, c.x)), minf(a.y, minf(b.y, c.y))), Vector2.ZERO).expand(Vector2(maxf(a.x, maxf(b.x, c.x)), maxf(a.y, maxf(b.y, c.y))))])
 		meta["_facing"] = facing
 	var near := []
 	for entry in meta._facing:
-		var r: Rect2 = entry[2]
+		var r: Rect2 = entry[3]
 		if r.end.x < box.position.x or r.position.x > box.end.x or r.end.y < box.position.y or r.position.y > box.end.y: continue
-		near.append([entry[0], entry[1]])
+		near.append([entry[0], entry[1], entry[2]])
 	# The front-most depth seen in each cell of the outline's box.
 	var front := {}
 	for entry in near:
+		if not entry[2]: continue
 		var q: Array = entry[1]
 		var lo := Vector2(minf(q[0].x, minf(q[1].x, q[2].x)), minf(q[0].y, minf(q[1].y, q[2].y)))
 		var hi := Vector2(maxf(q[0].x, maxf(q[1].x, q[2].x)), maxf(q[0].y, maxf(q[1].y, q[2].y)))
@@ -234,6 +237,12 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 	var outside := {}
 	var drop := {}
 	var taken := []
+	# Everything the outline holds goes (the user's rule): every camera-facing face inside it down to
+	# REMOVE_DEPTH behind its front-most surface (Tripo doors are painted on more than one layer; the
+	# building's far walls lie much deeper and stay).
+	var top := -INF
+	for cell in front:
+		if Geometry2D.is_point_in_polygon((Vector2(cell)+Vector2(.5, .5))*CELL, poly): top = maxf(top, float(front[cell][0]))
 	var stats := {"triangles_near": near.size(), "taken_whole": 0, "split": 0, "outline_m2": 0.0, "cut_m2": 0.0, "left_m2": 0.0}
 	stats.outline_m2 = absf(signed_area(poly))
 	for entry in near:
@@ -249,7 +258,7 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 			var w := bary(c, tri2[0], tri2[1], tri2[2])
 			var z: float = q[0].z*w.x+q[1].z*w.y+q[2].z*w.z
 			var cell := Vector2i(floori(c.x/CELL), floori(c.y/CELL))
-			if not front.has(cell) or z >= float(front[cell][0])-SURFACE_BAND: visible = true
+			if (entry[2] and (not front.has(cell) or z >= float(front[cell][0])-SURFACE_BAND)) or z >= top-REMOVE_DEPTH: visible = true
 		if not visible: continue
 		var pieces_out := Geometry2D.clip_polygons(tri2, poly)
 		var turns := pieces_out.map(func(p): return Geometry2D.is_polygon_clockwise(p))
@@ -268,7 +277,7 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 					pieces_out.append_array(Geometry2D.clip_polygons(part, poly))
 		if not drop.has(tri.key): drop[tri.key] = []
 		drop[tri.key].append(int(tri.index))
-		taken.append([tri, tri2])
+		taken.append([tri, tri2, entry[2]])
 		var whole := absf(signed_area(tri2)) > 0.0 and is_equal_approx(area_sum(pieces_in), absf(signed_area(tri2))) and pieces_out.is_empty()
 		stats.taken_whole += 1 if whole else 0
 		stats.split += 0 if whole else 1
@@ -464,6 +473,7 @@ func save_opening(model: String, result: Dictionary, plan: Dictionary, mesh_face
 		# building; back and edges in the door's colour; a handle on both faces at the free edge.
 		var parts := {}
 		for t in result.taken:
+			if not t[2]: continue
 			for piece in Geometry2D.intersect_polygons(t[1], poly):
 				var verts := triangulate(piece, t[0], t[1])
 				if not parts.has(t[0].key): parts[t[0].key] = []

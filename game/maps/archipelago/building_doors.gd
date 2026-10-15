@@ -44,7 +44,7 @@ const RECT_OVERRIDES := {
 }
 const OPENING_SHADER := """
 shader_type spatial;
-render_mode unshaded, cull_back, shadows_disabled;
+render_mode unshaded, cull_disabled, shadows_disabled, fog_disabled;
 // 0: nobody home, a dark doorway; 1: a lit room behind it (the 집·문·방문 session drives this).
 uniform float inner_light : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 light_color : source_color = vec3(1.0, 0.74, 0.44);

@@ -66,6 +66,9 @@ func exterior() -> void:
 		var plain := await shot("%s_ext_%s_plain.png" % [label, id])
 		leaf.visible = true
 		opening.visible = true
+		if "--lit" in OS.get_cmdline_user_args():
+			(opening.material_override as ShaderMaterial).set_shader_parameter("inner_light", 1.0)
+			print("OPENING ", opening.get_path(), " visible=", opening.is_visible_in_tree(), " aabb=", opening.global_transform*opening.get_aabb(), " mesh=", opening.mesh, " shader_ok=", (opening.material_override as ShaderMaterial).shader.code.length())
 		for amount in [0.0, 0.5, 1.0]:
 			Doors.set_door_open(id, amount)
 			var image := await shot("%s_ext_%s_%s.png" % [label, id, ["closed", "half", "open"][int(amount*2)]])
