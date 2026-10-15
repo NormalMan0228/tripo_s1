@@ -67,6 +67,12 @@ const VILLAGE_PROPS := {
 	"reeds":["environment/reeds.glb","prop_lods/45_reeds.glb"],
 	"lamp":["environment/lamp.glb","prop_lods/27_lamp.glb"],
 }
+## Village ground cover (~20k triangles each, LODs 1.2k-1.6k): drawn with its LOD by the village's own
+## screen-size rule (environment_layout.gd: LOD under 260 px tall, the full mesh again from 300 px),
+## which keeps the LOD at every expedition zoom except the closest one on large screens at high detail.
+const GROUND_COVER := ["reeds","white_flowers","yellow_flowers","pink_flowers"]
+const COVER_LIMITS := Vector2(260,300)
+const GameSettings = preload("res://scripts/game_settings.gd")
 
 static var _layout_cache: Dictionary = {}
 
@@ -82,6 +88,7 @@ var glow_materials: Array[ShaderMaterial] = []
 var props := {}
 var batches := {}
 var multimeshes: Array[Dictionary] = []
+var cover_multimeshes: Array[Dictionary] = []
 var low_active := false
 var occupied: Array[Vector3] = []
 var app: Node
@@ -614,7 +621,7 @@ func _instance(id: String, at: Vector3, yaw: float, scale: float, opts := {}) ->
 	var basis := Basis(Vector3.UP,yaw).scaled(Vector3.ONE*scale)
 	if opts.has("tilt"): basis = Basis(Vector3(cos(yaw),0,sin(yaw)),float(opts.tilt))*basis
 	var shadow: bool = opts.get("shadow",true)
-	var lod: String = opts.get("lod","auto")
+	var lod: String = "cover" if id in GROUND_COVER else opts.get("lod","auto")
 	var key := "%s|%s|%s|%d_%d" % [id,shadow,lod,int(floor(at.x/CHUNK)),int(floor(at.z/CHUNK))]
 	if not batches.has(key):
 		batches[key] = {"id":id,"shadow":shadow,"lod":lod,"xforms":[]}
@@ -632,15 +639,24 @@ func _finish_batches() -> void:
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		var always_low: bool = b.lod == "low"
-		mm.mesh = entry.low if always_low else entry.mesh
+		var cover: bool = b.lod == "cover" and entry.low != entry.mesh
+		mm.mesh = entry.low if always_low or cover else entry.mesh
 		mm.instance_count = b.xforms.size()
-		for i in b.xforms.size(): mm.set_instance_transform(i,b.xforms[i])
+		var largest := 0.0
+		for i in b.xforms.size():
+			mm.set_instance_transform(i,b.xforms[i])
+			var s: Vector3 = (b.xforms[i] as Transform3D).basis.get_scale()
+			largest = maxf(largest,maxf(s.x,maxf(s.y,s.z)))
 		var node := MultiMeshInstance3D.new()
 		node.multimesh = mm
 		node.set_meta("prop",b.id)
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if b.shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(node)
-		if not always_low and entry.low != entry.mesh:
+		if cover:
+			# Ground cover: its LOD until the tallest instance reaches COVER_LIMITS on screen.
+			var extent: Vector3 = entry.aabb.size
+			cover_multimeshes.append({"mm":mm,"high":entry.mesh,"low":entry.low,"low_active":true,"size":maxf(extent.x,maxf(extent.y,extent.z))*largest})
+		elif not always_low and entry.low != entry.mesh:
 			multimeshes.append({"mm":mm,"high":entry.mesh,"low":entry.low})
 		stats.multimeshes += 1
 	batches.clear()
@@ -1147,6 +1163,15 @@ func _process(delta: float) -> void:
 		if want_low != low_active:
 			low_active = want_low
 			for m in multimeshes: m.mm.mesh = m.low if low_active else m.high
+		if not cover_multimeshes.is_empty():
+			# The village's rule (environment_layout.gd _update_prop_lods) for an orthographic camera.
+			var pixels := get_viewport().get_visible_rect().size.y*GameSettings.lod_multiplier()
+			for m in cover_multimeshes:
+				var projected: float = m.size*pixels/maxf(camera.size,0.1)
+				var use_low := projected < (COVER_LIMITS.y if m.low_active else COVER_LIMITS.x)
+				if use_low != bool(m.low_active):
+					m.low_active = use_low
+					m.mm.mesh = m.low if use_low else m.high
 	_apply_grade(false)
 	adopt_wait -= delta
 	if adopt_wait <= 0.0:
