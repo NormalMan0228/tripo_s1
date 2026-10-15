@@ -41,6 +41,7 @@ labs/archipelago_object_lab/reviews/
 game/maps/archipelago/assets/
 # Generated from them by tools/bake_archipelago.py (simplified collision, the baked island).
 game/maps/archipelago/generated/
+game/maps/survival/generated/
 # Working list written by tools/i18n_catalog.py extract.
 game/i18n/source.json
 .cc5_bridge/

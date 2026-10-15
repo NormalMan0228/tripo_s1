@@ -8,6 +8,9 @@ New-Item -ItemType Directory -Path builds/windows -Force | Out-Null
 # The archipelago's generated data (collision, baked island) must match the map: bake it when stale.
 & (Join-Path $taskRoot '.tools\art-venv\Scripts\python.exe') (Join-Path $taskRoot 'tools\bake_archipelago.py')
 if ($LASTEXITCODE -ne 0) { throw 'Archipelago bake failed.' }
+# The survival maps' baked static data (ground, water, rim scatter) likewise.
+& (Join-Path $taskRoot '.tools\art-venv\Scripts\python.exe') (Join-Path $taskRoot 'tools\bake_survival.py')
+if ($LASTEXITCODE -ne 0) { throw 'Survival bake failed.' }
 & $taskGodot --headless --path game --export-release 'Windows Desktop'
 if ($LASTEXITCODE -ne 0) { throw 'Godot export failed.' }
 & $taskGodot --headless --path game --export-release 'Windows Developer'

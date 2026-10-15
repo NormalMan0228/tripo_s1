@@ -1888,8 +1888,14 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	close_village_modal()
 	cancel_preview()
 	busy=true
-	# The expedition's props read on a worker thread while the server answers and the card comes up.
-	LoadPace.want(preload("res://maps/survival/survival_map.gd").resource_paths(map_id))
+	# The expedition's props read on a worker thread while the server answers and the card comes up,
+	# for the map the run is on: a run under way (resumed) stays on the map it began on. A co-op run's
+	# map is known once its snapshot is in (prefetch_run_map below).
+	var prefetched := ""
+	if party_run_id.is_empty():
+		var active = me.get("active_run_summary")
+		prefetched = str(active.get("map_id",map_id)) if active is Dictionary else map_id
+		LoadPace.want(preload("res://maps/survival/survival_map.gd").resource_paths(prefetched))
 	coop_run = not party_run_id.is_empty()
 	var result: Dictionary = {"ok":true,"data":{"id":party_run_id}} if coop_run else await api.post("/v1/runs",api.mutation({"map_id":map_id,"difficulty":difficulty,"chapter_id":chapter_id}))
 	if not check(result):
@@ -1902,6 +1908,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		busy=false
 		return
 	run=snapshot.data
+	prefetch_run_map(str(run.get("map_id",map_id)),prefetched)
 	# Into the expedition under the same loading card as every other change of place.
 	var veil := Transition.of(get_tree())
 	veil.loading(region_name(str(run.get("map_id",map_id))),"run",str(run.get("map_id",map_id)))
@@ -2022,6 +2029,19 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	update_run()
 	busy=false
 	veil.fade_in()
+
+## The run is on `actual`; start_run read `prefetched` ahead ("" for none, a co-op run). Another map's
+## reads still queued are dropped and this map's are queued, so its baked ground, props and resource
+## models come from the worker threads instead of loading on the main thread under the card (a read
+## already on a worker finishes and is let go at LoadPace.release()).
+func prefetch_run_map(actual: String, prefetched: String) -> void:
+	if actual == prefetched: return
+	var survival_map := preload("res://maps/survival/survival_map.gd")
+	var needed: Array = survival_map.resource_paths(actual)
+	if not prefetched.is_empty():
+		for path in survival_map.resource_paths(prefetched):
+			if not path in needed: LoadPace.queue.erase(path)
+	LoadPace.want(needed)
 
 func intent(action: String, target := "") -> void:
 	if screen!="survival" or paused or run.get("status","")!="active": return
