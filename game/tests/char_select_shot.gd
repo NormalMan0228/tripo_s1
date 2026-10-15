@@ -26,13 +26,23 @@ func run() -> void:
 	var app := Main.new()
 	root.add_child(app)
 	await create_timer(3.0).timeout
-	app.login_ui("menu")
+	# A plain title behind: the version check against the online world and the menu step aside.
+	if "gate" in app and is_instance_valid(app.gate): app.gate.visible = false
+	for child in app.ui.get_children(): child.queue_free()
+	var art := TextureRect.new()
+	art.texture = load("res://assets/title_golden.jpg")
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	app.ui.add_child(art)
 	preload("res://scripts/transition.gd").of(self).fade_in()
 	await create_timer(1.2).timeout
 	var picker := CharacterSelect.new()
 	picker.avatar = {"character":"explorer"}
 	app.ui.add_child(picker)
 	await create_timer(1.2).timeout
+	var panel: Control = picker.get_child(1)
+	expect(Rect2(Vector2.ZERO, Vector2(1280, 800)).encloses(panel.get_global_rect()), "the card fits the screen (%s)" % panel.get_global_rect())
 	await capture("first")
 	expect(picker.chosen == "m1" and picker.cards["m2"].disabled, "the 남 tab opens on 모험가; characters without a model are locked (준비 중)")
 	await capture("male")

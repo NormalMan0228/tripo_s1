@@ -42,6 +42,9 @@ func _ready() -> void:
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", RpgUi.panel_style("night"))
 	card.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	# Grows from the centre both ways, so the whole card stays on screen.
+	card.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	card.grow_vertical = Control.GROW_DIRECTION_BOTH
 	add_child(card)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
@@ -57,7 +60,8 @@ func _ready() -> void:
 	left.add_theme_constant_override("separation", 8)
 	row.add_child(left)
 	var tabs := RpgUi.tab_strip(left, [{"id":"m", "label":tr("남")}, {"id":"f", "label":tr("여")}], func(id: String):
-		for key in pages: (pages[key] as Control).visible = key == id, "night")
+		for key in pages: (pages[key] as Control).visible = key == id
+		if is_instance_valid(card): _fit(card), "night")
 	tabs.name = "SexTabs"
 	var group := ButtonGroup.new()
 	for tab in ["m", "f"]:
@@ -66,6 +70,7 @@ func _ready() -> void:
 		grid.columns = 2
 		grid.add_theme_constant_override("h_separation", 10)
 		grid.add_theme_constant_override("v_separation", 10)
+		grid.visible = tab == "m"
 		left.add_child(grid)
 		pages[tab] = grid
 	for spec in CARDS:
@@ -80,6 +85,11 @@ func _ready() -> void:
 	row.add_child(editor)
 	for b in editor.find_children("*", "Button", true, false):
 		if b.has_meta("character"): b.get_parent().visible = false
+	# The wardrobe's part names were set for a paper card: light ink on this night glass.
+	for l in editor.find_children("*", "Label", true, false):
+		(l as Label).add_theme_color_override("font_color", RpgUi.INK)
+	for c in editor.find_children("*", "CheckButton", true, false):
+		(c as CheckButton).add_theme_color_override("font_color", RpgUi.INK)
 	var start := RpgUi.button(column, tr("모험 시작"), _start, "gold", "lg", true)
 	start.name = "Start"
 	start.size_flags_horizontal = Control.SIZE_SHRINK_END
@@ -91,7 +101,16 @@ func _ready() -> void:
 		if spec[0] == now or spec[4] == now: first = spec[0]
 	RpgUi.select_tab(tabs, "f" if first.begins_with("f") else "m")
 	pick(first, false)
-	RpgUi.slide_in(card, Vector2(0, 16), 0.3)
+	_fit.call_deferred(card)
+	# A soft fade in (a slide would fight the centring above).
+	card.modulate.a = 0.0
+	card.create_tween().tween_property(card, "modulate:a", 1.0, 0.3)
+
+## The card shrinks to its content (containers only grow by themselves) and sits in the middle.
+func _fit(card: Control) -> void:
+	if not is_instance_valid(card): return
+	card.reset_size()
+	card.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_MINSIZE)
 
 func _card(spec: Array, group: ButtonGroup) -> Button:
 	var id: String = spec[0]
