@@ -162,5 +162,7 @@ def test_visitors_see_the_shape_where_they_see_the_object(world):
     # A home visit lists it the same way.
     assert c.post(own + '/placement', headers=hs[0], json=mutation(version=2, action='retrieve')).status_code == 200
     assert c.post(own + '/placement', headers=hs[0], json=mutation(version=3, room='home', x=2, z=-2, rotation=301)).status_code == 200
+    # Guests come into the home only while its owner is there (server/home_access.py).
+    c.post('/v1/social/presence', headers=hs[0], json={'scene': 'home', 'x': 0, 'z': 3})
     home = c.post('/v1/social/presence', headers=hs[1], json={'scene': 'home', 'x': 1, 'z': 2}).json()['space']
     assert [(o['rotation'], o['shape']) for o in home['objects']] == [(301, newer)]
