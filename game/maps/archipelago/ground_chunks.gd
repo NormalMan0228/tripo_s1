@@ -165,7 +165,7 @@ static func cut(arrays: Array, triples: PackedInt32Array) -> Array:
 static func build(grounds: Array, simplifier: Object = null) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Ground"
-	var stats := {"tris_before": 0, "tris_after": 0, "dropped": 0, "vertices_after": 0, "chunks": 0, "cells": 0, "islands": {}}
+	var stats := {"tris_before": 0, "tris_cut": 0, "tris_after": 0, "dropped": 0, "vertices_after": 0, "chunks": 0, "cells": 0, "islands": {}}
 	var cells_seen := {}
 	var shades := {}
 	var sorted := grounds.duplicate()
@@ -190,6 +190,7 @@ static func build(grounds: Array, simplifier: Object = null) -> Node3D:
 				shades[cell].append_array(PackedVector3Array([at*verts[index[t]], at*verts[index[t+1]], at*verts[index[t+2]]]))
 			for cell: Vector2i in keys:
 				var triples := triples_of(index, cells[cell])
+				stats.tris_cut += triples.size()/3
 				if simplifier: triples = simplifier.triangles(arrays, triples, island)
 				var piece := cut(arrays, triples)
 				var mesh := ArrayMesh.new()
@@ -217,7 +218,7 @@ static func build(grounds: Array, simplifier: Object = null) -> Node3D:
 		stats.tris_after += island_stats.tris_after
 		stats.chunks += island_stats.chunks
 		stats.islands[island] = island_stats
-	stats.dropped = stats.tris_before-stats.tris_after
+	stats.dropped = stats.tris_before-stats.tris_cut
 	stats.cells = cells_seen.size()
 	stats["shade_tris"] = 0
 	var shade_cells := shades.keys()

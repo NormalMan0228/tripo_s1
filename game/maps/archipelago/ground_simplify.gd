@@ -3,7 +3,8 @@ extends RefCounted
 ## hands it to GroundChunks.build). Each chunk's triangles are split into zones and each zone is
 ## simplified on its own (SurfaceTool.generate_lod, positions only: the kept vertices stay bit copies,
 ## so their normals, tangents and UVs are the ground's own) within its zone's error bound:
-##   lock   exactly as they are: anything a vertex of which lies in a LOCK zone (see below)
+##   lock   exactly as they are: anything a vertex of which lies in a LOCK zone (see below), and the
+##          water line (any part within WATER_LINE of the sea level)
 ##   coast  reaching below COAST_BELOW (the water line and the beach): 5 mm, 1.0 degree
 ##   land   10 mm, 1.5 degrees
 ##   rough  steep (face normal y under STEEP_NORMAL_Y) or under the sea (all below SUBMERGED_BELOW):
@@ -22,8 +23,13 @@ extends RefCounted
 const ZONES := {"coast": [0.005, 1.0], "land": [0.010, 1.5], "rough": [0.020, 2.0]}
 const COAST_BELOW := 0.6
 const SUBMERGED_BELOW := -0.15
+## Triangles reaching into -WATER_LINE..WATER_LINE stay as they are.
+const WATER_LINE := 0.15
 const STEEP_NORMAL_Y := 0.9
 const PIN_ROUNDS := 4
+## The bake checks each zone at corners, centres and edge middles against this share of its bounds,
+## so the surface between those points (tests/ground_equivalence.gd samples a 0.5 m grid) stays within.
+const CHECK_SHARE := 0.75
 const GRID := 0.25
 const GRID_FROM := Vector2(-136, -120)
 const GRID_CELLS := Vector2i(960, 960)
@@ -140,6 +146,8 @@ func zone_of(a: Vector3, b: Vector3, c: Vector3, pinned: Dictionary, key: Vector
 	if locked_at(centre.x, centre.z): return "lock"
 	var low := minf(a.y, minf(b.y, c.y))
 	var high := maxf(a.y, maxf(b.y, c.y))
+	# The water line (waves move the sea surface by a few centimetres): where sea meets sand pixel for pixel.
+	if high >= -WATER_LINE and low <= WATER_LINE: return "lock"
 	if high < SUBMERGED_BELOW: return "rough"
 	if low < COAST_BELOW: return "coast"
 	var normal := (b-a).cross(c-a).normalized()
@@ -174,7 +182,7 @@ func triangles(arrays: Array, triples: PackedInt32Array, island: String) -> Pack
 				stats.border_fallbacks += 1
 				out.append_array(tris)
 				continue
-			var bad := _check(verts, normals, tris, lod, float(bound[0]), float(bound[1]))
+			var bad := _check(verts, normals, tris, lod, float(bound[0])*CHECK_SHARE, float(bound[1])*CHECK_SHARE)
 			if bad.is_empty():
 				simplified[zone] = [tris.size()/3, lod.size()/3]
 				out.append_array(lod)
