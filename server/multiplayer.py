@@ -46,7 +46,9 @@ CREATE INDEX IF NOT EXISTS coop_members_user ON coop_members(user_id);
 # Presence columns added after the first release, in order (guarded ALTERs, idempotent):
 # y and the walk (0.11.4), then the social layer's place/floor and the interaction state ix.
 PRESENCE_COLUMNS = (('y', 'REAL NOT NULL DEFAULT 0'), ('vx', 'REAL NOT NULL DEFAULT 0'), ('vz', 'REAL NOT NULL DEFAULT 0'), ('ct', 'REAL'),
-                    ('place', 'TEXT'), ('floor', 'INTEGER'), ('ix', 'TEXT'))
+                    ('place', 'TEXT'), ('floor', 'INTEGER'), ('ix', 'TEXT'),
+                    # 1 once this sign-in has polled with since (a chat2 game, which can answer knocks).
+                    ('chat2', 'INTEGER'))
 
 
 class Invite(Mutation):
@@ -318,8 +320,8 @@ class Multiplayer:
                 if host != user['id']:
                     conn.execute('UPDATE mp_visits SET expires=? WHERE user_id=?', (clock()+VISIT_SECONDS, user['id']))
                 ix = body.ix.model_dump_json() if body.ix else None
-                conn.execute('INSERT INTO mp_presence(user_id,host_id,scene,x,z,y,yaw,seen,vx,vz,ct,place,floor,ix) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,scene=excluded.scene,x=excluded.x,z=excluded.z,y=excluded.y,yaw=excluded.yaw,seen=excluded.seen,vx=excluded.vx,vz=excluded.vz,ct=excluded.ct,place=excluded.place,floor=excluded.floor,ix=excluded.ix',
-                             (user['id'], host, body.scene, body.x, body.z, body.y, body.yaw, clock(), body.vx, body.vz, body.t, body.place, body.floor, ix))
+                conn.execute('INSERT INTO mp_presence(user_id,host_id,scene,x,z,y,yaw,seen,vx,vz,ct,place,floor,ix,chat2) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET host_id=excluded.host_id,scene=excluded.scene,x=excluded.x,z=excluded.z,y=excluded.y,yaw=excluded.yaw,seen=excluded.seen,vx=excluded.vx,vz=excluded.vz,ct=excluded.ct,place=excluded.place,floor=excluded.floor,ix=excluded.ix,chat2=MAX(COALESCE(chat2,0),excluded.chat2)',
+                             (user['id'], host, body.scene, body.x, body.z, body.y, body.yaw, clock(), body.vx, body.vz, body.t, body.place, body.floor, ix, int(body.since is not None)))
                 # The host's residents' home versions (npc_homes.py), so visitors follow their rooms too.
                 homes = app.state.npc_homes.versions_in(conn, host) if hasattr(app.state, 'npc_homes') else {}
                 # The rest is read after the commit: some 240 polls a second share SQLite's one writer slot.
@@ -383,14 +385,15 @@ class Multiplayer:
                     if row['kind'] == 'knock':
                         # The host lets a knocking player in: straight in from the village, else an
                         # ordinary invitation, which the guest's game accepts once it is in the village.
+                        # Either way the host must be at home, not off visiting someone.
+                        if host_for(conn, user['id']) != user['id']:
+                            fail('return_home_before_inviting')
                         guest = row['sender_id']
                         spot = conn.execute('SELECT scene,seen FROM mp_presence WHERE user_id=?', (guest,)).fetchone()
                         if spot and spot['scene'] == 'village' and clock()-spot['seen'] < HOST_GONE_SECONDS and not active_coop(conn, guest):
                             start_visit(conn, guest, user['id'])
                             knocked = 'visiting'
                         else:
-                            if host_for(conn, user['id']) != user['id']:
-                                fail('return_home_before_inviting')
                             conn.execute("UPDATE mp_invites SET state='replaced' WHERE sender_id=? AND recipient_id=? AND kind='village' AND state='pending'", (user['id'], guest))
                             conn.execute("INSERT INTO mp_invites VALUES (?,?,?,'village',NULL,'pending',?,?)", (str(uuid.uuid4()), user['id'], guest, clock()+600, clock()))
                             knocked = 'invited'

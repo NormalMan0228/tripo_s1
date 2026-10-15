@@ -125,7 +125,8 @@ is the overview plus `"knock": "visiting"` (the guest was in their village and w
 or `"knock": "invited"` (the guest is indoors or away: a normal village invitation host → guest was
 created; the guest's client should accept it automatically if it knocked within 10 minutes).
 Errors as for invitations (`invitation_expired`, `village_full`, `host_offline`,
-`return_home_before_inviting`, `party_expedition_active`).
+`party_expedition_active`), and `return_home_before_inviting` when the host is away visiting
+someone (both outcomes).
 
 ---
 
@@ -211,7 +212,8 @@ Rules:
 - `joinable`: the friend is online in their own village or home with fewer than 2 guests (you are
   not already there). `drop_in`: the friend lets friends walk straight in (else a visit knocks).
 - `my_village`: the host and every guest, indoors too (`place: home` with `floor`), so 내보내기
-  (`/v1/social/eject`) works for guests inside the house. `invites_out` and `knocks` only for the host.
+  (`/v1/social/eject`) works for guests inside the house; a guest appearing offline is listed with
+  `online: false` (to the others). `invites_out` and `knocks` only for the host.
 
 ---
 
@@ -225,8 +227,9 @@ Rules:
 
 A request is **silently** kept from the other player (the sender still sees it as outgoing) when
 either has blocked the other, when the receiver's `requests` pref is `nobody`, or within 24 h
-after the receiver declined the sender. Requests expire after 30 days. Accept/decline is only for
-the receiver, cancel only for the sender.
+after the receiver declined the sender. Sending it again (same id) once none of these applies any
+more (the block lifted, the pref back to `everyone`, the cooldown over) delivers it. Requests
+expire after 30 days. Accept/decline is only for the receiver, cancel only for the sender.
 
 ## 6. Blocks, privacy, reports
 
@@ -235,7 +238,7 @@ the receiver, cancel only for the sender.
 | `POST /v1/social/blocks` | `{request_id, user_id}` | `{ok}` | 404 `user_not_found`, 422 `block_self`, 409 `block_list_full` (200). Ends the friendship, open requests, pending invitations and knocks both ways, and a visit either way (the guest's next poll has `visit_ended.reason: "ended"`) |
 | `POST /v1/social/blocks/remove` | `{request_id, user_id}` | `{ok}` | |
 | `POST /v1/social/prefs` | `{request_id, appear_offline?: bool, roster?: "everyone"\|"friends", requests?: "everyone"\|"nobody", drop_in?: "off"\|"friends"}` | the prefs | 422 on other values |
-| `POST /v1/social/report` | `{request_id, user_id, message_id?, reason: "spam"\|"abuse"\|"other", note?: ≤200}` | `{ok, id}` | 422 `report_self`, 429 `report_limited` (10 a day); the same report again within a day returns the first id |
+| `POST /v1/social/report` | `{request_id, user_id, message_id?, reason: "spam"\|"abuse"\|"other", note?: ≤200}` | `{ok, id}` | 422 `report_self`, 429 `report_limited` (10 a day); the same report again within a day returns the first id (also past the limit) |
 
 Blocks hide both players from each other everywhere: chat (both ways, legacy messages too),
 `space.players`, the online list, friends lists, `my_village` guests and knocks; invitations from
@@ -244,20 +247,32 @@ silent `asked`. A party is not broken up by a block (the shared expedition goes 
 lines of a blocked member are hidden.
 
 A report stores the reported line's text (as everyone saw it) and up to 10 lines the reported
-player wrote in the last hour where the reporter could read them, for the operator.
+player wrote in the last hour where the reporter could read them, for the operator. Both only from
+rooms the reporter reads (its village, its party, `global`, whispers to it): a `message_id` of a
+line elsewhere (someone else's whisper, another party) is stored without text.
 
 ## 7. Visits from the lists (`POST /v1/social/visit`)
 
-`{request_id, user_id}` → `{state: "visiting"}` or `{state: "asked", expires}`.
+`{request_id, user_id}` → `{state: "visiting"}`, `{state: "asked", expires}` or
+`{state: "host_cannot_answer"}`.
 - `visiting`: you are friends, the host's `drop_in` is `friends`, and you are in your village
   scene (polled within 20 s). The visit starts like an accepted invitation; your next village poll
   shows the new `host_id`. Already there: also `visiting`.
 - `asked`: a knock (an invitation of kind `knock`, guest → host, 2 minutes). The host sees it in
-  `knocks` and `social.knocks`. Blocked pairs and hosts whose `requests` is `nobody` (for
-  non-friends) get a silent `asked` without a knock.
-- Errors: 409 `host_offline` (not online and visible, or away visiting someone), 422 `visit_self`,
-  404 `user_not_found`, 409 `party_expedition_active`, 409 `village_full`, 429 `knock_limited`
-  (one knock per host per 60 s, at most 5 open), Retry-After.
+  `knocks` and `social.knocks`; a new knock on the same host replaces your earlier one.
+- Friends only: 409 `host_offline` (not online and visible, or away visiting someone). Friends
+  see that in their list anyway.
+- Everyone else gets the same answers (the same limits, then `asked`) whether the host is at home,
+  offline, away, appearing offline, hidden from you (`roster: friends`, or the server's
+  `social_roster` is not `all`), has `requests: nobody` or has blocked you. The knock reaches the
+  host only when the host would appear to you in the online list and is at home; otherwise it is
+  silently dropped.
+- `host_cannot_answer`: the host is reachable (as above) but plays a released game (0.11.x; the
+  server has seen no presence poll with `since` from this sign-in), which never shows knocks. No
+  knock is made; say so (for example "this player's game cannot answer visits yet: ask them to
+  invite you") instead of a knock that would lapse unseen.
+- Errors: 422 `visit_self`, 404 `user_not_found`, 409 `party_expedition_active`, 409 `village_full`,
+  429 `knock_limited` (one knock per host per 60 s, at most 5 open), Retry-After.
 
 ## 8. Operators
 

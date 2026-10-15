@@ -361,11 +361,15 @@ class Friends:
             host_name = conn.execute('SELECT username FROM users WHERE id=?', (host,)).fetchone()[0]
             host_live = rows.get(host)
             guests = []
-            for g in conn.execute('SELECT v.user_id,u.username,p.scene,p.place,p.floor,p.seen,p.host_id,NULL AS host_name,0 AS expedition FROM mp_visits v JOIN users u ON u.id=v.user_id '
-                                  'LEFT JOIN mp_presence p ON p.user_id=v.user_id WHERE v.host_id=? AND v.expires>? ORDER BY u.username', (host, now)):
+            for g in conn.execute('SELECT v.user_id,u.username,p.scene,p.place,p.floor,p.seen,p.host_id,NULL AS host_name,0 AS expedition,'
+                                  'COALESCE(s.appear_offline,0) AS appear_offline FROM mp_visits v JOIN users u ON u.id=v.user_id '
+                                  'LEFT JOIN mp_presence p ON p.user_id=v.user_id LEFT JOIN social_prefs s ON s.user_id=v.user_id '
+                                  'WHERE v.host_id=? AND v.expires>? ORDER BY u.username', (host, now)):
                 if g['user_id'] in blocked:
                     continue
-                entry = {'id': g['user_id'], 'username': g['username'], 'online': bool(g['seen'] is not None and now-g['seen'] < ONLINE_SECONDS)}
+                # Appearing offline shows offline here too (the player asking always sees itself).
+                live = g['seen'] is not None and now-g['seen'] < ONLINE_SECONDS
+                entry = {'id': g['user_id'], 'username': g['username'], 'online': bool(live and (g['user_id'] == me or not g['appear_offline']))}
                 if g['scene'] is not None:
                     entry['place'] = place_of(g)
                     if g['floor'] is not None:
@@ -426,8 +430,17 @@ class Friends:
                     fail('user_blocked')
                 if are_friends(conn, me, them):
                     return {'state': 'friends'}
-                open_row = conn.execute("SELECT id FROM social_requests WHERE from_id=? AND to_id=? AND state IN ('pending','suppressed')", (me, them)).fetchone()
+                # Never tells the sender why nothing reaches the other player.
+                def silent():
+                    return bool(blocked_between(conn, me, them) or prefs(conn, them)['requests'] == 'nobody'
+                                or conn.execute("SELECT 1 FROM social_requests WHERE from_id=? AND to_id=? AND state='declined' AND updated>?", (me, them, now-DECLINE_COOLDOWN_SECONDS)).fetchone())
+                open_row = conn.execute("SELECT id,state FROM social_requests WHERE from_id=? AND to_id=? AND state IN ('pending','suppressed')", (me, them)).fetchone()
                 if open_row:
+                    # A request kept back reaches the other player once nothing keeps it back any
+                    # more (the block lifted, their pref back to everyone, the 24 h cooldown over).
+                    if open_row['state'] == 'suppressed' and not silent():
+                        conn.execute("UPDATE social_requests SET state='pending',updated=? WHERE id=?", (now, open_row['id']))
+                        bump(conn, me, them)
                     return {'state': 'sent', 'id': open_row['id']}
                 if conn.execute('SELECT count(*) FROM social_requests WHERE from_id=? AND created>?', (me, now-86400)).fetchone()[0] >= REQUESTS_PER_DAY:
                     fail('friend_requests_limited', 429)
@@ -439,12 +452,10 @@ class Friends:
                 if reverse and not blocked_between(conn, me, them):
                     accept_into(conn, reverse)
                     return {'state': 'accepted'}
-                # Never tells the sender why nothing reaches the other player.
-                silent = (blocked_between(conn, me, them) or prefs(conn, them)['requests'] == 'nobody'
-                          or conn.execute("SELECT 1 FROM social_requests WHERE from_id=? AND to_id=? AND state='declined' AND updated>?", (me, them, now-DECLINE_COOLDOWN_SECONDS)).fetchone())
+                kept_back = silent()
                 request_id = str(uuid.uuid4())
-                conn.execute('INSERT INTO social_requests VALUES (?,?,?,?,?,?)', (request_id, me, them, 'suppressed' if silent else 'pending', now, now))
-                bump(conn, me) if silent else bump(conn, me, them)
+                conn.execute('INSERT INTO social_requests VALUES (?,?,?,?,?,?)', (request_id, me, them, 'suppressed' if kept_back else 'pending', now, now))
+                bump(conn, me) if kept_back else bump(conn, me, them)
                 return {'state': 'sent', 'id': request_id}
             return mutate(request, body, 'friend_request', apply)
 
@@ -522,20 +533,23 @@ class Friends:
             def apply(conn, user):
                 now, me = clock(), user['id']
                 them = target(conn, user, body.user_id, 'report_self')['id']
-                if conn.execute('SELECT count(*) FROM social_reports WHERE user_id=? AND created>?', (me, now-86400)).fetchone()[0] >= REPORTS_PER_DAY:
-                    fail('report_limited', 429)
+                # The same report again within a day is the first one, even past the daily limit.
                 same = conn.execute('SELECT id FROM social_reports WHERE user_id=? AND to_id=? AND COALESCE(message_id,0)=? AND created>?', (me, them, body.message_id or 0, now-86400)).fetchone()
                 if same:
                     return {'ok': True, 'id': same['id']}
-                text = None
-                if body.message_id:
-                    line = conn.execute('SELECT text FROM mp_messages WHERE id=? AND user_id=?', (body.message_id, them)).fetchone()
-                    text = line['text'] if line else None
-                # What the reporter could have read from that player in the last hour, for the operator.
+                if conn.execute('SELECT count(*) FROM social_reports WHERE user_id=? AND created>?', (me, now-86400)).fetchone()[0] >= REPORTS_PER_DAY:
+                    fail('report_limited', 429)
+                # Only rooms the reporter can read: its village, its party, everyone, whispers to it.
                 party = mp.party_for(conn, me)
                 rooms = ['village:'+mp.host_for(conn, me), 'global', 'dm:'+me] + (['party:'+party['id']] if party else [])
+                marks = ','.join('?'*len(rooms))
+                text = None
+                if body.message_id:
+                    line = conn.execute(f'SELECT text FROM mp_messages WHERE id=? AND user_id=? AND room IN ({marks})', (body.message_id, them, *rooms)).fetchone()
+                    text = line['text'] if line else None
+                # What the reporter could have read from that player in the last hour, for the operator.
                 context = [dict(r) for r in conn.execute(
-                    f"SELECT id,channel,room,text,created FROM mp_messages WHERE user_id=? AND created>? AND room IN ({','.join('?'*len(rooms))}) ORDER BY id DESC LIMIT 10",
+                    f'SELECT id,channel,room,text,created FROM mp_messages WHERE user_id=? AND created>? AND room IN ({marks}) ORDER BY id DESC LIMIT 10',
                     (them, now-3600, *rooms))]
                 for line in context:
                     line['room'] = line['room'].split(':')[0]
@@ -554,29 +568,46 @@ class Friends:
                 host = target(conn, user, body.user_id, 'visit_self')['id']
                 if mp.host_for(conn, me) == host:
                     return {'state': 'visiting'}
-                friends = are_friends(conn, me, host)
-                host_prefs = prefs(conn, host)
-                asked = {'state': 'asked', 'expires': now+KNOCK_SECONDS}
-                if blocked_between(conn, me, host) or (not friends and host_prefs['requests'] == 'nobody'):
-                    return asked
-                if not visible_online(conn, host, now) or mp.host_for(conn, host) != host:
-                    fail('host_offline')
                 if mp.active_coop(conn, me):
                     fail('party_expedition_active')
-                spot = conn.execute('SELECT scene,seen FROM mp_presence WHERE user_id=?', (me,)).fetchone()
-                # Straight in only from the village: the game follows a new host in its village poll.
-                if friends and host_prefs['drop_in'] == 'friends' and spot and spot['scene'] == 'village' and now-spot['seen'] < mp.HOST_GONE_SECONDS:
-                    mp.start_visit(conn, me, host)
-                    bump(conn, host)
-                    return {'state': 'visiting'}
+                friends = are_friends(conn, me, host) and not blocked_between(conn, me, host)
+                host_prefs = prefs(conn, host)
+                at_home = visible_online(conn, host, now) and mp.host_for(conn, host) == host
+                if friends:
+                    # Friends see the host's online state in their list anyway.
+                    if not at_home:
+                        fail('host_offline')
+                    spot = conn.execute('SELECT scene,seen FROM mp_presence WHERE user_id=?', (me,)).fetchone()
+                    # Straight in only from the village: the game follows a new host in its village poll.
+                    if host_prefs['drop_in'] == 'friends' and spot and spot['scene'] == 'village' and now-spot['seen'] < mp.HOST_GONE_SECONDS:
+                        mp.start_visit(conn, me, host)
+                        bump(conn, host)
+                        return {'state': 'visiting'}
+                # Everyone else gets the same answers whether the host is online, away, hidden from
+                # them or has blocked them: the same limits, then 'asked'. Only a knock the host can
+                # be reached by is shown; the rest are kept as 'suppressed' rows (they count for the limits).
                 last = conn.execute("SELECT max(created) FROM mp_invites WHERE sender_id=? AND recipient_id=? AND kind='knock'", (me, host)).fetchone()[0]
                 if last is not None and now-last < KNOCK_GAP_SECONDS:
                     refuse('knock_limited', 429, KNOCK_GAP_SECONDS-(now-last))
-                if conn.execute("SELECT count(*) FROM mp_invites WHERE sender_id=? AND state='pending' AND kind='knock' AND expires>?", (me, now)).fetchone()[0] >= KNOCKS_PENDING:
+                # A new knock replaces this player's earlier one at the same village (no duplicates).
+                conn.execute("UPDATE mp_invites SET state='replaced' WHERE sender_id=? AND recipient_id=? AND kind='knock' AND state IN ('pending','suppressed')", (me, host))
+                if conn.execute("SELECT count(*) FROM mp_invites WHERE sender_id=? AND state IN ('pending','suppressed') AND kind='knock' AND expires>?", (me, now)).fetchone()[0] >= KNOCKS_PENDING:
                     refuse('knock_limited', 429, KNOCK_SECONDS)
-                conn.execute("INSERT INTO mp_invites VALUES (?,?,?,'knock',NULL,'pending',?,?)", (str(uuid.uuid4()), me, host, now+KNOCK_SECONDS, now))
-                bump(conn, host)
-                return asked
+                # Strangers reach only hosts who would appear to them in the online list.
+                reachable = friends or (self.settings.social_roster == 'all' and host_prefs['roster'] == 'everyone'
+                                        and host_prefs['requests'] != 'nobody' and not blocked_between(conn, me, host))
+                heard = at_home and reachable
+                if heard:
+                    game = conn.execute('SELECT chat2 FROM mp_presence WHERE user_id=?', (host,)).fetchone()
+                    if not (game and game['chat2']):
+                        # A released game (0.11.x) never shows knocks: say so rather than leave a
+                        # knock to lapse unseen. Only for hosts this player can see online anyway.
+                        return {'state': 'host_cannot_answer'}
+                conn.execute('INSERT INTO mp_invites VALUES (?,?,?,?,NULL,?,?,?)',
+                             (str(uuid.uuid4()), me, host, 'knock', 'pending' if heard else 'suppressed', now+KNOCK_SECONDS, now))
+                if heard:
+                    bump(conn, host)
+                return {'state': 'asked', 'expires': now+KNOCK_SECONDS}
             return mutate(request, body, 'social_visit', apply)
 
         # --- operators ------------------------------------------------------------------------

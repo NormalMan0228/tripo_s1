@@ -66,10 +66,34 @@ def test_requests_by_id_reverse_auto_accept_cancel_and_decline_cooldown(world):
     assert again['state'] == 'sent' and names(w.people(alice)['requests']['outgoing']) == ['charlie']
     assert w.people(charlie)['requests']['incoming'] == [] and w.presence(charlie, since=0)['social']['requests'] == 0
     assert w.refused(charlie, '/v1/friends/requests/'+again['id']+'/accept', 404) == 'request_unavailable'
-    w.call(alice, '/v1/friends/requests/'+again['id']+'/cancel')
+    # Once the cooldown is over, asking again sends the request kept back (the same id).
     w.tick(86401)
-    w.call(alice, '/v1/friends/requests', username='charlie')
+    assert w.call(alice, '/v1/friends/requests', username='charlie') == again
     assert names(w.people(charlie)['requests']['incoming']) == ['alice']
+    assert w.call(charlie, '/v1/friends/requests/'+again['id']+'/accept')['state'] == 'accepted'
+
+
+def test_a_request_kept_back_reaches_the_player_once_nothing_keeps_it_back(world):
+    w = world
+    alice, bravo, charlie = w.players('alice', 'bravo', 'charlie')
+    # The receiver's pref: nobody, then everyone again.
+    w.call(bravo, '/v1/social/prefs', requests='nobody')
+    sent = w.call(alice, '/v1/friends/requests', username='bravo')
+    assert w.people(bravo)['requests']['incoming'] == []
+    w.call(bravo, '/v1/social/prefs', requests='everyone')
+    assert w.call(alice, '/v1/friends/requests', username='bravo') == sent
+    assert names(w.people(bravo)['requests']['incoming']) == ['alice']
+    # A block, then lifted.
+    w.call(charlie, '/v1/social/blocks', user_id=alice.id)
+    w.call(charlie, '/v1/social/blocks/remove', user_id=alice.id)
+    w.call(charlie, '/v1/social/prefs', requests='nobody')
+    kept = w.call(alice, '/v1/friends/requests', username='charlie')
+    w.call(charlie, '/v1/social/prefs', requests='everyone')
+    w.call(charlie, '/v1/social/blocks', user_id=alice.id)
+    w.call(charlie, '/v1/social/blocks/remove', user_id=alice.id)
+    again = w.call(alice, '/v1/friends/requests', username='charlie')
+    assert names(w.people(charlie)['requests']['incoming']) == ['alice'] and again['state'] == 'sent'
+    assert kept['id'] != again['id']   # the block cancelled the first one
 
 
 def test_request_limits(world):
@@ -192,7 +216,7 @@ def test_drop_in_and_knocks(world):
     alice, bravo, charlie, delta, echo = w.players('alice', 'bravo', 'charlie', 'delta', 'echo')
     for p in (bravo, charlie, delta):
         w.befriend(alice, p)
-    w.presence(alice)
+    w.presence(alice, since=0)
     # Friends with drop-in on walk straight in from their village.
     w.call(alice, '/v1/social/prefs', drop_in='friends')
     w.presence(bravo)
@@ -226,15 +250,106 @@ def test_drop_in_and_knocks(world):
     assert w.refused(alice, '/v1/social/invites/'+knock+'/accept', 409) == 'village_full'
     w.call(alice, '/v1/social/invites/'+knock+'/decline')
     assert 'knocks' not in w.presence(alice)
-    # A host who is not here: told so (and hosts who want no strangers get no knocks).
+    # A host who is not here: friends are told so; anyone else gets the silent answer (below).
     w.client.post('/v1/social/offline', headers=alice.headers)
-    assert w.refused(echo, '/v1/social/visit', 409, user_id=alice.id) == 'host_offline'
-    w.presence(alice)
+    assert w.refused(bravo, '/v1/social/visit', 409, user_id=alice.id) == 'host_offline'
+    w.presence(alice, since=0)
     w.call(alice, '/v1/social/prefs', requests='nobody')
     w.tick(61)
     assert w.call(echo, '/v1/social/visit', user_id=alice.id)['state'] == 'asked'
     assert 'knocks' not in w.presence(alice)
     assert w.refused(echo, '/v1/social/visit', 422, user_id=echo.id) == 'visit_self'
+
+
+def test_strangers_get_the_same_knock_answers_whatever_the_host_does(make_world):
+    """A stranger cannot tell from /v1/social/visit whether a host is online, away, hidden
+    from them (roster: friends, appear offline) or has blocked them."""
+    w = make_world()
+    host, other, prying = w.players('host', 'other', 'prying')
+    w.presence(other, since=0)
+
+    shown = []
+
+    def answers(who):
+        first = w.call(who, '/v1/social/visit', user_id=host.id)
+        again = w.refused(who, '/v1/social/visit', 429, user_id=host.id)
+        with w.db() as conn:
+            shown.append(conn.execute("SELECT count(*) FROM mp_invites WHERE sender_id=? AND kind='knock' AND state='pending'", (who.id,)).fetchone()[0])
+        w.tick(61)
+        return first['state'], again
+
+    w.presence(host, since=0)
+    at_home = answers(prying)
+    assert at_home == ('asked', 'knock_limited')
+    assert [k['sender'] for k in w.presence(host, since=0)['knocks']] == ['prying']
+    cases = []
+    w.call(host, '/v1/social/prefs', roster='friends')
+    cases.append(answers(prying))
+    w.call(host, '/v1/social/prefs', roster='everyone', appear_offline=True)
+    cases.append(answers(prying))
+    w.call(host, '/v1/social/prefs', appear_offline=False)
+    w.visit(host, other)                       # the host is away, visiting
+    cases.append(answers(prying))
+    w.call(host, '/v1/social/home')
+    w.presence(host, since=0)
+    w.call(host, '/v1/social/blocks', user_id=prying.id)
+    cases.append(answers(prying))
+    w.client.post('/v1/social/offline', headers=host.headers)
+    w.call(host, '/v1/social/blocks/remove', user_id=prying.id)
+    cases.append(answers(prying))              # offline
+    assert cases == [at_home]*5
+    assert shown == [1, 0, 0, 0, 0, 0]         # only the knock on the host at home reached it
+
+
+def test_a_new_knock_replaces_the_earlier_one(world):
+    w = world
+    alice, bravo = w.players('alice', 'bravo')
+    w.presence(alice, since=0)
+    w.call(bravo, '/v1/social/visit', user_id=alice.id)
+    w.tick(61)
+    w.presence(alice, since=0)
+    w.call(bravo, '/v1/social/visit', user_id=alice.id)
+    host = w.presence(alice, since=0)
+    assert [k['sender'] for k in host['knocks']] == ['bravo'] and host['social']['knocks'] == 1
+    assert names(w.people(alice)['my_village']['knocks']) == ['bravo']
+
+
+def test_knocking_on_a_released_game_says_it_cannot_answer(world):
+    w = world
+    alice, bravo, charlie = w.players('alice', 'bravo', 'charlie')
+    w.befriend(alice, charlie)
+    w.presence(alice)                          # 0.11.x: no since, never shows knocks
+    assert w.call(bravo, '/v1/social/visit', user_id=alice.id) == {'state': 'host_cannot_answer'}
+    assert w.call(charlie, '/v1/social/visit', user_id=alice.id) == {'state': 'host_cannot_answer'}
+    with w.db() as conn:
+        assert conn.execute("SELECT count(*) FROM mp_invites WHERE kind='knock'").fetchone()[0] == 0
+    w.presence(alice, since=0)                 # the same sign-in on a chat2 game
+    w.presence(alice)                          # (a later poll without since keeps it)
+    assert w.call(bravo, '/v1/social/visit', user_id=alice.id)['state'] == 'asked'
+    assert [k['sender'] for k in w.presence(alice, since=0)['knocks']] == ['bravo']
+
+
+def test_a_host_away_visiting_cannot_let_a_knock_in(world):
+    w = world
+    alice, bravo, charlie = w.players('alice', 'bravo', 'charlie')
+    w.presence(alice, since=0)
+    w.presence(bravo)
+    w.call(bravo, '/v1/social/visit', user_id=alice.id)
+    knock = w.presence(alice, since=0)['knocks'][0]['id']
+    w.visit(alice, charlie)                    # alice goes to charlie's village
+    assert w.refused(alice, '/v1/social/invites/'+knock+'/accept', 409) == 'return_home_before_inviting'
+
+
+def test_my_village_shows_a_guest_appearing_offline_as_offline(world):
+    w = world
+    alice, bravo = w.players('alice', 'bravo')
+    w.visit(bravo, alice)
+    w.presence(bravo)
+    w.call(bravo, '/v1/social/prefs', appear_offline=True)
+    w.tick(4)
+    seen = w.people(alice)
+    assert seen['online'] == [] and [(g['username'], g['online']) for g in seen['my_village']['guests']] == [('bravo', False)]
+    assert [(g['username'], g['online']) for g in w.people(bravo)['my_village']['guests']] == [('bravo', True)]
 
 
 def test_roster_is_cached_for_three_seconds(world):
@@ -283,6 +398,33 @@ def test_reports_snapshot_the_lines_and_reach_operators(world):
     for i in range(social.REPORTS_PER_DAY-1):
         w.call(alice, '/v1/social/report', user_id=bravo.id, message_id=1000+i, reason='spam')
     assert w.refused(alice, '/v1/social/report', 429, user_id=bravo.id, reason='other') == 'report_limited'
+
+
+def test_a_report_never_attaches_a_line_the_reporter_could_not_read(world):
+    w = world
+    alice, bravo, charlie = w.players('alice', 'bravo', 'charlie')
+    w.befriend(bravo, charlie)
+    w.presence(charlie, since=0)
+    whisper = w.say(bravo, 'secret for charlie', channel='whisper', to='charlie')
+    w.call(bravo, '/v1/party')
+    party = w.say(bravo, 'party only', channel='party')
+    seen = w.say(bravo, 'hello all', channel='global')
+    boss = w.player('teacher_y', role='admin')
+    for line in (whisper, party, seen):
+        w.call(alice, '/v1/social/report', user_id=bravo.id, message_id=line['id'], reason='abuse')
+    stored = {r['message_id']: r['text'] for r in w.get(boss, '/v1/admin/reports')['reports']}
+    assert stored == {whisper['id']: None, party['id']: None, seen['id']: 'hello all'}
+
+
+def test_the_same_report_again_returns_the_first_id_even_past_the_daily_limit(world):
+    w = world
+    alice = w.player('alice')
+    others = w.players(*('r%02d' % i for i in range(social.REPORTS_PER_DAY)))
+    first = w.call(alice, '/v1/social/report', user_id=others[0].id, message_id=5, reason='spam')
+    for p in others[1:]:
+        w.call(alice, '/v1/social/report', user_id=p.id, reason='spam')
+    assert w.refused(alice, '/v1/social/report', 429, user_id=others[1].id, message_id=9, reason='spam') == 'report_limited'
+    assert w.call(alice, '/v1/social/report', user_id=others[0].id, message_id=5, reason='spam')['id'] == first['id']
 
 
 def test_prefs_round_trip(world):
