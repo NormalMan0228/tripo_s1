@@ -207,9 +207,11 @@ static func approach_points(rec: Dictionary, ctx: Dictionary, resolved: Dictiona
 		for turn in [deg_to_rad(45.0), deg_to_rad(-45.0)]:
 			var d := forward.rotated(UP, turn)
 			out.append({"pos": flat + d * reach, "yaw": yaw_of(-d), "from": "front_l" if turn > 0 else "front_r"})
-	var lateral := width * 0.5 + 0.45
-	out.append({"pos": flat + side * lateral + forward * 0.12, "yaw": yaw_of(-side), "from": "left"})
-	out.append({"pos": flat - side * lateral + forward * 0.12, "yaw": yaw_of(side), "from": "right"})
+	# Beside a seat (not the head or foot end of a bed: a bed is entered from its long side).
+	if kind != "lie":
+		var lateral := width * 0.5 + 0.45
+		out.append({"pos": flat + side * lateral + forward * 0.12, "yaw": yaw_of(-side), "from": "left"})
+		out.append({"pos": flat - side * lateral + forward * 0.12, "yaw": yaw_of(side), "from": "right"})
 	return out
 
 ## Approach candidates best first: a free spot with a clear straight path, then the closest, then the

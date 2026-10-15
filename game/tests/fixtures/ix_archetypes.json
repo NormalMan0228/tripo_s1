@@ -110,6 +110,114 @@
    ]
   },
   {
+   "id": "bed",
+   "rest": "lie",
+   "family": "rest",
+   "title": "나무 침대",
+   "parts": [
+    {
+     "id": "frame",
+     "parent": "",
+     "shape": "box",
+     "size": [
+      1.0,
+      0.3,
+      1.8
+     ],
+     "position": [
+      0,
+      0.15,
+      0
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "mattress",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      0.92,
+      0.16,
+      1.7
+     ],
+     "position": [
+      0,
+      0.23,
+      0.03
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "pillow",
+     "parent": "mattress",
+     "shape": "box",
+     "size": [
+      0.6,
+      0.08,
+      0.3
+     ],
+     "position": [
+      0,
+      0.12,
+      -0.66
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    },
+    {
+     "id": "headboard",
+     "parent": "frame",
+     "shape": "box",
+     "size": [
+      1.0,
+      0.7,
+      0.08
+     ],
+     "position": [
+      0,
+      0.2,
+      -0.86
+     ],
+     "rotation": [
+      0,
+      0,
+      0
+     ],
+     "pivot": [
+      0,
+      0,
+      0
+     ]
+    }
+   ]
+  },
+  {
    "id": "seat",
    "rest": "sit",
    "family": "rest",

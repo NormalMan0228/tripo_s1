@@ -13,7 +13,7 @@ const Interiors = preload("res://scripts/interiors.gd")
 
 ## id -> [type, count (-1: any), plan-space top (m), tolerance]
 const EXPECT := {
-	"rocking_chair": ["sit", 1, 0.49, 0.02], "seat": ["sit", 1, 0.48, 0.02], "sofa": ["sit", 2, 0.45, 0.02], "bench": ["sit", 2, 0.46, 0.02],
+	"rocking_chair": ["sit", 1, 0.49, 0.02], "bed": ["lie", 2, 0.46, 0.02], "seat": ["sit", 1, 0.48, 0.02], "sofa": ["sit", 2, 0.45, 0.02], "bench": ["sit", 2, 0.46, 0.02],
 	"armchair": ["sit", 1, 0.45, 0.02], "throne": ["sit", 1, 0.50, 0.02], "beanbag": ["sit", 1, 0.60, 0.05], "swing": ["sit", 1, 0.58, 0.02],
 	"hammock": ["lie", 2, 1.0, 0.05], "sunbed": ["lie", 2, 0.35, 0.02], "bathtub": ["lie", 2, 0.555, 0.02], "toilet": ["sit", 1, 0.46, 0.02],
 	"rug": ["sit_ground", 1, 0.024, 0.02], "seesaw": ["sit", -1, 0.48, 0.02], "rocking_horse": ["perch", 1, 0.725, 0.02]}

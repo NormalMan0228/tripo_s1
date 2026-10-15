@@ -674,6 +674,10 @@ func build_stage() -> void:
 		stage.add_child(hero)
 		if not is_instance_valid(seat):
 			seat=RestSeat.new();add_child(seat)
+			# The walk up to a seat uses the room's own walking (no doors or stairs on the way).
+			seat.mover=func(direction: Vector3, step: float): move_hero(direction,step,false)
+			seat.free_check=func(point: Vector3) -> bool: return can_stand(point)
+			seat.walk_off=walk_allowed
 		seat.hero=hero
 		place_hero_at_door()
 
@@ -2025,6 +2029,12 @@ func walk_out_step(delta: float) -> void:
 	hero.position=hero.position.move_toward(walk_out,ControllerProfile.ROOM_WALK*delta)
 	report_motion(before,delta)
 
+## Whether the walker's own movement keys count now (the room's walking gate; the seat driver asks too).
+func walk_allowed() -> bool:
+	if placement_mode or travelling or leaving or is_instance_valid(talk_box) or is_instance_valid(craft_window) or PauseMenu.is_open() or VersionGate.is_blocked(): return false
+	var focus := get_viewport().gui_get_focus_owner()
+	return not (focus is TextEdit or focus is LineEdit) and not is_instance_valid(painter) and not is_instance_valid(interaction_panel)
+
 ## WASD walking inside the room.
 func walk(delta: float) -> void:
 	var input_direction := Input.get_vector("move_left","move_right","move_forward","move_back")
@@ -2037,18 +2047,20 @@ func walk(delta: float) -> void:
 
 ## One step of walking: stays on the floor, slides along furniture, eases into
 ## doorways, climbs stairs it walks into and leaves through the front door.
-func move_hero(direction: Vector3, delta: float) -> void:
+## side_effects false (walking up to a seat): no doorway easing, stairs or leaving, and the
+## direction's length is the pace (the walk slows into the seat).
+func move_hero(direction: Vector3, delta: float, side_effects := true) -> void:
 	if not is_instance_valid(hero) or direction.length()<=0.0: return
 	var before: Vector3=hero.position
-	var step := direction.normalized()*delta*ControllerProfile.ROOM_WALK
+	var step := (direction.normalized() if side_effects else direction.limit_length(1.0))*delta*ControllerProfile.ROOM_WALK
 	var limits := Interiors.walk_limits(room_spec)
 	var door_x: float=limits.door_x
 	# Heading for the front door from a little to the side: ease into the doorway.
-	if room_spec.get("has_door",false) and step.z>0 and hero.position.z>float(limits.front)-0.25 and absf(hero.position.x-door_x)<Interiors.DOOR_HALF+0.4:
+	if side_effects and room_spec.get("has_door",false) and step.z>0 and hero.position.z>float(limits.front)-0.25 and absf(hero.position.x-door_x)<Interiors.DOOR_HALF+0.4:
 		var eased := Vector3(move_toward(hero.position.x,door_x,delta*1.6),0,hero.position.z)
 		if can_stand(eased): hero.position=eased
 	# ...and the same for doorways between rooms.
-	for door in room_spec.get("doorways",[]):
+	for door in room_spec.get("doorways",[]) if side_effects else []:
 		var middle: float=(float(door.z0)+float(door.z1))*0.5
 		if absf(step.x)>0.001 and absf(hero.position.x-float(door.x))<0.9 and absf(hero.position.z-middle)<Interiors.DOORWAY*0.5+0.45:
 			var eased := Vector3(hero.position.x,0,move_toward(hero.position.z,middle,delta*1.6))
@@ -2056,12 +2068,12 @@ func move_hero(direction: Vector3, delta: float) -> void:
 	var stuck := movement_blocked(hero.position)
 	var candidate: Vector3=hero.position+Vector3(step.x,0,0)
 	if can_stand(candidate,stuck):hero.position=candidate
-	else: try_stairs(candidate,direction)
+	elif side_effects: try_stairs(candidate,direction)
 	candidate=hero.position+Vector3(0,0,step.z)
 	if can_stand(candidate,stuck):hero.position=candidate
-	else: try_stairs(candidate,direction)
+	elif side_effects: try_stairs(candidate,direction)
 	report_motion(before,delta)
-	if room_spec.get("has_door",false) and step.z>0 and direction.normalized().z>0.5 and Interiors.at_door(room_spec,hero.position+Vector3(0,0,step.z)):leave()
+	if side_effects and room_spec.get("has_door",false) and step.z>0 and direction.normalized().z>0.5 and Interiors.at_door(room_spec,hero.position+Vector3(0,0,step.z)):leave()
 
 ## The walk clip and contact IK follow where the walker really went: a blocked or
 ## clamped step reads as standing still instead of marching in place.
