@@ -150,6 +150,8 @@ class Database:
                 raise ValueError('Demo and live must use different database directories')
             from .appearance import migrate as migrate_appearance
             migrate_appearance(db)
+            from .display_names import migrate as migrate_display_names
+            migrate_display_names(db)
 
     def connect(self):
         # check_same_thread off: a pooled connection serves one request at a time, on any thread.

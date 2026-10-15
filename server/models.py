@@ -115,6 +115,10 @@ class AvatarEdit(Mutation):
     version: int = Field(ge=0)
     avatar: AvatarPatch
 
+class NameEdit(Mutation):
+    # The shown name (server/display_names.py checks it).
+    display_name: str = Field(max_length=64)
+
 class LifeAction(Mutation):
     version: int = Field(ge=0)
     action: Literal['plant','water','harvest','till','untill','cast','reel','cancel_fishing','gather','shake','pickup','buy','sell','order']

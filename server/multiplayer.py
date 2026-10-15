@@ -243,7 +243,7 @@ class Multiplayer:
             party = party_for(conn, user_id)
             if not party:
                 return None
-            members = [dict(r) for r in conn.execute('SELECT u.id,u.username,m.joined FROM mp_members m JOIN users u ON u.id=m.user_id WHERE m.party_id=? ORDER BY m.joined,u.id', (party['id'],))]
+            members = [dict(r) for r in conn.execute('SELECT u.id,u.username,COALESCE(u.display_name,u.username) AS display_name,m.joined FROM mp_members m JOIN users u ON u.id=m.user_id WHERE m.party_id=? ORDER BY m.joined,u.id', (party['id'],))]
             for member in members:
                 presence = conn.execute('SELECT seen FROM mp_presence WHERE user_id=?', (member['id'],)).fetchone()
                 member['online'] = bool(presence and clock()-presence['seen'] < coop.PRESENCE_SECONDS)
@@ -255,9 +255,9 @@ class Multiplayer:
 
         def overview(conn, user, messages=True, blocked=None):
             host = host_for(conn, user['id'])
-            host_name = conn.execute('SELECT username FROM users WHERE id=?', (host,)).fetchone()[0]
+            host_name, host_display_name = conn.execute('SELECT username,COALESCE(display_name,username) FROM users WHERE id=?', (host,)).fetchone()
             blocked = social_db.blocked_ids(conn, user['id']) if blocked is None else blocked
-            offers = [dict(r) for r in conn.execute("SELECT i.id,i.kind,i.sender_id,u.username AS sender,i.expires FROM mp_invites i JOIN users u ON u.id=i.sender_id WHERE recipient_id=? AND state='pending' AND expires>? ORDER BY i.created DESC LIMIT 40", (user['id'], clock()))]
+            offers = [dict(r) for r in conn.execute("SELECT i.id,i.kind,i.sender_id,u.username AS sender,COALESCE(u.display_name,u.username) AS sender_display_name,i.expires FROM mp_invites i JOIN users u ON u.id=i.sender_id WHERE recipient_id=? AND state='pending' AND expires>? ORDER BY i.created DESC LIMIT 40", (user['id'], clock()))]
             # Knocks are listed apart: a released game would show one as a party invitation.
             invites = [i for i in offers if i['kind'] != 'knock'][:20]
             knocks = [{k: i[k] for k in ('id', 'sender_id', 'sender', 'expires')} for i in offers if i['kind'] == 'knock' and i['sender_id'] not in blocked][:20]
@@ -267,10 +267,10 @@ class Multiplayer:
             # Why the last visit ended (the host left, lost the connection or ended it), for a while.
             ended = None
             if host == user['id']:
-                notice = conn.execute('SELECT n.host_id,n.reason,n.created,u.username FROM mp_visit_notices n JOIN users u ON u.id=n.host_id WHERE n.user_id=? AND n.created>?', (user['id'], clock()-NOTICE_SECONDS)).fetchone()
+                notice = conn.execute('SELECT n.host_id,n.reason,n.created,u.username,COALESCE(u.display_name,u.username) AS display_name FROM mp_visit_notices n JOIN users u ON u.id=n.host_id WHERE n.user_id=? AND n.created>?', (user['id'], clock()-NOTICE_SECONDS)).fetchone()
                 if notice:
-                    ended = dict(host_id=notice['host_id'], host_name=notice['username'], reason=notice['reason'], at=notice['created'])
-            data = dict(self_id=user['id'], host_id=host, host_name=host_name, visiting=host != user['id'],
+                    ended = dict(host_id=notice['host_id'], host_name=notice['username'], host_display_name=notice['display_name'], reason=notice['reason'], at=notice['created'])
+            data = dict(self_id=user['id'], host_id=host, host_name=host_name, host_display_name=host_display_name, visiting=host != user['id'],
                         party=party_public(conn, user['id']), invites=invites, pending_rewards=pending, messages=messages,
                         visit_ended=ended)
             if knocks:
@@ -293,11 +293,11 @@ class Multiplayer:
             host = host_for(conn, user['id'])
             objects = [build_rules.listed(object_shape.listed(dict(r))) for r in conn.execute("SELECT o.id,o.name,o.color,o.version,o.state,o.x,o.z,o.rotation,COALESCE(l.room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE asset_id=o.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=o.id) AS runtime_version," + object_paint.version_column('o.id') + " AS paint_version," + object_shape.column('o.id') + " AS shape," + build_rules.column('o.id') + " AS mount FROM objects o LEFT JOIN furniture_locations l ON l.object_id=o.id WHERE o.owner_id=? AND o.state='placed' AND COALESCE(l.room,'village')=? ORDER BY o.id", (host, scene))]
             players = []
-            for row in conn.execute("SELECT p.*,u.username FROM mp_presence p JOIN users u ON u.id=p.user_id WHERE p.host_id=? AND p.scene=? AND p.seen>? AND (p.user_id=? OR EXISTS(SELECT 1 FROM mp_visits v WHERE v.user_id=p.user_id AND v.host_id=? AND v.expires>?))", (host, scene, clock()-VISIBLE_SECONDS, host, host, clock())):
+            for row in conn.execute("SELECT p.*,u.username,COALESCE(u.display_name,u.username) AS display_name FROM mp_presence p JOIN users u ON u.id=p.user_id WHERE p.host_id=? AND p.scene=? AND p.seen>? AND (p.user_id=? OR EXISTS(SELECT 1 FROM mp_visits v WHERE v.user_id=p.user_id AND v.host_id=? AND v.expires>?))", (host, scene, clock()-VISIBLE_SECONDS, host, host, clock())):
                 if row['user_id'] in blocked:
                     continue
                 # t: the sender's clock when the spot was taken (older games send none: seen).
-                player = dict(id=row['user_id'], username=row['username'], x=row['x'], z=row['z'], y=row['y'], yaw=row['yaw'],
+                player = dict(id=row['user_id'], username=row['username'], display_name=row['display_name'], x=row['x'], z=row['z'], y=row['y'], yaw=row['yaw'],
                               vx=row['vx'], vz=row['vz'], t=row['ct'], seen=row['seen'], **look(conn, row['user_id']))
                 # The interaction state only when that player sent one (older replies are unchanged).
                 if row['ix']:
@@ -505,7 +505,7 @@ class Multiplayer:
                     previous = conn.execute('SELECT status FROM coop_runs WHERE id=?', (party['run_id'],)).fetchone()
                     if previous and previous[0] == 'active':
                         fail('party_expedition_active')
-                members = [dict(r) for r in conn.execute('SELECT u.id,u.username FROM mp_members m JOIN users u ON u.id=m.user_id WHERE m.party_id=? ORDER BY joined,u.id', (party['id'],))]
+                members = [dict(r) for r in conn.execute('SELECT u.id,u.username,COALESCE(u.display_name,u.username) AS display_name FROM mp_members m JOIN users u ON u.id=m.user_id WHERE m.party_id=? ORDER BY joined,u.id', (party['id'],))]
                 if len(members) < 2:
                     fail('party_needs_two_players')
                 for member in members:
