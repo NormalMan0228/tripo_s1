@@ -112,23 +112,31 @@ def place(c, h, item, x, z):
     return r.json()
 
 
-def test_requests_wait_for_the_opening_chapter_and_its_letter(world):
+def test_requests_open_while_the_chair_is_made_and_mokas_after_the_chapter(world):
     app, c, now = world
     h = account(c, 'newcomer')
     first = c.get('/v1/me', headers=h).json()['quests']
     assert first['unlocked'] is False and {q['state'] for q in first['states']} == {'locked'}
     assert accept(c, h, 'moka_pie').json()['detail'] == 'quests_locked'
-    # The chapter: letter, 모카's request, the welcome chair on the terrace.
+    # The chapter: letter, 모카's request. Asked, nothing ordered yet: still closed.
     for action in ('read_letter', 'accept'):
         assert c.post('/v1/story/step', headers=h, json=mutation(action=action)).status_code == 200
+    assert listing(c, h)['unlocked'] is False
+    # The chair is ordered: while it is made every request opens but 모카's own (she is busy).
+    craft(app, c, h, '하늘색 쿠션을 얹은 둥근 나무 카페 의자', now)
+    waiting = listing(c, h)
+    assert waiting['unlocked'] is True
+    assert {q['id']: q['state'] for q in waiting['list']}['moka_pie'] == 'locked'
+    assert {q['state'] for q in waiting['list'] if q['id'] != 'moka_pie'} == {'available'}
+    assert accept(c, h, 'moka_pie').json()['detail'] == 'quests_locked'
+    assert accept(c, h, 'sora_outfit').status_code == 200
+    # The welcome chair on the terrace ends the chapter: 모카's request opens too (no letter needed).
     chair = next(o for o in c.get('/v1/me', headers=h).json()['objects'] if o['name'] == '환영의 나무 의자')
     done = c.post('/v1/story/gift', headers=h, json=mutation(object_id=chair['id'], version=chair['version'])).json()
     assert done['story']['step'] == 'done'
-    # Done, but 모카's letter is still unread: the chapter's last line comes first.
-    assert listing(c, h)['unlocked'] is False
-    c.post('/v1/letters/read', headers=h, json=mutation(ids=[done['letters'][0]['id']]))
     open_ = listing(c, h)
-    assert open_['unlocked'] is True and {q['state'] for q in open_['list']} == {'available'}
+    states = {q['id']: q['state'] for q in open_['list']}
+    assert open_['unlocked'] is True and states.pop('sora_outfit') == 'active' and set(states.values()) == {'available'}
     # Every resident of the village asks one thing (residents.gd RESIDENTS, the same nineteen).
     assert [q['npc'] for q in open_['list']] == ['regular', 'naru', 'sora', 'moru', 'haeru', 'postman', 'farmer', 'lamplighter', 'fisher',
                                                 'sweeper', 'gentleman', 'stargazer', 'gardener', 'scout', 'miller', 'shopkeeper', 'kid',

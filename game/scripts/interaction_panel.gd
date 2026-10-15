@@ -111,37 +111,20 @@ func _ready() -> void:
 # ---------------------------------------------------------------- layout
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0.03, 0.04, 0.05, 0.55)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
-	window = PanelContainer.new()
-	window.add_theme_stylebox_override("panel", RpgUi.panel_style("paper"))
-	window.custom_minimum_size = Vector2(1040, 660)
-	center.add_child(window)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 8)
-	window.add_child(column)
-	# Header: ribbon title, the object's name, close.
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 12)
-	column.add_child(head)
-	RpgUi.ribbon(head, tr("상호작용"), true, 22)
-	title_label = RpgUi.heading(head, str(obj.get("name", "")), 20)
-	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# The shared window (RpgUi.window): the shade, a centred 1040 px parchment card, the object's name
+	# as the title after the teal 상호작용 ribbon, the close key (Esc, through the window stack).
+	var w := RpgUi.window(self, str(obj.get("name", "")), {"width":1040, "place":"centre", "scroll":false,
+		"on_close":func(): close_panel(), "id":"interaction_editor"})
+	window = w.card
+	window.custom_minimum_size.y = 660
+	var column: VBoxContainer = w.body
+	var head: HBoxContainer = w.head
+	var ribbon := RpgUi.ribbon(head, tr("상호작용"), true, 22)
+	ribbon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.move_child(ribbon, 0)
+	title_label = w.title
 	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	var close := Button.new()
-	close.icon = RpgUi.icon_texture("close")
-	close.expand_icon = true
-	close.custom_minimum_size = Vector2(40, 40)
-	close.focus_mode = Control.FOCUS_NONE
-	RpgUi.name_tip(close, tr("닫기"), "Esc")
-	close.pressed.connect(func(): close_panel())
-	head.add_child(close)
+	title_label.clip_text = true
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 16)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -202,7 +185,6 @@ func _build() -> void:
 	preview_timer.timeout.connect(func(): _preview(false))
 	add_child(preview_timer)
 	_set_enabled(false)
-	RpgUi.pop_in(window)
 
 func _build_stage(parent: Control) -> void:
 	var left := VBoxContainer.new()
@@ -531,16 +513,14 @@ func close_panel(saved := false) -> void:
 	finished.emit(saved or saved_once)
 	queue_free()
 
-func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
-		var owner_focus := get_viewport().gui_get_focus_owner()
-		if owner_focus is TextEdit: owner_focus.release_focus()
-		else: close_panel()
-		get_viewport().set_input_as_handled()
-
+## The world behind takes no keys while the editor is open. Esc goes to the window stack: it
+## leaves the describe box first, then closes the top window (this editor).
 func _unhandled_key_input(event: InputEvent) -> void:
-	# The world behind does not react while the editor is open.
 	get_viewport().set_input_as_handled()
+	if not (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE): return
+	var owner_focus := get_viewport().gui_get_focus_owner()
+	if owner_focus is TextEdit and is_ancestor_of(owner_focus): owner_focus.release_focus()
+	else: RpgUi.close_top()
 
 func _stage_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -1078,7 +1058,7 @@ func _celebrate() -> void:
 		dot.rings = 3
 		var glow := StandardMaterial3D.new()
 		glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		glow.albedo_color = Color("ffe08a")
+		glow.albedo_color = RpgUi.HOVER
 		dot.material = glow
 		burst.mesh = dot
 		burst.position = Vector3(0, 0.6, 0)

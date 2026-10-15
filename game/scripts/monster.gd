@@ -47,17 +47,26 @@ static func available(p_species: String, p_variant := "") -> bool:
 		if ResourceLoader.exists(path_for(p_species, v)): return true
 	return false
 
+## The variant whose GLB setup() loads for species/variant: that one, else any other variant of the
+## species that exists ("" when none does).
+static func resolved_variant(p_species: String, p_variant: String) -> String:
+	for v in ([p_variant] if p_variant in VARIANTS else []) + VARIANTS:
+		if ResourceLoader.exists(path_for(p_species, v)): return v
+	return ""
+
+## The GLB setup() loads for species/variant ("" when there is none): the survival map reads it on
+## a worker thread before the first night, so the spawn finds it in the resource cache.
+static func resolved_path(p_species: String, p_variant: String) -> String:
+	var v := resolved_variant(p_species, p_variant)
+	return "" if v == "" else path_for(p_species, v)
+
 ## Loads the GLB for species/variant (any other variant of the species if that one is missing).
 func setup(p_species: String, p_variant: String) -> bool:
 	species = p_species
-	var order: Array = ([p_variant] if p_variant in VARIANTS else []) + VARIANTS
-	var path := ""
-	for v in order:
-		if ResourceLoader.exists(path_for(species, v)):
-			path = path_for(species, v)
-			variant = v
-			break
-	if path == "": return false
+	var found := resolved_variant(species, p_variant)
+	if found == "": return false
+	variant = found
+	var path := path_for(species, found)
 	var scene := load(path) as PackedScene
 	if scene == null: return false
 	model = scene.instantiate() as Node3D

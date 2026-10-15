@@ -16,6 +16,7 @@ extends SceneTree
 ## by default; 60-90 is a person's press). The IME helper's trace (focus, editing, composition, keys)
 ## goes to user://logs/ime_trace.txt; a field whose composed syllables never arrived (Godot 4.7.2
 ## engine bug godotengine/godot#123269) fails with that named.
+const SocialHud = preload("res://scripts/social_hud.gd")
 const Main = preload("res://scripts/main.gd")
 var server := preload("res://tests/qa_server.gd").url()
 var hold_ms := 12
@@ -66,8 +67,10 @@ func key(keycode: Key, unicode: int) -> void:
 ## Focuses the field (a click, or the screen's own focus), then types. Real IME: `keys` are the
 ## 2-beolsik keys ("gksrmf" = 한글, '>' Enter, '.' a short pause). Otherwise `text` goes in as
 ## committed syllables ('\n' Enter). Returns "0 ..." when typed, "2 ..." when another window took
-## the front, "3 ..." without a Korean IME.
+## the front, "3 ..." without a Korean IME, "4 ..." when the field is not on screen.
 func type_into(field: Control, keys: String, text: String, clicked := true) -> String:
+	# A hidden field takes no keys: the viewport drops the focus at the first key (0 syllables).
+	if not field.is_visible_in_tree(): return "4 the field is hidden (%s)" % field.get_path()
 	if clicked: await click(field)
 	if root.gui_get_focus_owner() != field:
 		print("  (focus was on %s, hovered %s; grabbing)" % [root.gui_get_focus_owner(), root.gui_get_hovered_control()])
@@ -126,6 +129,9 @@ func typed(field: Control, keys: String, text: String, label: String, clicked :=
 	if is_instance_valid(field):
 		field.text_changed.disconnect(on_text)
 		if field is LineEdit: field.text_submitted.disconnect(on_submit)
+	if report.begins_with("4"):
+		expect(false, "%s: %s" % [label, report])
+		return ""
 	if not report.begins_with("0"):
 		print("SKIP %s: %s" % [label, report])
 		return ""
@@ -198,21 +204,27 @@ func run() -> void:
 		await typed(app.craft_box.prompt, "wkrdms. qjtjt. ahdid. dmlwk ", "작은 버섯 모양 의자 ", "village craft prompt")
 	app.close_village_modal()
 
-	# 함께하기 while presence polls: the invite name, then two chat lines with Enter, no click between.
+	# 함께하기 while presence polls: the invite name in the drawer, then two lines in the always-on
+	# chat box: Enter sends and gives the keys back, Enter again opens it for the next line.
 	during = func(): app.social.poll()
-	await app.social.open_menu()
-	await create_timer(0.6).timeout
-	var social_fields := fields_in(app.village_modal, "LineEdit") if is_instance_valid(app.village_modal) else []
-	expect(social_fields.size() >= 2, "함께하기 has the invite and chat fields")
-	if social_fields.size() >= 2:
-		await typed(social_fields[0], "cheogkf. dlfma ", "초대할 이름 ", "social invite name")
-		var chat: LineEdit = social_fields[social_fields.size()-1]
-		var sent := await typed(chat, "dkssudgktpdy>....qksrkdnjdy>..", "안녕하세요\n반가워요\n", "social chat field empty after two Enters")
-		var said := func() -> Array: return app.social.data.get("messages", []).map(func(m): return str(m.text))
+	var hub: Node = SocialHud.of(app.api)
+	expect(hub != null, "the social layer is up in the village")
+	if hub:
+		hub.open_window("village")
+		await create_timer(0.6).timeout
+		var name_fields: Array = hub.window.form.find_children("*", "LineEdit", true, false)
+		expect(name_fields.size() == 1, "the 함께하기 drawer has the invite name field")
+		if name_fields.size() == 1:
+			await typed(name_fields[0], "cheogkf. dlfma ", "초대할 이름 ", "social invite name")
+		hub.close_window()
+		await create_timer(0.3).timeout
+		# Committed syllables follow the keys: Enter sends, Enter opens the chat again, Enter sends.
+		var sent := await typed(hub.chat.field, "dkssudgktpdy>....>qksrkdnjdy>..", "안녕하세요\n\n반가워요\n", "chat box empty after two lines (Enter, Enter, Enter)")
+		var said := func() -> Array: return hub.lines.map(func(m): return str(m.get("text", "")))
 		await wait_until(func(): return said.call().has("반가워요"), 5.0)
 		if not sent.is_empty():
-			expect(said.call().has("안녕하세요") and said.call().has("반가워요"), "social chat: both lines sent (%s)" % [said.call()])
-	app.close_village_modal()
+			expect(said.call().has("안녕하세요") and said.call().has("반가워요"), "chat box: both lines sent (%s)" % [said.call()])
+		expect(not hub.chat.field.has_focus(), "the chat lets go after the last Enter")
 	during = Callable()
 
 	# The interaction editor's describe box (글로 설명하기), on a free fixture chest.
@@ -255,9 +267,17 @@ func run() -> void:
 	var studio: Node = load("res://scenes/studio.tscn").instantiate()
 	root.add_child(studio)
 	if await wait_until(func(): return not studio.data.is_empty(), 30.0):
-		# The room's C opens the same craft window as the village's.
+		# The room's C opens the same craft window as the village's. The fixture chest made above
+		# finished in this session, so the window opens on it (완성했어요!) with the form hidden: like
+		# a player, press 새로 만들기 first (it shows the form and puts the caret in the box).
 		await studio.open_craft()
 		await create_timer(0.4).timeout
+		if is_instance_valid(studio.craft) and not studio.craft.form.visible:
+			var again: Array = studio.craft.status.find_children("*", "Button", true, false).filter(func(b): return b.text == tr("새로 만들기"))
+			if not again.is_empty():
+				(again[0] as Button).pressed.emit()
+				await create_timer(0.3).timeout
+			expect(studio.craft.form.visible and studio.craft.prompt.has_focus(), "room craft window: 새로 만들기 shows the form with the caret in the box")
 		during = func(): studio.refresh()
 		await typed(studio.craft.prompt, "dhfmrhf. tkdwk ", "오르골 상자 ", "room craft prompt")
 		during = Callable()

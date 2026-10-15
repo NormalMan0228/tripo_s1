@@ -240,7 +240,7 @@ func _build_form() -> void:
 	form.add_child(price_row)
 	price_row.add_child(RpgUi.icon("res://assets/starseed.svg", 22))
 	price_label = _label(price_row, "", 14, true)
-	ask = _button(form, tr("의뢰하기"), request, "gold")
+	ask = _button(form, tr("의뢰하기"), request, "gold", "lg")
 	held_note = _label(form, "", 13, true)
 	held_note.visible = false
 
@@ -453,6 +453,8 @@ func _start_over() -> void:
 	if tracker != null: tracker.clear_done()
 	new_craft.emit()
 	_show_form()
+	# The words come next: the caret waits in the box (Korean IME included).
+	if is_instance_valid(prompt) and prompt.is_visible_in_tree(): prompt.grab_focus()
 
 ## "여기에 놓기": the place puts the new object down where the player is (and closes the window).
 func _place(object_id: String) -> void:
@@ -620,7 +622,7 @@ func _paint_step(step: Dictionary, mode: String) -> void:
 	var before := str(step.mode)
 	if before == mode: return
 	step.mode = mode
-	var gold := Color("e9b552")
+	var gold: Color = RpgUi.AWAY
 	var ink: Color = RpgUi.PAPER_INK
 	var muted := Color(ink, 0.35)
 	var lit := mode != "pending"
@@ -862,16 +864,14 @@ func _say(value: String) -> void:
 func _explain(code: String) -> String:
 	return CraftWords.error(code, cap)
 
+## A line on the parchment (RpgUi.label): paper ink, or muted, or `color`; wraps with the window;
+## 20 px and up in the display font.
 func _label(parent: Node, value: String, size := 15, muted := false, color := Color(0, 0, 0, 0)) -> Label:
-	var l := Label.new()
-	l.text = value
+	var tone: Color = color if color.a > 0.0 else (RpgUi.PAPER_INK if not muted else RpgUi.PAPER_MUTED)
+	var l := RpgUi.label(parent, value, size, tone, false)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.add_theme_font_size_override("font_size", size)
 	if size >= 20: l.add_theme_font_override("font", RpgUi.FONT_DISPLAY)
-	var tone: Color = color if color.a > 0.0 else (RpgUi.PAPER_INK if not muted else RpgUi.PAPER_MUTED)
-	l.add_theme_color_override("font_color", tone)
-	parent.add_child(l)
 	return l
 
 ## Button rows wrap with the window's width.
@@ -882,16 +882,9 @@ func _row(parent: Node) -> HFlowContainer:
 	parent.add_child(r)
 	return r
 
-func _button(parent: Node, value: String, callback: Callable, variant := "") -> Button:
-	var b := Button.new()
-	b.text = value
-	b.custom_minimum_size.y = 42
-	b.focus_mode = Control.FOCUS_NONE
-	if variant == "gold": b.theme_type_variation = "GoldButton"
-	RpgUi.hover_motion(b, 1.03)
-	b.pressed.connect(func() -> void: callback.call())
-	parent.add_child(b)
-	return b
+## A shared button (RpgUi.button): parchment, or gold for the step forward; md, lg for the main ask.
+func _button(parent: Node, value: String, callback: Callable, variant := "", size := "md") -> Button:
+	return RpgUi.button(parent, value, callback, "gold" if variant == "gold" else "normal", size)
 
 func _option(parent: Node, items: Array) -> OptionButton:
 	var o := OptionButton.new()

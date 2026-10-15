@@ -363,6 +363,9 @@ def public_state(s):
     data['obstacles']=s.get('obstacles',[])
     data['hazards']=s.get('hazards',[])
     data['day'] = min(7, int(s['elapsed']/s['day_seconds'])+1)
+    # The species tonight's roster draws from (night_enemies), so the client reads only their models
+    # ahead of the night: under the expedition's loading card, and the new ones while a day is young.
+    data['night_species'] = list(catalog.night_species(data['map_id'], data['day']))
     data['night'] = s['elapsed'] % s['day_seconds'] / s['day_seconds'] >= 0.65
     data['day_progress'] = s['elapsed'] % s['day_seconds'] / s['day_seconds']
     data['fire_remaining'] = max(0., s['fire_until']-s['elapsed'])

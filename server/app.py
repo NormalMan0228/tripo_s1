@@ -308,7 +308,10 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def get_life(request:Request):
         with db.read() as conn:
             user=auth(conn,request)
-            return homestead.public(life_state(conn,user['id']),clock())
+            state=life_state(conn,user['id'])
+            result=homestead.public(state,clock())
+            result['sell_stars']=homestead.star_status(state,clock(),settings.sell_stars_daily,settings.sell_coins_per_star)
+            return result
 
     @app.post('/v1/admin/grant')
     def admin_grant(body:AdminGrant,request:Request):
@@ -338,6 +341,16 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             state=life_state(conn,user['id'])
             try: result=homestead.act(state,body,clock())
             except homestead.Rejected as error: fail(str(error))
+            # Selling also pays starseeds (a daily allowance), through the ledger like every star.
+            if body.action=='sell':
+                stars=homestead.sell_stars(state,homestead.PRICES[body.item]*body.quantity,clock(),
+                                           settings.sell_stars_daily,settings.sell_coins_per_star)
+                if stars:
+                    money(conn,user['id'],stars,'sell_reward',str(body.request_id))
+                    result['message']=result['message'].replace('개를 받았어요.',f'개와 별씨 {stars}개를 받았어요.')
+                result['stars']=stars
+                result['shards']=conn.execute('SELECT shards FROM users WHERE id=?',(user['id'],)).fetchone()[0]
+            result['sell_stars']=homestead.star_status(state,clock(),settings.sell_stars_daily,settings.sell_coins_per_star)
             conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
                          (user['id'],json.dumps(state)))
             return result
@@ -460,7 +473,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 # The opening story chapter (server/story.py), None for accounts without it.
                 'story':app.state.story.public_for(conn,user['id']),
                 # Residents' requests (server/quests.py brief: states only; the full list is /v1/quests).
-                'quests':app.state.quests.brief_for(conn,user['id'])}
+                'quests':app.state.quests.brief_for(conn,user['id']),
+                # Treasure chests already opened (server/treasure.py brief), so the game draws them open.
+                'chests':app.state.treasure.brief_for(conn,user['id'])}
 
     @app.post('/v1/objects/{object_id}')
     def edit_object(object_id:str,body:ObjectEdit,request:Request):
@@ -654,6 +669,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.story=Story(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
     from .quests import Quests
     app.state.quests=Quests(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
+    from .treasure import Treasure
+    app.state.treasure=Treasure(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
     from .interactions import Interactions
     app.state.interactions=Interactions(app,db,settings,clock,auth,mutate,own,money,studio)
     from .usage_report import UsageReport; app.state.usage_report=UsageReport(app,db,settings,clock)

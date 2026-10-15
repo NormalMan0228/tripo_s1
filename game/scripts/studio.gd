@@ -42,9 +42,11 @@ const ROOM_AMBIENCE_DB := -13.0
 ## A resident's activity cue (♪ at the piano, ✦ at the telescope) barks again only after this long.
 const CUE_BARK_GAP := 15.0
 const NpcGifts=preload("res://scripts/npc_gifts.gd")
+const ShopSell=preload("res://scripts/shop_sell.gd")
 const AvatarLook=preload("res://scripts/avatar_look.gd")
 ## Visitors' and the host's walk in the home, drawn smoothly from the presence replies.
 const RemoteMotion=preload("res://scripts/remote_motion.gd")
+const SocialHud=preload("res://scripts/social_hud.gd")
 ## The home shares spots four times a second; other rooms (the workshop, a public building) still
 ## say every few seconds that this player is here, so a host crafting in the workshop keeps the
 ## guests in the village (server/multiplayer.py HOST_GONE_SECONDS).
@@ -55,6 +57,9 @@ const RestSeat=preload("res://scripts/rest_seat.gd")
 const StoryHome=preload("res://scripts/story_home.gd")
 ## Game version and server notices (update window, new-version banner, maintenance countdown/screen).
 const VersionGate=preload("res://scripts/version_gate.gd")
+## On ladder rungs the walker climbs with this clip (the explorer's crouched step) instead of the
+## walk clip, which would march in place: the rise is straight up, nothing moves across.
+const LADDER_CLIP := "Legs_Crouch_Step"
 var api: Node
 var gate: CanvasLayer
 var viewport: SubViewport
@@ -229,9 +234,25 @@ var walk_out := Vector3.ZERO
 ## RPG-style HUD over the full-screen room view.
 var name_panel: PanelContainer
 var name_tween: Tween
+## The location card's picture and its flavour line (shown on arrival, then rolled up).
+var place_icon: TextureRect
+var place_flavour: VBoxContainer
 var toast_lane: VBoxContainer
-var hint_chip: PanelContainer
-var hint_key: Label
+## The one prompt chip (RpgUi.prompt): what the interact key does right here.
+var hint_chip: Label
+## The HUD root (design canvas), the character frame (RpgUi.player_frame) and its portrait drawing.
+var hud: Control
+var frame: Dictionary={}
+var portrait_view: Node
+## The name and leaf coins the village handed over (-1: not known here).
+var session_name := ""
+var session_coins := -1
+## The 가방 drawer (RpgUi.drawer, kept), its scrolling pages and tabs, and the furniture preview.
+var bag: Dictionary={}
+var bag_scroll: ScrollContainer
+var bag_strip: HBoxContainer
+var bag_pages: Dictionary={}
+var preview_view: SubViewportContainer
 ## The hotbar slots, as in the village: 가방 (I) opens the dock, 제작 (C) the craft window.
 var dock_toggle: Button
 var craft_slot: Button
@@ -290,6 +311,8 @@ func _ready() -> void:
 		visit_host=str(session.get("visit_host",""))
 		visit_name=str(session.get("visit_name",""))
 		visiting=bool(session.get("visiting",false)) or not visit_host.is_empty()
+		session_name=str(session.get("username",""))
+		session_coins=int(session.get("coins",-1))
 		if session.get("avatar") is Dictionary: session_avatar=session.avatar
 		if session.get("profile") is Dictionary and session.profile.get("avatar") is Dictionary:
 			session_avatar=session.profile.avatar
@@ -328,18 +351,15 @@ func _ready() -> void:
 	show_story()
 	if public_room:
 		# Village buildings are only for looking around: no bag or editing (the craft window still opens;
-		# the finished object waits in the bag).
-		dock_panel.visible=false;RpgUi.show_slot(dock_toggle,false)
-		for b in room_buttons: b.visible=false
-		message(tr(str(room_spec.flavour)))
+		# the finished object waits in the bag). The location card tells the building's flavour.
+		set_dock_open(false);update_room_slots()
 		if not api.token.is_empty():
 			load_avatar()
 			refresh_gifts()
 		return
 	if not visit_host.is_empty():
 		# Visitors only look around: no bag, room switching or editing (crafting goes on as anywhere).
-		dock_panel.visible=false;RpgUi.show_slot(dock_toggle,false)
-		for b in room_buttons: b.visible=false
+		set_dock_open(false);update_room_slots()
 		message(tr("%s님의 집에 놀러 왔어요. 가구는 구경만 할 수 있어요.") % visit_name)
 	if api.token.is_empty():
 		message(tr("마을에서 로그인한 뒤 공방으로 들어오세요."))
@@ -350,300 +370,338 @@ func load_avatar() -> void:
 	var response: Dictionary=await api.request("/v1/studio")
 	if response.ok and is_instance_valid(hero) and response.data is Dictionary:
 		wear_profile(response.data.get("profile",{}))
+		show_stars(int(response.data.get("shards",0)))
 
 ## The saved look on the room's walker (a no-op when its version is the one already worn).
 func wear_profile(profile: Dictionary, animate := false) -> void:
 	if not is_instance_valid(hero) or not profile.get("avatar") is Dictionary: return
 	AvatarLook.wear(hero,profile.avatar,int(profile.get("version",-1)),animate)
+	show_portrait(profile.avatar,int(profile.get("version",-1)))
 
-func theme_style() -> Theme:
-	var t := Theme.new()
-	t.default_font=RpgUi.FONT_BODY;t.default_font_size=14
-	t.set_font("font","Button",RpgUi.FONT_STRONG)
-	RpgUi.tooltip_theme(t)
-	for type in ["VScrollBar","HScrollBar"]:
-		t.set_stylebox("scroll",type,RpgUi.frame("scroll_track"));t.set_stylebox("grabber",type,RpgUi.frame("scroll_grabber"))
-		t.set_stylebox("grabber_highlight",type,RpgUi.frame("scroll_grabber_hover"));t.set_stylebox("grabber_pressed",type,RpgUi.frame("scroll_grabber_hover"))
-	for type in ["HSlider","VSlider"]:
-		t.set_stylebox("slider",type,RpgUi.frame("bar_bg"));t.set_stylebox("grabber_area",type,RpgUi.frame("bar_fill",Color("e9b552")))
-		t.set_icon("grabber",type,RpgUi.half("slider_grabber"));t.set_icon("grabber_highlight",type,RpgUi.half("slider_grabber_hover"))
-	for type in ["Label","Button","ColorPickerButton","OptionButton","LineEdit","TextEdit","ItemList","CheckButton","CodeEdit"]:
-		t.set_color("font_color",type,RpgUi.INK)
-		if type in ["Button","OptionButton","CheckButton","ColorPickerButton"]:
-			t.set_color("font_hover_color",type,Color("ffe08a"));t.set_color("font_pressed_color",type,Color("ffe08a"))
-			t.set_color("font_disabled_color",type,Color(RpgUi.INK,.4))
-		if type in ["LineEdit","TextEdit","CodeEdit"]:t.set_color("font_placeholder_color",type,Color(1,1,1,.42))
-		if type=="Label":continue
-		for state_name in ["normal","hover","pressed","focus","selected","read_only","disabled"]:
-			var field: bool = type in ["LineEdit","TextEdit","CodeEdit"]
-			var fill := Color(0.05,0.07,0.08,.72) if field else (Color(0.24,0.2,0.12,.95) if state_name in ["hover","selected"] else (Color(0.36,0.28,0.14,.95) if state_name=="pressed" else Color(0.09,0.12,0.13,.9)))
-			var style := RpgUi.style(fill,8,RpgUi.GOLD if state_name in ["hover","focus","pressed"] else Color(RpgUi.GOLD,.45),1)
-			style.shadow_size=0
-			style.content_margin_left=10;style.content_margin_right=10;style.content_margin_top=7;style.content_margin_bottom=7
-			t.set_stylebox(state_name,type,style)
-	var list_panel := RpgUi.style(Color(0.05,0.07,0.08,.6),8,Color(RpgUi.GOLD,.35),1)
-	list_panel.shadow_size=0
-	t.set_stylebox("panel","ItemList",list_panel)
-	var chosen := RpgUi.style(Color(0.36,0.28,0.14,.9),6,RpgUi.GOLD,1);chosen.shadow_size=0
-	t.set_stylebox("selected","ItemList",chosen);t.set_stylebox("selected_focus","ItemList",chosen)
-	t.set_color("font_selected_color","ItemList",Color("ffe08a"))
-	var popup := RpgUi.style(Color(0.08,0.1,0.11,.97),8,Color(RpgUi.GOLD,.6),1)
-	t.set_stylebox("panel","PopupMenu",popup)
-	t.set_color("font_color","PopupMenu",RpgUi.INK);t.set_color("font_hover_color","PopupMenu",Color("ffe08a"))
-	t.set_stylebox("hover","PopupMenu",chosen)
-	t.set_color("font_color","SpinBox",RpgUi.INK)
-	return t
-
-func label(parent: Node,value: String,size_px:=14) -> Label:
-	var l := Label.new();l.text=value;l.add_theme_font_size_override("font_size",size_px)
-	l.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;l.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	parent.add_child(l);return l
-
-func button(parent: Node,value: String,callback: Callable) -> Button:
-	var b := Button.new();b.text=value;b.pressed.connect(callback);b.custom_minimum_size.y=38;parent.add_child(b);RpgUi.hover_motion(b,1.03);return b
-
-func option(parent: Node,items: Array) -> OptionButton:
-	var o := OptionButton.new();o.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	for value in items:o.add_item(value)
-	parent.add_child(o);return o
-
-## A small gold key cap ("E", "C", "Esc") like the village hotbar's.
-func key_cap(parent: Node, key: String) -> Label:
-	var cap := Label.new()
-	cap.text=key
-	cap.add_theme_font_size_override("font_size",12)
-	cap.add_theme_color_override("font_color",Color("2b2112"))
-	cap.add_theme_font_override("font",RpgUi.FONT_BOLD)
-	cap.add_theme_stylebox_override("normal",RpgUi.frame("keycap"))
-	cap.size_flags_vertical=Control.SIZE_SHRINK_CENTER
-	cap.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	parent.add_child(cap)
-	return cap
-
-## A compact dark RPG button for the HUD, with an optional key cap.
-func hud_button(parent: Node, value: String, callback: Callable, key := "") -> Button:
-	var b := Button.new()
-	b.text=value
-	b.focus_mode=Control.FOCUS_NONE
-	b.custom_minimum_size=Vector2(0,44)
-	b.add_theme_font_size_override("font_size",16)
-	b.add_theme_font_override("font",RpgUi.FONT_STRONG)
-	for state in ["normal","hover","pressed","disabled"]:
-		var plate := RpgUi.frame("btn_night_"+state)
-		plate.content_margin_left=16 if key.is_empty() else 30
-		b.add_theme_stylebox_override(state,plate)
-	RpgUi.hover_motion(b,1.04)
-	for state in ["font_color","font_hover_color","font_pressed_color"]:
-		b.add_theme_color_override(state,Color("fff2cf") if state!="font_hover_color" else Color("ffe08a"))
-	b.pressed.connect(callback)
-	parent.add_child(b)
-	if not key.is_empty():
-		var cap := key_cap(b,key)
-		cap.position=Vector2(-6,-9)
-	return b
-
-## Opens or closes the bag drawer. Once the room stands, a real change slides it with the drawer's
-## own sound (I, Esc, the 가방 slot); the arrival's first state stays silent.
+## The 가방 drawer (I): built once and kept, opened and closed in place (RpgUi.show_drawer), so the
+## picked piece, its preview and the developer tabs stay as they were. On the window stack while
+## open: I and Esc close it like any window. The location card steps aside while it is open.
+## Its slide sound is the drawer's own (RpgUi.show_drawer, only on a real change once the room
+## stands: animate is is_processing(), so the arrival's first state stays silent).
 func set_dock_open(open: bool) -> void:
 	if not is_instance_valid(dock_panel): return
-	var was: bool=dock_panel.visible
-	dock_panel.visible=open and visit_host.is_empty() and not public_room
-	if dock_panel.visible!=was and is_processing(): RpgUi.sfx("drawer_open" if dock_panel.visible else "drawer_close",-10.0)
-	if is_instance_valid(dock_toggle): dock_toggle.modulate=Color(1,1,1,1) if not dock_panel.visible else Color(1,0.92,0.75,1)
+	var shown: bool=open and visit_host.is_empty() and not public_room
+	RpgUi.show_drawer(bag,shown,is_processing())
+	if shown: fit_bag()
+	if is_instance_valid(name_panel): name_panel.visible=not shown and not is_instance_valid(talk_box)
+	if is_instance_valid(dock_toggle): dock_toggle.modulate=RpgUi.WARM.lerp(Color.WHITE,0.55) if shown else Color.WHITE
 
-## The place panel shows on arrival and on every room or floor change, then fades.
+## The location card (top right) unrolls its flavour line on arrival and on every room or floor
+## change, then rolls it up again to the place's name.
 func show_place_panel() -> void:
-	if not is_instance_valid(name_panel): return
+	if not is_instance_valid(name_panel) or not is_instance_valid(place_flavour): return
 	if name_tween and name_tween.is_valid(): name_tween.kill()
-	name_panel.modulate.a=1.0
+	place_flavour.visible=true
+	place_flavour.modulate.a=1.0
 	name_tween=create_tween()
 	name_tween.tween_interval(6.0)
-	name_tween.tween_property(name_panel,"modulate:a",0.0,0.8)
+	name_tween.tween_property(place_flavour,"modulate:a",0.0,0.6)
+	name_tween.tween_callback(func():
+		if is_instance_valid(place_flavour): place_flavour.visible=false
+		if is_instance_valid(name_panel): RpgUi._snug(name_panel))
 
 func row(parent: Node) -> HBoxContainer:
 	var r := HBoxContainer.new();r.add_theme_constant_override("separation",8);parent.add_child(r);return r
 
+## Body text on the bag's parchment (wrapping, full width).
+func paper_text(parent: Node, value: String, size_px := 13, color := RpgUi.PAPER_INK) -> Label:
+	var l := RpgUi.caption(parent,value,size_px,color)
+	l.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	return l
+
+## A drop-down on the bag's parchment.
+func paper_choice(parent: Node, items: Array) -> OptionButton:
+	var o := OptionButton.new();o.size_flags_horizontal=Control.SIZE_EXPAND_FILL;o.focus_mode=Control.FOCUS_NONE
+	for value in items: o.add_item(value)
+	parent.add_child(o);return o
+
 func build_ui() -> void:
-	theme=theme_style()
+	# Night glass for what floats over the room (the placing tools, the talk and chest cards); the
+	# bag drawer and the windows bring the parchment theme with them (RpgUi.drawer, RpgUi.window).
+	theme=RpgUi.night_theme()
 	# The room fills the whole screen; the HUD floats over it like the village's.
 	view_container=SubViewportContainer.new();view_container.stretch=true;view_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(view_container)
 	viewport=SubViewport.new();viewport.size=Vector2i(1280,800);viewport.own_world_3d=true;viewport.render_target_update_mode=SubViewport.UPDATE_ALWAYS;viewport.msaa_3d=Viewport.MSAA_4X;view_container.add_child(viewport)
 	GameSettings.track_viewport(viewport,view_container)
 	view_container.gui_input.connect(view_input)
-	# Top left: where you are (building, floor, room) and a short line about it.
-	name_panel=PanelContainer.new();name_panel.name="PlacePanel";name_panel.position=Vector2(18,16);name_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	name_panel.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
-	add_child(name_panel)
-	var head := VBoxContainer.new();head.add_theme_constant_override("separation",2);name_panel.add_child(head)
-	var title_row := HBoxContainer.new();title_row.add_theme_constant_override("separation",10);head.add_child(title_row)
-	title_label=RpgUi.label(title_row,tr("물결빛 공방"),23)
-	place_label=RpgUi.label(title_row,"",14,RpgUi.GOLD)
-	place_label.size_flags_vertical=Control.SIZE_SHRINK_END
-	subtitle_label=RpgUi.label(head,tr("상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요"),13,Color("d8e3d4"),false)
-	subtitle_label.custom_minimum_size.x=0;subtitle_label.autowrap_mode=TextServer.AUTOWRAP_OFF
-	if BuildMode.developer(): RpgUi.label(head,tr("개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다"),11,Color("e3b07a"),false)
+	# The HUD on the village's 1280x800 design canvas (RpgUi.pin keeps each piece on its edge).
+	hud=Control.new();hud.name="Hud";hud.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);hud.theme=RpgUi.theme();add_child(hud)
+	# Top left: the character frame (portrait, name, the two currencies), the village's own.
+	var look := AvatarLook.normalize(session_avatar)
+	var portrait := "res://assets/ui/portrait_%s.png" % str(look.get("character","explorer"))
+	frame=RpgUi.player_frame(hud,portrait if ResourceLoader.exists(portrait) else "res://assets/ui/portrait_explorer.png","profile")
+	frame.panel.name="PlayerFrame"
+	frame.name.text=session_name
+	frame.name.visible=not session_name.is_empty()
+	show_coins(session_coins)
+	show_portrait(session_avatar,session_version)
+	# Top right, in the village minimap's spot: where you are (building, floor, room).
+	build_location_card()
 	# Top centre: what just happened (server replies, furniture lines), on the shared toast lane;
 	# status_label keeps the last line.
 	toast_lane=RpgUi.toast_lane(self,94)
 	status_label=Label.new();status_label.name="StatusText";status_label.visible=false;status_label.text=tr("서버에 연결하고 있어요");add_child(status_label)
-	# Bottom centre: a key chip for what E (or walking) does right here.
-	hint_chip=PanelContainer.new();hint_chip.name="HintChip";hint_chip.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	hint_chip.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
-	hint_chip.set_anchors_preset(Control.PRESET_CENTER_BOTTOM);hint_chip.grow_horizontal=Control.GROW_DIRECTION_BOTH;hint_chip.grow_vertical=Control.GROW_DIRECTION_BEGIN
-	add_child(hint_chip)
-	var chip_row := HBoxContainer.new();chip_row.add_theme_constant_override("separation",8);chip_row.mouse_filter=Control.MOUSE_FILTER_IGNORE;hint_chip.add_child(chip_row)
-	hint_key=key_cap(chip_row,"E")
-	controls_label=RpgUi.label(chip_row,tr("WASD 이동   E 상호작용   R 회전   Esc 취소"),15,RpgUi.INK,false)
+	# Above the hotbar: the one prompt chip of every place (what the interact key does right here).
+	hint_chip=RpgUi.prompt(hud,560);hint_chip.name="HintChip"
+	controls_label=hint_chip
 	await LoadPace.step("room hud")
-	# Bottom left: the way out (and the player's two rooms).
-	var nav := HBoxContainer.new();nav.name="RoomNav";nav.add_theme_constant_override("separation",8)
-	nav.set_anchors_preset(Control.PRESET_BOTTOM_LEFT);nav.grow_vertical=Control.GROW_DIRECTION_BEGIN
-	nav.offset_left=18;nav.offset_right=18;nav.offset_top=-66;nav.offset_bottom=-22
-	add_child(nav)
-	leave_button=hud_button(nav,tr("마을로 나가기"),leave)
-	leave_button.icon=RpgUi.icon_texture("home");leave_button.expand_icon=false
-	leave_button.add_theme_constant_override("icon_max_width",24)
-	room_buttons.append(hud_button(nav,tr("내 집"),func(): await change_room("home")))
-	room_buttons.append(hud_button(nav,tr("공방"),func(): await change_room("workshop")))
+	# Bottom centre: the village's hotbar slots for what rooms have (same icons, keys and tooltips)
+	# and the ways out, so the bottom left stays the chat's.
+	var bar := RpgUi.hotbar(hud,[{"icon":"res://assets/ui/bag.svg","action":"inventory","label":tr("가방"),"call":func(): set_dock_open(not dock_panel.visible)},
+		{"icon":"res://assets/ui/craft.svg","action":"craft","label":tr("제작"),"call":func(): open_craft()},
+		{"icon":"res://assets/ui/icons/leave.png","action":"","label":tr("마을로"),"call":func(): leave()},
+		{"icon":"res://assets/ui/icons/home.png","action":"","label":tr("내 집"),"call":func(): await change_room("home")},
+		{"icon":"res://assets/ui/icons/starseed.png","action":"","label":tr("공방"),"call":func(): await change_room("workshop")}],700,"hotbar")
+	bar.name="RoomNav"
+	dock_toggle=bar.get_child(0);dock_toggle.name="DockToggle"
+	# One sound for the bag slot's press: the drawer's own slide (set_dock_open, RpgUi.show_drawer),
+	# not the slot's click a moment before it (button_down only carries hover_motion's press sound).
+	for link in dock_toggle.button_down.get_connections(): dock_toggle.button_down.disconnect(link.callable)
+	craft_slot=bar.get_child(1);craft_slot.name="CraftSlot"
+	leave_button=bar.get_child(2);leave_button.name="LeaveSlot"
+	room_buttons=[bar.get_child(3),bar.get_child(4)]
+	room_buttons[0].name="HomeSlot";room_buttons[1].name="WorkshopSlot"
 	# In-world dressing tools remain visible next to the furniture, not in dev tabs.
 	placement_tools=PanelContainer.new();placement_tools.name="PlacementTools"
 	placement_tools.position=Vector2(18,128);placement_tools.custom_minimum_size.x=345
 	placement_tools.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
 	add_child(placement_tools);placement_tools.visible=false
 	var tools := VBoxContainer.new();tools.add_theme_constant_override("separation",8);placement_tools.add_child(tools)
-	placement_title=label(tools,tr("가구 놓기"),18)
+	placement_title=RpgUi.label(tools,tr("가구 놓기"),18,RpgUi.GOLD)
 	placement_title.max_lines_visible=1;placement_title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
-	placement_feedback=label(tools,tr("빈자리를 골라 주세요"),13)
+	placement_feedback=RpgUi.label(tools,tr("빈자리를 골라 주세요"),13,RpgUi.INK,false)
+	placement_feedback.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	var rotate_row := row(tools)
 	# Any angle: the arrows turn 15°, R 15° (Shift back, Alt/Ctrl 1°) and the wheel 5°.
 	turn_readout=ObjectTransform.turn_bar(rotate_row,rotate_placement)
-	grid_toggle=CheckButton.new();grid_toggle.text=tr("격자");grid_toggle.button_pressed=true;rotate_row.add_child(grid_toggle)
+	grid_toggle=CheckButton.new();grid_toggle.text=tr("격자");grid_toggle.button_pressed=true;grid_toggle.focus_mode=Control.FOCUS_NONE;rotate_row.add_child(grid_toggle)
 	var confirm_row := row(tools)
-	place_button=button(confirm_row,tr("여기에 놓기"),commit_place);place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	# One sound for the press: the button's own press kind is the cancel (not a click and a cancel).
-	var cancel_button := Button.new();cancel_button.text=tr("취소");cancel_button.pressed.connect(cancel_placement);cancel_button.custom_minimum_size.y=38
-	confirm_row.add_child(cancel_button);RpgUi.hover_motion(cancel_button,1.03,Vector2(0.5,0.5),true,"cancel",-8.0)
+	place_button=RpgUi.button(confirm_row,tr("여기에 놓기"),commit_place,"primary");place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	# One sound for the press: the button's own press kind is the cancel (not a click and a cancel);
+	# button_down only carries hover_motion's press sound.
+	var cancel_button := RpgUi.button(confirm_row,tr("취소"),cancel_placement)
+	for link in cancel_button.button_down.get_connections(): cancel_button.button_down.disconnect(link.callable)
+	cancel_button.button_down.connect(func(): RpgUi.sfx("cancel",-8.0))
 	await LoadPace.step("room drawer")
-	# Right: the bag and decorating drawer (the village's 가방, I).
-	var dock := PanelContainer.new();dock_panel=dock;dock.name="Dock"
-	dock.add_theme_stylebox_override("panel",RpgUi.panel_style("night"))
-	dock.set_anchors_preset(Control.PRESET_RIGHT_WIDE);dock.grow_horizontal=Control.GROW_DIRECTION_BEGIN
-	dock.offset_left=-412;dock.offset_right=-14;dock.offset_top=14;dock.offset_bottom=-112
-	add_child(dock)
-	# Bottom centre: the village's hotbar slots for what rooms have, with the same icons and keys.
-	var hud := Control.new();hud.name="Hotbar";hud.mouse_filter=Control.MOUSE_FILTER_IGNORE
-	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);hud.theme=RpgUi.theme();add_child(hud)
-	var bar := RpgUi.hotbar(hud,[{"icon":"res://assets/ui/bag.svg","action":"inventory","label":tr("가방"),"call":func(): set_dock_open(not dock_panel.visible)},
-		{"icon":"res://assets/ui/craft.svg","action":"craft","label":tr("제작"),"call":func(): open_craft()}],700)
-	dock_toggle=bar.get_child(0);dock_toggle.name="DockToggle"
-	# One sound for the bag slot's press: the drawer's own slide (set_dock_open), not the slot's
-	# click a moment before it (button_down only carries hover_motion's press sound).
-	for link in dock_toggle.button_down.get_connections(): dock_toggle.button_down.disconnect(link.callable)
-	craft_slot=bar.get_child(1);craft_slot.name="CraftSlot"
-	var box := VBoxContainer.new();dock.add_child(box)
-	wallet=RpgUi.label(box,tr("나의 공방"),18,RpgUi.GOLD)
-	var tabs := TabContainer.new();tabs.size_flags_vertical=Control.SIZE_EXPAND_FILL;box.add_child(tabs)
-	var tab_panel := StyleBoxFlat.new();tab_panel.bg_color=Color(0.05,0.07,0.08,.55);tab_panel.set_corner_radius_all(12)
-	tab_panel.content_margin_left=8;tab_panel.content_margin_right=8;tab_panel.content_margin_top=8;tab_panel.content_margin_bottom=8
-	tabs.add_theme_stylebox_override("panel",tab_panel)
-	var tab_bar := tabs.get_tab_bar()
-	for state_name in ["tab_selected","tab_unselected","tab_hovered"]:
-		var tab_style := StyleBoxFlat.new()
-		tab_style.bg_color=Color(0.36,0.28,0.14,.95) if state_name=="tab_selected" else Color(0.09,0.12,0.13,.9)
-		tab_style.set_border_width_all(1);tab_style.border_color=Color(RpgUi.GOLD,.8 if state_name=="tab_selected" else .4)
-		tab_style.set_corner_radius_all(7)
-		tab_style.content_margin_left=11;tab_style.content_margin_right=11;tab_style.content_margin_top=7;tab_style.content_margin_bottom=7
-		tab_bar.add_theme_stylebox_override(state_name,tab_style)
-		tabs.add_theme_stylebox_override(state_name,tab_style)
-	tab_bar.add_theme_color_override("font_selected_color",Color("ffe08a"))
-	tab_bar.add_theme_color_override("font_unselected_color",RpgUi.INK)
-	tab_bar.add_theme_color_override("font_hovered_color",Color("ffe08a"))
-	tabs.add_theme_color_override("font_selected_color",Color("ffe08a"))
-	tabs.add_theme_color_override("font_unselected_color",RpgUi.INK)
-	# Crafting is the craft window (C), the same as the village's; the drawer keeps the bag.
-	var own := VBoxContainer.new();own.name=tr("보관함");tabs.add_child(own)
-	label(own,tr("내가 만든 작은 세계"),19)
-	room_capacity=label(own,tr("배치한 가구를 확인하고 있어요"),12)
-	inventory=ItemList.new();inventory.custom_minimum_size.y=135;inventory.size_flags_vertical=Control.SIZE_EXPAND_FILL;inventory.fixed_icon_size=Vector2i(26,26);own.add_child(inventory);inventory.item_selected.connect(select_item)
+	build_bag()
+
+## Top right, in the village minimap's spot: the building's name over a gold rule, the floor and
+## room under it, on the objective tracker's night glass. Its flavour line shows for a moment on
+## each arrival (show_place_panel).
+func build_location_card() -> void:
+	name_panel=PanelContainer.new();name_panel.name="PlacePanel";name_panel.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	var plate := RpgUi.panel_style("night")
+	plate.content_margin_top=14;plate.content_margin_bottom=16
+	name_panel.add_theme_stylebox_override("panel",plate)
+	name_panel.position=Vector2(994,10);name_panel.custom_minimum_size.x=272
+	hud.add_child(name_panel)
+	var column := VBoxContainer.new();column.add_theme_constant_override("separation",4);column.mouse_filter=Control.MOUSE_FILTER_IGNORE;name_panel.add_child(column)
+	var head := HBoxContainer.new();head.add_theme_constant_override("separation",8);head.mouse_filter=Control.MOUSE_FILTER_IGNORE;column.add_child(head)
+	place_icon=RpgUi.icon("res://assets/ui/icons/map.png",26);place_icon.size_flags_vertical=Control.SIZE_SHRINK_CENTER;head.add_child(place_icon)
+	title_label=RpgUi.label(head,tr("물결빛 공방"),17,RpgUi.GOLD)
+	title_label.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	title_label.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
+	title_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+	RpgUi.divider(column,Color(RpgUi.GOLD,.55))
+	place_label=RpgUi.label(column,"",14,RpgUi.INK,false)
+	place_flavour=VBoxContainer.new();place_flavour.add_theme_constant_override("separation",2);place_flavour.mouse_filter=Control.MOUSE_FILTER_IGNORE;column.add_child(place_flavour)
+	subtitle_label=RpgUi.label(place_flavour,tr("상상한 가구를 만들고, 색칠하고, 내 공간에 놓아요"),13,RpgUi.SOFT,false)
+	subtitle_label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;subtitle_label.custom_minimum_size.x=236
+	if BuildMode.developer(): RpgUi.label(place_flavour,tr("개발 화면 · 생성 방식과 모델, 코드, 기록을 검증할 수 있습니다"),11,RpgUi.WARM,false).autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	RpgUi.pin(name_panel,1.0,0.0)
+
+## The location card's picture: the home, the workshop, or a village building.
+func location_icon() -> String:
+	if public_room: return "res://assets/ui/icons/map.png"
+	return "res://assets/ui/icons/home.png" if room=="home" else "res://assets/ui/icons/starseed.png"
+
+## The ways out on the hotbar: 마을로 always; the owner's other room (내 집 / 공방) in their own
+## rooms only (a visit or a village building has no room switching).
+func update_room_slots() -> void:
+	if room_buttons.size()<2: return
+	var own: bool=visit_host.is_empty() and not public_room
+	RpgUi.show_slot(room_buttons[0],own and room!="home")
+	RpgUi.show_slot(room_buttons[1],own and room!="workshop")
+	RpgUi.show_slot(dock_toggle,own)
+
+## The frame's leaf coins (잎전) when the village told them (the session); hidden otherwise.
+func show_coins(coins: int) -> void:
+	if not frame.has("leaves") or not is_instance_valid(frame.leaves): return
+	var known := coins>=0
+	var coins_row: Node=frame.leaves.get_parent()
+	var at: int=frame.leaves.get_index()
+	for index in [at-1,at]:
+		var part := coins_row.get_child(index) as Control
+		if part: part.visible=known
+	# The gap before the leaf goes with it.
+	var gap := coins_row.get_child(at-2) as Control
+	if gap and not gap is Label: gap.visible=known
+	if known: RpgUi.count_to(frame.leaves,coins)
+
+## The frame's star-seeds (별씨) after /v1/studio or a resident's reward.
+func show_stars(shards: int) -> void:
+	if frame.has("stars") and is_instance_valid(frame.stars): RpgUi.count_to(frame.stars,shards)
+
+## The medallion shows the player's own character as dressed (avatar_portrait.gd, as in the
+## village); the authored picture of the same character stands in until that drawing is ready.
+func show_portrait(avatar: Dictionary, version := -1) -> void:
+	if not frame.has("portrait") or not is_instance_valid(frame.portrait): return
+	var look := AvatarLook.normalize(avatar)
+	if not is_instance_valid(portrait_view):
+		portrait_view=preload("res://scripts/avatar_portrait.gd").new()
+		add_child(portrait_view)
+		portrait_view.rendered.connect(func():
+			if frame.has("portrait") and is_instance_valid(frame.portrait): frame.portrait.texture=portrait_view.get_texture())
+	if not portrait_view.drawn_key.is_empty(): frame.portrait.texture=portrait_view.get_texture()
+	portrait_view.show_look(look,version)
+
+## The bag drawer: the village's parchment drawer (RpgUi.drawer, I), with the furniture list, its
+## preview, placing, painting (the village palette) and the craft entry; developer builds add the
+## code, part-fitting and craft-history tabs (RpgUi.tab_strip).
+func build_bag() -> void:
+	bag=RpgUi.drawer(self,tr("가방"),{"action":"inventory","width":RpgUi.DRAWER_W,"icon":"res://assets/ui/bag.svg","id":"room_bag","hidden":true,
+		"on_close":func(): set_dock_open(false)})
+	dock_panel=bag.root;dock_panel.name="Dock"
+	var column: VBoxContainer=bag.body
+	# Developer builds: the server's generation mode (the frame shows the star-seeds).
+	wallet=paper_text(column,"",12,RpgUi.PAPER_MUTED)
+	wallet.visible=BuildMode.developer()
+	var entries := [{"id":"own","label":tr("보관함")}]
+	if BuildMode.developer(): entries.append_array([{"id":"source","label":tr("동작 코드")},{"id":"fit","label":tr("부품 맞춤")},{"id":"history","label":tr("제작 기록")}])
+	bag_strip=RpgUi.tab_strip(column,entries,show_bag_page)
+	bag_strip.visible=entries.size()>1
+	bag_scroll=ScrollContainer.new();bag_scroll.name="Scroll";bag_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(bag_scroll)
+	var pages := VBoxContainer.new();pages.name="Pages";pages.size_flags_horizontal=Control.SIZE_EXPAND_FILL;bag_scroll.add_child(pages)
+	pages.minimum_size_changed.connect(fit_bag)
+	get_viewport().size_changed.connect(fit_bag)
+	# 보관함: the furniture, its preview and what can be done with it.
+	var own := VBoxContainer.new();own.name="Own";own.add_theme_constant_override("separation",8);pages.add_child(own)
+	bag_pages["own"]=own
+	room_capacity=paper_text(own,tr("배치한 가구를 확인하고 있어요"),12,RpgUi.PAPER_MUTED)
+	inventory=ItemList.new();inventory.custom_minimum_size.y=150;inventory.fixed_icon_size=Vector2i(26,26);own.add_child(inventory);inventory.item_selected.connect(select_item)
 	# A soft tick when the player picks a piece in the bag (selecting from code is silent).
 	inventory.item_selected.connect(func(_index: int): RpgUi.sfx("select",-10.0))
-	var preview_view := SubViewportContainer.new();preview_view.custom_minimum_size.y=190;preview_view.stretch=true;own.add_child(preview_view)
-	var preview_port := SubViewport.new();preview_port.size=Vector2i(330,190);preview_port.own_world_3d=true;preview_port.render_target_update_mode=SubViewport.UPDATE_ALWAYS;preview_port.msaa_3d=Viewport.MSAA_4X;preview_view.add_child(preview_port)
+	preview_view=SubViewportContainer.new();preview_view.custom_minimum_size.y=150;preview_view.stretch=true;own.add_child(preview_view)
+	RpgUi.name_tip(preview_view,tr("미리보기 · 드래그 회전 / 휠 확대"))
+	var preview_port := SubViewport.new();preview_port.size=Vector2i(258,150);preview_port.own_world_3d=true;preview_port.render_target_update_mode=SubViewport.UPDATE_ALWAYS;preview_port.msaa_3d=Viewport.MSAA_4X;preview_view.add_child(preview_port)
 	preview_stage=Node3D.new();preview_port.add_child(preview_stage)
 	var preview_env := WorldEnvironment.new();preview_env.environment=Environment.new();preview_env.environment.background_mode=Environment.BG_COLOR;preview_env.environment.background_color=Color("b5c1ad");preview_env.environment.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR;preview_env.environment.ambient_light_color=Color.WHITE;preview_env.environment.ambient_light_energy=.12;preview_stage.add_child(preview_env)
 	var preview_sun := DirectionalLight3D.new();preview_sun.rotation_degrees=Vector3(-40,-30,0);preview_sun.light_energy=.45;preview_stage.add_child(preview_sun)
 	preview_camera=Camera3D.new();preview_camera.projection=Camera3D.PROJECTION_ORTHOGONAL;preview_camera.size=2.9;preview_camera.position=Vector3(2.7,2.2,4);preview_stage.add_child(preview_camera);preview_camera.look_at(Vector3(0,.65,0));preview_camera.current=true
 	Art.box(preview_stage,Vector3(0,-.04,0),Vector3(8,.06,8),Color("a9b7a0"))
 	preview_view.gui_input.connect(preview_input)
-	label(own,tr("미리보기 · 드래그 회전 / 휠 확대"),11).modulate=Color("817960")
-	detail=label(own,tr("가구를 고르면 모습을 살펴볼 수 있어요"),13)
+	detail=paper_text(own,tr("가구를 고르면 모습을 살펴볼 수 있어요"),13)
 	var actions := row(own)
-	button(actions,tr("바닥에 배치"),begin_place);button(actions,tr("회수"),retrieve);button(actions,tr("사용"),interact_selected)
-	RpgUi.name_tip(button(own,tr("상호작용"),open_interactions),tr("누르거나 다가가면 움직이고 빛나게"))
+	for spec in [[tr("놓기"),begin_place,tr("바닥에 배치")],[tr("회수"),retrieve,tr("가방으로 회수")],[tr("사용"),interact_selected,tr("열기·켜기 같은 동작")]]:
+		var key := RpgUi.button(actions,spec[0],spec[1],"normal","sm")
+		key.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		RpgUi.name_tip(key,spec[2])
 	# Furniture with UVs is painted in the painting workspace; the colour rows below stay
 	# for furniture made without UVs (whole colour per part).
-	paint_button=button(own,tr("색칠하기"),open_painter)
-	paint_button.theme_type_variation="GoldButton";paint_button.tooltip_text=tr("붓·채우기·그라데이션으로 표면을 직접 칠해요")
-	button(own,tr("모양 바꾸기"),open_shape_panel).tooltip_text=tr("가로 · 깊이 · 높이 · 크기 · 좌우 반전")
-	part_choice=option(own,[tr("전체 색칠")])
+	paint_button=RpgUi.button(own,tr("색칠하기"),open_painter,"primary")
+	paint_button.tooltip_text=tr("붓·채우기·그라데이션으로 표면을 직접 칠해요")
+	var tools := row(own)
+	var interact_key := RpgUi.button(tools,tr("상호작용"),open_interactions,"normal","sm")
+	interact_key.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	RpgUi.name_tip(interact_key,tr("누르거나 다가가면 움직이고 빛나게"))
+	var shape_key := RpgUi.button(tools,tr("모양 바꾸기"),open_shape_panel,"normal","sm")
+	shape_key.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	shape_key.tooltip_text=tr("가로 · 깊이 · 높이 · 크기 · 좌우 반전")
+	part_choice=paper_choice(own,[tr("전체 색칠")])
 	var palette := row(own)
-	paint_rows=[part_choice,palette]
-	for color in ["#f1dfb8","#dfa958","#789887","#bd7f75","#7d9ca3"]:
-		var b := button(palette,"●",func(): await paint(color));b.modulate=Color(color);b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-		RpgUi.name_tip(b,RpgUi.color_name(color))
-	var custom_row := row(own)
-	paint_rows.append(custom_row)
-	var custom_color := ColorPickerButton.new();custom_color.text=tr("직접 색 고르기");custom_color.edit_alpha=false;custom_color.color=Color("dfa958");custom_color.size_flags_horizontal=Control.SIZE_EXPAND_FILL;custom_row.add_child(custom_color)
+	palette.alignment=BoxContainer.ALIGNMENT_CENTER
+	for color in RpgUi.PALETTE:
+		var hex: String=color
+		RpgUi.swatch(palette,hex,false,func(): await paint(hex))
+	# A colour of one's own: the picker waits under a ghost key, with the way back to the original.
+	var custom_box := VBoxContainer.new();custom_box.add_theme_constant_override("separation",6);own.add_child(custom_box)
+	var custom_row := row(custom_box)
+	var custom_color := ColorPickerButton.new();custom_color.text=tr("직접 색 고르기");custom_color.edit_alpha=false;custom_color.color=Color("dfa958");custom_color.size_flags_horizontal=Control.SIZE_EXPAND_FILL;custom_color.focus_mode=Control.FOCUS_NONE;custom_row.add_child(custom_color)
 	custom_color.popup_closed.connect(func():await paint("#"+custom_color.color.to_html(false)))
-	button(custom_row,tr("원래 색 복원"),func():await paint("#ffffff",true))
-	# The same call to craft as the village bag's.
-	var craft_entry := button(own,tr("C · 새 물건 제작 의뢰"),func(): open_craft());craft_entry.theme_type_variation="GoldButton"
-	button(own,tr("새로고침"),refresh)
-	var source := VBoxContainer.new();source.name=tr("동작 코드");tabs.add_child(source)
-	label(source,tr("생성된 조작 함수와 이벤트"),18)
-	label(source,tr("서버가 검사한 숫자 연산·부품 제어 코드입니다. 파일이나 재화에 접근할 수 없습니다."),12)
-	generated_functions=option(source,[])
+	RpgUi.button(custom_row,tr("원래 색 복원"),func():await paint("#ffffff",true),"normal","sm")
+	custom_row.visible=false
+	var reveal := RpgUi.button(custom_box,tr("직접 고르기"),func(): custom_row.visible=not custom_row.visible,"ghost","sm")
+	custom_box.move_child(reveal,0)
+	paint_rows=[part_choice,palette,custom_box]
+	# The same call to craft as the village bag's; its key cap follows the bindings.
+	var craft_entry := RpgUi.button(own,tr("새 물건 제작 의뢰"),func(): open_craft(),"gold")
+	RpgUi.name_tip(craft_entry,tr("새 물건 제작 의뢰"),RpgUi.key_text("craft"))
+	RpgUi.keycap(craft_entry,"craft",11).position=Vector2(10,9)
+	RpgUi.button(own,tr("새로고침"),refresh,"ghost","sm")
+	# Built for everyone (the code and history fields are filled on every pick and refresh); only
+	# developer builds get the tabs that show them.
+	build_dev_pages(pages)
+	select_bag_page("own")
+
+## The developer tabs: the generated control code, part fitting and the craft history.
+func build_dev_pages(pages: VBoxContainer) -> void:
+	var source := VBoxContainer.new();source.name="Source";source.add_theme_constant_override("separation",8);pages.add_child(source)
+	bag_pages["source"]=source
+	RpgUi.label(source,tr("생성된 조작 함수와 이벤트"),17,RpgUi.PAPER_INK,false)
+	paper_text(source,tr("서버가 검사한 숫자 연산·부품 제어 코드입니다. 파일이나 재화에 접근할 수 없습니다."),12,RpgUi.PAPER_MUTED)
+	generated_functions=paper_choice(source,[])
 	generated_functions.item_selected.connect(load_function_fields)
-	function_signature=label(source,"",12)
+	function_signature=paper_text(source,"",12)
 	function_fields_scroll=ScrollContainer.new();function_fields_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;source.add_child(function_fields_scroll)
 	function_fields_box=VBoxContainer.new();function_fields_box.size_flags_horizontal=Control.SIZE_EXPAND_FILL;function_fields_scroll.add_child(function_fields_box)
 	raw_args_toggle=CheckButton.new();raw_args_toggle.text=tr("개발자용 JSON 입력");source.add_child(raw_args_toggle)
 	function_args=LineEdit.new();function_args.text="[]";function_args.placeholder_text=tr("숫자 인수 예: [0.5]");source.add_child(function_args);function_args.visible=false
 	raw_args_toggle.toggled.connect(func(enabled):function_args.visible=enabled;function_fields_scroll.visible=not enabled)
-	button(source,tr("선택한 생성 함수 호출"),invoke_generated)
-	function_result=label(source,tr("가구를 선택하면 생성된 함수를 검사할 수 있어요."),12)
-	code_view=CodeEdit.new();code_view.editable=false;code_view.size_flags_vertical=Control.SIZE_EXPAND_FILL;source.add_child(code_view)
-	var fit_scroll := ScrollContainer.new();fit_scroll.name=tr("부품 맞춤");tabs.add_child(fit_scroll)
-	var fit := VBoxContainer.new();fit.size_flags_horizontal=Control.SIZE_EXPAND_FILL;fit_scroll.add_child(fit)
-	label(fit,tr("움직이는 부품 맞추기"),18)
-	label(fit,tr("뚜껑·바늘의 위치와 회전축을 조정합니다. 저장하면 내 가구에만 적용되며 원래 설계로 되돌릴 수 있어요."),12)
-	binding_part=option(fit,[]);binding_part.item_selected.connect(load_binding_fields)
+	RpgUi.button(source,tr("선택한 생성 함수 호출"),invoke_generated,"normal","sm")
+	function_result=paper_text(source,tr("가구를 선택하면 생성된 함수를 검사할 수 있어요."),12)
+	code_view=CodeEdit.new();code_view.editable=false;code_view.custom_minimum_size.y=220;source.add_child(code_view)
+	var fit := VBoxContainer.new();fit.name="Fit";fit.add_theme_constant_override("separation",8);pages.add_child(fit)
+	bag_pages["fit"]=fit
+	RpgUi.label(fit,tr("움직이는 부품 맞추기"),17,RpgUi.PAPER_INK,false)
+	paper_text(fit,tr("뚜껑·바늘의 위치와 회전축을 조정합니다. 저장하면 내 가구에만 적용되며 원래 설계로 되돌릴 수 있어요."),12,RpgUi.PAPER_MUTED)
+	binding_part=paper_choice(fit,[]);binding_part.item_selected.connect(load_binding_fields)
 	for spec in [["position",tr("위치 · m"),-3.0,3.0,.01],["rotation",tr("방향 · 도"),-360.0,360.0,1.0],["pivot",tr("회전축 · 중심 기준"),-.5,.5,.01],["size",tr("크기 · m"),.02,3.0,.01]]:
-		label(fit,spec[1],13)
+		paper_text(fit,spec[1],13)
 		var axes := row(fit);var fields: Array[SpinBox]=[]
 		for axis in ["X","Y","Z"]:
 			var field := SpinBox.new();field.prefix=axis;field.min_value=spec[2];field.max_value=spec[3];field.step=spec[4];field.size_flags_horizontal=Control.SIZE_EXPAND_FILL;axes.add_child(field);fields.append(field)
 			field.value_changed.connect(func(_value):preview_binding_fields())
 		binding_fields[spec[0]]=fields
 	var fitting_actions := row(fit)
-	button(fitting_actions,tr("맞춤 저장"),func():await save_binding(false))
-	button(fitting_actions,tr("원래 설계로"),func():await save_binding(true))
-	button(fit,tr("열기·닫기 등 동작 시험"),interact_selected)
-	binding_hint=label(fit,tr("가구를 고르면 부품 목록이 표시됩니다. 전체 크기는 배치 구역에 맞게 자동 조절됩니다."),12)
-	var history := VBoxContainer.new();history.name=tr("제작 기록");tabs.add_child(history)
-	label(history,tr("최근 제작 30건 · 시간 UTC"),18)
+	RpgUi.button(fitting_actions,tr("맞춤 저장"),func():await save_binding(false),"normal","sm")
+	RpgUi.button(fitting_actions,tr("원래 설계로"),func():await save_binding(true),"normal","sm")
+	RpgUi.button(fit,tr("열기·닫기 등 동작 시험"),interact_selected,"normal","sm")
+	binding_hint=paper_text(fit,tr("가구를 고르면 부품 목록이 표시됩니다. 전체 크기는 배치 구역에 맞게 자동 조절됩니다."),12)
+	var history := VBoxContainer.new();history.name="History";history.add_theme_constant_override("separation",8);pages.add_child(history)
+	bag_pages["history"]=history
+	RpgUi.label(history,tr("최근 제작 30건 · 시간 UTC"),17,RpgUi.PAPER_INK,false)
 	history_list=ItemList.new();history_list.custom_minimum_size.y=180;history_list.item_selected.connect(select_history);history.add_child(history_list)
-	history_detail=label(history,tr("기록을 선택하면 예약·확정 별씨와 확인된 Tripo 비용을 볼 수 있어요."),13)
-	button(history,tr("이 설계의 도형 미리보기"),func():await show_design(history_selected))
-	button(history,tr("기록 새로고침"),refresh)
-	# Tabs: 0 보관함, then (developer builds) 1 동작 코드, 2 부품 맞춤, 3 제작 기록.
-	tabs.tab_changed.connect(func(index: int):
-		if index==3:return
-		var target: Control=own if index==0 else (source if index==1 else fit)
+	history_detail=paper_text(history,tr("기록을 선택하면 예약·확정 별씨와 확인된 Tripo 비용을 볼 수 있어요."),13)
+	RpgUi.button(history,tr("이 설계의 도형 미리보기"),func():await show_design(history_selected),"normal","sm")
+	RpgUi.button(history,tr("기록 새로고침"),refresh,"ghost","sm")
+
+## Picks a bag tab (its strip key too).
+func select_bag_page(id: String) -> void:
+	if is_instance_valid(bag_strip) and bag_strip.visible: RpgUi.select_tab(bag_strip,id)
+	show_bag_page(id)
+
+## Shows one bag page; the furniture preview moves along to the pages that use it.
+func show_bag_page(id: String) -> void:
+	for key in bag_pages: (bag_pages[key] as Control).visible=key==id
+	if id!="history" and bag_pages.has(id) and is_instance_valid(preview_view):
+		var target: Control=bag_pages[id]
 		preview_view.reparent(target)
-		target.move_child(preview_view,1 if index==0 else 2))
-	if not BuildMode.developer():
-		for index in [1,2,3]: tabs.set_tab_hidden(index,true)
+		target.move_child(preview_view,2)
+	fit_bag()
+
+## The bag scrolls once its page would pass the screen's foot (at any UI scale).
+func fit_bag() -> void:
+	if not is_instance_valid(bag_scroll) or not bag_scroll.is_inside_tree(): return
+	var pages: Control=bag_scroll.get_child(0)
+	var room := maxf(200.0,get_viewport_rect().size.y-150.0)
+	bag_scroll.custom_minimum_size.y=minf(pages.get_combined_minimum_size().y,room)
 
 ## A line in the status bar and the room's toast lane. kind is the toast's (RpgUi.toast: info,
 ## success, warn, error, social), which picks its icon and chime.
@@ -729,25 +787,18 @@ func build_stage() -> void:
 		seat.hero=hero
 		place_hero_at_door()
 
-## Speech bubble and "E" badge drawn over the room view, pinned to 3D points.
+## A furniture's words and the interact key's cap drawn over the room view, pinned to 3D points:
+## the night pill of the toasts and prompt, and the key cap of the hotbar (key from the bindings).
 func build_overlays() -> void:
 	bubble=PanelContainer.new();bubble.name="InteractionBubble";bubble.mouse_filter=Control.MOUSE_FILTER_IGNORE;bubble.visible=false
-	var bubble_style := StyleBoxFlat.new();bubble_style.bg_color=Color("fffaf0",.97);bubble_style.set_corner_radius_all(16)
-	bubble_style.set_border_width_all(2);bubble_style.border_color=Color("c9b48a")
-	bubble_style.content_margin_left=16;bubble_style.content_margin_right=16;bubble_style.content_margin_top=10;bubble_style.content_margin_bottom=10
-	bubble_style.shadow_color=Color(0,0,0,.18);bubble_style.shadow_size=6;bubble_style.shadow_offset=Vector2(0,3)
+	var bubble_style := RpgUi.panel_style("pill")
+	bubble_style.content_margin_left=18;bubble_style.content_margin_right=18;bubble_style.content_margin_top=9;bubble_style.content_margin_bottom=11
 	bubble.add_theme_stylebox_override("panel",bubble_style)
-	bubble_label=Label.new();bubble_label.add_theme_font_size_override("font_size",17);bubble_label.add_theme_color_override("font_color",Color("4a3b2b"))
-	bubble_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;bubble.add_child(bubble_label)
+	bubble_label=RpgUi.label(bubble,"",17,RpgUi.INK)
+	bubble_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	add_child(bubble)
-	var tail := Polygon2D.new();tail.name="Tail";tail.color=Color("fffaf0");tail.polygon=PackedVector2Array([Vector2(-9,0),Vector2(9,0),Vector2(0,11)])
-	bubble.add_child(tail)
-	hint_label=Label.new();hint_label.name="InteractHint";hint_label.text="E";hint_label.mouse_filter=Control.MOUSE_FILTER_IGNORE;hint_label.visible=false
-	hint_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	var hint_style := StyleBoxFlat.new();hint_style.bg_color=Color("4a3b2b",.9);hint_style.set_corner_radius_all(14)
-	hint_style.content_margin_left=9;hint_style.content_margin_right=9;hint_style.content_margin_top=3;hint_style.content_margin_bottom=3
-	hint_label.add_theme_stylebox_override("normal",hint_style);hint_label.add_theme_color_override("font_color",Color("ffe9b0"));hint_label.add_theme_font_size_override("font_size",15)
-	add_child(hint_label)
+	hint_label=RpgUi.keycap(self,RpgUi.key_text("interact"),15)
+	hint_label.name="InteractHint";hint_label.visible=false
 
 ## Keeps an overlay control centred just above a 3D point of the room view.
 func pin_overlay(control: Control, anchor: Vector3, lift := 10.0) -> void:
@@ -795,7 +846,9 @@ func build_room() -> void:
 	if public_room:
 		title_label.text=tr(str(building_spec.name))
 		subtitle_label.text=tr(str(building_spec.kind))+"  ·  "+tr(str(building_spec.flavour))
-	set_chip("",default_hint())
+	if is_instance_valid(place_icon): place_icon.texture=load(location_icon())
+	update_room_slots()
+	set_chip("","")
 	show_place_panel()
 	apply_daylight(true)
 	await LoadPace.step("room residents")
@@ -819,6 +872,7 @@ func set_floor(index: int) -> void:
 		if is_instance_valid(entry.node): entry.node.visible=int(entry.get("floor",0))==index
 	current_room=-1
 	update_place_label()
+	show_place_panel()
 
 func update_place_label() -> void:
 	if not is_instance_valid(place_label) or room_spec.is_empty(): return
@@ -831,8 +885,11 @@ func update_place_label() -> void:
 	if int(room_spec.floors)>1 and not str(room_spec.label).is_empty(): parts.append(tr(str(room_spec.label)))
 	var room_name := tr(str(room_spec.rooms[index].name))
 	if parts.is_empty() or parts[0]!=room_name: parts.append(room_name)
-	place_label.text="·  "+"  ·  ".join(parts)
-	show_place_panel()
+	place_label.text="  ·  ".join(parts)
+	# A new room on the same floor brightens its name in place; a new floor unrolls the card.
+	if not RpgUi.calm() and place_label.is_inside_tree():
+		place_label.modulate.a=0.25
+		place_label.create_tween().tween_property(place_label,"modulate:a",1.0,0.35)
 
 ## Stairs, ladders and hatches: a short fade with footsteps, then the other floor.
 func travel(record: Dictionary, instant := false) -> void:
@@ -912,11 +969,12 @@ func follow_path(points: Array[Vector3], speed: float, fade_at: float, veil: Can
 		var before: Vector3=hero.position
 		hero.position=points[segment].lerp(points[segment+1],clampf(along/maxf(lengths[segment],0.0001),0.0,1.0))
 		var step := Vector2(hero.position.x-before.x,hero.position.z-before.z)
+		if "clip_override" in hero: hero.clip_override=LADDER_CLIP if climbing_rungs else ""
 		if climbing_rungs:
-			# Hand over hand up the rungs: the stepping clip in place, facing the ladder.
+			# Hand over hand up the rungs, facing the ladder: the crouched stepping clip, not the
+			# walk clip marching in place (no walking pace is reported while nothing moves across).
 			hero.facing=face_ladder
-			hero.external_motion=Vector2(face_ladder.x,face_ladder.z)
-			hero.external_velocity=hero.external_motion*0.8
+			hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
 		elif step.length()<0.0005:
 			hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
 		else:
@@ -930,6 +988,7 @@ func follow_path(points: Array[Vector3], speed: float, fade_at: float, veil: Can
 		await get_tree().process_frame
 		if not is_instance_valid(hero): return
 	hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
+	if "clip_override" in hero: hero.clip_override=""
 
 ## Real-time light: windows, sunbeams, ambient, sun and room lamps follow the clock.
 func apply_daylight(force := false) -> void:
@@ -993,6 +1052,7 @@ func refresh() -> void:
 		return
 	data=response.data
 	wallet.text=tr("별씨 %d")%data.shards
+	show_stars(int(data.shards))
 	if BuildMode.developer(): wallet.text+="  ·  "+(tr("Tripo 실제 생성 가능") if data.geometry_enabled else (tr("개발 공방") if data.llm!="openai" else tr("온라인 공방")))
 	# The craft window opens on this at once (its options follow the server's per-craft cap and
 	# setup), and a craft still under way is followed again.
@@ -1226,10 +1286,10 @@ func open_shape_panel() -> void:
 	cancel_placement()
 	var id: String=selected.id
 	shape_panel=ShapePanel.new()
-	shape_panel.setup(api,selected,func(): return [inspected if selected.get("id","")==id else null,placed.get(id)],func(text: String): message(text))
+	# On the left, under the room's frame: the bag's preview on the right stays in view.
+	shape_panel.setup(api,selected,func(): return [inspected if selected.get("id","")==id else null,placed.get(id)],func(text: String): message(text),{"side":"left","top":128.0})
 	shape_panel.saved.connect(func(shape: Dictionary): shape_saved(id,shape))
 	add_child(shape_panel)
-	shape_panel.position=Vector2(18,128)
 
 ## A saved shape: the room's list matches the server again.
 func shape_saved(id: String, shape: Dictionary) -> void:
@@ -1251,7 +1311,7 @@ func load_function_fields(index: int) -> void:
 	for parameter in definition.params:
 		names.append(str(parameter))
 		var line := row(function_fields_box)
-		label(line,str(parameter),12).size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		paper_text(line,str(parameter),12)
 		var field := SpinBox.new();field.min_value=-1000000;field.max_value=1000000;field.step=.01;field.custom_minimum_size.x=150
 		line.add_child(field);function_fields.append(field)
 		field.value_changed.connect(func(_v):sync_function_args())
@@ -1599,6 +1659,8 @@ func show_story() -> void:
 	story_home=null
 	# A resident's request to come to this room (quests.gd: 하늘's observatory at night).
 	preload("res://scripts/quests.gd").entered_room(self,room)
+	# The treasure chest in the owner's own home (treasure.gd).
+	preload("res://scripts/treasure.gd").enter_room(self)
 	if room!="home" or public_room or not visit_host.is_empty() or visiting or api.token.is_empty(): return
 	story_home=StoryHome.new()
 	add_child(story_home)
@@ -1610,7 +1672,27 @@ func update_capacity() -> void:
 	room_capacity.tooltip_text=tr("가구의 복잡도와 이미지 크기에 따라 용량이 달라져요. 꽉 차면 일부 가구를 회수하거나 다른 방으로 옮겨 주세요.")
 
 func _exit_tree() -> void:
+	SocialHud.release_place(self)
 	if not Engine.has_meta("studio_session"): preload("res://scripts/town.gd").discard_kept()
+
+## This session's social layer (chat, the 함께하기 drawer), bound to this room; null without multiplayer.
+func social_hub() -> Node:
+	if not social_session or api.token.is_empty(): return null
+	var hub := SocialHud.of(api)
+	if hub and hub.place != self and is_inside_tree(): hub.bind(self,"room",toast_lane if is_instance_valid(toast_lane) else null)
+	return hub
+
+## Where this walker is, for the lists (social_hud.presence_extra).
+func social_place() -> String:
+	if room=="home": return "home"
+	return "workshop" if room=="workshop" else "room"
+
+## A chat line said by someone in this room: a bubble over their head.
+func chat_bubble(user_id: String, username: String, text: String) -> void:
+	var actor: Node3D=null
+	if peers.has(user_id) and is_instance_valid(peers[user_id].node): actor=peers[user_id].node
+	elif is_instance_valid(hero) and not user_id.is_empty() and user_id==str(SocialHud.of(api).overview.get("self_id","")): actor=hero
+	if actor and actor.visible: SocialHud.bubble(actor,text)
 
 ## Shares this walker's spot inside the home and, for visitors, loads the host's
 ## furniture. Everyone in the same home sees the others (server: mp_presence).
@@ -1625,10 +1707,14 @@ func share_presence() -> void:
 	# (remote_motion.gd); kept-alive like the village's polls.
 	var spot := {"scene":"home","x":hero.position.x,"z":hero.position.z,"y":floor_index*3.0,"yaw":wrapf(heading,-PI,PI)}
 	if rich_presence: spot.merge({"vx":clampf(moving.x,-30,30),"vz":clampf(moving.y,-30,30),"t":RemoteMotion.now()})
+	var hub := social_hub()
+	if hub: spot.merge(hub.presence_extra(social_place(),floor_index))
 	var response: Dictionary=await api.post_kept("/v1/social/presence",spot,4.0)
 	presence_pending=false
-	if not response.ok and int(response.get("status",0))==422: rich_presence=false
+	if not response.ok and int(response.get("status",0))==422 and not (hub and hub.presence_refused(response)): rich_presence=false
 	if not response.ok or not is_inside_tree(): return
+	# The room's chat arrives with the walk (social_hud.gd).
+	if hub and is_instance_valid(hub): hub.ingest(response.data)
 	var space = response.data.get("space")
 	if not space is Dictionary: return
 	if not visit_host.is_empty():
@@ -1709,8 +1795,15 @@ func update_peers(delta: float) -> void:
 func keep_present() -> void:
 	if presence_pending or api.token.is_empty() or VersionGate.is_blocked(): return
 	presence_pending=true
-	await api.post_kept("/v1/social/presence",{"scene":"away"},4.0)
+	var hub := social_hub()
+	var body := {"scene":"away"}
+	if hub: body.merge(hub.presence_extra(social_place(),floor_index))
+	var response: Dictionary=await api.post_kept("/v1/social/presence",body,4.0)
 	presence_pending=false
+	if not is_inside_tree() or not hub or not is_instance_valid(hub): return
+	# The workshop and the residents' rooms get the chat on the heartbeat's answer.
+	if response.ok: hub.ingest(response.data)
+	else: hub.presence_refused(response)
 
 ## Closing the game in a room: friends see this player leave at once (social.gd does the same in
 ## the village; server/multiplayer.py leave).
@@ -1722,6 +1815,7 @@ func _notification(what: int) -> void:
 func logged_out(_reason: String) -> void:
 	if api.token.is_empty(): return
 	CraftTracker.end(api)
+	SocialHud.end(api)
 	api.token=""
 	leaving=true
 	var cloud := get_node_or_null("/root/CloudPrefs")
@@ -1772,14 +1866,24 @@ func _unhandled_key_input(event: InputEvent) -> void:
 				if talk_page>=talk_lines.size()-1 and index<talk_choices.size(): pick_talk(talk_choices[index])
 		get_viewport().set_input_as_handled()
 		return
-	# The craft window takes the keys while open; Esc closes it (also while typing), as in the village.
+	var focus := get_viewport().gui_get_focus_owner()
+	var typing: bool = focus is LineEdit or focus is TextEdit
+	# The craft window (on the window stack, as in the village) takes the keys while open; Esc closes
+	# it (also while typing), and so does its own key C when no field is being typed in.
 	if is_instance_valid(craft_window):
-		if event.physical_keycode==KEY_ESCAPE:
+		if event.physical_keycode==KEY_ESCAPE or (not typing and RpgUi.closes_window(craft_window.window,key)):
 			close_craft()
 			get_viewport().set_input_as_handled()
 		return
-	var focus := get_viewport().gui_get_focus_owner()
-	if focus is LineEdit or focus is TextEdit:return
+	# Any other shared window over the room: Esc or its own opening key closes it.
+	var top := RpgUi.top_window()
+	if not top.is_empty() and str(top.get("kind",""))!="dialogue":
+		if event.physical_keycode==KEY_ESCAPE or (not typing and RpgUi.closes_window(top,key)):
+			if RpgUi.close_top(top):
+				get_viewport().set_input_as_handled()
+				return
+		if bool(top.get("modal",false)): return
+	if typing:return
 	if event.physical_keycode==KEY_ESCAPE:
 		if placement_mode:
 			RpgUi.sfx("cancel",-8.0)
@@ -1787,6 +1891,10 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		elif not resting.is_empty(): stand_up()
 		elif is_instance_valid(dock_panel) and dock_panel.visible: set_dock_open(false)
 		else: PauseMenu.open(self)
+	# HUD key (U): fold every HUD panel at once (or open them all again), as in the village.
+	if key==KEY_U:
+		RpgUi.toggle_all_folds()
+		return
 	# The village's keys: C the craft window, I the bag (here the drawer with the bag).
 	if key==KEY_C:
 		open_craft()
@@ -1924,6 +2032,7 @@ func nearest_decor() -> Dictionary:
 func use_decor(record: Dictionary) -> void:
 	last_used=record
 	if is_instance_valid(story_home) and story_home.use(record): return
+	if preload("res://scripts/treasure.gd").use_home(self,record): return
 	if record.kind=="gift":
 		use_gift(record)
 		return
@@ -1976,73 +2085,64 @@ func say(text: String, record: Dictionary) -> void:
 	bubble_tween.tween_property(bubble,"modulate:a",0.0,0.45)
 	bubble_tween.tween_callback(func(): bubble.visible=false)
 
-## Shows a small "E" over whatever the walker can use (furniture or the door) and
-## the matching key chip at the bottom of the screen.
+## Shows the interact key's cap over whatever the walker can use (furniture or the door) and
+## the matching prompt chip above the hotbar; with nothing in reach the chip steps back.
 func update_hint() -> void:
+	var key := RpgUi.key_text("interact")
 	if not is_instance_valid(hint_label) or not is_instance_valid(hero) or placement_mode or travelling:
 		if is_instance_valid(hint_label): hint_label.visible=false
-		set_chip("",default_hint())
+		set_chip("","")
 		return
 	if not resting.is_empty():
 		hint_label.visible=false
-		set_chip("E",tr("일어나기"))
+		set_chip("interact",tr("일어나기"))
 		return
 	if floor_index==0 and Interiors.near_door(room_spec,hero.position):
-		hint_label.text="E"
+		hint_label.text=key
 		hint_anchor=Vector3(float(room_spec.get("door_x",0.0)),1.45,float(room_spec.size.y)*0.5+0.3)
 		hint_label.visible=true
-		set_chip("E",tr("문 쪽으로 걸어 나가면 마을로"))
+		set_chip("interact",tr("마을로 나가기"))
 		return
 	var fixed := nearest_decor()
 	if fixed.is_empty():
-		# A player-made piece that does something (or seats/beds) shows its E too.
+		# A player-made piece that does something (or seats/beds) shows its key too.
 		var crafted := nearest_crafted()
 		var piece: Node3D=crafted.get("item")
 		if is_instance_valid(piece) and piece.has_method("use_interaction") and (not piece.vm.program.get("events",{}).is_empty() or str(piece.rest)!=""):
 			var tall: Vector3=piece.get_meta("size",Vector3.ONE)
-			hint_label.text="E"
+			hint_label.text=key
 			hint_anchor=Vector3(piece.position.x,minf(piece.position.y+tall.y+0.15,float(room_spec.height)),piece.position.z)
 			hint_label.visible=not bubble.visible
-			set_chip("E",{"sit":tr("앉기"),"lie":tr("눕기")}.get(str(piece.rest),tr("사용")))
+			set_chip("interact",{"sit":tr("앉기"),"lie":tr("눕기")}.get(str(piece.rest),tr("사용")))
 			return
 		hint_label.visible=false
-		set_chip("",default_hint())
+		set_chip("","")
 		return
 	var record: Dictionary=fixed.record
 	var size: Vector3=record.get("size",Vector3.ONE)
 	var top: float=record.node.global_position.y+(size.y*0.5 if record.mounted else size.y)
 	var up: bool=record.has("link") and int(record.link.to)>floor_index
-	hint_label.text="E  ▲" if up else ("E  ▼" if record.has("link") else "E")
+	hint_label.text=key+("  ▲" if up else ("  ▼" if record.has("link") else ""))
 	hint_anchor=Vector3(record.center.x,minf(top+0.15,float(room_spec.height)),record.center.z)
 	hint_label.visible=not bubble.visible
 	var who := str(record.get("id","")) if record.kind=="resident" else str(record.get("occupant",""))
 	if not who.is_empty() and npcs.has(who):
-		set_chip("E",tr("쉿, 자고 있어요") if npcs[who].state.get("asleep",false) else tr("말 걸기"))
-	elif record.has("link"): set_chip("E",(tr("▲ 계단 오르기") if up else tr("▼ 계단 내려가기")))
-	elif is_instance_valid(story_home) and not story_home.chip(record).is_empty(): set_chip("E",story_home.chip(record))
-	else: set_chip("E",tr(str(Interiors.ACTION_HINTS.get(str(Interiors.ACTIONS.get(str(record.kind),"look")),"살펴보기"))))
+		set_chip("interact",tr("쉿, 자고 있어요") if npcs[who].state.get("asleep",false) else tr("말 걸기"))
+	elif record.has("link"): set_chip("interact",(tr("▲ 계단 오르기") if up else tr("▼ 계단 내려가기")))
+	elif is_instance_valid(story_home) and not story_home.chip(record).is_empty(): set_chip("interact",story_home.chip(record))
+	elif not preload("res://scripts/treasure.gd").home_chip(self,record).is_empty(): set_chip("interact",preload("res://scripts/treasure.gd").home_chip(self,record))
+	else: set_chip("interact",tr(str(Interiors.ACTION_HINTS.get(str(Interiors.ACTIONS.get(str(record.kind),"look")),"살펴보기"))))
 
-## The controls line; the hotbar's keys (I 가방, C 제작) are in it as in the village's slots.
-func default_hint() -> String:
-	if public_room or not visit_host.is_empty(): return tr("WASD 이동   E 살펴보기") + "   " + tr("C 제작")
-	return tr("WASD 이동   E 상호작용   R 회전   Esc 취소") + "   " + tr("I 가방   C 제작")
-
-func set_chip(key: String, text: String) -> void:
+## The prompt chip (RpgUi.prompt, y 560 like every place): the action's key as a cap (from the
+## bindings, so a rebind shows at once) and what it does; hidden with nothing to do, during a talk
+## and when interaction prompts are switched off.
+func set_chip(action: String, text: String) -> void:
 	if not is_instance_valid(hint_chip): return
-	if key=="E": key=GameSettings.key_label("interact")
-	# Interaction prompts can be switched off; the plain controls line stays.
-	hint_chip.modulate.a=1.0 if key.is_empty() or GameSettings.show_prompts() else 0.0
-	if is_instance_valid(hint_label):
-		hint_label.modulate.a=1.0 if GameSettings.show_prompts() else 0.0
-		if not key.is_empty() and key!="E": hint_label.text=hint_label.text.replace("E",key)
-	hint_key.visible=not key.is_empty()
-	hint_key.text=key
-	controls_label.text=text
-	hint_chip.reset_size()
-	var chip: Vector2=hint_chip.get_combined_minimum_size()
-	hint_chip.offset_left=-chip.x*0.5;hint_chip.offset_right=chip.x*0.5
-	# Just above the hotbar (its tray tops out 94 px above the bottom on the design canvas).
-	hint_chip.offset_top=-chip.y-106;hint_chip.offset_bottom=-106
+	var value := "" if action.is_empty() or text.is_empty() else RpgUi.key_text(action)+"  "+text
+	if is_instance_valid(hint_label): hint_label.modulate.a=1.0 if GameSettings.show_prompts() else 0.0
+	if str(hint_chip.get_meta("prompt",""))!=value:
+		RpgUi.set_prompt(hint_chip,value)
+	hint_chip.visible=not value.is_empty() and GameSettings.show_prompts() and not is_instance_valid(talk_box)
 
 ## Camera framing: in front of the open front edge, above the door side, framing
 ## the room the walker is in (closer than outside); distance follows that room.
@@ -2125,7 +2225,7 @@ func _process(delta: float) -> void:
 				soft_tick("valid" if problem.is_empty() else "invalid",-10.0,0.15)
 			placement_title.text=tr("놓을 자리 고르기 · ")+str(selected.get("name",tr("가구")))
 			placement_feedback.text=tr("이곳에 놓을 수 있어요 · %d°")%placement_rotation if problem.is_empty() else problem
-			placement_feedback.modulate=Color("4a6d50") if problem.is_empty() else Color("a25445")
+			placement_feedback.modulate=RpgUi.LEAF_LIGHT if problem.is_empty() else RpgUi.ACCENT.lightened(0.45)
 			place_button.disabled=pending or not problem.is_empty() or not is_instance_valid(ghost)
 			if is_instance_valid(ghost):ghost.rotation.y=ObjectTransform.ease_yaw(ghost.rotation.y,placement_rotation,delta)
 	if is_instance_valid(floor_grid):floor_grid.visible=placement_mode and grid_toggle.button_pressed
@@ -2434,7 +2534,7 @@ func play_effect(action: String, record: Dictionary) -> void:
 			for i in 4: note_pop(top+Vector3(randf_range(-0.4,0.4),0.1,0),"♪" if i%2==0 else "♫",i*0.18)
 		"read": pages(top+front*0.25,5)
 		"wind":
-			ring(top,Color("e9d29b",0.9),0.9)
+			ring(top,Color(RpgUi.GOLD,0.9),0.9)
 			spin_hands(node)
 		"ring":
 			ring(top+Vector3(0,0.1,0),Color("ffe39a",0.9),1.2)
@@ -2686,6 +2786,11 @@ func make_body(id: String, holder: Node3D) -> Node3D:
 			if figure is Node3D:
 				holder.add_child(figure)
 				figure.set_day(DayFolk.is_day(id,float(resident_clock().hour)),true)
+				# The figure's tag keeps one size on screen, made for the far village camera; the room's
+				# close camera blew it up over the whole café. Sized in the room like the other residents'.
+				var own = figure.get("nameplate")
+				if own is Label3D:
+					own.fixed_size=false;own.pixel_size=0.006;own.font_size=28;own.outline_size=4
 				return figure
 	var stand_in := Interiors.stand_in_figure(id)
 	holder.add_child(stand_in)
@@ -2744,7 +2849,7 @@ func pose_resident(entry: Dictionary) -> void:
 	var others: Array=[]
 	for other in npcs.values():
 		if other!=entry and int(other.floor)==level and other.pose=="stand": others.append(other.holder.position)
-	var at: Vector3=Interiors.stand_spot(record,f,decor_by_floor[level],others) if not record.is_empty() else Interiors.spawn_point(f)+Vector3(0.9,0,-0.6)
+	var at: Vector3=Interiors.stand_spot(record,f,decor_by_floor[level],others,floor_entries(level)) if not record.is_empty() else Interiors.spawn_point(f)+Vector3(0.9,0,-0.6)
 	holder.position=at
 	var look: Vector3=(record.center if not record.is_empty() else at+Vector3(0,0,1))-at
 	face_body(entry,atan2(look.x,look.z) if Vector2(look.x,look.z).length()>0.05 else 0.0)
@@ -2753,6 +2858,16 @@ func pose_resident(entry: Dictionary) -> void:
 		"size":Vector3(0.6,1.75,0.6),"half":Vector2(0.28,0.28),"world_half":Vector2(0.28,0.28),"top":1.75,"floor":level,"room":Interiors.room_at(f,at.x)}
 	decor_by_floor[level].append(talk)
 	entry.talk=talk
+
+## Where the walker comes onto a floor: the front door's spot on the ground floor, every
+## stair's arrival on the others (a standing resident keeps these and the way from them open).
+func floor_entries(level: int) -> Array:
+	var points: Array=[]
+	if level==0: points.append(Interiors.spawn_point(building_spec.floors[0]))
+	for f in building_spec.floors:
+		for item in f.get("furniture",[]):
+			if item.has("link") and int(item.link.to)==level: points.append(item.link.arrive)
+	return points
 
 func face_body(entry: Dictionary, yaw: float) -> void:
 	var body: Node3D=entry.body
@@ -2873,10 +2988,14 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	# Residents of a house take gifts from their own village's player.
 	if lines.is_empty() and NpcGifts.can_receive(id) and not visiting and not api.token.is_empty():
 		talk.choices.insert(maxi(0,talk.choices.size()-1),["선물하기","gift"])
+	# 단비 at the counter buys the bag's finds: leaf coins and a daily starseed allowance (shop_sell.gd).
+	if lines.is_empty() and id=="shopkeeper" and str(entry.state.get("activity",""))=="shopkeep" and not visiting and not api.token.is_empty():
+		talk.choices.insert(0,["물건 팔기","sell"])
 	# The resident's request (quests.gd) comes first, as in the village.
 	if lines.is_empty() and not visiting:
 		var request: Array=preload("res://scripts/quests.gd").room_choice(self,id)
-		# Marked: reading on with E or Space never takes or hands over a request (advance_talk).
+		# Marked "request". Keys pick it only once the choices are up (RpgUi.dialogue_ready), and
+		# taking a request still asks first, with '다음에요' leading.
 		if not request.is_empty(): talk.choices.insert(0,request+["request"])
 	talk_id=id;talk_lines=talk.lines;talk_choices=talk.choices;talk_page=0
 	if entry.pose=="stand" and is_instance_valid(hero):
@@ -2896,19 +3015,16 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	talk_body=talk_window.body
 	# Kept for older callers; choices now live in talk_window.choices.
 	talk_footer=HBoxContainer.new();talk_footer.visible=false;talk_box.add_child(talk_footer)
-	for item in [name_panel,hint_chip,hint_label,bubble]:
-		if is_instance_valid(item): item.visible=false
+	show_hud(false)
 	show_talk_page()
 
 func show_talk_page() -> void:
 	if not is_instance_valid(talk_box): return
 	talk_body.text=str(talk_lines[talk_page])
-	talk_body.visible_ratio=0.0
 	RpgUi.dialogue_line(talk_window,talk_body.text)
-	var typing := talk_body.create_tween()
-	typing.tween_property(talk_body,"visible_ratio",1.0,GameSettings.typing_seconds(talk_body.text.length()))
-	# The resident babbles in their own voice along the typing (a new talk greets first); closing
-	# the talk frees the label, which ends it.
+	RpgUi.dialogue_type(talk_window,GameSettings.typing_seconds(talk_body.text.length()))
+	# The resident babbles in their own voice along the typing (a new talk greets first); a skip shows
+	# the line whole, and closing the talk frees the label, which ends it.
 	VoiceBabble.speak(self,talk_id,talk_body.text,0.0,talk_body)
 	if talk_page<talk_lines.size()-1:
 		RpgUi.dialogue_more(talk_window,true)
@@ -2935,42 +3051,52 @@ func advance_talk() -> void:
 	if talk_window.is_empty():
 		close_talk()
 		return
-	if talk_body.visible_ratio<1.0:
-		talk_body.visible_ratio=1.0
+	if RpgUi.dialogue_typing(talk_window):
+		RpgUi.dialogue_skip(talk_window)
 	elif talk_page<talk_lines.size()-1:
 		talk_page+=1
 		# The village dialogue's page turn (main.gd open_dialogue).
 		RpgUi.sfx("page",-8.0)
 		show_talk_page()
 	elif not talk_choices.is_empty():
-		# The resident's own first choice; a request (quests.gd, marked in open_talk) only by a click.
-		for choice in talk_choices:
-			if (choice as Array).size()<3 or str(choice[2])!="request":
-				pick_talk(choice)
-				return
+		# The highlighted choice, as in the village (RpgUi.dialogue_pick; W/S or the arrows move it).
+		RpgUi.dialogue_pick(talk_window)
 
-## Closes the talk (or the storage chest's list) with the close sound, only when a box was open.
+## Closes the talk (or the storage chest's window), with the close sound only when a box was open.
 ## sound false: a talk replaced by the next one, or a choice whose outcome has its own sound.
 func close_talk(sound := true) -> void:
-	if is_instance_valid(talk_box):
+	# A shared window (the storage chest) leaves the window stack with its own close sound and fade.
+	if is_instance_valid(talk_box) and talk_box.has_meta("rpg_window"): RpgUi.close_window(talk_box.get_meta("rpg_window"))
+	elif is_instance_valid(talk_box):
 		talk_box.queue_free()
 		if sound and not leaving: RpgUi.sfx("close",-10.0)
 	talk_box=null
 	talk_window={}
 	talk_id=""
-	if is_instance_valid(hint_chip): hint_chip.visible=true
+	show_hud(true)
+
+## A conversation (or the chest's list) takes the screen: the HUD steps back, as in the village;
+## the prompt chip and the key cap over the furniture come back with the next update_hint.
+func show_hud(shown: bool) -> void:
+	if is_instance_valid(hud): hud.visible=shown
+	if not shown:
+		for item in [hint_label,bubble]:
+			if is_instance_valid(item): item.visible=false
 
 ## What a dialogue choice does: small gifts and tips, or the telescope at night.
 func run_choice(action: String) -> void:
 	var id := talk_id
 	# A choice with an outcome is heard in it (its own sound or its toast's chime), not a close as
 	# well; 또 봐요 (bye) just closes.
-	const OUTCOMES := ["gift","coffee","seed_tip","shop_tip","flour","flower","fish_tip","telescope"]
+	const OUTCOMES := ["gift","sell","coffee","seed_tip","shop_tip","flour","flower","fish_tip","telescope"]
 	close_talk(not (action in OUTCOMES))
 	var head: Vector3=hero.global_position+Vector3(0,1.6,0) if is_instance_valid(hero) else Vector3.ZERO
 	match action:
 		"gift":
 			open_gift(id)
+			return
+		"sell":
+			open_sell(id)
 			return
 		"coffee":
 			# The outcome's own sound stands in for the toast's chime (hush_toast), never both.
@@ -3111,6 +3237,37 @@ func use_gift(record: Dictionary) -> void:
 	say(tr("%s의 소중한 선물 · %s") % [owner_name,str(record.name)],record)
 	Interiors.play(self,"pop")
 
+## 단비's selling window at the counter (shop_sell.gd). E or Esc closes it, like the storage list.
+func open_sell(id: String) -> void:
+	# The talk it replaces goes quietly; the card opens with a window's open sound (ShopSell.window
+	# has none of its own), and E or Esc closes it with close_talk's.
+	close_talk(false)
+	RpgUi.sfx("open",-8.0)
+	talk_box=ShopSell.window(self,api,func(reply: Dictionary): sold(id,reply))
+	talk_window={};talk_lines=[];talk_choices=[]
+	for item in [name_panel,hint_chip,hint_label,bubble]:
+		if is_instance_valid(item): item.visible=false
+
+## A sale at the counter: sparkles over 단비, a coin chime, starseeds into the wallet line.
+func sold(id: String, reply: Dictionary) -> void:
+	var stars := int(reply.get("stars",0))
+	if npcs.has(id):
+		var resident: Dictionary=npcs[id]
+		pop_over(resident,"✦" if stars>0 else "♪")
+		if stars>0:
+			var at: Vector3=resident.holder.global_position
+			Fx.burst(stage,at+Vector3(0,1.5,0),"sparkle",18,Color(0,0,0,0),0.5)
+			Fx.glow(stage,at+Vector3(0,1.3,0),Color("ffd27a"),1.6,1.0)
+	if stars>0 and is_instance_valid(wallet):
+		wallet.text=tr("별씨 %d") % int(reply.get("shards",0))
+		wallet.pivot_offset=wallet.size*0.5
+		var bump := wallet.create_tween()
+		bump.tween_property(wallet,"scale",Vector2.ONE*1.2,0.08)
+		bump.tween_property(wallet,"scale",Vector2.ONE,0.14)
+	# The coin chime stands in for the toast's chime (hush_toast), never both.
+	Interiors.play(self,"ding");RpgUi.hush_toast()
+	message(str(reply.get("message","")))
+
 ## E on the house's storage chest: what the residents keep in storage (names and pictures only),
 ## for the owner and visitors alike. E or Esc closes it.
 func open_storage(record: Dictionary) -> void:
@@ -3120,33 +3277,26 @@ func open_storage(record: Dictionary) -> void:
 	close_talk(false)
 	Interiors.play(self,"creak")
 	if is_instance_valid(record.get("node")): Fx.wobble(record.node,0.05)
-	talk_box=Control.new();talk_box.name="StorageChest";talk_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(talk_box)
+	# The shared window (RpgUi.window): a small parchment card in the middle with the close key (Esc);
+	# E closes it too (advance_talk), shown as a key hint.
+	var w := RpgUi.window(self,tr("보관 상자"),{"width":RpgUi.WINDOW_W.small,"place":"centre","scroll":false,"on_close":close_talk,"id":"storage_chest"})
+	talk_box=w.root
 	talk_window={};talk_lines=[];talk_choices=[]
-	var shade := ColorRect.new();shade.color=Color(0,0,0,0.35);shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.gui_input.connect(func(event): if event is InputEventMouseButton and event.pressed: close_talk())
-	talk_box.add_child(shade)
-	var middle := CenterContainer.new();middle.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	middle.mouse_filter=Control.MOUSE_FILTER_IGNORE;talk_box.add_child(middle)
-	var card := PanelContainer.new();card.add_theme_stylebox_override("panel",RpgUi.panel_style("night",22))
-	card.custom_minimum_size=Vector2(440,0)
-	middle.add_child(card)
-	var column := VBoxContainer.new();column.add_theme_constant_override("separation",10);card.add_child(column)
-	RpgUi.label(column,tr("보관 상자"),22,RpgUi.GOLD)
+	w.shade.gui_input.connect(func(event): if event is InputEventMouseButton and event.pressed: close_talk())
+	var column: VBoxContainer=w.body
 	var stored: Array=reply.data.get("stored",[])
 	var hour: float=float(resident_clock().hour)
-	RpgUi.label(column,tr("곧 꺼내 놓을지도 몰라요.") if not stored.is_empty() else tr("지금은 상자가 비어 있어요. 선물은 모두 집 안에 나와 있어요."),14,RpgUi.SOFT)
+	RpgUi.caption(column,tr("곧 꺼내 놓을지도 몰라요.") if not stored.is_empty() else tr("지금은 상자가 비어 있어요. 선물은 모두 집 안에 나와 있어요."),14)
 	for item in stored.slice(0,8):
 		var row := HBoxContainer.new();row.add_theme_constant_override("separation",12);column.add_child(row)
 		row.add_child(RpgUi.icon(NpcGifts.icon_for(item.get("tags",[])),40))
 		var words := VBoxContainer.new();row.add_child(words)
-		RpgUi.label(words,str(item.get("name","")),16)
-		RpgUi.label(words,tr("%s의 선물") % Interiors.short_name(str(item.get("npc","")),hour),12,RpgUi.SOFT)
-	if stored.size()>8: RpgUi.label(column,tr("…그리고 %d개 더") % (stored.size()-8),13,RpgUi.SOFT)
-	RpgUi.label(column,tr("E 닫기"),12,RpgUi.SOFT)
-	RpgUi.pop_in(card)
-	for item in [name_panel,hint_chip,hint_label,bubble]:
-		if is_instance_valid(item): item.visible=false
+		RpgUi.label(words,str(item.get("name","")),16,RpgUi.PAPER_INK,false).add_theme_font_override("font",RpgUi.FONT_STRONG)
+		RpgUi.caption(words,tr("%s의 선물") % Interiors.short_name(str(item.get("npc","")),hour),12)
+	if stored.size()>8: RpgUi.caption(column,tr("…그리고 %d개 더") % (stored.size()-8),13)
+	RpgUi.divider(column)
+	RpgUi.key_hint(column,"interact",tr("닫기"),"paper").size_flags_horizontal=Control.SIZE_SHRINK_END
+	show_hud(false)
 
 ## Gifts react to the walker coming near and leaving, on this screen only.
 func gift_proximity() -> void:

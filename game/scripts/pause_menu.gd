@@ -5,6 +5,8 @@ extends CanvasLayer
 ## 계속하기 · 설정 · 조작 안내 · (survival) 진행을 저장하고 마을로 / 탐험을 마치고 귀환
 ## · (village) 타이틀로 · (room) 마을로 · 게임 종료.
 ##
+## Every page is a night RpgUi.window over one shared shade: the next page (조작 안내, a question,
+## 설정) borrows the shade already on screen, so the world never darkens twice.
 ## While open it eats gameplay keys and clicks, and keeps the walker still. Solo
 ## survival reuses main.gd's own pause (app.paused stops tick_run, so the server
 ## sees no time pass); co-op survival keeps running and says so. Nothing new is
@@ -19,8 +21,8 @@ var app: Node
 var context := ""
 var paused_run := false
 var root: Control
-var card: PanelContainer
-var column: VBoxContainer
+## The page on screen (an RpgUi.window description); the next page takes over its shade.
+var win: Dictionary = {}
 var sub: Control
 ## "main", "settings", "controls" or "ask": Esc steps back to "main", then closes.
 var view := "main"
@@ -64,27 +66,21 @@ func _ready() -> void:
 		app.pending_target = ""
 		paused_run = true
 	root = Control.new()
+	root.name = "Pages"
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_STOP
 	# A CanvasLayer cuts theme inheritance: borrow the app's HUD theme (RpgUi kit).
 	root.theme = theme_of(app)
 	add_child(root)
-	var shade := ColorRect.new()
-	shade.color = Color(0.02,0.04,0.05,.66)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.add_child(shade)
 	show_main()
-	RpgUi.sfx("open", -6.0)
-	if not GameSettings.reduced_motion():
-		root.modulate.a = 0.0
-		root.create_tween().tween_property(root, "modulate:a", 1.0, 0.12)
 
 func dismiss() -> void:
 	if paused_run and is_instance_valid(app) and "paused" in app and str(app.get("screen")) == "survival":
 		app.paused = false
 	paused_run = false
 	if current == self: current = null
-	if not is_queued_for_deletion(): RpgUi.sfx("close", -8.0)
+	if not win.is_empty(): RpgUi.close_window(win, false)
+	win = {}
 	queue_free()
 
 func _exit_tree() -> void:
@@ -104,6 +100,10 @@ func _input(event: InputEvent) -> void:
 		or (event is InputEventJoypadButton and event.pressed and event.button_index in [JOY_BUTTON_B, JOY_BUTTON_START])
 	if back:
 		get_viewport().set_input_as_handled()
+		# A question the app asked over this menu (the survival return) is the top window: it goes first.
+		var top := RpgUi.top_window()
+		var over: Control = top.get("root") if not top.is_empty() else null
+		if is_instance_valid(over) and over != win.get("root") and root.is_ancestor_of(over) and RpgUi.close_top(top): return
 		if view != "main": show_main()
 		else: dismiss()
 
@@ -112,37 +112,21 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton:
 		get_viewport().set_input_as_handled()
 
-func _clear() -> void:
-	if is_instance_valid(card): card.queue_free()
+## Opens the next page as a night window in the middle of the screen. It borrows the shade of the
+## page on screen, which then closes and hands the shade over, so the shade never blinks.
+func _page(title: String, width: float, on_close: Callable) -> VBoxContainer:
 	if is_instance_valid(sub): sub.queue_free()
-	card = null
 	sub = null
-
-func _card(width: float) -> VBoxContainer:
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.add_child(center)
-	card = PanelContainer.new()
-	var frame := RpgUi.panel_style("night")
-	frame.content_margin_left = 36; frame.content_margin_right = 36; frame.content_margin_top = 30; frame.content_margin_bottom = 28
-	card.add_theme_stylebox_override("panel", frame)
-	card.theme = RpgUi.night_theme()
-	RpgUi.pop_in(card)
-	card.custom_minimum_size.x = width
-	center.add_child(card)
-	column = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
-	card.add_child(column)
-	# The card's CenterContainer goes with it.
-	card.tree_exiting.connect(center.queue_free)
+	var old := win
+	win = RpgUi.window(root, title, {"kind":"night", "width":width, "place":"centre", "on_close":on_close, "id":"pause_page"})
+	if not old.is_empty(): RpgUi.close_window(old, false)
+	var column: VBoxContainer = win.body
+	column.add_theme_constant_override("separation", RpgUi.GAP)
 	return column
 
 func show_main() -> void:
-	_clear()
 	view = "main"
-	var list := _card(420)
-	RpgUi.label(list, tr("잠깐 쉬어 가기"), 30, RpgUi.GOLD)
-	RpgUi.divider(list, Color(RpgUi.GOLD, .6))
+	var list := _page(tr("잠깐 쉬어 가기"), 420, dismiss)
 	var note := ""
 	if context == "survival":
 		note = tr("협동 생존은 메뉴를 열어도 계속됩니다.\n연결이 끊겨도 동료가 남아 있으면 위험에 노출됩니다.") if app.get("coop_run") else tr("일시 정지 중에는 생존 시간과 허기가 멈춥니다.")
@@ -152,11 +136,9 @@ func show_main() -> void:
 		var l := RpgUi.label(list, note, 14, RpgUi.SOFT, false)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.custom_minimum_size.x = 360
-	var gap := Control.new(); gap.custom_minimum_size.y = 6; list.add_child(gap)
-	var first := _item(list, tr("계속하기"), dismiss)
-	first.theme_type_variation = "GoldButton"
-	first.add_theme_color_override("font_hover_color", RpgUi.PAPER_INK)
-	first.add_theme_color_override("font_focus_color", RpgUi.PAPER_INK)
+	var gap := Control.new(); gap.custom_minimum_size.y = 2; list.add_child(gap)
+	# The UI kit 2 plates: gold for the way back into play, night glass for the rest.
+	var first := _item(list, tr("계속하기"), dismiss, "MenuGoldButton")
 	_item(list, tr("설정"), show_settings)
 	_item(list, tr("조작 안내"), show_controls)
 	match context:
@@ -166,84 +148,93 @@ func show_main() -> void:
 				app.suspend_run())
 			_item(list, tr("탐험을 마치고 귀환"), func(): app.confirm_return())
 		"village":
-			_item(list, tr("타이틀로"), func(): ask(tr("로그아웃하고 타이틀로 돌아갈까요?"), func():
-				dismiss()
-				app.logout()))
+			_item(list, tr("타이틀로"), func(): ask(tr("로그아웃하고 타이틀로 돌아갈까요?"), _to_title, tr("타이틀로")))
 		"room":
 			_item(list, tr("마을로"), func():
 				dismiss()
 				app.leave())
-	_item(list, tr("게임 종료"), func(): ask(tr("게임을 종료할까요?") + ("\n" + tr("진행 중인 탐험은 저장되어 다음에 이어 할 수 있어요.") if context == "survival" and not app.get("coop_run") else ""), func():
-		# The same notice as closing the window, so friends see this player leave at once (social.gd).
-		get_tree().root.propagate_notification(NOTIFICATION_WM_CLOSE_REQUEST)
-		get_tree().quit()))
+	var saved := "\n" + tr("진행 중인 탐험은 저장되어 다음에 이어 할 수 있어요.") if context == "survival" and not app.get("coop_run") else ""
+	_item(list, tr("게임 종료"), func(): ask(tr("게임을 종료할까요?") + saved, _quit_game, tr("게임 종료")))
 	_focus.call_deferred(first)
 
-func _item(parent: Node, text: String, callback: Callable) -> Button:
-	var b := RpgUi.menu_button(parent, text, callback, 360.0)
+func _to_title() -> void:
+	dismiss()
+	app.logout()
+
+func _quit_game() -> void:
+	# The same notice as closing the window, so friends see this player leave at once (social.gd).
+	get_tree().root.propagate_notification(NOTIFICATION_WM_CLOSE_REQUEST)
+	get_tree().quit()
+
+## A menu plate ("MenuGoldButton" or "MenuNightButton") that arrows and the pad can reach.
+func _item(parent: Node, text: String, callback: Callable, variant := "MenuNightButton") -> Button:
+	var b := RpgUi.menu_button(parent, text, callback, 360.0, variant)
 	b.focus_mode = Control.FOCUS_ALL
-	b.add_theme_stylebox_override("focus", RpgUi.frame("focus"))
-	b.add_theme_color_override("font_focus_color", RpgUi.HOVER)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	if variant == "MenuNightButton": b.add_theme_color_override("font_focus_color", RpgUi.HOVER)
 	return b
 
 func show_settings() -> void:
-	_clear()
 	view = "settings"
+	# The pause page steps aside but stays open under the settings window, which borrows its shade.
+	if not win.is_empty() and is_instance_valid(win.card): win.card.visible = false
 	sub = SettingsMenu.open(root, show_main)
 
 func show_controls() -> void:
-	_clear()
 	view = "controls"
-	var list := _card(760)
-	RpgUi.label(list, tr("조작 안내"), 26)
+	var list := _page(tr("조작 안내"), 760, show_main)
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation", 36)
 	list.add_child(columns)
+	# [group, rows]; a row is [keys, words]: action ids show their current key (and follow a rebind),
+	# literal keys pass through; empty words name the action itself.
 	var groups := [
-		[[tr("이동"), [["move_forward","move_back","move_left","move_right"], ["run"]]],
-			[tr("마을과 방"), [["interact"],["inventory"],["map"],["storage"],["craft"],["wardrobe"],["rotate"]]]],
-		[[tr("생존"), [["interact"],["attack"],["eat"],["campfire"],["heal"]]],
-			[tr("기타"), [["toggle_sound"]]]],
+		[[tr("이동"), [[["move_forward","move_left","move_back","move_right"], tr("이동")], [["run"], ""], [[tr("휠")], tr("확대/축소")]]],
+			[tr("마을과 방"), [[["interact"], ""], [["inventory"], ""], [["map"], ""], [["storage"], ""], [["craft"], ""], [["wardrobe"], ""], [["rotate"], ""]]]],
+		[[tr("생존"), [[["interact"], ""], [["attack"], ""], [["eat"], ""], [["campfire"], ""], [["heal"], ""]]],
+			[tr("대화와 채팅"), [[["Enter"], tr("채팅")], [["social"], tr("함께하기")], [["interact","Space","Enter"], tr("대화 넘기기")], [["1-9"], tr("선택지")]]],
+			[tr("기타"), [[["toggle_hud"], tr("HUD 접기")], [["toggle_sound"], ""], [["Esc"], tr("메뉴")]]]],
 	]
 	for side in groups:
 		var half := VBoxContainer.new()
-		half.add_theme_constant_override("separation", 6)
+		half.add_theme_constant_override("separation", 5)
 		half.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		columns.add_child(half)
 		for group in side:
+			if half.get_child_count() > 0:
+				var gap := Control.new(); gap.custom_minimum_size.y = 4; half.add_child(gap)
 			RpgUi.label(half, group[0], 15, RpgUi.GOLD)
-			var grid := GridContainer.new()
-			grid.columns = 2
-			grid.add_theme_constant_override("h_separation", 14)
-			grid.add_theme_constant_override("v_separation", 3)
-			half.add_child(grid)
-			for actions in group[1]:
-				var keys := []
-				for action in actions: keys.append(GameSettings.key_label(action))
-				var cap := RpgUi.label(grid, " / ".join(keys), 15, RpgUi.HOVER)
-				cap.custom_minimum_size.x = 120
-				var what: String = tr("이동") if actions.size() > 1 else tr(GameSettings.action_label(actions[0]))
-				if actions[0] == "run" and str(GameSettings.get_value("run_mode")) == "toggle": what += tr(" (눌러서 전환)")
-				RpgUi.label(grid, what, 15)
-	var extra := RpgUi.label(list, tr("마우스 휠 · 확대/축소     Esc · 메뉴     %s · 대화 넘기기") % GameSettings.key_label("interact"), 13, RpgUi.SOFT, false)
-	extra.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			for row in group[1]: _keys(half, row[0], row[1])
 	var back := _item(list, tr("돌아가기"), show_main)
 	_focus.call_deferred(back)
 
-func ask(question: String, yes: Callable) -> void:
-	_clear()
+## One controls row: the key caps, then what they do. Caps built from an action id relabel
+## themselves after a rebind (RpgUi.keycap); further keys join the first cap ("E Space Enter").
+func _keys(parent: Node, keys: Array, words: String) -> HBoxContainer:
+	if words.is_empty():
+		words = tr(GameSettings.action_label(keys[0]))
+		if keys[0] == "run" and str(GameSettings.get_value("run_mode")) == "toggle": words += tr(" (눌러서 전환)")
+	var row := RpgUi.key_hint(parent, keys[0], words)
+	var said: Control = row.get_meta("words")
+	for key in keys.slice(1):
+		var cap := RpgUi.keycap(row, key)
+		cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.move_child(cap, said.get_index())
+	return row
+
+## A yes/no question on its own page; 취소 (and Esc) go back to the main page.
+func ask(question: String, yes: Callable, title := "") -> void:
 	view = "ask"
-	var list := _card(440)
-	var l := RpgUi.label(list, question, 19)
+	var list := _page(title if not title.is_empty() else tr("잠깐 쉬어 가기"), 440, show_main)
+	var l := RpgUi.label(list, question, 17)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.custom_minimum_size.x = 380
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", RpgUi.GAP)
 	list.add_child(row)
-	var confirm := _item(row, tr("확인"), yes)
-	confirm.custom_minimum_size.x = 180
-	var cancel := _item(row, tr("취소"), show_main)
-	cancel.custom_minimum_size.x = 180
+	var confirm := RpgUi.button(row, tr("확인"), yes, "primary", "lg", true)
+	var cancel := RpgUi.button(row, tr("취소"), show_main, "night", "lg", true)
+	for b in [confirm, cancel]: b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_focus.call_deferred(cancel)
 
 ## Focus once the frame settles, if the control is still on screen.

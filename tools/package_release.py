@@ -107,6 +107,9 @@ def game_zip(tag: str) -> Path:
     # The pack must carry the archipelago bake that matches the map (tools/bake_archipelago.py).
     import bake_archipelago
     bake_archipelago.verify_pack(pck)
+    # ...and the survival maps' baked data (tools/bake_survival.py).
+    import bake_survival
+    bake_survival.verify_pack(pck)
     # A fixed name, so a download page can always point at the newest game.
     # School builds (--school) ship as pre-releases under their own name and never replace it.
     target = OUT / ("Villagen_School_Windows.zip" if school else "Villagen_Windows.zip")

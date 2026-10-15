@@ -228,8 +228,8 @@ func update_plots(state: Dictionary, now: float) -> void:
 		var plot: Dictionary=state.get("plots",[{},{},{},{},{},{}])[i]
 		var ready: bool=not plot.is_empty() and plot.get("watered",false) and now>=float(plot.get("ready_at",0))
 		if plot.is_empty(): labels[i].text=tr("%d · E 심기") % (i+1)
-		elif not plot.get("watered",false): labels[i].text=tr("E · 물주기")
-		elif ready: labels[i].text=tr("E · 수확!")
+		elif not plot.get("watered",false): labels[i].text=tr("%s · 물주기") % preload("res://scripts/rpg_ui.gd").key_text("interact")
+		elif ready: labels[i].text=tr("%s · 수확!") % preload("res://scripts/rpg_ui.gd").key_text("interact")
 		else: labels[i].text=tr("성장 중 · %d초") % maxi(0,int(ceil(float(plot.ready_at)-now)))
 		if signature!=last_plot_signature or crops[i].get_meta("ripe",false)!=ready:
 			for child in crops[i].get_children():

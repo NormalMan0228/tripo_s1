@@ -25,7 +25,8 @@ it is in storage or at which slot, the next change time, and friendship. Read-on
 story shows or restarts one player's opening story chapter "마을의 첫 선물" (server/story.py).
 reset puts the account back at the letter on the desk (rehearsals; an account made before the
 chapter existed starts it this way): the piece on the café terrace goes back to the bag, every other
-piece, letter and return gift stays. Ask the player to sign in again afterwards.
+piece, letter and return gift stays. Treasure chests are not part of the chapter: opened ones
+stay open (and paid). Ask the player to sign in again afterwards.
 
     ... python -m server.admin_cli story show USERNAME
     ... python -m server.admin_cli story reset USERNAME
@@ -50,6 +51,11 @@ quests shows one player's residents' requests (server/quests.py): which are unde
 when, and the starseeds each paid (the ledger's quest_reward rows). Read-only.
 
     ... python -m server.admin_cli quests show USERNAME
+
+chests shows one player's treasure chests (server/treasure.py): which are open, when, the starseeds
+each paid (the ledger's chest_reward rows) and which are left. Read-only.
+
+    ... python -m server.admin_cli chests show USERNAME
 """
 from __future__ import annotations
 
@@ -335,6 +341,45 @@ def knocks(args):
         return 0
     finally:
         conn.close()
+def demo(args):
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    if not 0 <= args.stars <= 10000:
+        print('--stars must be 0-10000.')
+        return 1
+    from . import demo as staging, story as chapter
+    with sqlite3.connect(database, timeout=30, isolation_level=None) as conn:
+        conn.row_factory = sqlite3.Row
+        named = {}
+        for name in [args.username] + ([args.source] if args.source else []):
+            row = conn.execute('SELECT id FROM users WHERE username=?', (name.lower(),)).fetchone()
+            if not row:
+                print('No such account: ' + name)
+                return 1
+            named[name] = row['id']
+        if args.command == 'list':
+            print(json.dumps(staging.pieces(conn, named[args.username]), ensure_ascii=False, indent=1))
+            return 0
+        from .npc_homes import SCHEMA as HOMES
+        conn.executescript(HOMES + chapter.SCHEMA)
+        conn.execute('BEGIN IMMEDIATE')
+        try:
+            result = staging.prep(conn, args.data_dir, named[args.username], time.time(), args.stars,
+                                  named.get(args.source), args.pick)
+            conn.execute('COMMIT')
+        except ValueError as error:
+            conn.execute('ROLLBACK')
+            print(str(error))
+            return 1
+        except BaseException:
+            conn.execute('ROLLBACK')
+            raise
+        print(json.dumps({'ok': True, 'username': args.username.lower(), **result}, ensure_ascii=False))
+    return 0
+
+
 def quests(args):
     database = Path(args.data_dir) / 'world.sqlite3'
     if not database.is_file():
@@ -350,6 +395,24 @@ def quests(args):
         # A world from before the requests has no progress table yet (it starts empty).
         conn.executescript(requests.SCHEMA)
         print(json.dumps(requests.describe(conn, user['id']), ensure_ascii=False, indent=1))
+    return 0
+
+
+def chests(args):
+    database = Path(args.data_dir) / 'world.sqlite3'
+    if not database.is_file():
+        print('No world database at ' + str(database))
+        return 1
+    from . import treasure
+    with sqlite3.connect(database, timeout=30) as conn:
+        conn.row_factory = sqlite3.Row
+        user = conn.execute('SELECT id FROM users WHERE username=?', (args.username.lower(),)).fetchone()
+        if not user:
+            print('No such account.')
+            return 1
+        # A world from before the chests has no table yet (it starts empty).
+        conn.executescript(treasure.SCHEMA)
+        print(json.dumps(treasure.describe(conn, user['id']), ensure_ascii=False, indent=1))
     return 0
 
 
@@ -375,6 +438,13 @@ def main(argv=None):
     chapter.add_argument('command', choices=('show', 'reset'))
     chapter.add_argument('username')
     chapter.add_argument('--data-dir', default='/data')
+    staged = actions.add_parser('demo', help='ready an account for a demo run: story at the letter, starseeds, spare pieces')
+    staged.add_argument('command', choices=('prep', 'list'))
+    staged.add_argument('username')
+    staged.add_argument('--stars', type=int, default=0, help='prep: top the starseed balance up to at least this')
+    staged.add_argument('--copy-from', dest='source', help='prep: account to copy finished pieces from (see list)')
+    staged.add_argument('--pick', action='append', default=[], help='prep: a piece id (8+ characters) or a word of its name; repeat')
+    staged.add_argument('--data-dir', default='/data')
     talk = actions.add_parser('chat', help='list, delete or mute chat lines (moderation)')
     talk.add_argument('command', choices=('list', 'delete', 'mute'))
     talk.add_argument('values', nargs='*', help='delete: message ids; mute: USERNAME MINUTES')
@@ -395,6 +465,10 @@ def main(argv=None):
     asked.add_argument('command', choices=('show',))
     asked.add_argument('username')
     asked.add_argument('--data-dir', default='/data')
+    found = actions.add_parser('chests', help="show one player's treasure chests and their rewards")
+    found.add_argument('command', choices=('show',))
+    found.add_argument('username')
+    found.add_argument('--data-dir', default='/data')
     args = parser.parse_args(argv)
     if args.action == 'knocks':
         return knocks(args)
@@ -404,8 +478,12 @@ def main(argv=None):
         return reports(args)
     if args.action == 'story':
         return story(args)
+    if args.action == 'demo':
+        return demo(args)
     if args.action == 'quests':
         return quests(args)
+    if args.action == 'chests':
+        return chests(args)
     if args.action == 'npc-homes':
         return npc_homes(args)
     if args.action == 'library':

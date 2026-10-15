@@ -23,10 +23,23 @@ const I18n = preload("res://scripts/i18n.gd")
 var password := "Gate-check-password-1"
 ## --until=loaded|banner|countdown|maintenance|room|expedition|title stops after that part.
 var until := ""
+## A connection of the test's own (no gate watches it) and what /v1/client served it last.
+var looker: Node
+var served := {}
+## Every wait is for a state (a busy PC only makes it come later), bounded by these seconds.
+const SCENE_SECONDS := 60.0
+const STATE_SECONDS := 20.0
 
 func expect(value: bool, description: String) -> void:
 	print(("PASS " if value else "FAIL ") + description)
 	if not value: failed = true
+
+func wait_until(condition: Callable, seconds := STATE_SECONDS) -> bool:
+	var deadline := Time.get_ticks_msec() + int(seconds * 1000)
+	while Time.get_ticks_msec() < deadline:
+		if condition.call(): return true
+		await create_timer(0.1).timeout
+	return condition.call()
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -52,19 +65,68 @@ func write_policy(data: Dictionary) -> void:
 		return
 	file.store_string(JSON.stringify(data))
 	file.close()
-	# The server looks at the file every two seconds.
-	await create_timer(2.3).timeout
+	var written := Time.get_ticks_msec()
+	# The server looks at the file every two seconds (server/client_policy.py CHECK_SECONDS): at least
+	# that long (sessions_valid_after shows in no reply), and until /v1/client serves what it can show
+	# of the file (a busy server, or a read of the half-written file, takes longer).
+	while true:
+		var reply: Dictionary = await looker.request("/v1/client")
+		served = reply.get("data", {}) if reply.ok and reply.get("data") is Dictionary else {}
+		if Time.get_ticks_msec() - written >= 2300 and serves(data): return
+		if Time.get_ticks_msec() - written > STATE_SECONDS * 1000:
+			expect(false, "the server serves the new policy within %d s (%s)" % [STATE_SECONDS, JSON.stringify(served)])
+			return
+		await create_timer(0.2).timeout
+
+## Does the last /v1/client show the policy's versions, download page and notice?
+func serves(data: Dictionary) -> bool:
+	if not served.get("client") is Dictionary: return false
+	var client: Dictionary = served.client
+	for pair in [["min", "min_client_version"], ["latest", "latest_client_version"], ["download_url", "client_download_url"]]:
+		if str(client.get(pair[0], "")) != str(data.get(pair[1], "")): return false
+	var notice = served.get("notice")
+	if data.get("notice") is Dictionary: return notice is Dictionary and str(notice.get("id", "")) == str(data.notice.get("id", ""))
+	return notice == null
+
+## The gate holds what the server serves now (client versions, the notice and whether it runs).
+func gate_holds() -> bool:
+	var notice = served.get("notice")
+	var mine: Dictionary = VersionGate.notice
+	var same: bool = mine.is_empty() if not notice is Dictionary else (str(mine.get("id", "")) == str(notice.get("id", "")) and bool(mine.get("active", false)) == bool(notice.get("active", false)))
+	return same and VersionGate.client == served.get("client", {})
 
 func now() -> int:
 	return int(Time.get_unix_time_from_system())
 
-## Any reply carries the notice version; a change makes the gate ask /v1/client.
+## Any reply carries the notice version; a change makes the gate ask /v1/client. Until the gate holds
+## what the server serves: a check already under way may bring the earlier answer, and then the next
+## reply asks again.
 func nudge(scene: Node) -> void:
-	await scene.api.request("/v1/homestead")
-	await create_timer(0.6).timeout
+	var deadline := Time.get_ticks_msec() + int(STATE_SECONDS * 1000)
+	while not gate_holds() and Time.get_ticks_msec() < deadline:
+		await scene.api.request("/v1/homestead")
+		await wait_until(gate_holds, 1.0)
+	await process_frame
+
+## The title asks the server (as its menu and login card do) until the gate holds the answer: an ask
+## for the same world already under way returns at once and may bring the earlier answer.
+func ask_until_held(gate: Node) -> void:
+	var deadline := Time.get_ticks_msec() + int(STATE_SECONDS * 1000)
+	while true:
+		await gate.ask(server)
+		if gate_holds() or Time.get_ticks_msec() > deadline: return
+		await create_timer(0.2).timeout
+
+## The retry key until done() (a check already under way makes one press do nothing).
+func retry_until(gate: Node, done: Callable) -> void:
+	var deadline := Time.get_ticks_msec() + int(STATE_SECONDS * 1000)
+	while true:
+		await gate.retry()
+		if done.call() or Time.get_ticks_msec() > deadline: return
+		await create_timer(0.2).timeout
 
 func gate_of(scene: Node) -> CanvasLayer:
-	return scene.get("gate")
+	return scene.get("gate") if is_instance_valid(scene) else null
 
 ## Signs in (a fresh session) and opens the village the way a room hands over to it.
 func enter_village() -> Node:
@@ -76,11 +138,25 @@ func enter_village() -> Node:
 	if not login.ok: return null
 	Engine.set_meta("studio_session", {"token": login.data.token, "url": server, "room": "home"})
 	change_scene_to_file("res://scenes/main.tscn")
-	await create_timer(4.0).timeout
+	return await wait_for_village()
+
+## The scene in front is the village, built, signed in and its walker free to move.
+func village_ready() -> bool:
+	var scene := current_scene
+	if not is_instance_valid(scene) or not scene.has_method("tick_run") or scene.get("screen") != "village": return false
+	return not str(scene.api.token).is_empty() and is_instance_valid(scene.get("player")) and bool(scene.player.controls_enabled)
+
+func wait_for_village() -> Node:
+	await wait_until(village_ready, SCENE_SECONDS)
 	return current_scene
 
+## The scene in front is the home (studio.gd), standing: its own frame work starts once the stage is built.
+func home_ready() -> bool:
+	var scene := current_scene
+	return is_instance_valid(scene) and not scene.has_method("tick_run") and scene.get("room") == "home" and is_instance_valid(gate_of(scene)) and scene.is_processing()
+
 ## Waits until the scene in front is the title (main.gd on its login screen, no session).
-func wait_for_title(seconds := 6.0) -> Node:
+func wait_for_title(seconds := SCENE_SECONDS) -> Node:
 	var deadline := Time.get_ticks_msec() + int(seconds * 1000)
 	while Time.get_ticks_msec() < deadline:
 		var scene := current_scene
@@ -101,6 +177,9 @@ func run() -> void:
 	# The title asks the remembered world (a real login remembers it); --qa keeps this in the QA settings.
 	saved_world = str(I18n.setting("server", ""))
 	I18n.remember("server", server)
+	looker = load("res://scripts/api.gd").new()
+	root.add_child(looker)
+	looker.base_url = server
 	await write_policy({})
 	var api = load("res://scripts/api.gd").new()
 	root.add_child(api)
@@ -114,8 +193,7 @@ func run() -> void:
 	api.queue_free()
 	Engine.set_meta("studio_session", {"token": login.data.token, "url": server, "room": "home"})
 	change_scene_to_file("res://scenes/main.tscn")
-	await create_timer(4.0).timeout
-	var village: Node = current_scene
+	var village: Node = await wait_for_village()
 	expect(village.screen == "village", "village loaded")
 	var gate := gate_of(village)
 	expect(is_instance_valid(gate), "the village has a gate")
@@ -155,7 +233,8 @@ func run() -> void:
 	await write_policy({"latest_client_version": "99.0.0", "client_download_url": "https://example.com/villagen",
 		"notice": {"id": "qa2", "starts_at": now() + 120, "minutes": 10, "message": "QA 점검 안내"}})
 	await nudge(village)
-	await process_frame
+	# The pill's clock (and its urgency) moves on the gate's next frame.
+	await wait_until(func(): return is_instance_valid(gate.maintenance_pill) and gate.maintenance_urgent)
 	expect(is_instance_valid(gate.maintenance_pill) and gate.maintenance_urgent, "urgent in the last five minutes")
 	await capture("countdown")
 
@@ -184,7 +263,7 @@ func run() -> void:
 	gate.resumed.connect(func(): resumed += 1)
 	# What ops/notice.sh cancel writes: the maintenance is gone, the sessions from before it stay over.
 	await write_policy({"sessions_valid_after": started})
-	await gate.retry()
+	await retry_until(gate, func(): return not VersionGate.is_blocked())
 	expect(not VersionGate.is_blocked() and not is_instance_valid(gate.screen), "retry after maintenance closes the screen")
 	expect(resumed == 1 and village.screen == "login", "the title stays: the player signs in again")
 	expect(is_instance_valid(gate.note_pill) and "다시 로그인" in texts(gate.note_pill), "the title keeps the sign-in-again note")
@@ -202,9 +281,11 @@ func run() -> void:
 	# Signed in again, into a room: too old for the server (426) shows the update window there.
 	village = await enter_village()
 	expect(is_instance_valid(village) and village.screen == "village" and not village.api.token.is_empty(), "a fresh sign-in plays again")
+	# The village gate drops the note at its first refresh while signed in (its first check, ~3 s).
+	await wait_until(func(): return not is_instance_valid(gate_of(village).note_pill))
 	expect(not is_instance_valid(gate_of(village).note_pill), "the note is gone once signed in")
 	village.open_studio("home")
-	await create_timer(3.0).timeout
+	await wait_until(home_ready, SCENE_SECONDS)
 	var home: Node = current_scene
 	expect(home.get("room") == "home", "entered the home")
 	var room_gate := gate_of(home)
@@ -222,18 +303,22 @@ func run() -> void:
 	expect(download != null and not download.disabled, "the download button is live")
 	await capture("update")
 	await write_policy({})
-	await room_gate.retry()
+	await retry_until(room_gate, func(): return not VersionGate.is_blocked())
 	expect(not VersionGate.is_blocked(), "minimum lifted")
 	# Maintenance in the room: the screen, then back to the title (main.tscn) without a session.
+	# What the room showed when it left for the title (the room's own calls may meet the 503 first,
+	# while the policy is being read).
+	var room_screen := []
+	room_gate.logout_required.connect(func(_reason): room_screen.append(VersionGate.blocked == "server_maintenance" and is_instance_valid(room_gate.screen)))
 	await write_policy({"notice": {"id": "qa4", "starts_at": now() - 5, "minutes": 3, "message": "방 점검"}})
-	await home.api.request("/v1/studio")
+	if is_instance_valid(home) and not str(home.api.token).is_empty(): await home.api.request("/v1/studio")
 	await process_frame
-	expect(VersionGate.blocked == "server_maintenance" and is_instance_valid(room_gate.screen), "maintenance screen in the room")
-	title = await wait_for_title(8.0)
+	expect(not room_screen.is_empty() and room_screen[0], "maintenance screen in the room")
+	title = await wait_for_title()
 	expect(is_instance_valid(title) and title.has_method("tick_run") and title.screen == "login", "maintenance in a room returns to the title")
 	expect(is_instance_valid(gate_of(title).screen) and VersionGate.is_blocked(), "the maintenance screen follows to the title")
 	await write_policy({})
-	await gate_of(title).retry()
+	await retry_until(gate_of(title), func(): return not VersionGate.is_blocked())
 	expect(not VersionGate.is_blocked(), "maintenance over")
 
 	if until == "room":
@@ -241,16 +326,18 @@ func run() -> void:
 		return
 	# An expedition under maintenance: logged out, and the run waits on the server for the next sign-in.
 	village = await enter_village()
+	# start_run does nothing while the village is still busy with something else.
+	await wait_until(func(): return not village.busy)
 	await village.start_run("forest", "standard")
-	await create_timer(1.5).timeout
+	await wait_until(func(): return village.screen == "survival", SCENE_SECONDS)
 	expect(village.screen == "survival", "expedition started")
 	await write_policy({"notice": {"id": "qa5", "starts_at": now() - 5, "minutes": 3, "message": "탐험 점검"}})
-	title = await wait_for_title(8.0)
+	title = await wait_for_title()
 	expect(title == village and village.screen == "login" and VersionGate.blocked == "server_maintenance", "the expedition's next input meets maintenance: back to the title")
 	expect(village.run_id.is_empty() and not village.ticking, "inputs stop")
 	await capture("expedition")
 	await write_policy({})
-	await gate_of(village).retry()
+	await retry_until(gate_of(village), func(): return not VersionGate.is_blocked())
 	var checker = load("res://scripts/api.gd").new()
 	root.add_child(checker)
 	checker.base_url = server
@@ -265,7 +352,7 @@ func run() -> void:
 		return
 	# The title counts down too (before anyone signs in).
 	await write_policy({"notice": {"id": "qa6", "starts_at": now() + 600, "minutes": 5, "message": "타이틀 점검 안내"}})
-	await gate_of(village).ask(server)
+	await ask_until_held(gate_of(village))
 	expect(village.screen == "login" and is_instance_valid(gate_of(village).maintenance_pill), "countdown banner on the title")
 	expect("타이틀 점검 안내" in texts(gate_of(village).maintenance_pill), "with the operator's message")
 	await capture("title-countdown")
@@ -285,14 +372,14 @@ func run() -> void:
 	# The title: too old for this world, so login is refused with the update window.
 	await write_policy({"min_client_version": "99.0.0", "client_download_url": "https://example.com/villagen"})
 	gate = gate_of(village)
-	await gate.ask(server)
+	await ask_until_held(gate)
 	expect(village.screen == "login" and VersionGate.blocked == "client_update_required" and is_instance_valid(gate.screen), "update window over the title")
 	await village.authenticate(false, server, account, password, "")
 	expect(village.api.token.is_empty(), "login refused while this game is too old")
 	await capture("title-update")
 	# Only a newer game (a source run): the title shows the gentle banner and login works.
 	await write_policy({"latest_client_version": "99.0.0", "client_download_url": "https://example.com/villagen"})
-	await gate.ask(server)
+	await ask_until_held(gate)
 	expect(not VersionGate.is_blocked() and is_instance_valid(gate.update_pill), "title banner for a newer game")
 	await finish()
 

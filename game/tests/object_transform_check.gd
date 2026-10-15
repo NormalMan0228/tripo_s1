@@ -228,8 +228,7 @@ func run() -> void:
 	check(index >= 0, "home lists the second piece")
 	if index < 0: finish(); return
 	home.set_dock_open(true)
-	var tabs: TabContainer = home.find_children("*", "TabContainer", true, false)[0]
-	tabs.current_tab = 0 # 보관함
+	home.select_bag_page("own") # 보관함
 	await home.select_item(index)
 	home.open_shape_panel()
 	panel = home.shape_panel

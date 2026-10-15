@@ -30,11 +30,11 @@ SHADERS = ["water_surface", "waterfall", "waterfall_body", "waterfall_splash", "
 LAYOUTS = ["building_placements.json", "environment_layout.json"]
 
 
-def rewrite(text: str) -> str:
+def rewrite(text: str, scripts: bool = False) -> str:
     text = text.replace("res://assets/", PREFIX + "assets/")
     # Lab review outputs live under the repository art folder, one level higher here.
     text = text.replace("res://../../", "res://../")
-    for name in (SCRIPTS if args.scripts else []) + LAYOUTS + [s + ".gdshader" for s in SHADERS]:
+    for name in (SCRIPTS if scripts else []) + LAYOUTS + [s + ".gdshader" for s in SHADERS]:
         text = text.replace('"res://' + name, '"' + PREFIX + name)
     return text
 
@@ -74,12 +74,12 @@ def main() -> None:
         target = DEST / source.relative_to(LAB)
         target.parent.mkdir(parents=True, exist_ok=True)
         if source.suffix == ".import":
-            target.write_text(rewrite(source.read_text(encoding="utf-8")), encoding="utf-8", newline="\n")
+            target.write_text(rewrite(source.read_text(encoding="utf-8"), args.scripts), encoding="utf-8", newline="\n")
         elif not target.exists() or target.stat().st_size != source.stat().st_size or target.stat().st_mtime < source.stat().st_mtime:
             shutil.copy2(source, target)
     for name in (SCRIPTS if args.scripts else []) + LAYOUTS + [s + ".gdshader" for s in SHADERS]:
         text = (LAB / name).read_text(encoding="utf-8")
-        (DEST / name).write_text(rewrite(text), encoding="utf-8", newline="\n")
+        (DEST / name).write_text(rewrite(text, args.scripts), encoding="utf-8", newline="\n")
     print("ported to", DEST.relative_to(ROOT))
     import lighten_archipelago_map
     lighten_archipelago_map.apply()

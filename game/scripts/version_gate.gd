@@ -459,31 +459,21 @@ func _end_clock() -> String:
 
 # ------------------------------------------------------------------ blocking screens
 
-## The dimmed frame and card every blocking screen uses; returns the card's column.
-func _frame() -> VBoxContainer:
+## The window every blocking screen uses: a night RpgUi.window on this layer (90) over the shared
+## shade, darkened for a blocked game (dim), with no close key: only its own buttons lead on.
+## A screen replacing another takes over its shade, so the dark never blinks. Returns the body.
+func _frame(title: String) -> VBoxContainer:
+	var old := screen
+	screen = null
 	_close_screen()
-	screen = Control.new()
-	screen.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	screen.mouse_filter = Control.MOUSE_FILTER_STOP
-	root.add_child(screen)
-	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.03, 0.04, 0.8)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	screen.add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	screen.add_child(center)
-	var card := PanelContainer.new()
-	card.add_theme_stylebox_override("panel", RpgUi.panel_style("night"))
-	card.custom_minimum_size.x = 470
-	center.add_child(card)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 10)
+	var w := RpgUi.window(root, title, {"kind":"night", "width":470, "place":"centre", "scroll":false, "closable":false,
+		"dim":0.8, "id":"version_gate"})
+	screen = w.root
+	if is_instance_valid(old): RpgUi.close_window(old.get_meta("rpg_window", {}), false)
+	w.title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var column: VBoxContainer = w.body
+	column.add_theme_constant_override("separation", RpgUi.GAP)
 	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	card.add_child(column)
-	RpgUi.pop_in(card, 0.3)
 	lane.visible = false
 	return column
 
@@ -515,9 +505,8 @@ func _open_screen(reason: String) -> void:
 	if reason == "client_update_required":
 		_open_installer_screen("")
 		return
-	var column := _frame()
+	var column := _frame(tr("서버 점검 중"))
 	screen_kind = reason
-	RpgUi.ribbon(column, tr("서버 점검 중"), true, 24).size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_badge(column, "res://assets/ui/gear.svg", true)
 	screen_time = RpgUi.label(column, _end_text(), 26, RpgUi.GOLD)
 	screen_time.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -530,15 +519,13 @@ func _open_screen(reason: String) -> void:
 	RpgUi.divider(column, Color(RpgUi.GOLD, .8))
 	retry_button = _button(column, tr("다시 시도"), func(): retry(), 320, true)
 	_button(column, tr("게임 종료"), func(): get_tree().quit(), 320, false)
-	RpgUi.sfx("open")
 	retry_button.grab_focus.call_deferred()
 
 ## No patch can do it: the installer page (the address comes from the server).
 func _open_installer_screen(why: String) -> void:
-	var column := _frame()
+	var column := _frame(tr("업데이트 필요"))
 	screen_kind = "client_update_required"
 	patch_step = "installer"
-	RpgUi.ribbon(column, tr("업데이트 필요"), false, 24).size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_badge(column, "res://assets/starseed.svg", false)
 	_versions(column)
 	_line(column, tr("새 버전을 받아야 계속할 수 있어요."), 17, RpgUi.INK)
@@ -550,14 +537,12 @@ func _open_installer_screen(why: String) -> void:
 	first.disabled = not url.begins_with("https://")
 	if first.disabled: _line(column, tr("받는 곳은 운영자 공지를 확인해 주세요."), 13, Color(RpgUi.INK, .7))
 	_button(column, tr("게임 종료"), func(): get_tree().quit(), 320, false)
-	RpgUi.sfx("open")
 	if not first.disabled: first.grab_focus.call_deferred()
 
 ## The installed game patches itself: list, download with progress, check, restart.
 func _open_patch_screen() -> void:
-	var column := _frame()
+	var column := _frame(tr("업데이트"))
 	screen_kind = "client_update_required"
-	RpgUi.ribbon(column, tr("업데이트"), false, 24).size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_badge(column, "res://assets/starseed.svg", false)
 	_versions(column)
 	patch_status = _line(column, "", 17, RpgUi.INK)
@@ -578,7 +563,6 @@ func _open_patch_screen() -> void:
 	patch_buttons = VBoxContainer.new()
 	patch_buttons.add_theme_constant_override("separation", 10)
 	column.add_child(patch_buttons)
-	RpgUi.sfx("open")
 	patch_step = ""
 	_run_patch()
 
@@ -669,7 +653,7 @@ func _button(parent: Node, value: String, callback: Callable, width: float, gold
 	return b
 
 func _close_screen() -> void:
-	if is_instance_valid(screen): screen.queue_free()
+	if is_instance_valid(screen): RpgUi.close_window(screen.get_meta("rpg_window", {}), false)
 	screen = null
 	screen_kind = ""
 	screen_time = null

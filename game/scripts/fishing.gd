@@ -492,7 +492,7 @@ func refresh_hud() -> void:
 		"hooking": status.text=tr("챔질!")
 		"fight":
 			status.text=tr("걸렸다! 물고기를 초록 칸 안에 두세요")
-			hint=tr("E·Space·클릭을 누르고 있으면 칸이 오른쪽으로, 떼면 왼쪽으로")
+			hint=tr("%s·Space·클릭을 누르고 있으면 칸이 오른쪽으로, 떼면 왼쪽으로") % preload("res://scripts/rpg_ui.gd").key_text("interact")
 		"landing": status.text=tr("끌어올리는 중…")
 		"reeling": status.text=tr("줄을 감는 중…")
 		"card":

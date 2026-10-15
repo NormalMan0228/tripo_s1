@@ -34,8 +34,7 @@ func run() -> void:
 		studio.hero.set_walking(true);await create_timer(.5).timeout
 		check(studio.hero.active=="movement/B_TrailWalk","walk playing")
 		studio.hero.set_walking(false)
-	var tabs=studio.find_children("*","TabContainer",true,false)
-	if not tabs.is_empty():tabs[0].current_tab=0 # 보관함
+	studio.select_bag_page("own") # 보관함
 	if "--capture" in OS.get_cmdline_user_args():
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://../artifacts/studio-interaction.png")

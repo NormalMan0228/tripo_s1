@@ -1,6 +1,7 @@
 """Account-owned village life. All growth, catches and exchanges use server time/state.
 
-Leaf coins are a closed village economy: never converted to API-credit shards.
+Leaf coins never buy API-credit shards (starseeds). Selling at the shop also pays a small daily
+starseed allowance (sell_stars below; app.py grants it through the ledger, TRIPOTHON_SELL_STARS_DAILY).
 Walking is cosmetic/local in the village; action ownership, inventory and timing
 are authoritative, but these endpoints do not claim to attest client proximity.
 The client checks roads, water and slopes before tilling; the server keeps tilled
@@ -328,6 +329,30 @@ def pickup(state, body, now):
     add(state,item,1)
     return NAMES[item]+' 1개를 주웠어요.',{'kind':'pickup','node':body.node,'items':{item:1},'left':len(drop['items'])}
 
+def object_word(word):
+    """The word with its object particle: 사과를, 순무를, 강농어를, 돌멩이를, 진주를, 은어를 … 을/를."""
+    last=word[-1:] if word else ''
+    final=('가'<=last<='힣') and (ord(last)-0xAC00)%28!=0
+    return word+('을' if final else '를')
+
+def sell_stars(state, income, now, daily, per_star):
+    """Starseeds a sale earns on top of its leaf coins: one per `per_star` coins of sales (the
+    remainder carries to the next sale), at most `daily` on the player's calendar day. 0 when off."""
+    day=local_day(now)
+    if state.get('star_day')!=day: state['star_day'],state['star_today']=day,0
+    if daily<=0 or state['star_today']>=daily: return 0
+    pool=state.get('star_coins',0)+income
+    stars=min(pool//per_star,daily-state['star_today'])
+    # At the day's cap the remainder is dropped, so tomorrow starts from nothing.
+    state['star_coins']=pool-stars*per_star if state['star_today']+stars<daily else 0
+    state['star_today']+=stars
+    return stars
+
+def star_status(state, now, daily, per_star):
+    """Today's selling starseeds for the shop window: earned, the cap and the coins carried."""
+    today=state.get('star_today',0) if state.get('star_day')==local_day(now) else 0
+    return {'today':today,'cap':daily,'coins_per_star':per_star,'carry':state.get('star_coins',0) if today<daily else 0}
+
 def act(state, body, now):
     """Caller runs in one DB transaction; failure never persists partial mutations."""
     normalise(state)
@@ -375,7 +400,7 @@ def act(state, body, now):
         if body.item not in PRICES: raise Rejected('life_invalid_item')
         spend(state,body.item,body.quantity)
         income=PRICES[body.item]*body.quantity; state['coins']+=income
-        result=f'{NAMES[body.item]}을 팔고 잎전 {income}개를 받았어요.'
+        result=f'{object_word(NAMES[body.item])} 팔고 잎전 {income}개를 받았어요.'
     elif action=='order':
         day=local_day(now)
         if state['order_day']==day: raise Rejected('life_order_completed')
