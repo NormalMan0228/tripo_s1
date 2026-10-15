@@ -1556,7 +1556,8 @@ func poll_entitlements() -> void:
 	var story := chapter()
 	if story: story.adopt(result.data.get("story"))
 	if story: story.adopt_quests(result.data.get("quests"))
-	if objects_signature(result.data.objects)!=objects_signature(me.objects) or result.data.shards!=me.shards:
+	# Back from a room, `me` holds only the look until the first refresh answers.
+	if objects_signature(result.data.objects)!=objects_signature(me.get("objects",[])) or result.data.shards!=me.get("shards",-1):
 		cancel_preview()
 		await refresh_inventory()
 
