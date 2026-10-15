@@ -12,6 +12,10 @@ extends SceneTree
 ## The time of day is held at day_progress 0.3 (plain day grade) while measuring.
 ## --alternate-prefetch: entries alternate the survival map's creature prefetch (survival_map.gd
 ## prefetch_monsters) off and on (warmups keep it on), to compare both under the same conditions.
+## A new account's expeditions open the tutorial (main.gd start_run); --tutorial-done marks the
+## account's tutorial as cleared on the client, so the entries go to --map itself.
+## --log-hitches prints every frame over 50 ms; --log-entry-frames the first 12 frames of each
+## entry once its screen is the expedition (under the veil), with the renderer's monitors.
 ## Prints EXPB lines and EXPB_RESULT {json}; also writes <out>/<map>.json.
 ## Usage: Godot --path game --position X,Y --script res://tests/expedition_baseline.gd --
 ##   --server=http://127.0.0.1:8831 --map=forest --out=D:/.../baseline --load-phases --mute
@@ -35,6 +39,8 @@ var pace: Script
 ## [usec, frame ms, veil alpha, card visible]
 var samples: Array = []
 var last_usec := 0
+var entry_frame := 0
+var entering := false
 var result := {}
 var pin: Pin
 
@@ -108,10 +114,22 @@ func record() -> void:
 	last_usec = now
 	var v := veil()
 	if ms > 50.0 and "--log-hitches" in OS.get_cmdline_user_args():
-		print("HITCH %.1f ms at %d screen=%s veil=%.2f card=%s last_step=%s process=%.1f physics=%.1f" % [ms, Time.get_ticks_msec(),
+		var viewport := root.get_viewport_rid()
+		print("HITCH %.1f ms at %d screen=%s veil=%.2f card=%s last_step=%s process=%.1f physics=%.1f render_cpu=%.1f gpu=%.1f" % [ms, Time.get_ticks_msec(),
 			str(current_scene.get("screen")) if is_instance_valid(current_scene) else "-", v.veil.modulate.a if v else -1.0, str(v.card.visible) if v else "-",
-			str(pace.last_what), Performance.get_monitor(Performance.TIME_PROCESS)*1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)*1000.0])
+			str(pace.last_what), Performance.get_monitor(Performance.TIME_PROCESS)*1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)*1000.0,
+			RenderingServer.viewport_get_measured_render_time_cpu(viewport)+RenderingServer.get_frame_setup_time_cpu(), RenderingServer.viewport_get_measured_render_time_gpu(viewport)])
 	samples.append([now, ms, v.veil.modulate.a if v else 0.0, v.card.visible and v.is_inside_tree() if v else false])
+	if "--log-entry-frames" in OS.get_cmdline_user_args() and is_instance_valid(current_scene):
+		var on_survival: bool = entering and current_scene.get("screen") == "survival" and v != null and v.veil.modulate.a > 0.5
+		entry_frame = entry_frame+1 if on_survival else 0
+		if on_survival and entry_frame <= 12:
+			var viewport := root.get_viewport_rid()
+			print("ENTRY_FRAME %d %.1f ms process=%.1f render_cpu=%.1f gpu=%.1f objects=%d draws=%d tex=%.1f buf=%.1f veil=%.2f covered=%s usec=%d" % [entry_frame, ms,
+				Performance.get_monitor(Performance.TIME_PROCESS)*1000.0, RenderingServer.viewport_get_measured_render_time_cpu(viewport)+RenderingServer.get_frame_setup_time_cpu(),
+				RenderingServer.viewport_get_measured_render_time_gpu(viewport), Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME),
+				Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)/1048576.0,
+				Performance.get_monitor(Performance.RENDER_BUFFER_MEM_USED)/1048576.0, v.veil.modulate.a, str(pace.covered), now])
 
 func wait_until(condition: Callable, seconds: float) -> bool:
 	var deadline := Time.get_ticks_msec()+int(seconds*1000.0)
@@ -266,6 +284,7 @@ func run() -> void:
 		return
 	result["village_before"] = memory()
 	var alternate := "--alternate-prefetch" in OS.get_cmdline_user_args()
+	var tutorial_done := "--tutorial-done" in OS.get_cmdline_user_args()
 	var survival_map = load("res://maps/survival/survival_map.gd")
 	for n in warmup+entries:
 		var tag := ("warmup%d" % n) if n < warmup else ("entry%d" % (n-warmup+1))
@@ -273,13 +292,17 @@ func run() -> void:
 			survival_map.prefetch_monsters = n < warmup or (n-warmup) % 2 == 1
 			tag += "_prefetch" if bool(survival_map.prefetch_monsters) else "_noprefetch"
 		await create_timer(2.0).timeout
+		if tutorial_done: current_scene.me["tutorial_done"] = true
+		entering = true
 		var entry := await change("village -> "+map_id, func(): current_scene.start_run(map_id),
 			func(): return current_scene.get("screen") == "survival" and not current_scene.busy)
+		entering = false
 		if entry.is_empty():
 			finish()
 			return
 		entry["tag"] = tag
-		print("EXPB %-24s veil=%6.3f s click_to_play=%7.1f ms worst=%6.1f ms >50ms=%d frames=%d longest=%s" % [tag+" enter", entry.veil_s, entry.click_to_play_ms, entry.worst_ms, entry.over_50ms, entry.frames, str(entry.longest)])
+		entry["run_map"] = str(current_scene.run.get("map_id", ""))
+		print("EXPB %-24s veil=%6.3f s click_to_play=%7.1f ms worst=%6.1f ms >50ms=%d frames=%d longest=%s" % [tag+" enter "+entry.run_map, entry.veil_s, entry.click_to_play_ms, entry.worst_ms, entry.over_50ms, entry.frames, str(entry.longest)])
 		if entry.has("phases"): print("EXPB_PHASES %s %s" % [tag, JSON.stringify(entry.phases)])
 		aim(SPOTS[map_id][0][1])
 		await create_timer(settle_s).timeout

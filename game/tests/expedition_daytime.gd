@@ -6,11 +6,14 @@ extends SceneTree
 ##     on the public run API while the game's own ticks are paused (as stage_smoke.gd does);
 ##  2. per map (--maps, default forest,quarry,frost): the camp fire lit, the ticks paused (the run's
 ##     clock stands still), the camera pinned on the camp and day_progress held at 0.15 / 0.5 / 0.6 /
-##     0.66 / 0.8: <map>_tod_<n>_<progress>.png, UI hidden;
+##     0.66 / 0.8: <map>_tod_<n>_<progress>.png, UI hidden; then the map's boss night held (0.82 with
+##     the server's boss_night flag, no boss on the field): <map>_tod_6_boss.png;
 ##  3. the forest's boss night: ticks on (fire kept up) until it comes: forest_boss_night.png. Run the
 ##     QA server with short stages (TRIPOTHON_STAGE_SECONDS=24: the forest's boss night ~82 s in).
-## Checks along the way: noon (0.3) is the map's tuned day grade, the night is dark, the guide marks
-## each goal. Prints EXPDAY PASS/FAIL lines and EXPDAY_RESULT {json}.
+## Checks along the way: noon (0.3) is the map's tuned day grade, 0.6 is the sunset (its warm sun),
+## the night is dark, the boss night red, the guide marks each goal. --skip-tutorial marks the new
+## account's tutorial as cleared on the client, so its expeditions go to the maps themselves.
+## Prints EXPDAY PASS/FAIL lines and EXPDAY_RESULT {json}.
 ## Usage: Godot --path game --position X,Y --script res://tests/expedition_daytime.gd -- --qa --mute
 ##   --server=http://127.0.0.1:8831 --out=D:/.../artifacts/tod [--maps=forest] [--skip-tutorial] [--skip-boss]
 const PROGRESS := [0.15, 0.5, 0.6, 0.66, 0.8]
@@ -270,6 +273,8 @@ func steer(at: Vector2, goal: Vector2) -> Vector2:
 # ------------------------------------------------------------------ the maps' hours
 func strip(map_id: String) -> void:
 	await create_timer(1.5).timeout
+	# The village's /v1/me refresh brings the server's flag back each time.
+	if "--skip-tutorial" in OS.get_cmdline_user_args(): app().me["tutorial_done"] = true
 	app().start_run(map_id, "relaxed")
 	if not await wait_until(in_survival, 90.0):
 		check(false, "%s started" % map_id)
@@ -306,10 +311,26 @@ func strip(map_id: String) -> void:
 		pin.progress = p
 		await create_timer(4.5).timeout
 		report[str(p)] = {"hour":snappedf(float(map.daytime.hour), 0.01), "night":snappedf(float(map.night), 0.01), "dusk":snappedf(float(map.dusk), 0.01),
+			"sunset":snappedf(float(map.daytime.sunset), 0.01), "saturation":snappedf(env.adjustment_saturation, 0.01),
 			"sky":env.background_color.to_html(false), "sun":sun.light_color.to_html(false), "sun_energy":snappedf(sun.light_energy, 0.01),
 			"sun_rotation":[snappedf(sun.rotation_degrees.x, 0.1), snappedf(sun.rotation_degrees.y, 0.1)], "adjustment":env.adjustment_enabled}
 		await capture("%s_tod_%d_%s.png" % [map_id, i+1, str(p).replace(".", "")])
+		if is_equal_approx(p, 0.6):
+			var c := sun.light_color
+			check(float(map.daytime.sunset) > 0.9 and c.r > 0.95 and c.g < 0.75 and c.b < c.g,
+				"%s 0.6 is the sunset: a deep orange sun (sunset %.2f, sun %s)" % [map_id, float(map.daytime.sunset), c.to_html(false)])
 	check(float(map.night) > 0.95, "%s 0.8 is night (%.2f)" % [map_id, float(map.night)])
+	# The boss night held: deep night under its red moon and sky.
+	pin.progress = 0.82
+	pin.boss = true
+	await create_timer(4.5).timeout
+	var red := sun.light_color
+	report["boss"] = {"night":snappedf(float(map.night), 0.01), "boss":snappedf(float(map.daytime.boss), 0.01), "sky":env.background_color.to_html(false),
+		"sun":red.to_html(false), "sun_energy":snappedf(sun.light_energy, 0.01)}
+	check(float(map.daytime.boss) > 0.95 and red.r > red.g*1.6 and env.background_color.r > env.background_color.b,
+		"%s boss night: a red moon and sky (moon %s, sky %s)" % [map_id, red.to_html(false), env.background_color.to_html(false)])
+	await capture("%s_tod_6_boss.png" % map_id)
+	pin.boss = false
 	result.maps[map_id] = report
 	pin.hold_time = false
 	pin.hold_camera = false
