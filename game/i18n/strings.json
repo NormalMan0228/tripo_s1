@@ -1,5 +1,13 @@
 {
  "strings": {
+  "문이 잠겨 있어요.": {
+   "en": "The door is locked.",
+   "zh": "门锁着。"
+  },
+  "지금은 이 집에 들어갈 수 없어요.": {
+   "en": "You can't go into this home right now.",
+   "zh": "现在不能进入这个家。"
+  },
   "튜토리얼": {
    "en": "Tutorial",
    "zh": "教程"

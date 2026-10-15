@@ -9,7 +9,10 @@ def measured(conn,assets,asset_id):
     cached=conn.execute('SELECT budget FROM asset_render_budgets WHERE asset_id=?',(asset_id,)).fetchone()
     if cached:return json.loads(cached[0])
     studio=conn.execute('SELECT manifest FROM studio_assets WHERE asset_id=?',(asset_id,)).fetchone()
-    if studio:parts=json.loads(studio[0])['plan']['parts']
+    animated=False
+    if studio:
+        manifest=json.loads(studio[0]);parts=manifest['plan']['parts']
+        animated=manifest.get('provenance',{}).get('rig',{}).get('moves') is True
     else:
         row=conn.execute('SELECT relative_path,digest FROM assets WHERE id=?',(asset_id,)).fetchone()
         if not row:raise ProviderError('asset_integrity_failed')
@@ -17,7 +20,7 @@ def measured(conn,assets,asset_id):
     budget={key:0 for key in LIMITS}
     for part in parts:
         blob=read_glb(assets,part['file'],part['sha256'])
-        stats={};validate_glb(blob,allow_textures=True,stats=stats)
+        stats={};validate_glb(blob,allow_textures=True,stats=stats,allow_rigged=animated)
         for key in budget:budget[key]+=stats[key]
     conn.execute('INSERT INTO asset_render_budgets VALUES (?,?)',(asset_id,json.dumps(budget)))
     return budget

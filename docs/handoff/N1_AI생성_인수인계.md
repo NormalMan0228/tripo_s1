@@ -12,11 +12,13 @@
 | 53 | 크기 '직접 정하기': 바닥을 드래그해 넓이, 위아래로 드래그해 높이를 정함. 치수는 LLM에 넘김 | `game/scripts/craft_size_box.gd`, `StudioRequest.dims` |
 | 17 | 사용자 결정은 B안. 확인할 때까지 HUD 제작(C) 슬롯에 반짝이는 '!'를 붙임 | `game/scripts/craft_badge.gd`, `craft_tracker.badge()` |
 | 73 | 대책 2개: 미리보기 카메라가 물건 전체를 비춤, 컨셉 그림 프롬프트에 넓은 여백 요구 | `game/scripts/preview_frame.gd`, `asset_studio.draw_concept` |
+| 73b (dev) | 컨셉 그림 잘림 자동 감지: 서버 `cut_edges`가 물건이 닿은 변을 `concept.edges`에 넣으면, 견적 화면에 경고가 뜨고 '다시 그리기' 버튼이 금색으로 바뀜(16060ee) | `asset_studio.cut_edges`, `craft_panel._show_quote` |
+| 67c (dev) | 움직이는 캐릭터의 게임 쪽 연결. 서버 codex/rig67(43e36f0, 기본 꺼짐)를 합침. 제작 창 옵션 '움직이는 캐릭터로 만들기', 제작 단계 '뼈대·동작', 배치 뒤 idle 반복 재생과 뼈 움직임 확인(c49c8e6) | `game/scripts/rig_motion.gd`, `asset_assembly.gd`, `craft_panel.gd` |
 
 ## 남은 일
 - **73 원인 확정**: 실제로 잘린 job으로 아직 확인하지 못함. 사용자가 VM에서 신고된 job의 `studio_jobs.provenance`(image_path, concept)와 `<job>-concept.jpg`, `<job>-whole.glb`를 확인해야 함(크레딧 없음).
 - **71 '로컬까지 연동'**: 뜻을 사용자에게 확인해야 함.
-- **67 캐릭터 리깅·애니**: XL 규모이고 크레딧 승인이 필요함.
+- **67 실제 생성 시험**: 게임·서버 연결은 끝남. 실제 Tripo로 리깅하려면 크레딧(약 55~70) 승인과 `TRIPOTHON_RIG_ANIM_ENABLED=true`가 필요함. 가짜 Tripo E2E 테스트는 `game/tests/rig_e2e_check.gd`로, 서버 환경 변수 `TRIPOTHON_FAKE_TRIPO=true TRIPO_ENABLE_PAID=true TRIPOTHON_RIG_ANIM_ENABLED=true`를 켜고 돌림.
 - 창 모드 craft_panel_check 실패: 배지를 넣기 전 코드로 A/B 해 봐도 같았음. main.gd refresh_inventory의 HUD 재생성 타이밍 문제로, 01이 is_instance_valid 확인을 넣음(23ddaa0). 06:00 무렵 다시 확인할 예정.
 
 ## 배포 주의

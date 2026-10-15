@@ -46,7 +46,7 @@ def reserved_username(value: str) -> bool:
 
 
 class AdminGrant(Mutation):
-    shards: int = Field(default=0, ge=0, le=100000)
+    shards: int = Field(default=0, ge=0, le=100000, strict=True)
     coins: int = Field(default=0, ge=0, le=100000)
 
 class RunStart(Mutation):

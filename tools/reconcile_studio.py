@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from server.config import Settings,read_tripo_key
 from server.app import create_app
+from server.economy import change_shards
 from server.backups import create_backup,readonly
 from server.operations import refund_studio_not_submitted,evidence
 from server.database import Database
@@ -45,8 +46,9 @@ async def main():
         if conn.execute('SELECT 1 FROM studio_leases WHERE job_id=? AND expires>?',(args.job_id,time.time())).fetchone():raise RuntimeError('worker_still_holds_lease')
         refunded=conn.execute("SELECT 1 FROM ledger WHERE user_id=? AND reason='studio_refund' AND reference=?",(row['owner_id'],args.job_id)).fetchone()
         if refunded and not conn.execute("SELECT 1 FROM ledger WHERE reason='studio_resume_charge' AND reference=?",(args.job_id,)).fetchone():
-            if not conn.execute('UPDATE users SET shards=shards-? WHERE id=? AND shards>=?',(row['cost'],row['owner_id'],row['cost'])).rowcount:raise RuntimeError('insufficient_shards_to_resume')
-            conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',(str(uuid.uuid4()),row['owner_id'],-row['cost'],'studio_resume_charge',args.job_id,time.time()))
+            balance=conn.execute('SELECT shards FROM users WHERE id=?',(row['owner_id'],)).fetchone()[0]
+            if balance < row['cost']:raise RuntimeError('insufficient_shards_to_resume')
+            change_shards(conn,row['owner_id'],-row['cost'],'studio_resume_charge',args.job_id,time.time())
         conn.execute("UPDATE studio_jobs SET state='building',error=NULL WHERE id=?",(args.job_id,))
         conn.execute('INSERT INTO audit(user_id,action,target,outcome,created) VALUES (?,?,?,?,?)',(row['owner_id'],'studio_operator_resume',args.job_id,json.dumps({'action':'known_task_only','evidence':args.evidence_reference}),time.time()))
     for _ in range(180):

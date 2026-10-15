@@ -24,7 +24,9 @@ from .asset_vm import AssetVM, ProgramError, exercise_extended as exercise
 from .design_provider import DesignProvider, DesignFailure, MODELS, EFFORTS, provider_name
 from .provider import ProviderError, validate_glb
 from .studio_pricing import mesh_credits,estimate
-from . import room_budget
+from .account_limits import daily_counts, tester_credits, check_tester_budget, reserve_tester_credits, record_tester_bill
+from . import room_budget, rig_rules
+from .rig_pipeline import advance_rig, rig_bill_entries, RIG_STATES
 from .stored_assets import read_glb
 from .object_paint import version_column as paint_version
 from . import object_shape
@@ -138,6 +140,7 @@ class StudioRequest(Mutation):
     prompt: str=Field(min_length=2,max_length=1500)
     material: Literal['mesh','textured']='mesh'
     motion: Literal['static','dynamic']='dynamic'
+    animate: bool=False
     designer: Literal['fixture','llm','simple']='fixture'
     geometry: Literal['proxy','tripo']='proxy'
     mesh_model: Literal['configured','v3.1-20260211','P2-20260801']='configured'
@@ -328,6 +331,10 @@ def billing(parts):
             value=part.get(key)
             if type(value) in (int,float) and math.isfinite(value) and 0<=value<=1000000:reported.append(value)
             else:missing=True
+        for entry in rig_bill_entries(part):
+            value=entry.get('credits_consumed')
+            if type(value) in (int,float) and math.isfinite(value) and 0<=value<=1000000:reported.append(value)
+            else:missing=True
     return {'known_tripo_credits':sum(reported),'tripo_credits_consumed':None if missing else sum(reported),'billing_complete':not missing}
 
 # A quote awaiting the owner's confirmation has not reached Tripo, so it must
@@ -389,8 +396,16 @@ def stage(state,provenance):
     """The step the craft window shows: design, concept (the picture), confirm, mesh, or the final state."""
     if state in ('queued','planning'):return 'concept' if provenance.get('redraw') or provenance.get('stage')=='concept' else 'design'
     if state=='awaiting_confirmation':return 'confirm'
-    if state in ('building','submitting'):return 'mesh'
+    if state in ('building','submitting'):return 'rig' if provenance.get('stage')=='rig' else 'mesh'
     return state
+
+def listed_object(conn, row):
+    value=object_shape.listed(dict(row))
+    stored=conn.execute('SELECT manifest FROM studio_assets JOIN objects ON objects.asset_id=studio_assets.asset_id WHERE objects.id=?',(value['id'],)).fetchone()
+    rig=json.loads(stored[0]).get('provenance',{}).get('rig',{}) if stored else {}
+    value.update(moves=rig.get('moves') is True,clips=rig.get('clips',[]))
+    return value
+
 
 class Studio:
     def __init__(self,app,db,settings,clock,provider,auth,mutate,money,own,new_object,assets,designer=None,profile=None):
@@ -436,22 +451,27 @@ class Studio:
         def info(request:Request):
             with db.transaction() as conn:
                 user=auth(conn,request)
+                limits=settings.limits_for(user)
                 return {'mode':settings.mode,'llm':settings.studio_llm,
                     'models':('gpt-6-luna',) if settings.mode=='live' else MODELS,
                     'efforts':('high',) if settings.mode=='live' else EFFORTS,
                     'profile':profile(conn,user['id']) if profile else {},
                     'room_usage':{room:room_budget.usage(conn,assets,user['id'],room) for room in ('home','workshop','village')},
                     'geometry_enabled':bool(settings.paid_enabled and settings.tripo_key),
-                    'max_tripo_credits':settings.max_credits_per_craft if settings.mode=='live' else 0,
+                    'max_tripo_credits':limits.max_credits_per_craft,
+                    'max_stars_per_craft':limits.max_stars_per_craft,
+                    'tester_budget':limits.tester_credit_budget,
+                    'tester_budget_used':tester_credits(conn) if limits.is_tester else 0,
                     'tripo_requests_used':tripo_requests(conn,user['id']),
-                    'tripo_requests_limit':settings.user_total_generation_limit if settings.mode=='live' else 0,
-                    'tripo_budget':settings.tripo_credit_budget,
-                    'tripo_budget_used':round(tripo_credits_committed(conn)) if settings.tripo_credit_budget else 0,
+                    'tripo_requests_limit':limits.user_total_generation_limit,
+                    'tripo_budget':limits.tripo_credit_budget,
+                    'tripo_budget_used':round(tripo_credits_committed(conn)) if limits.tripo_credit_budget else 0,
                     **craft_styles.public(),
+                    **({'rigging':{'enabled':True,'rig_type':'biped','clips':list(rig_rules.CLIPS),'rig_credits':25,'clip_credits':10,'pose':'A'}} if settings.rig_anim_enabled else {}),
                     'prices':{'static_mesh':20,'static_textured':40,'dynamic_mesh':30,'dynamic_textured':50},
                     'tripo_estimate':{'models':{'v3.1-20260211':{'text_mesh':10,'text_textured':20,'image_mesh':20,'image_textured':30},'P2-20260801':{'text_mesh':100,'text_textured':110,'image_mesh':100,'image_textured':110}},'image_refinement_per_part':5,'source':'official_rates_and_measured_2026_10_02','max_parts':8,'confirmation_required':True},
                     'jobs':[dict(r) for r in conn.execute('SELECT id,state,cost,object_id,error,created FROM studio_jobs WHERE owner_id=? ORDER BY created DESC LIMIT 30',(user['id'],))],
-                    'objects':[object_shape.listed(dict(r)) for r in conn.execute("SELECT objects.id,name,color,objects.version,objects.state,x,z,rotation,COALESCE(room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE studio_assets.asset_id=objects.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+paint_version('objects.id')+" AS paint_version,"+object_shape.column('objects.id')+" AS shape FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id WHERE owner_id=? AND state!='gifted' ORDER BY created DESC",(user['id'],))],
+                    'objects':[listed_object(conn,r) for r in conn.execute("SELECT objects.id,name,color,objects.version,objects.state,x,z,rotation,COALESCE(room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE studio_assets.asset_id=objects.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+paint_version('objects.id')+" AS paint_version,"+object_shape.column('objects.id')+" AS shape FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id WHERE owner_id=? AND state!='gifted' ORDER BY created DESC",(user['id'],))],
                     'categories':[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')],
                     'shards':user['shards']}
 
@@ -487,14 +507,21 @@ class Studio:
             # A clock is always built with its hands, even when asked for a still piece: the game makes
             # them (no credits, so it fits wherever the still piece fits). The price stays what was asked.
             asked=body
+            if body.animate:
+                if not settings.rig_anim_enabled:fail('rigging_disabled',503)
+                if not rig_rules.character_like(body.prompt):fail('animate_requires_character',422)
+                if body.image:fail('animate_requires_text',422)
+                if body.geometry!='tripo':fail('animate_requires_tripo',422)
+                body=body.model_copy(update={'motion':'static'})
             kind=archetypes.classify(body.prompt)
-            if kind and kind.get('always_moving') and body.motion=='static' and body.designer!='simple':
+            if not body.animate and kind and kind.get('always_moving') and body.motion=='static' and body.designer!='simple':
                 body=body.model_copy(update={'motion':'dynamic','concept':False})
             # Moving furniture keeps separate parts: at least two Tripo meshes, or one when the game
             # makes every moving part.
-            meshes=archetypes.least_meshes(kind,body.motion)
+            meshes=1 if body.animate else archetypes.least_meshes(kind,body.motion)
             # The photo and subtler requests are judged by the designer (asset_contract.py SAFETY).
             def create(conn,user):
+                limits=settings.limits_for(user)
                 if body.designer=='llm' and settings.studio_llm=='fixture':fail('llm_not_configured',503)
                 if body.geometry=='tripo' and not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
                 if body.designer=='simple' and (body.motion!='static' or body.image):fail('simple_requires_static_text')
@@ -508,24 +535,26 @@ class Studio:
                 if conn.execute("SELECT 1 FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled','unknown')",(user['id'],)).fetchone():fail('generation_pending')
                 if body.geometry=='tripo':
                     if provider_busy(conn):fail('provider_busy')
-                    cap=settings.max_credits_per_craft if settings.mode=='live' else 0
+                    cap=limits.max_credits_per_craft
                     if cap:
                         try:
-                            least=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',meshes,bool(body.image),body.image_mode=='refine')
+                            least=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',meshes,bool(body.image),body.image_mode=='refine')+rig_rules.credits(body.animate)
                         except ProviderError:least=cap+1
+                        if body.animate and body.concept:least+=CONCEPT_CREDITS+(10 if (settings.tripo_model if body.mesh_model=='configured' else body.mesh_model)=='v3.1-20260211' else 0)
                         if least>cap:fail('craft_over_trial_limit',403)
-                    if settings.tripo_credit_budget:
-                        try:need=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',meshes,bool(body.image),body.image_mode=='refine')
+                    if limits.tripo_credit_budget or limits.is_tester:
+                        try:need=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',meshes,bool(body.image),body.image_mode=='refine')+rig_rules.credits(body.animate)
                         except ProviderError:need=0
-                        if body.concept and not body.image:need+=CONCEPT_CREDITS
-                        if tripo_credits_committed(conn)+need>settings.tripo_credit_budget:fail('tripo_budget_exhausted',429)
-                count=conn.execute('SELECT count(*) FROM studio_jobs WHERE created>=?',(int(clock()//86400)*86400,)).fetchone()[0]
-                if count>=settings.daily_generation_limit:fail('daily_generation_limit',429)
+                        if body.concept and not body.image:need+=CONCEPT_CREDITS+(10 if body.animate and (settings.tripo_model if body.mesh_model=='configured' else body.mesh_model)=='v3.1-20260211' else 0)
+                        if limits.tripo_credit_budget and tripo_credits_committed(conn)+need>limits.tripo_credit_budget:fail('tripo_budget_exhausted',429)
+                        try:check_tester_budget(conn,limits,need)
+                        except ProviderError as error:fail(error.code,429)
+                count=daily_counts(conn,int(clock()//86400)*86400)
+                if limits.daily_generation_limit and count>=limits.daily_generation_limit:fail('daily_generation_limit',429)
                 if settings.mode=='live':
-                    user_count=conn.execute('SELECT count(*) FROM studio_jobs WHERE owner_id=? AND created>=?',
-                                            (user['id'],int(clock()//86400)*86400)).fetchone()[0]
-                    if user_count>=settings.user_daily_generation_limit:fail('user_daily_generation_limit',429)
-                    limit=settings.user_total_generation_limit
+                    user_count=daily_counts(conn,int(clock()//86400)*86400,user['id'])
+                    if limits.user_daily_generation_limit and user_count>=limits.user_daily_generation_limit:fail('user_daily_generation_limit',429)
+                    limit=limits.user_total_generation_limit
                     # Failed jobs may already have used Tripo: the cap also counts every Tripo request.
                     if limit and (conn.execute("SELECT count(*) FROM studio_jobs WHERE owner_id=? AND state!='failed'",(user['id'],)).fetchone()[0]>=limit
                                   or (body.geometry=='tripo' and tripo_requests(conn,user['id'])>=limit)):
@@ -534,6 +563,7 @@ class Studio:
                         # the sentence; it is the only caller that sends image_mode.
                         fail(TRIAL_USED_UP % limit if 'image_mode' in body.model_fields_set else 'user_total_generation_limit',429)
                 job_id=str(uuid.uuid4());cost=price(asked)
+                if cost>limits.max_stars_per_craft:fail('craft_star_limit_exceeded',403)
                 money(conn,user['id'],-cost,'studio_charge',job_id)
                 conn.execute('INSERT INTO studio_jobs(id,owner_id,request,state,cost,created,updated) VALUES (?,?,?,?,?,?,?)',
                     (job_id,user['id'],body.model_dump_json(),'queued',cost,clock(),clock()))
@@ -561,7 +591,7 @@ class Studio:
                 # The window's steps: design -> picture (text-only crafts that drew one) -> 3D parts -> done.
                 value['stage']=stage(value['state'],value['provenance'])
                 drawn=value['state'] in ('queued','planning') or bool(value['provenance'].get('concept'))
-                value['stages']=['design']+(['concept'] if asked and not photo and drawn else [])+['mesh','done']
+                value['stages']=['design']+(['concept'] if asked and not photo and drawn else [])+['mesh']+(['rig'] if value['provenance'].get('animate') else [])+['done']
                 value['progress']=build_progress(parts) if value['state'] in ('building','submitting') else None
                 value['parts']={k:v['state'] for k,v in parts.items()}
                 # Why a craft failed, in the few reasons the window words (craft_moderation.failure_reason).
@@ -610,14 +640,16 @@ class Studio:
         @app.post('/v1/studio/jobs/{job_id}/confirm')
         def confirm(job_id:str,body:StudioConfirm,request:Request):
             def edit(conn,user):
+                limits=settings.limits_for(user)
                 row=conn.execute('SELECT * FROM studio_jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
                 if not row:fail('job_not_found',404)
                 if row['state']!='awaiting_confirmation':fail('not_awaiting_confirmation')
                 # Proxy builds (development) can wait on a concept picture too; they never reach Tripo.
                 tripo_job=json.loads(row['request']).get('geometry')=='tripo'
+                if json.loads(row['request']).get('animate') and not settings.rig_anim_enabled:fail('rigging_disabled',503)
                 if tripo_job and not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
                 if tripo_job and provider_busy(conn,job_id):fail('provider_busy')
-                if settings.mode=='live' and settings.user_total_generation_limit and tripo_requests(conn,user['id'],job_id)>=settings.user_total_generation_limit:
+                if limits.user_total_generation_limit and tripo_requests(conn,user['id'],job_id)>=limits.user_total_generation_limit:
                     fail('user_total_generation_limit',429)
                 quote=json.loads(row['provenance']);parts=json.loads(row['parts'] or '{}')
                 if quote.get('concept'):
@@ -626,9 +658,14 @@ class Studio:
                     if not body.use_concept and quote.get('estimate_text_only') is not None:
                         quote['estimated_tripo_credits']=quote['estimate_text_only']
                         quote['quoted_game_cost']=max(row['cost'],math.ceil(float(quote['estimated_tripo_credits'])*settings.studio_credit_rate))
-                if settings.tripo_credit_budget and tripo_credits_committed(conn,job_id)+float(quote.get('estimated_tripo_credits') or 0)>settings.tripo_credit_budget:
+                if limits.tripo_credit_budget and tripo_credits_committed(conn,job_id)+float(quote.get('estimated_tripo_credits') or 0)>limits.tripo_credit_budget:
                     fail('tripo_budget_exhausted',429)
+                if limits.max_credits_per_craft and float(quote.get('estimated_tripo_credits') or 0)>limits.max_credits_per_craft:fail('craft_over_trial_limit',403)
                 total=max(row['cost'],int(quote.get('quoted_game_cost',row['cost'])))
+                if total>limits.max_stars_per_craft:fail('craft_star_limit_exceeded',403)
+                if tripo_job:
+                    try:reserve_tester_credits(conn,limits,job_id+':build',self.build_credits(quote,parts))
+                    except ProviderError as error:fail(error.code,429)
                 if total>row['cost']:money(conn,user['id'],row['cost']-total,'studio_quote_charge',job_id)
                 conn.execute("UPDATE studio_jobs SET state='building',cost=?,provenance=?,parts=?,updated=? WHERE id=?",(total,json.dumps(quote),json.dumps(parts),clock(),job_id))
                 return {'id':job_id,'state':'building','estimate':quote.get('estimated_tripo_credits'),'cost':total}
@@ -648,6 +685,7 @@ class Studio:
         @app.post('/v1/studio/jobs/{job_id}/redraw')
         def redraw(job_id:str,body:Mutation,request:Request):
             def edit(conn,user):
+                limits=settings.limits_for(user)
                 row=conn.execute('SELECT * FROM studio_jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
                 if not row:fail('job_not_found',404)
                 quote=json.loads(row['provenance'] or '{}')
@@ -658,9 +696,11 @@ class Studio:
                     parts=json.loads(row['parts'] or '{}')
                     spent=sum(float(p.get('concept_credits_consumed') or 0) for p in parts.values())
                     model=settings.tripo_model if asked.get('mesh_model','configured')=='configured' else asked['mesh_model']
-                    cap=settings.max_credits_per_craft if settings.mode=='live' else 0
+                    cap=limits.max_credits_per_craft
                     if cap and spent+CONCEPT_CREDITS+mesh_credits(model,asked.get('material')=='textured',True)>cap:fail('craft_over_trial_limit',403)
-                    if settings.tripo_credit_budget and tripo_credits_committed(conn,job_id)+spent+CONCEPT_CREDITS>settings.tripo_credit_budget:fail('tripo_budget_exhausted',429)
+                    if limits.tripo_credit_budget and tripo_credits_committed(conn,job_id)+spent+CONCEPT_CREDITS>limits.tripo_credit_budget:fail('tripo_budget_exhausted',429)
+                    try:check_tester_budget(conn,limits,CONCEPT_CREDITS)
+                    except ProviderError as error:fail(error.code,429)
                     if provider_busy(conn,job_id):fail('provider_busy')
                 quote['redraw']=True
                 conn.execute("UPDATE studio_jobs SET state='queued',provenance=?,updated=? WHERE id=?",(json.dumps(quote),clock(),job_id))
@@ -801,22 +841,65 @@ class Studio:
             conn.execute('UPDATE studio_jobs SET '+','.join(k+'=?' for k in fields)+' WHERE id=?',(*fields.values(),job_id))
             conn.execute('UPDATE studio_leases SET expires=? WHERE job_id=? AND token=?',(self.clock()+600,job_id,self.claims.get(job_id,'')))
 
+    def limits_for_job(self,job):
+        with self.db.read() as conn:
+            return self.settings.limits_for(conn.execute('SELECT * FROM users WHERE id=?',(job['owner_id'],)).fetchone())
+
+    @staticmethod
+    def build_credits(quote,parts):
+        concepts=sum(float(p.get('concept_credits_consumed') or 0) for p in parts.values())
+        return max(0,float(quote.get('estimated_tripo_credits') or 0)-concepts)
+
+    def reserve_build(self,job,parts,quote):
+        limits=self.limits_for_job(job)
+        if max(job['cost'],int(quote.get('quoted_game_cost',job['cost'])))>limits.max_stars_per_craft:
+            raise ProviderError('craft_star_limit_exceeded')
+        body=StudioRequest.model_validate_json(job['request'])
+        model=self.settings.tripo_model if body.mesh_model=='configured' else body.mesh_model
+        needed=0
+        for part in parts.values():
+            if part.get('primitive'):continue
+            image=bool(part.get('use_concept') or (body.image and (len(parts)==1 or body.image_mode=='refine')))
+            for key,predicted in (('credits_consumed',mesh_credits(model,body.material=='textured',image)),
+                                  ('image_credits_consumed',5 if body.image_mode=='refine' else 0)):
+                actual=part.get(key)
+                needed+=actual if type(actual) in (int,float) and math.isfinite(actual) and actual>=0 else predicted
+        with self.db.transaction() as conn:
+            if body.animate:
+                for part in parts.values():
+                    stages=[(part.get('rig',{}),rig_rules.RIG_CREDITS)]+[(part.get('anims',{}).get(c,{}),rig_rules.CLIP_CREDITS) for c in rig_rules.CLIPS]
+                    for entry,predicted in stages:
+                        actual=entry.get('credits_consumed')
+                        needed+=actual if type(actual) in (int,float) and math.isfinite(actual) and actual>=0 else predicted
+            total=max(needed,self.build_credits(quote,parts))+sum(p.get('concept_credits_consumed') or 0 for p in parts.values())
+            if limits.max_credits_per_craft and total>limits.max_credits_per_craft:raise ProviderError('craft_over_trial_limit')
+            if limits.tripo_credit_budget and tripo_credits_committed(conn,job['id'])+total>limits.tripo_credit_budget:raise ProviderError('tripo_budget_exhausted')
+            reserve_tester_credits(conn,limits,job['id']+':build',max(needed,self.build_credits(quote,parts)))
+
+    def record_build_bill(self,job,parts):
+        actual=sum(p.get(key) or 0 for p in parts.values() for key in ('credits_consumed','image_credits_consumed')
+                   if type(p.get(key)) in (int,float) and math.isfinite(p[key]) and p[key]>=0)
+        actual+=sum(e.get('credits_consumed') or 0 for p in parts.values() for e in rig_bill_entries(p)
+                    if type(e.get('credits_consumed')) in (int,float) and math.isfinite(e['credits_consumed']) and e['credits_consumed']>=0)
+        with self.db.transaction() as conn:record_tester_bill(conn,job['id']+':build',actual)
+
     async def draw_concept(self,job,body,mesh_model,plan,parts,provenance):
         """Text-only crafts: a concept picture of the designed object (Tripo text-to-image, 5 credits) that
         the player approves before the 3D build, which then uses it as its reference image. Skipped (the
         text build stays) when it would pass the per-craft cap or the server budget; a failed picture
         never fails the craft. Proxy (development) crafts get a drawn placeholder, no Tripo."""
+        limits=self.limits_for_job(job)
         part=plan['parts'][0];entry=parts[part['id']]
         concept=dict(provenance.get('concept') or {'draws':0})
         textured=body.material=='textured'
         spent=float(entry.get('concept_credits_consumed') or 0)
         if body.geometry=='tripo':
-            cap=self.settings.max_credits_per_craft if self.settings.mode=='live' else 0
-            if cap and spent+CONCEPT_CREDITS+mesh_credits(mesh_model,textured,True)>cap:
+            cap=limits.max_credits_per_craft
+            if cap and spent+CONCEPT_CREDITS+mesh_credits(mesh_model,textured,True)+rig_rules.credits(body.animate)>cap:
                 provenance['concept_skipped']='over_cap';return
-            if self.settings.tripo_credit_budget:
+            if limits.tripo_credit_budget:
                 with self.db.transaction() as conn:committed=tripo_credits_committed(conn,job['id'])
-                if committed+spent+CONCEPT_CREDITS>self.settings.tripo_credit_budget:
+                if committed+spent+CONCEPT_CREDITS>limits.tripo_credit_budget:
                     provenance['concept_skipped']='budget';return
         # A product-style render: the picture becomes Tripo's image reference, so believable shapes and
         # materials give a better model. Style words in the description (cute, anime...) still win.
@@ -826,16 +909,21 @@ class Studio:
                 '(at least 15% of the picture) on every side, nothing touching or cut by the picture edge, no floor. '
                 'Three-quarter view, plain light-grey background, soft studio lighting. Style: '+craft_styles.style(body.style)['concept']+
                 ', unless the description asks for another style. No text, no people. Object: '+str(part.get('prompt','')))[:1800]
+        if body.animate:
+            prompt='Front view concept art. '+rig_rules.POSE+' Style: '+craft_styles.style(body.style)['concept']+'. Character: '+str(part.get('prompt',''))
         try:
             if body.geometry!='tripo':blob=fixture_concept(str(part.get('prompt','')))
             else:
                 tripo=self.provider_for(entry['key']) if entry.get('key') else await self.pick_provider(CONCEPT_CREDITS)
+                reference=job['id']+':concept:'+str(uuid.uuid4())
+                with self.db.transaction() as conn:reserve_tester_credits(conn,limits,reference,CONCEPT_CREDITS)
                 data=await tripo.request('POST','/generation/text-to-image',{'model':'seedream_v4','prompt':prompt})
                 task=data.get('task_id')
                 if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema')
                 entry.update(key=getattr(tripo,'fingerprint',''),concept_task=task)
                 for _ in range(80):
                     result=await tripo.task(task)
+                    with self.db.transaction() as conn:record_tester_bill(conn,reference,result.get('credits_consumed'))
                     if result.get('status')=='success':break
                     if result.get('status')=='banned':raise Refused('other')
                     if result.get('status') in ('failed','cancelled','expired'):raise ProviderError('concept_failed')
@@ -845,8 +933,9 @@ class Studio:
                 entry['concept_credits_consumed']=spent+(credits if type(credits) in (int,float) else CONCEPT_CREDITS)
                 blob=await tripo.fetch_image(image_url(result.get('output') or {}))
         except ProviderError as error:
-            # Tripo refused the picture for its content: the 3D build would be refused too, so the craft ends here.
-            if error.code.startswith('refused_'):raise
+            # Tripo refused the picture for its content (the 3D build would be refused too), or the tester
+            # budget is spent: the craft ends here.
+            if error.code.startswith('refused_') or error.code=='tester_credit_budget_exhausted':raise
             provenance['concept_error']=error.code
             return
         name=job['id']+'-concept.jpg'
@@ -857,8 +946,8 @@ class Studio:
         provenance.pop('concept_error',None);provenance.pop('concept_skipped',None)
         if body.geometry=='tripo':
             images=float(entry.get('concept_credits_consumed') or 0)
-            provenance.update(estimated_tripo_credits=images+mesh_credits(mesh_model,textured,True),
-                              estimate_text_only=images+mesh_credits(mesh_model,textured,False))
+            provenance.update(estimated_tripo_credits=images+mesh_credits(mesh_model,textured,True)+rig_rules.credits(body.animate),
+                              estimate_text_only=images+mesh_credits(mesh_model,textured,False)+rig_rules.credits(body.animate))
             provenance['quoted_game_cost']=max(job['cost'],math.ceil(provenance['estimated_tripo_credits']*self.settings.studio_credit_rate))
 
     def part_colour(self,plan,parts,part,entry,body):
@@ -875,7 +964,7 @@ class Studio:
     def guard_tripo_cap(self,job,parts):
         """Last check before a new Tripo request: the account's earlier requests plus the ones
         this job already sent must leave room for one more (live trial cap)."""
-        limit=self.settings.user_total_generation_limit if self.settings.mode=='live' else 0
+        limit=self.limits_for_job(job).user_total_generation_limit
         if not limit:return
         with self.db.transaction() as conn:used=tripo_requests(conn,job['owner_id'],job['id'])
         sent=sum(1 for p in parts.values() for k in ('task','image_task') if p.get(k))
@@ -885,7 +974,7 @@ class Studio:
         """Raises generation_timeout when a submitted part has waited on Tripo past the deadline
         (settings.studio_part_deadline). Parts submitted before deadlines existed start counting now."""
         for entry in parts.values():
-            if entry.get('state') not in ('generating','image_generating'):continue
+            if entry.get('state') not in ('generating','image_generating',*RIG_STATES):continue
             started=entry.setdefault('submitted',self.clock())
             if self.clock()-started>self.settings.studio_part_deadline:raise ProviderError('generation_timeout')
 
@@ -944,8 +1033,11 @@ class Studio:
             if not row or row['state'] not in ('queued','building'):return
             job=dict(row)
             if job['state']=='queued':conn.execute("UPDATE studio_jobs SET state='planning' WHERE id=?",(job_id,))
+        limits=self.limits_for_job(job)
         try:
             body=StudioRequest.model_validate_json(job['request'])
+            if body.animate and not self.settings.rig_anim_enabled:
+                self.update(job_id,state=job['state'],error='rigging_disabled');return
             mesh_model=self.settings.tripo_model if body.mesh_model=='configured' else body.mesh_model
             if body.geometry=='tripo' and not self.settings.tripo_key:
                 self.update(job_id,state=job['state'],error='provider_configuration_required')
@@ -967,7 +1059,7 @@ class Studio:
                 else:
                     style_text=craft_styles.designer_style(body.style,body.size,body.dims)
                     # A text-only request made before (same words, style, size and motion): the learned design, no LLM call.
-                    learned=None if body.image else library.make_key('design',library.normalize(body.prompt),body.style,body.size,body.motion,style_text,archetypes.VERSION,DESIGN_RULES,*([body.dims] if body.dims else []))
+                    learned=None if body.image or body.animate else library.make_key('design',library.normalize(body.prompt),body.style,body.size,body.motion,style_text,archetypes.VERSION,DESIGN_RULES,*([body.dims] if body.dims else []))
                     with self.db.transaction() as conn:cached=library.find(conn,learned) if learned else None
                     if cached:
                         plan,program=cached['value']['plan'],cached['value']['program']
@@ -983,21 +1075,24 @@ class Studio:
                             request_prompt+='\nThis photo may be rebuilt in 3D exactly as it is, so if any real person (or part of one) appears in it, return {"refused":"person"}.'
                         with self.db.transaction() as conn:categories=[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')]
                         request_prompt+='\nExisting category names (reuse a matching kind, otherwise propose a short new kind): '+json.dumps(categories,ensure_ascii=False)
-                        request_prompt+=archetypes.designer_hint(body.prompt,body.motion)
+                        request_prompt+=rig_rules.POSE if body.animate else archetypes.designer_hint(body.prompt,body.motion)
                         plan,program,provenance=await self.designer.generate(request_prompt,body.model,body.effort,body.image,style_text)
                 designed=(plan,program)
                 if body.motion=='static':
                     plan=static_plan(plan,body.prompt,look['prop'],body.dims)
                     program={'version':1,'state':{},'functions':{},'events':{}}
+                if body.animate:
+                    plan['parts'][0]['prompt']=(body.prompt[:550]+'. '+rig_rules.POSE)[:800]
                 # Normalize generated designs through the exact same gates as local fixtures.
                 plan=validate_plan(plan);exercise(program,[p['id'] for p in plan['parts']])
                 category=unicodedata.normalize('NFKC',plan['category']).casefold().strip()
                 plan['category']='_'.join(''.join(c if c.isalnum() else ' ' for c in category).split())[:40] or 'decoration'
                 # The library type (server/archetypes.py): its behaviours start on the finished object.
-                kind=archetypes.classify(body.prompt,plan)
+                kind=None if body.animate else archetypes.classify(body.prompt,plan)
                 if kind:
                     provenance['archetype']=kind['id']
                     plan=archetypes.seat_parts(kind['id'],plan)
+                provenance.update(animate=body.animate)
                 provenance.update(geometry='procedural_proxy' if body.geometry=='proxy' else 'tripo',material=body.material,motion=body.motion)
                 # The game sizes the finished object by size_m (0 = the designer's own size).
                 provenance.update(style=body.style,size=body.size,size_m=craft_styles.meters(body.size))
@@ -1009,8 +1104,8 @@ class Studio:
                 if body.geometry=='tripo':
                     def quote():
                         meshes=sum(1 for entry in parts.values() if not entry.get('primitive'))
-                        return estimate(mesh_model,body.material=='textured',meshes,bool(body.image) and (len(plan['parts'])==1 or body.image_mode=='refine'),body.image_mode=='refine')
-                    cap=self.settings.max_credits_per_craft if self.settings.mode=='live' else 0
+                        return estimate(mesh_model,body.material=='textured',meshes,bool(body.image) and (len(plan['parts'])==1 or body.image_mode=='refine'),body.image_mode=='refine')+rig_rules.credits(body.animate)
+                    cap=limits.max_credits_per_craft
                     if cap and quote()>cap and len(plan['parts'])>1:
                         # Over the per-craft cap with its parts: one complete piece instead, with the type's
                         # whole-object behaviours, rather than no craft at all.
@@ -1045,7 +1140,7 @@ class Studio:
             for entry in parts.values():
                 if entry['state']=='ready' and not entry.get('render_budget'):
                     blob=(self.assets/entry['file']).read_bytes();stats={}
-                    validate_glb(blob,allow_textures=textured,stats=stats)
+                    validate_glb(blob,allow_textures=textured,stats=stats,allow_rigged=body.animate)
                     if hashlib.sha256(blob).hexdigest()!=entry['sha256']:raise ProviderError('stored_part_changed')
                     entry.update(bytes=len(blob),render_budget=stats)
             for key,limit in (('texture_pixels',32000000),('vertices',300000),('draw_calls',128)):
@@ -1058,6 +1153,9 @@ class Studio:
                 if entry.get('primitive'):
                     entry['color']=self.part_colour(plan,parts,p,entry,body)
                     blob=clock_hands.hand_glb(entry.get('make','minute'),p['size'],p['pivot'],body.geometry=='tripo')
+                elif entry['state'] in RIG_STATES:
+                    blob=await advance_rig(self,job,body,parts,p['id'],provenance)
+                    if blob is None:return
                 elif body.geometry=='proxy':blob=fixture_glb(p['shape'],textured)
                 else:
                     if entry['state']=='pending' and body.image_mode=='refine':
@@ -1065,6 +1163,7 @@ class Studio:
                         tripo=await self.pick_provider(5)
                         entry['key']=getattr(tripo,'fingerprint','')
                         reference=await tripo.upload_image(body.image)
+                        self.reserve_build(job,parts,provenance)
                         self.update(job_id,state='submitting')
                         data=await tripo.request('POST','/generation/image-to-image',{'model':'seedream_v5','input':reference,
                             'prompt':'Create a clean isolated product reference of ONLY this component: '+p['prompt']+'. Preserve the reference design and soft illustrated island style. Neutral background, no text, no other components.',
@@ -1075,6 +1174,9 @@ class Studio:
                         self.update(job_id,state='building',parts=json.dumps(parts));return
                     if entry['state']=='image_generating':
                         result=await self.provider_for(entry.get('key')).task(entry['image_task'])
+                        if result.get('credits_consumed') is not None:
+                            entry['image_credits_consumed']=result['credits_consumed']
+                            self.record_build_bill(job,parts)
                         if result.get('status') in ('queued','running'):
                             track(entry,result);self.overdue(parts)
                             self.update(job_id,state='building',parts=json.dumps(parts));return
@@ -1086,17 +1188,17 @@ class Studio:
                     if entry['state'] in ('pending','image_ready'):
                         if entry['state']=='pending':self.guard_tripo_cap(job,parts)
                         concept=entry.get('concept_task') if entry.get('use_concept') else None
-                        predicted=mesh_credits(mesh_model,textured,bool(concept or (body.image and (len(parts)==1 or body.image_mode=='refine'))))
+                        predicted=mesh_credits(mesh_model,textured,bool(concept or (body.image and (len(parts)==1 or body.image_mode=='refine'))))+rig_rules.credits(body.animate)
                         # A refined image belongs to the key that made it; otherwise any key with credit.
                         if entry.get('key'):
                             tripo=self.provider_for(entry['key'])
                             if await tripo.balance()-predicted<self.settings.credit_reserve:raise ProviderError('insufficient_provider_credit')
                         else:tripo=await self.pick_provider(predicted)
                         payload={'model':mesh_model,
-                            'prompt':p['prompt']+' Standalone isolated component. Cozy rounded matte game furniture. No other parts, no ground.',
+                            'prompt':p['prompt']+' '+(rig_rules.POSE if body.animate else 'Standalone isolated component. Cozy rounded matte game furniture. No other parts, no ground.'),
                             # UVs are always requested (no surcharge): uncoloured crafts are painted
                             # in the game's painter, which maps its texture through them.
-                            'face_limit':3000,'texture':textured,'pbr':textured,'quad':False,'export_uv':True}
+                            'face_limit':8000 if body.animate else 3000,'texture':textured,'pbr':textured,'quad':False,'export_uv':True}
                         route='/generation/text-to-model'
                         if concept:
                             payload.pop('prompt');payload['input']=concept;route='/generation/image-to-model'
@@ -1109,6 +1211,7 @@ class Studio:
                             payload.pop('prompt');payload['input']=token;route='/generation/image-to-model'
                             provenance['image_path']='original_reference_to_tripo'
                         elif body.image:provenance['image_path']='llm_interpreted_part_prompts'
+                        self.reserve_build(job,parts,provenance)
                         self.update(job_id,state='submitting')
                         data=await tripo.request('POST',route,payload)
                         task=data.get('task_id')
@@ -1118,6 +1221,9 @@ class Studio:
                         return
                     tripo=self.provider_for(entry.get('key'))
                     result=await tripo.task(entry['task'])
+                    if result.get('credits_consumed') is not None:
+                        entry['credits_consumed']=result['credits_consumed']
+                        self.record_build_bill(job,parts)
                     if result.get('status') in ('queued','running'):
                         track(entry,result);self.overdue(parts)
                         self.update(job_id,state='building',parts=json.dumps(parts));return
@@ -1129,11 +1235,18 @@ class Studio:
                     # Keep actual provider billing even if download/validation subsequently fails.
                     self.update(job_id,parts=json.dumps(parts))
                     blob=await tripo.download(result.get('output',{}).get('model_url',''),allow_textures=textured)
+                if body.animate and entry['state']=='generating':
+                    entry.update(state='rig_pending',submitted=self.clock())
+                    provenance['stage']='rig'
+                    self.update(job_id,state='building',parts=json.dumps(parts),provenance=json.dumps(provenance));return
                 stats={}
-                validate_glb(blob,allow_textures=textured,stats=stats)
+                validate_glb(blob,allow_textures=textured,stats=stats,allow_rigged=body.animate)
                 if len(blob)+sum(part.get('bytes',0) for part in parts.values())>48*1024*1024:raise ProviderError('assembly_too_large')
                 for key,limit in (('texture_pixels',32000000),('vertices',300000),('draw_calls',128)):
                     if stats[key]+sum(part.get('render_budget',{}).get(key,0) for part in parts.values())>limit:raise ProviderError('assembly_render_budget_exceeded')
+                if body.animate:
+                    provenance['rig']={'status':'ok','rig_type':'biped','rig_model':rig_rules.RIG_MODEL,'pose':'A',
+                        'clips':stats['clips'],'default_clip':'idle','moves':True,'bones':stats['bones'],'seconds':stats['seconds']}
                 filename=job_id+'-'+p['id']+'.glb'
                 target=self.assets/filename;temporary=target.with_suffix('.tmp');temporary.write_bytes(blob);temporary.replace(target)
                 entry.update(state='ready',file=filename,sha256=hashlib.sha256(blob).hexdigest(),bytes=len(blob),render_budget=stats)
@@ -1175,7 +1288,7 @@ class Studio:
                     'tripo_credits_consumed':0,'known_tripo_credits':0,'billing_complete':True}))
             # Poll/download errors keep the paid task ID. Never submit it again; past the part's deadline
             # the craft fails (and is refunded) instead of waiting on Tripo forever.
-            if 'parts' in locals() and any((p.get('task') and p['state']=='generating') or (p.get('image_task') and p['state']=='image_generating') for p in parts.values()) and error.code in ('upstream_unreachable','upstream_unavailable','upstream_rate_limit','asset_download_failed','key_not_configured','upstream_authentication','upstream_non_json','upstream_invalid_json'):
+            if not error.uncertain and 'parts' in locals() and any((p.get('task') and p['state']=='generating') or (p.get('image_task') and p['state']=='image_generating') or p['state'] in RIG_STATES for p in parts.values()) and error.code in ('upstream_unreachable','upstream_unavailable','upstream_rate_limit','asset_download_failed','key_not_configured','upstream_authentication','upstream_non_json','upstream_invalid_json'):
                 try:
                     self.overdue(parts)
                     self.update(job_id,state='building',error=error.code,parts=json.dumps(parts));return
