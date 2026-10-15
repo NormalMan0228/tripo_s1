@@ -27,7 +27,25 @@ const RULES := 3
 static func for_node(node: Node3D, hint := "") -> Array:
 	if not is_instance_valid(node): return []
 	if node.has_meta("ix_record"): return for_room(node.get_meta("ix_record"))
+	var spec = node.get_meta("placement_spec") if node.has_meta("placement_spec") else null
+	if spec is Dictionary and IxData.PROP_MODELS.has(str(spec.get("id", ""))): return for_prop(node, str(spec.id))
 	return for_crafted(node, hint)
+
+## A map prop with measured sockets (ix_data.gd PROP_MODELS), carried by the prop's own transform
+## (its yaw and uniform scale). [] for a model nobody measured.
+static func for_prop(node: Node3D, model: String) -> Array:
+	var data: Dictionary = IxData.PROP_MODELS.get(model, {})
+	if data.is_empty() or not bool(data.get("calibrated", false)): return []
+	var key := "prop|%s|%d" % [model, RULES]
+	if node.has_meta(CACHE_META) and str(node.get_meta(CACHE_META).get("key", "")) == key: return node.get_meta(CACHE_META).entries
+	var entries: Array = []
+	for r in data.sockets:
+		var rec := Schema.normalize(r)
+		rec.source = "authored"
+		for one in IxMath.expand(rec, Vector3.ONE):
+			entries.append({"rec": one, "carrier": node, "box": AABB(), "node": node, "shape_node": null, "k_on_point": false, "floor_offset": 0.0})
+	node.set_meta(CACHE_META, {"key": key, "entries": entries})
+	return entries
 
 ## A room piece (an Interiors record {kind, node, size, ...}).
 static func for_room(record: Dictionary) -> Array:

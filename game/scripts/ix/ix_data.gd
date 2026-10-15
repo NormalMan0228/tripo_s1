@@ -24,9 +24,34 @@ const INTERIOR_KINDS := {
 ## Interiors.ACTIONS kinds that are used standing get one stand_use socket in front (data for WP12).
 const STAND_USE_SKIP := ["sit", "lie", "travel"]
 
-## Map props (WP6), in the prop model's own frame; values measured in the lab (tests/ix_lab.gd).
-## calibrated false: not offered in game (the old effect plays instead).
-const PROP_MODELS := {}
+## Map props (WP6), in the prop model's own frame (metres, before the instance's yaw and scale),
+## measured on the models' own triangles (tests/ix_prop_probe.gd) and checked in the lab (ix_lab.gd).
+## A model missing here (or calibrated false) keeps its old prop effect.
+const PROP_MODELS := {
+	# Back on -X, so the bench faces +X; 0.40 m seat, two places along its length.
+	"26_bench": {"calibrated": true, "sockets": [
+		{"id": "seat_0", "type": "sit", "variant": "bench", "pos": [0.08, 0.40, 0.0], "yaw": 90, "snap": false,
+			"params": {"back": true, "width": 0.9, "depth": 0.37}, "repeat": {"axis": "z", "pitch": 0.45, "min_width": 0.4}}]},
+	# Back on -Z; a 0.49 m seat.
+	"32_cafe_chair": {"calibrated": true, "sockets": [
+		{"id": "seat_0", "type": "sit", "variant": "chair", "pos": [0.0, 0.49, 0.05], "yaw": 0, "snap": false, "params": {"back": true, "width": 0.42, "depth": 0.42}}]},
+	# Two benches (0.43 m) along the table's long sides, facing the 0.80 m top; entered from behind them.
+	"25_picnic_table": {"calibrated": true, "sockets": [
+		{"id": "seat_0", "type": "sit", "variant": "bench", "pos": [-0.45, 0.43, -0.66], "yaw": 0, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
+			"approach": [{"pos": [-0.45, 0.0, -1.3], "yaw": 0, "from": "back"}]},
+		{"id": "seat_1", "type": "sit", "variant": "bench", "pos": [0.45, 0.43, -0.66], "yaw": 0, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
+			"approach": [{"pos": [0.45, 0.0, -1.3], "yaw": 0, "from": "back"}]},
+		{"id": "seat_2", "type": "sit", "variant": "bench", "pos": [-0.45, 0.43, 0.66], "yaw": 180, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
+			"approach": [{"pos": [-0.45, 0.0, 1.3], "yaw": 0, "from": "back"}]},
+		{"id": "seat_3", "type": "sit", "variant": "bench", "pos": [0.45, 0.43, 0.66], "yaw": 180, "snap": false, "params": {"back": false, "width": 0.5, "depth": 0.28},
+			"approach": [{"pos": [0.45, 0.0, 1.3], "yaw": 0, "from": "back"}]}]},
+	# Lying along it, head on the raised back at -Z (about 30 degrees); entered from either long side.
+	"29_beach_lounger": {"calibrated": true, "sockets": [
+		{"id": "lie_0", "type": "lie", "variant": "lounger", "group": "lie", "pos": [0.0, 0.46, -0.25], "yaw": 90, "snap": false,
+			"params": {"head": "l", "length": 1.7, "width": 0.72, "recline_deg": 30.0}},
+		{"id": "lie_1", "type": "lie", "variant": "lounger", "group": "lie", "pos": [0.0, 0.46, -0.25], "yaw": -90, "snap": false,
+			"params": {"head": "r", "length": 1.7, "width": 0.72, "recline_deg": 30.0}}]},
+}
 
 ## The socket records of a room piece kind (normalised later by ix_sources).
 static func interior(kind: String, action := "") -> Array:

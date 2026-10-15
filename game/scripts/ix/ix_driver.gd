@@ -82,6 +82,8 @@ var max_yaw_step := 0.0
 var phases: Array = []
 var max_step_at := ""
 var align_speed := 0.0
+## Approach spots given up on (blocked) during this interaction.
+var tried: Array = []
 var max_yaw_at := ""
 var why := ""
 
@@ -128,6 +130,7 @@ func begin(opts: Dictionary) -> bool:
 	was_visual_only = bool(actor.visual_only) if "visual_only" in actor else false
 	exit_requested = false
 	exit_fast = false
+	tried.clear()
 	max_step = 0.0
 	max_yaw_step = 0.0
 	phases.clear()
@@ -279,6 +282,14 @@ func _approach(delta: float, moving: Vector2) -> void:
 	else:
 		stall += delta
 	if stall > 0.5 or state_time > 3.0:
+		# Blocked (a table in the way): try another free spot around the seat once, then give up.
+		var other := next_approach()
+		if not other.is_empty() and state_time <= 3.0:
+			tried.append(approach.pos)
+			approach = other
+			best_distance = INF
+			stall = 0.0
+			return
 		_stop_steer()
 		if distance <= SHORT_ALIGN: go(ALIGN)
 		else: cancel("blocked")
@@ -395,6 +406,17 @@ func _hold(delta: float, moving: Vector2) -> void:
 		pose.weight = 1.0
 		pose.carrier = carrier_tilt()
 	if moving.length() > MOVE_THRESHOLD and phase_t > 0.2: start_exit(true)
+
+## The best free approach spot not tried yet ({} when none).
+func next_approach() -> Dictionary:
+	if tried.size() >= 2: return {}
+	var ranked := IxMath.rank_approach(socket.get("approach", []), actor.global_position, yaw_now, func(p): return spot_free(p))
+	for a in ranked:
+		if not bool(a.free): continue
+		var fresh: bool = Vector2(a.pos.x - approach.pos.x, a.pos.z - approach.pos.z).length() > 0.15
+		for p in tried: fresh = fresh and Vector2(a.pos.x - p.x, a.pos.z - p.z).length() > 0.15
+		if fresh: return a
+	return {}
 
 func start_exit(fast: bool) -> void:
 	if not state in [ENTER, HOLD]: return
