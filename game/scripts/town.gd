@@ -296,7 +296,10 @@ func use_prop(app: Node, entry: Dictionary) -> void:
 	# the ISS-1 driver on their measured sockets (ix_data.gd PROP_MODELS); a model without data, or
 	# no free seat, keeps the old effect below.
 	if IxData.PROP_MODELS.has(entry.id) and app.has_method("village_seat"):
-		if app.village_seat().start({"node":node,"hint":"lie" if entry.id=="29_beach_lounger" else "sit"}):
+		var lying: bool=entry.id=="29_beach_lounger"
+		if app.village_seat().start({"node":node,"hint":"lie" if lying else "sit"}):
+			# The old contented cue, over the seat (the walker is on its way there): a hum or a doze.
+			Fx.burst(self,base+Vector3(0,1.1,0),"zz" if lying else "note",3,Color(0,0,0,0),0.2)
 			Fx.sound(app,"pluck",base,0.9,-10.0)
 			return
 	var head: Vector3=player.global_position+Vector3(0,2.0,0)

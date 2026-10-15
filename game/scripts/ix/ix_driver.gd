@@ -11,7 +11,8 @@ extends Node
 ##
 ## Safety: movement input cancels APPROACH/ALIGN at once and ends HOLD; E/Esc go through
 ## request_exit(); a foreign move (a door, a teleport) aborts and leaves the body where it was put;
-## any state that overruns its time is aborted; control always comes back.
+## any state that overruns its time is aborted (an abort that cannot fade ends at once); a walker
+## freed or taken out of the tree (the world rebuilt) resets the driver; control always comes back.
 const IxMath = preload("res://scripts/ix/ix_math.gd")
 const IxSources = preload("res://scripts/ix/ix_sources.gd")
 const IxRig = preload("res://scripts/ix/ix_rig.gd")
@@ -27,7 +28,14 @@ const SKIP_APPROACH := 0.12
 const MAX_START := 2.6
 const SHORT_ALIGN := 1.2
 ## Seconds a state may last before the driver gives up and hands control back.
-const WATCHDOG := {APPROACH: 4.0, ALIGN: 1.0, ENTER: 2.5, EXIT: 2.5, RECOVER: 0.5, ABORT: 0.5}
+## (RECOVER never lasts a tick: it hands back at once.)
+const WATCHDOG := {APPROACH: 4.0, ALIGN: 1.0, ENTER: 2.5, EXIT: 2.5, ABORT: 0.5}
+## A walker that jumps this far in one tick while walking up was moved by something else.
+const APPROACH_JUMP := 0.6
+## Bodies a feet point must not overlap: buildings (2), characters (4), props (8), furniture (16), 32.
+const SPOT_MASK := 2 | 4 | 8 | 16 | 32
+## Bodies a short slide onto the approach spot must not pass through.
+const PATH_MASK := 2 | 8 | 16
 
 ## Who sits where: "<object instance id>:<socket id or group>" -> actor instance id.
 static var claims := {}
@@ -86,8 +94,11 @@ var align_speed := 0.0
 var tried: Array = []
 var max_yaw_at := ""
 var why := ""
+var approach_last := Vector3.INF
 
 func busy() -> bool: return state != IDLE
+## The walker still exists in a world (a rebuilt world frees it; nothing then drives the driver).
+func actor_ok() -> bool: return is_instance_valid(actor) and actor.is_inside_tree()
 func seated() -> bool: return state in [ENTER, HOLD, EXIT]
 ## The walker's own movement is taken over (APPROACH through EXIT).
 func locks_input() -> bool: return state in [APPROACH, ALIGN, ENTER, HOLD, EXIT, RECOVER]
@@ -116,7 +127,8 @@ func begin(opts: Dictionary) -> bool:
 	entry = pick.entry
 	approach = pick.approach
 	approach.pos = clear_spot(approach.pos, Vector3(approach.pos.x - socket.origin.x, 0, approach.pos.z - socket.origin.z))
-	if actor.global_position.distance_to(approach.pos) > MAX_START + 0.5:
+	# The same flat test APPROACH applies on its first tick: a false here lets callers fall back.
+	if Vector2(actor.global_position.x - approach.pos.x, actor.global_position.z - approach.pos.z).length() > MAX_START:
 		why = "far"
 		return false
 	claim_key = key_of(target, socket)
@@ -131,6 +143,7 @@ func begin(opts: Dictionary) -> bool:
 	exit_requested = false
 	exit_fast = false
 	tried.clear()
+	approach_last = Vector3.INF
 	max_step = 0.0
 	max_yaw_step = 0.0
 	phases.clear()
@@ -158,6 +171,13 @@ func choose(entries: Array, types: Array, wanted_id: String) -> Dictionary:
 		var ranked := IxMath.rank_approach(r.approach, here, facing_yaw, func(p): return spot_free(p))
 		if ranked.is_empty(): continue
 		var a: Dictionary = ranked[0]
+		# CLAIM needs a free feet point: the best one stepped out of the seat (<= 0.5 m), else another socket.
+		if not bool(a.free):
+			var moved := clear_spot(a.pos, Vector3(a.pos.x - r.origin.x, 0, a.pos.z - r.origin.z))
+			if not spot_free(moved): continue
+			a = a.duplicate()
+			a.pos = moved
+			a.free = true
 		var score := float(a.score) + Vector2(here.x - r.origin.x, here.z - r.origin.z).length() * 0.5
 		if score < best_score:
 			best_score = score
@@ -170,6 +190,9 @@ static func key_of(node: Node, resolved: Dictionary) -> String:
 
 ## E / Esc or a movement key: cancel an approach, end a hold; buffered during ENTER.
 func request_exit(fast := false) -> void:
+	if busy() and not actor_ok():
+		reset("gone")
+		return
 	match state:
 		APPROACH, ALIGN: cancel("input")
 		ENTER:
@@ -181,16 +204,50 @@ func request_exit(fast := false) -> void:
 ## controls back; the pose fades out over 0.15 s.
 func abort(reason := "") -> void:
 	if state in [IDLE, ABORT]: return
+	if not actor_ok():
+		reset(reason)
+		return
 	why = reason
 	hand_back(false)
 	fade_from = pose.weight if is_instance_valid(pose) else 0.0
+	if is_instance_valid(pose):
+		# Nothing may push the weight back up while it fades (the layer's own fallback ease), and a
+		# carrier's rock never outlives the seat.
+		pose.driven = true
+		pose.mode = ""
+		pose.carrier = Basis.IDENTITY
 	go(ABORT)
+
+## Back to IDLE at once, whatever the state: the claim released, the pose layer cleared, the walker
+## (when it still exists) given its controls back where it is. Used when the walker went away with
+## its world, and by the ABORT watchdog.
+func reset(reason := "") -> void:
+	if not reason.is_empty(): why = reason
+	if is_instance_valid(actor):
+		hand_back(false)
+	else:
+		if claims.has(claim_key) and not is_instance_id_valid(int(claims[claim_key])): claims.erase(claim_key)
+		claim_key = ""
+		last_written = Vector3.INF
+		approach_last = Vector3.INF
+	if is_instance_valid(pose):
+		pose.weight = 0.0
+		pose.mode = ""
+		pose.carrier = Basis.IDENTITY
+	if state != IDLE: go(IDLE)
 
 ## Called by player._physics_process right after tick_from, while busy().
 func drive(body: Node3D, delta: float) -> void:
 	if body != actor: return
+	if not actor_ok():
+		reset("gone")
+		return
 	state_time += delta
 	if WATCHDOG.has(state) and state_time > float(WATCHDOG[state]):
+		# An abort that could not fade in time ends now: control always comes back.
+		if state == ABORT:
+			reset("timeout")
+			return
 		abort("timeout")
 	if state == ABORT:
 		_fade(delta)
@@ -204,7 +261,14 @@ func drive(body: Node3D, delta: float) -> void:
 	if state in [ALIGN, ENTER, HOLD, EXIT] and last_written.is_finite() and actor.global_position.distance_to(last_written) > 0.05:
 		abort("moved")
 		return
+	# Walking up: a jump no walk makes (a teleport, a warp home) ends the approach.
+	if state == APPROACH and approach_last.is_finite() and actor.global_position.distance_to(approach_last) > APPROACH_JUMP:
+		cancel("moved")
+		return
 	ensure_pose()
+	# Walking up and turning: a pose left by another seat (a swing just got off) eases out first.
+	if state in [APPROACH, ALIGN] and is_instance_valid(pose) and pose.weight > 0.0:
+		pose.weight = move_toward(pose.weight, 0.0, delta / 0.15)
 	var moving := movement()
 	var before: Vector3 = actor.global_position
 	var yaw_before := yaw_now
@@ -217,6 +281,7 @@ func drive(body: Node3D, delta: float) -> void:
 		HOLD: _hold(delta, moving)
 		EXIT: _exit(delta, moving)
 		RECOVER: _recover()
+	approach_last = actor.global_position if state == APPROACH and is_instance_valid(actor) else Vector3.INF
 	if state in [ALIGN, ENTER, HOLD, EXIT] or (state == IDLE and phases.size() > 1):
 		var step := actor.global_position.distance_to(before)
 
@@ -291,7 +356,8 @@ func _approach(delta: float, moving: Vector2) -> void:
 			stall = 0.0
 			return
 		_stop_steer()
-		if distance <= SHORT_ALIGN: go(ALIGN)
+		# The last slide writes the body straight to the spot: only when nothing stands in between.
+		if distance <= SHORT_ALIGN and path_clear(here, Vector3(to.x, here.y, to.z)): go(ALIGN)
 		else: cancel("blocked")
 		return
 	var pace := clampf(distance / 0.5, 0.2, 1.0)
@@ -420,6 +486,9 @@ func next_approach() -> Dictionary:
 
 func start_exit(fast: bool) -> void:
 	if not state in [ENTER, HOLD]: return
+	if not actor_ok():
+		reset("gone")
+		return
 	exit_fast = fast
 	refresh_socket()
 	# The way out: the approach spot when it is still free, else the best free one.
@@ -429,6 +498,8 @@ func start_exit(fast: bool) -> void:
 	if not spot_free(out) and not ranked.is_empty() and bool(ranked[0].free): out = ranked[0].pos
 	# Never hand the walker back inside something: step the spot out of the seat until it is free.
 	out = clear_spot(out, Vector3(out.x - socket.origin.x, 0, out.z - socket.origin.z))
+	# Nothing free around the seat (something moved in since): back where the walker really stood.
+	if not spot_free(out): out = Vector3(enter_from.x, out.y, enter_from.z)
 	exit_point = Vector3(out.x, enter_from.y if absf(enter_from.y - out.y) < 0.3 else out.y, out.z)
 	hold_at = actor.global_position
 	edge_at = IxMath.hold_root(Vector3(socket.origin) + IxMath.dir_of(socket_yaw) * clampf(float(socket.params.get("width", 0.9)) * 0.5 - 0.22, 0.05, 0.4), socket_yaw, m.seat_contact) if kind == "lie" else hold_at
@@ -494,6 +565,7 @@ func cancel(reason: String) -> void:
 	if is_instance_valid(pose):
 		pose.weight = 0.0
 		pose.mode = ""
+		pose.carrier = Basis.IDENTITY
 	go(IDLE)
 	if on_done.is_valid(): on_done.call()
 
@@ -513,6 +585,8 @@ func hand_back(facing_out: bool) -> void:
 	if claims.get(claim_key, -1) == (actor.get_instance_id() if is_instance_valid(actor) else -2): claims.erase(claim_key)
 	claim_key = ""
 	last_written = Vector3.INF
+	approach_last = Vector3.INF
+	if is_instance_valid(pose): pose.carrier = Basis.IDENTITY
 
 # ------------------------------------------------------------------ helpers
 
@@ -562,8 +636,13 @@ func measured_contact() -> Vector3:
 	return IxRig.socket_global(skel, "seat_contact", actor.visual).origin
 
 func ensure_pose() -> void:
-	if not "hand_skeleton" in actor or not is_instance_valid(actor.hand_skeleton): return
-	if is_instance_valid(pose) and pose.get_parent() == actor.hand_skeleton: return
+	if not is_instance_valid(actor) or not "hand_skeleton" in actor or not is_instance_valid(actor.hand_skeleton): return
+	if is_instance_valid(pose) and pose.get_parent() == actor.hand_skeleton:
+		# The layer is shared (field seats and the fallback use it undriven): the driver claims it
+		# again every time, or the mode setter would load presets over the planted legs and the
+		# layer's own ease would fight the driver's weight.
+		pose.driven = true
+		return
 	# First use, or a new look rebuilt the character while seated: the new skeleton sits too.
 	var weight: float = pose.weight if is_instance_valid(pose) else 0.0
 	var params: Array = [pose.thigh, pose.calf, pose.spine, pose.arm, pose.forearm, pose.tilt, pose.foot_follow] if is_instance_valid(pose) else []
@@ -590,7 +669,8 @@ func spot_free(point: Vector3) -> bool:
 	var query := PhysicsShapeQueryParameters3D.new()
 	query.shape = capsule
 	query.transform = Transform3D(Basis.IDENTITY, point + Vector3(0, 0.05 + 0.75, 0))
-	query.collision_mask = 2 | 8 | 16
+	# Other walkers (layer 4) too: the walker is never handed back inside someone.
+	query.collision_mask = SPOT_MASK
 	query.exclude = [actor.get_rid()] if actor is CollisionObject3D else []
 	if not space.intersect_shape(query, 1).is_empty(): return false
 	var ray := PhysicsRayQueryParameters3D.create(point + Vector3(0, 0.6, 0), point + Vector3(0, -0.8, 0), 1 | 2)
@@ -604,6 +684,25 @@ func clear_spot(point: Vector3, outward: Vector3) -> Vector3:
 		var p := point + dir * (0.05 * i)
 		if spot_free(p): return p
 	return point
+
+## Nothing solid between two feet points (the walker's own body ignored): rays at knee and waist
+## height in the walker's world, or the injected spot check every 0.15 m in rooms.
+func path_clear(from: Vector3, to: Vector3) -> bool:
+	var flat := Vector3(to.x - from.x, 0, to.z - from.z)
+	if flat.length() < 0.05: return true
+	if free_check.is_valid():
+		var steps := int(ceil(flat.length() / 0.15))
+		for i in range(1, steps + 1):
+			if not bool(free_check.call(from + flat * (float(i) / steps))): return false
+		return true
+	if not actor_ok(): return false
+	var space := actor.get_world_3d().direct_space_state
+	var exclude: Array[RID] = []
+	if actor is CollisionObject3D: exclude.append((actor as CollisionObject3D).get_rid())
+	for lift in [0.3, 0.8]:
+		var ray := PhysicsRayQueryParameters3D.create(from + Vector3(0, lift, 0), to + Vector3(0, lift, 0), PATH_MASK, exclude)
+		if not space.intersect_ray(ray).is_empty(): return false
+	return true
 
 func _exit_tree() -> void:
 	if not claim_key.is_empty() and claims.get(claim_key, -1) == (actor.get_instance_id() if is_instance_valid(actor) else -2): claims.erase(claim_key)

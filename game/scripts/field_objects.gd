@@ -24,6 +24,8 @@ const IxPose := preload("res://scripts/ix/ix_pose.gd")
 const SFX :="res://assets/sfx/field/%s.wav"
 ## Solid parts sit on the props layer (8) like the map's benches and trees.
 const PROP_LAYER := 8
+## Seconds the seat pose takes to let go after getting up from a swing, rocker or hammock.
+const STAND_FADE := 0.08
 const BLOCK_MASK := 2|8|16
 const ISLANDS := {"square":"물결빛 광장","fields":"풍차 들판","garden":"정원 언덕","camp":"캠프 초원","lighthouse":"등대섬"}
 const SPECS := [
@@ -1420,8 +1422,12 @@ func stand_up(quiet := false) -> void:
 	var pose: SkeletonModifier3D = seat.pose
 	var restore: bool = seat.was_visual_only
 	seat = {}
-	# The pose fades out (it is never freed mid-pose: that snapped the legs straight in one frame).
-	if is_instance_valid(pose): pose.mode = ""
+	# The pose fades out (it is never freed mid-pose: that snapped the legs straight in one frame),
+	# quickly: the body already stands on the ground, so bent legs must not linger (about the old
+	# 24 rad/s leg limiter's time).
+	if is_instance_valid(pose) and not pose.driven:
+		pose.fade_time = STAND_FADE
+		pose.mode = ""
 	if is_instance_valid(entry.get("pivot")):
 		var pivot: Node3D = entry.pivot
 		pivot.create_tween().tween_property(pivot, "rotation:x", 0.0, 0.8).set_trans(Tween.TRANS_SINE)

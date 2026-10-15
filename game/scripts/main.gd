@@ -803,6 +803,12 @@ func build_world(survival: bool) -> bool:
 	sound.play_music(region_track() if survival else village_track())
 	leave_modules()
 	if is_instance_valid(town): town.release_map()
+	# The village seat (and its interaction driver) belongs to the walker that goes with this world:
+	# let go of it first, and the next village_seat() makes a fresh one for the new walker.
+	if is_instance_valid(seat):
+		seat.reset()
+		seat.queue_free()
+	seat=null
 	if is_instance_valid(world):
 		remove_child(world)
 		world.queue_free()

@@ -96,7 +96,8 @@ func plant_legs(m: Dictionary, drop: float, reach := -1.0) -> void:
 func _process_modification_with_delta(delta: float) -> void:
 	if not driven:
 		weight = move_toward(weight, 0.0 if mode.is_empty() else 1.0, delta / maxf(0.01, fade_time))
-	if weight <= 0.0 and carrier == Basis.IDENTITY: return
+	# The carrier's rock is weighted too, so weight 0 is always the idle layer that does nothing.
+	if weight <= 0.0: return
 	var skel := get_skeleton()
 	if skel == null: return
 	if int(_cfg.get("skel", 0)) != skel.get_instance_id(): _cfg = configure(skel, frame, forward_sign)
@@ -132,9 +133,10 @@ static func pose_skeleton(skel: Skeleton3D, cfg: Dictionary, p_thigh: float, p_c
 	var side_axis: Vector3 = cfg.lateral
 	# The tilt about the sideways axis (lying back), then a moving seat's rock, in skeleton space.
 	var tb := Basis(side_axis, p_tilt * w)
-	if p_carrier != Basis.IDENTITY:
+	if p_carrier != Basis.IDENTITY and w > 0.0:
 		var s := skel.global_basis.orthonormalized()
-		tb = (s.inverse() * p_carrier * s) * tb
+		var rock := Basis(Quaternion.IDENTITY.slerp(p_carrier.orthonormalized().get_rotation_quaternion(), w))
+		tb = (s.inverse() * rock * s) * tb
 	var hip: int = cfg.hip
 	var root: int = cfg.root
 	# Hips back to their rest height and (mostly) their rest turn: the idle bobs them a few cm.

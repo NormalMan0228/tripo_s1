@@ -11,6 +11,7 @@ const IxRig = preload("res://scripts/ix/ix_rig.gd")
 const IxMath = preload("res://scripts/ix/ix_math.gd")
 const IxSources = preload("res://scripts/ix/ix_sources.gd")
 const Driver = preload("res://scripts/ix/ix_driver.gd")
+const IxPose = preload("res://scripts/ix/ix_pose.gd")
 
 var failures: Array[String] = []
 var passes := 0
@@ -59,6 +60,14 @@ func run() -> void:
 	await foreign_move(chair45)
 	await new_look(chair45)
 	await two_on_a_bench(bench)
+	await after_field_seat(chair45, bed)
+	await abort_while_rocking(rocker)
+	await abort_watchdog(chair45)
+	await walker_freed(chair45)
+	await no_free_spot(chair45)
+	await start_too_far(chair45)
+	await blocked_slide(chair45)
+	await fallback_switch(chair45)
 	check(Driver.claims.is_empty(), "no seat stays claimed (%s)" % str(Driver.claims))
 	print("IX_FLOW_CHECK ", JSON.stringify({"ok": failures.is_empty(), "passed": passes, "failures": failures, "report": report}))
 	stage.queue_free()
@@ -149,6 +158,21 @@ func cycle(label: String, node: Node3D, hint: String, top: float, rock := false)
 	check(off <= 0.05, "%s: stands at the exit point (%.3f m)" % [label, off])
 	check(facing_error <= deg_to_rad(5.0), "%s: faces out of the seat (%.1f deg)" % [label, rad_to_deg(facing_error)])
 	check(driver.spot_free(player.global_position), "%s: the exit spot is free" % label)
+	# The same, against geometry the driver does not compute: the object's own front, a capsule of
+	# fixed size against the furniture's collision, and the distance from the seat.
+	var front := IxMath.dir_of(node.global_rotation.y)
+	var out_flat := Vector3(player.global_position.x - node.global_position.x, 0, player.global_position.z - node.global_position.z)
+	if hint == "lie":
+		# A bed is left over a long side: facing across the bed's length, away from its middle.
+		var length_axis: Vector3 = Vector3(node.global_basis.z.x, 0, node.global_basis.z.z).normalized()
+		check(absf(player.facing.normalized().dot(length_axis)) < sin(deg_to_rad(8.0)) and player.facing.dot(out_flat) > 0.0, "%s: faces out over the bed's long side (independent)" % label)
+	else:
+		var real := absf(angle_difference(IxMath.yaw_of(player.facing), IxMath.yaw_of(front)))
+		check(real <= deg_to_rad(8.0), "%s: faces the object's own front (%.1f deg, independent)" % [label, rad_to_deg(real)])
+		check(out_flat.dot(front) > 0.15, "%s: gets up in front of the seat, not behind or inside it (%.2f m)" % [label, out_flat.dot(front)])
+	var from_seat := Vector2(player.global_position.x - driver.socket.origin.x, player.global_position.z - driver.socket.origin.z).length()
+	check(from_seat >= 0.25 and from_seat <= 1.3, "%s: stands 0.25-1.3 m from the seat (%.2f m)" % [label, from_seat])
+	check(capsule_clear(player.global_position), "%s: a fixed 0.30 x 1.4 m capsule at the exit overlaps no furniture (independent)" % label)
 	check(trace.step <= 0.08 and driver.max_step <= 0.08, "%s: no body jump (max %.3f m per tick)" % [label, maxf(trace.step, driver.max_step)])
 	check(trace.yaw <= 0.35, "%s: no visual turn jump (max %.2f rad per tick)" % [label, trace.yaw])
 	check(joint_step < 25.0, "%s: joints < 25 deg per tick (%.1f, %s)" % [label, joint_step, joint_bone])
@@ -220,6 +244,191 @@ func two_on_a_bench(bench: Node3D) -> void:
 	other_seat.stand()
 	for i in 90: await physics_frame
 	check(not seat.driver.busy() and not other_seat.driver.busy(), "both get up")
+
+## A swing, rocker or hammock (field_objects.sit) and the fallback leave the shared pose layer
+## undriven; the next driver sit claims it again: the planted legs stay, and a bed's edge sit never
+## loads the lying preset (no 90-degree tip while sliding onto the edge).
+func after_field_seat(chair: Node3D, bed: Node3D) -> void:
+	for target in [chair, bed]:
+		var pose: SkeletonModifier3D = IxPose.attach(player)
+		pose.driven = false
+		pose.fade_time = 0.33
+		pose.mode = "seat_field"
+		for i in 30: await physics_frame
+		pose.fade_time = 0.08
+		pose.mode = ""
+		for i in 3: await physics_frame
+		var hint := "lie" if target == bed else "sit"
+		await stand_near(target)
+		seat.crafted(target, hint)
+		var driver: Node = seat.driver
+		var worst_tilt := 0.0
+		var legs_ok := true
+		for i in 240:
+			await physics_frame
+			if not driver.busy(): break
+			if driver.state == Driver.ENTER and driver.lie_phase == 0: worst_tilt = maxf(worst_tilt, absf(pose.tilt))
+			if driver.state == Driver.ENTER and driver.lie_phase == 0 and hint == "sit": legs_ok = legs_ok and absf(pose.thigh - driver.sit_legs.x) < 1e-4
+			if driver.state == Driver.HOLD: break
+		check(driver.state == Driver.HOLD and pose.driven, "after a field seat the driver %s again with the layer claimed (%s)" % ["sits" if hint == "sit" else "lies", driver.state_name()])
+		if hint == "sit": check(legs_ok, "after a field seat the planted legs are not replaced by a preset")
+		else: check(worst_tilt < 0.01, "after a field seat a bed's edge sit does not tip back (%.2f rad)" % worst_tilt)
+		seat.stand()
+		for i in 150:
+			await physics_frame
+			if not driver.busy(): break
+		player.global_position = Vector3(8, 0.02, 8)
+		for i in 6: await physics_frame
+
+## Aborted while a rocking seat rocks: the carrier tilt goes with the seat (weight 0 is a clean idle).
+func abort_while_rocking(rocker: Node3D) -> void:
+	await sit_down(rocker)
+	var driver: Node = seat.driver
+	for i in 20:
+		rocker.whole_root.rotation.x = 0.12 * sin(i * 0.3) + 0.1
+		await physics_frame
+	var rocked: bool = not driver.pose.carrier.is_equal_approx(Basis.IDENTITY)
+	seat.stand(false)
+	for i in 40:
+		await physics_frame
+		if not driver.busy(): break
+	rocker.whole_root.rotation.x = 0.0
+	check(rocked and not driver.busy() and driver.pose.carrier == Basis.IDENTITY and driver.pose.weight == 0.0, "an abort on a rocking seat leaves no carrier tilt (rocked %s, %s)" % [str(rocked), driver.state_name()])
+	player.global_position = Vector3(8, 0.02, 8)
+	for i in 6: await physics_frame
+
+## ABORT always ends: even with something pushing the layer back up, the watchdog hands back.
+func abort_watchdog(chair: Node3D) -> void:
+	await stand_near(chair)
+	seat.crafted(chair, "sit")
+	var driver: Node = seat.driver
+	for i in 120:
+		await physics_frame
+		if driver.state == Driver.ENTER: break
+	for i in 6: await physics_frame
+	seat.stand(false)
+	var t := 0.0
+	while driver.busy() and t < 1.5:
+		# A hostile layer: undriven and asked for a pose every tick, so the fade can never finish.
+		driver.pose.driven = false
+		driver.pose.mode = "sit"
+		await physics_frame
+		t += 1.0 / 60.0
+	check(not driver.busy() and t <= float(Driver.WATCHDOG[Driver.ABORT]) + 0.2, "an abort that cannot fade ends by its watchdog (%.2f s, %s)" % [t, driver.why])
+	driver.pose.mode = ""
+	check(not player.visual_only, "and the walker can walk")
+	player.global_position = Vector3(8, 0.02, 8)
+	for i in 20: await physics_frame
+
+## The walker goes away with its world while seated: the driver lets go by itself, E/Esc no longer
+## count as getting up, and the next walker sits normally.
+func walker_freed(chair: Node3D) -> void:
+	var walker: CharacterBody3D = load("res://scripts/player.gd").new()
+	stage.add_child(walker)
+	var rest: Node = load("res://scripts/rest_seat.gd").new()
+	stage.add_child(rest)
+	rest.keep_height = true
+	rest.hero = walker
+	var front := IxMath.dir_of(chair.rotation.y)
+	walker.global_position = chair.global_position + front * 1.1
+	for i in 6: await physics_frame
+	rest.crafted(chair, "sit")
+	for i in 180:
+		await physics_frame
+		if rest.driver.state == Driver.HOLD: break
+	var held: bool = rest.driver.state == Driver.HOLD
+	var key: String = rest.driver.claim_key
+	walker.queue_free()
+	await process_frame
+	await process_frame
+	check(held and not rest.resting() and not rest.driver.busy() and not Driver.claims.has(key), "a seated walker freed with its world: not resting, driver idle, claim released (%s)" % rest.driver.state_name())
+	rest.stand()
+	check(not rest.driver.busy(), "getting up afterwards is harmless")
+	var next: CharacterBody3D = load("res://scripts/player.gd").new()
+	stage.add_child(next)
+	next.global_position = chair.global_position + front * 1.1
+	for i in 6: await physics_frame
+	rest.hero = next
+	rest.crafted(chair, "sit")
+	for i in 180:
+		await physics_frame
+		if rest.driver.state == Driver.HOLD: break
+	check(rest.driver.state == Driver.HOLD and rest.driver.actor == next, "the next walker sits on the same seat")
+	rest.stand()
+	for i in 90:
+		await physics_frame
+		if not rest.driver.busy(): break
+	next.queue_free()
+	rest.queue_free()
+	for i in 4: await physics_frame
+
+## No free feet point anywhere: CLAIM refuses (no socket), so the fallback runs instead of aligning
+## the walker into a blocked spot.
+func no_free_spot(chair: Node3D) -> void:
+	await stand_near(chair)
+	seat.free_check = func(_p: Vector3) -> bool: return false
+	var driver: Node = seat.driver
+	driver.free_check = seat.free_check
+	var started: bool = seat.start({"node": chair, "hint": "sit"})
+	check(not started and not driver.busy() and driver.why == "no_socket", "no free feet point: the driver refuses (%s)" % driver.why)
+	seat.free_check = Callable()
+	driver.free_check = Callable()
+	# The capsule test sees other walkers (layer 4): a walker standing on a spot makes it not free.
+	var other: CharacterBody3D = load("res://scripts/player.gd").new()
+	stage.add_child(other)
+	other.global_position = Vector3(10, 0.02, -6)
+	for i in 4: await physics_frame
+	check(not driver.spot_free(Vector3(10, 0.0, -6)) and driver.spot_free(Vector3(12, 0.0, -6)), "a spot with another walker on it is not free")
+	other.queue_free()
+	await physics_frame
+
+## A start the approach would cancel on its first tick is refused up front (callers fall back).
+func start_too_far(chair: Node3D) -> void:
+	var front := IxMath.dir_of(chair.rotation.y)
+	player.global_position = chair.global_position + front * 3.6 + Vector3(0, 0.02, 0)
+	for i in 6: await physics_frame
+	var started: bool = seat.start({"node": chair, "hint": "sit"})
+	check(not started and not seat.driver.busy() and seat.driver.why == "far", "a start beyond the approach reach is refused (%s)" % seat.driver.why)
+	player.global_position = Vector3(8, 0.02, 8)
+	for i in 4: await physics_frame
+
+## The short slide onto the approach spot never passes through furniture.
+func blocked_slide(chair: Node3D) -> void:
+	var front := IxMath.dir_of(chair.rotation.y)
+	var ahead: Vector3 = chair.global_position + front * 0.9
+	var behind: Vector3 = chair.global_position - front * 0.9
+	var aside: Vector3 = ahead + front.cross(Vector3.UP) * 0.8
+	check(not seat.driver.path_clear(behind, ahead), "the path through the chair is not clear")
+	check(seat.driver.path_clear(ahead, aside), "a path in front of the chair is clear")
+
+## The hotfix switch: with the driver off every seat takes the simplified fallback, and it works.
+func fallback_switch(chair: Node3D) -> void:
+	var RestSeat = load("res://scripts/rest_seat.gd")
+	await stand_near(chair)
+	RestSeat.use_driver = false
+	seat.crafted(chair, "sit")
+	var legacy_ok: bool = seat.resting() and seat.legacy_mode == "sit" and not seat.driver.busy()
+	for i in 30: await physics_frame
+	var pose: SkeletonModifier3D = seat.pose
+	check(legacy_ok and is_instance_valid(pose) and not pose.driven and pose.weight > 0.9 and pose.fade_time == 0.25, "use_driver off: the fallback seats the walker with the pose layer (%s)" % str(seat.legacy_mode))
+	seat.stand()
+	for i in 20: await physics_frame
+	check(not seat.resting() and not player.visual_only and pose.weight == 0.0, "use_driver off: it gets up again")
+	RestSeat.use_driver = true
+	player.global_position = Vector3(8, 0.02, 8)
+	for i in 6: await physics_frame
+
+## A fixed-size capsule (independent of the driver's own check) against buildings, props and furniture.
+func capsule_clear(point: Vector3) -> bool:
+	var capsule := CapsuleShape3D.new()
+	capsule.radius = 0.30
+	capsule.height = 1.4
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = capsule
+	query.transform = Transform3D(Basis.IDENTITY, point + Vector3(0, 0.08 + 0.7, 0))
+	query.collision_mask = 2 | 8 | 16
+	query.exclude = [player.get_rid()]
+	return player.get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
 
 func sit_down(node: Node3D) -> void:
 	await stand_near(node)

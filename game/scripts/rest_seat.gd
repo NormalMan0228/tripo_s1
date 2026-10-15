@@ -5,26 +5,31 @@ extends Node
 ## gets up again facing out of it, onto a free spot. A crafted piece its owner marked as a seat or a
 ## bed (상호작용 · 쉬기) works the same way in both places (crafted()).
 ##
-## Fallback: a walker without the driver hook, a piece with no usable socket, or USE_DRIVER off keeps
-## the old way (settle on the seat at once, the pose layer easing in; up again where it stood).
+## Fallback: a walker without the driver hook, a piece with no usable socket, or use_driver off keeps
+## the simplified way (settle on the seat at once, the ISS-1 pose layer easing in; up again where it
+## stood). It is not the pre-ISS-1 code: beds keep the body upright and tilt the skeleton through the
+## pose layer, and field seats, shadow figures and story guests use ISS-1 whatever the switch says.
 ##
 ## In the village the walker is the player's own controller: walking (walk_off allows it) gets it up,
 ## being moved away by something else lets it go.
 const IxPose = preload("res://scripts/ix/ix_pose.gd")
 const IxRig = preload("res://scripts/ix/ix_rig.gd")
 const Driver = preload("res://scripts/ix/ix_driver.gd")
-## Off: every seat behaves as before ISS-1 (a PCK hotfix switch).
-const USE_DRIVER := true
+## Off: every seat takes the fallback above (a hotfix switch; tests/village_rest_check.gd runs it).
+static var use_driver := true
 
 var hero: Node3D:
 	set(value):
+		# A new walker (a rebuilt world): whatever the driver had with the old one is over.
+		if is_instance_valid(driver) and driver.busy() and driver.actor != value: driver.reset("gone")
 		hero = value
 		if is_instance_valid(driver):
 			driver.actor = value
 			if is_instance_valid(value) and "ix" in value: value.ix = driver
 ## "", "sit" or "lie": while the driver has the walker (walking up, seated, getting up), or the old way.
+## A driver whose walker went away with its world never counts as resting.
 var mode: String:
-	get: return driver.kind if is_instance_valid(driver) and driver.locks_input() else legacy_mode
+	get: return driver.kind if is_instance_valid(driver) and driver.locks_input() and driver.actor_ok() else legacy_mode
 	set(value): legacy_mode = value
 var legacy_mode := ""
 var pose: SkeletonModifier3D:
@@ -54,7 +59,7 @@ func resting() -> bool:
 
 ## The driver for this walker (made once), or null when the walker has no hook for it.
 func ensure_driver() -> Node:
-	if not USE_DRIVER or not is_instance_valid(hero) or not "ix" in hero or not hero.is_inside_tree(): return null
+	if not use_driver or not is_instance_valid(hero) or not "ix" in hero or not hero.is_inside_tree(): return null
 	if not is_instance_valid(driver):
 		driver = Driver.new()
 		driver.name = "IxDriver"
@@ -76,7 +81,10 @@ func ensure_pose() -> bool:
 	if not is_instance_valid(hero) or not "hand_skeleton" in hero or not is_instance_valid(hero.hand_skeleton): return false
 	if not is_instance_valid(legacy_pose) or legacy_pose.get_parent()!=hero.hand_skeleton:
 		legacy_pose=IxPose.attach(hero)
-	if is_instance_valid(legacy_pose): legacy_pose.driven=false
+	if is_instance_valid(legacy_pose):
+		legacy_pose.driven=false
+		# The layer is shared: a field seat may have left its own fade time on it.
+		legacy_pose.fade_time=0.25
 	return is_instance_valid(legacy_pose)
 
 func hip_height() -> float:
@@ -121,6 +129,11 @@ func lie(record: Dictionary) -> void:
 ## Gets up: with the driver, the walker stands up and steps off (face_away false: a door or a
 ## teleport takes it, so it is let go where it is).
 func stand(face_away := true) -> void:
+	if is_instance_valid(driver) and driver.busy() and not driver.actor_ok():
+		driver.reset("gone")
+		on_furniture=false
+		furniture=null
+		return
 	if is_instance_valid(driver) and driver.busy():
 		if face_away: driver.request_exit()
 		else: driver.abort("away")
@@ -188,7 +201,24 @@ func release() -> void:
 	if "visual_only" in hero: hero.visual_only=was_visual_only
 	if is_instance_valid(legacy_pose): legacy_pose.mode=""
 
+## Everything let go at once, without touching a walker that may be gone (the world is rebuilt).
+func reset() -> void:
+	if is_instance_valid(driver) and driver.busy(): driver.reset("gone")
+	if not legacy_mode.is_empty(): release()
+	on_furniture=false
+	furniture=null
+
+## Where other players should see this walker while it rests: the spot it stood on before (its
+## body is lowered into the seat, and presence carries no pose), or null when it is not resting.
+func stand_spot():
+	if is_instance_valid(driver) and driver.busy() and driver.actor_ok() and driver.state >= Driver.ALIGN and driver.state <= Driver.EXIT:
+		return Vector3(driver.enter_from)
+	if not legacy_mode.is_empty() and is_instance_valid(hero): return Vector3(back_to.x, back_to.y if keep_height else 0.0, back_to.z)
+	return null
+
 func _process(_delta: float) -> void:
+	# Nothing drives a driver whose walker went away with its world (player._physics_process does).
+	if is_instance_valid(driver) and driver.busy() and not driver.actor_ok(): driver.reset("gone")
 	if legacy_mode.is_empty(): return
 	if not is_instance_valid(hero) or not hero.is_inside_tree():
 		legacy_mode=""
