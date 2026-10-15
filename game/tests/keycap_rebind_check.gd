@@ -92,6 +92,12 @@ func controls() -> void:
 	GameSettings.reset_bindings()
 	host.free()
 
+## [KeyWatch nodes under the root, KeyWatch listeners in GameSettings].
+func key_watchers() -> Array:
+	var nodes := root.get_children().filter(func(n): return n is RpgUi.KeyWatch).size()
+	var heard := GameSettings.listeners.filter(func(c: Callable): return c.get_object() is RpgUi.KeyWatch).size()
+	return [nodes, heard]
+
 func village() -> void:
 	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/ui_gallery.json"))
 	var app = Main.new()
@@ -115,7 +121,15 @@ func village() -> void:
 	GameSettings.rebind("inventory", 0, KEY_J)
 	await process_frame
 	await process_frame
-	expect(root.has_node("RpgUiKeys"), "one key watcher listens for rebinding")
+	expect(root.has_node("RpgUiKeys") and key_watchers() == [1, 1], "exactly one key watcher under the root and one KeyWatch listener (%s) after the hotbar's same-frame calls" % [key_watchers()])
+	# A burst of action caps in one frame (before any deferred add has run) still makes no second watcher.
+	var burst := Control.new()
+	root.add_child(burst)
+	for i in 6: RpgUi.keycap(burst, "inventory", 12)
+	await process_frame
+	await process_frame
+	expect(key_watchers() == [1, 1], "six action caps in one frame keep one watcher and one listener (%s)" % [key_watchers()])
+	burst.queue_free()
 	var after := slot_keys(bag)
 	expect(after == ["J", t("가방") + "  ·  J"], "after the rebind the bag cap shows J and the tooltip reads '%s'" % after[1])
 	GameSettings.reset_bindings()

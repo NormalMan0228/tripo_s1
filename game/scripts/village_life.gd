@@ -463,7 +463,7 @@ func reel() -> void:
 
 func open_storage() -> void:
 	if state.is_empty(): return
-	var v: VBoxContainer=app.modal_card(tr("마을 생활 창고"),"storage")
+	var v: VBoxContainer=app.modal_card(tr("마을 생활 창고"))
 	mode="storage"
 	app.text(v,tr("잎전 %d  ·  수확 %d개  ·  낚은 물고기 %d마리  ·  채집 %d번")%[state.coins,state.harvested,state.caught,int(state.get("gathered",0))],18)
 	var scroll := ScrollContainer.new()
@@ -590,7 +590,7 @@ func open_map() -> void:
 		return
 	# The route guide (guide.gd) takes the picks: pins, glowing roads, the window stays.
 	var guide: Node=preload("res://scripts/guide.gd").current
-	var v: VBoxContainer=app.modal_card(tr("물결빛 마을 산책 지도"),"map")
+	var v: VBoxContainer=app.modal_card(tr("물결빛 마을 산책 지도"))
 	mode="map"
 	app.text(v,tr("장소나 지도 위를 누르면 빛나는 길이 이어져요.") if guide else tr("목적지를 고르면 길잡이 표식이 생겨요. 섬과 섬은 다리로 이어져 있어요."),14)
 	var row := HBoxContainer.new()

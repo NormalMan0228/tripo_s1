@@ -6,7 +6,7 @@ wardrobe, expedition, leaf) are overwritten in place so every caller picks up th
 new art; the rest are new. Usage: art-venv python tools/build_ui_icons.py
 
 `--painted` only paints the raster icons that have no sheet in tools/build_ui_kit.py (the
-close key, assets/ui/icons/close.png) in the painted set's look: a brass ring, a parchment
+close key, assets/ui/icons/close.png; the error and warn toast glyphs, alert.png and warn.png) in the painted set's look: a brass ring, a parchment
 face, a lacquered red cross, walnut outlines, a soft shadow and a little grain. RpgUi.painted()
 then prefers the PNG over the SVG of the same name.
 """
@@ -269,7 +269,89 @@ def paint_close(size=128, ss=4):
     print('painted', path)
 
 
+def paint_alert(kind, size=128, ss=4):
+    """The toast kinds' own glyphs, so neither borrows the close key: "error" is a red lacquer
+    badge (RpgUi.ACCENT) with a cream "!", "warn" a rounded amber triangle with a walnut "!".
+    Same look as the close key (walnut rim, soft shadow, grain, a gloss), different silhouettes."""
+    import numpy as np
+    from PIL import Image, ImageFilter
+    n = size * ss
+    y, x = np.mgrid[0:n, 0:n].astype(np.float32) + 0.5
+    u, v = (x - n / 2) / (n / 2), (y - n / 2) / (n / 2)   # -1..1, v down
+    aa = 1.5 / (n / 2)
+
+    def cover(d):
+        return np.clip(0.5 - d / aa, 0.0, 1.0)
+
+    def hexc(h):
+        h = h.lstrip('#')
+        return np.array([int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4)], np.float32)
+
+    def mix(a, b, t):
+        return a[None, None] * (1 - t[..., None]) + b[None, None] * t[..., None]
+
+    rgb = np.zeros((n, n, 3), np.float32)
+    alpha = np.zeros((n, n), np.float32)
+
+    def over(colour, cov):
+        nonlocal rgb, alpha
+        rgb = rgb * (1 - cov[..., None]) + colour * cov[..., None]
+        alpha = alpha + cov * (1 - alpha)
+
+    def capsule(ax, ay, bx, by):
+        px, py = u - ax, v - ay
+        dx, dy = bx - ax, by - ay
+        t = np.clip((px * dx + py * dy) / (dx * dx + dy * dy), 0, 1)
+        return np.hypot(px - t * dx, py - t * dy)
+
+    def triangle(cy, rad, round_by):
+        # Equilateral triangle pointing up (signed distance, after Inigo Quilez), rounded corners.
+        k = np.sqrt(3.0)
+        px, py = np.abs(u) - rad, -(v - cy) + rad / k
+        flip = px + k * py > 0
+        px, py = np.where(flip, (px - k * py) / 2, px), np.where(flip, (-k * px - py) / 2, py)
+        px = px - np.clip(px, -2 * rad, 0)
+        return -np.hypot(px, py) * np.sign(py) - round_by
+
+    rng = np.random.default_rng(11)
+    grain = np.asarray(Image.fromarray((rng.random((n, n)) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(ss * 0.9)), np.float32) / 255.0
+    grain = (grain - grain.mean()) * 2.2
+    walnut = hexc('#2e1a0c')
+    if kind == 'error':
+        body = np.hypot(u, v) - 0.84
+        top, foot = hexc('#e06c4e'), hexc('#8c2b1f')      # RpgUi.ACCENT b0452f between them
+        mark, rim_mark = hexc('#fbf1d6'), hexc('#3b1a10')
+        stem, dot, width = (-0.40, 0.10), 0.34, 0.115
+    else:
+        body = triangle(0.14, 0.66, 0.15)
+        top, foot = hexc('#f8d77c'), hexc('#d0861d')      # around RpgUi.AWAY e9b552
+        mark, rim_mark = hexc('#3b2414'), None
+        stem, dot, width = (-0.16, 0.22), 0.46, 0.10
+    shadow = cover(np.roll(body, int(0.06 * n / 2), axis=0) - 0.06)   # the silhouette, a little lower
+    shadow = np.asarray(Image.fromarray((shadow * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(ss * 2.2)), np.float32) / 255.0
+    over(np.zeros(3, np.float32)[None, None], shadow * 0.38)
+    over(walnut[None, None], cover(body - 0.06))
+    fill = mix(top, foot, np.clip((v + 0.75) / 1.5, 0, 1))
+    fill *= (1 + 0.05 * grain)[..., None]
+    over(fill, cover(body))
+    # A soft inner glow at the top and a gloss along the upper rim.
+    glow = cover(body + 0.10) * np.clip(-(v + 0.1) * 1.4, 0, 1) * 0.22
+    over(np.ones(3, np.float32)[None, None], glow)
+    # The "!": a stem and a dot.
+    d = np.minimum(capsule(0, stem[0], 0, stem[1]) - width, np.hypot(u, v - dot) - width * 1.05)
+    if rim_mark is not None:
+        over(rim_mark[None, None], cover(d - 0.045))
+    over(mark[None, None], cover(d))
+    out = np.dstack([np.clip(rgb / np.maximum(alpha, 1e-4)[..., None], 0, 1), alpha])
+    image = Image.fromarray((out * 255 + 0.5).astype(np.uint8), 'RGBA').resize((size, size), Image.LANCZOS)
+    path = OUT / 'icons' / f'{"alert" if kind == "error" else "warn"}.png'
+    image.save(path)
+    print('painted', path)
+
+
 if PAINT_ONLY:
     paint_close()
+    paint_alert('error')
+    paint_alert('warn')
 else:
     print('icons written to', OUT)

@@ -2918,6 +2918,7 @@ func close_village_modal() -> void:
 ## A centred parchment window over the shared shade (RpgUi.window): display-font title, the close
 ## key, an ornamented rule, then the caller's content. `action` is the GameSettings action that
 ## opens it (its key names the close key; "" names Esc). Opens with a fade + pop.
+## Callers pass "" until U-WP-04 routes the opening key to close the window: only Esc closes it now.
 func modal_card(title: String, action := "") -> VBoxContainer:
 	close_village_modal()
 	cancel_preview()
@@ -3255,7 +3256,7 @@ func restore_hud() -> void:
 
 func open_wardrobe() -> void:
 	if screen!="village": return
-	var v := modal_card(tr("나의 여행자"),"wardrobe")
+	var v := modal_card(tr("나의 여행자"))
 	var editor := preload("res://scripts/wardrobe.gd").new()
 	editor.avatar=me.get("profile",{}).get("avatar",{}).duplicate(true)
 	v.add_child(editor)

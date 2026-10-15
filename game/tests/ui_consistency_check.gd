@@ -195,7 +195,32 @@ func check_stack() -> void:
 	host.free()
 	await process_frame
 	expect(RpgUi.windows().is_empty() and RpgUi.top_window().is_empty() and heard.back() == [0, ""], "the stack is empty after the host left; listeners heard it")
+	await check_stack_bottom_first()
 	RpgUi.unlisten_windows(_on_windows)
+
+## Two modal windows sharing one shade; the bottom one (the shade's owner) closes first: the shade
+## moves to the window left open, and the next modal on that host reuses it without a script error.
+func check_stack_bottom_first() -> void:
+	var host := Control.new()
+	host.size = Vector2(1280, 800)
+	host.theme = RpgUi.theme()
+	root.add_child(host)
+	var low := RpgUi.window(host, "아래 창", {"id":"low"})
+	var high := RpgUi.window(host, "위 창", {"id":"high", "place":"centre"})
+	var veil: TextureRect = low.shade
+	expect(high.shade == veil and veil.get_parent() == low.root, "the second modal shares the first one's shade")
+	low.close.pressed.emit()
+	await create_timer(0.35).timeout
+	expect(not is_instance_valid(low.root) and is_instance_valid(veil) and veil.get_parent() == high.root and veil.get_index() == 0
+		and is_instance_valid(high.shade) and shades_under(host) == 1, "closing the bottom window first hands its shade to the one still open, under its card")
+	var third := RpgUi.window(host, "셋째 창", {"id":"third"})
+	expect(third.shade == veil and shades_under(host) == 1 and RpgUi.windows().map(func(w): return w.id) == ["high", "third"], "the next modal on that host reuses the handed-over shade")
+	RpgUi.close_window(third, false)
+	RpgUi.close_window(high, false)
+	await process_frame
+	expect(RpgUi.windows().is_empty() and shades_under(host) == 0, "closing the rest clears the shade")
+	host.free()
+	await process_frame
 
 # ------------------------------------------------------------------ village windows
 
@@ -213,7 +238,7 @@ func check_village_windows() -> void:
 	await app.enter_village()
 	await create_timer(0.8).timeout
 	var openers := [["expedition", func(): await app.open_expedition(), "Esc"], ["story", func(): app.open_story(), "Esc"],
-		["wardrobe", func(): app.open_wardrobe(), "O"], ["map", func(): app.life.open_map(), "Tab"], ["storage", func(): app.life.open_storage(), "B"],
+		["wardrobe", func(): app.open_wardrobe(), "Esc"], ["map", func(): app.life.open_map(), "Esc"], ["storage", func(): app.life.open_storage(), "Esc"],
 		["shop", func(): app.life.open_shop(), "Esc"], ["log", func(): app.life.open_log(), "Esc"], ["admin", func(): app.open_admin(), "Esc"]]
 	for entry in openers:
 		await (entry[1] as Callable).call()

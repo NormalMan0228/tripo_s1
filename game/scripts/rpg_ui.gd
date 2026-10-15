@@ -667,10 +667,20 @@ static func watch_key(c: Control, action: String, tip_name := "") -> void:
 		c.set_meta("key_tip_name", tip_name)
 	c.add_to_group(KEY_GROUP)
 	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null or tree.root == null or tree.root.has_node("RpgUiKeys"): return
+	if tree == null or tree.root == null: return
+	# The one watcher: kept here from the moment it is queued, so the other calls in the same frame
+	# (a hotbar's slots and caps) find it before the deferred add has run.
+	if is_instance_valid(_key_watch) and not _key_watch.is_queued_for_deletion(): return
+	if tree.root.has_node("RpgUiKeys"):
+		_key_watch = tree.root.get_node("RpgUiKeys")
+		return
 	var watch := KeyWatch.new()
 	watch.name = "RpgUiKeys"
+	_key_watch = watch
 	tree.root.add_child.call_deferred(watch)
+
+## The key watcher (queued or under the root), so watch_key makes exactly one.
+static var _key_watch: Node
 
 ## Relabels every key cap and key tooltip in the tree (KeyWatch calls it after a rebind).
 static func relabel_keys() -> void:
@@ -1029,25 +1039,50 @@ const TOAST_ACTION_SECONDS := 12.0
 const TOAST_MAX := 3
 ## Chimes asked for so far (tests: the field's toasts stay silent).
 static var toast_chimes := 0
-const TOAST_ICONS := {"info":"res://assets/starseed.svg", "success":"res://assets/ui/leaf.svg", "warn":"res://assets/starseed.svg",
-	"error":"res://assets/ui/close.svg", "social":"res://assets/ui/people.svg"}
+## Each kind its own glyph: error and warn are painted badges ("!" in lacquer red, an amber
+## triangle), never the close key's art (tools/build_ui_icons.py --painted).
+const TOAST_ICONS := {"info":"res://assets/starseed.svg", "success":"res://assets/ui/leaf.svg", "warn":"res://assets/ui/icons/warn.png",
+	"error":"res://assets/ui/icons/alert.png", "social":"res://assets/ui/people.svg"}
+## How long an evicted toast (the oldest, when a 4th arrives) takes to fade, and a slot to close.
+const TOAST_EVICT_SECONDS := 0.15
+const TOAST_COLLAPSE_SECONDS := 0.15
 
 ## The shared toast lane: a full-width column whose toasts stack centred from `y` on the design
 ## canvas (top lane), or upward ending at `y` + 44 when y is in the lower half (the field's lane).
 ## width > 0 gives every toast that width (the village's 520 px pills); 0 fits each to its text up
-## to max_width.
-static func toast_lane(host: Control, y := 94.0, width := 0.0, max_width := 640.0) -> VBoxContainer:
+## to max_width. opts.grow = "up" pins the lane's foot at `y` from the host's top and stacks
+## upward from there (notes just above a card that starts at y + a gap); the oldest leave while
+## the stack would rise past the host's top. opts.max caps the toasts shown at once (TOAST_MAX).
+static func toast_lane(host: Control, y := 94.0, width := 0.0, max_width := 640.0, opts := {}) -> VBoxContainer:
 	var lane := VBoxContainer.new()
 	lane.name = "ToastLane"
 	lane.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	lane.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	lane.add_theme_constant_override("separation", 6)
-	var top := y < CANVAS.y * 0.5
-	lane.alignment = BoxContainer.ALIGNMENT_BEGIN if top else BoxContainer.ALIGNMENT_END
-	if top: lane.offset_top = y
-	else: lane.offset_bottom = -(CANVAS.y - y - 44.0)
+	if str(opts.get("grow", "")) == "up":
+		lane.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+		lane.offset_top = 0.0
+		lane.offset_bottom = y
+		lane.grow_vertical = Control.GROW_DIRECTION_BEGIN
+		lane.alignment = BoxContainer.ALIGNMENT_END
+		# The room above the foot is y: once laid out, the oldest leave while the rest would not fit
+		# (a note that wraps to two lines takes the room of two).
+		lane.sort_children.connect(func() -> void:
+			var shown := toasts(lane)
+			var tall := -float(lane.get_theme_constant("separation"))
+			for item in shown: tall += (item as Control).size.y + float(lane.get_theme_constant("separation"))
+			while shown.size() > 1 and tall > y:
+				var oldest: Control = shown.pop_front()
+				tall -= oldest.size.y + float(lane.get_theme_constant("separation"))
+				dismiss_toast(oldest, TOAST_EVICT_SECONDS))
+	else:
+		var top := y < CANVAS.y * 0.5
+		lane.alignment = BoxContainer.ALIGNMENT_BEGIN if top else BoxContainer.ALIGNMENT_END
+		if top: lane.offset_top = y
+		else: lane.offset_bottom = -(CANVAS.y - y - 44.0)
 	lane.set_meta("width", width)
 	lane.set_meta("max_width", max_width)
+	lane.set_meta("max", maxi(1, int(opts.get("max", TOAST_MAX))))
 	lane.theme = night_theme()
 	host.add_child(lane)
 	return lane
@@ -1069,9 +1104,10 @@ static func find_toast(lane: Control, text: String) -> Control:
 ## A short line in a night pill with a kind icon (info: the star-seed glint, success, warn, error,
 ## social), popping in with a soft chime. It leaves after 4.5 s (12 s with action buttons:
 ## opts.actions = [{label, call}], pressing one runs it and dismisses the toast). At most three
-## stack on a lane (the oldest leaves); the same text while it is still shown refreshes that toast
-## instead of stacking. opts.sound = false keeps it silent (the field, a window's own notes); it is
-## silent with reduced motion too. Returns the toast.
+## stack on a lane (the lane's max; the oldest fades out quickly, then its slot closes); the same
+## text while it is still shown refreshes that toast instead of stacking. opts.sound = false keeps
+## it silent (the field, a window's own notes); it is silent with reduced motion too. Returns the
+## toast.
 static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Control:
 	if not is_instance_valid(lane) or text.is_empty(): return null
 	var same := find_toast(lane, text)
@@ -1084,11 +1120,8 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 			pulse.tween_property(same, "scale", Vector2.ONE, 0.18)
 		return same
 	var standing := toasts(lane)
-	while standing.size() >= TOAST_MAX:
-		var oldest: Control = standing.pop_front()
-		oldest.set_meta("leaving", true)
-		lane.remove_child(oldest)
-		oldest.queue_free()
+	while standing.size() >= int(lane.get_meta("max", TOAST_MAX)):
+		dismiss_toast(standing.pop_front(), TOAST_EVICT_SECONDS)
 	var pill := PanelContainer.new()
 	pill.name = "Toast"
 	pill.set_meta("toast", text)
@@ -1106,7 +1139,6 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 	var glint := icon(str(TOAST_ICONS.get(kind, TOAST_ICONS.info)), 24)
 	glint.name = "Kind"
 	glint.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	if kind == "warn": glint.modulate = AWAY
 	row.add_child(glint)
 	var words := label(row, text, T_BODY, INK)
 	words.name = "Text"
@@ -1134,11 +1166,12 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 		var held: WeakRef = weakref(pill)
 		var start := func() -> void:
 			var node: Control = held.get_ref()
-			if node == null or not node.is_inside_tree(): return
+			if node == null or not node.is_inside_tree() or node.get_meta("leaving", false): return
 			node.pivot_offset = Vector2(node.size.x * 0.5, 0)
 			var tw := node.create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 			tw.tween_property(node, "scale", Vector2.ONE, 0.3)
 			tw.tween_property(node, "modulate:a", 1.0, 0.2)
+			node.set_meta("pop", tw)
 		start.call_deferred()
 		if bool(opts.get("sound", true)):
 			toast_chimes += 1
@@ -1156,18 +1189,34 @@ static func _toast_timer(pill: Control) -> void:
 	tw.tween_callback(func(): dismiss_toast(pill))
 	pill.set_meta("timer", tw)
 
-## Fades a toast out and frees it.
-static func dismiss_toast(pill: Control) -> void:
+## Fades a toast out (it keeps its slot meanwhile, no longer counted), then closes its slot so the
+## toasts around it glide together, and frees it. With reduced motion it goes at once.
+static func dismiss_toast(pill: Control, seconds := 0.3) -> void:
 	if not is_instance_valid(pill) or pill.get_meta("leaving", false): return
 	pill.set_meta("leaving", true)
 	if pill.has_meta("timer"):
 		var old: Tween = pill.get_meta("timer")
 		if old and old.is_valid(): old.kill()
+	if pill.has_meta("pop"):
+		var pop: Tween = pill.get_meta("pop")
+		if pop and pop.is_valid(): pop.kill()
 	if calm() or not pill.is_inside_tree():
+		if pill.get_parent(): pill.get_parent().remove_child(pill)
 		pill.queue_free()
 		return
 	var tw := pill.create_tween()
-	tw.tween_property(pill, "modulate:a", 0.0, 0.3).set_trans(Tween.TRANS_SINE)
+	tw.tween_property(pill, "modulate:a", 0.0, seconds).set_trans(Tween.TRANS_SINE)
+	tw.tween_callback(func(): _collapse_toast(pill))
+
+## The empty slot of a faded toast shrinks to nothing, then the toast is freed.
+static func _collapse_toast(pill: Control) -> void:
+	if not is_instance_valid(pill): return
+	var tall := pill.size.y
+	for child in pill.get_children(): if child is CanvasItem: (child as CanvasItem).visible = false
+	pill.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	pill.custom_minimum_size = Vector2(0.0, tall)
+	var tw := pill.create_tween()
+	tw.tween_property(pill, "custom_minimum_size:y", 0.0, TOAST_COLLAPSE_SECONDS).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(pill.queue_free)
 
 ## Clears a lane at once (a place that says "nothing to show").
@@ -1811,6 +1860,7 @@ static func close_window(w: Dictionary, animate := true) -> void:
 	if root.get_meta("rpg_closing", false): return
 	root.set_meta("rpg_closing", true)
 	_forget_window(root.get_instance_id())
+	_hand_over_shade(root, w)
 	sfx("close", -10.0)
 	if animate and not calm() and root.is_inside_tree():
 		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1821,6 +1871,20 @@ static func close_window(w: Dictionary, animate := true) -> void:
 	else:
 		if root.get_parent(): root.get_parent().remove_child(root)
 		root.queue_free()
+
+## A modal shade shared with other windows lives under the window that made it: when that one
+## closes first, the shade moves to the lowest window still sharing it (under its card), so the
+## others keep their backdrop and no description points at a freed shade.
+static func _hand_over_shade(root: Control, w: Dictionary) -> void:
+	var veil = w.get("shade")
+	if not is_instance_valid(veil) or not (veil is TextureRect) or (veil as Node).get_parent() != root: return
+	for other in windows():
+		var keep: Control = other.get("root")
+		var theirs = other.get("shade")
+		if not is_instance_valid(theirs) or theirs != veil or not is_instance_valid(keep): continue
+		(veil as Node).reparent(keep, false)
+		keep.move_child(veil, 0)
+		return
 
 ## The open windows and drawers, bottom to top (their descriptions).
 static func windows() -> Array:
@@ -1878,7 +1942,7 @@ static func _modal_shade(host: Control) -> TextureRect:
 	for w in windows():
 		var root: Control = w.get("root")
 		var veil = w.get("shade")
-		if bool(w.get("modal", false)) and is_instance_valid(root) and root.get_parent() == host and veil is TextureRect and is_instance_valid(veil):
+		if bool(w.get("modal", false)) and is_instance_valid(root) and root.get_parent() == host and is_instance_valid(veil) and veil is TextureRect:
 			return veil
 	return null
 

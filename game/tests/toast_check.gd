@@ -42,9 +42,19 @@ func lane_rules() -> void:
 	root.add_child(host)
 	var lane := RpgUi.toast_lane(host)
 	expect(lane.offset_top == 94.0 and lane.alignment == BoxContainer.ALIGNMENT_BEGIN, "the lane sits at y 94, top centre")
-	for word in ["하나", "둘", "셋", "넷"]: RpgUi.toast(lane, word)
+	RpgUi.toast(lane, "하나")
+	await settle(0.35)
+	for word in ["둘", "셋", "넷"]: RpgUi.toast(lane, word)
 	await process_frame
 	expect(texts(lane) == ["둘", "셋", "넷"], "four pushes show three, the oldest left: %s" % [texts(lane)])
+	var evicted: Control = lane.get_child(0)
+	expect(lane.get_child_count() == 4 and str(evicted.get_meta("toast")) == "하나" and evicted.get_meta("leaving", false),
+		"the evicted toast keeps its slot while it fades (no jump in the stack)")
+	await settle(0.08)
+	var fading := evicted.modulate.a
+	expect(is_instance_valid(evicted) and fading < 1.0 and fading > 0.0, "it fades rather than vanishing (alpha %.2f)" % fading)
+	await settle(0.45)
+	expect(not is_instance_valid(evicted) and lane.get_child_count() == 3, "then its slot closes and it is freed (%d left)" % lane.get_child_count())
 	var first: Control = RpgUi.find_toast(lane, "셋")
 	var timer: Tween = first.get_meta("timer")
 	var again := RpgUi.toast(lane, "셋")
@@ -54,6 +64,16 @@ func lane_rules() -> void:
 		var item := RpgUi.toast(lane, kind, kind)
 		kinds.append(item.find_child("Kind", true, false) != null and item.get_meta("kind") == kind)
 	expect(not false in kinds and RpgUi.toasts(lane).size() == 3, "kinds carry their icon; still three on the lane")
+	var glyph := func(kind: String) -> String:
+		var item := RpgUi.toast(lane, "glyph " + kind, kind)
+		return (item.find_child("Kind", true, false) as TextureRect).texture.resource_path
+	var close_art := RpgUi.icon_texture("close").resource_path
+	var info_art: String = glyph.call("info")
+	var warn_art: String = glyph.call("warn")
+	var error_art: String = glyph.call("error")
+	expect(error_art != close_art and warn_art != info_art and error_art != warn_art and error_art.ends_with("alert.png") and warn_art.ends_with("warn.png"),
+		"error and warn have their own painted glyphs, not the close key or the info glint (%s, %s)" % [error_art.get_file(), warn_art.get_file()])
+	expect((RpgUi.find_toast(lane, "glyph warn").find_child("Kind", true, false) as CanvasItem).modulate == Color.WHITE, "the warn glyph is not a tinted info glint")
 	var ran := [0]
 	var card := RpgUi.toast(lane, "초대가 왔어요", "social", {"actions":[{"label":"수락", "call":func(): ran[0] += 1}]})
 	var accept: Button = card.find_children("*", "Button", true, false)[0]
@@ -71,6 +91,11 @@ func lane_rules() -> void:
 	expect(wide.custom_minimum_size.x == 520.0, "a fixed-width lane gives 520 px pills")
 	var low := RpgUi.toast_lane(host, 520, 520)
 	expect(low.alignment == BoxContainer.ALIGNMENT_END and is_equal_approx(low.offset_bottom, -(800.0 - 520.0 - 44.0)), "a lower lane stacks upward from its spot")
+	var up := RpgUi.toast_lane(host, 82, 0, 680, {"grow":"up", "max":2})
+	for word in ["하나", "둘", "셋"]: RpgUi.toast(up, word)
+	await process_frame
+	expect(up.alignment == BoxContainer.ALIGNMENT_END and up.anchor_bottom == 0.0 and up.offset_bottom == 82.0 and texts(up) == ["둘", "셋"],
+		"grow up: the lane's foot is pinned at y 82 and opts.max keeps two (%s)" % [texts(up)])
 	host.free()
 
 func places() -> void:
@@ -100,6 +125,24 @@ func places() -> void:
 	var notes: Control = window.note_lane if is_instance_valid(window) else null
 	if is_instance_valid(window): window.note("그림이 준비됐어요")
 	expect(is_instance_valid(notes) and texts(notes) == ["그림이 준비됐어요"] and notes.get_parent() == window, "the craft window's notes use their own lane over the card")
+	if is_instance_valid(window):
+		# Notes within the stay never reach the card: two short ones stack up from just above it,
+		# and one that wraps takes the room of two (the older leaves).
+		var card_top: float = (window.card as Control).get_global_rect().position.y
+		var rects := func() -> Array:
+			return notes.get_children().map(func(n): return (n as Control).get_global_rect())
+		var shown := func() -> Array:
+			return notes.get_children().map(func(n): return "%s %s" % [str(n.get_meta("toast", "")).left(6), n.size])
+		window.note("제작을 받았어요")
+		await settle(0.5)
+		var two: Array = rects.call()
+		expect(two.size() == 2 and RpgUi.toasts(notes).size() == 2 and two.all(func(r): return r.end.y <= card_top - window.NOTE_GAP + 0.5 and r.position.y >= 0.0)
+			and two[1].end.y > two[0].end.y, "two notes stack upward, the newest nearest the card, all above it (card top %.0f, %s)" % [card_top, shown.call()])
+		window.note("공방이 너무 오래 걸려 이번 제작을 멈췄어요. 맡긴 별씨는 돌려드렸어요. 조금 뒤에 다른 설명으로 다시 맡겨 주시면 공방이 다시 그려 볼게요.")
+		await settle(0.5)
+		var after: Array = rects.call()
+		expect(after.size() == 1 and RpgUi.toasts(notes).size() == 1 and after[0].size.y > 45.0 and after[0].end.y <= card_top - window.NOTE_GAP + 0.5 and after[0].position.y >= 0.0,
+			"a note that wraps takes the room of two: the older leaves and it ends above the card (%s)" % [shown.call()])
 	app.close_craft()
 	await settle(0.3)
 	await app.start_run("forest", "standard")

@@ -17,6 +17,10 @@ const CraftWords = preload("res://scripts/craft_words.gd")
 ## The card on the 1280x800 design canvas: centred, 92 px from the top, 760 px wide.
 const CARD_TOP := 92.0
 const CARD_WIDTH := 760.0
+## The notes' lane ends this far above the card (the pill's drawn shadow included) and shows at most
+## NOTE_MAX notes at once.
+const NOTE_GAP := 10.0
+const NOTE_MAX := 2
 
 var host: Node
 var panel: CraftPanel
@@ -25,7 +29,8 @@ var scroll: ScrollContainer
 var title: Label
 var close_key: Button
 ## Short lines over the card for what the craft says while the window is open (the place's own
-## toast lane sits under the window): the shared toast lane (RpgUi.toast), just above the card.
+## toast lane sits under the window): the shared toast lane (RpgUi.toast), growing up from just
+## above the card.
 var note_lane: VBoxContainer
 
 func setup(place: Node, network: Node) -> void:
@@ -92,7 +97,9 @@ func setup(place: Node, network: Node) -> void:
 	scroll.add_child(panel)
 	panel.setup(place, network)
 	panel.minimum_size_changed.connect(_fit)
-	note_lane = RpgUi.toast_lane(self, CARD_TOP - 50.0, 0.0, CARD_WIDTH - 80.0)
+	# Its foot sits NOTE_GAP above the card and it stacks upward, so notes never cover the card's
+	# title row and close key; two at most (the room above the card holds two one-line pills).
+	note_lane = RpgUi.toast_lane(self, CARD_TOP - NOTE_GAP, 0.0, CARD_WIDTH - 80.0, {"grow":"up", "max":NOTE_MAX})
 	note_lane.name = "Notes"
 
 func _ready() -> void:
