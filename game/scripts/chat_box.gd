@@ -148,6 +148,12 @@ func _ready() -> void:
 	glass.mouse_entered.connect(wake)
 	refresh_channels()
 	place_for("village")
+	visibility_changed.connect(_sync_processing)
+	_sync_processing()
+
+func _sync_processing() -> void:
+	# Hidden chat already freezes its idle clock; skip its empty frame callback too.
+	set_process(is_visible_in_tree())
 
 ## The same bottom-left spot in every place (village, rooms and expeditions keep their hotbars at the
 ## bottom centre, U-WP-10/11); `kind` stays for a place that needs its own.

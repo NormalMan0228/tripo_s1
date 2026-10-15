@@ -1096,6 +1096,9 @@ func enter_village() -> void:
 	build_inspector()
 	await refresh_inventory()
 	screen = "village"
+	# A long frame makes the next one run up to 8 physics ticks, which makes it long again: in the
+	# village (client physics only) at most 4, so a hitch passes instead of snowballing.
+	Engine.max_physics_steps_per_frame = 4
 	if social.visiting(): social.accept_crops()
 	else: await life.enter()
 	player.controls_enabled = true
@@ -2059,6 +2062,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	await LoadPace.step("expedition hud")
 	clear_ui()
 	screen="survival"
+	Engine.max_physics_steps_per_frame = 8
 	player.controls_enabled=false
 	left=panel(Vector2(20,20),256,"night")
 	var region_head := HBoxContainer.new()
