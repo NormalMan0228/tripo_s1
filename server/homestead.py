@@ -22,12 +22,17 @@ def village_inside(x, z):
     return VILLAGE_X[0] <= x <= VILLAGE_X[1] and VILLAGE_Z[0] <= z <= VILLAGE_Z[1]
 
 
-def village_reserved(x, z):
+def village_reserved(x, z, resident_moves=False):
     """Outdoor furniture coordinates are relative to the island town green.
 
     The arrival spot and the walk up to the workshop (town hall) door stay clear.
     Returns an error code, or None when the parcel may be used.
     """
+    if resident_moves:
+        from .village_residents import plot_reserved
+        reserved = plot_reserved(x, z)
+        if reserved:
+            return reserved
     if abs(x) < 2 and abs(z) < 2:
         return 'spawn_area_reserved'
     if -3.5 < x < 3.5 and -12 < z < -6:
@@ -393,23 +398,6 @@ def act(state, body, now):
         result,reward=shake(state,body,now)
     elif action=='pickup':
         result,reward=pickup(state,body,now)
-    elif action=='buy':
-        if body.item not in SHOP: raise Rejected('life_invalid_item')
-        cost=SHOP[body.item]*body.quantity
-        if state['coins']<cost: raise Rejected('life_not_enough_coins')
-        state['coins']-=cost; add(state,body.item,body.quantity)
-        result=f'{NAMES[body.item]} {body.quantity}개를 샀어요.'
-    elif action=='sell':
-        if body.item not in PRICES: raise Rejected('life_invalid_item')
-        spend(state,body.item,body.quantity)
-        income=PRICES[body.item]*body.quantity; state['coins']+=income
-        result=f'{object_word(NAMES[body.item])} 팔고 잎전 {income}개를 받았어요.'
-    elif action=='order':
-        day=local_day(now)
-        if state['order_day']==day: raise Rejected('life_order_completed')
-        spend(state,'turnip',2); spend(state,'perch')
-        state['coins']+=20; state['order_day']=day
-        result='마을 식탁 배달 완료! 잎전 20개를 받았어요.'
     else: raise Rejected('life_unknown_action')
     state['version']+=1
     response=public(state,now); response['message']=result

@@ -1,4 +1,4 @@
-"""The only writer of starseed balances. Callers own the surrounding transaction."""
+"""Currency balance and ledger writers. Callers own the surrounding transaction."""
 import json
 import logging
 import uuid
@@ -13,6 +13,11 @@ CREATE TABLE IF NOT EXISTS economy_flags (
  detail TEXT NOT NULL, first_seen REAL NOT NULL, last_seen REAL NOT NULL,
  occurrences INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(user_id,code));
 CREATE INDEX IF NOT EXISTS ledger_user_created ON ledger(user_id,created);
+CREATE TABLE IF NOT EXISTS leaf_ledger (
+ id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), amount INTEGER NOT NULL,
+ reason TEXT NOT NULL, reference TEXT NOT NULL, created REAL NOT NULL,
+ UNIQUE(user_id,reason,reference));
+CREATE INDEX IF NOT EXISTS leaf_ledger_user_created ON leaf_ledger(user_id,created);
 '''
 
 
@@ -79,6 +84,40 @@ def change_shards(conn, user_id, amount, reason, reference, now, *, sell_daily=N
         days = {int((r[0]+offset*60)//86400) for r in recent}
         if len(recent) >= 10 and len(days) > 1:
             flag(conn, user_id, 'boundary_sell_burst', {'sales': len(recent), 'window_seconds': 600}, now)
+
+
+def change_coins(conn, user_id, state, amount, reason, reference, now):
+    """Persist balance and leaf ledger together. Callers save later inventory/version edits.
+
+    The first write records an old save's balance once, without giving additional money.
+    """
+    if not conn.in_transaction:
+        raise RuntimeError('currency_transaction_required')
+    if type(amount) is not int or not -(2**63) <= amount < 2**63:
+        raise EconomyRejected(user_id, 'invalid_coin_amount', {'reason': reason})
+    balance = state.get('coins', 0)
+    if type(balance) is not int or balance < 0 or balance >= 2**63:
+        raise EconomyRejected(user_id, 'invalid_coin_balance', {'balance': balance})
+    if balance + amount < 0:
+        raise HTTPException(409, 'life_not_enough_coins')
+    if balance + amount >= 2**63:
+        raise EconomyRejected(user_id, 'coin_balance_overflow', {'balance': balance, 'attempted': amount})
+    updated = dict(state, coins=balance + amount)
+    conn.execute('SAVEPOINT coin_change')
+    try:
+        if not conn.execute('SELECT 1 FROM leaf_ledger WHERE user_id=? LIMIT 1', (user_id,)).fetchone():
+            conn.execute('INSERT INTO leaf_ledger VALUES (?,?,?,?,?,?)',
+                         (str(uuid.uuid4()), user_id, balance, 'opening_balance', 'migration', now))
+        conn.execute('INSERT INTO leaf_ledger VALUES (?,?,?,?,?,?)',
+                     (str(uuid.uuid4()), user_id, amount, reason, reference, now))
+        conn.execute('INSERT INTO homesteads VALUES (?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state',
+                     (user_id, json.dumps(updated)))
+    except BaseException:
+        conn.execute('ROLLBACK TO coin_change')
+        raise
+    finally:
+        conn.execute('RELEASE coin_change')
+    state['coins'] = updated['coins']
 
 
 def ledger_check(conn, now=None):
