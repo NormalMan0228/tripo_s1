@@ -11183,6 +11183,14 @@
   "이 제작은 별씨 한도를 넘어요. 옵션을 줄여 다시 맡겨 주세요.": {
    "en": "This craft is over the starseed limit. Choose fewer options and try again.",
    "zh": "此次制作超出星籽上限。请减少选项后再试。"
+  },
+  "%s·Space·클릭을 누르고 있으면 초록 호가 시계 방향으로, 떼면 반대로": {
+   "en": "Hold %s, Space or click to turn the green arc clockwise; release to let it drift back",
+   "zh": "按住 %s、空格或鼠标，绿色弧线顺时针转动；松开则往回漂"
+  },
+  "%s·Space·클릭을 누르고 있으면 칸이 위로, 떼면 아래로": {
+   "en": "Hold %s, Space or click to lift the zone; release to let it sink",
+   "zh": "按住 %s、空格或鼠标，区域向上；松开则下沉"
   }
  },
  "templates": [],

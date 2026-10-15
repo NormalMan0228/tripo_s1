@@ -287,6 +287,8 @@ func _ready() -> void:
 	add_child(sound)
 	world_audio = WorldAudio.new()
 	add_child(world_audio)
+	# Under-foot puffs follow the footstep sound's surface (foot_fx.gd).
+	preload("res://scripts/foot_fx.gd").attach(self, world_audio)
 	# The first start sets it up once the village is built (by then its thread is done).
 	if Engine.has_meta("studio_session"): world_audio.setup()
 	life=preload("res://scripts/village_life.gd").new()
@@ -2253,6 +2255,7 @@ func tick_run() -> void:
 		HeroVoice.play(self,"hurt")
 		player.react("hurt")
 		floating_feedback("−%d" % int(ceil(run.hp-result.data.hp)),player.position,Color("ef9983"))
+		preload("res://scripts/combat_fx.gd").hurt(self)
 	else:
 		# A telegraphed strike ended (windup -> recover) without hurting the hero or being interrupted: it missed.
 		for after in result.data.get("enemies",[]):
@@ -2270,6 +2273,7 @@ func tick_run() -> void:
 					player.face_point(Vector3(n.x,0,n.z))
 					resource_response(n)
 					CombatAudio.harvest(self,n.kind,Vector3(n.x,0,n.z),"axe" if run.inventory.axe>0 else "")
+					preload("res://scripts/combat_fx.gd").harvest(self,n.kind,Vector3(n.x,0,n.z))
 			player.react("gather")
 			if not HeroVoice.play(self,"harvest"): HeroVoice.play(self,"pickup")
 			floating_feedback(feedback,player.position,Color("ece1b4"))
@@ -2278,6 +2282,7 @@ func tick_run() -> void:
 			HeroVoice.play(self,"pickup",0.0,true)
 			player.react("craft")
 			floating_feedback(feedback,player.position,Color("b8dfb1"))
+			preload("res://scripts/combat_fx.gd").crafted(self)
 		elif feedback.contains("회복했습니다"):
 			# Cloth rip, wrap and pat (combat/bandage, else core/bandage; berries and soup keep core/eat).
 			if not CombatAudio.play(self,"bandage"): sound.effect("bandage")
@@ -2310,8 +2315,9 @@ func tick_run() -> void:
 				if str(struck_enemy.get("phase",""))=="windup" and not kill: CombatAudio.play(self,"block",at)
 				player.face_point(at)
 				floating_feedback(str(int(struck_enemy.hp-hp_left)),at,Color("f3c980"))
+				preload("res://scripts/combat_fx.gd").strike(self,at,kill,str(struck_enemy.get("phase",""))=="windup" and not kill)
 			player.react("attack")
-			attack_sweep()
+			attack_sweep(kill or CombatAudio.combo%3==0)
 		elif str(payload.action) in ["eat","heal","craft","fire"] and Time.get_ticks_msec()-survival_deny_at>800:
 			# A refused key press (nothing to eat, missing materials, away from the camp...): a soft
 			# deny, as the field's toasts are silent. Held gather and attack keys stay quiet.
@@ -2689,26 +2695,9 @@ func floating_feedback(value: String, at: Vector3, color: Color) -> void:
 	tween.tween_property(label,"modulate:a",0.0,0.5).set_delay(0.5)
 	tween.chain().tween_callback(label.queue_free)
 
-func attack_sweep() -> void:
-	var mesh := ImmediateMesh.new()
-	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
-	for i in 13:
-		var angle := -0.85+i*1.7/12
-		for radius in [1.3,1.47]: mesh.surface_add_vertex(Vector3(sin(angle)*radius,0,-cos(angle)*radius))
-	mesh.surface_end()
-	var arc := MeshInstance3D.new()
-	arc.mesh=mesh
-	arc.position=player.position+Vector3(0,0.8,0)
-	arc.rotation.y=atan2(-player.facing.x,-player.facing.z)
-	var mat := Art.material(Color("efe4b4"))
-	mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.cull_mode=BaseMaterial3D.CULL_DISABLED
-	mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
-	arc.material_override=mat
-	world.add_child(arc)
-	var tween := arc.create_tween()
-	tween.tween_property(mat,"albedo_color:a",0,0.23)
-	tween.tween_callback(arc.queue_free)
+## The swing trail in front of the hero (combat_fx.gd); heavy: the combo's third blow or a kill.
+func attack_sweep(heavy := false) -> void:
+	preload("res://scripts/combat_fx.gd").slash(self,heavy)
 
 func show_results() -> void:
 	paused=false
