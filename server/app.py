@@ -719,6 +719,10 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     app.state.story=Story(app,db,settings,clock,auth,mutate,multiplayer.host_for,assets)
     from .quests import Quests
     app.state.quests=Quests(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
+    from .quest_board import QuestBoard
+    app.state.quest_board=QuestBoard(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
+    from .dev_time import DevTime
+    app.state.dev_time=DevTime(app,db,clock,auth)
     from .treasure import Treasure
     app.state.treasure=Treasure(app,db,settings,clock,auth,mutate,money,multiplayer.host_for)
     from .interactions import Interactions

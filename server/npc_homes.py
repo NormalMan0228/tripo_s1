@@ -43,7 +43,7 @@ from .models import Mutation
 from .asset_assembly import extent, fixture_glb, validate_plan
 from .provider import ProviderError
 from .stored_assets import read_glb
-from . import homestead, object_paint, object_shape
+from . import homestead, npc_letters, object_paint, object_shape
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS npc_homes (
@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS npc_letters (
  gift_object_id TEXT REFERENCES objects(id), created REAL NOT NULL, read_at REAL, UNIQUE(host_id,npc_id,level));
 -- A one-mesh model's measured box (metres, before the game's sizing), so it is read only once.
 CREATE TABLE IF NOT EXISTS asset_bounds (asset_id TEXT PRIMARY KEY REFERENCES assets(id), size TEXT NOT NULL);
-'''
+''' + npc_letters.SCHEMA
 
 # Who takes gifts: every resident whose bed is in a house (game/scripts/residents.gd, same homes).
 # Shop and workplace owners are left out for now: the café, seed-shop and mill owners (regular, farmer,
@@ -94,7 +94,14 @@ NPCS = {
 }
 # Letter writers who do not take ordinary gifts: 모카, the café owner, writes the story chapter's
 # thank-you letter (server/story.py) and keeps its gift on the café terrace.
-SENDERS = {'regular': {'name': '모카', 'personality': 'cheerful'}}
+SENDERS = {
+    'regular': {'name': '모카', 'personality': 'cheerful'},
+    'farmer': {'name': '한결', 'personality': 'calm'},
+    'stargazer': {'name': '하늘', 'personality': 'dreamy'},
+    'gardener': {'name': '초록', 'personality': 'calm'},
+    'miller': {'name': '두레', 'personality': 'cheerful'},
+    'shopkeeper': {'name': '단비', 'personality': 'cheerful'},
+}
 # A resident's thank-you letter for a finished request (server/quests.py) has this level: one per
 # resident, clear of the hearts (1..4) and the story chapter's runs (0 and below).
 QUEST_LETTER_LEVEL = 100
@@ -421,9 +428,10 @@ def letters(conn, host_id, limit=50):
     # A story letter (level 0 or below, server/story.py) names the piece it thanks for: the gift
     # written down in the same moment.
     about = 'FROM npc_gifts g WHERE l.level<=0 AND g.host_id=l.host_id AND g.npc_id=l.npc_id AND g.created=l.created ORDER BY g.rowid DESC LIMIT 1'
-    rows = conn.execute('SELECT l.*,o.name AS gift_name,(SELECT t.name ' + about.replace('FROM npc_gifts g', 'FROM npc_gifts g JOIN objects t ON t.id=g.object_id') +
+    rows = conn.execute('SELECT l.*,e.event,e.event_key,e.payload,o.name AS gift_name,(SELECT t.name ' + about.replace('FROM npc_gifts g', 'FROM npc_gifts g JOIN objects t ON t.id=g.object_id') +
                         ') AS about_name,(SELECT g.mood ' + about + ') AS about_mood FROM npc_letters l '
                         'LEFT JOIN objects o ON o.id=l.gift_object_id '
+                        'LEFT JOIN npc_letter_events e ON e.letter_id=l.id '
                         'WHERE l.host_id=? ORDER BY l.created DESC,l.level DESC LIMIT ?', (host_id, limit)).fetchall()
     out = []
     for r in rows:
@@ -431,7 +439,12 @@ def letters(conn, host_id, limit=50):
         letter = {'id': r['id'], 'npc': r['npc_id'], 'name': who.get('name', ''), 'personality': who.get('personality', 'calm'),
                   'level': max(r['level'], 0), 'created': r['created'], 'read': r['read_at'] is not None,
                   'gift': {'id': r['gift_object_id'], 'name': r['gift_name']} if r['gift_object_id'] else None}
-        if r['level'] <= 0:
+        if r['event']:
+            letter['level'] = 0
+            letter['event'] = {'type': r['event'], 'key': r['event_key'], 'payload': json.loads(r['payload'])}
+            if r['event'] == 'request_done':
+                letter['quest'] = {'npc': r['npc_id']}
+        elif r['level'] <= 0:
             letter['story'] = {'chapter': 'first_gift', 'object': r['about_name'] or '', 'sittable': r['about_mood'] == 'love'}
         elif r['level'] >= QUEST_LETTER_LEVEL:
             # The resident's request is done (server/quests.py): its own thank-you words.
@@ -739,11 +752,14 @@ class NpcHomes:
         def read_letters(request: Request):
             with db.read() as conn:
                 user = auth(conn, request)
+            self.deliver_daily(user['id'])
+            with db.read() as conn:
                 return {'letters': letters(conn, user['id']), 'unread': unread_letters(conn, user['id'])}
 
         @app.post('/v1/letters/read')
         def mark_read(body: LettersRead, request: Request):
             def apply(conn, user):
+                npc_letters.dispatch_daily(conn, user['id'], clock())
                 ids = [str(i) for i in body.ids]
                 if ids:
                     conn.execute('UPDATE npc_letters SET read_at=? WHERE host_id=? AND read_at IS NULL AND id IN (%s)' % ','.join('?' * len(ids)),
@@ -764,8 +780,18 @@ class NpcHomes:
             return versions(conn, host_id)
 
     def unread_for(self, user_id):
+        self.deliver_daily(user_id)
         with self.db.read() as conn:
             return unread_letters(conn, user_id)
+
+    def deliver_daily(self, user_id):
+        """Write only when today's anniversary letter is still missing."""
+        now = self.clock()
+        with self.db.read() as conn:
+            pending = npc_letters.daily_pending(conn, user_id, now)
+        if pending:
+            with self.db.transaction() as conn:
+                npc_letters.dispatch_daily(conn, user_id, now)
 
     def versions_in(self, conn, host_id):
         """The same inside a caller's write transaction (the visit presence)."""
