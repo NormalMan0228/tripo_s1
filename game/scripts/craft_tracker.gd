@@ -12,6 +12,7 @@ const Api = preload("res://scripts/api.gd")
 const CraftWords = preload("res://scripts/craft_words.gd")
 const Fx = preload("res://scripts/fx.gd")
 const RpgUi = preload("res://scripts/rpg_ui.gd")
+const CraftBadge = preload("res://scripts/craft_badge.gd")
 
 ## The craft's state changed (each poll's answer; {} when it is gone or was cleared).
 signal updated(job: Dictionary)
@@ -47,6 +48,10 @@ var host: Node
 var window: Control
 ## Toasts said while no place was attached (the walk between the village and a room).
 var waiting: Array[String] = []
+## The craft waits for the player (its picture or quote, or its end heard with the window closed):
+## the HUD's craft slot wears a badge (craft_badge.gd) until the craft window opens.
+var needs_you := false
+var badge_timer: Timer
 
 ## The tracker of the session `network` (an api.gd) is signed in to; null before signing in.
 static func of(network: Node) -> Node:
@@ -95,7 +100,26 @@ func attach(place: Node) -> void:
 		waiting.clear()
 
 func window_open() -> bool:
-	return is_instance_valid(window) and window.is_inside_tree() and window.visible
+	# A window closing this frame (queued for deletion) is closed already.
+	return is_instance_valid(window) and window.is_inside_tree() and window.visible and not window.is_queued_for_deletion()
+
+## Raises the craft slot's badge (it follows the player into rooms: a place's HUD is rebuilt, so the
+## badge is put back every second while it is up) or clears it.
+func badge(on: bool) -> void:
+	needs_you = on and not window_open()
+	CraftBadge.show(needs_you)
+	if needs_you and badge_timer == null:
+		badge_timer = Timer.new()
+		badge_timer.wait_time = 1.0
+		badge_timer.timeout.connect(func() -> void: CraftBadge.show(needs_you and not window_open()))
+		add_child(badge_timer)
+	if badge_timer != null:
+		if needs_you: badge_timer.start()
+		else: badge_timer.stop()
+
+## The craft window opened: whatever the craft waited for is being seen.
+func seen() -> void:
+	if needs_you: badge(false)
 
 ## Follows the craft `id` (or the one already followed) until it needs the player or ends. Only one
 ## loop runs; a later call while it runs just switches the craft it asks about.
@@ -143,6 +167,7 @@ func start(value: Dictionary) -> void:
 ## The player cancelled the craft (the starseeds came back).
 func cancelled(id: String) -> void:
 	if id != job_id and not job_id.is_empty(): return
+	badge(false)
 	job_id = ""
 	job = {"id": id, "state": "cancelled"}
 	updated.emit(job)
@@ -167,6 +192,7 @@ func take(value: Dictionary) -> void:
 			told.append("picture:" + key)
 			chime("twinkle")
 			say(CraftWords.ready_words(value, not window_open()))
+			badge(true)
 	elif state in TERMINAL:
 		job_id = ""
 		if state == "ready": done = value
@@ -177,6 +203,8 @@ func take(value: Dictionary) -> void:
 			elif state == "failed": chime("craft_fail")
 			var words := CraftWords.ended_words(value, not window_open())
 			if not words.is_empty(): say(words)
+			# Finished or failed with the window closed: the slot says so until it is opened.
+			if state in ["ready", "failed"]: badge(true)
 			bag_changed()
 	updated.emit(value)
 

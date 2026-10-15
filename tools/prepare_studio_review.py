@@ -6,6 +6,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
 from fastapi.testclient import TestClient
 from server.app import create_app
+from server.economy import change_shards
 from server.config import Settings
 from server.asset_assembly import demo_design
 from server.provider import validate_glb
@@ -24,8 +25,7 @@ def main():
         with app.state.db.transaction() as conn:
             user=conn.execute("SELECT id FROM users WHERE username='workshop'").fetchone()[0]
             if not conn.execute("SELECT 1 FROM ledger WHERE user_id=? AND reason='review_allowance'",(user,)).fetchone():
-                conn.execute('UPDATE users SET shards=shards+500 WHERE id=?',(user,))
-                conn.execute('INSERT INTO ledger VALUES (?,?,?,?,?,?)',(str(uuid.uuid4()),user,500,'review_allowance','review',0))
+                change_shards(conn,user,500,'review_allowance','review',0)
             for motion in ('static','dynamic'):
                 for material in ('mesh','textured'):
                     aid='review-'+motion+'-'+material

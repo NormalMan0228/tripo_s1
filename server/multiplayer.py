@@ -9,7 +9,7 @@ from starlette.background import BackgroundTask
 from pydantic import Field
 from .models import Strict, Mutation, Input, RunStart
 from .stored_assets import read_glb
-from . import coop, homestead, object_paint, object_shape, interactions, tutorial, home_access
+from . import coop, homestead, object_paint, object_shape, interactions, tutorial, home_access, last_spot
 from . import friends as social_db
 from .chat import Chat
 
@@ -204,6 +204,8 @@ class Multiplayer:
             seen = conn.execute('SELECT seen FROM mp_presence WHERE user_id=?', (user_id,)).fetchone()
             if seen:
                 social_db.remember_seen(conn, user_id, seen[0])
+                # Where the next sign-in picks up (server/last_spot.py).
+                last_spot.save_from_presence(conn, user_id)
             conn.execute('DELETE FROM mp_presence WHERE user_id=?', (user_id,))
             conn.execute('DELETE FROM mp_visits WHERE user_id=?', (user_id,))
             for guest in conn.execute('SELECT user_id FROM mp_visits WHERE host_id=?', (user_id,)).fetchall():

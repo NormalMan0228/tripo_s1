@@ -1191,6 +1191,8 @@ func inspect_object(obj: Dictionary) -> void:
 		model.set_meta("object_key",object_key(obj))
 		if not model.get_meta("studio",false):Loader.paint(model,Color(selected.color))
 		inspect_stage.add_child(model)
+		# The whole object in view, however wide or tall (preview_frame.gd).
+		preload("res://scripts/preview_frame.gd").fit(preload("res://scripts/preview_frame.gd").camera_in(inspect_stage),model.get_meta("size",Vector3.ZERO))
 		update_paint_entry(model)
 		# A reload while the shape window is open keeps showing its unsaved draft.
 		if is_instance_valid(shape_panel): shape_panel.refresh()
@@ -3013,8 +3015,11 @@ func _process(delta: float) -> void:
 			elif Input.is_action_pressed("interact"): intent("harvest")
 		var previous_position: Vector3=player.position
 		player.position=predict_walker(delta)
-		player.external_velocity=Vector2(player.position.x-previous_position.x,player.position.z-previous_position.z)/maxf(delta,.001)
-		player.external_motion=player.external_velocity.normalized() if world_movement_allowed() else Vector2.ZERO
+		# The walker faces where the player steers; a server correction folding in only slides it.
+		var steer := movement_input()
+		var moved := Vector2(player.position.x-previous_position.x,player.position.z-previous_position.z)/maxf(delta,.001)
+		player.external_velocity=moved if steer.length()>0.1 else Vector2.ZERO
+		player.external_motion=steer.normalized() if steer.length()>0.1 else Vector2.ZERO
 		if paused or results_shown or network_failures>0:player.external_velocity=Vector2.ZERO
 		tick_elapsed+=delta
 		if tick_elapsed>=(0.2 if coop_run else 0.1):
@@ -3824,6 +3829,11 @@ func open_studio(destination: String="workshop") -> void:
 			refuse(tr("친구의 공방은 들어갈 수 없어요. 친구 집에는 놀러 갈 수 있어요."))
 			return
 		if destination=="home":
+			# The host's home opens only while the host is inside (server/home_access.py).
+			var shut: String=preload("res://scripts/home_door.gd").refusal(social.data.get("home"))
+			if not shut.is_empty():
+				refuse(shut)
+				return
 			session.visit_host=str(social.data.get("host_id",""))
 			session.visit_name=str(social.data.get("host_name",tr("친구")))
 	if busy or api.token.is_empty(): return
