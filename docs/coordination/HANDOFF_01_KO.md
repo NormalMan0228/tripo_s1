@@ -39,7 +39,11 @@
   - 계정당 5회, `TRIPO_DAILY_REQUEST_LIMIT=0`(0.11.8 코드부터 가능)
   - WELCOME 150, MAX_STARS 200, MAX_CREDITS_PER_CRAFT 200
   - TESTER 1500, 테스터 예산 10000
-- 배포 점검표: env에 `TRIPOTHON_ENABLE_LEGACY_GENERATION`이 없거나 false인지 확인합니다.
+- 배포 점검표(배포 전에 사용자가 VM에서 실행해 결과를 붙임):
+  - 키 줄 2개
+  - `TRIPOTHON_TRIPO_CREDIT_BUDGET=29106` (총괄이 사용자 잔액으로 계산한 값)
+  - `TRIPOTHON_ENABLE_LEGACY_GENERATION`이 없거나 false
+- 배포 뒤 확인: /health의 `tripo_keys` 2, `tripo_budget.total` 29106
 - 테스터 계정 tripo1~5는 배포 뒤 사용자가 VM에서 만듭니다(비밀번호는 숨김 입력). 명령은 `ops/README.md`에 있고 `-f ops/compose.gcp-free.yaml`을 붙입니다.
 
 ## 0.11.8 뒤 병합 대기열 (도움 파일 after_0118_queue.txt)
