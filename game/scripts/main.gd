@@ -2192,8 +2192,10 @@ func update_run() -> void:
 		social.sync_peers(run.get("players", []))
 		social.update_status()
 	var remaining := int(ceil(run.get("phase_remaining",0)))
-	# The boss night has no clock (phase_remaining stays 0): it ends when the boss falls.
+	# A night that holds (the boss night, the tutorial's last night) has no clock: phase_remaining
+	# stays 0 until the boss falls or the goals are met.
 	if bool(run.get("boss_night",false)): metrics.text=tr("우두머리의 밤")
+	elif run.has("stage") and int(run.get("stage_remaining",0))<0: metrics.text=tr("달이 뜬 밤")
 	else: metrics.text=tr("%s   ·   %s %d초") % [tr("달이 뜬 밤") if run.night else tr("탐험하기 좋은 낮"),tr("아침까지") if run.night else tr("밤까지"),remaining]
 	if is_instance_valid(day_track):
 		day_track.text=stage_text()

@@ -87,6 +87,12 @@ func run() -> void:
 	await process_frame
 	expect(app.day_track.text.ends_with("∞"), "the boss night's clock reads ∞ (%s)" % app.day_track.text)
 	expect(app.metrics.text == tr("우두머리의 밤"), "the status line names the boss night instead of a zero clock (%s)" % app.metrics.text)
+	app.run.merge({"boss_night":false, "boss":null, "night":true}, true)
+	app.update_run()
+	expect(app.metrics.text == tr("달이 뜬 밤"), "a night that holds without a boss shows no zero clock either (%s)" % app.metrics.text)
+	app.run.merge({"boss_night":true, "boss":{"id":"golem", "name":"이끼 골렘", "hp":900, "max_hp":1000}}, true)
+	app.update_run()
+	await process_frame
 	expect(is_instance_valid(app.boss_panel) and app.boss_meter.bar.value == 900 and app.boss_meter.bar.max_value == 1000, "the boss bar shows its health")
 	expect(app.toast_lane.position.y > lane_y, "the toast lane steps down under the boss bar")
 	app.run.boss.hp = 640
