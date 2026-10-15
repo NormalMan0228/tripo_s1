@@ -3,6 +3,7 @@ extends Node3D
 const Art = preload("res://scripts/art.gd")
 const VillageBag = preload("res://scripts/village_bag.gd")
 const TitleSky = preload("res://scripts/title_sky.gd")
+const CharacterSelect = preload("res://scripts/character_select.gd")
 const Loader = preload("res://scripts/model_loader.gd")
 const PaintApply = preload("res://scripts/painter/paint_apply.gd")
 const ObjectTransform = preload("res://scripts/object_transform.gd")
@@ -793,6 +794,9 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	if get_tree().current_scene==self:
 		I18n.remember("server",host)
 		I18n.remember("username",username.strip_edges())
+	# A new account picks and dresses its traveller first (character_select.gd, 31); the real game
+	# only, so test harnesses that register accounts go straight on.
+	if register and get_tree().current_scene==self: await first_look()
 	var veil := Transition.of(get_tree())
 	var at_home: bool = get_tree().current_scene==self
 	veil.loading(TownLayout.room_title("home") if at_home else tr("다섯 섬 마을"),"","room" if at_home else "village")
@@ -3787,6 +3791,17 @@ func restore_hud() -> void:
 	for item in hidden_hud:
 		if is_instance_valid(item): item.visible=true
 	hidden_hud.clear()
+
+## The first look over the title (character_select.gd): saved as the profile before the first place.
+func first_look() -> void:
+	var picker := CharacterSelect.new()
+	picker.avatar = me.get("profile",{}).get("avatar",{}).duplicate(true)
+	ui.add_child(picker)
+	var chosen: Dictionary = await picker.done
+	var result: Dictionary = await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":chosen}))
+	if result.ok: adopt_profile(result.data)
+	else: message(tr("모습을 저장하지 못했어요. 옷장(O)에서 다시 골라 주세요."))
+	if is_instance_valid(picker): picker.queue_free()
 
 func open_wardrobe() -> void:
 	if screen!="village": return

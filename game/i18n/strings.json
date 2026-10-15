@@ -10827,6 +10827,22 @@
   "입력 언어 · 입력한 글자로 알아봐요 (한/영 키로 바꿔요)": {
    "en": "Input language · read from what you type (switch with the Han/Eng key)",
    "zh": "输入语言 · 根据输入的文字判断（用韩/英键切换）"
+  },
+  "나의 여행자 만들기": {
+   "en": "Make your traveller",
+   "zh": "创建你的旅行者"
+  },
+  "함께 모험할 여행자를 고르고 꾸며 보세요. 나중에 옷장에서 언제든 바꿀 수 있어요.": {
+   "en": "Pick and dress the traveller you will adventure with. You can change it any time in the wardrobe.",
+   "zh": "挑选并打扮与你一起冒险的旅行者。之后可以随时在衣柜里更换。"
+  },
+  "모험 시작": {
+   "en": "Start the adventure",
+   "zh": "开始冒险"
+  },
+  "모습을 저장하지 못했어요. 옷장(O)에서 다시 골라 주세요.": {
+   "en": "Could not save the look. Pick it again in the wardrobe (O).",
+   "zh": "未能保存外观。请在衣柜(O)中重新选择。"
   }
  },
  "templates": []
