@@ -25,6 +25,11 @@ signal job_finished(job: Dictionary)
 signal new_craft
 
 const CONCEPT_CREDITS := 5
+## Reference photos: any picture up to PHOTO_FILE_BYTES is read, scaled to PHOTO_SIDE px and re-encoded
+## under PHOTO_SEND_BYTES before it is sent (the server takes 6 MB and keeps 1 MB, asset_studio.py).
+const PHOTO_FILE_BYTES := 20 * 1024 * 1024
+const PHOTO_SIDE := 1600
+const PHOTO_SEND_BYTES := 1024 * 1024
 const TERMINAL = CraftTracker.TERMINAL
 ## The server is still working: the window shows the steps and keeps them between polls.
 const WORKING := ["queued", "planning", "building", "submitting"]
@@ -48,6 +53,9 @@ var form: VBoxContainer
 var status: VBoxContainer
 var prompt: TextEdit
 var image_label: Label
+var image_preview: TextureRect
+## Text-only crafts: draw a concept picture first (5 credits) or build straight from the words (69).
+var picture_first: CheckButton
 var surface: OptionButton
 var motion: OptionButton
 var mesh_model: OptionButton
@@ -174,12 +182,13 @@ func _llm() -> bool:
 # ------------------------------------------------------------------ form
 
 func _build_form() -> void:
-	form = VBoxContainer.new()
-	form.add_theme_constant_override("separation", 9)
-	add_child(form)
+	# The status sits above the form: a failed craft says why on top of the form it returns to.
 	status = VBoxContainer.new()
 	status.add_theme_constant_override("separation", 9)
 	add_child(status)
+	form = VBoxContainer.new()
+	form.add_theme_constant_override("separation", 9)
+	add_child(form)
 	_label(form, tr("어떤 물건을 만들까요?"), 20)
 	prompt = TextEdit.new()
 	prompt.custom_minimum_size = Vector2(0, 92)
@@ -195,10 +204,19 @@ func _build_form() -> void:
 	var photo := _row(form)
 	photo_buttons.append(_button(photo, tr("사진·그림 추가"), func() -> void: _file_dialog().popup_centered_ratio(0.7)))
 	photo_buttons.append(_button(photo, tr("제거"), func() -> void:
-		image_data = ""
-		image_label.text = tr("참고 이미지 없음")
+		_clear_image()
 		_update_options()))
-	image_label = _label(form, tr("참고 그림을 추가할 수 있어요"), 13, true)
+	var picked := HBoxContainer.new()
+	picked.add_theme_constant_override("separation", 8)
+	form.add_child(picked)
+	image_preview = TextureRect.new()
+	image_preview.custom_minimum_size = Vector2(72, 72)
+	image_preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	image_preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	image_preview.visible = false
+	picked.add_child(image_preview)
+	image_label = _label(picked, tr("참고 그림을 추가할 수 있어요"), 13, true)
+	image_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	style_title = _label(form, tr("스타일"), 15)
 	style_grid = GridContainer.new()
 	style_grid.columns = 3
@@ -228,6 +246,16 @@ func _build_form() -> void:
 	choices.add_child(refine)
 	for control in [surface, motion, mesh_model]: control.item_selected.connect(func(_i: int) -> void: _update_options())
 	refine.toggled.connect(func(_on: bool) -> void: _update_options())
+	picture_first = CheckButton.new()
+	picture_first.text = tr("AI 그림을 먼저 보고 만들기")
+	picture_first.tooltip_text = tr("끄면 그림 단계 없이 글로 바로 3D를 만들어요. (그림 1장 5크레딧 절약)")
+	var prefs := ConfigFile.new()
+	prefs.load(I18n.settings_path())
+	picture_first.button_pressed = str(prefs.get_value(SETTINGS_SECTION, "picture_first", "on")) != "off"
+	picture_first.toggled.connect(func(_on: bool) -> void:
+		_save_choice()
+		_update_options())
+	form.add_child(picture_first)
 	concept_note = _label(form, "", 13, true)
 	# Developer choices; players get the server's own setup (see apply_info).
 	dev_box = VBoxContainer.new()
@@ -258,22 +286,74 @@ func _file_dialog() -> FileDialog:
 		file_dialog = FileDialog.new()
 		file_dialog.access = FileDialog.ACCESS_FILESYSTEM
 		file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
-		file_dialog.filters = PackedStringArray(["*.png,*.jpg,*.jpeg ; Reference image"])
+		file_dialog.filters = PackedStringArray(["*.png,*.jpg,*.jpeg,*.webp,*.bmp ; Reference image"])
 		add_child(file_dialog)
 		file_dialog.file_selected.connect(pick_image)
 	return file_dialog
 
+## A picked photo: read (PNG, JPG, WebP, BMP up to 20 MB), scaled down and re-encoded so it always fits
+## what the server takes; a picture that cannot be used says why.
 func pick_image(path: String) -> void:
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null or file.get_length() > 1024 * 1024:
+	var picture := read_photo(path)
+	if picture.has("error"):
 		RpgUi.sfx("deny", -6.0)
-		_say(tr("이미지는 1MB 이하로 준비해 주세요"))
+		_say(CraftWords.refusal(str(picture.error)))
 		return
-	var bytes := file.get_buffer(file.get_length())
-	image_data = "data:image/" + ("png" if path.get_extension().to_lower() == "png" else "jpeg") + ";base64," + Marshalls.raw_to_base64(bytes)
+	image_data = str(picture.data)
 	image_label.text = path.get_file()
+	image_preview.texture = ImageTexture.create_from_image(picture.image)
+	image_preview.visible = true
+	RpgUi.pop_in(image_preview, 0.3, 0.6)
+	RpgUi.sfx("select")
 	if _llm(): designer.select(1)
 	_update_options()
+
+func _clear_image() -> void:
+	image_data = ""
+	image_label.text = tr("참고 이미지 없음")
+	image_preview.texture = null
+	image_preview.visible = false
+
+## {"data": data URL, "image": Image} or {"error": image_too_large / image_too_small / image_unreadable}.
+static func read_photo(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null: return {"error": "image_unreadable"}
+	if file.get_length() > PHOTO_FILE_BYTES: return {"error": "image_too_large"}
+	return decode_photo(file.get_buffer(file.get_length()))
+
+## By content, not the file name: a .png that is really a JPEG still loads.
+static func decode_photo(bytes: PackedByteArray) -> Dictionary:
+	var image := Image.new()
+	var loaded := ERR_FILE_UNRECOGNIZED
+	if bytes.size() >= 4 and bytes[0] == 0x89 and bytes[1] == 0x50: loaded = image.load_png_from_buffer(bytes)
+	elif bytes.size() >= 3 and bytes[0] == 0xFF and bytes[1] == 0xD8: loaded = image.load_jpg_from_buffer(bytes)
+	elif bytes.size() >= 12 and bytes.slice(0, 4).get_string_from_ascii() == "RIFF" and bytes.slice(8, 12).get_string_from_ascii() == "WEBP": loaded = image.load_webp_from_buffer(bytes)
+	elif bytes.size() >= 2 and bytes[0] == 0x42 and bytes[1] == 0x4D: loaded = image.load_bmp_from_buffer(bytes)
+	if loaded != OK or image.is_empty(): return {"error": "image_unreadable"}
+	if mini(image.get_width(), image.get_height()) < 16: return {"error": "image_too_small"}
+	return encode_photo(image)
+
+static func encode_photo(image: Image) -> Dictionary:
+	if image.is_compressed(): image.decompress()
+	var alpha := image.detect_alpha() != Image.ALPHA_NONE
+	var side := PHOTO_SIDE
+	while true:
+		var copy: Image = image.duplicate()
+		var longest := maxi(copy.get_width(), copy.get_height())
+		if longest > side:
+			var ratio := float(side) / float(longest)
+			copy.resize(maxi(1, roundi(copy.get_width() * ratio)), maxi(1, roundi(copy.get_height() * ratio)), Image.INTERPOLATE_LANCZOS)
+		var kind := "png" if alpha else "jpeg"
+		var data: PackedByteArray = copy.save_png_to_buffer() if alpha else copy.save_jpg_to_buffer(0.88)
+		if data.size() > PHOTO_SEND_BYTES and alpha:
+			# A large transparent picture: a JPEG of the same size.
+			copy.convert(Image.FORMAT_RGB8)
+			data = copy.save_jpg_to_buffer(0.85)
+			kind = "jpeg"
+		if data.size() <= PHOTO_SEND_BYTES or side <= 512:
+			return {"data": "data:image/%s;base64,%s" % [kind, Marshalls.raw_to_base64(data)], "image": copy}
+		side = int(side * 0.75)
+	return {"error": "image_too_large"}
 
 func _tripo() -> bool:
 	return geometry.selected == 1
@@ -302,8 +382,7 @@ func _update_options() -> void:
 	var photos := _llm() and _fits(20)
 	for b in photo_buttons: b.disabled = not photos
 	if not photos and not image_data.is_empty():
-		image_data = ""
-		image_label.text = tr("참고 이미지 없음")
+		_clear_image()
 	mesh_model.set_item_disabled(1, not _fits(100))
 	if not _fits(100) and mesh_model.selected == 1: mesh_model.select(0)
 	refine.disabled = image_data.is_empty() or not _fits(25)
@@ -324,17 +403,21 @@ func _update_options() -> void:
 		forced_motion = false
 	moving = motion.selected == 1
 	var least := unit * (moving_meshes if moving else 1)
-	var concept := not photo and not moving
+	# The player may skip the picture step (69): built straight from the words, 5 credits less.
+	picture_first.visible = not photo and not moving
+	var concept := not photo and not moving and picture_first.button_pressed
 	var with_concept := (unit + 10 + CONCEPT_CREDITS) if mesh_model.selected == 0 else unit + CONCEPT_CREDITS
 	var stars := (40 if textured else 20) + (10 if moving else 0)
 	var over := tripo and cap > 0 and least > cap
 	price_label.text = tr("별씨 %d · Tripo 약 %d크레딧") % [stars, with_concept if concept and _fits(with_concept) else least] if tripo else tr("별씨 %d") % stars
 	if over: price_label.text += tr(" · 한도 %d 크레딧을 넘어요") % cap
-	concept_note.visible = concept or forced
+	concept_note.visible = concept or forced or picture_first.visible
 	if forced:
 		concept_note.text = tr("%s는 바늘이 실제 시각에 맞춰 움직이도록 만들어요. 바늘은 공방이 무료로 달아 드려요.") % tr(str(kind_info.get("names", {}).get("ko", "시계")))
 	elif concept:
 		concept_note.text = tr("사진이 없으면 AI가 먼저 그림을 그려 보여 드려요. 마음에 들면 그 그림으로 3D를 만들어요. (그림 1장 5크레딧)") if not tripo or _fits(with_concept) else tr("이번에는 그림 단계 없이 글로 만들어요. (1회 한도)")
+	elif picture_first.visible:
+		concept_note.text = tr("그림 단계 없이 글로 바로 3D를 만들어요.")
 	# Live servers build only with Tripo; a local world makes free sample shapes.
 	var ready_to_build := tripo or not _live()
 	ask.disabled = busy or over or not ready_to_build
@@ -355,7 +438,7 @@ func _base_body() -> Dictionary:
 		"mesh_model": "v3.1-20260211" if mesh_model.selected == 0 else "P2-20260801",
 		"model": models.get_item_text(models.selected), "effort": efforts.get_item_text(efforts.selected),
 		"image": image_data, "image_mode": "refine" if tripo and not image_data.is_empty() and refine.button_pressed else "original",
-		"concept": image_data.is_empty() and motion.selected == 0}
+		"concept": image_data.is_empty() and motion.selected == 0 and picture_first.button_pressed}
 
 ## Asks the server what the words name (after a short pause in typing) and updates the options.
 ## Older servers do not know the question: the form works as before.
@@ -427,10 +510,7 @@ func show_job(value: Dictionary) -> void:
 	_clear_status()
 	if state.is_empty() or state in ["failed", "cancelled"]:
 		_show_form()
-		if state == "failed":
-			# A Tripo part that never finished stops at its deadline (asset_studio.py overdue).
-			var words := tr("공방이 너무 오래 걸려 이번 제작을 멈췄어요. 맡긴 별씨는 돌려드렸어요.") if str(value.get("error", "")) == "generation_timeout" else tr("제작에 실패했어요. 맡긴 별씨는 돌려드렸어요.")
-			_label(status, words, 15, false, RpgUi.ACCENT)
+		if state == "failed": _show_failure(value)
 		return
 	form.visible = false
 	if state == "awaiting_confirmation":
@@ -457,6 +537,29 @@ func show_job(value: Dictionary) -> void:
 		_label(status, tr("공방이 Tripo에 보낸 요청이 닿았는지 확인하지 못했어요. 운영자가 확인하면 맡긴 별씨가 돌아와요. 그동안 새 물건을 만들 수 있어요."), 15)
 		_button(_row(status), tr("새로 만들기"), _start_over, "gold")
 	else: _show_working(value)
+
+## Why the craft failed, above the form it returns to: a refused (inappropriate) request or a failure,
+## with the reason the server gave (craft_words.gd failure()).
+func _show_failure(value: Dictionary) -> void:
+	var words: Dictionary = CraftWords.failure(value)
+	var card := PanelContainer.new()
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(RpgUi.ACCENT, 0.1)
+	box.border_color = Color(RpgUi.ACCENT, 0.55)
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(10)
+	box.set_content_margin_all(10)
+	card.add_theme_stylebox_override("panel", box)
+	status.add_child(card)
+	var lines := VBoxContainer.new()
+	lines.add_theme_constant_override("separation", 4)
+	card.add_child(lines)
+	_label(lines, str(words.title), 20, false, RpgUi.ACCENT)
+	_label(lines, str(words.why), 14)
+	if RpgUi.calm(): return
+	# A short shake says "no" without more words.
+	var shake := lines.create_tween()
+	for dx in [8.0, -6.0, 4.0, -2.0, 0.0]: shake.tween_property(lines, "position:x", dx, 0.05)
 
 func _start_over() -> void:
 	job = {}
@@ -850,6 +953,7 @@ func _save_choice() -> void:
 	config.load(I18n.settings_path())
 	config.set_value(SETTINGS_SECTION, "style", style_id)
 	config.set_value(SETTINGS_SECTION, "size", size_id)
+	if picture_first != null: config.set_value(SETTINGS_SECTION, "picture_first", "on" if picture_first.button_pressed else "off")
 	config.save(I18n.settings_path())
 
 func _save_dims(d: Vector3) -> void:

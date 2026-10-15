@@ -135,6 +135,44 @@ func run() -> void:
 	expect(labels(panel.status).contains(tr("확인이 필요해요")) and panel.working.is_empty() and "unknown" in CraftPanel.TERMINAL, "a held craft ends in a clear state")
 	panel.show_job({"id": "steps", "state": "failed", "error": "generation_timeout"})
 	expect(panel.form.visible and labels(panel.status).contains(tr("오래")), "a craft stopped at its deadline says so")
+	# A refused (inappropriate) craft and every other failure say why, above the form.
+	panel.show_job({"id": "steps", "state": "failed", "error": "refused_person", "reason": "refused", "refusal": "person"})
+	text = labels(panel.status)
+	expect(panel.form.visible and text.contains(tr("만들 수 없는 의뢰예요")) and text.contains("실제 사람") and text.contains("돌려드렸어요"), "a refused craft says why and that the starseeds came back")
+	await capture("refused")
+	panel.show_job({"id": "steps", "state": "failed", "error": "llm_invalid_design", "reason": "design"})
+	expect(labels(panel.status).contains("설계도"), "a failed design says so")
+	panel.show_job({"id": "steps", "state": "failed", "error": "refused_hate"})
+	expect(labels(panel.status).contains("혐오"), "an older server's refusal code is worded too")
+	panel.show_job({})
+	panel.prompt.text = "나치 깃발 액자"
+	await panel.request()
+	expect(panel.job_id.is_empty() and app.craft_job.is_empty(), "a listed word is refused before anything is made")
+	expect(panel._explain("refused_drugs").contains("마약") and panel._explain("image_too_large").contains("20MB"), "refusals and photo problems are worded")
+	# The picture step can be skipped (69): the craft is built from the words.
+	panel.prompt.text = "a round lamp"
+	panel.picture_first.button_pressed = false
+	expect(panel.picture_first.visible and panel._body().get("concept") == false and panel.concept_note.text.contains("그림 단계 없이"), "text-only craft skips the picture when asked")
+	panel.picture_first.button_pressed = true
+	expect(panel._body().get("concept") == true, "and draws it again when asked")
+	# Photos: any size up to 20 MB is scaled down and re-encoded under 1 MB; bad files say why.
+	var big := Image.create(3000, 2000, false, Image.FORMAT_RGB8)
+	big.fill(Color(0.8, 0.5, 0.2))
+	var big_path := OS.get_user_data_dir().path_join("craft_check_big.png")
+	big.save_png(big_path)
+	var photo := CraftPanel.read_photo(big_path)
+	expect(not photo.has("error") and maxi(photo.image.get_width(), photo.image.get_height()) == CraftPanel.PHOTO_SIDE and str(photo.data).begins_with("data:image/jpeg;base64,"), "a large photo is scaled to %d px" % CraftPanel.PHOTO_SIDE)
+	expect(Marshalls.base64_to_raw(str(photo.data).get_slice(",", 1)).size() <= CraftPanel.PHOTO_SEND_BYTES, "and sent under 1 MB")
+	var tiny := Image.create(8, 8, false, Image.FORMAT_RGB8)
+	var tiny_path := OS.get_user_data_dir().path_join("craft_check_tiny.png")
+	tiny.save_png(tiny_path)
+	var junk_path := OS.get_user_data_dir().path_join("craft_check_junk.png")
+	var junk := FileAccess.open(junk_path, FileAccess.WRITE)
+	junk.store_string("not a picture")
+	junk.close()
+	expect(CraftPanel.read_photo(tiny_path).get("error") == "image_too_small" and CraftPanel.read_photo(junk_path).get("error") == "image_unreadable", "tiny and broken pictures say why")
+	for path in [big_path, tiny_path, junk_path]: DirAccess.remove_absolute(path)
+	panel.prompt.text = ""
 	expect(CraftPanel.poll_pause(1) == 4.0 and CraftPanel.poll_pause(9) == 30.0, "failed polls back off up to 30 s")
 	panel.show_job({})
 	app.close_village_modal()
