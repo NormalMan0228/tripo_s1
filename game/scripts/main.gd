@@ -41,6 +41,9 @@ const PatchBoot = preload("res://scripts/patch_boot.gd")
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
 const Brand = preload("res://scripts/brand.gd")
 const SocialHud = preload("res://scripts/social_hud.gd")
+## Build mode: placed-object menu, stacking, ways kept open, 물건 통과 (scripts/build/).
+const VillageBuild = preload("res://scripts/build/village_build.gd")
+const LoadRing = preload("res://scripts/build/load_ring.gd")
 ## Login presets. The PC server is the one with Tripo enabled; the online server
 ## is the hosted demo.
 const SERVERS := [["local","http://127.0.0.1:8765","이 PC 월드"],["online","https://34-28-65-113.sslip.io","온라인 월드"]]
@@ -480,6 +483,7 @@ func error_message(code: String) -> String:
 		"registration_closed_today":tr("오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요."),
 		"client_update_required":tr("새 버전을 받아야 계속할 수 있어요."),
 		"server_maintenance":tr("서버 점검 중이에요. 잠시 뒤 다시 들어와 주세요.")}
+	messages.merge(VillageBuild.BuildRules.server_words())
 	if not preload("res://scripts/build_mode.gd").developer():
 		messages.server_update_required=tr("마을을 업데이트하고 있어요. 잠시 뒤 다시 접속해 주세요.")
 	return str(messages.get(code,tr("요청을 완료하지 못했습니다: ")+code if preload("res://scripts/build_mode.gd").developer() else tr("지금은 완료하지 못했어요. 잠시 뒤 다시 시도해 주세요.")))
@@ -861,6 +865,7 @@ func build_world(survival: bool) -> bool:
 	player = AvatarLook.walker(profile.get("avatar",{}),int(profile.get("version",-1)))
 	player.visual_only=survival
 	world.add_child(player)
+	if not survival: VillageBuild.PassThrough.for_walker(player)
 	LoadPace.done(0.88)
 	if not survival: await spawn_villagers()
 	if epoch!=world_epoch: return false
@@ -1449,7 +1454,7 @@ func sync_placed(objects: Array, prefix: String="/v1/objects/") -> bool:
 	for obj in objects:
 		var existing = loaded.get(obj.id)
 		if is_instance_valid(existing):
-			existing.position = TownLayout.furniture_point(obj.x,obj.z)
+			existing.position = VillageBuild.spot(obj,objects)
 			existing.rotation_degrees.y = obj.rotation
 			sync_shape(existing,obj)
 			var kept: bool=await sync_runtime(existing,obj,prefix)
@@ -1465,7 +1470,7 @@ func sync_placed(objects: Array, prefix: String="/v1/objects/") -> bool:
 			continue
 		asset.set_meta("object_key",object_key(obj))
 		object_root.add_child(asset)
-		asset.position = TownLayout.furniture_point(obj.x,obj.z)
+		asset.position = VillageBuild.spot(obj,objects)
 		asset.rotation_degrees.y = obj.rotation
 		Loader.add_collision(asset)
 		loaded[obj.id] = asset
@@ -1740,7 +1745,9 @@ func begin_place() -> void:
 	cancel_preview()
 	if is_instance_valid(shape_panel): shape_panel.close()
 	busy = true
+	var ring := LoadRing.start(ui)
 	preview = await load_object(selected)
+	LoadRing.finish(ring)
 	busy = false
 	if preview:
 		world.add_child(preview)
@@ -1749,7 +1756,8 @@ func begin_place() -> void:
 		preview_follow=not moving
 		preview_mouse=get_viewport().get_mouse_position()
 		if moving:
-			preview.position=TownLayout.furniture_point(selected.x,selected.z)
+			preview.position=VillageBuild.spot(selected,me.objects)
+			VillageBuild.resume_stack(self)
 			if is_instance_valid(loaded.get(preview_moving)): loaded[preview_moving].visible=false
 		preview.rotation_degrees.y=preview_rotation
 		# A ground disc shows whether the spot is free: green to place, red when blocked.
@@ -1820,11 +1828,13 @@ func show_turn_hud(on: bool) -> void:
 ## Mirrors homestead.village_inside/village_reserved and adds the map's own geometry.
 func placement_problem() -> String:
 	var p := TownLayout.furniture_local(preview.position)
+	var build_problem := VillageBuild.placement_problem(self)
+	if not build_problem.is_empty(): return build_problem
 	if p.x< -60 or p.x>130 or p.y< -115 or p.y>60: return tr("섬 안쪽에 놓아 주세요.")
 	if preview.position.y<TownLayout.SHORE_MIN_Y+.5: return tr("물 위에는 놓을 수 없어요.")
 	if absf(p.x)<2 and absf(p.y)<2: return tr("광장 한가운데는 비워 주세요.")
 	if absf(p.x)<3.5 and p.y> -12 and p.y< -6: return tr("공방 입구 앞은 비워 주세요.")
-	if Vector2(player.position.x-preview.position.x,player.position.z-preview.position.z).length()<1.3:
+	if not VillageBuild.stacking(self) and Vector2(player.position.x-preview.position.x,player.position.z-preview.position.z).length()<1.3:
 		return tr("캐릭터와 겹치지 않는 곳에 놓으세요.")
 	var span: Vector3=preview.get_meta("size",Vector3.ONE)
 	var box := BoxShape3D.new();box.size=Vector3(maxf(span.x,.4),maxf(span.y-.1,.2),maxf(span.z,.4))
@@ -1847,6 +1857,9 @@ func place_preview() -> void:
 	var problem := placement_problem()
 	if not problem.is_empty():
 		refuse(problem)
+		return
+	if VillageBuild.stacking(self):
+		await VillageBuild.place_stacked(self)
 		return
 	if not preview_moving.is_empty():
 		if await move_object(p):
@@ -3109,12 +3122,14 @@ func _process(delta: float) -> void:
 			# A picked-up object stays put (to turn it in place) until the pointer moves.
 			if not preview_follow and mouse.distance_to(preview_mouse)>8: preview_follow=true
 			var origin := camera.project_ray_origin(mouse)
-			var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+camera.project_ray_normal(mouse)*400,1|2|8)) if preview_follow else {}
+			var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+camera.project_ray_normal(mouse)*400,1|2|8|VillageBuild.CRAFTED,VillageBuild.rids(loaded.get(preview_moving,null)))) if preview_follow else {}
 			# A new piece's ghost has no spot of its own until the pointer first puts it on the ground:
 			# that frame (and the ones before it) stay silent, it only takes its colour.
 			var first_spot := not preview.has_meta("ghost_spot")
-			# Only open ground takes furniture; buildings, bridges and props keep the last spot.
-			if not hit.is_empty() and hit.collider is CollisionObject3D and hit.collider.collision_layer&1:
+			# On top of one of your pieces (village_build.gd), else only open ground takes furniture;
+			# buildings, bridges and props keep the last spot.
+			if preview_follow and VillageBuild.follow(self,hit): pass
+			elif not hit.is_empty() and hit.collider is CollisionObject3D and hit.collider.collision_layer&1:
 				var local := TownLayout.furniture_local(hit.position).snapped(Vector2(0.5,0.5))
 				var cell := TownLayout.furniture_point(local.x,local.y)
 				# A faint tick when the ghost lands on a new 0.5 m cell (at most ~11 a second).
@@ -3264,6 +3279,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				KEY_H: intent("heal")
 				KEY_SPACE: intent("attack")
 		elif screen=="village":
+			if key==KEY_V: VillageBuild.toggle_pass(self)
 			if key==KEY_TAB: life.open_map()
 			if key==KEY_B: life.open_storage()
 			if key==KEY_F9 and preload("res://scripts/build_mode.gd").admin: open_admin()
@@ -3279,6 +3295,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if screen=="village" and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
 		if is_instance_valid(preview): place_preview()
 		else: click_furniture(event.position)
+	if screen=="village" and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_RIGHT:
+		VillageBuild.right_click(self,event.position)
 
 func region_name(id: String) -> String:
 	var known: Dictionary={"forest":tr("솔바람 숲"),"quarry":tr("노을 채석장"),"frost":tr("서리빛 분지")}

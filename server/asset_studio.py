@@ -14,11 +14,10 @@ import uuid
 import unicodedata
 from typing import Literal
 from PIL import Image, ImageOps, ImageCms
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from fastapi import Request, HTTPException
 from fastapi.responses import Response
 from .models import Mutation
-from .homestead import village_reserved, village_inside
 from .asset_assembly import demo_design, fixture_glb, validate_plan, static_plan, simple_plan
 from .asset_vm import AssetVM, ProgramError, exercise_extended as exercise
 from .design_provider import DesignProvider, DesignFailure, MODELS, EFFORTS, provider_name
@@ -29,6 +28,7 @@ from . import room_budget
 from .stored_assets import read_glb
 from .object_paint import version_column as paint_version
 from . import object_shape
+from . import build_rules
 from . import craft_styles
 from . import craft_moderation
 from .craft_moderation import Refused
@@ -211,6 +211,23 @@ class Placement(Mutation):
     z: float=Field(default=0,ge=-130,le=130)
     # Facing in whole degrees; released clients send quarter turns only.
     rotation: int=Field(default=0,ge=0,le=359)
+    # Build mode (server/build_rules.py); released clients send none of these and place on the floor.
+    surface: Literal['floor','wall','ceiling','top']='floor'
+    # Bottom height (m): on a wall, or the measured top of the support under a 'top' piece.
+    y: float=Field(default=0,ge=0,le=8)
+    parent: uuid.UUID|None=None
+    wall: Literal['back','left','right']|None=None
+
+    @field_validator('parent','wall',mode='before')
+    @classmethod
+    def blank(cls,v):return None if v=='' else v
+
+    # A 'top' piece names its support and only it does; a wall piece names its wall.
+    @model_validator(mode='after')
+    def mount(self):
+        if self.action=='place' and (self.surface=='top')!=(self.parent is not None):raise ValueError('parent_only_on_top')
+        if self.action=='place' and self.surface=='wall' and self.wall is None:raise ValueError('wall_required')
+        return self
 
 # Learned designs (behaviour_library) made under older designer rules are not reused: 'safety1' is the
 # contract that refuses inappropriate requests instead of softening them (asset_contract.py SAFETY).
@@ -336,6 +353,7 @@ class Studio:
         with db.transaction() as conn:
             conn.executescript(SCHEMA)
             conn.executescript(library.SCHEMA)
+            conn.executescript(build_rules.SCHEMA)
             if 'bindings' not in [r[1] for r in conn.execute('PRAGMA table_info(studio_runtime)')]:
                 conn.execute("ALTER TABLE studio_runtime ADD COLUMN bindings TEXT NOT NULL DEFAULT '{}'")
         # Worlds made before held (unknown) crafts stopped counting as the owner's craft under way.
@@ -387,7 +405,7 @@ class Studio:
                     'prices':{'static_mesh':20,'static_textured':40,'dynamic_mesh':30,'dynamic_textured':50},
                     'tripo_estimate':{'models':{'v3.1-20260211':{'text_mesh':10,'text_textured':20,'image_mesh':20,'image_textured':30},'P2-20260801':{'text_mesh':100,'text_textured':110,'image_mesh':100,'image_textured':110}},'image_refinement_per_part':5,'source':'official_rates_and_measured_2026_10_02','max_parts':8,'confirmation_required':True},
                     'jobs':[dict(r) for r in conn.execute('SELECT id,state,cost,object_id,error,created FROM studio_jobs WHERE owner_id=? ORDER BY created DESC LIMIT 30',(user['id'],))],
-                    'objects':[object_shape.listed(dict(r)) for r in conn.execute("SELECT objects.id,name,color,objects.version,objects.state,x,z,rotation,COALESCE(room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE studio_assets.asset_id=objects.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+paint_version('objects.id')+" AS paint_version,"+object_shape.column('objects.id')+" AS shape FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id WHERE owner_id=? AND state!='gifted' ORDER BY created DESC",(user['id'],))],
+                    'objects':[build_rules.listed(object_shape.listed(dict(r))) for r in conn.execute("SELECT objects.id,name,color,objects.version,objects.state,x,z,rotation,COALESCE(room,'village') AS room,EXISTS(SELECT 1 FROM studio_assets WHERE studio_assets.asset_id=objects.asset_id) AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+paint_version('objects.id')+" AS paint_version,"+object_shape.column('objects.id')+" AS shape,"+build_rules.column('objects.id')+" AS mount FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id WHERE owner_id=? AND state!='gifted' ORDER BY created DESC",(user['id'],))],
                     'categories':[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')],
                     'shards':user['shards']}
 
@@ -701,6 +719,8 @@ class Studio:
                 if obj['state']=='listed':fail('object_is_listed')
                 if body.action=='retrieve':
                     conn.execute("UPDATE objects SET state='inventory',x=NULL,z=NULL,version=version+1 WHERE id=?",(object_id,))
+                    # Whatever stood on it goes to the bag too.
+                    pose={'retrieved':build_rules.retrieve(conn,object_id)}
                 else:
                     # An object standing in the village is retrieved there first (the village placement
                     # already requires that): the village scene is kept while visiting a room, so moving
@@ -708,20 +728,9 @@ class Studio:
                     # moving between rooms stays a single step.
                     here=conn.execute('SELECT room FROM furniture_locations WHERE object_id=?',(object_id,)).fetchone()
                     if obj['state']=='placed' and (here['room'] if here else 'village')=='village' and body.room!='village':fail(PLACED_ELSEWHERE)
-                    if body.room=='village':
-                        if not village_inside(body.x,body.z):fail('outside_room')
-                    elif abs(body.x)>4 or abs(body.z)>4:fail('outside_room')
-                    if body.room!='village' and abs(body.x)<1.5 and body.z>2.5:fail('door_area_reserved')
-                    if body.room=='workshop' and body.x < -1.8 and body.z < -1.5:fail('workbench_area_reserved')
-                    if body.room=='village' and village_reserved(body.x,body.z):fail('reserved_area')
-                    others=conn.execute("SELECT x,z FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? AND objects.id!=? AND state='placed' AND COALESCE(room,'village')=?",(user['id'],object_id,body.room)).fetchall()
-                    if len(others)>=30:fail('room_full')
-                    if any(abs(o['x']-body.x)<2 and abs(o['z']-body.z)<2 for o in others):fail('placement_overlap')
-                    try:room_budget.check(conn,assets,user['id'],body.room,object_id,obj['asset_id'])
-                    except ProviderError as error:fail(error.code,409 if error.code=='room_render_budget_exceeded' else 503)
-                    conn.execute("UPDATE objects SET state='placed',x=?,z=?,rotation=?,version=version+1 WHERE id=?",(body.x,body.z,body.rotation,object_id))
-                    conn.execute('INSERT INTO furniture_locations VALUES (?,?) ON CONFLICT(object_id) DO UPDATE SET room=excluded.room',(object_id,body.room))
-                return {'version':obj['version']+1,'room':body.room,'state':'inventory' if body.action=='retrieve' else 'placed'}
+                    # Floor, wall, ceiling or on top of a piece; sized overlap, room limits; carries what stands on it.
+                    pose=build_rules.place(conn,assets,user['id'],obj,body)
+                return {'version':obj['version']+1,'room':body.room,'state':'inventory' if body.action=='retrieve' else 'placed',**pose}
             return mutate(request,body,'placement:'+object_id,edit)
 
     def provider_for(self,fingerprint):

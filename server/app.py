@@ -20,7 +20,7 @@ from .database import Database
 from . import economy
 from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction, PrefsUpdate
 from .provider import TripoProvider, ProviderError, validate_glb
-from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial, last_spot
+from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial, last_spot, build_rules
 from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
                        LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER)
 from .stored_assets import read_glb
@@ -497,7 +497,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 'pending_reward':{'id':pending_reward['id'],'reward':pending_reward['reward']+campaign.pending_bonus(conn,user['id'],json.loads(pending_reward['state']))} if pending_reward else None,
                 'pending_job':pending_job['id'] if pending_job else None,
                 'pending_craft':{'id':craft['id'],'state':craft['state']} if craft else None,
-                'objects':[{**obj_public(r),'room':r['room'],'studio':bool(r['studio']),'runtime_version':r['runtime_version'],'paint_version':r['paint_version'],'shape':object_shape.public(r['shape'])} for r in conn.execute("SELECT objects.*,COALESCE(furniture_locations.room,'village') AS room,CASE WHEN studio_assets.asset_id IS NULL THEN 0 ELSE 1 END AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+object_paint.version_column('objects.id')+" AS paint_version,"+object_shape.column('objects.id')+" AS shape FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id LEFT JOIN studio_assets ON studio_assets.asset_id=objects.asset_id WHERE owner_id=? AND state!='gifted' ORDER BY created",(user['id'],))],
+                'objects':[{**obj_public(r),'room':r['room'],'studio':bool(r['studio']),'runtime_version':r['runtime_version'],'paint_version':r['paint_version'],'shape':object_shape.public(r['shape']),**build_rules.public(r['mount'],r['state'])} for r in conn.execute("SELECT objects.*,COALESCE(furniture_locations.room,'village') AS room,CASE WHEN studio_assets.asset_id IS NULL THEN 0 ELSE 1 END AS studio,(SELECT version FROM studio_runtime WHERE object_id=objects.id) AS runtime_version,"+object_paint.version_column('objects.id')+" AS paint_version,"+object_shape.column('objects.id')+" AS shape,"+build_rules.column('objects.id')+" AS mount FROM objects LEFT JOIN furniture_locations ON furniture_locations.object_id=objects.id LEFT JOIN studio_assets ON studio_assets.asset_id=objects.asset_id WHERE owner_id=? AND state!='gifted' ORDER BY created",(user['id'],))],
                 # Residents' home versions (npc_homes.py): a house the client has cached at this version is current.
                 'npc_homes':app.state.npc_homes.versions_for(user['id']),'npc_homes_host':user['id'],
                 # Unread letters from residents (the village mailbox raises its flag).
@@ -518,21 +518,25 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 conn.execute('UPDATE objects SET color=?,version=version+1 WHERE id=?',(body.color.lower(),object_id))
             elif body.action=='retrieve':
                 conn.execute("UPDATE objects SET state='inventory',x=NULL,z=NULL,version=version+1 WHERE id=?",(object_id,))
+                # Whatever stood on it goes to the bag too (server/build_rules.py).
+                retrieved = build_rules.retrieve(conn,object_id)
             else:
-                # Uniform 2x2 parcel; matches normalized 1.6m props on the client.
                 if row['state']!='inventory': fail('retrieve_before_moving')
                 if not homestead.village_inside(body.x, body.z): fail('outside_room')
                 reserved = homestead.village_reserved(body.x, body.z)
                 if reserved: fail(reserved)
                 other = conn.execute("SELECT x,z FROM objects LEFT JOIN furniture_locations ON object_id=objects.id WHERE owner_id=? AND state='placed' AND COALESCE(room,'village')='village'",(user['id'],)).fetchall()
                 if len(other)>=30: fail('village_full')
-                if any(abs(r['x']-body.x)<2 and abs(r['z']-body.z)<2 for r in other): fail('placement_overlap')
+                # Measured footprints (server/build_rules.py), a floor piece.
+                if build_rules.overlaps(conn,assets,user['id'],'village',row,body.x,body.z,body.rotation): fail('placement_overlap')
+                build_rules.mount(conn,object_id,'floor')
                 from . import room_budget
                 try:room_budget.check(conn,assets,user['id'],'village',object_id,row['asset_id'])
                 except ProviderError as error:fail(error.code,409 if error.code=='room_render_budget_exceeded' else 503)
                 conn.execute("UPDATE objects SET state='placed',x=?,z=?,rotation=?,version=version+1 WHERE id=?",
                              (body.x,body.z,body.rotation,object_id))
                 conn.execute("INSERT INTO furniture_locations VALUES (?,'village') ON CONFLICT(object_id) DO UPDATE SET room='village'",(object_id,))
+            if body.action=='retrieve': return {**obj_public(own(conn,user['id'],object_id)),'retrieved':retrieved}
             return obj_public(own(conn,user['id'],object_id))
         return mutate(request,body,'object:'+object_id,edit)
 

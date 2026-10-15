@@ -1,5 +1,101 @@
 {
  "strings": {
+  "옮기기": {
+   "en": "Move",
+   "zh": "移动"
+  },
+  "자리를 옮기고 방향도 바꿔요": {
+   "en": "Move it and change its facing",
+   "zh": "移动位置并改变朝向"
+  },
+  "그 자리에서 90° 돌려요": {
+   "en": "Turn it 90° where it stands",
+   "zh": "原地旋转90°"
+  },
+  "색칠": {
+   "en": "Paint",
+   "zh": "涂色"
+  },
+  "색이나 무늬를 칠해요": {
+   "en": "Paint a colour or pattern",
+   "zh": "涂上颜色或图案"
+  },
+  "넣기": {
+   "en": "Store",
+   "zh": "收起"
+  },
+  "가방(보관함)으로 거둬들여요": {
+   "en": "Put it back in your bag",
+   "zh": "收回到背包（仓库）"
+  },
+  "불러오는 중": {
+   "en": "Loading",
+   "zh": "加载中"
+  },
+  "바닥": {
+   "en": "Floor",
+   "zh": "地面"
+  },
+  "물건 위": {
+   "en": "On top",
+   "zh": "物品上"
+  },
+  "벽": {
+   "en": "Wall",
+   "zh": "墙"
+  },
+  "천장": {
+   "en": "Ceiling",
+   "zh": "天花板"
+  },
+  "얇고 납작한 물건만 벽에 걸 수 있어요.": {
+   "en": "Only thin, flat things can hang on a wall.",
+   "zh": "只有薄而平的物品才能挂在墙上。"
+  },
+  "천장에 달기에는 너무 커요.": {
+   "en": "Too big to hang from the ceiling.",
+   "zh": "太大了，无法挂在天花板上。"
+  },
+  "조명·모빌처럼 매다는 물건만 천장에 달 수 있어요.": {
+   "en": "Only hanging things like lights or mobiles go on the ceiling.",
+   "zh": "只有灯具、风铃这类悬挂物品才能挂在天花板上。"
+  },
+  "더 높이 쌓을 수 없어요.": {
+   "en": "It can't be stacked any higher.",
+   "zh": "无法再往上堆了。"
+  },
+  "아래 물건보다 커서 올릴 수 없어요.": {
+   "en": "It's bigger than the piece below.",
+   "zh": "比下面的物品大，放不上去。"
+  },
+  "문 앞은 비워 두세요.": {
+   "en": "Keep the doorway clear.",
+   "zh": "请让门前保持畅通。"
+  },
+  "다리 위에는 놓을 수 없어요.": {
+   "en": "Nothing can stand on a bridge.",
+   "zh": "桥上不能放东西。"
+  },
+  "큰 물건은 길 위에 놓을 수 없어요. 길가로 옮겨 주세요.": {
+   "en": "Big pieces can't block the road. Move it to the roadside.",
+   "zh": "大件物品不能放在路上，请移到路边。"
+  },
+  "받칠 물건을 찾지 못했어요.": {
+   "en": "The piece below is gone.",
+   "zh": "找不到下面的物品。"
+  },
+  "아래 물건 위에 올려 주세요.": {
+   "en": "Put it on top of the piece below.",
+   "zh": "请放在下面物品的上面。"
+  },
+  "여기서는 돌릴 수 없어요 · ": {
+   "en": "It can't turn here · ",
+   "zh": "这里无法旋转 · "
+  },
+  "물건 통과 켜기/끄기": {
+   "en": "Walk through objects on/off",
+   "zh": "穿过物品 开/关"
+  },
   "CapsLock이 켜져 있어요": {
    "en": "Caps Lock is on",
    "zh": "大写锁定已开启"
