@@ -58,6 +58,7 @@ func run() -> void:
 	# Give the audio thread a moment to drop stopped playbacks before the node goes.
 	await create_timer(0.5).timeout
 	audio.free()
+	check_release()
 	SfxBank.clear()
 	WorldAudio.cache.clear()
 	print("AUDIO_DONE failures=", failures)
@@ -199,6 +200,19 @@ func check_beds(audio: Node) -> void:
 		check(stats.seam <= maxf(stats.local * 1.25, 0.01), "bed %s seam jump %.4f vs nearby steps up to %.4f" % [key, stats.seam, stats.local])
 		check(stats.rms > 0.01, "bed %s is silent" % key)
 		print("AUDIO_BED %-18s %.1fs %5dHz rms=%.3f seam=%.4f nearby_max=%.4f" % [key, length, stream.mix_rate, stats.rms, stats.seam, stats.local])
+
+## The beds prepare() reads ahead on worker threads are all collected at quit (release(), called by
+## clean_exit.gd): a threaded load nobody takes leaks its load token ("ObjectDB instance leaked").
+func check_release() -> void:
+	WorldAudio.prepare()
+	var pending: Dictionary = WorldAudio.loading.duplicate()
+	check(pending.size() == 7, "prepare() read %d village beds ahead, not 7" % pending.size())
+	WorldAudio.release()
+	check(WorldAudio.loading.is_empty(), "release() left %d bed reads pending" % WorldAudio.loading.size())
+	for key in pending:
+		var status := ResourceLoader.load_threaded_get_status(pending[key])
+		check(status == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE, "the read of bed %s was never collected" % key)
+	check(not WorldAudio.cache.keys().any(func(key) -> bool: return str(key).begins_with("bed/")), "release() kept bed streams")
 
 func check_ambience(audio: Node) -> void:
 	var cases := [

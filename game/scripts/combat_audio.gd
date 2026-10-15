@@ -87,6 +87,9 @@ const STAGGER_WINDOW := 0.3
 const STAGGER_MAX := 0.25
 const GROUP_MAX := 4
 const COMBO_GAP := 1.1
+## Takes that open with silence the file must keep (a team recording): playback starts this many
+## seconds in. harvest_fiber_1 has ~98 ms of air before the tear; the derived takes start at once.
+const LEAD_IN := {"harvest_fiber_1.wav": 0.09}
 const HEART_START := 0.3
 const FIRE_LOW := 7.0
 const FIRE_DB := -17.0
@@ -96,8 +99,12 @@ static var last_take := {}
 static var last_time := {}
 static var heart: AudioStreamPlayer
 static var heart_tween: Tween
+## True while heart_tween / fire_tween is the fade to silence (a fade is started once, never restarted).
+static var heart_fading := false
 static var fire: AudioStreamPlayer3D
 static var fire_tween: Tween
+static var fire_fading := false
+static var fire_watch_id := 0
 static var fire_seen := -10.0
 static var fire_next_sputter := 0.0
 static var rng := RandomNumberGenerator.new()
@@ -122,11 +129,26 @@ static func _emit(app, event: String, at: Vector3, db: float, pitch: float, now:
 	if path.is_empty(): return false
 	var spec: Array = EVENTS[event]
 	var jitter: float = spec[2]
-	if not CreatureAudio.emit(app, SfxBank.stream(path), at, float(spec[0])+db+SfxBank.db(1.0), pitch*SfxBank.pitch(jitter), int(spec[1]), "combat/"+event):
+	var stream := SfxBank.stream(path)
+	if not CreatureAudio.emit(app, stream, at, float(spec[0])+db+SfxBank.db(1.0), pitch*SfxBank.pitch(jitter), int(spec[1]), "combat/"+event):
 		return false
+	if LEAD_IN.has(path.get_file()): _skip_lead_in(stream, float(LEAD_IN[path.get_file()]))
 	last_take[event] = path
 	last_time[event] = now
 	return true
+
+## Restarts the pooled voice CreatureAudio.emit() just started for `stream` (the newest one playing
+## it) `seconds` in, past the take's silent lead-in.
+static func _skip_lead_in(stream: AudioStream, seconds: float) -> void:
+	if stream == null or seconds <= 0.0 or seconds >= stream.get_length(): return
+	var newest: Node = null
+	var started := -1.0
+	for entry in CreatureAudio.pool3d + CreatureAudio.pool2d:
+		var node = entry.get("node")
+		if is_instance_valid(node) and node.stream == stream and node.playing and float(entry.get("started", 0.0)) >= started:
+			newest = node
+			started = float(entry.get("started", 0.0))
+	if newest != null: newest.call("play", seconds)
 
 ## The first of a burst plays at once; the next ones of the same event within STAGGER_WINDOW s are
 ## spread 60-250 ms apart (a pack appearing reads as a ripple, not one loud stacked hit).
@@ -138,23 +160,15 @@ static func _staggered(app, event: String, at: Vector3, db: float, pitch: float,
 	group_count[event] = index+1
 	if index == 0: return _emit(app, event, at, db, pitch, now)
 	if index >= GROUP_MAX: return false
-	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null: return false
 	var delay := minf(STAGGER_MAX, index*rng.randf_range(0.06, 0.09)+rng.randf_range(0.0, 0.03))
-	var target = app
-	tree.create_timer(delay).timeout.connect(func() -> void:
-		if target is Object and not is_instance_valid(target): return
-		_emit(target, event, at, db-1.5*index, pitch, Time.get_ticks_msec()*0.001))
-	return true
+	var level := db-1.5*index
+	# The app is held weakly (CreatureAudio.after): a scene left mid-burst just drops the rest.
+	return CreatureAudio.after(delay, app, func(target) -> void:
+		_emit(target, event, at, level, pitch, Time.get_ticks_msec()*0.001))
 
-## play() after `delay` s (skipped when `app` is gone by then).
+## play() after `delay` s (skipped when `app` is gone by then; the timer holds it weakly).
 static func later(app, event: String, delay: float, at := Vector3.INF, db := 0.0) -> void:
-	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null: return
-	var target = app
-	tree.create_timer(maxf(delay, 0.0)).timeout.connect(func() -> void:
-		if target is Object and not is_instance_valid(target): return
-		play(target, event, at, db))
+	CreatureAudio.after(delay, app, func(target) -> void: play(target, event, at, db))
 
 ## Every take of an event, loaded (tests and warm-up; play() loads lazily).
 static func streams(event: String) -> Array:
@@ -225,15 +239,12 @@ static func heartbeat(app, hp: float, max_hp := 100.0) -> void:
 	var ratio := clampf(hp/maxf(max_hp, 1.0), 0.0, 1.0)
 	var on := hp > 0.0 and ratio < HEART_START
 	if not on:
-		if is_instance_valid(heart) and heart.playing and heart.is_inside_tree():
-			if heart_tween and heart_tween.is_valid(): heart_tween.kill()
-			heart_tween = heart.create_tween()
-			heart_tween.tween_property(heart, "volume_db", -50.0, 0.6)
-			heart_tween.tween_callback(heart.stop)
+		_heart_fade()
 		return
 	if not _heart(): return
 	var urgency := 1.0-ratio/HEART_START
 	if heart_tween and heart_tween.is_valid(): heart_tween.kill()
+	heart_fading = false
 	heart.pitch_scale = lerpf(1.0, 1.4, urgency)
 	var target := lerpf(-22.0, -9.0, urgency)
 	if not heart.playing:
@@ -244,6 +255,17 @@ static func heartbeat(app, hp: float, max_hp := 100.0) -> void:
 
 static func heartbeat_playing() -> bool:
 	return is_instance_valid(heart) and heart.playing
+
+## Fades the heartbeat out and stops it. Idempotent: HP updates arrive several times a second, and
+## restarting the 0.6 s fade on each one would keep the stop at its end from ever running.
+static func _heart_fade() -> void:
+	if not is_instance_valid(heart) or not heart.playing or not heart.is_inside_tree(): return
+	if heart_fading and heart_tween and heart_tween.is_valid(): return
+	if heart_tween and heart_tween.is_valid(): heart_tween.kill()
+	heart_fading = true
+	heart_tween = heart.create_tween()
+	heart_tween.tween_property(heart, "volume_db", -50.0, 0.6)
+	heart_tween.tween_callback(heart.stop)
 
 static func _heart() -> bool:
 	if is_instance_valid(heart) and heart.is_inside_tree(): return true
@@ -259,11 +281,12 @@ static func _heart() -> bool:
 
 ## The campfire's crackle while it burns: positioned at `at`, distance falloff like emit(), a little
 ## louder in its last FIRE_LOW s with random sputters (and at night a quiet spit now and then).
-## Fades out when seconds_left reaches 0 or when no call came for 1.5 s (the run was left).
+## Fades out when seconds_left reaches 0 or when no call came for 1.5 s (the run was left); the fade
+## runs once to its end however often the out-calls keep coming (one last sputter as it goes out).
 static func campfire(app, seconds_left: float, at := Vector3.ZERO, night := false) -> void:
 	var now := Time.get_ticks_msec()*0.001
 	if seconds_left <= 0.0:
-		if campfire_playing() and fire.volume_db > -45.0: play(app, "sputter", at, 2.0)
+		if campfire_playing() and not fire_fading and fire.volume_db > -45.0: play(app, "sputter", at, 2.0)
 		_fire_fade()
 		return
 	if not _fire(): return
@@ -275,7 +298,9 @@ static func campfire(app, seconds_left: float, at := Vector3.ZERO, night := fals
 	if not fire.playing:
 		fire.volume_db = -45.0
 		fire.play(rng.randf_range(0.0, maxf(fire.stream.get_length()-0.1, 0.0)))
+	# Fed again (or back in the run): a fade under way turns back into the burning level.
 	if fire_tween and fire_tween.is_valid(): fire_tween.kill()
+	fire_fading = false
 	fire_tween = fire.create_tween()
 	fire_tween.tween_property(fire, "volume_db", target, 0.35)
 	if seconds_left < FIRE_LOW or night:
@@ -301,22 +326,30 @@ static func _fire() -> bool:
 	fire.max_db = 6.0
 	fire.bus = CreatureAudio.bus("SFX")
 	CreatureAudio.holder.add_child(fire)
-	_fire_watch()
+	fire_fading = false
+	fire_watch_id += 1
+	_fire_watch(fire_watch_id)
 	return fire.is_inside_tree()
 
 ## Polls twice a second while the loop exists: no campfire() call for 1.5 s = the run was left.
-static func _fire_watch() -> void:
-	if not is_instance_valid(fire) or not fire.is_inside_tree(): return
+## One poll chain per fire player (`id`); a chain whose player was replaced ends.
+static func _fire_watch(id: int) -> void:
+	if id != fire_watch_id or not is_instance_valid(fire) or not fire.is_inside_tree(): return
 	if fire.playing and Time.get_ticks_msec()*0.001-fire_seen > 1.5: _fire_fade()
-	fire.get_tree().create_timer(0.5).timeout.connect(func() -> void: _fire_watch())
+	fire.get_tree().create_timer(0.5).timeout.connect(func() -> void: _fire_watch(id))
 
+## Fades the loop to silence and stops it. Idempotent: the watchdog (every 0.5 s) and every run
+## update with the fire out call it again; a fade already under way is left to reach its stop,
+## restarting it each time would hold the loop just above silence forever.
 static func _fire_fade() -> void:
+	fire_next_sputter = 0.0
 	if not campfire_playing() or not fire.is_inside_tree(): return
+	if fire_fading and fire_tween and fire_tween.is_valid(): return
 	if fire_tween and fire_tween.is_valid(): fire_tween.kill()
+	fire_fading = true
 	fire_tween = fire.create_tween()
 	fire_tween.tween_property(fire, "volume_db", -50.0, 0.8)
 	fire_tween.tween_callback(fire.stop)
-	fire_next_sputter = 0.0
 
 ## A WAV made to loop: the import may already loop it; otherwise a forward loop over the file.
 static func _looped(path: String) -> AudioStreamWAV:

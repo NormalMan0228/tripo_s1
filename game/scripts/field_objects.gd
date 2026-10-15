@@ -1452,7 +1452,7 @@ func update_seat(delta: float) -> void:
 		if not SfxBank.has(SFX % creak): creak = String(seat.creak)
 		play(creak, entry.root.global_position, -17.0)
 
-func stand_up(quiet := false) -> void:
+func stand_up(_quiet := false) -> void:
 	if seat.is_empty(): return
 	var entry: Dictionary = seat.entry
 	var pose: SkeletonModifier3D = seat.pose
@@ -1473,7 +1473,8 @@ func stand_up(quiet := false) -> void:
 	player.visual_only = restore
 	player.velocity = Vector3.ZERO
 	player.global_position = Vector3(entry.stand)+Vector3(0,0.05,0)
-	if not quiet: play("paper", entry.root.global_position, -24.0)
+	# Getting up is heard through stand_sound() (field/stand) before this, from interact('stand')
+	# and from update_seat when the walker moves off; travel and leaving stand up quietly.
 
 # ------------------------------------------------------------------ telescope view
 func use_telescope(entry: Dictionary) -> void:

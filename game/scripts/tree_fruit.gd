@@ -302,7 +302,8 @@ func shake(app_ref: Node, node: Node3D) -> void:
 	Fx.wobble(node, strength, Vector3.UP.cross(away.normalized()), 5, 1.15)
 	var front: Vector3 = Vector3(tree.crown)+Vector3(0, 0.6, 1.6)*(0.7 if tree.kind == "palm" else 1.0)
 	Fx.burst(self, front, "leaf", 20 if ripe else 12, Color(0,0,0,0), 1.1)
-	Fx.sound(app, "leaves", node.global_position, 1.0 if ripe else 1.15)
+	# Conifers and palms rustle in their own families (fx/leaves_needle, fx/leaves_palm).
+	Fx.sound(app, {"pine":"leaves_needle","palm":"leaves_palm"}.get(tree.kind, "leaves"), node.global_position, 1.0 if ripe else 1.15)
 	if not ripe: return
 	tree.busy = true
 	var data: Dictionary = await call_server("shake", {"node":tree.id})

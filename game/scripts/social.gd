@@ -26,10 +26,15 @@ var changing := false
 var objects_pending := false
 var object_signature := ""
 var seen_message := 0
+## False until the first poll of a session has answered: the lines it brings are a backlog, shown
+## but not sounded (an empty first answer included, so the next real line still chimes).
+var first_poll_done := false
 ## Invites counted at the last poll (-1: none read yet), so only a new one chimes.
 var seen_invites := -1
 ## False until the first sync after a world change: the walkers already there arrive silently.
 var peer_baseline := false
+## When a join / leave chime last played (ms): a flickering connection chimes at most every 2 s.
+var peer_sound_ms := -100000
 var status_label: Label
 var menu_messages: Label
 var last_failure := 0.0
@@ -104,6 +109,7 @@ func reset_world() -> void:
 func reset_session() -> void:
 	data.clear()
 	seen_message = 0
+	first_poll_done = false
 	seen_invites = -1
 	reset_world()
 
@@ -113,6 +119,18 @@ func _process(delta: float) -> void:
 		if not is_instance_valid(entry.node): continue
 		entry.motion.update(delta)
 		entry.motion.apply_to(entry.node)
+		# Other players' footsteps: positional, on the other walkers' own voices and take bag
+		# (world_audio.stride; about -8 dB under the hero's, fading with distance).
+		var audio = app.get("world_audio")
+		var place := str(app.get("screen"))
+		if place in ["village","survival"] and is_instance_valid(audio) and audio.has_method("stride") and (entry.node as Node3D).is_inside_tree():
+			var at: Vector3=(entry.node as Node3D).global_position
+			# The ground under them, looked up four times a second (the road test walks every segment).
+			if Time.get_ticks_msec()-int(entry.get("ground_at",-1000))>250:
+				entry["ground_at"]=Time.get_ticks_msec()
+				if place=="village": entry["ground"]="stone" if preload("res://scripts/roads.gd").on_road(Vector2(at.x,at.z)) else "grass"
+				else: entry["ground"]=app.region_surface() if app.has_method("region_surface") else "grass"
+			audio.stride("peer%d" % entry.node.get_instance_id(),at,delta,str(entry.get("ground","grass")))
 	if not enabled or app.api.token.is_empty(): return
 	var interval := 0.0
 	match app.screen:
@@ -188,16 +206,20 @@ func poll() -> void:
 	# The host's residents' home versions (npc_gifts.gd), so a cached house stays current.
 	preload("res://scripts/npc_gifts.gd").set_versions(data.get("npc_homes"), data.get("host_id", ""))
 	update_status()
-	# The first read after signing in is a backlog: shown, not sounded.
-	var backlog := seen_message == 0
+	# The first read after signing in is a backlog: shown, not sounded. One chat sound per poll; a
+	# line that is not sounded (backlog, history, this player's own) keeps its toast silent too.
+	var backlog := not first_poll_done
+	first_poll_done = true
 	var heard := false
 	for entry in data.get("messages", []):
 		if int(entry.id) > seen_message:
 			seen_message = int(entry.id)
 			if not backlog and not heard: heard = chat_sound(entry)
+			if not heard: UiSound.hush_toast()
 			app.message(entry.username+": "+entry.text)
+	# A new invite (village or party): a soft notify; the first read of a login only counts them.
 	var invites: int = data.get("invites", []).size()
-	if seen_invites >= 0 and invites > seen_invites: UiSound.sfx("friend", -4.0)
+	if seen_invites >= 0 and invites > seen_invites: UiSound.sfx("notify", -7.0)
 	seen_invites = invites
 	if app.screen == "village":
 		if not old_host.is_empty() and old_host != str(data.host_id):
@@ -222,20 +244,26 @@ func poll() -> void:
 
 ## The sound of one new chat line, played before its toast (it stands in for the toast chime): none
 ## for a history line (a replayed backlog) or this player's own line (sending already sounded).
+## Chat is frequent: it sits at the toast chime's level (-12 dB, the files are as loud), a touch over.
 func chat_sound(entry: Dictionary) -> bool:
 	if bool(entry.get("history", false)): return false
 	if str(entry.get("username", "")) == str(app.me.get("username", "")): return false
 	var whisper := bool(entry.get("whisper", false)) or str(entry.get("kind", "")) == "whisper"
-	UiSound.sfx("whisper" if whisper else "chat_in", -4.0)
+	UiSound.sfx("whisper" if whisper else "chat_in", -11.0)
 	return true
 
-## A soft chime when another player arrives in this village or leaves it.
+## A soft chime when another player arrives in this village or leaves it (one per poll, at most every
+## 2 s; the walkers already there when this player arrives come in silently).
 func peer_sounds(before: Array) -> void:
 	var settled := peer_baseline
 	peer_baseline = true
-	if not settled: return
-	if peers.keys().any(func(id): return not before.has(id)): UiSound.sfx("join", -6.0)
-	elif before.any(func(id): return not peers.has(id)): UiSound.sfx("leave", -6.0)
+	if not settled or Time.get_ticks_msec() - peer_sound_ms < 2000: return
+	var kind := ""
+	if peers.keys().any(func(id): return not before.has(id)): kind = "join"
+	elif before.any(func(id): return not peers.has(id)): kind = "leave"
+	if kind.is_empty(): return
+	peer_sound_ms = Time.get_ticks_msec()
+	UiSound.sfx(kind, -6.0)
 
 func accept_crops() -> void:
 	if not data.get("village") is Dictionary: return
@@ -311,7 +339,8 @@ func announce_visit_end() -> void:
 	var key := str(info.get("at", ""))
 	if str(Engine.get_meta("visit_notice_seen", "")) == key: return
 	Engine.set_meta("visit_notice_seen", key)
-	app.message(visit_end_text(info))
+	# A social toast: its own glyph and chime (ui/toast_social) instead of the generic info one.
+	app.message(visit_end_text(info), "social")
 
 func visit_end_text(info: Dictionary) -> String:
 	var host := str(info.get("host_name", ""))
@@ -332,7 +361,7 @@ func _notification(what: int) -> void:
 func perform(path: String, payload: Dictionary = {}) -> Dictionary:
 	var result: Dictionary = await app.api.post(path, app.api.mutation(payload))
 	if not result.ok:
-		UiSound.sfx("deny", -4.0)
+		UiSound.sfx("deny", -7.0)
 		var messages := {"host_offline":tr("초대한 친구가 지금 마을에 없어요."), "party_full":tr("파티는 최대 3명입니다."), "village_full":tr("마을은 주인을 포함해 최대 3명입니다."), "already_in_party":tr("이미 파티에 참여 중입니다."), "party_leader_required":tr("파티장만 할 수 있습니다."), "party_members_not_in_village":tr("모두 마을에 접속한 뒤 출발해 주세요."), "member_has_solo_expedition":tr("개인 생존 탐험을 마친 뒤 파티로 출발해 주세요."), "party_needs_two_players":tr("동료를 초대해 2명 이상 모여 주세요."), "party_expedition_active":tr("진행 중인 협동 탐험으로 돌아가 주세요."), "leave_expedition_first":tr("탐험에서 귀환한 뒤 파티를 나갈 수 있습니다."), "invite_target_unavailable":tr("가입한 사용자 이름을 확인해 주세요."), "invitation_expired":tr("만료되었거나 이미 처리된 초대입니다."), "message_rate_limited":tr("메시지는 1초 간격으로 보낼 수 있습니다.")}
 		app.message(messages.get(result.error, app.error_message(result.error)))
 	return result
@@ -408,7 +437,8 @@ func open_menu() -> void:
 	for reward in data.get("pending_rewards", []):
 		app.button(content, tr("완료한 협동 탐험 보상 받기"), func():
 			if (await perform("/v1/coop/runs/"+reward.id+"/claim")).ok:
-				app.message(tr("협동 탐험 보상을 받았습니다."))
+				# A success toast: its own glyph and chime (ui/toast_success), not the generic info one.
+				app.message(tr("협동 탐험 보상을 받았습니다."), "success")
 				open_menu())
 	app.text(content, tr("파티 대화") if not party.is_empty() else tr("마을 대화"), 17)
 	menu_messages = app.text(content, "", 13)
@@ -427,10 +457,11 @@ func open_menu() -> void:
 	app.button(content, tr("초대 확인하기"), open_menu)
 	update_status()
 
-## An invite went out: a send sound with its toast.
+## An invite went out: a send sound with its toast (a social one; the send sound stands in for its
+## chime).
 func invited(text: String) -> void:
 	UiSound.sfx("chat_out", -4.0)
-	app.message(text)
+	app.message(text, "social")
 
 func answer(invitation: Dictionary, decision: String) -> void:
 	if changing: return

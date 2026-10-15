@@ -84,6 +84,7 @@ func refresh() -> void:
 ## One server action; returns the new state (with "reward") or {} after an error.
 func request(kind: String, extra: Dictionary={}) -> Dictionary:
 	if app.social.visiting():
+		deny()
 		app.message(tr("방문한 마을의 텃밭과 물건은 주인만 수정할 수 있습니다."))
 		return {}
 	if pending or state.is_empty() or app.screen!="village": return {}
@@ -93,19 +94,19 @@ func request(kind: String, extra: Dictionary={}) -> Dictionary:
 	pending=false
 	if epoch!=app.world_epoch: return {}
 	if not response.ok:
-		app.message(errors.get(response.error,app.error_message(response.error)))
 		deny()
+		app.message(errors.get(response.error,app.error_message(response.error)))
 		await refresh()
 		return {}
 	accept(response.data)
 	last_reward=response.data.get("reward",{})
 	return response.data
 
-## Refusals and server errors: the soft deny of sound.gd (UI bus), else the old escape blip.
+## Refusals and server errors: the soft UI deny (RpgUi.sfx, UI bus), the one sound of a refusal.
+## Call it before the message: as a message kind it stands in for that toast's chime (main.refuse()
+## does the same), so a refusal is heard once, never chime plus blip.
 func deny() -> void:
-	var sound = app.get("sound") if is_instance_valid(app) else null
-	if is_instance_valid(sound) and sound.has_method("effect"): sound.effect("error")
-	else: sfx.play("escape",1.3,-4)
+	RpgUi.sfx("deny",-6.0)
 
 ## Older call sites (shop, tree shaking, tests): message, sound and item feedback.
 func action(kind: String, extra: Dictionary={}) -> bool:
@@ -328,7 +329,8 @@ func plant(index: int, crop: String) -> void:
 	app.close_village_modal()
 	app.player.face_point(bed_point(index))
 	app.player.react("craft")
-	sfx.play("seed")
+	# The seed takes are soft (the old synth's level): +8 dB sits them with the hoe and the watering.
+	sfx.play("seed",1.0,8.0)
 	Art.burst(app.world,bed_point(index),"seed",12)
 	var data := await request("plant",{"plot":index,"item":crop})
 	if data.is_empty(): return

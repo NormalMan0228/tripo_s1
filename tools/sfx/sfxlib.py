@@ -23,8 +23,11 @@ Conventions (tools/sfx/README.md has the full list):
   game/tests/audio_bank_check.gd and the older generators (make_village_sfx.short_rms_peak);
 - finish(): DC removal, peak guard at -1 dBFS (gain-envelope limiter, no clipping), silence
   trimmed below -60 dBFS, raised-cosine fades (3 ms in, 20 ms out);
-- make_family() never overwrites a file tracked in git (team recordings, earlier generators)
-  unless allow_overwrite=True.
+- make_family() never overwrites a protected file (protected(): git-tracked, or with the
+  environment variable SFX_BASE=<ref> a file that already existed at <ref>: team recordings,
+  earlier generators) unless allow_overwrite=True;
+- make_family() balances perceived loudness after the flat match (aw_balance(): no take more
+  than AW_BALANCE_DB above the family's median A-weighted st-rms, aw_st_db()).
 
 Signals are float64 numpy arrays in [-1, 1]. Building blocks return roughly peak-normalised
 signals (peak ~1) so layers mix by gain; final level comes from finish()/match_to().
@@ -39,6 +42,7 @@ import glob
 import hashlib
 import math
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -69,7 +73,7 @@ __all__ = [
     "secs", "tvec", "db", "undb", "semitones",
     "write_wav", "read_wav", "resample", "repitch",
     "finish", "limit", "fades", "trim_silence", "remove_dc", "loopify",
-    "st_rms_peak_db", "peak_db", "match_to", "ref_db_of",
+    "st_rms_peak_db", "aw_st_db", "a_weight", "peak_db", "match_to", "ref_db_of", "aw_balance",
     "white", "pink", "brown", "noise",
     "lp", "hp", "bp", "peaking", "shelf", "tilt", "svf", "resonate",
     "env_points", "adsr", "exp_decay", "attack_decay",
@@ -229,6 +233,31 @@ def st_rms_peak_db(x, sr: int = DEFAULT_SR, win: float = 0.12, weighted: bool = 
         return db(math.sqrt(float(np.mean(a * a))))
     c = np.concatenate([[0.0], np.cumsum(a * a)])
     return db(math.sqrt(max(float(np.max(c[w:] - c[:-w])) / w, 0.0)))
+
+
+def _a_gain(f):
+    """IEC 61672 A-weighting magnitude (linear, 0 dB at 1 kHz) at frequencies f (Hz)."""
+    f2 = np.asarray(f, float) ** 2
+    ra = (12194.0 ** 2 * f2 * f2) / ((f2 + 20.6 ** 2) * np.sqrt((f2 + 107.7 ** 2) * (f2 + 737.9 ** 2)) * (f2 + 12194.0 ** 2))
+    return ra * 10.0 ** (2.0 / 20.0)
+
+
+def a_weight(x, sr: int = DEFAULT_SR) -> np.ndarray:
+    """A-weighted copy (zero phase, applied on the spectrum, so it is exact at any sample rate)."""
+    a = _arr(x)
+    if a.size == 0:
+        return a.copy()
+    from scipy.fft import irfft, next_fast_len, rfft
+    n = next_fast_len(a.size + secs(0.25, sr))        # zero pad: no wrap of the low-frequency ring
+    spec = rfft(a, n) * _a_gain(np.fft.rfftfreq(n, 1.0 / sr))
+    return irfft(spec, n)[: a.size]
+
+
+def aw_st_db(x, sr: int = DEFAULT_SR, win: float = 0.12) -> float:
+    """Perceptual loudness: the loudest `win` s RMS (dBFS) of the A-weighted signal. Takes that
+    pass the flat st-rms match but are much brighter than their family stand out by this
+    measure (sfx_qa --aw-over, make_family's A-weighted balance)."""
+    return st_rms_peak_db(a_weight(x, sr), sr, win, weighted=False)
 
 
 def peak_db(x) -> float:
@@ -940,13 +969,44 @@ def git_tracked(path) -> bool:
     return tracked
 
 
+BASE_REF = os.environ.get("SFX_BASE", "").strip()   # e.g. "merge-version-gate"; see protected()
+_BASE_FILES: dict = {}
+
+
+def base_files(ref: str, root=None) -> set:
+    """Resolved paths of every file that existed at `ref` (at the merge base of ref and HEAD, like
+    `git diff ref...HEAD`) in the repo at root (default: this repo). Raises when git cannot
+    resolve the ref, so a typo never unprotects anything."""
+    root = Path(root or REPO).resolve()
+    key = (str(root), ref)
+    if key not in _BASE_FILES:
+        mb = subprocess.run(["git", "merge-base", ref, "HEAD"], cwd=str(root), capture_output=True, text=True)
+        commit = mb.stdout.strip() if mb.returncode == 0 and mb.stdout.strip() else ref
+        r = subprocess.run(["git", "ls-tree", "-r", "-z", "--name-only", commit], cwd=str(root), capture_output=True)
+        if r.returncode != 0:
+            raise RuntimeError("sfxlib: git cannot list %r in %s: %s" % (ref, root, r.stderr.decode("utf-8", "replace").strip()))
+        _BASE_FILES[key] = {(root / rel).resolve() for rel in r.stdout.decode("utf-8", "replace").split("\0") if rel}
+    return _BASE_FILES[key]
+
+
+def protected(path) -> bool:
+    """A file make_family()/write_take() must not overwrite. By default every git-tracked file.
+    With a base ref (environment SFX_BASE=<ref>, or sfxlib.BASE_REF), only files that already
+    existed at <ref>: team recordings and older generator output stay protected, while takes
+    added since <ref> (committed or not) can be re-rendered in place."""
+    if BASE_REF:
+        return Path(path).resolve() in base_files(BASE_REF)
+    return git_tracked(path)
+
+
 def _guard(paths: Sequence[Path], allow_overwrite: bool):
     if allow_overwrite:
         return
-    bad = [str(p) for p in paths if p.exists() and git_tracked(p)]
+    bad = [str(p) for p in paths if p.exists() and protected(p)]
     if bad:
-        raise FileExistsError("refusing to overwrite git-tracked file(s) (use a higher start index, "
-                              "or allow_overwrite=True if this really is your own file):\n  " + "\n  ".join(bad))
+        raise FileExistsError("refusing to overwrite protected file(s) (git-tracked%s; use a higher start index, "
+                              "or allow_overwrite=True if this really is your own file):\n  "
+                              % ((", existed at " + BASE_REF) if BASE_REF else "") + "\n  ".join(bad))
 
 
 def _describe(path: Path, x: np.ndarray, sr: int, ref_db: float | None) -> dict:
@@ -970,14 +1030,89 @@ def write_take(path, x, sr: int = DEFAULT_SR, ref_db: float | None = None, allow
     return _describe(path, y, sr, ref_db)
 
 
+AW_BALANCE_DB = 1.5    # make_family: no take more than this above its family's median A-weighted level
+AW_FLAT_ROOM_DB = 1.75 # ... lowering a take for that keeps it within this of the family's flat st-rms
+                       # median (sfx_qa FAILs a take 2 dB off it)
+
+
+def sibling_levels(out_dir, event: str, exclude=()) -> list:
+    """(st-rms, A-weighted st-rms) of the files already in out_dir that sfx_qa groups with
+    <event>'s takes (the bare <event>.wav and every <event>_<n>.wav), minus `exclude` (the takes
+    being rendered)."""
+    out_dir = Path(out_dir)
+    skip = {Path(p).resolve() for p in exclude}
+    pat = re.compile(r"^%s(_\d+)?$" % re.escape(event))
+    vals = []
+    for p in sorted(out_dir.glob("%s*.wav" % event)) if out_dir.is_dir() else []:
+        if pat.match(p.stem) and p.resolve() not in skip:
+            try:
+                x, sr = read_wav(p)
+                vals.append((st_rms_peak_db(x, sr), aw_st_db(x, sr)))
+            except Exception:  # noqa: BLE001
+                pass
+    return vals
+
+
+def aw_balance(raws, ys, sr: int, ref_db: float, finish_kw: dict | None = None, siblings=(),
+               over_db: float = AW_BALANCE_DB, room_db: float = AW_FLAT_ROOM_DB):
+    """A-weighted level matching for one family. The flat st-rms match lets a bright take in a dark
+    family sound several dB louder than its siblings. Every take whose A-weighted st-rms (aw_st_db)
+    sits more than over_db above the family median (these takes plus `siblings`, (st, aw) pairs of
+    existing files of the family) is re-finished from its raw render:
+      1. quieter by the excess, as far as the flat level may go (room_db under the flat median);
+      2. if that is not enough, darkened by the gentlest 1st-order low-pass (searched) that brings
+         it to median + over_db, kept only when it lowers the perceived level (a take with no low
+         content only gets duller, not quieter, so it stays as step 1 left it).
+    Returns (new ys, per-take notes)."""
+    st = [st_rms_peak_db(y, sr) for y in ys]
+    aw = [aw_st_db(y, sr) for y in ys]
+    med = float(np.median(aw + [float(a) for _, a in siblings])) if aw else 0.0
+    fmed = float(np.median(st + [float(v) for v, _ in siblings])) if st else 0.0
+    out, notes = list(ys), [{} for _ in ys]
+    kw = dict(finish_kw or {})
+    for k, (raw, y) in enumerate(zip(raws, ys)):
+        over = aw[k] - med - over_db
+        if over <= 0.05 or raw.size < 16:
+            continue
+        g = min(over, max(0.0, room_db - (fmed - st[k])))
+        best = finish(raw, sr, ref_db=ref_db - g, **kw) if g > 0.0 else y
+        best_aw = aw_st_db(best, sr)
+        lo_cut = None
+        if best_aw - med > over_db + 0.05:
+            # log-domain bisection on the cutoff: a lower cutoff -> darker -> lower aw
+            lo, hi = math.log(150.0), math.log(0.45 * sr)
+            cand, cut = None, None
+            for _ in range(12):
+                mid = 0.5 * (lo + hi)
+                y2 = finish(lp(raw, sr, math.exp(mid), order=1), sr, ref_db=ref_db - g, **kw)
+                if aw_st_db(y2, sr) - med <= over_db:
+                    cand, cut, lo = y2, math.exp(mid), mid         # dark enough: try a brighter cut
+                else:
+                    hi = mid
+            if cand is None:
+                cut = 150.0
+                cand = finish(lp(raw, sr, cut, order=1), sr, ref_db=ref_db - g, **kw)
+            cand_aw = aw_st_db(cand, sr)
+            if cand_aw < best_aw - 0.3:
+                best, best_aw, lo_cut = cand, cand_aw, cut
+        out[k] = best
+        notes[k] = {"aw_over_db": round(aw[k] - med, 2), "aw_gain_db": round(-g, 2),
+                    "aw_lowpass_hz": round(lo_cut) if lo_cut else None, "aw_db": round(best_aw, 2),
+                    "aw_family_median": round(med, 2)}
+    return out, notes
+
+
 def make_family(out_dir, event: str, n: int, fn: Callable, sr: int = DEFAULT_SR, ref_db: float | None = None,
                 seed_base: str = "", start: int = 1, allow_overwrite: bool = False,
-                finish_kw: dict | None = None, dry_run: bool = False, verbose: bool = True) -> list:
+                finish_kw: dict | None = None, dry_run: bool = False, verbose: bool = True,
+                aw_balance_db: float | None = AW_BALANCE_DB) -> list:
     """Render takes <event>_<start>.wav .. <event>_<start+n-1>.wav into out_dir.
 
     fn(rng, i) -> float array at `sr` (or (array, notes_dict)); rng is a numpy Generator seeded
     from take_seed(event, i, seed_base), so a take re-renders identically. Each take goes through
-    finish() (DC, limiter, trim, fades) and is matched to ref_db (st-rms) when given.
+    finish() (DC, limiter, trim, fades) and is matched to ref_db (st-rms) when given. Then the
+    A-weighted balance (aw_balance(), skipped for loops or with aw_balance_db=None) re-finishes
+    the takes that would sound more than aw_balance_db dB louder than the family's median.
     Refuses (before writing anything) when a target is tracked in git, e.g. a team recording
     harvest_tree_1.wav: start=2 then. Warns when numbering would leave a gap (sfx_bank.gd
     tolerates one missing index only). Returns one metadata dict per take."""
@@ -989,6 +1124,7 @@ def make_family(out_dir, event: str, n: int, fn: Callable, sr: int = DEFAULT_SR,
         print("sfxlib: warning: %s_%d.wav does not exist; takes from %d leave a gap (sfx_bank.gd skips at most one)"
               % (event, start - 1, start), file=sys.stderr)
     meta = []
+    takes = []
     for i, path in zip(idx, targets):
         seed = take_seed(event, i, seed_base)
         res = fn(np.random.default_rng(seed), i)
@@ -996,7 +1132,14 @@ def make_family(out_dir, event: str, n: int, fn: Callable, sr: int = DEFAULT_SR,
         if isinstance(res, tuple):
             res, notes = res[0], dict(res[1]) if len(res) > 1 else {}
         raw = _arr(res)
-        y = finish(raw, sr, ref_db=ref_db, **(finish_kw or {}))
+        takes.append([i, path, seed, notes, raw, finish(raw, sr, ref_db=ref_db, **(finish_kw or {}))])
+    if aw_balance_db is not None and ref_db is not None and not (finish_kw or {}).get("loop"):
+        ys, bal = aw_balance([t[4] for t in takes], [t[5] for t in takes], sr, ref_db, finish_kw,
+                             sibling_levels(out_dir, event, targets), aw_balance_db)
+        for t, y, b in zip(takes, ys, bal):
+            t[5] = y
+            t[3] = dict(t[3], **b)
+    for i, path, seed, notes, raw, y in takes:
         if not dry_run:
             write_wav(path, y, sr)
         d = _describe(path, y, sr, ref_db)
@@ -1008,7 +1151,7 @@ def make_family(out_dir, event: str, n: int, fn: Callable, sr: int = DEFAULT_SR,
             if d["limit_db"] > 6.0:
                 print("sfxlib: warning: %s: limiter takes %.1f dB off the peak (soften the transient or lower ref_db)"
                       % (path.name, d["limit_db"]), file=sys.stderr)
-        if ref_db is not None and abs(d["delta_db"]) > LEVEL_TOL_DB:
+        if ref_db is not None and abs(d["delta_db"] - notes.get("aw_gain_db", 0.0)) > LEVEL_TOL_DB:
             d["warning"] = "level %.1f dB off ref (crest factor too high for the ceiling?)" % d["delta_db"]
             print("sfxlib: warning: %s: %s" % (path.name, d["warning"]), file=sys.stderr)
         meta.append(d)

@@ -424,42 +424,93 @@ static func fold_tip(id: String, shut: bool) -> String:
 ## toast_error toast_social quest_accept quest_ready quest_complete star unlock rotate snap place
 ## lift cancel valid invalid paint brush fill undo redo layer swatch key_capture save
 ## craft_submit craft_step craft_done craft_fail page choice.
+## A fanfare kind (quest_accept, quest_ready, quest_complete, unlock, save, craft_done) likewise covers a
+## generic confirm raised in the same moment (the route guide's beacon set by a request taken).
+## Kinds that come in bursts keep a longer gap than the 60 ms every kind has (SFX_GAP_MS).
 static func sfx(kind: String, volume_db := -4.0) -> void:
-	const SfxBank = preload("res://scripts/sfx_bank.gd")
-	const FALLBACK := {"deny": "close", "tab": "click", "select": "click", "slider": "hover", "drawer_open": "open",
-		"drawer_close": "close", "count": "hover", "coin_gain": "toast", "chat_in": "toast", "chat_out": "click",
-		"whisper": "chat_in", "friend": "toast", "join": "open", "leave": "close", "notify": "toast",
-		"toast_success": "confirm", "toast_warn": "toast", "toast_error": "deny", "toast_social": "chat_in",
-		"quest_accept": "confirm", "quest_ready": "toast", "quest_complete": "confirm", "star": "toast",
-		"unlock": "confirm", "rotate": "slider", "snap": "slider", "place": "click", "lift": "click",
-		"cancel": "close", "valid": "hover", "invalid": "deny", "paint": "click", "fill": "click", "undo": "click",
-		"redo": "click", "layer": "click", "swatch": "hover", "key_capture": "click", "save": "confirm",
-		"craft_submit": "confirm", "craft_step": "toast", "craft_done": "confirm", "craft_fail": "deny",
-		"page": "click", "choice": "click"}
-	const FOR_TOAST := ["deny", "coin_gain", "chat_in", "chat_out", "whisper", "friend", "join", "leave", "notify",
-		"toast_success", "toast_warn", "toast_error", "toast_social", "quest_accept", "quest_ready", "quest_complete",
-		"unlock", "save", "craft_submit", "craft_done", "craft_fail", "invalid", "cancel", "paint", "place", "lift"]
-	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null or tree.root == null: return
-	# Headless runs (tests, tools) have a dummy audio driver that never finishes a playback, so a
-	# sound played just before quitting stayed referenced at exit ("resources still in use").
-	if DisplayServer.get_name() == "headless": return
-	if kind == "hover":
-		if Time.get_ticks_msec() - _last_hover < 45: return
-		_last_hover = Time.get_ticks_msec()
-	# One press can reach both a button hook and an older sound.effect("click").
-	if Time.get_ticks_msec() - int(_last_played.get(kind, -1000)) < 60: return
-	_last_played[kind] = Time.get_ticks_msec()
-	if kind in FOR_TOAST: _last_played["toast"] = Time.get_ticks_msec()
+	if not _sfx_gate(kind, int(SFX_GAP_MS.get(kind, 60))): return
+	var family := sfx_family(kind)
+	if family.is_empty(): return
+	_sfx_play(SfxBank.pick_path("ui/" + family), volume_db, SfxBank.pitch(0.04))
+
+const SfxBank = preload("res://scripts/sfx_bank.gd")
+## A kind with no takes (not imported yet) plays this related kind instead (up to three hops).
+const SFX_FALLBACK := {"deny": "close", "tab": "click", "select": "click", "slider": "hover", "drawer_open": "open",
+	"drawer_close": "close", "count": "hover", "coin_gain": "toast", "chat_in": "toast", "chat_out": "click",
+	"whisper": "chat_in", "friend": "toast", "join": "open", "leave": "close", "notify": "toast",
+	"toast_success": "confirm", "toast_warn": "toast", "toast_error": "deny", "toast_social": "chat_in",
+	"quest_accept": "confirm", "quest_ready": "toast", "quest_complete": "confirm", "star": "toast",
+	"unlock": "confirm", "rotate": "slider", "snap": "slider", "place": "click", "lift": "click",
+	"cancel": "close", "valid": "hover", "invalid": "deny", "paint": "click", "fill": "click", "undo": "click",
+	"redo": "click", "layer": "click", "swatch": "hover", "key_capture": "click", "save": "confirm",
+	"craft_submit": "confirm", "craft_step": "toast", "craft_done": "confirm", "craft_fail": "deny",
+	"page": "click", "choice": "click"}
+## Message kinds: each stands in for the generic toast chime of a message raised in the same moment.
+const SFX_FOR_TOAST := ["deny", "coin_gain", "chat_in", "chat_out", "whisper", "friend", "join", "leave", "notify",
+	"toast_success", "toast_warn", "toast_error", "toast_social", "quest_accept", "quest_ready", "quest_complete",
+	"unlock", "save", "craft_submit", "craft_done", "craft_fail", "invalid", "cancel", "paint", "place", "lift"]
+## Fanfare kinds: each covers a generic confirm raised in the same moment.
+const SFX_FANFARE := ["quest_accept", "quest_ready", "quest_complete", "unlock", "save", "craft_done"]
+## Least time (ms) between two plays of a kind that can come in bursts: currency count ticks, notify
+## chimes (badges, "!" marks, invites), chat lines arriving poll after poll.
+const SFX_GAP_MS := {"count": 80, "notify": 400, "chat_in": 400, "whisper": 400}
+
+## The take family a kind plays ("" when neither it nor its fallbacks have takes yet).
+static func sfx_family(kind: String) -> String:
 	var family := kind
 	for _hop in 3:
 		if family.is_empty() or SfxBank.has("ui/" + family): break
-		family = str(FALLBACK.get(family, ""))
-	if family.is_empty() or not SfxBank.has("ui/" + family): return
+		family = str(SFX_FALLBACK.get(family, ""))
+	return family if not family.is_empty() and SfxBank.has("ui/" + family) else ""
+
+## One take of a kind (its path) for a ladder of notes (sfx_note); "" when the kind has none.
+static func sfx_take(kind: String) -> String:
+	var family := sfx_family(kind)
+	return SfxBank.pick_path("ui/" + family) if not family.is_empty() else ""
+
+## One note of a ladder: `take` (sfx_take, the same take for every note so the steps stay in tune)
+## raised by `semitones`, without the pitch jitter (star landings climb a scale). Notes keep their own
+## short gap (25 ms), so quick steps all sound.
+static func sfx_note(kind: String, take: String, semitones: float, volume_db := -4.0) -> void:
+	if take.is_empty() or not _sfx_gate(kind + "#note", 25): return
+	_sfx_play(take, volume_db, pow(2.0, semitones / 12.0))
+
+## The next toast chime in this moment stays silent (a replayed chat backlog, a line this player just
+## sent, a reward whose flying stars carry the sound): it is deduped like a repeat.
+static func hush_toast() -> void:
+	_last_played["toast"] = Time.get_ticks_msec()
+
+## Whether a kind may play now (and marks it played): never headless, hover at most every 45 ms, each
+## kind at most every `gap` ms. A message kind marks the toast chime as covered even when its own gap
+## holds it back; a fanfare kind marks the generic confirm.
+static func _sfx_gate(kind: String, gap: int) -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null: return false
+	# Headless runs (tests, tools) have a dummy audio driver that never finishes a playback, so a
+	# sound played just before quitting stayed referenced at exit ("resources still in use").
+	if DisplayServer.get_name() == "headless": return false
+	var now := Time.get_ticks_msec()
+	if kind in SFX_FOR_TOAST: _last_played["toast"] = now
+	if kind in SFX_FANFARE: _last_played["#fanfare"] = now
+	if kind == "confirm" and now - int(_last_played.get("#fanfare", -100000)) < 150: return false
+	if kind == "hover":
+		if now - _last_hover < 45: return false
+		_last_hover = now
+	# One press can reach both a button hook and an older sound.effect("click").
+	if now - int(_last_played.get(kind, -100000)) < gap: return false
+	_last_played[kind] = now
+	return true
+
+## Plays one take on the shared UI players (made once, under the tree's root).
+static func _sfx_play(path: String, volume_db: float, pitch: float) -> void:
+	if path.is_empty(): return
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null: return
 	var host := tree.root.get_node_or_null("RpgUiSounds")
-	if host == null:
+	if host == null and tree.root.has_meta("rpg_ui_sounds"):
 		# A host made earlier this frame is still waiting for its deferred add: use it, not a second.
-		var waiting = tree.root.get_meta("rpg_ui_sounds", null)
+		# (has_meta first: get_meta with a null default reports an error when the key is missing.)
+		var waiting = tree.root.get_meta("rpg_ui_sounds")
 		if is_instance_valid(waiting) and not (waiting as Node).is_queued_for_deletion(): host = waiting
 	var fresh := host == null
 	if fresh:
@@ -472,7 +523,6 @@ static func sfx(kind: String, volume_db := -4.0) -> void:
 	# Take paths come from sfx_bank (cached strings, cleared by CleanExit); the loaded streams live
 	# on the host node, freed with the tree; a static stream cache kept them alive past exit
 	# ("resources still in use").
-	var path := SfxBank.pick_path("ui/" + family)
 	var sounds: Dictionary = host.get_meta("sounds", {})
 	if not sounds.has(path):
 		sounds[path] = load(path) if ResourceLoader.exists(path) else null
@@ -490,7 +540,7 @@ static func sfx(kind: String, volume_db := -4.0) -> void:
 	voice.bus = "UI" if AudioServer.get_bus_index("UI") != -1 else "Master"
 	voice.stream = sounds[path]
 	voice.volume_db = volume_db + SfxBank.db(1.0)
-	voice.pitch_scale = SfxBank.pitch(0.04)
+	voice.pitch_scale = pitch
 	if fresh or not voice.is_inside_tree(): voice.play.call_deferred()
 	else: voice.play()
 
@@ -531,8 +581,9 @@ static func fade(c: CanvasItem, to := 0.0, duration := 0.18) -> Tween:
 	tw.tween_property(c, "modulate:a", to, duration).set_trans(Tween.TRANS_SINE)
 	return tw
 
-## Hover lift + brightness and the soft hover tick; click sound on press.
-static func hover_motion(c: Control, lift := 1.05, pivot := Vector2(0.5, 0.5), sounds := true) -> void:
+## Hover lift + brightness and the soft hover tick; a press sound on press (`press`, at `press_db`:
+## click, or a kind of its own: a dialogue choice, a swatch, a danger button's deny).
+static func hover_motion(c: Control, lift := 1.05, pivot := Vector2(0.5, 0.5), sounds := true, press := "click", press_db := -4.0) -> void:
 	var to := func(target: float, bright: float) -> void:
 		if not is_instance_valid(c) or calm(): return
 		c.pivot_offset = c.size * pivot
@@ -544,11 +595,15 @@ static func hover_motion(c: Control, lift := 1.05, pivot := Vector2(0.5, 0.5), s
 		to.call(lift, 1.08)
 		if sounds: sfx("hover"))
 	c.mouse_exited.connect(func(): to.call(1.0, 1.0))
-	if sounds and c is BaseButton: (c as BaseButton).button_down.connect(func(): sfx("click"))
+	if sounds and c is BaseButton: (c as BaseButton).button_down.connect(func(): sfx(press, press_db))
 
-## Counts a number label up (or down) to value with a small pulse.
+## Counts a number label up (or down) to value with a small pulse. A change of a count already shown
+## ticks softly as the digits roll (at most ~12 a second) and a gain ends on a coin jingle; the first
+## fill of a label, and a count restarted by clearing its count_target (quests.gd reward_fly, whose
+## flying stars carry the sound), stay silent.
 static func count_to(l: Label, value: int, duration := -1.0) -> void:
 	if not is_instance_valid(l): return
+	var heard := l.has_meta("count_target")
 	var target_now: int = l.get_meta("count_target", -2147483648)
 	if target_now == value: return
 	l.set_meta("count_target", value)
@@ -561,7 +616,14 @@ static func count_to(l: Label, value: int, duration := -1.0) -> void:
 		if old and old.is_valid(): old.kill()
 	var seconds := duration if duration > 0.0 else clampf(absf(value - from) * 0.02, 0.3, 0.9)
 	var tw := l.create_tween()
-	tw.tween_method(func(v: float): l.text = str(int(round(v))), float(from), float(value), seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	var gain := value > from
+	var roll := func(v: float) -> void:
+		var shown := str(int(round(v)))
+		if heard and shown != l.text: sfx("count", -16.0 if gain else -19.0)
+		l.text = shown
+	tw.tween_method(roll, float(from), float(value), seconds).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	# A count cut short by a newer one (killed) never finishes: only the last gain jingles.
+	if heard and gain: tw.finished.connect(func(): sfx("coin_gain", -12.0))
 	l.set_meta("count_tween", tw)
 	l.pivot_offset = l.size * 0.5
 	var pulse := l.create_tween()
@@ -799,7 +861,9 @@ static func button(parent: Node, text: String, callback: Callable, variant := "n
 	b.add_theme_font_size_override("font_size", spec[1])
 	if size == "menu": b.add_theme_font_override("font", FONT_STRONG)
 	b.focus_mode = Control.FOCUS_ALL if menu else Control.FOCUS_NONE
-	hover_motion(b, 1.03)
+	# A danger button (delete, leave, discard) answers with the low deny note instead of the click.
+	if variant == "danger": hover_motion(b, 1.03, Vector2(0.5, 0.5), true, "deny", -6.0)
+	else: hover_motion(b, 1.03)
 	b.pressed.connect(func(): if callback.is_valid(): callback.call())
 	parent.add_child(b)
 	return b
@@ -830,9 +894,11 @@ static func _extra_buttons(t: Theme, night: bool) -> void:
 	t.set_color("font_disabled_color", "GhostButton", Color(ink, .45))
 
 ## A count pill (ACCENT) on the top-right corner of a slot or button; hidden at 0. Calling it
-## again on the same parent updates the same pill.
+## again on the same parent updates the same pill; a count that grows there (a new letter, invite or
+## request) gives a soft notify chime, the first fill does not.
 static func badge(parent: Control, count: int) -> Label:
 	var pill: Label = parent.get_node_or_null("Badge")
+	if pill != null and count > int(pill.get_meta("count", 0)) and parent.is_visible_in_tree(): sfx("notify", -12.0)
 	if pill == null:
 		pill = Label.new()
 		pill.name = "Badge"
@@ -857,6 +923,7 @@ static func badge(parent: Control, count: int) -> Label:
 		parent.add_child(pill)
 	pill.text = str(count) if count < 100 else "99+"
 	pill.visible = count > 0
+	pill.set_meta("count", count)
 	return pill
 
 ## A round paint swatch ("#d98477") that lifts on hover; a gold rim marks the chosen one. Named
@@ -880,7 +947,7 @@ static func swatch(parent: Node, hex: String, selected: bool, callback: Callable
 		dot.shadow_offset = Vector2(0,2)
 		b.add_theme_stylebox_override(state, dot)
 	name_tip(b, color_name(hex))
-	hover_motion(b, 1.15)
+	hover_motion(b, 1.15, Vector2(0.5, 0.5), true, "swatch")
 	b.pressed.connect(func(): if callback.is_valid(): callback.call())
 	parent.add_child(b)
 	return b
@@ -1218,8 +1285,17 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 		start.call_deferred()
 		if bool(opts.get("sound", true)):
 			toast_chimes += 1
-			sfx("toast", -12.0)
+			_toast_chime(kind)
 	return pill
+
+## A new toast's chime by its kind: info the plain toast chime, success / warn / error / social their
+## own. A message kind played just before (SFX_FOR_TOAST: deny, chat_in, quest_accept ...) or
+## hush_toast() stands in for it, as it does for the plain chime.
+static func _toast_chime(kind: String) -> void:
+	const KINDS := {"success": "toast_success", "warn": "toast_warn", "error": "toast_error", "social": "toast_social"}
+	var sound := str(KINDS.get(kind, "toast"))
+	if sound != "toast" and Time.get_ticks_msec() - int(_last_played.get("toast", -100000)) < 60: return
+	sfx(sound, -12.0)
 
 ## (Re)starts a toast's stay, then fades it out and frees it.
 static func _toast_timer(pill: Control) -> void:
@@ -1892,11 +1968,12 @@ static func drawer(host: Control, title: String, opts := {}) -> Dictionary:
 	divider(column, PAPER_LINE if kind != "night" else Color(GOLD, .55))
 	_push_window(root, w)
 	slide_in(card, Vector2(-40.0 if left else 40.0, 0.0))
-	sfx("open", -10.0)
+	sfx("drawer_open", -10.0)
 	return w
 
-## Closes a window or drawer: leaves the stack, plays the close sound and frees it (a short fade
-## first when animate; at once otherwise, so callers that test is_instance_valid see it gone).
+## Closes a window or drawer: leaves the stack, plays the close sound (a drawer its own slide) and
+## frees it (a short fade first when animate; at once otherwise, so callers that test is_instance_valid
+## see it gone).
 static func close_window(w: Dictionary, animate := true) -> void:
 	var root: Control = w.get("root") if w.has("root") and is_instance_valid(w.get("root")) else null
 	if root == null: return
@@ -1904,7 +1981,7 @@ static func close_window(w: Dictionary, animate := true) -> void:
 	root.set_meta("rpg_closing", true)
 	_forget_window(root.get_instance_id())
 	_hand_over_shade(root, w)
-	sfx("close", -10.0)
+	sfx("drawer_close" if str(w.get("kind", "")) == "drawer" else "close", -10.0)
 	if animate and not calm() and root.is_inside_tree():
 		root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		for child in root.get_children(): if child is Control: (child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -2269,9 +2346,10 @@ static func dialogue_choices(d: Dictionary, entries: Array) -> Array:
 				var pick: int = event.keycode - KEY_1
 				if pick < made.size():
 					b.accept_event()
+					sfx("choice")
 					(made[pick] as Button).pressed.emit())
 		b.focus_entered.connect(func(): sfx("hover"))
-		hover_motion(b, 1.03)
+		hover_motion(b, 1.03, Vector2(0.5, 0.5), true, "choice")
 		list.add_child(b)
 		made.append(b)
 		if not calm():

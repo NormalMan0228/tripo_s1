@@ -24,6 +24,23 @@ const CraftWindow=preload("res://scripts/craft_window.gd")
 const CraftTracker=preload("res://scripts/craft_tracker.gd")
 const CraftWords=preload("res://scripts/craft_words.gd")
 const Fx=preload("res://scripts/fx.gd")
+## Residents' babble, greetings and emote barks (voice_babble.gd).
+const VoiceBabble=preload("res://scripts/voice_babble.gd")
+## Room tone, the room's bed, floor footsteps (world_audio.gd) and the room music (sound.gd).
+const WorldAudio=preload("res://scripts/world_audio.gd")
+const Sound=preload("res://scripts/sound.gd")
+## The room music swells in over this many seconds (the village track was just cut by the scene
+## change), and on the way out it fades over MUSIC_HANDOFF s across the change to the village.
+const MUSIC_IN := 3.0
+const MUSIC_HANDOFF := 1.6
+## Visitors' and residents' footsteps sit this far under the walker's own (dB).
+const PEER_STEP_DB := -8.0
+const RESIDENT_STEP_DB := -11.0
+## Room beds sit this low (WorldAudio.ambience_db; the village uses -10): a hearth's crackle or a
+## clock stays under the music and the furniture sounds.
+const ROOM_AMBIENCE_DB := -13.0
+## A resident's activity cue (♪ at the piano, ✦ at the telescope) barks again only after this long.
+const CUE_BARK_GAP := 15.0
 const NpcGifts=preload("res://scripts/npc_gifts.gd")
 const AvatarLook=preload("res://scripts/avatar_look.gd")
 ## Visitors' and the host's walk in the home, drawn smoothly from the presence replies.
@@ -100,6 +117,10 @@ var session_version := -1
 var dock_panel: Control
 var room_buttons: Array[Button] = []
 var peers: Dictionary = {}
+## Visitors' join/leave sounds (peer_sounds): the first presence answer has been taken stock of, and
+## the last one played (ms).
+var peer_baseline := false
+var peer_sound_ms := -100000
 var presence_time := 0.0
 var presence_pending := false
 var shared_presence := false
@@ -155,6 +176,15 @@ var grid_toggle: CheckButton
 ## Interior rooms: "home" and "workshop" can be decorated; a building id such as
 ## "01_cafe" opens that building's read-only public interior (scripts/interiors.gd).
 var room_spec: Dictionary={}
+## The room's WorldAudio: room tone, the room's bed (hearth, clock, mill, cafe, the sea through the
+## walls) and the floor's footsteps (planks, tile, stone, rug, stairs).
+var world_audio: Node
+## The room's music (sound.gd).
+var room_music: Node
+## Last play (ms) of the UI ticks that can come many times a second (soft_tick).
+var tick_times: Dictionary={}
+## Residents walking right now (walk_to), whose steps room_steps plays.
+var stepping: Array=[]
 var decor: Array=[]
 var public_room := false
 var subtitle_label: Label
@@ -272,8 +302,14 @@ func _ready() -> void:
 	veil.play_door("close",room)
 	tone_player=AudioStreamPlayer.new();tone_player.volume_db=-5;tone_player.bus=GameSettings.BUS_SFX;add_child(tone_player)
 	sfx_player=AudioStreamPlayer.new();sfx_player.volume_db=-8;sfx_player.bus=GameSettings.BUS_SFX;add_child(sfx_player)
-	# Indoor music (집 BGM) for the home and the other rooms.
-	var music := preload("res://scripts/sound.gd").new();add_child(music);music.play_music("home")
+	# Indoor music (집 BGM) for the home and the other rooms: it swells in softly under the card.
+	room_music=Sound.new();add_child(room_music);room_music.play_music("home")
+	ease_in_music()
+	# Room tone, the room's own bed (hearth, clock, mill, cafe), the sea through the walls; floor footsteps.
+	# The building's bed starts under the card; each floor and room refines it (update_room_audio).
+	world_audio=WorldAudio.new();world_audio.name="WorldAudio";add_child(world_audio);world_audio.setup()
+	world_audio.ambience_db=ROOM_AMBIENCE_DB
+	update_room_audio()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--hour="): hour_override=clampf(float(arg.trim_prefix("--hour=")),0.0,23.99)
 	if Engine.has_meta("interior_hour"): hour_override=float(Engine.get_meta("interior_hour"))
@@ -364,7 +400,7 @@ func label(parent: Node,value: String,size_px:=14) -> Label:
 	parent.add_child(l);return l
 
 func button(parent: Node,value: String,callback: Callable) -> Button:
-	var b := Button.new();b.text=value;b.pressed.connect(callback);b.custom_minimum_size.y=38;parent.add_child(b);return b
+	var b := Button.new();b.text=value;b.pressed.connect(callback);b.custom_minimum_size.y=38;parent.add_child(b);RpgUi.hover_motion(b,1.03);return b
 
 func option(parent: Node,items: Array) -> OptionButton:
 	var o := OptionButton.new();o.size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -406,9 +442,13 @@ func hud_button(parent: Node, value: String, callback: Callable, key := "") -> B
 		cap.position=Vector2(-6,-9)
 	return b
 
+## Opens or closes the bag drawer. Once the room stands, a real change slides it with the drawer's
+## own sound (I, Esc, the 가방 slot); the arrival's first state stays silent.
 func set_dock_open(open: bool) -> void:
 	if not is_instance_valid(dock_panel): return
+	var was: bool=dock_panel.visible
 	dock_panel.visible=open and visit_host.is_empty() and not public_room
+	if dock_panel.visible!=was and is_processing(): RpgUi.sfx("drawer_open" if dock_panel.visible else "drawer_close",-10.0)
 	if is_instance_valid(dock_toggle): dock_toggle.modulate=Color(1,1,1,1) if not dock_panel.visible else Color(1,0.92,0.75,1)
 
 ## The place panel shows on arrival and on every room or floor change, then fades.
@@ -480,7 +520,9 @@ func build_ui() -> void:
 	grid_toggle=CheckButton.new();grid_toggle.text=tr("격자");grid_toggle.button_pressed=true;rotate_row.add_child(grid_toggle)
 	var confirm_row := row(tools)
 	place_button=button(confirm_row,tr("여기에 놓기"),commit_place);place_button.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	button(confirm_row,tr("취소"),cancel_placement)
+	# One sound for the press: the button's own press kind is the cancel (not a click and a cancel).
+	var cancel_button := Button.new();cancel_button.text=tr("취소");cancel_button.pressed.connect(cancel_placement);cancel_button.custom_minimum_size.y=38
+	confirm_row.add_child(cancel_button);RpgUi.hover_motion(cancel_button,1.03,Vector2(0.5,0.5),true,"cancel",-8.0)
 	await LoadPace.step("room drawer")
 	# Right: the bag and decorating drawer (the village's 가방, I).
 	var dock := PanelContainer.new();dock_panel=dock;dock.name="Dock"
@@ -494,6 +536,9 @@ func build_ui() -> void:
 	var bar := RpgUi.hotbar(hud,[{"icon":"res://assets/ui/bag.svg","action":"inventory","label":tr("가방"),"call":func(): set_dock_open(not dock_panel.visible)},
 		{"icon":"res://assets/ui/craft.svg","action":"craft","label":tr("제작"),"call":func(): open_craft()}],700)
 	dock_toggle=bar.get_child(0);dock_toggle.name="DockToggle"
+	# One sound for the bag slot's press: the drawer's own slide (set_dock_open), not the slot's
+	# click a moment before it (button_down only carries hover_motion's press sound).
+	for link in dock_toggle.button_down.get_connections(): dock_toggle.button_down.disconnect(link.callable)
 	craft_slot=bar.get_child(1);craft_slot.name="CraftSlot"
 	var box := VBoxContainer.new();dock.add_child(box)
 	wallet=RpgUi.label(box,tr("나의 공방"),18,RpgUi.GOLD)
@@ -520,6 +565,8 @@ func build_ui() -> void:
 	label(own,tr("내가 만든 작은 세계"),19)
 	room_capacity=label(own,tr("배치한 가구를 확인하고 있어요"),12)
 	inventory=ItemList.new();inventory.custom_minimum_size.y=135;inventory.size_flags_vertical=Control.SIZE_EXPAND_FILL;inventory.fixed_icon_size=Vector2i(26,26);own.add_child(inventory);inventory.item_selected.connect(select_item)
+	# A soft tick when the player picks a piece in the bag (selecting from code is silent).
+	inventory.item_selected.connect(func(_index: int): RpgUi.sfx("select",-10.0))
 	var preview_view := SubViewportContainer.new();preview_view.custom_minimum_size.y=190;preview_view.stretch=true;own.add_child(preview_view)
 	var preview_port := SubViewport.new();preview_port.size=Vector2i(330,190);preview_port.own_world_3d=true;preview_port.render_target_update_mode=SubViewport.UPDATE_ALWAYS;preview_port.msaa_3d=Viewport.MSAA_4X;preview_view.add_child(preview_port)
 	preview_stage=Node3D.new();preview_port.add_child(preview_stage)
@@ -598,9 +645,29 @@ func build_ui() -> void:
 	if not BuildMode.developer():
 		for index in [1,2,3]: tabs.set_tab_hidden(index,true)
 
-func message(value: String, toast := true) -> void:
+## A line in the status bar and the room's toast lane. kind is the toast's (RpgUi.toast: info,
+## success, warn, error, social), which picks its icon and chime.
+func message(value: String, toast := true, kind := "info") -> void:
 	# Maintenance or a too-old game: the gate's one screen speaks instead of scattered errors.
 	if VersionGate.is_blocked(): return
+	value=message_text(value)
+	status_label.text=value
+	if is_instance_valid(toast_lane) and is_inside_tree():
+		if not toast or value.is_empty(): RpgUi.clear_toasts(toast_lane)
+		else: RpgUi.toast(toast_lane,value,kind)
+
+## A refusal or a failed request: message() with the soft deny in place of the toast's chime (a kind
+## played right before message() stamps RpgUi's toast dedupe, so that chime stays quiet), as the
+## village's main.refuse(). Only when message() raises a new toast: a line still on screen just
+## refreshes, so a repeated error never stacks denies.
+func refuse(value: String) -> void:
+	var line := message_text(value)
+	if not line.is_empty() and not VersionGate.is_blocked() and is_instance_valid(toast_lane) and is_inside_tree() and not RpgUi.find_toast(toast_lane,line):
+		RpgUi.sfx("deny",-6.0)
+	message(value)
+
+## The words message() shows: server codes in plain words (player builds), the rest as it is.
+func message_text(value: String) -> String:
 	value=value.replace("room_render_budget_exceeded",tr("꾸미기 용량이 꽉 찼어요. 가구 일부를 회수하거나 다른 방에 놓아 주세요."))
 	if not BuildMode.developer():
 		var words := {"insufficient_shards":tr("별씨가 부족해요. 탐험 보상을 모아 보세요."),"stale_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"stale_runtime_version":tr("가구가 바뀌었어요. 다시 골라 주세요."),"not_found":tr("물건을 찾을 수 없어요. 보관함을 새로고침해 주세요."),"unauthorized":tr("다시 로그인해 주세요."),"geometry_disabled":tr("지금은 새 가구 제작을 준비하고 있어요."),"placement_overlap":tr("다른 가구와 겹쳐요."),"placement_out_of_bounds":tr("벽과 출입문에서 떨어진 곳에 놓아 주세요."),"model_download_failed":tr("가구를 읽지 못했어요. 잠시 뒤 다시 골라 주세요.")}
@@ -612,10 +679,7 @@ func message(value: String, toast := true) -> void:
 		for match_value in pattern.search_all(value):
 			var code: String=match_value.get_string()
 			if words.has(code): value=value.replace(code,words[code])
-	status_label.text=value
-	if is_instance_valid(toast_lane) and is_inside_tree():
-		if not toast or value.is_empty(): RpgUi.clear_toasts(toast_lane)
-		else: RpgUi.toast(toast_lane,value)
+	return value
 
 func build_stage() -> void:
 	stage=Node3D.new();viewport.add_child(stage)
@@ -710,7 +774,7 @@ func place_hero_at_door() -> void:
 func build_room() -> void:
 	for child in room_root.get_children():child.queue_free()
 	npcs.clear()
-	close_talk()
+	close_talk(false)
 	building_spec=Interiors.spec(room)
 	public_room=bool(building_spec.public)
 	# Floors are rebuilt: the residents' gifts load again on top.
@@ -762,6 +826,7 @@ func update_place_label() -> void:
 	var index := Interiors.room_at(room_spec,x)
 	if index==current_room: return
 	current_room=index
+	update_room_audio()
 	var parts: PackedStringArray=[]
 	if int(room_spec.floors)>1 and not str(room_spec.label).is_empty(): parts.append(tr(str(room_spec.label)))
 	var room_name := tr(str(room_spec.rooms[index].name))
@@ -780,7 +845,9 @@ func travel(record: Dictionary, instant := false) -> void:
 	if not instant and is_instance_valid(hero):
 		# Walk onto the stair and up (or down into the hatch); the floors swap
 		# under a short fade near the end of the visible part of the climb.
-		sfx_player.stream=Interiors.sfx("steps");sfx_player.play()
+		# Stairs and hatches step on "stairs" through the room's footsteps (_process); a ladder's rungs
+		# (no walking) and a room without WorldAudio keep the climbing thuds.
+		if not is_instance_valid(world_audio) or record.kind=="ladder": Interiors.play(self,"steps")
 		var veil := Transition.of(get_tree())
 		var path: Array[Vector3]=Interiors.climb_path(record,hero.position)
 		await follow_path(path,1.15,0.62,veil,record.kind=="ladder",record)
@@ -869,6 +936,8 @@ func apply_daylight(force := false) -> void:
 	if building_spec.is_empty() or not is_instance_valid(environment): return
 	var hour := hour_override if hour_override>=0.0 else Daylight.clock_hour()
 	daylight_sample=Daylight.sample(hour)
+	# Birds and crickets through the walls follow the clock.
+	update_room_audio()
 	var day: float=daylight_sample.daylight
 	var night: float=daylight_sample.night
 	var sun_color: Color=daylight_sample.sun_color
@@ -919,7 +988,7 @@ func refresh() -> void:
 	var response: Dictionary=await api.request("/v1/studio")
 	refreshing=false
 	if not response.ok:
-		message(tr("서버 연결을 확인해 주세요 · ")+response.error)
+		refuse(tr("서버 연결을 확인해 주세요 · ")+response.error)
 		clear_owned()
 		return
 	data=response.data
@@ -954,7 +1023,7 @@ func refresh() -> void:
 			var selected_id: String=selected.id;var refresh_selection := selection_epoch
 			var latest: Dictionary=await api.request("/v1/objects/"+selected_id+"/assembly")
 			if refresh_selection!=selection_epoch:return
-			if not latest.ok:clear_selection();message(tr("선택한 가구를 다시 불러올 수 없어요."));return
+			if not latest.ok:clear_selection();refuse(tr("선택한 가구를 다시 불러올 수 없어요."));return
 			if latest.data.plan!=inspected.manifest.plan:
 				if binding_dirty:
 					message(tr("다른 곳에서 부품 맞춤이 바뀌었어요. 편집값은 보존했습니다. 가구를 다시 선택하면 최신 설계를 불러옵니다."));return
@@ -1055,7 +1124,7 @@ func select_item(index: int) -> void:
 	if selected.get("id")!=id or selection_request!=selection_epoch:
 		if item:item.queue_free()
 		return
-	if not item:message(tr("에셋을 읽을 수 없습니다"));return
+	if not item:refuse(tr("에셋을 읽을 수 없습니다"));return
 	inspected=item;preview_stage.add_child(item);item.position=Vector3.ZERO
 	var preview_size: Vector3=item.get_meta("size",Vector3.ONE)
 	preview_camera.size=maxf(1.5,preview_size.y*1.5)
@@ -1093,7 +1162,7 @@ func update_paint_entry(item: Node3D) -> void:
 
 func open_painter() -> void:
 	if pending or selected.is_empty() or is_instance_valid(painter) or not visit_host.is_empty():return
-	if not is_instance_valid(inspected):message(tr("가구를 고르면 모습을 살펴볼 수 있어요"));return
+	if not is_instance_valid(inspected):refuse(tr("가구를 고르면 모습을 살펴볼 수 있어요"));return
 	if is_instance_valid(shape_panel):shape_panel.close()
 	var parts: Array=[]
 	for i in range(1,part_choice.item_count):parts.append([str(part_choice.get_item_metadata(i)),part_choice.get_item_text(i)])
@@ -1120,8 +1189,8 @@ func painter_saved(id: String, image, version) -> void:
 func open_interactions() -> void:
 	if pending or selected.is_empty() or is_instance_valid(interaction_panel) or is_instance_valid(painter) or not visit_host.is_empty():return
 	if not is_instance_valid(inspected) or not inspected.get_meta("studio",false) or not inspected.has_method("use_interaction"):
-		message(tr("직접 만든 물건만 상호작용을 넣을 수 있어요."));return
-	if selected.get("state","")=="listed":message(tr("장터에 올린 물건은 바꿀 수 없어요."));return
+		refuse(tr("직접 만든 물건만 상호작용을 넣을 수 있어요."));return
+	if selected.get("state","")=="listed":refuse(tr("장터에 올린 물건은 바꿀 수 없어요."));return
 	var id: String=selected.id
 	interaction_panel=InteractionPanel.new()
 	interaction_panel.setup(api,selected.duplicate(),inspected,{"saved":func(reply: Dictionary):interactions_saved(id,reply)})
@@ -1152,8 +1221,8 @@ func painter_flat(id: String, hex: String, part: String, reset: bool) -> void:
 func open_shape_panel() -> void:
 	if pending or selected.is_empty() or is_instance_valid(painter) or not visit_host.is_empty() or public_room:return
 	if is_instance_valid(shape_panel):shape_panel.close();return
-	if selected.get("state")=="listed":message(tr("장터에 올린 물건은 모양을 바꿀 수 없어요."));return
-	if not is_instance_valid(inspected):message(tr("가구를 고르면 모습을 살펴볼 수 있어요"));return
+	if selected.get("state")=="listed":refuse(tr("장터에 올린 물건은 모양을 바꿀 수 없어요."));return
+	if not is_instance_valid(inspected):refuse(tr("가구를 고르면 모습을 살펴볼 수 있어요"));return
 	cancel_placement()
 	var id: String=selected.id
 	shape_panel=ShapePanel.new()
@@ -1228,7 +1297,7 @@ func save_binding(reset: bool) -> void:
 	pending=true
 	var reply: Dictionary=await api.post("/v1/objects/"+id+"/bindings",api.mutation(body))
 	pending=false
-	if not reply.ok:message(tr("맞춤을 저장하지 못했어요 · ")+reply.error);return
+	if not reply.ok:refuse(tr("맞춤을 저장하지 못했어요 · ")+reply.error);return
 	binding_dirty=false
 	if placed.has(id):placed[id].queue_free();placed.erase(id)
 	await refresh()
@@ -1263,7 +1332,7 @@ func craft_tracker() -> Node:
 func open_craft() -> void:
 	if api.token.is_empty() or leaving or VersionGate.is_blocked() or is_instance_valid(craft_window): return
 	if placement_mode: cancel_placement()
-	if is_instance_valid(talk_box): close_talk()
+	if is_instance_valid(talk_box): close_talk(false)
 	if is_instance_valid(shape_panel): shape_panel.close()
 	craft_window=CraftWindow.new()
 	craft_window.setup(self,api)
@@ -1282,8 +1351,9 @@ func close_craft() -> void:
 	craft_window.queue_free()
 	craft_window=null
 
-func craft_say(words: String) -> void:
-	message(words)
+## The craft window's line as a toast here; kind as message()'s (optional, info by default).
+func craft_say(words: String, kind := "info") -> void:
+	message(words,true,kind)
 
 func craft_bag_changed() -> void:
 	refresh()
@@ -1358,14 +1428,26 @@ func begin_place() -> void:
 					mesh.set_surface_override_material(index,translucent)
 		place_at=ghost.position
 	else:
-		placement_mode=false;message(tr("가구를 불러오지 못했어요. 다시 선택해 주세요."));return
+		placement_mode=false;refuse(tr("가구를 불러오지 못했어요. 다시 선택해 주세요."));return
+	# The ghost is up: a lift, and the green/red flip (_process) only sounds on a real change.
+	if is_instance_valid(placement_feedback): placement_feedback.set_meta("free",placement_problem(place_at).is_empty())
+	RpgUi.sfx("lift",-6.0)
 	message(tr("빈 바닥을 가리켜 보세요 · 클릭해서 놓기 · R·휠 돌리기"))
 
 ## Turns the ghost by any whole number of degrees; it eases there (_process).
 func rotate_placement(degrees: int) -> void:
 	if not placement_mode or pending:return
 	placement_rotation=ObjectTransform.wrap_degrees(placement_rotation+degrees)
+	soft_tick("rotate",-8.0)
 	ObjectTransform.show_angle(turn_readout,placement_rotation)
+
+## A UI tick that can come many times a second (grid snap, turning, the green/red flip): at most
+## one per `gap` s for each kind, so sweeping the mouse or spinning the wheel stays a soft ratchet.
+func soft_tick(kind: String, db: float, gap := 0.08) -> void:
+	var now := Time.get_ticks_msec()
+	if now-int(tick_times.get(kind,-100000))<int(gap*1000.0): return
+	tick_times[kind]=now
+	RpgUi.sfx(kind,db)
 
 func cancel_placement() -> void:
 	placement_mode=false;placement_epoch+=1
@@ -1379,6 +1461,8 @@ func view_input(event: InputEvent) -> void:
 		var direction := camera.project_ray_normal(event.position)
 		if absf(direction.y)>0.001:
 			var point := origin+direction*(-origin.y/direction.y)
+			# A soft tick when the ghost lands on a new 0.5 m cell.
+			if not Vector3(roundf(point.x*2)/2,0.08,roundf(point.z*2)/2).is_equal_approx(place_at): soft_tick("snap",-14.0,0.09)
 			place_at=Vector3(roundf(point.x*2)/2,0.08,roundf(point.z*2)/2)
 			if is_instance_valid(ghost):ghost.position=place_at
 	if placement_mode and event is InputEventMouseButton and event.pressed and ObjectTransform.wheel_turn(event)!=0:
@@ -1433,12 +1517,14 @@ func preview_input(event: InputEvent) -> void:
 func commit_place() -> void:
 	if pending or selected.is_empty():return
 	var blocked := placement_problem(place_at)
-	if not blocked.is_empty():message(blocked);return
+	if not blocked.is_empty():RpgUi.sfx("deny",-6.0);message(blocked);return
 	pending=true
 	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation({"version":selected.version,"room":room,"x":place_at.x,"z":place_at.z,"rotation":placement_rotation}))
 	pending=false
-	if not reply.ok:message(tr("여기에는 놓을 수 없어요 · ")+reply.error);await refresh();return
+	if not reply.ok:RpgUi.sfx("deny",-6.0);message(tr("여기에는 놓을 수 없어요 · ")+reply.error);await refresh();return
 	adopt_ghost()
+	# Set down: a soft thunk under the arrival's own pop and twinkle (Fx.arrive).
+	RpgUi.sfx("place",-8.0)
 	cancel_placement()
 	await refresh()
 	message(tr("좋아요! 가구를 놓았어요."))
@@ -1453,7 +1539,8 @@ func adopt_ghost() -> void:
 	var moved: bool=placed.has(id) and is_instance_valid(placed[id])
 	if moved:placed[id].queue_free()
 	for mesh in item.find_children("*","MeshInstance3D",true,false):
-		var own=mesh.get_meta("placing_materials",null)
+		# get_meta with a null default still reports a missing key: ask first.
+		var own=mesh.get_meta("placing_materials") if mesh.has_meta("placing_materials") else null
 		if own is Array:
 			for index in own.size():mesh.set_surface_override_material(index,own[index])
 			mesh.remove_meta("placing_materials")
@@ -1467,8 +1554,8 @@ func retrieve() -> void:
 	pending=true
 	var reply: Dictionary=await api.post("/v1/objects/"+selected.id+"/placement",api.mutation({"version":selected.version,"action":"retrieve","room":room}))
 	pending=false
-	if not reply.ok:message(reply.error)
-	else:message(tr("보관함으로 옮겼어요."))
+	if not reply.ok:refuse(reply.error)
+	else:RpgUi.sfx("lift",-6.0);message(tr("보관함으로 옮겼어요."))
 	await refresh()
 
 func interact_selected() -> void:
@@ -1479,23 +1566,24 @@ func interact_selected() -> void:
 	if response.ok:
 		inspected.accept_event(response.data)
 		if placed.has(selected.id):placed[selected.id].accept_event(response.data)
-	else:message(response.error)
+	else:refuse(response.error)
 
 func paint(color: String, reset := false) -> void:
 	if pending or selected.is_empty() or not is_instance_valid(inspected):return
-	if reset and not inspected.get_meta("studio",false):message(tr("기본 가구는 팔레트에서 색을 골라 주세요"));return
+	if reset and not inspected.get_meta("studio",false):refuse(tr("기본 가구는 팔레트에서 색을 골라 주세요"));return
 	pending=true
 	if inspected.get_meta("studio",false):
 		var target := "all" if part_choice.selected==0 else str(part_choice.get_item_metadata(part_choice.selected))
 		var response: Dictionary=await api.post("/v1/objects/"+selected.id+"/colors",api.mutation({"version":inspected.runtime_version,"part":target,"color":color,"reset":reset}))
 		if response.ok:
 			inspected.runtime_version=response.data.version;inspected.paint(response.data.colors)
+			RpgUi.sfx("paint",-6.0)
 			if placed.has(selected.id):placed[selected.id].runtime_version=response.data.version;placed[selected.id].paint(response.data.colors)
-		else:message(response.error)
+		else:refuse(response.error)
 	else:
 		var response: Dictionary=await api.post("/v1/objects/"+selected.id,api.mutation({"version":selected.version,"action":"paint","color":color}))
-		if response.ok:selected.version=response.data.version;Loader.paint(inspected,Color(color))
-		else:message(response.error)
+		if response.ok:selected.version=response.data.version;Loader.paint(inspected,Color(color));RpgUi.sfx("paint",-6.0)
+		else:refuse(response.error)
 	pending=false
 
 func change_room(value: String) -> void:
@@ -1562,6 +1650,7 @@ func share_presence() -> void:
 	var self_id := str(response.data.get("self_id",""))
 	var present := {}
 	var arrival := RemoteMotion.now()
+	var before: Array=peers.keys()
 	for record in space.players:
 		var version := int(record.get("avatar_version",-1))
 		if str(record.id)==self_id:
@@ -1590,12 +1679,31 @@ func share_presence() -> void:
 		if not present.has(id):
 			if is_instance_valid(peers[id].node): peers[id].node.queue_free()
 			peers.erase(id)
+	peer_sounds(before)
+
+## A visitor coming into the home or leaving it: the soft join or leave, as in the village
+## (social.gd peer_sounds). The first answer after arriving only takes stock (whoever is already
+## here is no news), then one sound per answer at most and at most one every 2 s. A floor change
+## keeps the visitor in `peers`, so it is no arrival.
+func peer_sounds(before: Array) -> void:
+	var settled := peer_baseline
+	peer_baseline=true
+	if not settled or leaving or Time.get_ticks_msec()-peer_sound_ms<2000: return
+	var kind := ""
+	if peers.keys().any(func(id): return not before.has(id)): kind="join"
+	elif before.any(func(id): return not peers.has(id)): kind="leave"
+	if kind.is_empty(): return
+	peer_sound_ms=Time.get_ticks_msec()
+	RpgUi.sfx(kind,-6.0)
 
 func update_peers(delta: float) -> void:
 	for entry in peers.values():
 		if not is_instance_valid(entry.node): continue
 		entry.motion.update(delta)
 		entry.motion.apply_to(entry.node)
+		# Visitors on this floor walk audibly: quieter, their own voices, falling off with distance.
+		if is_instance_valid(world_audio) and entry.node.visible and entry.node.is_inside_tree():
+			world_audio.stride("peer%d" % entry.node.get_instance_id(),entry.node.global_position,delta,floor_surface(entry.node.global_position),false,PEER_STEP_DB)
 
 ## Outside the home: only "still here" for friends (the answer is not used).
 func keep_present() -> void:
@@ -1634,6 +1742,10 @@ func leave() -> void:
 		walk_out=Vector3(float(room_spec.get("door_x",0.0)),0,float(room_spec.size.y)*0.5+1.6)
 	veil.play_door("open",room)
 	veil.loading(tr("다섯 섬 마을"),"","village")
+	# The room's sound goes with the light: the beds fade with the veil, the music fades across the
+	# scene change while the village's own track comes in (no hard cut).
+	fade_room_audio(Transition.OUT)
+	hand_off_music()
 	await veil.fade_out()
 	if is_instance_valid(hero):
 		hero.external_velocity=Vector2.ZERO;hero.external_motion=Vector2.ZERO
@@ -1669,7 +1781,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var focus := get_viewport().gui_get_focus_owner()
 	if focus is LineEdit or focus is TextEdit:return
 	if event.physical_keycode==KEY_ESCAPE:
-		if placement_mode: cancel_placement()
+		if placement_mode:
+			RpgUi.sfx("cancel",-8.0)
+			cancel_placement()
 		elif not resting.is_empty(): stand_up()
 		elif is_instance_valid(dock_panel) and dock_panel.visible: set_dock_open(false)
 		else: PauseMenu.open(self)
@@ -1727,7 +1841,51 @@ func use_crafted(id: String) -> void:
 
 ## Sits on or lies down on a crafted piece the owner marked as a seat or a bed.
 func rest_on_crafted(item: Node3D, kind: String) -> void:
-	if is_instance_valid(seat): seat.crafted(item,kind)
+	if not is_instance_valid(seat) or not resting.is_empty(): return
+	hook_seat_sounds()
+	seat.crafted(item,kind)
+	if not resting.is_empty(): seat_sound("cushion")
+
+## The room seat driver's own sounds (IxDriver.sound, as the village's main.seat_sound): a soft deny
+## when the walk up gives up (the way blocked, out of reach, too long) and a rocking or swinging
+## piece's creak where its sway turns. The weight landing and getting up stay with seat_sound
+## (on_settled / on_done), the feet with room_steps.
+func hook_seat_sounds() -> void:
+	if not is_instance_valid(seat): return
+	var driver: Node=seat.ensure_driver()
+	if is_instance_valid(driver) and "sound" in driver: driver.sound=seat_event_sound
+
+func seat_event_sound(event: String, info: Dictionary) -> void:
+	if leaving or not is_inside_tree(): return
+	match event:
+		"refused": RpgUi.sfx("deny",-10.0)
+		"rock":
+			# The driver spaces the creaks 0.8-1.3 s apart; a wider sway is a little louder, and the
+			# pitch drifts so no two sound alike. Rope (a hammock, a swing) sighs instead of creaking.
+			if DisplayServer.get_name()=="headless": return
+			var amount := clampf(float(info.get("amount",1.0)),0.0,1.0)
+			var at: Vector3=info.get("at",Vector3.INF)
+			Fx.sound(self,"field/hammock" if str(info.get("material",""))=="rope" else "field/wood_creak",at,randf_range(0.95,1.05),-12.0+4.0*amount)
+
+## The seat's sound for sitting or lying down: played when the walker settles on the seat (the seat
+## driver's on_settled, ix/ix_driver.gd), and a softer one when it gets up again (on_done after a
+## settle). Without the driver (rest_seat.gd's fallback settles at once) it plays now, and only when
+## a seat took the walker: nothing sounds on the E press of a seat that could not be reached.
+func seat_sound(sound: String) -> void:
+	var driver: Node=seat.driver if is_instance_valid(seat) else null
+	if not is_instance_valid(driver) or not driver.busy() or driver.seated():
+		if not resting.is_empty(): Interiors.play(self,sound)
+		return
+	var target: Node=driver.target
+	var state := {"settled":false,"up":false}
+	driver.on_settled=func():
+		if state.settled or not is_instance_valid(driver) or driver.target!=target: return
+		state.settled=true
+		Interiors.play(self,sound)
+	driver.on_done=func():
+		if not state.settled or state.up: return
+		state.up=true
+		Interiors.play(self,sound,-15.0)
 
 ## Everything within reach, best first: the piece the walker faces and is closest
 ## to leads; pieces hanging above others (a clock over a wardrobe, a window over
@@ -1788,12 +1946,15 @@ func use_decor(record: Dictionary) -> void:
 	if result.has("chip"): say(str(result.chip),record)
 	elif not result.get("quiet",false): say(str(result.text),record)
 	var sound: String=result.get("sound","pop")
+	var seated := action=="sit" or action=="lie"
 	if sound=="piano":
 		tone_player.stream=Interiors.piano_stream(interact_count)
 		tone_player.play()
-	else:
-		sfx_player.stream=Interiors.sfx(sound);sfx_player.play()
+	elif not seated:
+		Interiors.play(self,sound)
 	play_effect(action,record)
+	# Sitting and lying: the cushion sounds when the walker settles on it, not on the E press.
+	if seated and sound!="piano": seat_sound(sound)
 
 ## A short speech bubble above the furniture, mirrored in the status bar.
 func say(text: String, record: Dictionary) -> void:
@@ -1958,6 +2119,10 @@ func _process(delta: float) -> void:
 		placement_tools.visible=placement_mode
 		if placement_mode:
 			var problem := placement_problem(place_at)
+			# The spot turning free or blocked: a soft tick, only on a flip (and not in a flurry).
+			if bool(placement_feedback.get_meta("free",true))!=problem.is_empty():
+				placement_feedback.set_meta("free",problem.is_empty())
+				soft_tick("valid" if problem.is_empty() else "invalid",-10.0,0.15)
 			placement_title.text=tr("놓을 자리 고르기 · ")+str(selected.get("name",tr("가구")))
 			placement_feedback.text=tr("이곳에 놓을 수 있어요 · %d°")%placement_rotation if problem.is_empty() else problem
 			placement_feedback.modulate=Color("4a6d50") if problem.is_empty() else Color("a25445")
@@ -2005,6 +2170,7 @@ func _process(delta: float) -> void:
 		var focus := get_viewport().gui_get_focus_owner()
 		if not (focus is TextEdit or focus is LineEdit) and not is_instance_valid(painter) and not is_instance_valid(interaction_panel):walk(delta)
 	update_camera(delta)
+	room_steps(delta)
 	if is_instance_valid(bubble) and bubble.visible: pin_overlay(bubble,bubble_anchor,14)
 	if is_instance_valid(hint_label) and hint_label.visible: pin_overlay(hint_label,hint_anchor,6)
 
@@ -2014,6 +2180,101 @@ func walk_out_step(delta: float) -> void:
 	var before: Vector3=hero.position
 	hero.position=hero.position.move_toward(walk_out,ControllerProfile.ROOM_WALK*delta)
 	report_motion(before,delta)
+
+# ---------------------------------------------------------------- room sound
+
+## Footsteps on the floor the walker is on (WorldAudio.stride turns movement into steps, so walk,
+## move_hero, the seat walk-up, stairs and the walk out all step): planks, tile, flagstone or a rug,
+## "stairs" while climbing; residents walking in, out or to a new spot step more quietly.
+func room_steps(delta: float) -> void:
+	if not is_instance_valid(world_audio) or not is_instance_valid(hero): return
+	world_audio.stride("hero",hero.position,delta,"stairs" if travelling else floor_surface(hero.position),true)
+	for i in range(stepping.size()-1,-1,-1):
+		var entry: Dictionary=stepping[i]
+		if not entry.get("walking",false) or not is_instance_valid(entry.holder):
+			stepping.remove_at(i)
+			continue
+		if int(entry.floor)!=floor_index: continue
+		world_audio.stride("resident:"+str(entry.id),entry.holder.position,delta,floor_surface(entry.holder.position),false,RESIDENT_STEP_DB)
+
+## Footstep surface at a spot of the current floor: the floor of the room it is in (interiors.gd
+## THEMES "floor": planks, tile, flagstone), a rug when standing on one.
+func floor_surface(at: Vector3) -> String:
+	if room_spec.is_empty(): return "planks"
+	var floor_kind := str(room_spec.get("colors",{}).get("floor","planks"))
+	var rooms: Array=room_spec.get("rooms",[])
+	if rooms.size()>1:
+		var index := Interiors.room_at(room_spec,at.x)
+		if index>=0 and index<rooms.size(): floor_kind=str(rooms[index].get("colors",{}).get("floor",floor_kind))
+	return WorldAudio.room_surface(floor_kind,decor,at)
+
+## The room's bed for where the walker is: the hearth, a clock, the mill, the cafe's murmur, the
+## sea through the lighthouse walls, over the room tone (WorldAudio.room_ambience). Crossfades
+## (WorldAudio fade) as the walker crosses into another room or floor; day follows the clock.
+func update_room_audio() -> void:
+	if not is_instance_valid(world_audio) or leaving: return
+	var theme := str(Interiors.ROOMS.get(Interiors.building_for(room),{}).get("theme",room))
+	if not room_spec.is_empty():
+		theme=str(room_spec.get("theme",theme))
+		var rooms: Array=room_spec.get("rooms",[])
+		if current_room>=0 and current_room<rooms.size(): theme=str(rooms[current_room].get("theme",theme))
+	var day := float(daylight_sample.get("daylight",1.0))
+	var next := WorldAudio.room_ambience(theme,day)
+	next["hour"]=float(daylight_sample.get("hour",-1.0))
+	world_audio.set_ambience(next)
+
+## Into the room softly: the home track rises from faint over MUSIC_IN s (instead of the 1.2 s
+## mode crossfade), while the card is up and the room bed fades in under it.
+func ease_in_music() -> void:
+	if not is_instance_valid(room_music) or room_music.music.is_empty(): return
+	var player: AudioStreamPlayer=room_music.music[room_music.music_index]
+	if not player.playing: return
+	if room_music.fade and room_music.fade.is_valid(): room_music.fade.kill()
+	for other in room_music.music:
+		if other!=player: other.stop()
+	player.volume_db=-40.0
+	room_music.fade=room_music.create_tween()
+	room_music.fade.tween_property(player,"volume_db",Sound.MUSIC_DB,MUSIC_IN)
+
+## The room's beds fade out over `seconds` (leaving: they go with the light, no cut at the change).
+func fade_room_audio(seconds: float) -> void:
+	if not is_instance_valid(world_audio): return
+	world_audio.set_process(false)
+	var sounding: Array=[]
+	for key in world_audio.beds:
+		if world_audio.beds[key].playing: sounding.append(world_audio.beds[key])
+	if sounding.is_empty(): return
+	var fade := world_audio.create_tween().set_parallel(true)
+	for player in sounding: fade.tween_property(player,"volume_db",-60.0,maxf(seconds,0.05))
+
+## Leaving: the room's music moves to a short-lived player under the veil (transition.gd, which
+## outlives the scene) at the same spot and level, then fades over MUSIC_HANDOFF s, so it crosses
+## the scene change into the village's own fade-in instead of stopping dead. Skipped headless
+## (the dummy driver never ends a playback).
+func hand_off_music() -> void:
+	if DisplayServer.get_name()=="headless" or not is_instance_valid(room_music): return
+	var playing: AudioStreamPlayer=null
+	for player in room_music.music:
+		if player.playing and player.stream!=null and (playing==null or player.volume_db>playing.volume_db): playing=player
+	if playing==null or playing.volume_db<=Sound.SILENT_DB+1.0: return
+	var keeper := Transition.of(get_tree())
+	if not is_instance_valid(keeper) or not keeper.is_inside_tree(): return
+	if room_music.fade and room_music.fade.is_valid(): room_music.fade.kill()
+	var tail := AudioStreamPlayer.new()
+	tail.name="RoomMusicTail"
+	tail.bus=playing.bus
+	tail.stream=playing.stream
+	tail.volume_db=playing.volume_db
+	keeper.add_child(tail)
+	tail.play(playing.get_playback_position())
+	for player in room_music.music: player.stop()
+	# Let go of the stream however the tail ends (faded, or the game closing mid-fade).
+	tail.tree_exiting.connect(func():
+		tail.stop()
+		tail.stream=null)
+	var fade := tail.create_tween()
+	fade.tween_property(tail,"volume_db",Sound.SILENT_DB,MUSIC_HANDOFF)
+	fade.tween_callback(tail.queue_free)
 
 ## Whether the walker's own movement keys count now (the room's walking gate; the seat driver asks too).
 func walk_allowed() -> bool:
@@ -2348,11 +2609,11 @@ func puff(at: Vector3, color: Color, count: int, rise: float, spread: float, rad
 ## Sits on a chair, sofa or bench: hips and knees bend and the walker settles on
 ## the seat facing out. Any movement key or E gets up again.
 func sit_on(record: Dictionary) -> void:
-	if is_instance_valid(seat): seat.sit(record)
+	if is_instance_valid(seat): hook_seat_sounds();seat.sit(record)
 
 ## Lies down on a bed, head on the pillow.
 func lie_on(record: Dictionary) -> void:
-	if is_instance_valid(seat): seat.lie(record)
+	if is_instance_valid(seat): hook_seat_sounds();seat.lie(record)
 
 func stand_up(face_away := true) -> void:
 	if is_instance_valid(seat): seat.stand(face_away)
@@ -2541,9 +2802,13 @@ func walk_to(entry: Dictionary, target: Vector3, done: Callable) -> void:
 		done.call();return
 	face_body(entry,atan2(offset.x,offset.z))
 	if body.has_method("play_clip"): body.play_clip("walk")
+	# Heard on the floor while it walks (room_steps), walking out of the room too.
+	entry["walking"]=true
+	if not entry in stepping: stepping.append(entry)
 	var tween := holder.create_tween()
 	tween.tween_property(holder,"position",target,offset.length()/1.1)
 	tween.tween_callback(func():
+		entry["walking"]=false
 		if body.has_method("play_clip"): body.play_clip("idle")
 		if not entry.record.is_empty() and npcs.has(str(entry.id)):
 			var look: Vector3=entry.record.center-holder.position
@@ -2570,6 +2835,12 @@ func pop_over(entry: Dictionary, text: String) -> void:
 	var body: Node3D=entry.body
 	if body.has_method("pop"):
 		body.pop(text,1.6);return
+	# Bodies without pop() (the cast): the cue's bark in the resident's register. An activity cue
+	# repeats every few seconds, so the same bubble barks again only after CUE_BARK_GAP s.
+	var now := Time.get_ticks_msec()*0.001
+	if text!=str(entry.get("bark_text","")) or now-float(entry.get("bark_time",-100.0))>=CUE_BARK_GAP:
+		if VoiceBabble.emote(self,str(entry.get("id","")),text,entry.holder.global_position):
+			entry["bark_text"]=text;entry["bark_time"]=now
 	var label := Art.label3d(entry.holder,text,Vector3(0,2.0,0),Color("fff2c8"))
 	label.font_size=40
 	var tween := label.create_tween()
@@ -2584,6 +2855,7 @@ func talk_to(id: String, record: Dictionary) -> void:
 	var entry: Dictionary=npcs[id]
 	if is_instance_valid(hero): hero.face_point(entry.holder.global_position)
 	if entry.state.get("asleep",false):
+		VoiceBabble.emote(self,id,"zz")
 		say(tr("쿨쿨… 깊이 잠들었어요."),record)
 		return
 	open_talk(id)
@@ -2592,7 +2864,8 @@ func talk_to(id: String, record: Dictionary) -> void:
 ## lines/choices replace the resident's own talk (the gift conversation); such choices are
 ## [label, Callable] instead of [label, action word].
 func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
-	close_talk()
+	# A talk replaced by the next one (the gift conversation, a request) goes quietly.
+	close_talk(false)
 	if not npcs.has(id): return
 	var entry: Dictionary=npcs[id]
 	var c := resident_clock()
@@ -2610,7 +2883,8 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 		var look: Vector3=hero.global_position-entry.holder.global_position
 		face_body(entry,atan2(look.x,look.z))
 	if entry.body.has_method("smile"): entry.body.smile(3.0)
-	sfx_player.stream=Interiors.sfx("pop");sfx_player.play()
+	# The dialogue box opens with its own sound (RpgUi.dialogue) and the resident greets (VoiceBabble):
+	# no extra pop on top, as in the village.
 	talk_box=Control.new();talk_box.name="TalkBox";talk_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	talk_box.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	add_child(talk_box)
@@ -2633,6 +2907,9 @@ func show_talk_page() -> void:
 	RpgUi.dialogue_line(talk_window,talk_body.text)
 	var typing := talk_body.create_tween()
 	typing.tween_property(talk_body,"visible_ratio",1.0,GameSettings.typing_seconds(talk_body.text.length()))
+	# The resident babbles in their own voice along the typing (a new talk greets first); closing
+	# the talk frees the label, which ends it.
+	VoiceBabble.speak(self,talk_id,talk_body.text,0.0,talk_body)
 	if talk_page<talk_lines.size()-1:
 		RpgUi.dialogue_more(talk_window,true)
 	else:
@@ -2646,8 +2923,9 @@ func show_talk_page() -> void:
 ## A dialogue choice: an action word (run_choice) or, in the gift conversation, a Callable.
 func pick_talk(choice: Array) -> void:
 	if choice[1] is Callable:
-		close_talk()
 		var action: Callable=choice[1]
+		# A plain 알겠어요 closes with the close sound; a choice that goes on is heard in what follows.
+		close_talk(not action.is_valid())
 		if action.is_valid(): action.call()
 	else: run_choice(str(choice[1]))
 
@@ -2661,7 +2939,8 @@ func advance_talk() -> void:
 		talk_body.visible_ratio=1.0
 	elif talk_page<talk_lines.size()-1:
 		talk_page+=1
-		sfx_player.stream=Interiors.sfx("click");sfx_player.play()
+		# The village dialogue's page turn (main.gd open_dialogue).
+		RpgUi.sfx("page",-8.0)
 		show_talk_page()
 	elif not talk_choices.is_empty():
 		# The resident's own first choice; a request (quests.gd, marked in open_talk) only by a click.
@@ -2670,8 +2949,12 @@ func advance_talk() -> void:
 				pick_talk(choice)
 				return
 
-func close_talk() -> void:
-	if is_instance_valid(talk_box): talk_box.queue_free()
+## Closes the talk (or the storage chest's list) with the close sound, only when a box was open.
+## sound false: a talk replaced by the next one, or a choice whose outcome has its own sound.
+func close_talk(sound := true) -> void:
+	if is_instance_valid(talk_box):
+		talk_box.queue_free()
+		if sound and not leaving: RpgUi.sfx("close",-10.0)
 	talk_box=null
 	talk_window={}
 	talk_id=""
@@ -2680,28 +2963,32 @@ func close_talk() -> void:
 ## What a dialogue choice does: small gifts and tips, or the telescope at night.
 func run_choice(action: String) -> void:
 	var id := talk_id
-	close_talk()
+	# A choice with an outcome is heard in it (its own sound or its toast's chime), not a close as
+	# well; 또 봐요 (bye) just closes.
+	const OUTCOMES := ["gift","coffee","seed_tip","shop_tip","flour","flower","fish_tip","telescope"]
+	close_talk(not (action in OUTCOMES))
 	var head: Vector3=hero.global_position+Vector3(0,1.6,0) if is_instance_valid(hero) else Vector3.ZERO
 	match action:
 		"gift":
 			open_gift(id)
 			return
 		"coffee":
-			message(tr("따뜻한 코코아를 받았어요. 달콤해요!"))
-			sfx_player.stream=Interiors.sfx("clink");sfx_player.play()
+			# The outcome's own sound stands in for the toast's chime (hush_toast), never both.
+			Interiors.play(self,"clink");RpgUi.hush_toast()
+			message(tr("따뜻한 코코아를 받았어요. 달콤해요!"),true,"success")
 			puff(head,Color("f4f4f2",0.7),5,0.8,0.15,0.12)
 		"seed_tip":
+			Interiors.play(self,"ding");RpgUi.hush_toast()
 			message(tr("추천: 별사탕 씨앗은 햇살 좋은 밭에서 잘 자라요."))
-			sfx_player.stream=Interiors.sfx("ding");sfx_player.play()
 		"shop_tip":
+			Interiors.play(self,"ding");RpgUi.hush_toast()
 			message(tr("오늘의 추천은 반짝이는 낚싯바늘이에요."))
-			sfx_player.stream=Interiors.sfx("ding");sfx_player.play()
 		"flour":
-			message(tr("밀가루 한 줌을 받았어요. 고소한 냄새가 나요."))
+			message(tr("밀가루 한 줌을 받았어요. 고소한 냄새가 나요."),true,"success")
 			puff(head-Vector3(0,0.6,0),Color("f3ead6",0.8),8,0.5,0.3,0.12)
 		"flower":
-			message(tr("들꽃 한 송이를 받았어요. 향기가 좋아요."))
-			sfx_player.stream=Interiors.sfx("chime");sfx_player.play()
+			Interiors.play(self,"chime");RpgUi.hush_toast()
+			message(tr("들꽃 한 송이를 받았어요. 향기가 좋아요."),true,"success")
 		"fish_tip":
 			message(tr("물때가 바뀔 때 찌를 던져 보세요. 꼭 낚일 거예요!"))
 		"telescope":
@@ -2724,7 +3011,7 @@ func open_gift(id: String) -> void:
 		NpcGifts.thanks_effect(stage,entry.holder.global_position)
 		pop_over(entry,"♥")
 		if entry.body.has_method("smile"): entry.body.smile(3.0)
-		sfx_player.stream=Interiors.sfx("chime");sfx_player.play()
+		# thanks_effect's twinkle and the toast's chime are the sound, as in the village (no third chime).
 		message(NpcGifts.thanks_text(Interiors.short_name(id,float(resident_clock().hour)),reply))
 		var note := NpcGifts.letters_note(reply)
 		if not note.is_empty(): create_tween().tween_callback(func(): message(note)).set_delay(2.6)
@@ -2822,7 +3109,7 @@ func use_gift(record: Dictionary) -> void:
 	if node.has_method("local_event"): node.local_event("click")
 	var owner_name := Interiors.short_name(str(record.npc),float(resident_clock().hour)) if not str(record.npc).is_empty() else ""
 	say(tr("%s의 소중한 선물 · %s") % [owner_name,str(record.name)],record)
-	sfx_player.stream=Interiors.sfx("pop");sfx_player.play()
+	Interiors.play(self,"pop")
 
 ## E on the house's storage chest: what the residents keep in storage (names and pictures only),
 ## for the owner and visitors alike. E or Esc closes it.
@@ -2830,8 +3117,8 @@ func open_storage(record: Dictionary) -> void:
 	if gift_home.is_empty(): return
 	var reply: Dictionary=await api.request("/v1/social/npc-homes/%s" % gift_home)
 	if not reply.ok or not is_inside_tree(): return
-	close_talk()
-	sfx_player.stream=Interiors.sfx("creak");sfx_player.play()
+	close_talk(false)
+	Interiors.play(self,"creak")
 	if is_instance_valid(record.get("node")): Fx.wobble(record.node,0.05)
 	talk_box=Control.new();talk_box.name="StorageChest";talk_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(talk_box)

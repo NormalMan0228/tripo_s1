@@ -184,14 +184,21 @@ func resume_music() -> void:
 	fade=create_tween()
 	fade.tween_property(current,"volume_db",MUSIC_DB,GAP_FADE_IN)
 
-## A recorded one-shot (portal, door) on the SFX bus, over the music.
+## A recorded one-shot (portal, door) on the SFX bus, over the music. A .wav path is a take
+## family (the bare original plus <name>_1.wav, <name>_2.wav ...) picked through SfxBank's shuffle
+## bag with +-3 % pitch and +-1 dB; any other file plays as it is.
 func stinger(path: String, volume_db := -10.0) -> void:
-	if not ResourceLoader.exists(path): return
+	var stream: AudioStream = SfxBank.pick(path) if path.get_extension().to_lower()=="wav" else null
+	var jitter := stream!=null
+	if stream==null:
+		if not ResourceLoader.exists(path): return
+		stream=load(path) as AudioStream
+		if stream==null: return
 	var player := next_voice()
-	player.stream=load(path)
+	player.stream=stream
 	player.bus=GameSettings.BUS_SFX
-	player.pitch_scale=1.0
-	player.volume_db=volume_db
+	player.pitch_scale=SfxBank.pitch(0.03) if jitter else 1.0
+	player.volume_db=volume_db+(SfxBank.db(1.0) if jitter else 0.0)
 	player.play()
 
 func make_effect(kind: String) -> AudioStreamWAV:

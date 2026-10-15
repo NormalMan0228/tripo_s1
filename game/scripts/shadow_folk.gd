@@ -1065,4 +1065,7 @@ func footstep(walker: Node, speed: float) -> void:
 	if not is_instance_valid(audio) or not audio.has_method("footstep"): return
 	var surface := "stone" if Roads.on_road(walker.xz()) else "grass"
 	if paths.kinds[walker.at_node] == "bridge" or paths.kinds[walker.target_node] == "bridge": surface = "wood"
-	audio.footstep(surface, speed*0.6)
+	# Positional, on the other walkers' own voices and take bag (the hero's steps stay its own);
+	# the test stub's audio only has footstep().
+	if audio.has_method("remote_step") and walker is Node3D: audio.remote_step((walker as Node3D).global_position, surface, speed*0.6, -5.0)
+	else: audio.footstep(surface, speed*0.6)

@@ -12,12 +12,14 @@ Writes NEW takes next to the existing ones (never touches a git-tracked WAV):
   game/assets/sfx/creatures/step_<gait>_<n>.wav, boar_charge_<n>.wav, boar_dazed_<n>.wav
 
 Each family is a grid of structural archetypes (L.cycle) plus small random detail, levelled to the
-existing files of that kind (st-rms, sfxlib.finish). Numbering continues after the highest
-git-tracked take; re-running re-renders the same files (seeded) and removes this generator's own
-stale higher-numbered takes.
+existing files of that kind (st-rms, sfxlib.finish, plus make_family's A-weighted balance).
+Numbering continues after the highest original take (git-tracked, or with the environment
+variable SFX_BASE=<ref> the takes that existed at <ref>: set SFX_BASE=merge-version-gate to
+re-render the committed takes in place); re-running re-renders the same files (seeded) and
+removes this generator's own stale higher-numbered takes.
 
   .tools\\art-venv\\Scripts\\python.exe tools\\sfx\\gen_combat.py [--only combat,hero,creatures,layers,steps]
-        [--family swing_axe,hit_flesh] [--list] [--dry-run]
+        [--family swing_axe,hit_flesh] [--list] [--dry-run] [--root <scratch dir>]
 """
 from __future__ import annotations
 
@@ -608,6 +610,44 @@ def _hp_noise(s, d, lo, hi, pts):
     return pk(band(s.noise(n), lo, hi) * ctl(n, rel(d, pts)))
 
 
+_LTAS: dict = {}
+
+
+def _bands(per_oct):
+    """Log band centres 63 Hz .. 12.7 kHz, per_oct bands per octave."""
+    return 1000.0 * 2.0 ** (np.arange(-4 * per_oct, 4 * per_oct) / float(per_oct))
+
+
+def _band_db(x, c, per_oct):
+    """Long-term spectrum (Welch, dB) of a take at SR, averaged over each band around c."""
+    from scipy import signal as ss
+    f, P = ss.welch(np.asarray(x, float), SR, nperseg=min(2048, x.size))
+    w = 2.0 ** (0.5 / per_oct)
+    return np.array([10 * np.log10(P[(f >= a / w) & (f < a * w)].mean() + 1e-20) if np.any((f >= a / w) & (f < a * w))
+                     else 10 * np.log10(np.interp(a, f, P) + 1e-20) for a in c])
+
+
+def ltas_match(x, name, strength=0.85, max_db=12.0, passes=2, per_oct=3):
+    """EQ a derived take toward the long-term spectrum of the team recording harvest_<name>_1
+    (per_oct log bands per octave, smooth zero-phase gain curve), so the shuffle bag sounds like
+    one material: the re-cut, the layers and the re-pitch change the gesture, not the timbre."""
+    from scipy.fft import irfft, next_fast_len, rfft
+    c = _bands(per_oct)
+    key = (name, per_oct)
+    if key not in _LTAS:
+        _LTAS[key] = _band_db(rec(name), c, per_oct)
+    y = np.asarray(x, float)
+    for _ in range(passes):
+        diff = _LTAS[key] - _band_db(y, c, per_oct)
+        diff = np.clip((diff - np.median(diff)) * strength, -max_db, max_db)
+        diff[c < 125.0] = np.minimum(diff[c < 125.0], 0.0)    # never boost the bottom: narrow lows ring on
+        n = next_fast_len(y.size + secs(0.3))                 # zero pad: the gain curve's ring must not wrap
+        f = np.fft.rfftfreq(n, 1.0 / SR)
+        g = 10.0 ** (np.interp(np.log(np.maximum(f, c[0])), np.log(c), diff) / 20.0)
+        y = irfft(rfft(y, n) * g, n)[: y.size]
+    return y
+
+
 def harvest_tree(s, k):
     """The team's chop: its impact (+ crack) stays the core; the body, follow-up and tail change."""
     x = rec("tree")
@@ -659,7 +699,9 @@ def harvest_tree(s, k):
 
 
 def harvest_stone(s, k):
-    """Pick on rock: the recording's strikes re-cut into new rhythms, plus chips and sparks."""
+    """Pick on rock: the recording's strikes re-cut into new rhythms, plus soft chips, sparks and
+    scrapes kept under the strikes (low-passed), EQ'd back to the recording's long-term spectrum
+    (ltas_match) so no take sounds brighter than harvest_stone_1."""
     x = rec("stone")
     segs = L.segments(x, SR)
     arch, ratio = L.cycle(k, list(range(11)), [1.0, 0.92, 1.08, 0.96, 1.04])
@@ -677,23 +719,31 @@ def harvest_stone(s, k):
     out = L.repitch(out, ratio)
     lay = buf(out.size / SR + 0.3)
     place(lay, out, 0.0)
-    if arch in (1, 5, 9):
-        f = u(s, 2600, 3600)
-        place(lay, pk(modal([f, f * 1.52, f * 2.31], [0.06, 0.035, 0.02], [1, 0.5, 0.3], 0.25, s.rng)), 0.004, 0.25)   # spark
-    if arch in (2, 6, 10):
-        place(lay, debris(s, secs(0.4), 6, 0.05, 0.3, (0.25, 0.5), 0.35), 0.0, 0.8)
+    if arch in (1, 5, 9):      # a short dull ring of the struck rock (was a 2.6-3.6 kHz spark)
+        f = u(s, 1500, 2100)
+        place(lay, L.lp(pk(modal([f, f * 1.52, f * 2.31], [0.035, 0.02, 0.012], [1, 0.4, 0.2], 0.2, s.rng)), SR, 2600), 0.004, 0.12)
+    if arch in (2, 6, 10):     # a few chips falling, under the strikes
+        place(lay, L.lp(debris(s, secs(0.4), 6, 0.05, 0.3, (0.25, 0.5), 0.35), SR, 2500), 0.0, 0.35)
     if arch in (3, 7):
         place(lay, pk(thud(s, u(s, 100, 125), 0.18, 0.04, grit=0.7)), 0.0, 0.35)
-    if arch in (4, 8):
-        place(lay, pk(scrape(s, 0.25, 300, 4000)), 0.06, 0.3)
-    return L.tilt(lay, SR, [0.0, 2.0, -2.0, 1.0][k % 4])
+    if arch in (4, 8):         # pick dragged on the face
+        place(lay, L.lp(pk(scrape(s, 0.25, 300, 2500)), SR, 2200), 0.06, 0.15)
+    return ltas_match(lay, "stone", 1.0, 9.0, 3, 12)
+
+
+FIBER_DYN = {"even": (1.0, 1.0), "fade": (1.0, 0.55), "swell": (0.6, 1.0)}    # first / last part gain
 
 
 def harvest_fiber(s, k):
-    """Grass torn up: the recording's tear re-cut (other order, length, splits) plus a synthetic rip or root snap."""
+    """Grass torn up: only the recording's own tear, re-cut (other order, count and length of the
+    pieces), with a short pause in some takes (a two-stage pull), its own dynamics and a re-pitch,
+    then EQ'd back to the recording's long-term spectrum (ltas_match) so the derived takes keep the
+    bright 8-16 kHz rustle of harvest_fiber_1 instead of a boxy mid range. No synthetic rip, root
+    snap, soil pops or tilt: they dominated the takes and made _1 stand apart in the bag."""
     x = rec("fiber")
     segs = L.segments(x, SR)
     arch, ratio = L.cycle(k, list(range(11)), [1.0, 0.93, 1.07, 0.97, 1.04])
+    dyn, pause = L.cycle(k, ["even", "fade", "swell"], [0.0, 0.055, 0.0, 0.0, 0.08])
     rng = s.rng
     idx = list(range(len(segs)))
     if arch % 3 == 0:
@@ -702,23 +752,21 @@ def harvest_fiber(s, k):
         idx = idx[::-1]
     else:
         idx = idx[1:] + idx[:1]
-    keep = [5, 3, 4, 2, 5, 3, 4, 3, 2, 4, 3][arch]
-    parts = [L.take_slice(x, SR, *segs[i], fade_in=0.002, fade_out=0.01)[: secs(u(s, 0.06, 0.13))] for i in idx[:keep]]
-    out = L.concat(parts, SR, 0.006)
-    out = L.repitch(out, ratio)
-    lay = buf(out.size / SR + 0.35)
+    keep = min(len(idx), [5, 3, 4, 2, 5, 3, 4, 3, 2, 4, 3][arch])
+    g0, g1 = FIBER_DYN[dyn]
+    lay = buf(0.95)
+    at = 0.0
+    for j, i in enumerate(idx[:keep]):
+        part = L.take_slice(x, SR, *segs[i], fade_in=0.002, fade_out=0.01)[: secs(u(s, 0.06, 0.13))]
+        g = g0 + (g1 - g0) * (j / max(1, keep - 1))
+        place(lay, part, at, g * u(s, 0.85, 1.0))
+        at += part.size / SR - 0.006 + (pause if j == 0 and keep > 2 else 0.0)
+    out = L.repitch(lay[: secs(at + 0.02)], ratio)
+    lay = buf(out.size / SR + 0.2)
     place(lay, out, 0.0)
-    if arch in (0, 4, 8):      # pulsed rip
-        m = secs(0.12)
-        rip = norm(band(s.noise(m), 800, 5000)) * (0.5 + 0.5 * np.sign(np.sin(2 * np.pi * u(s, 70, 120) * T(m)))) * ctl(m, [(0, 0), (0.02, 1), (0.12, 0)])
-        place(lay, pk(rip), out.size / SR * 0.5, 0.35)
-    if arch in (1, 5, 9):      # root snap
-        place(lay, tok(s, u(s, 900, 1400), 0.012), out.size / SR * 0.7, 0.3)
-    if arch in (2, 6, 10):     # soil crumble
-        place(lay, pops(s, secs(0.25), 120, 600, 3500, ctl(secs(0.25), [(0, 1), (0.25, 0)]), (0.002, 0.005)), out.size / SR * 0.6, 0.5)
-    if arch in (3, 7):         # leafy swish
-        place(lay, _hp_noise(s, 0.18, 2000, 8000, [(0, 0), (0.3, 1), (1, 0)]), 0.0, 0.2)
-    return L.tilt(lay, SR, [0.0, -2.0, 2.0][k % 3])
+    if arch in (3, 7):         # leafy swish under the tear
+        place(lay, _hp_noise(s, 0.18, 2000, 8000, [(0, 0), (0.3, 1), (1, 0)]), 0.0, 0.15)
+    return ltas_match(lay, "fiber", 1.0, 9.0, 3, 12)
 
 
 # =============================================================================== combat: new cues
@@ -1366,8 +1414,9 @@ def _refs(d: Path, pattern: str):
 
 
 def ref_of(d: Path, event: str):
-    """Median st-rms of the git-tracked takes of <event> (bare + _<n>)."""
-    files = [p for p in _refs(d, r"%s(_\d+)?\.wav" % re.escape(event)) if L.git_tracked(p)]
+    """The original takes of <event> (bare + _<n>; sfxlib.protected: git-tracked, or with
+    SFX_BASE=<ref> the files that existed at <ref>); their median st-rms is the target."""
+    files = [p for p in _refs(d, r"%s(_\d+)?\.wav" % re.escape(event)) if L.protected(p)]
     return files
 
 
@@ -1436,9 +1485,15 @@ _TRACKED_CACHE: dict = {}
 
 
 def tracked_names(d: Path) -> set:
+    """Names of the original (protected) files in d: git-tracked, or with SFX_BASE=<ref> the files
+    that existed at <ref>, so takes committed since then are re-rendered in place, not renumbered."""
     if d not in _TRACKED_CACHE:
-        r = subprocess.run(["git", "ls-files", "--", str(d)], cwd=str(L.REPO), capture_output=True, text=True)
-        _TRACKED_CACHE[d] = {Path(line).name for line in r.stdout.splitlines()}
+        if L.BASE_REF:
+            base = L.base_files(L.BASE_REF)
+            _TRACKED_CACHE[d] = {p.name for p in d.glob("*") if p.resolve() in base}
+        else:
+            r = subprocess.run(["git", "ls-files", "--", str(d)], cwd=str(L.REPO), capture_output=True, text=True)
+            _TRACKED_CACHE[d] = {Path(line).name for line in r.stdout.splitlines()}
     return _TRACKED_CACHE[d]
 
 
@@ -1505,7 +1560,13 @@ def main(argv=None) -> int:
     ap.add_argument("--family", default="", help="comma list of event names")
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--root", default="", help="write under <root>/<dir> instead of game/assets/sfx (trial runs in "
+                    "scratch; the family's originals are copied there so levels and the A-weighted median match)")
     a = ap.parse_args(argv)
+    if not L.BASE_REF:
+        print("gen_combat: note: SFX_BASE is not set, so every git-tracked take counts as an original and numbering "
+              "continues after it; set SFX_BASE=merge-version-gate to re-render the takes committed since then",
+              file=sys.stderr)
     groups = {g for g in a.only.split(",") if g}
     names = {g for g in a.family.split(",") if g}
     fams = [f for f in families() if (not groups or f.group in groups) and (not names or f.event in names)]
@@ -1513,6 +1574,16 @@ def main(argv=None) -> int:
         for f in fams:
             print("%-9s %-10s %-26s %3d takes from %d @ %d Hz" % (f.group, f.dir.name, f.event, f.n, start_of(f) if not f.loop else 0, f.sr))
         return 0
+    if a.root:
+        import shutil
+        for f in fams:
+            if not f.loop:
+                f.start = start_of(f)
+            home, f.dir = f.dir, Path(a.root) / f.dir.name
+            f.dir.mkdir(parents=True, exist_ok=True)
+            for p in _refs(home, r"%s(_\d+)?\.wav" % re.escape(f.event)):
+                if p.name in tracked_names(home):
+                    shutil.copy2(p, f.dir / p.name)
     total = 0
     for f in fams:
         print("== %s/%s" % (f.dir.name, f.event))

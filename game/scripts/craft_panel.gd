@@ -257,6 +257,7 @@ func _file_dialog() -> FileDialog:
 func pick_image(path: String) -> void:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null or file.get_length() > 1024 * 1024:
+		RpgUi.sfx("deny", -6.0)
 		_say(tr("이미지는 1MB 이하로 준비해 주세요"))
 		return
 	var bytes := file.get_buffer(file.get_length())
@@ -367,8 +368,9 @@ func request() -> void:
 	if busy or not job_id.is_empty(): return
 	var length := prompt.text.strip_edges().length()
 	if length < 2 or length > 1500:
-		_say(_explain("invalid_craft_request"))
+		# The sound first: as a message kind it stands in for the toast chime _say() raises.
 		RpgUi.sfx("deny", -6.0)
+		_say(_explain("invalid_craft_request"))
 		return
 	busy = true
 	_update_options()
@@ -376,8 +378,8 @@ func request() -> void:
 	busy = false
 	_update_options()
 	if not reply.ok:
-		_say(_explain(reply.error))
 		RpgUi.sfx("deny", -6.0)
+		_say(_explain(reply.error))
 		return
 	RpgUi.sfx("craft_submit", -6.0)
 	job_id = str(reply.data.id)
@@ -716,10 +718,11 @@ func confirm(use_picture: bool) -> void:
 	var reply: Dictionary = await tracker.api.post("/v1/studio/jobs/" + job_id + "/confirm", tracker.api.mutation({"use_concept": use_picture}))
 	busy = false
 	if not reply.ok:
-		_say(_explain(reply.error))
 		RpgUi.sfx("deny", -6.0)
+		_say(_explain(reply.error))
 		return
-	RpgUi.sfx("confirm", -6.0)
+	# The design goes off to be built: the submit sound, a message kind, so the toast stays quiet.
+	RpgUi.sfx("craft_submit", -6.0)
 	_say(tr("확인한 설계로 3D 메시를 만들고 있어요"))
 	tracker.follow(job_id)
 
@@ -729,8 +732,8 @@ func redraw_concept() -> void:
 	var reply: Dictionary = await tracker.api.post("/v1/studio/jobs/" + job_id + "/redraw", tracker.api.mutation())
 	busy = false
 	if not reply.ok:
-		_say(_explain(reply.error))
 		RpgUi.sfx("deny", -6.0)
+		_say(_explain(reply.error))
 		return
 	RpgUi.sfx("paint", -6.0)
 	tracker.follow(job_id)
@@ -741,8 +744,8 @@ func cancel() -> void:
 	var reply: Dictionary = await tracker.api.post("/v1/studio/jobs/" + job_id + "/cancel", tracker.api.mutation())
 	busy = false
 	if not reply.ok:
-		_say(_explain(reply.error))
 		RpgUi.sfx("deny", -6.0)
+		_say(_explain(reply.error))
 		return
 	RpgUi.sfx("cancel", -6.0)
 	var cancelled := job_id
@@ -756,6 +759,7 @@ static func preview_design(network: Node, id: String, parent: Node, say: Callabl
 	var response: Dictionary = await network.request("/v1/studio/jobs/" + id + "/preview")
 	if not is_instance_valid(parent): return
 	if not response.ok:
+		RpgUi.sfx("deny", -6.0)
 		say.call(TranslationServer.translate("설계 미리보기 실패 · ") + str(response.error))
 		return
 	var window = load("res://scripts/design_preview.gd").new()
@@ -763,6 +767,7 @@ static func preview_design(network: Node, id: String, parent: Node, say: Callabl
 	if window.show_plan(response.data): window.popup_centered()
 	else:
 		window.queue_free()
+		RpgUi.sfx("deny", -6.0)
 		say.call(TranslationServer.translate("설계를 표시하지 못했습니다"))
 
 # ------------------------------------------------------------------ styles and sizes

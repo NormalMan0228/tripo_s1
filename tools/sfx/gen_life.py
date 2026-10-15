@@ -1047,6 +1047,52 @@ def eat(rng, i):
     return out, {"kind": kind, "count": count}
 
 
+SOUP_ORDERS = ["clink_sip", "sip_set_down", "stir_sip", "sip_swallow_tap"]
+
+
+def eat_soup(rng, i):
+    """Soup: a warm sip (soft, low-q breathy slurp with a few tiny bubbles) and a light spoon clink
+    on the bowl, four orders (clink then sip, sip then the spoon set down, two stirring taps then
+    a short sip, sip + swallow + one tap). The clink stays under the sip: a meal, not a bell."""
+    order = SOUP_ORDERS[i % 4]
+    bowl = [2350.0, 2800.0, 2100.0, 2550.0][i % 4] * rng.uniform(0.97, 1.03)
+
+    def clink(g, f=None):
+        y = L.modal(SR, f or bowl, "ceramic", dur=0.22, rng=rng)
+        return L.norm_peak(L.lp(y, SR, 6500)) * g
+
+    def sip(d, rise=1.0):
+        n = L.secs(d, SR)
+        u = np.linspace(0, 1, n)
+        fc = np.interp(u, [0, 0.35, 1], [520, 1150 * rise, 820])
+        air = L.svf(L.pink(n, rng), SR, fc, q=1.4, mode="bp")
+        flutter = 0.75 + 0.25 * np.sin(2 * np.pi * rng.uniform(9, 14) * u * d + rng.uniform(0, 6))
+        y = L.norm_peak(air * flutter * np.interp(u, [0, 0.15, 0.7, 1], [0, 1, 0.75, 0]))
+        L.place(y, grains(SR, d * 0.8, int(5 * d / 0.2), rng, 900, 2600, g_dur=(0.003, 0.008), gain=(0.08, 0.2)), d * 0.12, SR)
+        return y
+
+    def swallow():
+        return L.norm_peak(bubble(SR, rng.uniform(170, 220), rng, tau=0.05, rise=0.5)) * 0.45
+
+    out = np.zeros(L.secs(0.9, SR))
+    if order == "clink_sip":
+        L.place(out, clink(0.32), 0.0, SR)
+        L.place(out, sip(0.3), 0.14, SR)
+    elif order == "sip_set_down":
+        L.place(out, sip(0.36, 1.12), 0.0, SR)
+        L.place(out, clink(0.28), 0.42, SR)
+        L.place(out, clink(0.14, bowl * 1.06), 0.47, SR)
+    elif order == "stir_sip":
+        L.place(out, clink(0.22), 0.0, SR)
+        L.place(out, clink(0.18, bowl * 0.94), 0.11, SR)
+        L.place(out, sip(0.22, 0.9), 0.24, SR)
+    else:
+        L.place(out, sip(0.26, 1.05), 0.0, SR)
+        L.place(out, swallow(), 0.3, SR)
+        L.place(out, clink(0.2), 0.46, SR)
+    return L.reverb(out, SR, room=0.12, wet=0.08, rng=rng), {"order": order}
+
+
 def bandage(rng, i):
     """Bandage: cloth rip, wraps and a pat (four orders)."""
     kind = ["rip_wraps", "wraps_pat", "rip_tie", "wrap_pats"][i % 4]
@@ -1239,6 +1285,7 @@ FAMILIES = [
     ("core", "gather", 6, gather, SR, ("core", "gather", 0.0)),
     ("core", "craft", 8, craft, SR, ("core", "craft", 0.0)),
     ("core", "eat", 6, eat, SR, ("core", "eat", 0.0)),
+    ("core", "eat_soup", 4, eat_soup, SR, ("core", "eat", -1.0)),
     ("core", "bandage", 4, bandage, SR, ("core", "eat", 0.0)),
     ("core", "fire", 4, fire, SR, ("core", "fire", 0.0)),
     ("core", "error", 8, error, SR, ("core", "error", 0.0)),

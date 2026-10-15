@@ -8,6 +8,8 @@ Writes NEW files only (never a git-tracked one):
   game/assets/sfx/fx/<kind>_<n>.wav        fx.gd Fx.sound kinds (were runtime synth; now baked takes)
   game/assets/sfx/field/<name>_<n>.wav     field_objects.gd play() (the bare <name>.wav stays take 0)
   game/assets/sfx/interior/<kind>_<n>.wav  interiors.gd Interiors.sfx / Interiors.play kinds
+  game/assets/sfx/world/portal_<n>.wav     sound.gd stinger() takes of world/portal.wav (the team's
+                                           original stays take 0; the takes are derived from it)
 Each family is built on a grid of structural archetypes (sfxlib.cycle) plus small random detail,
 so every take is a different "recording" of the same action. Levels: the fx and interior families
 match the st-rms of the runtime synth they replace (fx_synth / interior_synth below are ports of
@@ -1848,6 +1850,65 @@ def in_steps(rng, i):
     return room(out, SR, rng, 0.25, 0.1), {"direction": direction, "creaky": creaky}
 
 
+# =========================================================================== world: portal stinger takes
+PORTAL = L.SFX_ROOT / "world" / "portal.wav"     # the team's stinger (git original, stays take 0)
+_PORTAL: list = []
+
+
+def portal_rec():
+    """The original portal stinger at SR, cached (a low swell to a peak at ~0.7 s, then a long decay)."""
+    if not _PORTAL:
+        x, sr = L.read_wav(PORTAL)
+        _PORTAL.append(L.resample(x, sr, SR))
+    return _PORTAL[0]
+
+
+def _decay_from(x, at, tau):
+    """x with an extra exponential fade from `at` s on (a shorter tail)."""
+    y = x.copy()
+    k = L.secs(at, SR)
+    if k < y.size:
+        y[k:] *= np.exp(-np.arange(y.size - k) / (tau * SR))
+    return y
+
+
+@family("world", "portal", 4, ref=lambda: L.ref_db_of(PORTAL))
+def portal(rng, i):
+    """Portal stinger variants derived from the original recording, so the family stays one sound:
+    deep (re-pitched 13 % down, the fading hum wavers), quick (the build cut short, a snappier
+    swell and a shorter tail), double (the swell, then a softer second wave), open (the build is
+    the reversed decay, a whoosh drawing in, and a low-pass opens on the way to the peak). Re-pitch alone would be a jittered copy
+    (sim > 0.9), so every take also changes the gesture's timing."""
+    x = portal_rec()
+    kind = ["deep", "quick", "double", "open"][i % 4]
+    if kind == "deep":
+        y = L.repitch(x, 0.87 * rng.uniform(0.99, 1.01))
+        k = L.secs(0.82, SR)                                    # the hum wavers as it fades
+        t = np.arange(y.size - k) / SR
+        y[k:] *= 0.72 + 0.28 * np.cos(TAU * rng.uniform(4.5, 5.5) * t)
+        y = _decay_from(y, 1.05, 0.28)
+    elif kind == "quick":
+        y = L.take_slice(x, SR, L.secs(0.36, SR), x.size, fade_in=0.04, fade_out=0.05)
+        y = _decay_from(L.repitch(y, 1.07 * rng.uniform(0.99, 1.01)), 0.5, 0.16)
+    elif kind == "double":
+        head = L.repitch(x, 0.95)
+        y = np.zeros(head.size + L.secs(0.45, SR))
+        L.place(y, _decay_from(head, 0.82, 0.07), 0.0, SR)
+        second = L.take_slice(head, SR, L.secs(0.55, SR), head.size, fade_in=0.06, fade_out=0.05)
+        L.place(y, second, 0.98 * rng.uniform(0.97, 1.03), SR, gain=0.55)
+    else:
+        tail = x[L.secs(0.75, SR):][::-1]                      # the decay reversed: a whoosh drawing in
+        lead = L.take_slice(tail, SR, max(0, tail.size - L.secs(0.55, SR)), tail.size, 0.12, 0.01)
+        body = L.take_slice(x, SR, L.secs(0.62, SR), x.size, fade_in=0.02, fade_out=0.05)
+        y = np.zeros(lead.size + body.size)
+        L.place(y, lead, 0.0, SR, gain=0.8)
+        L.place(y, body, lead.size / SR - 0.04, SR)              # the original's peak ~0.6 s in, as before
+        fc = np.interp(np.linspace(0, 1, y.size), [0, 0.25, 0.35, 1], [250, 1400, 2600, 900])
+        y = 0.65 * L.svf(y, SR, fc, q=0.8, mode="lp") + 0.35 * y
+        y = _decay_from(L.repitch(y, 0.96), 1.1, 0.2)
+    return y, {"kind": kind}
+
+
 # =========================================================================== loops (one take each)
 LOOPS = [("fx", "firepit_loop", 1, SR, lambda: ref_fx("crackle") - 6.0, firepit_loop)]
 
@@ -1856,10 +1917,11 @@ LOOPS = [("fx", "firepit_loop", 1, SR, lambda: ref_fx("crackle") - 6.0, firepit_
 def relevel(d: dict, tol: float = 0.75) -> None:
     """Short takes (under the 120 ms window) read louder once finish() has trimmed their tail; scale
     such a take back to its reference (never above the -1 dBFS ceiling) and rewrite it."""
-    if "delta_db" not in d or abs(d["delta_db"]) <= tol:
+    want = d.get("aw_gain_db", 0.0)      # make_family's A-weighted balance may have lowered the take on purpose
+    if "delta_db" not in d or abs(d["delta_db"] - want) <= tol:
         return
     x, sr = L.read_wav(d["path"])
-    y = x * L.undb(-d["delta_db"])
+    y = x * L.undb(want - d["delta_db"])
     if float(np.max(np.abs(y))) > L.CEILING:
         y = y * (L.CEILING / float(np.max(np.abs(y))))
     L.write_wav(d["path"], y, sr)
@@ -1903,7 +1965,7 @@ def run(root: Path, only=None, names=None, quiet=False) -> list:
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--only", help="comma list of dirs: fx,field,interior")
+    ap.add_argument("--only", help="comma list of dirs: fx,field,interior,world")
     ap.add_argument("--family", help="comma list of event names")
     ap.add_argument("--root", help="output root instead of game/assets/sfx (trial runs in scratch)")
     ap.add_argument("--list", action="store_true", help="list the families and exit")

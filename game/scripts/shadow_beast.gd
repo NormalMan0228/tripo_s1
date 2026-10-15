@@ -40,7 +40,14 @@ var audio: Script
 var showcase := false  ## galleries drive monster clips directly; skips the phase -> clip mapping
 ## Metres travelled per footfall sound (creature_audio.gd step(): paw / hoof / stomp / flutter / squelch).
 const STRIDE := {"wolf": 1.15, "boar": 0.95, "brute": 1.7, "wisp": 1.9, "shroom": 0.75}
+## Below this snapshot ground speed (m/s) the body only settles onto its target: no footfall.
+const STEP_MIN_SPEED := 0.25
 var stride_left := 0.5
+## Per-creature minimum seconds between two of the same call (a phase that flickers between two
+## snapshots, rapid hits); the pack-wide limits (idle gap, voices per species, 40 ms merge, staggered
+## alerts, step budget) live in creature_audio.gd.
+const VOICE_GAP := {"windup": 0.5, "strike": 0.3, "hurt": 0.3, "charge": 0.6, "dazed": 0.6}
+var voice_at := {}
 
 func _ready() -> void:
 	health=Label3D.new()
@@ -252,14 +259,19 @@ func die() -> void:
 
 func voice(event: String) -> void:
 	if audio==null or not is_inside_tree(): return
+	var now := Time.get_ticks_msec()*0.001
+	if now-float(voice_at.get(event,-10.0))<float(VOICE_GAP.get(event,0.0)): return
+	voice_at[event]=now
 	audio.call("play",self,kind,event,global_position,variant)
 
-## One footfall per STRIDE metres travelled; creature_audio.gd throttles by distance and voice count.
+## One footfall per STRIDE metres travelled while actually moving; creature_audio.gd throttles by
+## distance, species gap, voice count and a pack-wide rate.
 func footfall(moved: float) -> void:
 	if moved<0.0005 or audio==null or not is_inside_tree(): return
 	stride_left-=moved
 	if stride_left>0.0: return
 	stride_left=float(STRIDE.get(kind,1.1))*randf_range(0.88,1.12)
+	if ground_speed<STEP_MIN_SPEED: return
 	audio.call("step",self,kind,global_position,ground_speed)
 
 ## Small one-shot mote burst (spore puff, death smoke). CPUParticles3D works on Compatibility.

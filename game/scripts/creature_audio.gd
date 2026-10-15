@@ -46,11 +46,14 @@ extends RefCounted
 ## Voices: MAX_VOICES pooled 3D players + MAX_VOICES flat players under root/GameSfx,
 ## MAX_PER_SPECIES at once per species; a full pool steals the lowest-priority, oldest voice
 ## (death 5 > strike/hurt/charge 4 > alert/windup/dazed 3 > idle 1 > region layers/steps 0)
-## or drops the new sound if it ranks lower. Steps: at most MAX_STEPS at once, within STEP_RANGE m.
+## or drops the new sound if it ranks lower. Steps: at most MAX_STEPS at once, within STEP_RANGE m,
+## one per species every STEP_GAP s and about STEP_RATE per second over the whole pack.
 ## Bus: "SFX" when the project has it, else "Master".
 ##
 ## Shared engine (used by combat_audio.gd / hero_voice.gd):
 ##   CreatureAudio.emit(app_or_node, stream, at, volume_db, pitch, priority, tag, bus := "SFX") -> bool
+##   CreatureAudio.after(delay, app_or_node, fn) -> bool  fn.call(app_or_node) after delay s, holding
+##       the app weakly (skipped when it is freed by then; no "Lambda capture was freed" error)
 ##   CreatureAudio.listener(app_or_node) -> Vector3 (Vector3.INF when unknown)
 ##   CreatureAudio.find_app(node) -> Object (the node, the current scene or an ancestor with `player`)
 ##   CreatureAudio.bus(name) -> StringName, CreatureAudio.active(tag_prefix := "") -> int
@@ -85,7 +88,11 @@ const GAIT := {"wolf": "paw", "boar": "hoof", "brute": "stomp", "wisp": "flutter
 const STEP_DB := {"paw": -19.0, "hoof": -17.5, "stomp": -14.0, "flutter": -20.0, "squelch": -18.5}
 const MAX_STEPS := 2
 const STEP_RANGE := 18.0
-const STEP_GAP := 0.09
+const STEP_GAP := 0.12
+## Footfalls across every species: a bucket of STEP_BURST refilled at STEP_RATE per second, so a
+## running pack stays a soft patter instead of a drum roll.
+const STEP_RATE := 8.0
+const STEP_BURST := 3.0
 const MAX_VOICES := 10
 const MAX_PER_SPECIES := 3
 const MAX_IDLE := 2
@@ -105,6 +112,8 @@ static var last_take := {}
 static var last_idle := {}
 static var last_key := {}
 static var last_step := {}
+static var step_tokens := STEP_BURST
+static var step_refill := -10.0
 static var alert_start := -10.0
 static var alert_count := 0
 static var rng := RandomNumberGenerator.new()
@@ -132,14 +141,10 @@ static func play(app_or_node, species: String, event: String, at: Vector3, varia
 		alert_count += 1
 		if alert_count > 1:
 			if alert_count > ALERT_GROUP_MAX: return false
-			var tree := Engine.get_main_loop() as SceneTree
-			if tree == null: return false
 			var delay := minf(0.3, (alert_count-1)*rng.randf_range(0.08, 0.12)+rng.randf_range(0.0, 0.04))
-			var target = app_or_node
-			tree.create_timer(delay).timeout.connect(func() -> void:
-				if target is Object and not is_instance_valid(target): return
+			# The creature that called may die before its turn: after() holds it weakly.
+			return after(delay, app_or_node, func(target) -> void:
 				_voice(target, species, event, region, key, at, Time.get_ticks_msec()*0.001))
-			return true
 	return _voice(app_or_node, species, event, region, key, at, now)
 
 static func _voice(app_or_node, species: String, event: String, region: String, key: String, at: Vector3, now: float) -> bool:
@@ -172,13 +177,17 @@ static func _layer(app_or_node, region: String, event: String, at: Vector3, db: 
 	emit(app_or_node, SfxBank.stream(path), at, db+LAYER_DB+SfxBank.db(1.5), SfxBank.pitch(0.05), 0, "layer/"+region)
 
 ## One monster footfall (call per stride from the creature's movement): paw / hoof / stomp /
-## squelch / flutter by species. Dropped when far away, when MAX_STEPS are sounding or when the same
-## species stepped within STEP_GAP s; priority 0, so steps never cut a voice.
+## squelch / flutter by species. Dropped when far away, when MAX_STEPS are sounding, when the same
+## species stepped within STEP_GAP s or when the pack used up its STEP_RATE budget; priority 0, so
+## steps never cut a voice.
 static func step(app_or_node, species: String, at: Vector3, speed := 1.0) -> bool:
 	species = species_name(species)
 	var gait: String = GAIT.get(species, "paw")
 	var now := Time.get_ticks_msec()*0.001
 	if now-float(last_step.get(species, -10.0)) < STEP_GAP: return false
+	step_tokens = minf(STEP_BURST, step_tokens+maxf(now-step_refill, 0.0)*STEP_RATE)
+	step_refill = now
+	if step_tokens < 1.0: return false
 	if active("step/") >= MAX_STEPS: return false
 	if at != Vector3.INF:
 		var ears := listener(app_or_node)
@@ -190,6 +199,7 @@ static func step(app_or_node, species: String, at: Vector3, speed := 1.0) -> boo
 			lerpf(0.97, 1.04, pace)*SfxBank.pitch(0.06), 0, "step/"+species):
 		return false
 	last_step[species] = now
+	step_tokens -= 1.0
 	return true
 
 static func species_name(species: String) -> String:
@@ -245,6 +255,25 @@ static func preload_all() -> int:
 	return count
 
 # ------------------------------------------------------------------ shared engine
+## fn.call(app_or_node) after `delay` s. The timer lambda holds the app through a WeakRef: a lambda
+## that captured the app itself would make Godot print "Lambda capture at index 0 was freed" when
+## the app (a scene being left, a creature dying) goes first. Skipped when the app is freed by then;
+## a non-object app (null) is passed through. False when nothing was scheduled.
+static func after(delay: float, app_or_node, fn: Callable) -> bool:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null: return false
+	var is_object := typeof(app_or_node) == TYPE_OBJECT
+	if is_object and not is_instance_valid(app_or_node): return false
+	var ref: WeakRef = weakref(app_or_node) if is_object else null
+	var plain = null if is_object else app_or_node
+	tree.create_timer(maxf(delay, 0.0)).timeout.connect(func() -> void:
+		var target = plain
+		if ref != null:
+			target = ref.get_ref()
+			if target == null: return
+		fn.call(target))
+	return true
+
 static func bus(name: String) -> StringName:
 	return StringName(name) if AudioServer.get_bus_index(name) >= 0 else &"Master"
 

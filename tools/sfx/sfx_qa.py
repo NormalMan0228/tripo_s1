@@ -2,10 +2,12 @@
 
     python tools/sfx/sfx_qa.py <dir|glob|file>... [--group auto|dir|none] [--sheet out.png]
                                [--json out.json] [--min-takes N] [--strict] [--quiet]
+                               [--base <git ref>] [--aw-over DB]
 
 Per file: duration, peak dBFS, short-term RMS peak (120 ms, 150 Hz high-pass: the game's
-audio_bank_check measure), DC offset, clipped samples, edge levels (max |x| in the first/last
-2 ms and the first/last sample), leading/trailing silence, spectral centroid, header shape.
+audio_bank_check measure), the same peak A-weighted (perceived loudness: "aw"), DC offset,
+clipped samples, edge levels (max |x| in the first/last 2 ms and the first/last sample),
+leading/trailing silence, spectral centroid, header shape.
 
 Families (--group auto): files in one directory whose names differ only by a trailing _<n>
 (the bare original <event>.wav joins its <event>_<n>.wav takes). Per family: take count,
@@ -25,10 +27,14 @@ FAIL rules (exit code 1): clipped samples, |DC| > 0.01, first sample above -40 d
 sample above -50 dBFS or last 2 ms above -36 dBFS, leading silence > 40 ms or trailing silence
 > 80 ms (below -60 dBFS) -- loops (*loop* names, beds/ambience/loops dirs, --loop) get a seam
 check instead -- not mono 16-bit with a 44-byte header, silent file, family loudness
-outlier (> 2 dB from the family median), spread > --max-spread, near-identical pair, fewer
-than --min-takes takes. Problems of files that git already tracks (team recordings, older
-generators) are reported as WARN unless --strict, since those files must not be changed;
-a loudness outlier or a near-identical pair that involves a new take is always a FAIL.
+outlier (> 2 dB from the family median), spread > --max-spread, a new take more than
+--aw-over (2.5) dB above the family's median A-weighted level (a bright take that the flat
+match lets jump out), near-identical pair, fewer than --min-takes takes. Problems of original
+files (team recordings, older generators) are reported as WARN unless --strict, since those
+files must not be changed; a loudness outlier or a near-identical pair that involves a new take
+is always a FAIL. Originals are the files git tracks, or with --base <ref> the files that
+already existed at <ref> (merge base with HEAD): everything added since then, committed or not
+(git diff --diff-filter=A <ref>...HEAD plus untracked files), counts as new and can FAIL.
 """
 from __future__ import annotations
 
@@ -51,6 +57,7 @@ import sfxlib as L  # noqa: E402
 SIM_FAIL = 0.90          # calibrated on the existing assets, see README "QA similarity calibration"
 XC_FAIL = 0.95           # literal (time-shifted, re-levelled) copies
 OUTLIER_DB = 2.0
+AW_OVER_DB = 2.5         # a new take this far above its family's median A-weighted st-rms FAILs
 MAX_SPREAD_DB = 3.0
 FEAT_SR = 22050
 SCALES = (0.92, 0.94, 0.96, 0.98, 1.0, 1.02, 1.04, 1.06, 1.08)    # time-scale search
@@ -115,6 +122,17 @@ def tracked_set(paths) -> set:
         for rel in r.stdout.decode("utf-8", "replace").split("\0"):
             if rel:
                 out.add((root / rel).resolve())
+    return out
+
+
+def original_set(paths, base: str) -> set:
+    """Resolved paths that already existed at `base` (merge base of base and HEAD) in every repo
+    the inputs live in. Files added since then (committed or untracked) are not in it."""
+    tracked_set(paths)                      # fills _REPOS
+    out = set()
+    for root in {_REPOS.get(p.parent) for p in paths}:
+        if root is not None:
+            out |= L.base_files(base, root)
     return out
 
 
@@ -247,9 +265,11 @@ def is_loop(path: Path) -> bool:
     return "loop" in path.stem.lower() or path.parent.name.lower() in LOOP_DIRS
 
 
-def analyse(path: Path, tracked: bool, loop: bool | None = None) -> dict:
+def analyse(path: Path, tracked: bool, loop: bool | None = None, original: bool | None = None) -> dict:
+    """original: a file that must not change (default: tracked); its problems are WARN."""
     loop = is_loop(path) if loop is None else loop
-    d = {"path": str(path), "name": path.stem, "dir": path.parent.name, "tracked": tracked, "loop": loop, "problems": []}
+    d = {"path": str(path), "name": path.stem, "dir": path.parent.name, "tracked": tracked,
+         "original": tracked if original is None else original, "loop": loop, "problems": []}
     try:
         info = L.wav_info(path)
         x, sr = L.read_wav(path)
@@ -265,6 +285,7 @@ def analyse(path: Path, tracked: bool, loop: bool | None = None) -> dict:
     pk = float(np.max(np.abs(x)))
     d["peak_db"] = round(L.db(pk), 2)
     d["st_db"] = round(L.st_rms_peak_db(x, sr), 2)
+    d["aw_db"] = round(L.aw_st_db(x, sr), 2)
     d["dc"] = round(float(np.mean(x)), 5)
     if info["tag"] == 1 and info["bits"] == 16:
         raw = np.round(x * 32768.0) if info["channels"] == 1 else None
@@ -356,9 +377,10 @@ def _take_no(name):
 
 
 def evaluate(files, mode="auto", min_takes=0, max_spread=MAX_SPREAD_DB, sim_fail=SIM_FAIL, xc_fail=XC_FAIL,
-             strict=False, loop=None):
+             strict=False, loop=None, base=None, aw_over=AW_OVER_DB):
     tracked = tracked_set(files)
-    rows = [analyse(f, f in tracked, loop) for f in files]
+    orig = original_set(files, base) if base else tracked
+    rows = [analyse(f, f in tracked, loop, f in orig) for f in files]
     fams: dict = {}
     for r in rows:
         fams.setdefault(family_key(Path(r["path"]), mode), []).append(r)
@@ -369,7 +391,7 @@ def evaluate(files, mode="auto", min_takes=0, max_spread=MAX_SPREAD_DB, sim_fail
 
     for r in rows:
         for prob in r["problems"]:
-            flag(strict or not r["tracked"], "%s/%s: %s" % (r["dir"], r["name"], prob))
+            flag(strict or not r["original"], "%s/%s: %s" % (r["dir"], r["name"], prob))
     for key, members in sorted(fams.items()):
         members.sort(key=lambda r: (_take_no(r["name"]), r["name"]))
         ok = [m for m in members if "_feat" in m]
@@ -386,10 +408,21 @@ def evaluate(files, mode="auto", min_takes=0, max_spread=MAX_SPREAD_DB, sim_fail
                         fam["fails"].append(msg)
                         flag(True, msg)
                 if fam["spread"] > max_spread:
-                    new = any(not m["tracked"] for m in ok)
+                    new = any(not m["original"] for m in ok)
                     msg = "%s: loudness spread %.1f dB > %.1f" % (key, fam["spread"], max_spread)
                     fam["fails"].append(msg)
                     flag(strict or new, msg)
+            aw = [m["aw_db"] for m in ok if "aw_db" in m]
+            if aw:
+                amed = float(np.median(aw))
+                fam.update(aw_median=round(amed, 2), aw_spread=round(max(aw) - min(aw), 2))
+                if len(aw) > 1:
+                    for m in ok:
+                        if m.get("aw_db", -999.0) - amed > aw_over:
+                            msg = "%s: %s perceived (A-weighted) level %.1f dB is %.1f dB above the family median %.1f" % (
+                                key, m["name"], m["aw_db"], m["aw_db"] - amed, amed)
+                            fam["fails"].append(msg)
+                            flag(strict or not m["original"], msg)
         if min_takes and len(members) < min_takes:
             msg = "%s: %d takes < --min-takes %d" % (key, len(members), min_takes)
             fam["fails"].append(msg)
@@ -411,7 +444,7 @@ def evaluate(files, mode="auto", min_takes=0, max_spread=MAX_SPREAD_DB, sim_fail
                     msg = "%s: %s ~ %s near-identical (sim %.3f = min(freq %.3f, time %.3f), xc %.3f)" % (
                         key, a["name"], b["name"], s, parts["freq"], parts["time"], c)
                     fam["fails"].append(msg)
-                    flag(strict or not (a["tracked"] and b["tracked"]), msg)
+                    flag(strict or not (a["original"] and b["original"]), msg)
         for m in ok:
             if m["name"] in best:
                 m["max_sim"], m["max_sim_with"] = round(best[m["name"]][0], 3), best[m["name"]][1]
@@ -424,12 +457,14 @@ def evaluate(files, mode="auto", min_takes=0, max_spread=MAX_SPREAD_DB, sim_fail
 # --------------------------------------------------------------------------- output
 def print_report(rows, families, fails, warns, quiet=False):
     by = {r["name"] + "|" + r["dir"]: r for r in rows}
-    print("%-34s %3s %13s %7s %6s %6s %6s  %s" % ("family", "n", "dur s", "st med", "spread", "maxsim", "maxxc", "status"))
+    print("%-34s %3s %13s %7s %6s %6s %6s %6s %6s  %s" % ("family", "n", "dur s", "st med", "spread", "aw med", "aw spr",
+                                                         "maxsim", "maxxc", "status"))
     for fam in families:
         status = "FAIL" if any(m in fails for m in fam["fails"]) else ("warn" if fam["fails"] else "ok")
         dur = "%.2f-%.2f" % (fam.get("dur_min", 0), fam.get("dur_max", 0))
-        print("%-34s %3d %13s %7.1f %6.2f %6.3f %6.3f  %s" % (fam["family"][:34], fam["count"], dur, fam.get("st_median", float("nan")),
-                                                         fam.get("spread", 0.0), fam["max_sim"], fam["max_xc"], status))
+        print("%-34s %3d %13s %7.1f %6.2f %6.1f %6.2f %6.3f %6.3f  %s" % (
+            fam["family"][:34], fam["count"], dur, fam.get("st_median", float("nan")), fam.get("spread", 0.0),
+            fam.get("aw_median", float("nan")), fam.get("aw_spread", 0.0), fam["max_sim"], fam["max_xc"], status))
         if quiet:
             continue
         d = fam["family"].split("/")[0]
@@ -437,13 +472,13 @@ def print_report(rows, families, fails, warns, quiet=False):
             r = by.get(name + "|" + d)
             if not r or "seconds" not in r or "st_db" not in r:
                 continue
-            print("    %-28s %5.3fs pk %6.1f st %6.1f dc %+.4f clip %d edge %5.0f/%5.0f lead %3.0f tail %3.0f cen %5.0f%s%s" % (
-                r["name"][:28], r["seconds"], r["peak_db"], r["st_db"], r["dc"], r["clipped"], r["start_db"], r["end_db"],
-                r["lead_ms"], r["tail_ms"], r["centroid_hz"],
+            print("    %-28s %5.3fs pk %6.1f st %6.1f aw %6.1f dc %+.4f clip %d edge %5.0f/%5.0f lead %3.0f tail %3.0f cen %5.0f%s%s" % (
+                r["name"][:28], r["seconds"], r["peak_db"], r["st_db"], r.get("aw_db", float("nan")), r["dc"], r["clipped"],
+                r["start_db"], r["end_db"], r["lead_ms"], r["tail_ms"], r["centroid_hz"],
                 ("  sim %.2f~%s" % (r["max_sim"], r["max_sim_with"])) if "max_sim" in r else "",
-                "  [git]" if r["tracked"] else ""))
+                "  [orig]" if r["original"] else ""))
     if warns:
-        print("\nWARN (%d, files already in git):" % len(warns))
+        print("\nWARN (%d, original files that must not change):" % len(warns))
         for w in warns[:200]:
             print("  " + w)
     print("\nFAIL (%d):" % len(fails))
@@ -494,10 +529,10 @@ def draw_sheet(rows, families, fails, out: Path, max_s=None, sim_fail=SIM_FAIL):
             im = Image.fromarray(lut[np.clip((S * 255).astype(int), 0, 255)][::-1])
             im = im.resize((cols, ROW - 6), Image.BILINEAR)
             img.paste(im, (LABEL, y + 2))
-            red = any(r["name"] in m for m in fam["fails"]) or (r["problems"] and not r["tracked"])
-            dr.text((8, y + 4), r["name"][:44] + ("  [git]" if r["tracked"] else ""), fill=(255, 120, 120) if red else (230, 230, 230), font=font)
-            dr.text((8, y + 18), "%.3fs  st %.1f  pk %.1f  cen %.0f" % (r["seconds"], r["st_db"], r["peak_db"], r["centroid_hz"]),
-                    fill=(170, 170, 170), font=font)
+            red = any(r["name"] in m for m in fam["fails"]) or (r["problems"] and not r["original"])
+            dr.text((8, y + 4), r["name"][:44] + ("  [orig]" if r["original"] else ""), fill=(255, 120, 120) if red else (230, 230, 230), font=font)
+            dr.text((8, y + 18), "%.3fs  st %.1f  aw %.1f  pk %.1f  cen %.0f" % (
+                r["seconds"], r["st_db"], r.get("aw_db", float("nan")), r["peak_db"], r["centroid_hz"]), fill=(170, 170, 170), font=font)
             if "max_sim" in r:
                 dr.text((8, y + 32), "max sim %.2f vs %s" % (r["max_sim"], r["max_sim_with"][-14:]),
                         fill=(255, 120, 120) if r["max_sim"] >= sim_fail else (150, 190, 150), font=font)
@@ -530,7 +565,8 @@ def _jsonable(rows, families, fails, warns, args):
     for r in rows:
         clean.append({k: v for k, v in r.items() if not k.startswith("_")})
     return {"thresholds": {"sim_fail": args.sim_fail, "xc_fail": args.xc_fail, "outlier_db": OUTLIER_DB,
-                           "max_spread_db": args.max_spread},
+                           "max_spread_db": args.max_spread, "aw_over_db": args.aw_over},
+            "base": args.base or None,
             "files": clean, "families": families, "fails": fails, "warns": warns}
 
 
@@ -544,7 +580,12 @@ def main(argv=None) -> int:
     ap.add_argument("--max-spread", type=float, default=MAX_SPREAD_DB, help="max family loudness spread (dB)")
     ap.add_argument("--sim-fail", type=float, default=SIM_FAIL, help="near-identical band-map similarity")
     ap.add_argument("--xc-fail", type=float, default=XC_FAIL, help="near-identical waveform correlation")
-    ap.add_argument("--strict", action="store_true", help="problems of git-tracked files FAIL too")
+    ap.add_argument("--strict", action="store_true", help="problems of original files FAIL too")
+    ap.add_argument("--base", default="", help="git ref: files that existed there are the originals (WARN); "
+                    "everything added since <ref>...HEAD, committed or untracked, is new and can FAIL "
+                    "(default: every git-tracked file is an original)")
+    ap.add_argument("--aw-over", type=float, default=AW_OVER_DB,
+                    help="FAIL a new take this many dB above its family's median A-weighted st-rms")
     ap.add_argument("--quiet", action="store_true", help="family table and FAIL list only")
     ap.add_argument("--loop", action="store_true", help="treat every input as a loop (seam check instead of "
                     "fades/silence); *loop* names and beds/ambience/loops dirs are loops anyway")
@@ -554,7 +595,8 @@ def main(argv=None) -> int:
         print("sfx_qa: no wav files", file=sys.stderr)
         return 2
     rows, families, fails, warns = evaluate(files, args.group, args.min_takes, args.max_spread, args.sim_fail,
-                                            args.xc_fail, args.strict, True if args.loop else None)
+                                            args.xc_fail, args.strict, True if args.loop else None,
+                                            args.base or None, args.aw_over)
     print_report(rows, families, fails, warns, args.quiet)
     if args.sheet:
         print("sheet:", draw_sheet(rows, families, fails, Path(args.sheet), sim_fail=args.sim_fail))

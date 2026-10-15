@@ -9,7 +9,9 @@ extends SceneTree
 ##    (each slot sounds and is silent at its end), resolve() maps casts and titles.
 ## 3. Pooled playback: voices never exceed the pool, species and idle limits hold, far
 ##    sounds are skipped, low-priority sounds can't steal from high-priority ones, the
-##    heartbeat loops and fades, and the babble follows a typing Label (rate-limited,
+##    heartbeat loops and fades (also while the out-call repeats), the campfire fade finishes
+##    under repeated out-calls and its watchdog, timers for a freed app stay silent, footfalls
+##    keep a pack-wide budget, and the babble follows a typing Label (rate-limited,
 ##    stops on skip, "" stays silent).
 ## Writes artifacts/audio-bank-check.txt. Exit code 1 on any failure.
 const CreatureAudio := preload("res://scripts/creature_audio.gd")
@@ -61,6 +63,7 @@ func run() -> void:
 	check_events()
 	await check_pool()
 	await check_variety()
+	await check_timers()
 	await check_heartbeat()
 	await check_campfire()
 	await check_babble()
@@ -351,12 +354,21 @@ func check_variety() -> void:
 	check(layered >= 3, "the frost layer sounded under only %d of 12 wolf deaths" % layered)
 	CreatureAudio.stop_all()
 	CreatureAudio.last_step.clear()
+	CreatureAudio.step_tokens = CreatureAudio.STEP_BURST
 	check(CreatureAudio.step(app, "boar", Vector3(2, 0, 0), 2.0), "boar footfall did not play")
 	check(not CreatureAudio.step(app, "boar", Vector3(2, 0, 0), 2.0), "two boar footfalls within STEP_GAP")
 	check(not CreatureAudio.step(app, "wolf", Vector3(40, 0, 0), 2.0), "a footfall 40 m away played")
 	check(CreatureAudio.step(app, "brute", Vector3(-2, 0, 0), 1.0), "brute footfall did not play")
 	await process_frame
 	check(not CreatureAudio.step(app, "shroom", Vector3(0, 0, 2), 1.0), "more than MAX_STEPS footfalls at once")
+	# A whole pack stepping in one frame (voices freed between): the pack budget lets STEP_BURST through.
+	CreatureAudio.last_step.clear()
+	CreatureAudio.step_tokens = CreatureAudio.STEP_BURST
+	var pack_steps := 0
+	for species in CreatureAudio.SPECIES:
+		CreatureAudio.stop_all()
+		if CreatureAudio.step(app, species, Vector3(1, 0, 1), 2.0): pack_steps += 1
+	check(pack_steps == int(CreatureAudio.STEP_BURST), "a pack stepping at once started %d footfalls (want %d)" % [pack_steps, int(CreatureAudio.STEP_BURST)])
 	check(CreatureAudio.pool_paths("boar", "charge", "quarry").size() >= 6, "boar charge pool")
 	check(CreatureAudio.pool_paths("wolf", "dazed", "forest") == CreatureAudio.pool_paths("wolf", "hurt", "forest"), "dazed falls back to hurt")
 	CreatureAudio.stop_all()
@@ -366,6 +378,35 @@ func check_variety() -> void:
 	check(CombatAudio.cue(app, "hunger", true, 30.0), "hunger cue did not play again after it ended")
 	lines.append("variety    hit_flesh %d takes in 24 plays, hero hurt %d in 16, no back-to-back repeat; spawn burst 7 -> %d; frost layer %d/12" % [
 		seen.size(), hero_seen.size(), spawned, layered])
+	CreatureAudio.stop_all()
+	app.queue_free()
+	await process_frame
+
+## Delayed sounds (staggered spawn/dissolve and alerts, CombatAudio.later) for an app that is freed
+## before they fire: dropped without a sound and without "Lambda capture ... was freed" errors.
+func check_timers() -> void:
+	var doomed := make_app()
+	await process_frame
+	CreatureAudio.stop_all()
+	CombatAudio.group_start.clear()
+	CreatureAudio.alert_start = -10.0
+	CreatureAudio.last_key.clear()
+	for i in 3: CombatAudio.play(doomed, "dissolve", Vector3(i, 0, 1))
+	for species in ["wolf", "boar", "brute"]: CreatureAudio.play(doomed, species, "alert", Vector3(2, 0, 1))
+	CombatAudio.later(doomed, "equip", 0.05)
+	var at_free := CreatureAudio.played
+	doomed.free()
+	await create_timer(0.45).timeout
+	check(CreatureAudio.played == at_free, "%d delayed sounds played for an app freed before its timers" % (CreatureAudio.played-at_free))
+	# A live app still gets them.
+	var app := make_app()
+	await process_frame
+	CombatAudio.last_time.erase("equip")
+	CombatAudio.later(app, "equip", 0.05)
+	var before := CreatureAudio.played
+	await create_timer(0.2).timeout
+	check(CreatureAudio.played > before, "CombatAudio.later() did not play for a live app")
+	lines.append("timers     freed app: %d delayed sounds dropped quietly; live app: later() plays" % 5)
 	CreatureAudio.stop_all()
 	app.queue_free()
 	await process_frame
@@ -392,7 +433,19 @@ func check_campfire() -> void:
 	check(CombatAudio.campfire_playing(), "campfire did not restart")
 	await create_timer(3.2).timeout
 	check(not CombatAudio.campfire_playing(), "campfire kept playing after the run stopped calling it")
-	lines.append("campfire   loops while fed, fades when the fire goes out or the run is left")
+	# The run keeps reporting the fire out on every update (and the watchdog polls): one fade, then silence.
+	CombatAudio.campfire(app, 30.0, Vector3(1, 0, 0))
+	await process_frame
+	check(CombatAudio.campfire_playing(), "campfire did not restart for the repeated out-call check")
+	var sputters := CreatureAudio.played
+	var until := Time.get_ticks_msec()+1300
+	while Time.get_ticks_msec() < until:
+		CombatAudio.campfire(app, 0.0, Vector3(1, 0, 0))
+		await create_timer(0.1).timeout
+	sputters = CreatureAudio.played-sputters
+	check(not CombatAudio.campfire_playing(), "campfire kept playing while the out-call repeated")
+	check(sputters <= 1, "the fire going out sputtered %d times (want 1)" % sputters)
+	lines.append("campfire   loops while fed, fades once when the fire goes out (repeated out-calls: %d sputter) or the run is left" % sputters)
 	app.queue_free()
 	await process_frame
 
@@ -410,9 +463,12 @@ func check_heartbeat() -> void:
 	check(CombatAudio.heart.pitch_scale > slow, "heartbeat does not speed up at lower HP")
 	await create_timer(1.0).timeout
 	check(CombatAudio.heartbeat_playing(), "heartbeat loop ended by itself")
-	CombatAudio.heartbeat(app, 60.0)
-	await create_timer(0.9).timeout
-	check(not CombatAudio.heartbeat_playing(), "heartbeat did not fade out above 30 %")
+	# HP updates keep arriving several times a second above 30 %: the fade must still reach its stop.
+	var until := Time.get_ticks_msec()+900
+	while Time.get_ticks_msec() < until:
+		CombatAudio.heartbeat(app, 60.0)
+		await create_timer(0.1).timeout
+	check(not CombatAudio.heartbeat_playing(), "heartbeat did not fade out above 30 % while HP updates kept coming")
 	lines.append("heartbeat  starts below 30 %%, pitch %.2f -> %.2f, loops, fades out" % [slow, CombatAudio.heart.pitch_scale])
 	app.queue_free()
 

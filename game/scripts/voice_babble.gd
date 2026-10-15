@@ -19,7 +19,8 @@ extends Node
 ##         "scout", "lamplighter", "gentleman", "poet", "stroller"), "villager"/"shadow"
 ##         (generic), or a portrait path / cast name (resolve() below).
 ##         "" / "letter" / "sign" (objects with no speaker: signs, mailboxes, boards) = no voice,
-##         soft quill/paper ticks follow the typing instead (voice/quill_<n>.wav, UI bus).
+##         soft quill/paper ticks follow the typing instead (voice/quill_<n>.wav, UI bus):
+##         a jittered ~8-11 per second pen cadence while ink appears, silent once it stops.
 ##       label: pass the typing Label and the blips follow label.visible_ratio exactly
 ##         (skipping to the full line stops the babble; a new text, hiding or freeing the
 ##         label ends it). Without a label the text is "typed" at `speed` characters per
@@ -107,10 +108,16 @@ const GREET_DB := 1.0
 const GREET_GAP := 30.0
 ## The first syllables of a line wait at most this long for the greeting bark.
 const GREET_HOLD := 0.28
-## Quill ticks for lines without a speaker.
+## Quill ticks for lines without a speaker: while ink keeps appearing the pen scratches on
+## its own cadence, QUILL_GAP..QUILL_GAP_MAX s apart (~8-11 per second, jittered), not one
+## tick per character; it stops QUILL_IDLE s after the reveal stalls and when it ends.
 const QUILL_IDS := ["", "letter", "sign"]
-const QUILL_GAP := 0.06
-const QUILL_DB := -11.0
+const QUILL_GAP := 0.09
+const QUILL_GAP_MAX := 0.125
+const QUILL_IDLE := 0.2
+## Soft: letters and signs are read often. The first stroke of a word lands a touch firmer.
+const QUILL_DB := -13.0
+const QUILL_ACCENT := 1.5
 
 static var instance = null
 static var banks := {}
@@ -137,6 +144,9 @@ var last_emit := -10.0
 var word_start := true
 var active := false
 var quill := false
+var next_tick := 0.0
+var last_ink := -10.0
+var stroke_up := false
 var hold_until := 0.0
 var hold_voice := ""
 var greeted_label := 0
@@ -332,6 +342,7 @@ func _begin(line: String, speed: float, typing_label: Label) -> void:
 	cursor = 0
 	word_start = true
 	last_emit = -10.0
+	last_ink = -10.0
 	_shape()
 	active = not text.strip_edges().is_empty()
 
@@ -376,8 +387,11 @@ func _process(_delta: float) -> void:
 		cursor = revealed
 		active = cursor < text.length()
 		return
-	var gap: float = QUILL_GAP if quill else float(VOICES[voice].gap)
-	var held := not quill and now < hold_until
+	if quill:
+		_quill_step(now, revealed)
+		return
+	var gap := float(VOICES[voice].gap)
+	var held := now < hold_until
 	while cursor < revealed:
 		var i := cursor
 		cursor += 1
@@ -386,16 +400,30 @@ func _process(_delta: float) -> void:
 			if code == 32 or code == 10: word_start = true
 			continue
 		if not held and (now-last_emit >= gap or (word_start and now-last_emit >= gap*0.6)):
-			if quill:
-				_tick()
-				# Pen strokes are less even than syllables.
-				last_emit = now+rng.randf_range(0.0, 0.035)
-			else:
-				_emit(i, code)
-				last_emit = now
+			_emit(i, code)
+			last_emit = now
 			word_start = false
 			break
 		word_start = false
+	if cursor >= text.length(): active = false
+
+## The quill follows the ink, not the characters: every visible character (punctuation is
+## written too) keeps the pen moving, and while it moves the ticks run on their own jittered
+## cadence. The schedule advances from the planned time so frame steps do not slow it, but
+## never bunches ticks after a hitch; a stalled reveal lets the pen rest.
+func _quill_step(now: float, revealed: int) -> void:
+	while cursor < revealed:
+		var code := text.unicode_at(cursor)
+		cursor += 1
+		if code == 32 or code == 10 or code == 9 or code == 0x3000: word_start = true
+		else: last_ink = now
+	if now-last_ink > maxf(QUILL_IDLE, 1.2/maxf(cps, 1.0)):
+		next_tick = maxf(next_tick, now)
+	elif now >= next_tick:
+		_tick(word_start)
+		word_start = false
+		var interval := rng.randf_range(QUILL_GAP, QUILL_GAP_MAX)
+		next_tick = maxf(next_tick+interval, now+interval*0.6)
 	if cursor >= text.length(): active = false
 
 static func _voiced(code: int) -> bool:
@@ -454,15 +482,17 @@ func _emit(i: int, code: int) -> void:
 		stop_at[slot_index] = _now()+SLOT/p.pitch_scale
 	syllables_played += 1
 
-## One quill/paper tick (UI bus).
-func _tick() -> void:
+## One quill/paper tick (UI bus). Strokes alternate down/up (a hair lower, then higher); the
+## first stroke of a word is the firmer one.
+func _tick(accent := false) -> void:
 	var take := SfxBank.pick(DIR+"quill")
 	if take == null or ticks.is_empty(): return
 	var p := ticks[tick_next]
 	tick_next = (tick_next+1) % ticks.size()
+	stroke_up = false if accent else not stroke_up
 	p.stream = take
-	p.pitch_scale = SfxBank.pitch(0.06)
-	p.volume_db = QUILL_DB+SfxBank.db(1.5)
+	p.pitch_scale = SfxBank.pitch(0.05)*(1.02 if stroke_up else 0.98)
+	p.volume_db = QUILL_DB+(QUILL_ACCENT if accent else 0.0)+SfxBank.db(1.2)
 	p.play()
 	ticks_played += 1
 

@@ -23,7 +23,11 @@ section to this README.
 - Never overwrite or delete an existing WAV. Team recordings (`combat/harvest_tree_1.wav`,
   `harvest_stone_1.wav`, `harvest_fiber_1.wav`, `doors/*`, `ui/*.wav`) and the outputs of the older
   generators stay as they are; new takes are new files. `make_family()` and `write_take()` refuse
-  to write over a git-tracked file. If `_1` exists, start your family at `start=2`.
+  to write over a protected file (`sfxlib.protected()`): every git-tracked file, or, with the
+  environment variable `SFX_BASE=<ref>`, only the files that already existed at `<ref>`. The new
+  takes of this work are committed, so re-render them with
+  `$env:SFX_BASE = 'merge-version-gate'` (PowerShell) set; without it the guard refuses, and
+  `gen_combat.py` would number new takes after them. If `_1` exists, start your family at `start=2`.
 - Do **not** run `tools/make_village_sfx.py`, `tools/make_creature_sfx.py` or
   `tools/build_ui_sounds.py`; they overwrite. The first two can be imported for their helpers
   (they have a `__main__` guard; their module `SR` is 32000):
@@ -59,6 +63,17 @@ section to this README.
   - `make_village_sfx.py` keeps `doors/` and `field/` files under 120 KB.
 - Report your size budget as the sum of new WAV bytes. `make_family()` returns a `bytes` value for
   each take, and `family_report()` prints the KB total.
+- **Perceived level (A-weighted).** The flat st-rms match lets a bright take in a dark family sound
+  3-5 dB louder than its siblings (a 3 kHz tick next to 150 Hz thumps). `aw_st_db()` is the same
+  120 ms peak after IEC A-weighting. `make_family()` and `diverse_family()` run `aw_balance()` after
+  finishing a family: a take more than 1.5 dB (`AW_BALANCE_DB`) above the family's median A-weighted
+  level (existing files of the family included) is re-finished quieter, at most 1.75 dB
+  (`AW_FLAT_ROOM_DB`) under the family's flat median, and, if that is not enough, darkened by the
+  gentlest 1st-order low-pass that gets it there (kept only when it really lowers the perceived
+  level: a take with nothing below 1 kHz only gets duller). Its notes (`aw_over_db`, `aw_gain_db`,
+  `aw_lowpass_hz`) land in the take metadata. Pass `aw_balance_db=None` to switch it off. A take
+  that still stands out needs a design change (less breath, more body), as `gen_voice.emote_dots`
+  takes 3 and 5 got.
 
 ## Designing takes that really differ
 
@@ -192,13 +207,20 @@ cross-family look-alikes. `--group none` checks files alone.
 - a file that is not mono 16-bit PCM with a 44-byte header;
 - a silent file;
 - a take more than 2 dB from the family median;
+- a new take more than `--aw-over` (2.5 dB) above the family's median A-weighted st-rms (`aw` in
+  the report: the perceived level, which the flat measure misses for bright takes);
 - a family spread over `--max-spread` (3 dB);
 - fewer takes than `--min-takes`;
 - a near-identical pair.
 
-Problems of files git already tracks are reported as WARN, since those files must not change; use
+Problems of original files are reported as WARN, since those files must not change; use
 `--strict` to make them FAIL. A loudness outlier, or a near-identical pair that involves a new
-take, always FAILs.
+take, always FAILs. Originals are the git-tracked files, or with `--base <ref>` the files that
+already existed at `<ref>` (its merge base with HEAD): everything added since then, committed or
+untracked (`git diff --diff-filter=A <ref>...HEAD` plus untracked files), is new and can FAIL.
+Now that the takes of this work are committed, run the QA with `--base merge-version-gate`;
+without it every committed take counts as an original and its problems drop to WARN. The report
+marks originals `[orig]`.
 
 **Loops:**
 - Files named `*loop*`, files in `beds/`, `ambience/` or `loops/`, and every input with `--loop`
@@ -337,7 +359,10 @@ comes from `take_seed(event, n, "gen_life-v1")`.
     fish_out, escape, catch, card, rod_equip.
   - Trees and the village: fruit_detach, bounce, fruit_water, knock, bell.
 - `core/`, played by `sound.gd` `effect(kind)`: reward, gather, craft, eat, bandage, fire, error,
-  sell, buy, errand, newday, win, lose.
+  sell, buy, errand, newday, win, lose, and `eat_soup` (4 takes: a warm sip and a light spoon clink
+  on the bowl in four orders, 1 dB under eat). `eat_soup` plays once `main.gd` calls
+  `sound.effect("eat_soup")` for soup (the server answers "열매 수프를 먹었습니다."); until then soup
+  plays core/eat like berries.
 - The forage kinds `dig_stone`, `dig_grass` and `chop_wood` play the recorded
   `combat/harvest_{stone,fiber,tree}` families. Take `_1` is the team recording; the combat
   generator owns the other takes.
@@ -527,7 +552,7 @@ default import: no PCM, no loops.
 .tools\art-venv\Scripts\python.exe tools\sfx\gen_doors.py            # doors/<room>_<kind>_1..3 (84 files)
 ```
 
-Both take `--root <dir>` for trial runs in scratch, plus `--only fx,field,interior` /
+Both take `--root <dir>` for trial runs in scratch, plus `--only fx,field,interior,world` /
 `--family thud,seat` (props) or `--room 01_cafe` (doors). Renders are seeded per take, so a re-run
 writes the same files. Neither writes over a git-tracked file. Helpers come from
 `tools/make_village_sfx.py` (`creak`, `bell`, `tube`, `thud`, `wind`, `rumble`...), which is
@@ -545,6 +570,11 @@ imported and never run.
 - `interior/<kind>_<n>`: the 15 `Interiors.sfx` kinds, 6 takes each, plus `steps` (8 stair
   takes in place of 4 identical thuds).
 - `doors/<room>_<kind>_<n>`: 3 takes per room and kind, so with the original there are 4.
+- `world/portal_<n>`: 4 variants of the team's portal stinger `world/portal.wav` (which stays
+  take 0; `sound.gd stinger()` bags the family): deep (13 % lower, the fading hum wavers), quick
+  (the build cut short, a shorter tail), double (a softer second wave), open (the build is the
+  reversed decay drawing in, a low-pass opening to the peak). Derived from the recording, at
+  22050 Hz, levelled to it; max sim 0.86.
 
 **Designing the takes.** Most families are tables of explicit recipes, not random draws:
 - creaks are scripts of (time, length, f_start, f_end) events;
@@ -614,10 +644,15 @@ renders the same files.
 - `steps/<surface>_<walk|run>_<n>.wav`, n = 1..14, for grass, sand, stone, wood, rock, shallow, snow,
   ice, gravel, leaves, ash, dirt, planks, tile, rug, stairs; `steps/cloth_<n>.wav` (8, a cloth/gear
   rustle layered on about 30 % of hero steps). 22050 Hz.
-- `ambience/<bed>.wav`: 60 s loops (coast, wind and their muffled twins 64 s): birds (22050 Hz),
-  coast (16000), birds_far, insects, night, wind, waterfall, forest, frost, quarry, ember, hearth,
-  clock, cafe (11025), mill (8000), room (6000), sea_muffled, wind_muffled, waterfall_muffled (5000).
-  The rates follow the content and the 34 MB budget; the dark beds have nothing above their Nyquist.
+- `ambience/<bed>.wav`: 60 s loops (coast, wind and their muffled twins 64 s): birds, insects,
+  night, forest, waterfall, hearth (22050 Hz), coast (16000), birds_far, wind, frost, quarry,
+  ember, clock, cafe (11025), mill (8000), room (6000), sea_muffled, wind_muffled,
+  waterfall_muffled (5000). The rates follow the content and the 34 MB budget; the dark beds have
+  nothing above their Nyquist. Insects, night crickets, forest leaves, waterfall spray and hearth
+  crackle were squeezed against the 5.5 kHz Nyquist at 11025 Hz and moved to 22050 Hz on
+  2026-10-15 (+1.32 MB each, same long-term level, `BED_DB` unchanged); texture grain lengths are
+  written at 11025 Hz and scaled with `smp()`. `waterfall_muffled` was left as rendered from the
+  11025 Hz waterfall (below 380 Hz nothing differs).
 - `ambience/spots/<kind>_<n>.wav`: bird 16, gull 8, wave_crash 10, wave_slap 8, gust 8, cricket 8,
   owl 6, frog 8, rooster 3, windmill_creak 6, distant_bell 3.
 
@@ -686,11 +721,12 @@ Everything renders at 32 kHz and is resampled per family:
 ```
 
 **Numbering and levels**
-- Numbering continues after the highest git-tracked take of each event, so the older takes and
-  the team recordings stay.
+- Numbering continues after the highest original take of each event (git-tracked, or with
+  `SFX_BASE=<ref>` the takes that existed at `<ref>`), so the older takes and the team recordings
+  stay. `--root <dir>` renders into a scratch root (the family's originals are copied there).
 - Re-running renders the same files from the same seeds. Untracked takes numbered past a
   family's range are removed.
-- Each family is levelled to the median st-rms of its git-tracked takes. A new kind matches a
+- Each family is levelled to the median st-rms of its original takes. A new kind matches a
   sibling: `whiff` matches the swings, `equip`/`cold`/`hunger`/`ember`/`bandage` match `dodge`,
   `sputter`/`depleted_*`/`craft_*` match `fuel`, `night_warn` matches `night`, and
   `campfire_loop` matches `heartbeat_loop`.
@@ -705,9 +741,19 @@ Everything renders at 32 kHz and is resampled per family:
   - `harvest_tree`/`stone`/`fiber` `_2.._12` are derived from the team recording `_1`:
     - tree: the recorded chop is the core, with new bodies, double chops, splinters, leaves,
       creaks;
-    - stone: the recording's strikes re-cut into new rhythms, plus sparks, chips and scrapes;
-    - fiber: the tear re-cut in another order and length, plus a synthetic rip, root snap or
-      soil.
+    - stone: the recording's strikes re-cut into new rhythms, plus a dull rock ring, chips or a
+      scrape kept low-passed under the strikes;
+    - fiber: only the recording's own tear, re-cut (order, piece count and length, a pause in
+      some takes, its own dynamics); no synthetic rip, root snap, soil pops or tilt any more.
+    - stone and fiber are EQ'd back to `_1`'s long-term spectrum (`ltas_match()`: 1/12-octave
+      bands, zero-phase, at most 9 dB, never a boost below 125 Hz), so the bag sounds like one
+      material: fiber keeps the recording's 8-16 kHz rustle (37.7 % of the energy vs 35.7 % in
+      `_1`, was 24 %). LTAS correlation with `_1` (40 log bands 100 Hz-10 kHz, band-averaged
+      Welch): stone 0.96-0.99, fiber 0.87-0.97 (was 0.14-0.6). The review's centre-sampled variant
+      gives stone 0.92-0.98 and fiber 0.56-0.91: for 0.15-0.3 s noise takes it is mostly Welch
+      noise (a 0.15 s window of `_1` itself scores 0.57). Max sim in the family 0.85 / 0.80.
+    - `harvest_fiber_1` opens with 98 ms of silence (the file stays): `combat_audio.gd` and
+      `life_sfx.gd` start that take 0.09 s in (`LEAD_IN`).
   - new events: whiff 6, equip 5, sputter 5, `depleted_<tree|stone|fiber|berry>` 3 each,
     night_warn 3, cold 4, hunger 4, ember 4, `craft_<tool|soup|bandage>` 4 each, bandage 4.
   - `campfire_loop.wav`: 6.1 s, seamless (`loopify`). The import stage must give it

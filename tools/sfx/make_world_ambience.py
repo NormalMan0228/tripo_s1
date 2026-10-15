@@ -12,7 +12,9 @@ reverbs are circular convolutions, so the last sample runs straight into the fir
 no seam). Identifiable events (a bird phrase, a wave crash, a gust, a cricket) are NOT in the beds;
 they are one-shots that ambience_spots.gd scatters at random times and places. Beds are levelled to
 -20 dBFS long-term RMS (world_audio.gd BED_DB sets the in-game balance). Sample rates follow the
-content and the size budget: birds 22050, coast 16000, the rest 11025 or lower (dark beds).
+content and the size budget: the bright beds (birds, insects, night crickets, forest leaves,
+waterfall spray, hearth crackle) 22050, coast 16000, the rest 11025 or lower (dark beds). Texture
+grain sizes are given at 11025 Hz and scaled (smp()), so a bed keeps its character at any rate.
 
 One-shots -> game/assets/sfx/ambience/spots/<kind>_<n>.wav: designed families (species / call
 pattern / break shape / gust shape grids) rendered through tools/sfx/diverse.py, which keeps only
@@ -42,6 +44,11 @@ CTRL = 50                # control rate of slow envelopes (Hz)
 # =========================================================================== periodic helpers
 def rms(x):
     return math.sqrt(float(np.mean(x * x))) + 1e-12
+
+
+def smp(sr, n_at_11025):
+    """A texture grain length given in samples at 11025 Hz, at sample rate sr."""
+    return max(1, int(round(n_at_11025 * sr / 11025.0)))
 
 
 def fmask(n, sr, lo=None, hi=None, color="white", order=2):
@@ -300,8 +307,9 @@ def bed_waterfall(rng, sr, dur):
     n = L.secs(dur, sr)
     surge = up(0.85 + 0.15 * cenv(rng, dur, 0.25, 0.03), n)
     out = cnoise(rng, n, sr, 40, 220, "brown") * 0.8
-    g = np.repeat(rng.random(n // 220 + 2), 220)[:n]
-    g = np.convolve(np.concatenate([g, g[:200]]), np.ones(200) / 200, "same")[:n]
+    a, b = smp(sr, 220), smp(sr, 200)
+    g = np.repeat(rng.random(n // a + 2), a)[:n]
+    g = np.convolve(np.concatenate([g, g[:b]]), np.ones(b) / b, "same")[:n]
     out += cnoise(rng, n, sr, 450, 2400, "pink") * (0.6 + 1.2 * g ** 2) * 0.9
     out += cnoise(rng, n, sr, 2400, 5200) * 0.3
     for t in times_by(rng, np.ones(100), n, int(dur * 25)):        # spray droplets
@@ -317,8 +325,9 @@ def bed_room(rng, sr, dur):
 
 def leaves_layer(rng, n, sr, dur, I, lo=1600, hi=5200):
     i = up(I, n)
-    g = np.repeat(rng.random(n // 70 + 2), 70)[:n] ** 2.5            # many small leaves, each its own flick
-    g = np.convolve(np.concatenate([g, g[:30]]), np.ones(30) / 30, "same")[:n]
+    a, b = smp(sr, 70), smp(sr, 30)
+    g = np.repeat(rng.random(n // a + 2), a)[:n] ** 2.5              # many small leaves, each its own flick
+    g = np.convolve(np.concatenate([g, g[:b]]), np.ones(b) / b, "same")[:n]
     return cnoise(rng, n, sr, lo, hi) * (0.3 + 1.6 * g) * i ** 1.7
 
 
@@ -510,17 +519,17 @@ def muffle(x, sr_in, sr_out, cutoff):
 BEDS = {
     "birds": (lambda r, sr, d: bed_birds(r, sr, d, False), 22050, 60.0),
     "birds_far": (lambda r, sr, d: bed_birds(r, sr, d, True), 11025, 60.0),
-    "insects": (bed_insects, 11025, 60.0),
-    "night": (bed_night, 11025, 60.0),
+    "insects": (bed_insects, 22050, 60.0),
+    "night": (bed_night, 22050, 60.0),
     "coast": (bed_coast, 16000, 64.0),
     "wind": (bed_wind, 11025, 64.0),
-    "waterfall": (bed_waterfall, 11025, 60.0),
+    "waterfall": (bed_waterfall, 22050, 60.0),
     "room": (bed_room, 6000, 60.0),
-    "forest": (bed_forest, 11025, 60.0),
+    "forest": (bed_forest, 22050, 60.0),
     "frost": (bed_frost, 11025, 60.0),
     "quarry": (bed_quarry, 11025, 60.0),
     "ember": (bed_ember, 11025, 60.0),
-    "hearth": (bed_hearth, 11025, 60.0),
+    "hearth": (bed_hearth, 22050, 60.0),
     "clock": (bed_clock, 11025, 60.0),
     "mill": (bed_mill, 8000, 60.0),
     "cafe": (bed_cafe, 11025, 60.0),

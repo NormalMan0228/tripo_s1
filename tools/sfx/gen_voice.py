@@ -454,15 +454,15 @@ def emote_dots(s, reg, i, rng):
         a = syl(s, reg, 0.11 * j, [(0, 1.04 * p), (1, 1.02 * p)], [(0, "m"), (1, "m")], "m", "flat", tilt=1.6)
         b = syl(s, reg, 0.16 * j, [(0, 0.93 * p), (1, 0.88 * p)], [(0, "m"), (1, ("m", "eu", 0.3))], "m", "fall", tilt=1.6)
         return phrase([(0.0, a, 1.0), (0.21 * j, b, 0.9)])
-    if i == 2:   # "uh..." open, flat-falling, creaky end
+    if i == 2:   # "uh..." open, flat-falling, creaky end (soft: a thinking sound must not stand out)
         return syl(s, reg, 0.42 * j, [(0, 1.0 * p), (0.5, 0.98 * p), (1, 0.82 * p)], [(0, "eo"), (1, "eu")], "v", "fall",
-                   rough=0.22, breath=reg["breath"] + 0.08)
+                   rough=0.14, breath=reg["breath"] + 0.03, tilt=1.45)
     if i == 3:   # "mmm?" dips then rises (puzzled)
         return syl(s, reg, 0.46 * j, [(0, 1.0 * p), (0.5, 0.9 * p), (1, 1.2 * p)], [(0, "m"), (0.6, "m"), (1, ("m", "eu", 0.5))],
                    "m", "swell", tilt=1.5)
-    # "ehh..." breathy, long slow fall with a slow waver
+    # "ehh..." breathy, long slow fall with a slow waver (the breath kept low, as warm as the hums)
     return syl(s, reg, 0.6 * j, [(0, 1.08 * p), (1, 0.86 * p)], [(0, "e"), (1, "eo")], "h", "fall", vib=(3.2, 0.02),
-               breath=reg["breath"] + 0.22)
+               breath=reg["breath"] + 0.1, tilt=1.45)
 
 
 def emote_heart(s, reg, i, rng):

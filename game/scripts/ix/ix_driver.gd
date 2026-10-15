@@ -58,6 +58,23 @@ var input_allowed := Callable()
 var free_check := Callable()
 var on_done := Callable()
 var on_settled := Callable()
+## Seat sounds (opt-in: the village sets it; rooms play their own): sound.call(event, info) at
+##   "settle"  the weight lands on the seat (a bed's or lounger's edge too),
+##   "lie"     the back is down on a bed or lounger,
+##   "rise"    the weight leaves the seat (getting up; from a bed, once sat up on its edge),
+##   "feet"    standing on the floor again after getting up,
+##   "rock"    a rocking or swinging seat turns at the end of a sway (period jitter, >= 0.8 s apart),
+##   "refused" walking up gave up (the way blocked, out of reach, or too long).
+## info: {at (the seat point), material (seat_material()), variant (the seat's), kind, amount 0..1}.
+var sound := Callable()
+## Seat variants heard as upholstery or as rope; anything else is wood (seat_material()).
+const SOFT_SEATS := ["armchair", "sofa", "bed", "lounger"]
+const ROPE_SEATS := ["hammock", "swing"]
+## The carrier's tilt (its up vector) last tick and its last change, and seconds until the next
+## rock may sound: a creak where the sway turns.
+var rock_up := Vector3.UP
+var rock_turn := Vector3.ZERO
+var rock_quiet := 0.0
 
 var approach := {}
 var exit_point := Vector3.ZERO
@@ -207,6 +224,8 @@ func abort(reason := "") -> void:
 	if not actor_ok():
 		reset(reason)
 		return
+	# Walking up took too long: the seat could not be reached.
+	if reason == "timeout" and state in [APPROACH, ALIGN]: _sound("refused")
 	why = reason
 	hand_back(false)
 	fade_from = pose.weight if is_instance_valid(pose) else 0.0
@@ -452,10 +471,17 @@ func _enter(delta: float, moving: Vector2) -> void:
 		if kind == "lie":
 			lie_phase = 1
 			phase_t = 0.0
+			# Sat on the edge: the bed or lounger takes the weight before the back goes down.
+			_sound("settle")
 		else: _settled()
 
 func _settled() -> void:
 	go(HOLD)
+	# Contact: a seat's creak or cushion as the weight lands; on a bed, the back lying down.
+	_sound("lie" if kind == "lie" else "settle")
+	rock_up = carrier_tilt() * Vector3.UP
+	rock_turn = Vector3.ZERO
+	rock_quiet = 0.6
 	if on_settled.is_valid(): on_settled.call()
 	if exit_requested: start_exit(exit_fast)
 
@@ -468,10 +494,27 @@ func _hold(delta: float, moving: Vector2) -> void:
 	write(hold_at)
 	face()
 	# A rocking or swinging carrier tilts the pose, never the body.
+	var tilt := carrier_tilt()
 	if is_instance_valid(pose):
 		pose.weight = 1.0
-		pose.carrier = carrier_tilt()
+		pose.carrier = tilt
+	_rock(tilt, delta)
 	if moving.length() > MOVE_THRESHOLD and phase_t > 0.2: start_exit(true)
+
+## A rocking or swinging seat creaks where its sway turns back (not every turn: 0.8-1.3 s apart,
+## so it never ticks like a metronome), louder for a wider sway. A still seat stays silent.
+func _rock(tilt: Basis, delta: float) -> void:
+	rock_quiet -= delta
+	var up := tilt * Vector3.UP
+	var turn := up - rock_up
+	rock_up = up
+	if turn.length() < 1e-5: return
+	var reversed := rock_turn.length() > 1e-5 and rock_turn.dot(turn) < 0.0
+	rock_turn = turn
+	var angle := Vector3.UP.angle_to(up)
+	if not reversed or rock_quiet > 0.0 or angle < 0.025: return
+	rock_quiet = randf_range(0.8, 1.3)
+	_sound("rock", angle / 0.15)
 
 ## The best free approach spot not tried yet ({} when none).
 func next_approach() -> Dictionary:
@@ -505,6 +548,8 @@ func start_exit(fast: bool) -> void:
 	edge_at = IxMath.hold_root(Vector3(socket.origin) + IxMath.dir_of(socket_yaw) * clampf(float(socket.params.get("width", 0.9)) * 0.5 - 0.22, 0.05, 0.4), socket_yaw, m.seat_contact) if kind == "lie" else hold_at
 	if is_instance_valid(pose): pose.carrier = Basis.IDENTITY
 	go(EXIT)
+	# Getting up off a seat: the seat lets go of the weight (a bed's comes once sat up on its edge).
+	if kind != "lie": _sound("rise")
 
 func _exit(delta: float, moving: Vector2) -> void:
 	phase_t += delta
@@ -525,6 +570,7 @@ func _exit(delta: float, moving: Vector2) -> void:
 			lie_phase = 1
 			phase_t = 0.0
 			set_pose("sit", float(socket.height))
+			_sound("rise")
 		return
 	var from := edge_at if kind == "lie" else hold_at
 	# Longer for a far exit spot, so no tick moves the body more than the bound.
@@ -548,6 +594,8 @@ func _recover() -> void:
 	hand_back(true)
 	go(IDLE)
 	phases.append("done")
+	# Both feet on the floor again.
+	_sound("feet")
 	if on_done.is_valid(): on_done.call()
 
 func _fade(delta: float) -> void:
@@ -559,6 +607,8 @@ func _fade(delta: float) -> void:
 	else: go(IDLE)
 
 func cancel(reason: String) -> void:
+	# The walk up gave up on its own (the player moving off, or the seat or walker going away, is no refusal).
+	if reason in ["blocked", "far"]: _sound("refused")
 	why = reason
 	_stop_steer()
 	hand_back(false)
@@ -589,6 +639,22 @@ func hand_back(facing_out: bool) -> void:
 	if is_instance_valid(pose): pose.carrier = Basis.IDENTITY
 
 # ------------------------------------------------------------------ helpers
+
+## Hands a seat moment to `sound` (nothing when it is unset).
+func _sound(event: String, amount := 1.0) -> void:
+	if not sound.is_valid(): return
+	var at: Vector3 = socket.origin if socket.has("origin") else (actor.global_position if actor_ok() else Vector3.INF)
+	sound.call(event, {"at": at, "material": seat_material(socket, variant), "variant": str(socket.get("variant", "")),
+		"kind": kind, "amount": clampf(amount, 0.0, 1.0)})
+
+## What a seat sounds like: "ground" (sitting on the ground), "soft" (armchair, sofa, bed,
+## lounger), "rope" (hammock, swing) or "wood" (benches, chairs, stools, anything else).
+static func seat_material(resolved: Dictionary, pose_variant := "") -> String:
+	if str(resolved.get("type", "")) == "sit_ground" or pose_variant == "sit_ground": return "ground"
+	var seat := str(resolved.get("variant", ""))
+	if seat in SOFT_SEATS: return "soft"
+	if seat in ROPE_SEATS: return "rope"
+	return "wood"
 
 func hold_body() -> void:
 	if "visual_only" in actor: actor.visual_only = true

@@ -34,6 +34,8 @@ const RUN_SPEED := 3.6
 const STEPS := "steps/"
 const BED_DIR := "res://assets/sfx/ambience/"
 const CLOTH := "steps/cloth"
+## The wave slap layered over a fall into the sea (splash()).
+const SLAP := "ambience/spots/wave_slap"
 ## Chance of the cloth/gear rustle on a hero step (walking; running adds a little).
 const CLOTH_CHANCE := 0.3
 ## Level of the rustle under the step (dB).
@@ -46,10 +48,12 @@ const REMOTE_VOICES := 6
 const REMOTE_AUDIBLE := 26.0
 const FALLOFF_START := 2.5
 ## Level (dB) of each baked bed when its gain is 1 (file beds sit at -20 dBFS RMS; see
-## make_world_ambience.py TARGET). "_muffled" twins play indoors.
+## make_world_ambience.py TARGET). "_muffled" twins play indoors. The clock and room tone files are
+## quieter (about -30 and -33 dBFS RMS), hence their higher trims: indoors the beds stay within
+## about 10 dB of each other (hearth about -40 dBFS in game, clock -45, the bare room tone -49).
 const BED_DB := {
 	"birds": -17.0, "birds_far": -21.0, "insects": -20.0, "night": -19.0, "coast": -4.5, "wind": -8.0, "waterfall": -4.0,
-	"room": -20.0, "forest": -10.0, "frost": -11.0, "quarry": -12.0, "ember": -6.5, "hearth": -5.0, "clock": -10.0,
+	"room": -6.5, "forest": -10.0, "frost": -11.0, "quarry": -12.0, "ember": -6.5, "hearth": -5.0, "clock": -5.0,
 	"mill": -8.0, "cafe": -13.5, "sea_muffled": -15.0, "wind_muffled": -19.0, "waterfall_muffled": -14.0,
 }
 ## The same for the synthesized fallback beds (normalized differently) and which synth bed stands in.
@@ -377,7 +381,13 @@ func splash(size := 1.0) -> void:
 		player.pitch_scale = lerpf(1.0, 0.78, clampf(size, 0.0, 1.0)) * rng.randf_range(0.97, 1.03)
 		player.volume_db = step.volume_db + 4.0 * clampf(size, 0.0, 1.5)
 		player.play()
-	if size >= 0.75 and is_instance_valid(spots): spots.play_flat("wave_slap", -8.0 + 4.0 * minf(size, 1.5))
+	# The sea slapping back over a fall: part of the hero's own action, so it plays on SFX (a cloth
+	# voice) like the splash, not as an ambience one-shot (gone with the ambience slider, and taking
+	# one of the three flat ambience voices).
+	if size >= 0.75 and not cloth_voices.is_empty():
+		var voice := cloth_voices[cloth_index]
+		cloth_index = (cloth_index + 1) % cloth_voices.size()
+		SfxBank.play_on(voice, SLAP, -8.0 + 4.0 * minf(size, 1.5), 1.0, 0.05, 1.0)
 
 ## Where the hero is: `focus`, else the parent's player / hero, else the camera (INF: unknown).
 func listener() -> Vector3:
@@ -519,11 +529,12 @@ static func _bed_ready(key: String, wait := false) -> bool:
 		_request_bed(key)
 		var status := ResourceLoader.load_threaded_get_status(path)
 		if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS and not wait: return false
-		if status == ResourceLoader.THREAD_LOAD_LOADED or (wait and status == ResourceLoader.THREAD_LOAD_IN_PROGRESS):
-			loading.erase(key)
+		loading.erase(key)
+		# Every request is collected, a failed one too (`wait` blocks on one still running): one
+		# that never is leaks its load token at exit (see release()).
+		if status != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 			var stream := ResourceLoader.load_threaded_get(path) as AudioStream
 			if stream != null: return _bed_loaded(key, stream)
-		loading.erase(key)
 	if cache.has("synth/" + key):
 		cache["bed/" + key] = cache["synth/" + key]
 		bed_level[key] = SYNTH_BED_DB[key]
@@ -540,6 +551,22 @@ static func _request_bed(key: String) -> void:
 	var path := BED_DIR + key + ".wav"
 	if not ResourceLoader.exists(path): return
 	if ResourceLoader.load_threaded_request(path) == OK: loading[key] = path
+
+## At quit (clean_exit.gd): collects every bed read still pending, waiting for one still running,
+## and lets go of the bed streams. The engine leaks a load_threaded_request() that nobody took with
+## load_threaded_get() before exit: its load token, a plain RefCounted left at reference count 0
+## ("N ObjectDB instances were leaked at exit"). prepare() reads all seven village beds ahead, and
+## a bed the session never wanted (night and crickets by day, birds at night, a far waterfall) was
+## otherwise never collected: one leak per such bed.
+static func release() -> void:
+	for key in loading.keys():
+		var path: String = loading[key]
+		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_get(path)
+	loading.clear()
+	for key in cache.keys():
+		if str(key).begins_with("bed/"): cache.erase(key)
+	bed_level.clear()
 
 ## The synthesized fallback: 4 takes per original surface and gait, and the original beds.
 static func build_streams() -> void:

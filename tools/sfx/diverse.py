@@ -11,7 +11,8 @@ sfx_qa's 0.90 / 0.95 fail line) against every kept take; candidates are tried in
 are kept or `max_candidates` ran out (then the least similar rejects fill up and a warning is
 printed). Kept takes are written as <event>_<start>.wav ... in the order they were kept, so a
 re-run with the same code renders the same files. Like make_family, it refuses to overwrite a
-git-tracked file.
+protected file (sfxlib.protected), and it
+applies make_family's A-weighted balance (sfxlib.aw_balance) to the kept takes.
 """
 from __future__ import annotations
 
@@ -37,7 +38,7 @@ def pair_sim(fa, fb) -> float:
 def diverse_family(out_dir, event: str, n: int, fn, sr: int = L.DEFAULT_SR, ref_db: float | None = None,
                    seed_base: str = "", start: int = 1, max_candidates: int | None = None, sim_max: float = SIM_MAX,
                    xc_max: float = XC_MAX, finish_kw: dict | None = None, allow_overwrite: bool = False,
-                   dry_run: bool = False, loop: bool = False) -> list:
+                   dry_run: bool = False, loop: bool = False, aw_balance_db: float | None = L.AW_BALANCE_DB) -> list:
     out_dir = Path(out_dir)
     targets = [out_dir / ("%s_%d.wav" % (event, i)) for i in range(int(start), int(start) + int(n))]
     L._guard(targets, allow_overwrite)
@@ -62,7 +63,8 @@ def diverse_family(out_dir, event: str, n: int, fn, sr: int = L.DEFAULT_SR, ref_
             worst_xc = max(worst_xc, c)
             if s >= sim_max or c >= xc_max:
                 break
-        cand = {"k": k, "seed": seed, "y": y, "feat": feat, "notes": notes, "worst": worst, "worst_xc": worst_xc, "with": with_k}
+        cand = {"k": k, "seed": seed, "raw": np.asarray(res, float), "y": y, "feat": feat, "notes": notes,
+                "worst": worst, "worst_xc": worst_xc, "with": with_k}
         if worst < sim_max and worst_xc < xc_max:
             kept.append(cand)
         else:
@@ -75,6 +77,16 @@ def diverse_family(out_dir, event: str, n: int, fn, sr: int = L.DEFAULT_SR, ref_
                 c["worst"] = max([pair_sim(c["feat"], o["feat"]) for o in kept] or [0.0])
             rejects.sort(key=lambda c: c["worst"])
             kept.append(rejects.pop(0))
+    kept = kept[:n]
+    if aw_balance_db is not None and ref_db is not None and not loop:
+        # A-weighted level matching, as in make_family (sfxlib.aw_balance)
+        kw = {k: v for k, v in (finish_kw or {}).items() if k != "loop"}
+        ys, bal = L.aw_balance([c["raw"] for c in kept], [c["y"] for c in kept], sr, ref_db, kw,
+                               L.sibling_levels(out_dir, event, targets), aw_balance_db)
+        for c, y, b in zip(kept, ys, bal):
+            if b:
+                c["y"] = y
+                c["notes"] = dict(c["notes"], **b)
     meta = []
     for path, c in zip(targets, kept):
         if not dry_run:

@@ -16,6 +16,9 @@ const DB_JITTER := 1.0
 ## take families whose _1 is the team recording.
 const SAMPLES := {"dig_stone":"res://assets/sfx/combat/harvest_stone","dig_grass":"res://assets/sfx/combat/harvest_fiber",
 	"chop_wood":"res://assets/sfx/combat/harvest_tree"}
+## Takes that open with silence the file must keep (the team recording harvest_fiber_1 has ~98 ms
+## of air before the tear): playback starts this many seconds in.
+const LEAD_IN := {"harvest_fiber_1.wav":0.09}
 ## Kinds that only exist as take families: the old synth (kind, pitch, dB) standing in for them.
 const STAND_IN := {"knock":["rock",0.55,-3.0],"bell":["catch",0.5,0.0],"thrash":["plop",0.8,0.0],"ripple":["plop",1.3,-8.0],
 	"whiz":["cast",1.3,-6.0],"windup":["cast",0.8,-6.0],"strike":["cast",1.4,-2.0],"reel_back":["tick",0.8,-4.0],
@@ -78,7 +81,7 @@ func _play(kind: String, pitch: float, volume: float, spread: float) -> void:
 	p.stream=stream
 	p.pitch_scale=clampf(pitch*SfxBank.pitch(spread),0.25,4.0)
 	p.volume_db=VOLUME+volume+SfxBank.db(DB_JITTER)
-	p.play()
+	p.play(float(LEAD_IN.get(stream.resource_path.get_file(),0.0)))
 
 ## The next idle player of the ring, or the next one in turn when all are busy.
 func _voice() -> AudioStreamPlayer:

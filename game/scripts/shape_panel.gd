@@ -216,8 +216,9 @@ func send(body: Dictionary) -> bool:
 	busy = false
 	if not reply.ok:
 		var words := {"object_is_listed": tr("장터에 올린 물건은 모양을 바꿀 수 없어요."), "stale_shape_version": tr("다른 곳에서 모양이 바뀌었어요. 다시 열어 주세요."), "object_not_found": tr("물건을 찾을 수 없어요.")}
-		say.call(words.get(str(reply.error), tr("모양을 저장하지 못했어요.")))
+		# The deny first: as a message kind it stands in for the chime of the toast say() raises.
 		RpgUi.sfx("deny", -6.0)
+		say.call(words.get(str(reply.error), tr("모양을 저장하지 못했어요.")))
 		refresh()
 		return false
 	stored = ObjectTransform.shape_of(reply.data)

@@ -1,8 +1,9 @@
 extends Node
 ## Random one-shots over the ambience beds (a WorldAudio child, world_audio.gd): bird calls, gulls,
 ## wave crashes and slaps, wind gusts, crickets, owls, frogs, a rooster at dawn, the windmill
-## creaking and a far bell. Takes: res://assets/sfx/ambience/spots/<kind>_<n>.wav
-## (tools/sfx/make_world_ambience.py), picked through sfx_bank.gd's shuffle bag.
+## creaking and a far bell (by day, and once at dusk, softer and lower). Takes:
+## res://assets/sfx/ambience/spots/<kind>_<n>.wav (tools/sfx/make_world_ambience.py), picked
+## through sfx_bank.gd's shuffle bag.
 ## WorldAudio.set_ambience() hands over its bed gains (mix_targets) and parameters; weights()
 ## turns them into how lively each kind is (0 = silent: daytime birds at night, gulls inland, any
 ## of it indoors). Each kind waits a random gap (longer when its weight is low), then plays one
@@ -10,7 +11,7 @@ extends Node
 ## WorldAudio.distance_db from the reference distance) when there is a camera, else a flat
 ## player; sea and wind sounds are never placed (the sea's side is not known here) and get
 ## louder with their weight instead. Everything plays on the Ambience bus.
-## Counters for tests: fired, fired_by[kind], last_path[kind].
+## Counters for tests: fired, fired_by[kind], last_path[kind] (scheduled calls); dusk_count.
 
 const GameSettings = preload("res://scripts/game_settings.gd")
 const SfxBank = preload("res://scripts/sfx_bank.gd")
@@ -18,8 +19,9 @@ const DIR := "ambience/spots/"
 ## gap: [min, max] s between two calls at full weight; db: level at `ref` m (with
 ## WorldAudio.ambience_db on top); pitch: +- jitter; dist / height: where it is placed around
 ## the hero (empty: not placed, flat); limit: most calls per dawn / per stretch (0 = no limit).
+## Birds call often and close: they sit under the hero's walking steps, not above them.
 const KINDS := {
-	"bird": {"gap": [2.5, 9.0], "db": -11.0, "pitch": 0.06, "dist": [6.0, 26.0], "height": [2.0, 7.0], "ref": 10.0},
+	"bird": {"gap": [2.5, 9.0], "db": -14.5, "pitch": 0.06, "dist": [6.0, 26.0], "height": [2.0, 7.0], "ref": 10.0},
 	"gull": {"gap": [8.0, 24.0], "db": -12.0, "pitch": 0.05, "dist": [14.0, 40.0], "height": [6.0, 14.0], "ref": 18.0},
 	"wave_crash": {"gap": [5.0, 13.0], "db": -9.0, "pitch": 0.04, "dist": [], "height": [], "ref": 1.0},
 	"wave_slap": {"gap": [4.0, 14.0], "db": -14.0, "pitch": 0.06, "dist": [], "height": [], "ref": 1.0},
@@ -33,6 +35,16 @@ const KINDS := {
 }
 const VOICES_3D := 6
 const VOICES_FLAT := 3
+## Dusk: once an evening, the far bell (DUSK_KIND takes, softer and a little lower) as the daylight
+## falls through DUSK_DAY, outdoors in the village. The fall itself marks the evening (the real-time
+## clock moves the daylight too slowly for day_trend); a jump of more than DUSK_STEP (a scene change,
+## the survival night switch) rings nothing. Daylight above DUSK_REARM arms it for the next evening.
+const DUSK_KIND := "distant_bell"
+const DUSK_DAY := 0.4
+const DUSK_DB := -18.0
+const DUSK_PITCH := 0.89
+const DUSK_STEP := 0.15
+const DUSK_REARM := 0.6
 
 ## The WorldAudio this belongs to (ambience_db, listener()).
 var audio: Node
@@ -47,6 +59,9 @@ var limited := {}
 var fired := 0
 var fired_by := {}
 var last_path := {}
+## This evening's dusk bell has rung (or its moment passed indoors); dusk bells so far (tests).
+var dusk_rung := false
+var dusk_count := 0
 var voices3d: Array[AudioStreamPlayer3D] = []
 var voices_flat: Array[AudioStreamPlayer] = []
 var rng := RandomNumberGenerator.new()
@@ -62,6 +77,7 @@ func update(targets: Dictionary, p: Dictionary) -> void:
 	params = p
 	var day := clampf(float(p.get("day", 1.0)), 0.0, 1.0)
 	if last_day >= 0.0: day_trend = lerpf(day_trend, signf(day - last_day), 0.5) if absf(day - last_day) > 0.0005 else day_trend
+	_dusk(last_day, day, p)
 	last_day = day
 	if p.has("hour") and float(p.hour) >= 0.0:
 		var hour := float(p.hour)
@@ -74,6 +90,31 @@ func update(targets: Dictionary, p: Dictionary) -> void:
 	for kind in weight:
 		if weight[kind] > 0.02: any = true
 	set_process(any)
+
+## The dusk bell when the daylight has just fallen through DUSK_DAY (from `before` to `day`, a small
+## step), outdoors in the village; at most once until the daylight is back over DUSK_REARM.
+func _dusk(before: float, day: float, p: Dictionary) -> void:
+	if day > DUSK_REARM: dusk_rung = false
+	if dusk_rung or before < 0.0 or before <= DUSK_DAY or day > DUSK_DAY or before - day > DUSK_STEP: return
+	dusk_rung = true
+	var inside_value = p.get("indoor", false)
+	var inside: bool = bool(inside_value) if inside_value is bool else float(inside_value) >= 0.5
+	if inside or str(p.get("zone", "")) not in ["", "village"]: return
+	ring_dusk()
+
+## Rings the dusk bell now: one far bell take on a flat voice. False when nothing played.
+func ring_dusk() -> bool:
+	var path := SfxBank.pick_path(DIR + DUSK_KIND)
+	var stream := SfxBank.stream(path) if not path.is_empty() else null
+	var flat := _free_flat()
+	if stream == null or flat == null: return false
+	var trim: float = audio.get("ambience_db") if audio != null else -10.0
+	flat.stream = stream
+	flat.pitch_scale = DUSK_PITCH * SfxBank.pitch(0.02)
+	flat.volume_db = trim + DUSK_DB + SfxBank.db(1.0)
+	flat.play()
+	dusk_count += 1
+	return true
 
 ## How lively each kind is (0..1) for bed gains `levels` (mix_targets), parameters `p`, dawn 0/1 and
 ## how near the windmill is (0..1, 1 when unknown).
@@ -170,7 +211,8 @@ func fire(kind: String, w := 1.0) -> bool:
 	if limit > 0: limited[kind] = int(limited.get(kind, 0)) + 1
 	return true
 
-## A one-shot without placement (WorldAudio.splash uses the wave slap).
+## A one-shot without placement, on the Ambience bus (WorldAudio.splash plays its wave slap on SFX
+## itself: a sound of the hero's own action stays with the effects).
 func play_flat(kind: String, db := 0.0) -> bool:
 	var path := SfxBank.pick_path(DIR + kind)
 	var stream := SfxBank.stream(path) if not path.is_empty() else null

@@ -9,7 +9,10 @@ extends SceneTree
 ##    starts/ends quietly. Every voice has a bark register and a gentle pitch toward its f0.
 ## 3. Babble variety: the same character spoken over and over never plays the same take twice in a
 ##    row, uses every bank, and its pitch varies (+-2 % on top of the per-character note).
-## 4. Quill: "", "sign" and "letter" tick (ticks_played) and never babble (syllables_played).
+## 4. Quill: "", "sign" and "letter" tick (ticks_played) on a ~8-11/s cadence while the text
+##    reveals (not one tick per character), never closer than the throttle allows, stop with the
+##    line and never babble (syllables_played). A typing Label (main.gd open_dialogue with an
+##    empty cast) ticks too; a stalled reveal rests the pen and a skip silences it at once.
 ## 5. Greeting: greet() plays once per voice per GREET_GAP; a new dialogue Label greets and holds
 ##    the first syllables; the next page (same Label) does not greet again.
 ## 6. Emotes: bubble glyphs map to kinds, emote() plays, is throttled per voice and overall,
@@ -203,16 +206,66 @@ func check_variety() -> void:
 
 # ------------------------------------------------------------------ 4. quill
 func check_quill() -> void:
+	var line := "이정표: 서쪽 다리를 건너면 바닷가 마을이에요"
+	var min_ms := int(VoiceBabble.QUILL_GAP*600.0)-20
+	var rates := PackedStringArray()
+	var closest := 100000
 	for id in ["", "sign", "letter"]:
 		var ticks := VoiceBabble.ticks_played
 		var syllables := VoiceBabble.syllables_played
-		VoiceBabble.speak(null, id, "이정표: 서쪽 다리를 건너면 바닷가 마을이에요", 30.0)
+		var t0 := Time.get_ticks_msec()
+		VoiceBabble.speak(null, id, line, 30.0)
 		check(VoiceBabble.speaking(), "'%s' did not start the quill" % id)
-		await create_timer(0.5).timeout
-		check(VoiceBabble.ticks_played-ticks >= 3, "'%s' made %d quill ticks in 0.5 s" % [id, VoiceBabble.ticks_played-ticks])
+		var seen := ticks
+		var last := -1
+		var at_half := -1
+		while VoiceBabble.speaking() and Time.get_ticks_msec()-t0 < 3000:
+			await process_frame
+			var now := Time.get_ticks_msec()
+			if VoiceBabble.ticks_played != seen:
+				if last >= 0: closest = mini(closest, now-last)
+				last = now
+				seen = VoiceBabble.ticks_played
+			if at_half < 0 and now-t0 >= 500: at_half = VoiceBabble.ticks_played-ticks
+		var seconds := (Time.get_ticks_msec()-t0)*0.001
+		var made := VoiceBabble.ticks_played-ticks
+		var rate := made/maxf(seconds, 0.001)
+		check(not VoiceBabble.speaking(), "'%s' quill did not end with the line" % id)
+		check(at_half >= 4 and at_half <= 7, "'%s' made %d quill ticks in 0.5 s (want a ~8-11/s cadence)" % [id, at_half])
+		check(rate >= 7.0 and rate <= 12.5, "'%s' quill cadence %.1f/s (%d ticks over %.2f s)" % [id, rate, made, seconds])
+		await create_timer(0.3).timeout
+		check(VoiceBabble.ticks_played-ticks == made, "'%s' kept ticking after the line was written (%d more)" % [id, VoiceBabble.ticks_played-ticks-made])
 		check(VoiceBabble.syllables_played == syllables, "'%s' babbled" % id)
+		rates.append("%.1f" % rate)
 		VoiceBabble.stop(true)
-	lines.append("quill      '', sign and letter tick (%d ticks) and never babble" % VoiceBabble.ticks_played)
+	check(closest >= min_ms, "two quill ticks only %d ms apart (throttle %d ms)" % [closest, min_ms])
+	# Label-driven, as main.gd open_dialogue does for signs and letters (empty cast): a stalled
+	# reveal rests the pen, a skip to the full line silences it at once.
+	var label := Label.new()
+	root.add_child(label)
+	label.text = "게시판: 내일 아침 부두에서 낚시 대회가 열립니다. 모두 오세요!"
+	label.visible_ratio = 0.0
+	var typing := label.create_tween()
+	typing.tween_property(label, "visible_ratio", 1.0, 1.6)
+	var before := VoiceBabble.ticks_played
+	VoiceBabble.speak(null, "", label.text, 0.0, label)
+	await create_timer(0.5).timeout
+	var typed := VoiceBabble.ticks_played-before
+	check(typed >= 4, "a typing sign Label made %d quill ticks in 0.5 s" % typed)
+	typing.kill()
+	await create_timer(VoiceBabble.QUILL_IDLE+0.1).timeout
+	var rested := VoiceBabble.ticks_played
+	await create_timer(0.3).timeout
+	check(VoiceBabble.ticks_played == rested, "the quill kept ticking while the reveal stalled (%d)" % (VoiceBabble.ticks_played-rested))
+	check(VoiceBabble.speaking(), "a stalled reveal ended the quill")
+	label.visible_ratio = 1.0
+	await process_frame
+	await process_frame
+	check(not VoiceBabble.speaking() and VoiceBabble.ticks_played == rested, "skipping to the full line did not stop the quill")
+	VoiceBabble.stop(true)
+	label.queue_free()
+	await process_frame
+	lines.append("quill      '', sign, letter: %s ticks/s, closest %d ms, label %d ticks in 0.5 s, rests on a stall, skip stops, never babble" % [" / ".join(rates), closest, typed])
 
 # ------------------------------------------------------------------ 5. greeting
 func check_greet() -> void:

@@ -107,8 +107,9 @@ var story_progress := 0
 var camera: Camera3D
 ## The campfire crackles where it stands (fx/firepit_loop_1, tools/sfx/gen_props.py): one looping
 ## player under the town whose level follows the walker's distance like Fx.sound (-0.8 dB per
-## metre past 3 m), stopped out of earshot; close by, a sputter now and then.
-const FIRE_DB := -12.0
+## metre past 3 m), stopped out of earshot; close by, a sputter now and then. The loop file is soft
+## (about -35 dBFS RMS): -4 dB puts it near the survival campfire (CombatAudio) at 3 m, about -39.
+const FIRE_DB := -4.0
 const FIRE_REACH := 26.0
 const SfxBank=preload("res://scripts/sfx_bank.gd")
 var fire_at := Vector3.INF
@@ -355,8 +356,8 @@ func use_prop(app: Node, entry: Dictionary) -> void:
 		var lying: bool=entry.id=="29_beach_lounger"
 		if app.village_seat().start({"node":node,"hint":"lie" if lying else "sit"}):
 			# The old contented cue, over the seat (the walker is on its way there): a hum or a doze.
+			# It is heard on contact instead: the driver's settle (a creak, or the lounger's cushion).
 			Fx.burst(self,base+Vector3(0,1.1,0),"zz" if lying else "note",3,Color(0,0,0,0),0.2)
-			Fx.sound(app,"pluck",base,0.9,-10.0)
 			return
 	var head: Vector3=player.global_position+Vector3(0,2.0,0)
 	var away: Vector3=Vector3.UP.cross(Vector3(base.x-player.global_position.x,0,base.z-player.global_position.z).normalized())
