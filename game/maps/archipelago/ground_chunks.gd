@@ -14,6 +14,19 @@ extends RefCounted
 const CELL := 32.0
 const ORIGIN := Vector2(-128, -112)
 const DROP_BELOW := -0.30
+## Except under the waterfall's splash (Waterfall__impact_foam and 2 m round it): its shader fades
+## by the depth of what is behind it (waterfall_splash.gdshader), so the ground there stays.
+const KEEP_UNDER := [Rect2(-3.4, -11.74, 8.8, 7.6)]
+## The dropped triangles that reach SHADE_FROM or higher still cast shadows (positions only, one
+## "Shade_<cx>_<cz>" node a cell, drawn in shadow maps alone): near the water line the shadow
+## filter reached them from rocks and shores above the water.
+const SHADE_FROM := -1.0
+## Chunks are culled with this margin (metres): the renderer culls shadow casters against a
+## cascade's box, but the shadow filter reads a few texels past it, so a chunk just outside that
+## the whole island ground used to put in the shadow map changed shadows at the screen's edges.
+const CULL_MARGIN := 4.0
+## When true the bake simplifies the chunks within error bounds (ground_simplify.gd).
+const SIMPLIFY := false
 const FORMAT := 1
 ## While baking (tools/bake_archipelago.gd), building_layout.gd keeps the float arrays it builds
 ## each levelled ground from on the ground node under this meta: the chunks copy them, so their
@@ -63,11 +76,29 @@ static func bin(verts: PackedVector3Array, index: PackedInt32Array) -> Dictionar
 		var a := verts[index[t]]
 		var b := verts[index[t+1]]
 		var c := verts[index[t+2]]
-		if a.y < DROP_BELOW and b.y < DROP_BELOW and c.y < DROP_BELOW: continue
-		var cell := cell_of((a+b+c)/3.0)
+		var centre := (a+b+c)/3.0
+		if a.y < DROP_BELOW and b.y < DROP_BELOW and c.y < DROP_BELOW and not kept_under(centre): continue
+		var cell := cell_of(centre)
 		if not cells.has(cell): cells[cell] = PackedInt32Array()
 		cells[cell].append(t)
 	return cells
+
+## The dropped triangles that still cast shadows (SHADE_FROM), as index offsets.
+static func shaded(verts: PackedVector3Array, index: PackedInt32Array) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	for t in range(0, index.size(), 3):
+		var a := verts[index[t]]
+		var b := verts[index[t+1]]
+		var c := verts[index[t+2]]
+		var high := maxf(a.y, maxf(b.y, c.y))
+		if high < DROP_BELOW and high >= SHADE_FROM and not kept_under((a+b+c)/3.0): out.append(t)
+	return out
+
+## Under the waterfall's splash (KEEP_UNDER): kept however deep.
+static func kept_under(p: Vector3) -> bool:
+	for area: Rect2 in KEEP_UNDER:
+		if area.has_point(Vector2(p.x, p.z)): return true
+	return false
 
 ## World boxes of the chunks the ground nodes would be cut into ("<cx>_<cz>_<island>": AABB).
 static func cell_boxes(grounds: Array) -> Dictionary:
@@ -90,22 +121,27 @@ static func cell_boxes(grounds: Array) -> Dictionary:
 const PER_VERTEX := {Mesh.ARRAY_VERTEX: 1, Mesh.ARRAY_NORMAL: 1, Mesh.ARRAY_TANGENT: 4, Mesh.ARRAY_COLOR: 1,
 	Mesh.ARRAY_TEX_UV: 1, Mesh.ARRAY_TEX_UV2: 1, Mesh.ARRAY_BONES: 4, Mesh.ARRAY_WEIGHTS: 4}
 
-## One surface's arrays for the triangles `starts` of `arrays` (vertices compacted in first-use order).
-static func cut(arrays: Array, starts: PackedInt32Array) -> Array:
-	var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+## The vertex index triples of the triangles starting at `starts` (index offsets).
+static func triples_of(index: PackedInt32Array, starts: PackedInt32Array) -> PackedInt32Array:
+	var out := PackedInt32Array()
+	out.resize(starts.size()*3)
+	for n in starts.size():
+		for k in 3: out[n*3+k] = index[starts[n]+k]
+	return out
+
+## One surface's arrays for the triangles `triples` (vertex indices of `arrays`, 3 a triangle), the
+## vertices compacted in first-use order.
+static func cut(arrays: Array, triples: PackedInt32Array) -> Array:
 	var remap := {}
 	var order := PackedInt32Array()
 	var local := PackedInt32Array()
-	local.resize(starts.size()*3)
-	var n := 0
-	for t in starts:
-		for k in 3:
-			var i := index[t+k]
-			if not remap.has(i):
-				remap[i] = order.size()
-				order.append(i)
-			local[n] = remap[i]
-			n += 1
+	local.resize(triples.size())
+	for n in triples.size():
+		var i := triples[n]
+		if not remap.has(i):
+			remap[i] = order.size()
+			order.append(i)
+		local[n] = remap[i]
 	var out := []
 	out.resize(Mesh.ARRAY_MAX)
 	for type: int in PER_VERTEX:
@@ -122,11 +158,16 @@ static func cut(arrays: Array, starts: PackedInt32Array) -> Array:
 
 ## The chunk scene's root: a Node3D "Ground" with a MeshInstance3D per (cell, island), owned by it
 ## (ready to pack). `grounds`: the levelled ground nodes with their surface materials set.
-static func build(grounds: Array) -> Node3D:
+## `simplifier` (ground_simplify.gd, or null for the triangles as they are): its
+## triangles(arrays, triples, island) gives the triangles a chunk keeps. Each chunk carries the
+## triangles it was cut from (vertex indices of its ground) in the meta "source_triangles" for
+## validate(); the bake removes it before saving.
+static func build(grounds: Array, simplifier: Object = null) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Ground"
 	var stats := {"tris_before": 0, "tris_after": 0, "dropped": 0, "vertices_after": 0, "chunks": 0, "cells": 0, "islands": {}}
 	var cells_seen := {}
+	var shades := {}
 	var sorted := grounds.duplicate()
 	sorted.sort_custom(func(a, b): return String(a.name) < String(b.name))
 	for ground: MeshInstance3D in sorted:
@@ -142,8 +183,15 @@ static func build(grounds: Array) -> Node3D:
 			var keys := cells.keys()
 			keys.sort()
 			island_stats.tris_before += index.size()/3
+			for t in shaded(verts, index):
+				var at := ground.global_transform
+				var cell := cell_of((verts[index[t]]+verts[index[t+1]]+verts[index[t+2]])/3.0)
+				if not shades.has(cell): shades[cell] = PackedVector3Array()
+				shades[cell].append_array(PackedVector3Array([at*verts[index[t]], at*verts[index[t+1]], at*verts[index[t+2]]]))
 			for cell: Vector2i in keys:
-				var piece := cut(arrays, cells[cell])
+				var triples := triples_of(index, cells[cell])
+				if simplifier: triples = simplifier.triangles(arrays, triples, island)
+				var piece := cut(arrays, triples)
 				var mesh := ArrayMesh.new()
 				mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, piece)
 				mesh.surface_set_material(0, material)
@@ -156,7 +204,9 @@ static func build(grounds: Array) -> Node3D:
 						"visibility_range_begin", "visibility_range_end", "visibility_range_fade_mode"]:
 					chunk.set(property, ground.get(property))
 				chunk.set_meta("island", island)
+				chunk.set_meta("source_triangles", triples)
 				chunk.layers = GROUND_LAYER
+				chunk.extra_cull_margin = CULL_MARGIN
 				root.add_child(chunk)
 				chunk.owner = root
 				cells_seen[cell] = true
@@ -169,22 +219,46 @@ static func build(grounds: Array) -> Node3D:
 		stats.islands[island] = island_stats
 	stats.dropped = stats.tris_before-stats.tris_after
 	stats.cells = cells_seen.size()
+	stats["shade_tris"] = 0
+	var shade_cells := shades.keys()
+	shade_cells.sort()
+	for cell: Vector2i in shade_cells:
+		var mesh := ArrayMesh.new()
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = shades[cell]
+		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+		var shade := MeshInstance3D.new()
+		shade.name = "Shade_%d_%d" % [cell.x, cell.y]
+		shade.mesh = mesh
+		shade.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		shade.layers = GROUND_LAYER
+		shade.extra_cull_margin = CULL_MARGIN
+		root.add_child(shade)
+		shade.owner = root
+		stats.shade_tris += (shades[cell] as PackedVector3Array).size()/3
 	root.set_meta("format", FORMAT)
 	root.set_meta("cell", CELL)
 	root.set_meta("origin", ORIGIN)
 	root.set_meta("drop_below", DROP_BELOW)
+	root.set_meta("simplified", simplifier != null)
+	if simplifier: stats["simplify"] = simplifier.stats
 	root.set_meta("stats", stats)
 	return root
 
 ## Checks the chunks against the levelled ground they were cut from: every triangle that reaches
-## DROP_BELOW is in exactly one chunk, in the cell of its centroid, with every vertex attribute equal
-## (as floats, and as the bytes the GPU gets); every dropped triangle lies wholly below DROP_BELOW.
+## DROP_BELOW is in the chunk of its centroid's cell, every dropped triangle lies wholly below
+## DROP_BELOW, and every chunk vertex is one of the ground's, every attribute equal as floats and as
+## the bytes the GPU gets. Unsimplified (meta "simplified" false) the chunks hold exactly the cell's
+## triangles; simplified, the triangles the simplifier gave (meta "source_triangles"; without it, as
+## after loading, only that each chunk vertex's bytes are some ground vertex's).
 ## Returns {"ok", "failures": [...], ...counts}.
 static func validate(root: Node3D, grounds: Array) -> Dictionary:
 	var failures := []
 	var kept := 0
 	var dropped := 0
 	var checked_vertices := 0
+	var simplified: bool = root.get_meta("simplified", false)
 	var by_name := {}
 	for chunk in root.get_children(): by_name[String(chunk.name)] = chunk
 	for ground: MeshInstance3D in grounds:
@@ -200,9 +274,11 @@ static func validate(root: Node3D, grounds: Array) -> Dictionary:
 			# Dropped means wholly below the line.
 			var below := 0
 			for t in range(0, index.size(), 3):
-				if maxf(verts[index[t]].y, maxf(verts[index[t+1]].y, verts[index[t+2]].y)) < DROP_BELOW: below += 1
+				if maxf(verts[index[t]].y, maxf(verts[index[t+1]].y, verts[index[t+2]].y)) < DROP_BELOW and not kept_under((verts[index[t]]+verts[index[t+1]]+verts[index[t+2]])/3.0): below += 1
 			if below != index.size()/3-in_cells: failures.append("%s: %d triangles dropped, %d lie below %.2f m" % [ground.name, index.size()/3-in_cells, below, DROP_BELOW])
 			var source := RenderingServer.mesh_get_surface(ground.mesh.get_rid(), surface)
+			# Simplified chunks without their source list: any of the ground's vertices, by bytes.
+			var known := {}
 			for cell: Vector2i in cells:
 				var chunk := by_name.get(chunk_name(cell, island)) as MeshInstance3D
 				if chunk == null:
@@ -210,17 +286,24 @@ static func validate(root: Node3D, grounds: Array) -> Dictionary:
 					continue
 				var piece := chunk.mesh.surface_get_arrays(0)
 				var chunk_index: PackedInt32Array = piece[Mesh.ARRAY_INDEX]
-				var starts: PackedInt32Array = cells[cell]
-				if chunk_index.size() != starts.size()*3:
-					failures.append("%s: %d triangles, the ground has %d in its cell" % [chunk.name, chunk_index.size()/3, starts.size()])
-					continue
-				kept += starts.size()
 				var target := RenderingServer.mesh_get_surface(chunk.mesh.get_rid(), 0)
+				var expected: PackedInt32Array = triples_of(index, cells[cell]) if not simplified else chunk.get_meta("source_triangles", PackedInt32Array())
 				var bad := 0
-				for n in starts.size():
-					for k in 3:
-						var i := index[starts[n]+k]
-						var j := chunk_index[n*3+k]
+				if expected.is_empty():
+					if known.is_empty():
+						for i in verts.size(): known[vertex_bytes(source, i)] = true
+					for j in int(target.vertex_count):
+						checked_vertices += 1
+						if not known.has(vertex_bytes(target, j)): bad += 1
+					kept += chunk_index.size()/3
+				elif chunk_index.size() != expected.size():
+					failures.append("%s: %d triangles, %d expected" % [chunk.name, chunk_index.size()/3, expected.size()/3])
+					continue
+				else:
+					kept += expected.size()/3
+					for n in expected.size():
+						var i := expected[n]
+						var j := chunk_index[n]
 						checked_vertices += 1
 						for type: int in PER_VERTEX:
 							if arrays[type] == null: continue
@@ -229,11 +312,37 @@ static func validate(root: Node3D, grounds: Array) -> Dictionary:
 								if arrays[type][i*width+w] != piece[type][j*width+w]: bad += 1
 						if not same_bytes(source, i, target, j): bad += 1
 				if bad > 0: failures.append("%s: %d vertex values differ from the ground's" % [chunk.name, bad])
-	var expected := 0
+	var held := 0
 	for chunk in root.get_children():
-		if String(chunk.name).begins_with("Chunk_"): expected += (chunk as MeshInstance3D).mesh.surface_get_arrays(0)[Mesh.ARRAY_INDEX].size()/3
-	if expected != kept: failures.append("the chunks hold %d triangles, the ground keeps %d" % [expected, kept])
-	return {"ok": failures.is_empty(), "failures": failures.slice(0, 12), "kept": kept, "dropped": dropped, "vertices_checked": checked_vertices}
+		if String(chunk.name).begins_with("Chunk_"): held += (chunk as MeshInstance3D).mesh.surface_get_arrays(0)[Mesh.ARRAY_INDEX].size()/3
+	if held != kept: failures.append("the chunks hold %d triangles, %d expected" % [held, kept])
+	# The shadow casters: the dropped triangles reaching SHADE_FROM, cell by cell, the same positions.
+	var shades := {}
+	var in_order := grounds.duplicate()
+	in_order.sort_custom(func(a, b): return String(a.name) < String(b.name))
+	for ground: MeshInstance3D in in_order:
+		for surface in ground.mesh.get_surface_count():
+			var arrays := ground.mesh.surface_get_arrays(surface)
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+			for t in shaded(verts, index):
+				var cell := cell_of((verts[index[t]]+verts[index[t+1]]+verts[index[t+2]])/3.0)
+				var key := "Shade_%d_%d" % [cell.x, cell.y]
+				if not shades.has(key): shades[key] = PackedVector3Array()
+				var at := ground.global_transform
+				shades[key].append_array(PackedVector3Array([at*verts[index[t]], at*verts[index[t+1]], at*verts[index[t+2]]]))
+	var shade_tris := 0
+	for key: String in shades:
+		var node := by_name.get(key) as MeshInstance3D
+		if node == null or node.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY:
+			failures.append("%s missing or drawn" % key)
+			continue
+		var held_faces: PackedVector3Array = node.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+		if held_faces != shades[key]: failures.append("%s: its faces differ from the ground's" % key)
+		shade_tris += held_faces.size()/3
+	for child in root.get_children():
+		if String(child.name).begins_with("Shade_") and not shades.has(String(child.name)): failures.append("%s casts nothing of the ground's" % child.name)
+	return {"ok": failures.is_empty(), "failures": failures.slice(0, 12), "kept": kept, "dropped": dropped, "shade_tris": shade_tris, "vertices_checked": checked_vertices}
 
 ## The ocean surface keeps a 204,800-triangle base the view never gets close enough to draw: the sea
 ## is flat, so even its coarsest LOD is under a pixel off at every village zoom (it draws 1,600

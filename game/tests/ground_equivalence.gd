@@ -10,12 +10,14 @@ extends SceneTree
 ##   heights    on a 0.5 m grid over the islands and at every map point (doors, bridge ends, piers, pavilion
 ##              floors, places, the cafe terrace slot, every placed prop and building): where the levelled
 ##              ground is at or above DROP_BELOW the chunks have ground there at the same height and
-##              with the same normal (no holes, no cracks, no steps)
+##              with the same normal (no holes, no cracks, no steps); simplified chunks (ground_simplify.gd)
+##              within their zone's bounds (height and normal), and exactly the same in its lock zones
 ## Prints GROUND_EQUIVALENCE {...}; exits 1 on any failure (or a stale bake).
 const Map = preload("res://maps/archipelago/archipelago.gd")
 const IslandBake = preload("res://maps/archipelago/island_bake.gd")
 const GroundChunks = preload("res://maps/archipelago/ground_chunks.gd")
 const Town = preload("res://scripts/town.gd")
+const GroundSimplify = preload("res://maps/archipelago/ground_simplify.gd")
 const BUCKET := 2.0
 var failures: Array[String] = []
 
@@ -78,12 +80,16 @@ func run() -> void:
 		for x in range(-256, 193):
 			points.append(["grid", Vector2(x*0.5, z*0.5)])
 			grid += 1
+	# Simplified chunks: each point's bounds come from the zone of the original triangle under it.
+	var simplified: bool = chunks.get_meta("simplified", false)
+	var zones: GroundSimplify = GroundSimplify.new(map) if simplified else null
 	var compared := 0
 	var largest := 0.0
 	var largest_normal := 0.0
 	var holes := []
 	var steps := []
 	var map_point_moves := 0
+	var per_zone := {}
 	for entry: Array in points:
 		var at: Vector2 = entry[1]
 		var a := before.sample(at)
@@ -94,16 +100,32 @@ func run() -> void:
 			if holes.size() < 12: holes.append([entry[0], at, snappedf(a.y, 0.001)])
 			continue
 		var dy := absf(float(a.y)-float(b.y))
+		var angle := rad_to_deg((a.normal as Vector3).angle_to(b.normal))
+		var zone := "exact"
+		var bound := [0.0, 0.0]
+		if zones:
+			var corners: Array = a.tri
+			zone = zones.zone_of(corners[0], corners[1], corners[2], {}, Vector3i.ZERO)
+			if zone != "lock": bound = GroundSimplify.ZONES[zone]
+		var z: Dictionary = per_zone.get(zone, {"points": 0, "largest_m": 0.0, "largest_normal_deg": 0.0, "over": 0})
+		z.points += 1
+		z.largest_m = maxf(z.largest_m, dy)
+		z.largest_normal_deg = maxf(z.largest_normal_deg, angle)
 		largest = maxf(largest, dy)
-		largest_normal = maxf(largest_normal, rad_to_deg((a.normal as Vector3).angle_to(b.normal)))
-		if dy > 0.0:
+		largest_normal = maxf(largest_normal, angle)
+		# (Normals as floats: a bound of 0 allows the last bit of a renormalised vector.)
+		if dy > float(bound[0])+1e-6 or angle > float(bound[1])+0.01:
+			z.over += 1
 			if entry[0] != "grid": map_point_moves += 1
-			if steps.size() < 12: steps.append([entry[0], at, snappedf(a.y, 0.0001), snappedf(b.y, 0.0001)])
-	report["heights"] = {"points": points.size(), "grid": grid, "map_points": points.size()-grid, "compared": compared,
-		"holes": holes, "moved": steps, "largest_m": largest, "largest_normal_deg": snappedf(largest_normal, 0.001), "map_points_moved": map_point_moves}
+			if steps.size() < 12: steps.append([entry[0], zone, at, snappedf(a.y, 0.0001), snappedf(b.y, 0.0001), snappedf(angle, 0.01)])
+		per_zone[zone] = z
+	for zone in per_zone:
+		per_zone[zone].largest_m = snappedf(per_zone[zone].largest_m, 0.0001)
+		per_zone[zone].largest_normal_deg = snappedf(per_zone[zone].largest_normal_deg, 0.001)
+	report["heights"] = {"points": points.size(), "grid": grid, "map_points": points.size()-grid, "compared": compared, "simplified": simplified,
+		"holes": holes, "beyond_bounds": steps, "largest_m": largest, "largest_normal_deg": snappedf(largest_normal, 0.001), "map_points_beyond": map_point_moves, "zones": per_zone}
 	if not holes.is_empty(): failures.append("%d+ points have ground before and none in the chunks" % holes.size())
-	if not steps.is_empty(): failures.append("ground heights differ (largest %.4f m)" % largest)
-	if largest_normal > 0.0: failures.append("ground normals differ (largest %.3f deg)" % largest_normal)
+	if not steps.is_empty(): failures.append("ground heights or normals beyond their bounds (largest %.4f m, %.3f deg)" % [largest, largest_normal])
 	chunks.free()
 	report["seconds"] = (Time.get_ticks_msec()-started)/1000.0
 	finish(report)
@@ -182,5 +204,5 @@ class Surface:
 			if u < -1e-6 or v < -1e-6 or u+v > 1.0+1e-6: continue
 			var y := a.y+u*(b.y-a.y)+v*(c.y-a.y)
 			if best.is_empty() or y > float(best.y):
-				best = {"y": y, "normal": ((t[3] as Vector3)*(1.0-u-v)+(t[4] as Vector3)*u+(t[5] as Vector3)*v).normalized()}
+				best = {"y": y, "normal": ((t[3] as Vector3)*(1.0-u-v)+(t[4] as Vector3)*u+(t[5] as Vector3)*v).normalized(), "tri": [a, b, c]}
 		return best

@@ -44,7 +44,7 @@ const KEY_FILES := [
 	"res://maps/archipelago/building_placements.json", "res://maps/archipelago/environment_layout.json",
 	"res://maps/archipelago/archipelago.gd", "res://maps/archipelago/building_layout.gd",
 	"res://maps/archipelago/environment_layout.gd", "res://maps/archipelago/island_bake.gd",
-	"res://maps/archipelago/ground_chunks.gd",
+	"res://maps/archipelago/ground_chunks.gd", "res://maps/archipelago/ground_simplify.gd",
 	"res://scripts/roads.gd", "res://scripts/town.gd", "res://scripts/load_pace.gd", "res://scripts/art.gd",
 ]
 ## --no-bake: build the map as if there were no generated data (tests compare both).

@@ -16,6 +16,7 @@ extends SceneTree
 const Map = preload("res://maps/archipelago/archipelago.gd")
 const IslandBake = preload("res://maps/archipelago/island_bake.gd")
 const GroundChunks = preload("res://maps/archipelago/ground_chunks.gd")
+const GroundSimplify = preload("res://maps/archipelago/ground_simplify.gd")
 
 ## Experiments: --epsilon=M, --ground-epsilon=M (0 keeps the faces as they are, only cut in chunks).
 var epsilon := IslandBake.EPSILON
@@ -263,8 +264,11 @@ func bake_island() -> Dictionary:
 func bake_ground(map: Node3D) -> Dictionary:
 	var t := Time.get_ticks_msec()
 	var grounds := map.find_children("*__ground", "MeshInstance3D", true, false)
-	var ground := GroundChunks.build(grounds)
+	var simplify_ground := (GroundChunks.SIMPLIFY or "--simplify-ground" in OS.get_cmdline_user_args()) and not "--exact-ground" in OS.get_cmdline_user_args()
+	var ground := GroundChunks.build(grounds, GroundSimplify.new(map) if simplify_ground else null)
 	var check := GroundChunks.validate(ground, grounds)
+	# The source lists were for the check only.
+	for chunk in ground.get_children(): if chunk.has_meta("source_triangles"): chunk.remove_meta("source_triangles")
 	var oceans := map.find_children("Ocean__central_surface", "MeshInstance3D", true, false)
 	var ocean := GroundChunks.add_ocean(ground, oceans[0]) if not oceans.is_empty() else {"ok": true, "failures": []}
 	for node in grounds: node.remove_meta(GroundChunks.ARRAYS_META)
