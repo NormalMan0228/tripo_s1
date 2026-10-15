@@ -9,6 +9,7 @@ const I18n = preload("res://scripts/i18n.gd")
 const Stub = preload("res://tests/ui_stub_api.gd")
 const PauseMenu = preload("res://scripts/pause_menu.gd")
 const SettingsMenu = preload("res://scripts/settings_menu.gd")
+const RpgUi = preload("res://scripts/rpg_ui.gd")
 var app: Node
 var prefix := "ui-gallery-"
 var only: PackedStringArray = []
@@ -36,6 +37,13 @@ func capture(name: String) -> void:
 func settle(seconds: float) -> void:
 	await create_timer(seconds).timeout
 
+## Waits (up to 8 s) until the start card (transition.gd) has faded off the title.
+func uncovered() -> void:
+	var cover: CanvasLayer = load("res://scripts/transition.gd").of(self)
+	for i in 80:
+		if not is_instance_valid(cover) or cover.veil.modulate.a < 0.02: return
+		await settle(0.1)
+
 func close_modal() -> void:
 	app.close_village_modal()
 	await settle(0.25)
@@ -61,11 +69,18 @@ func tour(fixture: Dictionary) -> void:
 	root.add_child(app)
 	await settle(1.6)
 	if wanted("title"): await capture("title")
+	if wanted("title-menu"):
+		# The title's menu plates once the start card has faded (the version check may still be asking).
+		await uncovered()
+		app.login_ui("menu")
+		await settle(0.8)
+		await capture("title-menu")
 	if wanted("login"):
 		app.login_ui("login")
 		await settle(0.5)
 		await capture("login")
 	if wanted("settings"):
+		await uncovered()
 		app.login_ui("settings")
 		await settle(0.5)
 		await capture("settings")
@@ -125,10 +140,20 @@ func tour(fixture: Dictionary) -> void:
 		await settle(1.6)
 		await capture("dialogue-shadow")
 		await close_modal()
-	if wanted("pause-menu"):
-		PauseMenu.open(app)
+	if wanted("pause-menu") or wanted("pause-controls") or wanted("pause-settings"):
+		var pause = PauseMenu.open(app)
 		await settle(0.8)
-		await capture("pause-menu")
+		if wanted("pause-menu"): await capture("pause-menu")
+		if wanted("pause-controls"):
+			pause.show_controls()
+			await settle(0.6)
+			await capture("pause-controls")
+			pause.show_main()
+		if wanted("pause-settings"):
+			# Settings over the pause page: one shade under both.
+			pause.show_settings()
+			await settle(0.8)
+			await capture("pause-settings")
 		PauseMenu.close()
 		await settle(0.4)
 	if wanted("settings-menu"):
@@ -186,7 +211,7 @@ func tour(fixture: Dictionary) -> void:
 		await settle(0.5)
 		await capture("admin")
 		await close_modal()
-	if wanted("survival") or wanted("survival-bag") or wanted("pause") or wanted("results"):
+	if wanted("survival") or wanted("survival-bag") or wanted("pause") or wanted("return-confirm") or wanted("results"):
 		await app.start_run("forest", "standard")
 		await settle(1.4)
 		app.message(tr("해가 졌어요. 야영지로 돌아가 불을 지키세요."))
@@ -202,6 +227,12 @@ func tour(fixture: Dictionary) -> void:
 			await settle(0.5)
 			await capture("pause")
 			app.toggle_pause()
+		if wanted("return-confirm"):
+			app.confirm_return()
+			await settle(0.5)
+			await capture("return-confirm")
+			if is_instance_valid(app.return_dialog): RpgUi.close_window(app.return_dialog.get_meta("rpg_window", {}), false)
+			await settle(0.2)
 		if wanted("results"):
 			app.paused = true
 			fixture.run.status = "won"
