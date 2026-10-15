@@ -1,6 +1,6 @@
 extends CanvasLayer
 ## In-game performance overlay (F2, or Settings > 그래픽 > 성능 표시; off by default): a small
-## translucent panel in the top-right corner with frame rate and frame times (average and the worst
+## translucent panel in the bottom-right corner with frame rate and frame times (average and the worst
 ## 1 %), process/physics time, memory and video memory, draw calls and triangles, node/object
 ## counts, the scene, the presence round trip and how many players / residents are nearby.
 ## The numbers refresh every REFRESH s. While hidden it does nothing at all (no process); while
@@ -22,9 +22,13 @@ var cursor := 0
 var filled := 0
 var clock := 0.0
 var cost_us := 0.0
+## The frame it was made in: ImeCaret makes it on the first F2 and shows it, and that same key
+## press then reaches this _input too (it hid it again at once).
+var born_frame := -1
 
 func _ready() -> void:
 	layer = 120
+	born_frame = Engine.get_process_frames()
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	times.resize(WINDOW)
 	panel = PanelContainer.new()
@@ -35,9 +39,15 @@ func _ready() -> void:
 	look.content_margin_top = 6
 	look.content_margin_bottom = 6
 	panel.add_theme_stylebox_override("panel", look)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	# Bottom right: the minimap and the map card hold the top right in the village and on
+	# expeditions; this corner is free everywhere (hotbar centre, chat bottom left).
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	panel.position = Vector2(-12, 12)
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.offset_left = -12
+	panel.offset_right = -12
+	panel.offset_top = -12
+	panel.offset_bottom = -12
 	add_child(panel)
 	label = Label.new()
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -66,6 +76,7 @@ func show_overlay(value: bool) -> void:
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == TOGGLE_KEY:
+		if Engine.get_process_frames() == born_frame: return
 		show_overlay(not visible)
 
 func _process(delta: float) -> void:
