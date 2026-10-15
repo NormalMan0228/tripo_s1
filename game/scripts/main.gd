@@ -439,7 +439,8 @@ func button(parent: Node, value: String, callback: Callable, variant := "default
 		"gold": b.theme_type_variation="GoldButton"
 		"choice": b.theme_type_variation="ChoiceButton"
 	RpgUi.hover_motion(b,1.03)
-	b.pressed.connect(func(): callback.call())
+	# One press at a time while its work is under way (RpgUi.once, 62).
+	b.pressed.connect(RpgUi.once(b,callback))
 	parent.add_child(b)
 	return b
 

@@ -6,6 +6,7 @@ extends SceneTree
 ## - every hotbar slot pressed twice in one frame opens its window once (one window on the stack),
 ##   and Esc closes it again;
 ## - with a window open, a click on the shade around it does not reach the world either.
+## - a key whose work is still under way ignores a second press (RpgUi.once).
 ##   godot --headless --path game --script res://tests/hud_click_tour.gd -- --qa
 const Main = preload("res://scripts/main.gd")
 const Stub = preload("res://tests/ui_stub_api.gd")
@@ -114,6 +115,18 @@ func run() -> void:
 		if is_instance_valid(app.village_modal): app.close_village_modal()
 		if drawer_open and app.right.get_parent().visible: app.toggle_drawer()
 		await settle(0.3)
+	# A key whose work takes a while runs once for a double press, and again after it finished.
+	var runs := [0]
+	var slow := RpgUi.button(app.ui, "slow", func():
+		runs[0] += 1
+		await create_timer(0.4).timeout)
+	slow.pressed.emit()
+	slow.pressed.emit()
+	await settle(0.6)
+	slow.pressed.emit()
+	await settle(0.6)
+	expect(runs[0] == 2, "a double press on a busy key runs it once (%d runs for 2+1 presses)" % runs[0])
+	slow.queue_free()
 	print("HUD_CLICK_TOUR ", "PASS" if failures.is_empty() else "FAIL %d" % failures.size())
 	SocialHud.end()
 	quit(0 if failures.is_empty() else 1)
