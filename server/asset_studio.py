@@ -27,6 +27,7 @@ from .account_limits import daily_counts, tester_credits, check_tester_budget, r
 from . import tripo_budget, llm_budget
 from . import room_budget
 from .stored_assets import read_glb
+from .homestead import village_reserved
 from .object_paint import version_column as paint_version
 from . import object_shape
 from . import build_rules
@@ -735,8 +736,14 @@ class Studio:
                     # moving between rooms stays a single step.
                     here=conn.execute('SELECT room FROM furniture_locations WHERE object_id=?',(object_id,)).fetchone()
                     if obj['state']=='placed' and (here['room'] if here else 'village')=='village' and body.room!='village':fail(PLACED_ELSEWHERE)
+                    if body.room=='village':
+                        reserved=village_reserved(body.x,body.z,settings.resident_moves)
+                        if reserved:fail('plot_reserved' if reserved=='plot_reserved' else 'reserved_area')
                     # Floor, wall, ceiling or on top of a piece; sized overlap, room limits; carries what stands on it.
                     pose=build_rules.place(conn,assets,user['id'],obj,body)
+                    if body.room=='village' and settings.resident_moves:
+                        if any(village_reserved(child['x'],child['z'],True)=='plot_reserved' for child in pose['carried']):
+                            fail('plot_reserved')
                 return {'version':obj['version']+1,'room':body.room,'state':'inventory' if body.action=='retrieve' else 'placed',**pose}
             return mutate(request,body,'placement:'+object_id,edit)
 

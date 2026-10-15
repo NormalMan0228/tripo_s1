@@ -146,6 +146,10 @@ class Settings:
     npc_shuffle_min: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_SHUFFLE_MIN', '14400')))
     npc_shuffle_max: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_NPC_SHUFFLE_MAX', '86400')))
     npc_seed: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_NPC_SEED', '0')))
+    # Resident moves are opt-in until the client/map integration is ready.
+    resident_moves: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_RESIDENT_MOVES', 'off').lower() in ('on', '1', 'true'))
+    resident_arrive_seconds: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_RESIDENT_ARRIVE_SECONDS', '90')))
+    resident_leave_seconds: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_RESIDENT_LEAVE_SECONDS', '90')))
     # New accounts start the opening story chapter (server/story.py); off: they never see it.
     story_enabled: bool = field(default_factory=lambda: os.getenv('TRIPOTHON_STORY', 'on').lower() not in ('off', '0', 'false'))
     # Residents' requests (server/quests.py): their starseed rewards (quests.STARS) times this;
@@ -262,6 +266,9 @@ class Settings:
         for low, high in ((self.npc_place_min, self.npc_place_max), (self.npc_shuffle_min, self.npc_shuffle_max)):
             if not (math.isfinite(low) and math.isfinite(high) and 0.5 <= low <= high <= 30 * 86400):
                 raise ValueError('Invalid resident home timing')
+        for delay in (self.resident_arrive_seconds, self.resident_leave_seconds):
+            if not math.isfinite(delay) or not 0 <= delay <= 30 * 86400:
+                raise ValueError('Invalid resident move timing')
         if len(self.npc_levels) != 4 or any(not 0 <= a < b for a, b in zip((0,) + tuple(self.npc_levels), self.npc_levels)):
             raise ValueError('Friendship hearts need four rising point thresholds')
         if not 0 <= self.npc_seed < 2**31:
