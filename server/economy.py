@@ -28,6 +28,10 @@ class EconomyRejected(HTTPException):
         self.user_id, self.evidence = user_id, detail
 
 
+class CoinRejected(ValueError):
+    """Invalid leaf-coin changes leave the caller's homestead state untouched."""
+
+
 def flag(conn, user_id, code, detail, now):
     """Flags remain until operator review; security-event copies follow normal retention."""
     conn.execute('''INSERT INTO economy_flags(user_id,code,detail,first_seen,last_seen)

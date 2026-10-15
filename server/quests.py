@@ -18,7 +18,7 @@ The server checks every condition it can see from its own data:
 and trusts the game only for what it cannot see, with limits:
   visit    standing at a place (a signpost, the lookout, a pier) or entering a room: one report per
            place, from a fixed list, at least VISIT_GAP seconds apart; night requests only while it
-           is night by the player's clock (homestead.night, the time zone header); a request taken
+           is night by the account's fixed reward clock (homestead.reward_night); a request taken
            while standing at its place (하늘 in her observatory) counts that place at once
   talk     passing a message on to another resident (that resident only, once).
 
@@ -466,7 +466,7 @@ class Quests:
                     # Taken at its place (하늘 asks inside her observatory at night): that place counts
                     # now, by the report's rules (a night errand only while it is night).
                     progress = {}
-                    if quest['kind'] == 'visit' and body.place in quest['places'] and (not quest.get('night') or homestead.night(now)):
+                    if quest['kind'] == 'visit' and body.place in quest['places'] and (not quest.get('night') or homestead.reward_night(now)):
                         progress = {'places': [body.place], 'last': now}
                     conn.execute('INSERT INTO quest_progress(user_id,quest_id,state,accepted,baseline,progress) VALUES (?,?,?,?,?,?)',
                                  (user['id'], quest_id, 'active', now, json.dumps(baseline), json.dumps(progress)))
@@ -491,9 +491,8 @@ class Quests:
                 state = json.loads(row['progress'])
                 places = state.get('places', [])
                 now = clock()
-                # A night errand counts only while it is night by the player's clock (the time zone
-                # header, as for night fish).
-                if quest.get('night') and body.place not in places and not homestead.night(now):
+                # Reward eligibility uses the account's fixed clock, never a new request header.
+                if quest.get('night') and body.place not in places and not homestead.reward_night(now):
                     fail('quest_not_night')
                 if body.place not in places and len(places) < quest['count']:
                     if now - float(state.get('last', 0)) < VISIT_GAP:

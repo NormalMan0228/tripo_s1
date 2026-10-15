@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS npc_friendship (
 CREATE TABLE IF NOT EXISTS npc_gifts (
  id TEXT PRIMARY KEY, host_id TEXT NOT NULL REFERENCES users(id), npc_id TEXT NOT NULL,
  object_id TEXT NOT NULL REFERENCES objects(id), mood TEXT NOT NULL, points INTEGER NOT NULL, created REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS npc_gifts_daily ON npc_gifts(host_id,npc_id,created);
 -- One letter per resident and heart; the fourth heart's letter carries the return gift.
 CREATE TABLE IF NOT EXISTS npc_letters (
  id TEXT PRIMARY KEY, host_id TEXT NOT NULL REFERENCES users(id), npc_id TEXT NOT NULL, level INTEGER NOT NULL,
@@ -137,6 +138,8 @@ MAX_CATCH_UP = 24
 # the resident loves), later ones that day a little. Hearts are settings.npc_levels.
 GAIN = {'love': 20, 'like': 15, 'thanks': 10}
 GAIN_AGAIN = 2
+# The first loved gift and five further gifts fill one resident's daily allowance.
+GIFT_DAILY_POINTS = 30
 # Older one-mesh models stand indoors with their longest side this long (the village shows them
 # at 1.6 m); a model that cannot be measured uses a box by its kind.
 LEGACY_LONGEST = 1.2
@@ -316,6 +319,16 @@ def friendship(conn, host_id, npc_id, levels):
     level = sum(1 for threshold in levels if points >= threshold)
     return {'points': points, 'gifts': row['gifts'] if row else 0, 'level': level,
             'next': levels[level] if level < len(levels) else None}
+
+
+def gift_allowance(conn, host_id, npc_id, now):
+    offset = homestead.DAILY_OFFSET.get()
+    shift = (homestead.KST * 60 if offset is None else offset) * 60
+    start = ((now + shift) // 86400) * 86400 - shift
+    earned = conn.execute('SELECT COALESCE(SUM(points),0) FROM npc_gifts '
+                          'WHERE host_id=? AND npc_id=? AND created>=? AND created<?',
+                          (host_id, npc_id, start, start + 86400)).fetchone()[0]
+    return {'earned': earned, 'cap': GIFT_DAILY_POINTS, 'remaining': max(0, GIFT_DAILY_POINTS - earned)}
 
 
 def glb_bounds(blob):
@@ -655,8 +668,10 @@ class NpcHomes:
                 items = [dict(r) for r in conn.execute(
                     "SELECT o.id,o.name,o.color,o.version,EXISTS(SELECT 1 FROM studio_assets s WHERE s.asset_id=o.asset_id) AS studio "
                     "FROM objects o WHERE o.owner_id=? AND o.state='inventory' ORDER BY o.created DESC LIMIT 24", (user['id'],))]
+                allowance = gift_allowance(conn, user['id'], npc_id, clock())
                 return {'npc': npc_id, 'home': npc['home'], 'personality': npc['personality'],
                         'can_gift': host_for(conn, user['id']) == user['id'],
+                        'daily_gain': allowance,
                         'friendship': friendship(conn, user['id'], npc_id, levels), 'items': items}
 
         @app.post('/v1/npcs/{npc_id}/gift')
@@ -675,6 +690,9 @@ class NpcHomes:
                     fail('stale_object_version')
                 if obj['state'] != 'inventory':
                     fail('object_not_in_inventory')
+                allowance = gift_allowance(conn, user['id'], npc_id, now)
+                if not allowance['remaining']:
+                    fail('npc_gift_daily_limit', 429)
                 studio = conn.execute('SELECT manifest FROM studio_assets WHERE asset_id=?', (obj['asset_id'],)).fetchone()
                 shape = conn.execute('SELECT width,depth,height,scale FROM object_shape WHERE object_id=?', (obj['id'],)).fetchone()
                 shape = dict(shape) if shape else None
@@ -712,7 +730,7 @@ class NpcHomes:
                 day = homestead.local_day(now)
                 before = conn.execute('SELECT last_day FROM npc_friendship WHERE host_id=? AND npc_id=?', (user['id'], npc_id)).fetchone()
                 again = bool(before and before['last_day'] == day)
-                gain = GAIN_AGAIN if again else GAIN[mood]
+                gain = min(GAIN_AGAIN if again else GAIN[mood], allowance['remaining'])
                 conn.execute('INSERT INTO npc_friendship(host_id,npc_id,points,gifts,last_day) VALUES (?,?,?,1,?) '
                              'ON CONFLICT(host_id,npc_id) DO UPDATE SET points=points+excluded.points,gifts=gifts+1,last_day=excluded.last_day',
                              (user['id'], npc_id, gain, day))
@@ -732,6 +750,7 @@ class NpcHomes:
                 fresh = [letter for letter in letters(conn, user['id']) if letter['id'] in written]
                 return {'npc': npc_id, 'object_id': obj['id'], 'name': obj['name'], 'mood': mood, 'again': again, 'gain': gain,
                         'personality': npc['personality'], 'home': home_id, 'home_version': home['version'],
+                        'daily_gain': gift_allowance(conn, user['id'], npc_id, now),
                         'friendship': bond, 'letters': sorted(fresh, key=lambda letter: letter['level'])}
             return mutate(request, body, 'npc_gift:' + npc_id, give)
 

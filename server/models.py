@@ -47,7 +47,7 @@ def reserved_username(value: str) -> bool:
 
 class AdminGrant(Mutation):
     shards: int = Field(default=0, ge=0, le=100000, strict=True)
-    coins: int = Field(default=0, ge=0, le=100000)
+    coins: int = Field(default=0, ge=0, le=100000, strict=True)
 
 class RunStart(Mutation):
     map_id: Literal['tutorial','forest','quarry','frost'] = 'forest'
@@ -74,7 +74,7 @@ class LifeAction(Mutation):
     plot: int = Field(default=0,ge=0,le=17)
     item: str = Field(default='',max_length=24)
     spot: Literal['pond','sea','river'] = 'pond'
-    quantity: int = Field(default=1,ge=1,le=20)
+    quantity: int = Field(default=1,ge=1,le=20,strict=True)
     # Tilled plot centre in map metres (homestead.FARM_ZONES bounds it further).
     x: float = Field(default=0,ge=-200,le=200)
     z: float = Field(default=0,ge=-200,le=200)
@@ -111,4 +111,4 @@ class Generate(Mutation):
 class Listing(Mutation):
     object_id: UUID
     version: int = Field(ge=1)
-    price: int = Field(ge=1,le=10000)
+    price: int = Field(ge=1,le=10000,strict=True)

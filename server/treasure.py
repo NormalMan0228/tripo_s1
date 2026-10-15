@@ -1,7 +1,7 @@
 """Treasure chests (보물상자): starseeds found once per account, at home and around the islands.
 
-A new maker finds one chest in their own home (the ground floor, against the back wall) and ten
-more around the five islands, two per island, tucked behind a tree, under the windmill, on the
+A new maker finds one chest in their own home (the ground floor, against the back wall) and eleven
+more around the five islands, two per island plus a third in fields, tucked behind a tree, under the windmill, on the
 lighthouse rocks and so on (the game places them: game/scripts/treasure.gd CHESTS, the same ids).
 Pressing E next to one opens it: the lid swings open, warm light and sparkles, and the stars fly
 into the starseed counter. Each chest pays once per account, through the ledger like every other
@@ -13,7 +13,7 @@ walker stands (a chest is a short walk from a road, nothing else to check), with
   once                a second open is refused (chest_already_open), the ledger checked too
   CHEST_GAP           at least this many seconds between two opens (nobody walks faster)
 
-Rewards: STARS below (home 10, field chests 3-5, 45 in all). TRIPOTHON_CHEST_STARS_SCALE
+Rewards: STARS below (home 10, field chests 3-5, 48 in all). TRIPOTHON_CHEST_STARS_SCALE
 (server/config.py, default 1.0) multiplies them; 0 turns the rewards off (chests still open and
 pay nothing). Chests are independent of the opening story chapter: admin_cli story reset leaves
 them as they are.

@@ -261,6 +261,12 @@ def night(now):
     hour=(now/3600+UTC_OFFSET.get()/60)%24
     return hour<6 or hour>=19
 
+def reward_night(now):
+    """Reward eligibility follows the fixed account offset, never a request header."""
+    offset=DAILY_OFFSET.get()
+    hour=(now/3600+(KST*60 if offset is None else offset)/60)%24
+    return hour<6 or hour>=19
+
 def spend(state, item, count=1):
     if state['bag'].get(item,0)<count: raise Rejected('life_missing_items')
     state['bag'][item]-=count
@@ -289,7 +295,7 @@ def tillable(state, x, z):
         if max(abs(plot['x']-x),abs(plot['z']-z))<1.7: raise Rejected('life_plot_overlap')
 
 def pick_fish(spot, now):
-    time='night' if night(now) else 'day'
+    time='night' if reward_night(now) else 'day'
     pool=[(fish,data) for fish,data in FISH.items() if spot in data['spots'] and data['time'] in ('any',time)]
     ticket=secrets.randbelow(sum(data['weight'] for _,data in pool))
     for fish,data in pool:

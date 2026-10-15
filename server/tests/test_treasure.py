@@ -5,6 +5,7 @@ import json
 import re
 import sqlite3
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
@@ -213,3 +214,38 @@ def test_a_story_reset_leaves_the_chests_alone(world, capsys):
     now[0] += 10
     assert open_chest(c, h, 'home').json()['detail'] == 'chest_already_open'
     assert paid(app) == [('home', 10)]
+
+
+def test_chest_rewards_reject_client_amounts_and_have_a_lifetime_cap(world):
+    app, c, now = world
+    h = account(c, 'bounded_chests')
+    start = me(c, h)['shards']
+    for extra in ({'stars': 10**30}, {'amount': -1}, {'scale': 5}, {'rarity': True},
+                  {'item': 'home'}, {'shards': 1.0}):
+        assert open_chest(c, h, 'home', mutation(**extra)).status_code == 422
+    assert paid(app) == [] and me(c, h)['chests']['opened'] == []
+    for chest_id in treasure.STARS:
+        assert open_chest(c, h, chest_id).status_code == 200
+        now[0] += treasure.CHEST_GAP
+    assert me(c, h)['shards'] == start + 48
+    # A new day and fresh request ids never replenish the fixed per-account set.
+    now[0] += 86400
+    login = c.post('/v1/auth/login', json={'username': 'bounded_chests', 'password': 'Chest-test-password'})
+    assert login.status_code == 200, login.text
+    h = {'Authorization': 'Bearer ' + login.json()['token']}
+    for chest_id in treasure.STARS:
+        again = open_chest(c, h, chest_id)
+        assert again.status_code == 409 and again.json()['detail'] == 'chest_already_open'
+    assert len(paid(app)) == len(treasure.STARS)
+    assert me(c, h)['shards'] == start + 48
+
+
+def test_concurrent_chest_requests_pay_once(world):
+    app, c, now = world
+    h = account(c, 'chest_race')
+    start = me(c, h)['shards']
+    with ThreadPoolExecutor(2) as pool:
+        replies = list(pool.map(lambda _: open_chest(c, h, 'home'), range(2)))
+    assert sorted(reply.status_code for reply in replies) == [200, 409]
+    assert paid(app) == [('home', 10)]
+    assert me(c, h)['shards'] == start + 10
