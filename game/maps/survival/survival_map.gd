@@ -195,6 +195,9 @@ func build(run: Dictionary) -> void:
 	process_priority = 100
 	# Its per-frame work starts once it is built (a paced build spans frames).
 	set_process(false)
+	# The village's teardown (main.gd build_world) and this map's first draws in different frames: in
+	# one they held the frame 50-64 ms under the card (the baked ground goes in at once).
+	await LoadPace.step("survival map")
 	# Read on a worker thread since the expedition began (resource_paths); used only when it is
 	# fresh and was made for this run's obstacles and hazards, else the map is built as before.
 	baked = null
