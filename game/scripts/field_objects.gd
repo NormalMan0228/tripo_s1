@@ -99,6 +99,10 @@ func setup(main: Node) -> void:
 ## card (load_pace.gd), in one go otherwise.
 func build() -> void:
 	space = get_world_3d().direct_space_state
+	# The kept (or baked) map added back to the tree a moment ago reaches the physics space at the
+	# next physics step; placing before it found no ground and skipped every object (seen headless
+	# after walking out of a room with the baked island).
+	await get_tree().physics_frame
 	for spec in SPECS:
 		await LoadPace.step("field object")
 		var spot := find_spot(spec)

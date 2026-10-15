@@ -162,6 +162,13 @@ func run() -> void:
 	var guide: Node = Guide.current
 	await wait_for(func() -> bool: return is_instance_valid(guide) and guide.active(), 10.0)
 	var sign_square: Dictionary = story.signpost("square")
+	await wait_for(func() -> bool:
+		var post: Dictionary = story.signpost("square")
+		return not post.is_empty() and guide.active() and Vector2(guide.target.at).distance_to(post.at) < 0.5, 10.0)
+	sign_square = story.signpost("square")
+	if sign_square.is_empty() or not guide.active():
+		var field: Node = story.field_module()
+		print("DEBUG field=", field, " objects=", field.objects.size() if field else -1, " guide=", guide.target if is_instance_valid(guide) else {}, " walker=", story.walker_at())
 	expect(is_instance_valid(guide) and guide.active() and str(guide.target.key) == "story_cafe" and Vector2(guide.target.at).distance_to(sign_square.get("at", Vector2.INF)) < 0.5,
 		"the guide leads to this island's signpost on the way to the café")
 	expect(Residents.held.has("regular"), "모카 is held for the chapter (her walker and the café interior agree)")
@@ -179,6 +186,9 @@ func run() -> void:
 	expect(story.greeted_here.count("naru") == 1, "Naru greets only once")
 
 	# 4. Across the islands: at the signpost its travel choices open with the café's island first.
+	if sign_square.is_empty():
+		quit(1)
+		return
 	await teleport(town, sign_square.at+Vector2(1.6, 1.2))
 	expect(await wait_for(func() -> bool: return choice_button(town, tr("%s(으)로 가기") % tr("풍차 들판")) != null or is_instance_valid(town.village_modal), 8.0), "arriving at the signpost opens its travel choices")
 	await press_choice(town, tr("%s(으)로 가기") % tr("풍차 들판"))
