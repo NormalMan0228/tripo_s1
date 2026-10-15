@@ -482,7 +482,7 @@ static func reward_burst(app: Node, at: Vector3, stars: int) -> void:
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	badge.add_theme_constant_override("separation", 3)
 	badge.add_child(RpgUi.icon(STAR_ICON, 38))
-	RpgUi.numbers(RpgUi.label(badge, "+%d" % stars, 28, Color("ffe08a")), 28)
+	RpgUi.numbers(RpgUi.label(badge, "+%d" % stars, 28, RpgUi.HOVER), 28)
 	app.ui.add_child(badge)
 	badge.size = badge.get_combined_minimum_size()
 	badge.position = from-badge.size*0.5
@@ -936,7 +936,7 @@ func report_signposts() -> void:
 			var now: Dictionary = result.data.get("quest", {})
 			var lift: Vector3 = spot.root.global_position if spot.get("root") is Node3D and is_instance_valid(spot.root) else Town.point(spot.at, 0.0)
 			Fx.burst(self, lift+Vector3(0, 1.6, 0), "sparkle", 14, Color(0,0,0,0), 0.4)
-			Fx.glow(self, lift+Vector3(0, 1.4, 0), Color("ffe08a"), 1.8, 1.0)
+			Fx.glow(self, lift+Vector3(0, 1.4, 0), RpgUi.HOVER, 1.8, 1.0)
 			RpgUi.sfx("confirm", -8.0)
 			if str(now.get("state", "")) != "ready":
 				app.message(tr("이정표 %d/%d · %s") % [int(now.get("have", 0)), int(now.get("need", 3)), str(spot.name)])
