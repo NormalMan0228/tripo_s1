@@ -23,6 +23,21 @@ const RATE := 22050
 ## Every surface footstep() knows; anything else plays as grass.
 const SURFACES := ["grass", "sand", "stone", "wood", "rock", "shallow", "snow", "ice", "gravel", "leaves", "ash", "dirt",
 	"planks", "tile", "rug", "stairs"]
+## What a foot plant kicks up on each surface, for under-foot effects (the VFX side listens to
+## `stepped` and draws by this, so sound and effect always agree on the surface):
+## dust (dry ground), splash (water), snow (snow and ice), leaves (litter), grass (blades), "" (hard
+## floors: nothing visible).
+const SURFACE_FX := {"grass": "grass", "sand": "dust", "dirt": "dust", "gravel": "dust", "ash": "dust",
+	"shallow": "splash", "snow": "snow", "ice": "snow", "leaves": "leaves", "stone": "", "wood": "", "rock": "",
+	"planks": "", "tile": "", "rug": "", "stairs": ""}
+
+## Every foot plant this node decides, heard or not (a muted bus or missing takes still emit), so
+## under-foot effects use the same surface judgement as the sound. info: {kind ("step" | "land" |
+## "splash"), who ("hero" | "remote"), surface (one of SURFACES), fx (SURFACE_FX of it), at (world
+## position, Vector3.INF when unknown), speed (m/s), gait ("walk" | "run"), foot (0 left, 1 right;
+## -1 for land/splash), size (splash size, 1.0 otherwise)}. Remote steps past REMOTE_AUDIBLE m are
+## not decided, so they do not emit either (that also keeps far walkers from costing effects).
+signal stepped(info: Dictionary)
 ## The runtime synth's surfaces (fallback only) and the synth stand-in for every other surface.
 const SYNTH_SURFACES := ["grass", "sand", "stone", "wood", "rock", "shallow"]
 const SYNTH_FOR := {"snow": "sand", "ice": "stone", "gravel": "stone", "leaves": "grass", "ash": "sand", "dirt": "sand",
@@ -215,6 +230,7 @@ func footstep(surface: String, speed: float) -> void:
 	if steps.is_empty(): setup()
 	if not is_inside_tree() or speed <= 0.05: return
 	var step := step_choice(surface, speed)
+	_emit("step", "hero", step.surface, listener(), speed, step.gait, step.foot)
 	if step.stream == null: return
 	var player := steps[step_index]
 	step_index = (step_index + 1) % steps.size()
@@ -290,6 +306,7 @@ func remote_step(at: Vector3, surface: String, speed: float, db := -8.0) -> bool
 		if distance > REMOTE_AUDIBLE: return false
 		falloff = distance_db(distance)
 	var step := _pick_step(surface, speed, "remote:")
+	_emit("step", "remote", step.surface, at, speed, step.gait, -1)
 	if step.stream == null: return false
 	var camera: Camera3D = get_viewport().get_camera_3d() if get_viewport() else null
 	var entry := _remote_voice(camera != null and at != Vector3.INF)
@@ -362,6 +379,7 @@ func land(speed := 6.0, surface := "grass") -> void:
 	if steps.is_empty(): setup()
 	if not is_inside_tree() or speed < 2.0: return
 	var step := _pick_step(surface, 5.0, "")
+	_emit("land", "hero", step.surface, listener(), speed, "run", -1)
 	if step.stream == null: return
 	var player := steps[step_index]
 	step_index = (step_index + 1) % steps.size()
@@ -376,6 +394,7 @@ func splash(size := 1.0) -> void:
 	if steps.is_empty(): setup()
 	if not is_inside_tree(): return
 	var step := _pick_step("shallow", 5.0, "")
+	_emit("splash", "hero", "shallow", listener(), 5.0, "run", -1, size)
 	if step.stream != null:
 		var player := steps[step_index]
 		step_index = (step_index + 1) % steps.size()
@@ -390,6 +409,11 @@ func splash(size := 1.0) -> void:
 		var voice := cloth_voices[cloth_index]
 		cloth_index = (cloth_index + 1) % cloth_voices.size()
 		SfxBank.play_on(voice, SLAP, -8.0 + 4.0 * minf(size, 1.5), 1.0, 0.05, 1.0)
+
+func _emit(kind: String, who: String, surface: String, at: Vector3, speed: float, gait: String, step_foot: int, size := 1.0) -> void:
+	if stepped.get_connections().is_empty(): return
+	stepped.emit({"kind": kind, "who": who, "surface": surface, "fx": SURFACE_FX.get(surface, ""), "at": at,
+		"speed": speed, "gait": gait, "foot": step_foot, "size": size})
 
 ## Where the hero is: `focus`, else the parent's player / hero, else the camera (INF: unknown).
 func listener() -> Vector3:
