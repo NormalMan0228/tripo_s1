@@ -17,7 +17,9 @@ its send time), the server process's CPU and memory, database file growth and th
 The server is one uvicorn worker on port 8867 (the production command line, demo mode, WAL
 SQLite) with a temporary data directory that is deleted afterwards. Accounts, sessions, villages,
 visits, friendships and placed objects are seeded straight into SQLite (sign-up is rate limited).
-This measures this PC; docs/design/SOCIAL_API.md explains the t4g.small estimate.
+This measures this PC; docs/design/SOCIAL_API.md explains the t4g.small estimate. It cannot be
+pointed at a running server: to measure the VM, run it on the VM inside the development server's
+image (the exact command is in docs/design/SOCIAL_API.md 9.4; pass --output under /tmp there).
 """
 import argparse
 import asyncio
@@ -529,7 +531,7 @@ def coop_scenario(args):
         shutil.rmtree(data, ignore_errors=True)
 
 
-def main():
+def make_parser():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--scenario', choices=('social', 'coop'), default='social')
     parser.add_argument('--seconds', type=int, default=180, help='measured seconds (after a 10 s warm-up)')
@@ -549,6 +551,11 @@ def main():
     parser.add_argument('--workers', type=int, default=8, help='load generator processes (one asyncio loop each)')
     parser.add_argument('--seed', type=int, default=7)
     parser.add_argument('--output', help='JSON report path (default artifacts/multiplayer-load-<scenario>.json)')
+    return parser
+
+
+def main():
+    parser = make_parser()
     args = parser.parse_args()
     if not 5 <= args.seconds <= 900 or not 3 <= args.users <= 300 or not 0 <= args.legacy_share <= 1:
         parser.error('seconds 5..900, users 3..300, legacy share 0..1')

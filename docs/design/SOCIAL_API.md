@@ -303,7 +303,21 @@ Settings (environment): `VILLAGEN_GLOBAL_CHAT` (on|off, default on), `VILLAGEN_S
 (all|friends|off, default all), `VILLAGEN_CHAT_FILTER_EXTRA` (word file in the data directory),
 `VILLAGEN_CHAT_IP_PER_MINUTE` (600), `VILLAGEN_CHAT_RETENTION_HOURS` (24),
 `VILLAGEN_PRESENCE_TOGETHER` (0.25), `VILLAGEN_PRESENCE_ALONE` (1), `VILLAGEN_PEOPLE_SECONDS` (5),
-`VILLAGEN_PRESENCE_BUDGET` (60 polls/s, section 9.2).
+`VILLAGEN_PRESENCE_BUDGET` (60 polls/s, section 9.2). Set them in `ops/production.env` (school server)
+or `ops/staging.env` (development server); `ops/compose.yaml` and `ops/compose.staging.yaml` pass
+each of them to the API container (compose hands a container only the variables its `environment`
+block lists), and the next `sudo bash ops/update_online_server.sh main` (or `ops/staging.sh update
+--force`) applies them; check `/health` (`global_chat`, `social_roster`, `social_poll`). The extra word
+file goes into the data volume, see `ops/production.env.example`. Both env examples list every
+setting with its default. Defaults ship global chat on and the full roster (`all`): decide per
+school whether to turn them down.
+
+Rolling the server back to a version before the social layer (6028e2c or older): those list every
+pending invitation, so a 0.11.x host would see a pending knock as a party invitation, and accepting
+it would move the host into the knocker's village. Right before switching, run
+`python -m server.admin_cli knocks expire` in the API container (it ends every open knock), or
+keep the server in maintenance for 2 minutes (a knock lasts 120 s). Everything else the social layer
+added (tables, columns, `chat2`) is ignored by older servers.
 
 ## 9. Polling guidance
 
@@ -377,9 +391,22 @@ baseline is 20 % per vCPU = 0.4 vCPU sustained. Assume a request costs about 1.7
 - H, the default budget of 60 polls/s with clients following the advice: the server settled at
   60.3 presence polls/s, 25 % of a core here, about 43 % of a vCPU estimated, near the baseline,
   while small groups keep 4 Hz. 120 players would be slowed further (up to 4×).
-Confirm on staging with this tool pointed at the VM-like box (it runs anywhere with the server
-venv) and watch CloudWatch CPUCreditBalance during a lesson; lower `VILLAGEN_PRESENCE_BUDGET`
-if the balance falls.
+The tool cannot be pointed at a running server: it starts its own isolated server and seeds it
+through SQLite. To measure the VM, run it on the VM itself, inside the development server's image
+(it has the server's Python and packages; the checkout is mounted read-only, the data and report
+stay in the container's /tmp and vanish with it; no network). Outside lessons, with the
+development server stopped to free memory; the report is printed as JSON at the end:
+```
+cd /opt/villagen-staging && sudo bash ops/staging.sh stop
+sudo docker run --rm --network none --cpus 2 --memory 768m --tmpfs /tmp:rw,size=256m \
+  -e PYTHONDONTWRITEBYTECODE=1 -v "$PWD:/src:ro" -w /src villagen-staging-api \
+  python tools/test_multiplayer_load.py --users 60 --seconds 120 --follow-advice --workers 2 --output /tmp/load.json
+sudo bash ops/staging.sh start
+```
+`--workers 2` keeps the load generator from taking the CPU the server needs; it still shares the
+two vCPUs, so read the server CPU column (the server process only) rather than the latency. Then
+watch CloudWatch CPUCreditBalance during a lesson; lower `VILLAGEN_PRESENCE_BUDGET` if the balance
+falls (it slows only updated clients, 9.2).
 
 ## 10. Storage, retention and load safety
 

@@ -39,6 +39,13 @@ a mute refuses that player's lines until it ends (0 minutes lifts it).
     ... python -m server.admin_cli chat mute USERNAME MINUTES
     ... python -m server.admin_cli reports list [--all] [--limit 50]
     ... python -m server.admin_cli reports close REPORT_ID [REPORT_ID ...]
+
+knocks expire ends every open knock (visit requests, kind 'knock'). Run it right before rolling the
+server back to a version before the social layer (6028e2c and older): those list every pending
+invitation, so a 0.11.x host would see a knock as a party invitation, and accepting it would move
+the host into the knocker's village.
+
+    ... python -m server.admin_cli knocks expire
 """
 from __future__ import annotations
 
@@ -309,6 +316,23 @@ def reports(args):
         conn.close()
 
 
+def knocks(args):
+    conn = social_db(args)
+    if conn is None:
+        return 1
+    try:
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='mp_invites'").fetchone():
+            print(json.dumps({'ok': True, 'expired': 0}))
+            return 0
+        conn.execute('BEGIN IMMEDIATE')
+        expired = conn.execute("UPDATE mp_invites SET state='revoked' WHERE kind='knock' AND state IN ('pending','suppressed')").rowcount
+        conn.execute('COMMIT')
+        print(json.dumps({'ok': True, 'expired': expired}))
+        return 0
+    finally:
+        conn.close()
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     actions = parser.add_subparsers(dest='action', required=True)
@@ -344,7 +368,12 @@ def main(argv=None):
     reported.add_argument('--all', action='store_true', help='list: closed reports too')
     reported.add_argument('--limit', type=int, default=50)
     reported.add_argument('--data-dir', default='/data')
+    knocked = actions.add_parser('knocks', help='end every open knock (before rolling the server back)')
+    knocked.add_argument('command', choices=('expire',))
+    knocked.add_argument('--data-dir', default='/data')
     args = parser.parse_args(argv)
+    if args.action == 'knocks':
+        return knocks(args)
     if args.action == 'chat':
         return chat(args)
     if args.action == 'reports':

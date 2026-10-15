@@ -91,3 +91,23 @@ def test_chat_and_report_moderation_commands(tmp_path, capsys):
     assert main(['reports', 'list', *args]) == 0
     assert json.loads(capsys.readouterr().out) == []
     w.close()
+
+
+def test_knocks_expire_before_a_rollback_leaves_no_invitation_for_old_servers(tmp_path, capsys):
+    import json
+    from server.tests.social_world import World
+    w = World(tmp_path / 'data')
+    alice, bravo, charlie = w.players('alice', 'bravo', 'charlie')
+    w.presence(alice, since=0)
+    w.presence(charlie, since=0)
+    w.call(bravo, '/v1/social/visit', user_id=alice.id)
+    invite = w.call(alice, '/v1/social/invites', username='charlie', kind='village')
+    capsys.readouterr()
+    assert main(['knocks', 'expire', '--data-dir', str(tmp_path / 'data')]) == 0
+    assert json.loads(capsys.readouterr().out) == {'ok': True, 'expired': 1}
+    # What a server before the social layer lists: every pending invitation of any kind.
+    with w.db() as conn:
+        pending = [tuple(r) for r in conn.execute("SELECT kind,sender_id FROM mp_invites WHERE state='pending'")]
+    assert pending == [('village', alice.id)]
+    assert [i['id'] for i in w.get(charlie, '/v1/social')['invites']] == [invite['id']]
+    w.close()
