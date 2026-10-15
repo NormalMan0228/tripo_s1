@@ -463,7 +463,7 @@ func reel() -> void:
 
 func open_storage() -> void:
 	if state.is_empty(): return
-	var v: VBoxContainer=app.modal_card(tr("마을 생활 창고"),"storage")
+	var v: VBoxContainer=app.modal_card(tr("마을 창고"),"storage")
 	mode="storage"
 	app.text(v,tr("잎전 %d  ·  수확 %d개  ·  낚은 물고기 %d마리  ·  채집 %d번")%[state.coins,state.harvested,state.caught,int(state.get("gathered",0))],18)
 	var scroll := ScrollContainer.new()
@@ -610,7 +610,7 @@ func open_map() -> void:
 			app.message(tr(place.title)+tr("에 길잡이를 표시했어요.")))
 		b.custom_minimum_size.x=315
 	if is_instance_valid(guide): guide.attach_map(map_view,list)
-	app.button(v,tr("B · 생활 창고 열기"),open_storage)
+	app.button(v,tr("%s · 마을 창고 열기") % RpgUi.key_text("storage"),open_storage)
 
 func closed() -> void:
 	if mode=="view" and is_instance_valid(app.camera): app.camera.size=preload("res://scripts/controller_profile.gd").VILLAGE_CAMERA_DEFAULT

@@ -586,6 +586,7 @@ func build_bag() -> void:
 	paint_rows=[part_choice,palette,custom_box]
 	# The same call to craft as the village bag's; its key cap follows the bindings.
 	var craft_entry := RpgUi.button(own,tr("새 물건 제작 의뢰"),func(): open_craft(),"gold")
+	RpgUi.name_tip(craft_entry,tr("새 물건 제작 의뢰"),RpgUi.key_text("craft"))
 	RpgUi.keycap(craft_entry,"craft",11).position=Vector2(10,9)
 	RpgUi.button(own,tr("새로고침"),refresh,"ghost","sm")
 	# Built for everyone (the code and history fields are filled on every pick and refresh); only

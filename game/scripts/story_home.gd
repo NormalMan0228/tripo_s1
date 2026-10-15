@@ -186,7 +186,7 @@ func open_letter() -> void:
 		words.custom_minimum_size.x = 490
 	var sign := RpgUi.caption(column, tr(SIGNATURE), 16, RpgUi.PAPER_MUTED)
 	sign.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	var close := RpgUi.caption(column, tr("E · 편지 접기"), 13, RpgUi.PAPER_MUTED)
+	var close := RpgUi.caption(column, tr("%s · 편지 접기") % preload("res://scripts/rpg_ui.gd").key_text("interact"), 13, RpgUi.PAPER_MUTED)
 	close.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# Unfolds from a thin strip, like opening a folded sheet.
 	paper.pivot_offset = Vector2(280, 160)
@@ -253,7 +253,7 @@ func update_card() -> void:
 	var lines: Array = [["▸ "+tr("책상 위 편지 읽기"), true], [tr("이삿날 아침, 편지가 와 있어요"), false]] if unread() \
 		else [["▸ "+tr("카페 '빨간 지붕'에 인사하러 가기"), true], [tr("문을 나서면 길 안내가 시작돼요"), false]]
 	if str(state.get("step", "")) == "craft":
-		lines = [["▸ "+tr("C · 모카의 의자 만들기"), true], [tr("완성되면 모카에게 가져가기"), false]]
+		lines = [["▸ "+tr("%s · 모카의 의자 만들기") % preload("res://scripts/rpg_ui.gd").key_text("craft"), true], [tr("완성되면 모카에게 가져가기"), false]]
 	for entry in lines:
 		var words := RpgUi.label(card_lines, str(entry[0]), 14 if entry[1] else 13, RpgUi.INK if entry[1] else Color(RpgUi.INK, 0.72), bool(entry[1]))
 		words.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

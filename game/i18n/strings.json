@@ -10291,6 +10291,46 @@
   "모닥불": {
    "en": "Campfire",
    "zh": "篝火"
+  },
+  "%s · 휠": {
+   "en": "%s · Wheel",
+   "zh": "%s · 滚轮"
+  },
+  "%s · 먼저 음식을 드세요": {
+   "en": "%s · Eat something first",
+   "zh": "%s · 先吃点东西吧"
+  },
+  "%s 제작 · %s 모닥불 · %s 식사": {
+   "en": "%s Craft · %s Campfire · %s Eat",
+   "zh": "%s 制作 · %s 篝火 · %s 进食"
+  },
+  "%s · 모카의 의자 만들기": {
+   "en": "%s · Make Moka's chair",
+   "zh": "%s · 制作摩卡的椅子"
+  },
+  "%s · 편지 접기": {
+   "en": "%s · Fold the letter",
+   "zh": "%s · 收起信"
+  },
+  "%s · 물주기": {
+   "en": "%s · Water",
+   "zh": "%s · 浇水"
+  },
+  "%s · 수확!": {
+   "en": "%s · Harvest!",
+   "zh": "%s · 收获！"
+  },
+  "마을 창고": {
+   "en": "Village Storage",
+   "zh": "村庄仓库"
+  },
+  "%s · 마을 창고 열기": {
+   "en": "%s · Open Village Storage",
+   "zh": "%s · 打开村庄仓库"
+  },
+  "%s·Space·클릭을 누르고 있으면 칸이 오른쪽으로, 떼면 왼쪽으로": {
+   "en": "Hold %s, Space or click to move the zone right; release to move it left",
+   "zh": "按住 %s、空格或鼠标，区域向右移动；松开则向左"
   }
  },
  "templates": []

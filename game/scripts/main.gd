@@ -950,7 +950,7 @@ func enter_village() -> void:
 	var drawer_title := HBoxContainer.new()
 	right.add_child(drawer_title)
 	drawer_title.add_child(RpgUi.icon("res://assets/ui/bag.svg",30))
-	text(drawer_title,tr("나의 보관함"),24).size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	text(drawer_title,tr("가방"),24).size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	close_button(drawer_title,toggle_drawer,"I")
 	rule(right)
 	objects_list = ItemList.new()
@@ -989,7 +989,7 @@ func enter_village() -> void:
 		price.custom_minimum_size.x = 115
 		sell_row.add_child(price)
 		button(sell_row,tr("별씨로 판매"),sell_object)
-	button(right,tr("C · 새 물건 제작 의뢰"),open_craft,"gold")
+	RpgUi.name_tip(button(right,tr("새 물건 제작 의뢰"),open_craft,"gold"),tr("새 물건 제작 의뢰"),RpgUi.key_text("craft"))
 	prompt = LineEdit.new()
 	prompt.max_length = 500
 	right.add_child(prompt)
@@ -1717,7 +1717,7 @@ func show_turn_hud(on: bool) -> void:
 		row.add_theme_constant_override("separation",12)
 		pill.add_child(row)
 		turn_readout=ObjectTransform.turn_bar(row,turn_preview)
-		RpgUi.label(row,tr("R · 휠"),13,RpgUi.SOFT,false).size_flags_vertical=Control.SIZE_SHRINK_CENTER
+		RpgUi.label(row,tr("%s · 휠") % RpgUi.key_text("rotate"),13,RpgUi.SOFT,false).size_flags_vertical=Control.SIZE_SHRINK_CENTER
 		ui.add_child(pill)
 		var size := pill.get_combined_minimum_size()
 		pill.position=Vector2(640-size.x*.5,496)
@@ -2226,7 +2226,7 @@ func update_run() -> void:
 		if run.get("story") is Dictionary and run.status=="active":
 			objective.text=run.story.title+"\n"
 			for goal in run.story.goals:objective.text+="%s  %d / %d\n"%[goal.label,goal.current,goal.target]
-			objective.text+="\n"+(tr("Q · 먼저 음식을 드세요") if run.hunger<35 else tr("I 제작 · F 모닥불 · Q 식사"))
+			objective.text+="\n"+(tr("%s · 먼저 음식을 드세요") % RpgUi.key_text("eat") if run.hunger<35 else tr("%s 제작 · %s 모닥불 · %s 식사") % [RpgUi.key_text("inventory"),RpgUi.key_text("campfire"),RpgUi.key_text("eat")])
 	for recipe in craft_buttons:
 		var can_make: bool=run.status=="active"
 		for item in RECIPES[recipe]:

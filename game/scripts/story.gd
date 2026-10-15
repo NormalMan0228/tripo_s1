@@ -189,7 +189,7 @@ func objective(base: String) -> String:
 			if confirming(): return "▸ "+tr("그림이 나왔어요 · C로 확인하기")+"\n"+tr("마음에 들면 제작을 맡겨요")
 			if crafting(): return "▸ "+tr("제작 중 · 완성되면 모카에게 가져가기")+"\n"+tr("그동안 마을을 둘러봐요")
 			if stalled(): return "▸ "+tr("제작이 멈췄어요 · C로 다시 만들기")+"\n"+tr("어떤 모습이든 네 상상대로")
-			return "▸ "+tr("C · 모카의 의자 만들기")+"\n"+tr("어떤 모습이든 네 상상대로")
+			return "▸ "+tr("%s · 모카의 의자 만들기") % preload("res://scripts/rpg_ui.gd").key_text("craft")+"\n"+tr("어떤 모습이든 네 상상대로")
 		"done":
 			if not bool(story.get("letter", {}).get("read", true)):
 				return "✦ "+tr("마을의 첫 선물 · 완료")+"\n▸ "+tr("우편함에서 모카의 편지 읽기")+"\n"+base

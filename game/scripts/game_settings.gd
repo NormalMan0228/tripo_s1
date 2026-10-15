@@ -112,7 +112,7 @@ const ACTIONS := [
 	["heal","붕대 감기",[KEY_H,KEY_NONE]],
 	["inventory","가방",[KEY_I,KEY_NONE]],
 	["map","지도",[KEY_TAB,KEY_NONE]],
-	["storage","보관함",[KEY_B,KEY_NONE]],
+	["storage","창고",[KEY_B,KEY_NONE]],
 	["craft","제작",[KEY_C,KEY_NONE]],
 	["wardrobe","옷장",[KEY_O,KEY_NONE]],
 	["rotate","가구 돌리기",[KEY_R,KEY_NONE]],
