@@ -637,7 +637,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
 
     @app.get('/v1/generations/{job_id}')
     def job(job_id:str,request:Request):
-        with db.transaction() as conn:
+        with db.read() as conn:
             user=auth(conn,request)
             row=conn.execute('SELECT id,state,object_id,error_code FROM jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
             if not row: fail('job_not_found',404)
@@ -711,6 +711,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     from .interactions import Interactions
     app.state.interactions=Interactions(app,db,settings,clock,auth,mutate,own,money,studio)
     from .usage_report import UsageReport; app.state.usage_report=UsageReport(app,db,settings,clock)
+    from .migrations import migrate_polling_indexes
+    migrate_polling_indexes(db)
     class PlayerTimeZone:
         """The player's time zone header (minutes from UTC) -> homestead.UTC_OFFSET for this request,
         so night fish and the daily order follow the player's own clock."""

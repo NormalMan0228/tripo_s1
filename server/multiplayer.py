@@ -243,10 +243,10 @@ class Multiplayer:
             party = party_for(conn, user_id)
             if not party:
                 return None
-            members = [dict(r) for r in conn.execute('SELECT u.id,u.username,m.joined FROM mp_members m JOIN users u ON u.id=m.user_id WHERE m.party_id=? ORDER BY m.joined,u.id', (party['id'],))]
+            members = [dict(r) for r in conn.execute('SELECT u.id,u.username,m.joined,p.seen FROM mp_members m JOIN users u ON u.id=m.user_id LEFT JOIN mp_presence p ON p.user_id=m.user_id WHERE m.party_id=? ORDER BY m.joined,u.id', (party['id'],))]
             for member in members:
-                presence = conn.execute('SELECT seen FROM mp_presence WHERE user_id=?', (member['id'],)).fetchone()
-                member['online'] = bool(presence and clock()-presence['seen'] < coop.PRESENCE_SECONDS)
+                seen = member.pop('seen')
+                member['online'] = seen is not None and clock()-seen < coop.PRESENCE_SECONDS
             run = conn.execute('SELECT status FROM coop_runs WHERE id=?', (party['run_id'],)).fetchone() if party['run_id'] else None
             participant = conn.execute('SELECT withdrawn FROM coop_members WHERE run_id=? AND user_id=?', (party['run_id'], user_id)).fetchone() if run else None
             return dict(id=party['id'], leader_id=party['leader_id'], members=members, max_members=3,
@@ -305,11 +305,11 @@ class Multiplayer:
                 if row['held']:
                     player['held'] = row['held']
                 players.append(player)
-            row = conn.execute('SELECT state FROM homesteads WHERE user_id=?', (host,)).fetchone()
-            life = homestead.public(json.loads(row[0]) if row else homestead.initial(), clock())
-            # Visitors can see crops, not the host's private inventory or fishing outcome.
-            crops = {'version': life['version'], 'plots': life['plots'], 'server_time': clock()}
-            return dict(host_id=host, scene=scene, objects=objects, players=players, crops=crops if scene == 'village' else None)
+            crops = None
+            if scene == 'village':
+                row = conn.execute('SELECT state FROM homesteads WHERE user_id=?', (host,)).fetchone()
+                crops = homestead.public_crops(row[0] if row else None, clock())
+            return dict(host_id=host, scene=scene, objects=objects, players=players, crops=crops)
 
         @app.get('/v1/social')
         def social(request: Request):

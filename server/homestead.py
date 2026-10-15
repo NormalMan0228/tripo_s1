@@ -10,6 +10,8 @@ plots inside the farm meadow, on its grid, apart from each other and under a cap
 import contextvars
 import copy
 import secrets
+import json
+from functools import lru_cache
 
 
 # Village furniture coordinates are metres from the town green; this box covers all
@@ -159,13 +161,42 @@ def normalise(state):
 
 def planted(plot): return bool(plot.get('crop'))
 
-def public(state, now):
-    result=copy.deepcopy(normalise(state))
-    result['server_time']=now
-    for plot in result['plots']:
+def _grow_public_plots(plots, now):
+    for plot in plots:
         if planted(plot):
             plot['remaining']=max(0,plot['ready_at']-now) if plot.get('watered') else None
             plot['ready']=bool(plot.get('watered') and now>=plot['ready_at'])
+
+
+def _crop_source(raw):
+    state = normalise(json.loads(raw)) if raw is not None else initial()
+    return state['version'], state['plots']
+
+
+# The exact persisted JSON is the key, not a user ID/version or a time-to-live.
+# Every caller still reads SQLite, so commits/restores invalidate immediately and
+# rollbacks cannot publish a new value. Keep at most 128 modest saves (64K characters each);
+# larger saves use the same projection without being retained by the cache.
+_cached_crop_source = lru_cache(maxsize=128)(_crop_source)
+
+
+def public_crops(raw, now):
+    """Visitor-safe crop projection; growth is recomputed even on a cache hit.
+
+    Never return cached mutable values: callers receive their own plots. Private
+    inventory/fishing/catalog data is neither copied nor included in the reply.
+    """
+    version, saved = (_cached_crop_source(raw) if raw is None or len(raw) <= 65536
+                      else _crop_source(raw))
+    plots = copy.deepcopy(saved)
+    _grow_public_plots(plots, now)
+    return {'version': version, 'plots': plots, 'server_time': now}
+
+
+def public(state, now):
+    result=copy.deepcopy(normalise(state))
+    result['server_time']=now
+    _grow_public_plots(result['plots'], now)
     fish=result.get('fishing')
     if fish:
         for secret in ('catch','size'): fish.pop(secret,None)

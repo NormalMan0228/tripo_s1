@@ -384,7 +384,7 @@ class Studio:
 
         @app.get('/v1/studio/jobs/{job_id}')
         def status(job_id:str,request:Request):
-            with db.transaction() as conn:
+            with db.read() as conn:
                 user=auth(conn,request)
                 row=conn.execute("SELECT id,state,cost,object_id,error,provenance,parts,plan,json_extract(request,'$.concept') AS concept_asked,"
                     "COALESCE(json_extract(request,'$.image'),'')!='' AS image_given FROM studio_jobs WHERE id=? AND owner_id=?",(job_id,user['id'])).fetchone()
