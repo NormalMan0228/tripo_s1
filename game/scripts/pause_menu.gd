@@ -113,20 +113,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 ## Opens the next page as a night window in the middle of the screen. It borrows the shade of the
-## page on screen, which then closes and hands the shade over, so the shade never blinks.
-func _page(title: String, width: float, on_close: Callable) -> VBoxContainer:
+## page on screen, which then closes and hands the shade over, so the shade never blinks. One sound
+## per page change (`sound`: the window's open going forward, a close stepping back, "" when the
+## page that left was heard already), never the old page's close and the new one's open together.
+func _page(title: String, width: float, on_close: Callable, sound := "open") -> VBoxContainer:
 	if is_instance_valid(sub): sub.queue_free()
 	sub = null
 	var old := win
-	win = RpgUi.window(root, title, {"kind":"night", "width":width, "place":"centre", "on_close":on_close, "id":"pause_page"})
-	if not old.is_empty(): RpgUi.close_window(old, false)
+	win = RpgUi.window(root, title, {"kind":"night", "width":width, "place":"centre", "on_close":on_close, "id":"pause_page", "sound":false})
+	if not old.is_empty(): RpgUi.close_window(old, false, false)
+	if not sound.is_empty(): RpgUi.sfx(sound, -8.0 if sound == "open" else -10.0)
 	var column: VBoxContainer = win.body
 	column.add_theme_constant_override("separation", RpgUi.GAP)
 	return column
 
 func show_main() -> void:
+	# Back from 조작 안내 or a question: that page closing; back from the settings: their own close.
+	var back := view
 	view = "main"
-	var list := _page(tr("잠깐 쉬어 가기"), 420, dismiss)
+	var list := _page(tr("잠깐 쉬어 가기"), 420, dismiss, "" if back == "settings" else ("close" if back in ["controls", "ask"] else "open"))
 	var note := ""
 	if context == "survival":
 		note = tr("협동 생존은 메뉴를 열어도 계속됩니다.\n연결이 끊겨도 동료가 남아 있으면 위험에 노출됩니다.") if app.get("coop_run") else tr("일시 정지 중에는 생존 시간과 허기가 멈춥니다.")

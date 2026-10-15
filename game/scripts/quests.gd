@@ -29,6 +29,8 @@ const Interiors := preload("res://scripts/interiors.gd")
 const KEY := "story_quest:"
 const BOOK_KEY := "story_quest_book"
 const STAR_ICON := "res://assets/starseed.svg"
+## The stars flying into the counter land on a rising major scale (semitones over the first note).
+const STAR_STEPS := [0, 2, 4, 5, 7, 9, 11, 12]
 ## Island names (field_objects.gd ISLANDS) and where 모카 waits while the chapter holds her (story.gd).
 const ISLANDS := {"square":"물결빛 광장","fields":"풍차 들판","garden":"정원 언덕","camp":"캠프 초원","lighthouse":"등대섬"}
 const MOKA_AT := Vector2(-59.6, -29.9)
@@ -297,7 +299,7 @@ static func deliver(api: Node, item: Dictionary, npc: String, say: Callable, don
 	var id := str(item.id)
 	var result: Dictionary = await api.post("/v1/quests/%s/progress" % id, api.mutation({"place":npc}))
 	if not result.ok:
-		say.call([error_line(str(result.get("error", "")))], [])
+		refused(str(result.get("error", "")), say)
 		return
 	adopt_data(result.data.get("quests"), str(api.token))
 	say.call(lines_of(item, "reply"), [[t("전해 드릴게요"), Callable()]])
@@ -319,7 +321,7 @@ static func offer(api: Node, entry: Dictionary, say: Callable, done: Callable, h
 static func accept(api: Node, id: String, say: Callable, done: Callable, at := "") -> void:
 	var result: Dictionary = await api.post("/v1/quests/%s/accept" % id, api.mutation({"place":at} if not at.is_empty() else {}))
 	if not result.ok:
-		say.call([error_line(str(result.get("error", "")))], [])
+		refused(str(result.get("error", "")), say)
 		return
 	adopt_data(result.data.get("quests"), str(api.token))
 	var entry: Dictionary = result.data.get("quest", {})
@@ -354,13 +356,18 @@ static func hand_over(api: Node, id: String, say: Callable, done: Callable) -> v
 		if code == "quest_not_ready":
 			var fresh: Dictionary = await api.request("/v1/quests")
 			if fresh.ok: adopt_data(fresh.data.get("quests"), str(api.token))
-		say.call([error_line(code)], [])
+		refused(code, say)
 		return
 	adopt_data(result.data.get("quests"), str(api.token))
 	var entry: Dictionary = result.data.get("quest", {})
 	say.call(lines_of(entry, "thanks"), [[t("천만에요"), Callable()]])
 	# The thanks are open: the effects start over them and finish once they close.
 	if done.is_valid(): done.call("completed", result.data)
+
+## The server said no (not ready, not this village's, closed): the resident says why over a soft deny.
+static func refused(code: String, say: Callable) -> void:
+	RpgUi.sfx("deny", -8.0)
+	say.call([error_line(code)], [])
 
 static func error_line(code: String) -> String:
 	match code:
@@ -382,7 +389,8 @@ static func village_done(app: Node, anchor: Node3D, kind: String, reply: Diction
 		"accepted":
 			if is_instance_valid(anchor) and anchor.has_method("pop"): anchor.pop("!", 1.6)
 			if is_instance_valid(anchor): Fx.bubble(app.world, anchor.global_position+Vector3(0, 2.3, 0), "star")
-			RpgUi.sfx("confirm", -6.0)
+			# Before the toast and the guide's beacon: it stands in for their chimes.
+			RpgUi.sfx("quest_accept", -6.0)
 			app.message(t("새 부탁 · %s") % title_of(entry))
 			if here: here.accepted(entry)
 		"guide":
@@ -410,6 +418,8 @@ static func village_done(app: Node, anchor: Node3D, kind: String, reply: Diction
 			await after_dialogue(app)
 			if not is_instance_valid(app): return
 			reward_fly(app, at, stars, total)
+			# The stars' landing notes are the sound of this line.
+			if stars > 0: RpgUi.hush_toast()
 			app.message(t("부탁 완료 · %s · %s") % [title_of(entry), stars_text(stars)] if stars > 0 else t("부탁 완료 · %s") % title_of(entry))
 			var note := NpcGifts.letters_note(reply)
 			if not note.is_empty(): app.get_tree().create_timer(3.2).timeout.connect(func(): if is_instance_valid(app): app.message(note))
@@ -436,7 +446,9 @@ static func entered_room(room: Node, room_id: String) -> void:
 			if not result.ok or not is_instance_valid(room): return
 			adopt_data(result.data.get("quests"), str(api.token))
 			var now: Dictionary = result.data.get("quest", {})
-			if str(now.get("state", "")) == "ready" and room.has_method("message"): room.message(done_word(now, room_hour(room)))
+			if str(now.get("state", "")) == "ready" and room.has_method("message"):
+				RpgUi.sfx("quest_ready", -6.0)
+				room.message(done_word(now, room_hour(room)))
 			return
 
 ## Night by the player's own clock (server/homestead.py night: before 6 or from 19).
@@ -449,12 +461,16 @@ static func room_done(room: Node, id: String, kind: String, reply: Dictionary) -
 	if not is_instance_valid(room) or not room.npcs.has(id): return
 	var resident: Dictionary = room.npcs[id]
 	var entry: Dictionary = reply.get("quest", {})
+	# Each sound before the room's toast: it stands in for the toast's chime.
 	if kind == "accepted":
 		room.pop_over(resident, "!")
+		RpgUi.sfx("quest_accept", -6.0)
 		room.message(t("새 부탁 · %s") % title_of(entry))
 	elif kind == "progress":
 		room.pop_over(resident, "♪")
-		if str(entry.get("state", "")) == "ready": room.message(done_word(entry, room_hour(room)))
+		if str(entry.get("state", "")) == "ready":
+			RpgUi.sfx("quest_ready", -6.0)
+			room.message(done_word(entry, room_hour(room)))
 	elif kind == "completed":
 		var stars := int(reply.get("stars", 0))
 		var at: Vector3 = resident.holder.global_position
@@ -464,19 +480,20 @@ static func room_done(room: Node, id: String, kind: String, reply: Dictionary) -
 		if is_instance_valid(room.get("wallet")): room.wallet.text = t("별씨 %d") % int(reply.get("shards", 0))
 		# The room's character frame counts the reward up too.
 		if reply.has("shards") and room.has_method("show_stars"): room.show_stars(int(reply.shards))
+		RpgUi.sfx("quest_complete", -4.0)
 		room.message(t("부탁 완료 · %s · %s") % [title_of(entry), stars_text(stars)] if stars > 0 else t("부탁 완료 · %s") % title_of(entry))
 		var note := NpcGifts.letters_note(reply)
 		if not note.is_empty(): room.create_tween().tween_callback(func(): room.message(note)).set_delay(3.0)
 
 ## The moment of the hand-over, over the thanks: sparkles, a glow and a ring at the resident and
-## a "+N" starseed rising over them.
-static func reward_burst(app: Node, at: Vector3, stars: int) -> void:
+## a "+N" starseed rising over them. fanfare false: the same sight without the request fanfare
+## (starseeds from a sale at the stall, whose coins already jingled).
+static func reward_burst(app: Node, at: Vector3, stars: int, fanfare := true) -> void:
 	var world: Node3D = app.world
 	Fx.burst(world, at+Vector3(0, 1.6, 0), "sparkle", 24, Color(0,0,0,0), 0.55)
 	Fx.glow(world, at+Vector3(0, 1.4, 0), Color("ffd27a"), 2.4, 1.3)
 	Fx.ring(world, at+Vector3(0, 0.05, 0), 1.8, Color(1.0, 0.88, 0.5, 0.8), 0.9)
-	RpgUi.sfx("confirm", -2.0)
-	if DisplayServer.get_name() != "headless": Fx.sound(app, "twinkle", at, 1.2, -1.0)
+	if fanfare: RpgUi.sfx("quest_complete", -4.0)
 	if stars <= 0 or not is_instance_valid(app.get("camera")) or not is_instance_valid(app.get("ui")): return
 	var from: Vector2 = app.camera.unproject_position(at+Vector3(0, 1.9, 0))
 	var badge := HBoxContainer.new()
@@ -518,6 +535,9 @@ static func reward_fly(app: Node, at: Vector3, stars: int, total: int) -> void:
 	var goal: Vector2 = counter.get_global_rect().get_center() if counter.is_visible_in_tree() else Vector2(120, 60)
 	var flying := mini(stars, 8)
 	var landed := [0]
+	# Each landing rings one note of a major scale on the same star take (in tune), the last a little
+	# brighter; the counter's own count stays silent (its target was cleared above).
+	var take := RpgUi.sfx_take("star")
 	for k in flying:
 		var star := RpgUi.icon(STAR_ICON, 30)
 		star.name = "QuestStar"
@@ -542,7 +562,7 @@ static func reward_fly(app: Node, at: Vector3, stars: int, total: int) -> void:
 				var bump := counter.create_tween()
 				bump.tween_property(counter, "scale", Vector2.ONE*1.22, 0.06)
 				bump.tween_property(counter, "scale", Vector2.ONE, 0.12)
-			if DisplayServer.get_name() != "headless": Fx.sound(app, "pluck", Vector3.INF, 1.5+0.06*landed[0], -10.0))
+			RpgUi.sfx_note("star", take, STAR_STEPS[mini(landed[0], STAR_STEPS.size())-1], -7.0 if landed[0] == flying else -9.0))
 
 ## This module in the village (null in rooms or while loading).
 static func village_of(app: Node) -> Node:
@@ -573,6 +593,11 @@ var reporting := false
 var report_after := 0.0
 ## "!" and "?" over residents: instance id of the resident -> its Label3D.
 var marks := {}
+## The residents with a "!" at the last look (npc -> true), whether that look counted (the list was
+## known: a login's first fill and the requests opening stay silent), and when a new "!" last chimed.
+var marked := {}
+var marks_primed := false
+var mark_chime_ms := -100000
 
 func setup(main: Node, owner_story: Node) -> void:
 	app = main
@@ -608,7 +633,12 @@ func adopt(data) -> void:
 	# The chair was ordered (or the chapter ended) while this login saw them closed: the requests open (not on
 	# every login of an open account, and not when nobody has a request left).
 	if was_open == 0 and open == 1 and not story.visiting() and entries().any(func(item): return str(item.get("state", "")) == "available"):
-		get_tree().create_timer(1.2).timeout.connect(func(): if is_instance_valid(app): app.message(tr("마을 주민들이 부탁을 기다리고 있어요 · 머리 위 ! 를 찾아보세요")))
+		# The unlock is the sound of the "!" marks appearing now.
+		marks_primed = false
+		get_tree().create_timer(1.2).timeout.connect(func():
+			if not is_instance_valid(app): return
+			RpgUi.sfx("unlock", -6.0)
+			app.message(tr("마을 주민들이 부탁을 기다리고 있어요 · 머리 위 ! 를 찾아보세요")))
 	was_open = open
 	for item in entries():
 		var id := str(item.get("id", ""))
@@ -858,11 +888,12 @@ func completed(item: Dictionary) -> void:
 func became_ready(item: Dictionary) -> void:
 	if not shown() or str(app.get("screen")) != "village": return
 	var who := npc_name(str(item.npc), story.hour())
+	# Before the toast and the guide's beacon: it stands in for their chimes.
+	RpgUi.sfx("quest_ready", -6.0)
 	app.message((tr("다 모았어요! %s에게 가져가 보세요") if str(item.kind) == "bring" else tr("다 됐어요! %s에게 알려 주세요")) % who)
 	if is_instance_valid(app.get("player")):
 		Fx.burst(app.world, app.player.global_position+Vector3(0, 1.8, 0), "sparkle", 12, Color(0,0,0,0), 0.35)
 		Fx.bubble(app.world, app.player.global_position+Vector3(0, 2.2, 0), "star")
-	RpgUi.sfx("confirm", -6.0)
 	var id := str(item.id)
 	if focus.is_empty() or focus == id or followed == KEY+id:
 		focus = id
@@ -939,8 +970,10 @@ func report_signposts() -> void:
 			var lift: Vector3 = spot.root.global_position if spot.get("root") is Node3D and is_instance_valid(spot.root) else Town.point(spot.at, 0.0)
 			Fx.burst(self, lift+Vector3(0, 1.6, 0), "sparkle", 14, Color(0,0,0,0), 0.4)
 			Fx.glow(self, lift+Vector3(0, 1.4, 0), RpgUi.HOVER, 1.8, 1.0)
-			RpgUi.sfx("confirm", -8.0)
+			# One more signpost: a star note (the last one is the request's ready moment, became_ready).
 			if str(now.get("state", "")) != "ready":
+				RpgUi.sfx("star", -8.0)
+				RpgUi.hush_toast()
 				app.message(tr("이정표 %d/%d · %s") % [int(now.get("have", 0)), int(now.get("need", 3)), str(spot.name)])
 			return
 
@@ -966,6 +999,7 @@ func update_marks() -> void:
 		var state := state_of(item)
 		if state == "available": want[str(item.npc)] = "!"
 		elif state == "ready": want[str(item.npc)] = "?"
+	mark_chime(want)
 	var bodies := {}
 	for module in app.get("modules") if app.get("modules") != null else []:
 		if not is_instance_valid(module) or not "walkers" in module: continue
@@ -992,6 +1026,19 @@ func update_marks() -> void:
 		if label.text != symbol:
 			label.text = symbol
 			label.modulate = Color("ffd84a") if symbol == "!" else Color("9fe3ff")
+
+## A new request waiting ("!" over a resident who had none): one soft notify, at most every 8 s and not
+## over an open conversation (the hand-over's own sounds). A "?" has its moment in became_ready.
+func mark_chime(want: Dictionary) -> void:
+	var now := {}
+	for npc in want:
+		if want[npc] == "!": now[npc] = true
+	var fresh := now.keys().any(func(npc): return not marked.has(npc))
+	if marks_primed and fresh and Time.get_ticks_msec() - mark_chime_ms > 8000 and not is_instance_valid(app.get("village_modal")):
+		mark_chime_ms = Time.get_ticks_msec()
+		RpgUi.sfx("notify", -12.0)
+	marked = now
+	if not known(token()).is_empty(): marks_primed = true
 
 func mark_label() -> Label3D:
 	var label := Label3D.new()
@@ -1021,6 +1068,8 @@ func clear_marks() -> void:
 func open_book() -> void:
 	if not is_instance_valid(app) or not app.has_method("modal_card"): return
 	var v: VBoxContainer = app.modal_card(tr("부탁 수첩"))
+	# A book: a page rustle over the window's open.
+	RpgUi.sfx("page", -10.0)
 	RpgUi.caption(v, tr("마을 주민들의 작은 부탁이에요. 들어주면 별씨를 받아요."), 13)
 	# Nineteen rows: the list scrolls inside the window (the wheel or the bar).
 	var scroll := ScrollContainer.new()

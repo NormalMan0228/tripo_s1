@@ -29,6 +29,7 @@ const Roads = preload("res://scripts/roads.gd")
 const Daylight = preload("res://scripts/daylight.gd")
 const CombatAudio = preload("res://scripts/combat_audio.gd")
 const HeroVoice = preload("res://scripts/hero_voice.gd")
+const SfxBank = preload("res://scripts/sfx_bank.gd")
 const VoiceBabble = preload("res://scripts/voice_babble.gd")
 const GameSettings = preload("res://scripts/game_settings.gd")
 const SettingsMenu = preload("res://scripts/settings_menu.gd")
@@ -70,6 +71,19 @@ const TRADING_UI_ENABLED := false
 const ITEM_NAMES := {"wood":"목재","stone":"돌","berry":"열매","fiber":"섬유","axe":"도끼","spear":"창","soup":"수프","bandage":"붕대"}
 const COLORS := RpgUi.PALETTE
 const RECIPES := {"axe":{"wood":3,"stone":2},"spear":{"wood":4,"stone":2},"soup":{"berry":3,"wood":1},"bandage":{"fiber":3}}
+## Seconds the morning motif waits for the dawn sting (2.2 s takes) to ring out, and the window the
+## win fanfare starts in once the hero's level-up chime (1.7-2.0 s takes) has rung.
+const DAWN_RING := 2.4
+const WIN_AFTER_MIN := 1.6
+const WIN_AFTER_MAX := 2.0
+## Sprint-start whoosh: a run-key press counts while moving; at most one every SPRINT_CUE_GAP s.
+const SPRINT_CUE_GAP := 1.5
+## Warded cue (monsters pushed back at the warm campfire): beasts within this many m of the camp, at
+## most one cue every WARD_CUE_GAP s.
+const WARD_REACH := 12.0
+const WARD_CUE_GAP := 6.0
+## Using a crafted object: one soft cue per click, at most one every USE_CUE_GAP_MS per object.
+const USE_CUE_GAP_MS := 250
 var api: Node
 var gate: CanvasLayer
 var social: Node
@@ -154,7 +168,24 @@ var daylight: Node
 var step_distance := 0.0
 var last_step_at := Vector3.ZERO
 var ambience_elapsed := 10.0
+## Landing and wading sounds (update_world_audio): airborne last frame, fastest fall since, in the
+## shallows last frame, and when the last shallows splash played (msec).
+var was_airborne := false
+var fall_speed := 0.0
+var was_wading := false
+var wade_splash_at := 0
+## Throttles (msec) for the frequent placement ticks (the prompt chip keeps its own: RpgUi.prompt).
+var snap_tick_at := 0
+var flip_tick_at := 0
+var survival_deny_at := 0
+## When the last sprint-start whoosh and warded cue played (s, Time ticks).
+var sprint_cue_at := -10.0
+var ward_cue_at := -100.0
 var day_track: Label
+## The boss night's health bar under the stage tracker (stage runs, run.boss), and the last hp seen.
+var boss_panel: Control
+var boss_meter: Dictionary = {}
+var boss_last_hp := -1.0
 var toast_lane: VBoxContainer
 var last_notice := ""
 var ambience: CPUParticles3D
@@ -403,7 +434,9 @@ func button(parent: Node, value: String, callback: Callable, variant := "default
 	parent.add_child(b)
 	return b
 
-func message(value: String) -> void:
+## kind: RpgUi.toast's kind ("info", "success", "warn", "error", "social"), which picks the pill's
+## look and its chime (toast_success, toast_social ...).
+func message(value: String, kind := "info") -> void:
 	# Maintenance or a too-old game: the gate's one screen speaks instead of scattered errors.
 	if VersionGate.is_blocked(): return
 	# Server messages arrive in Korean; already translated client text passes through.
@@ -412,7 +445,7 @@ func message(value: String) -> void:
 	# The shared toast lane (RpgUi.toast): a line still on screen refreshes, a new one stacks (max 3).
 	if is_instance_valid(toast_lane) and not value.is_empty() and (value!=last_notice or RpgUi.find_toast(toast_lane,value)):
 		last_notice=value
-		RpgUi.toast(toast_lane,value,"info",{"sound":screen!="survival"})
+		RpgUi.toast(toast_lane,value,kind,{"sound":screen!="survival"})
 
 ## The HUD's toast lane at design y (520 px pills) and a hidden copy of the last line (notice).
 func lay_toasts(y: float) -> void:
@@ -453,9 +486,44 @@ func error_message(code: String) -> String:
 
 func check(result: Dictionary) -> bool:
 	if not result.ok:
-		message(error_message(result.error))
+		refuse(error_message(result.error))
 		return false
 	return true
+
+## A refusal or a failed request: message() with the soft deny in place of the toast's success
+## chime (a kind played right before message() stamps RpgUi's toast dedupe, so that chime stays
+## quiet). Only when message() raises a new toast: a line still on screen just refreshes, and the
+## field's toasts are silent, so a repeated error never stacks denies.
+func refuse(value: String) -> void:
+	var line := I18n.server(value)
+	if screen!="survival" and not line.is_empty() and not VersionGate.is_blocked() and is_instance_valid(toast_lane) and line!=last_notice and not RpgUi.find_toast(toast_lane,line):
+		RpgUi.sfx("deny",-6.0)
+	message(value)
+
+## sound.effect(kind) a moment later (after a sting or a chime it would stack on), unless the
+## screen has changed meanwhile.
+func effect_later(kind: String, seconds: float) -> void:
+	var on := screen
+	get_tree().create_timer(seconds).timeout.connect(func():
+		if is_instance_valid(sound) and screen==on: sound.effect(kind))
+
+## HeroVoice.play(event) a moment later (forced: chance and gap skipped), the same way.
+func voice_later(event: String, seconds: float, db := 0.0) -> void:
+	var on := screen
+	get_tree().create_timer(seconds).timeout.connect(func():
+		if screen==on: HeroVoice.play(self,event,db,true))
+
+## core/newday after the dawn sting, unless the run has ended (or another began) meanwhile.
+func newday_later(seconds: float) -> void:
+	var on := screen
+	var id := run_id
+	get_tree().create_timer(seconds).timeout.connect(func():
+		if is_instance_valid(sound) and screen==on and run_id==id and run.get("status","")=="active": sound.effect("newday"))
+
+## How long a take rings (its length less a short fade tail), kept within lo..hi s; hi when unknown.
+func chime_length(path: String, lo: float, hi: float) -> float:
+	var take: AudioStream = SfxBank.stream(path) if not path.is_empty() else null
+	return clampf(take.get_length()-0.15 if take else hi, lo, hi)
 
 ## The world the login card opens on: the one remembered, or the build's default (player builds
 ## start online). A school build first opens on the school world even if an older build saved the
@@ -667,10 +735,10 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 	# *.ts.net; Tailscale encrypts the link). Anything else on the internet needs HTTPS.
 	local_pattern.compile("^http://(127\\.0\\.0\\.1|localhost|10(\\.[0-9]{1,3}){3}|192\\.168(\\.[0-9]{1,3}){2}|172\\.(1[6-9]|2[0-9]|3[01])(\\.[0-9]{1,3}){2}|100\\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])(\\.[0-9]{1,3}){2}|[a-z0-9-]+(\\.[a-z0-9-]+)*\\.ts\\.net):[0-9]{1,5}$")
 	if not (host.begins_with("https://") or local_pattern.search(host)!=null):
-		message(tr("멀리 있는 월드는 https:// 주소로 들어가요."))
+		refuse(tr("멀리 있는 월드는 https:// 주소로 들어가요."))
 		return
 	if username.strip_edges().is_empty() or password.is_empty():
-		message(tr("아이디와 비밀번호를 입력하세요."))
+		refuse(tr("아이디와 비밀번호를 입력하세요."))
 		return
 	busy = true
 	# Signing in again (another account or world) ends the earlier session's craft follower.
@@ -690,7 +758,7 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		return
 	if health.data.get("service","")!="tripothon" or int(health.data.get("protocol",0))!=6:
 		busy=false
-		message(error_message("server_update_required"))
+		refuse(error_message("server_update_required"))
 		return
 	var result: Dictionary = await api.post("/v1/auth/"+("register" if register else "login"),{"username":username,"password":password,"invitation":invitation})
 	busy = false
@@ -956,6 +1024,7 @@ func enter_village() -> void:
 	objects_list = ItemList.new()
 	objects_list.custom_minimum_size = Vector2(252,150)
 	objects_list.item_selected.connect(select_object)
+	objects_list.item_selected.connect(func(_index: int): RpgUi.sfx("select",-9.0))
 	right.add_child(objects_list)
 	object_info = text(right,tr("물건을 선택하세요."),13)
 	object_info.custom_minimum_size.x = 250
@@ -1042,16 +1111,17 @@ func warm_up_shaders() -> void:
 
 func toggle_drawer() -> void:
 	if screen == "village" and social.visiting():
-		message(tr("방문 중에는 함께하기 메뉴에서 대화하거나 내 마을로 돌아갈 수 있습니다."))
+		refuse(tr("방문 중에는 함께하기 메뉴에서 대화하거나 내 마을로 돌아갈 수 있습니다."))
 		return
 	if not is_instance_valid(right): return
 	var opening: bool=not right.get_parent().visible
 	if not opening and is_instance_valid(shape_panel): shape_panel.close()
 	right.get_parent().visible=opening
+	# The side drawer's own slide (as RpgUi.drawer), not the centred windows' open / close.
 	if opening:
 		RpgUi.slide_in(right.get_parent(),Vector2(28,0),0.26)
-		RpgUi.sfx("open",-8.0)
-	else: RpgUi.sfx("close",-10.0)
+		RpgUi.sfx("drawer_open",-10.0)
+	else: RpgUi.sfx("drawer_close",-10.0)
 	if screen=="village":player.controls_enabled=world_movement_allowed()
 	if is_instance_valid(objective_card): objective_card.visible=not opening
 	if is_instance_valid(minimap): minimap.visible=not opening
@@ -1166,8 +1236,9 @@ func build_village_hud() -> void:
 			["chest.svg","storage",tr("창고"),life.open_storage],["wardrobe.svg","wardrobe",tr("옷장"),open_wardrobe],["expedition.svg","",tr("탐험"),open_expedition]]+(
 			[["admin.svg","F9",tr("관리"),open_admin]] if preload("res://scripts/build_mode.gd").admin else []):
 		var action: Callable = spec[3]
+		# The bag slot's press is heard as the drawer's own slide (toggle_drawer), as in rooms.
 		slots.append({"icon":"res://assets/ui/"+spec[0],"action":spec[1],"label":tr(spec[2]),"primary":spec[0]=="expedition.svg",
-			"call":func(): action.call()})
+			"press":"" if spec[1]=="inventory" else "click","call":func(): action.call()})
 	var bar := RpgUi.hotbar(ui,slots,700,"hotbar")
 	expedition_button = bar.get_child(5)
 	lay_toasts(94)
@@ -1215,7 +1286,7 @@ func build_play_hud(survival: bool) -> void:
 	task_head.add_theme_constant_override("separation",6)
 	task_card.add_child(task_head)
 	task_head.add_child(RpgUi.name_tip(RpgUi.icon("res://assets/ui/book.svg",22),tr("목표")))
-	RpgUi.label(task_head,tr("✦  일곱 밤의 목표").trim_prefix("✦  "),15,RpgUi.GOLD)
+	RpgUi.label(task_head,tr("목표"),15,RpgUi.GOLD)
 	var task_body := VBoxContainer.new()
 	task_body.add_theme_constant_override("separation",8)
 	task_card.add_child(task_body)
@@ -1233,7 +1304,11 @@ func build_play_hud(survival: bool) -> void:
 			["fire","campfire",tr("모닥불"),func(): intent("fire")],["heart","heal",tr("붕대"),func(): intent("heal")],
 			["home","",tr("귀환"),confirm_return]]:
 		var action: Callable=spec[3]
-		slots.append({"icon":"res://assets/ui/icons/%s.png" % spec[0],"action":spec[1],"label":spec[2],"call":func(): action.call()})
+		# A press picks: a soft select for eat, fire and bandage (their outcome sounds when the field
+		# acts); the bag's drawer slide and the return question's window are the bag and home slots' sound.
+		var press: String="" if spec[0] in ["bag","home"] else "select"
+		slots.append({"icon":"res://assets/ui/icons/%s.png" % spec[0],"action":spec[1],"label":spec[2],"press":press,"press_db":-8.0,
+			"call":func(): action.call()})
 	# Folds to a handle tab like the village hotbar (fold id "toolbar"); the keys keep working.
 	toolbar_bar=RpgUi.hotbar(ui,slots,700,"toolbar")
 	toolbar_bar.name="FieldHotbar"
@@ -1248,7 +1323,7 @@ func build_play_hud(survival: bool) -> void:
 	RpgUi.pin(tracker,0.5,0.0)
 	day_track=RpgUi.numbers(RpgUi.label(tracker,"",18,RpgUi.INK),18)
 	day_track.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
-	RpgUi.name_tip(day_track,tr("일곱 밤 중 지나온 날"))
+	RpgUi.name_tip(day_track,tr("탐험 진행"))
 	if preload("res://scripts/build_mode.gd").developer():
 		var debug_box := panel(Vector2(20,520),252,"night")
 		developer_panel=debug_box.get_parent()
@@ -1438,7 +1513,9 @@ func claim_pending_reward() -> void:
 	busy=false
 	if check(result):
 		await refresh_inventory()
-		message(tr("생존 보상 %d 별씨를 받았습니다.") % result.data.reward)
+		message(tr("생존 보상 %d 별씨를 받았습니다.") % result.data.reward,"success")
+		# The hero's soft reward sparkle follows the success chime instead of landing on it.
+		voice_later("reward",0.5,-4.0)
 
 func poll_entitlements() -> void:
 	if social.visiting(): return
@@ -1458,7 +1535,7 @@ func poll_entitlements() -> void:
 		api.token=""
 		build_world(false)
 		login_ui()
-		message(error_message(result.error))
+		refuse(error_message(result.error))
 		return
 	# Residents' home versions: a house cached at this version opens without asking again.
 	NpcGifts.set_versions(result.data.get("npc_homes"),result.data.get("npc_homes_host",""))
@@ -1484,7 +1561,7 @@ func load_object(obj: Dictionary, prefix: String="/v1/objects/") -> Node3D:
 		# The owner's shape edit (width, depth, height, size, mirror) shows wherever it stands.
 		ObjectTransform.apply(assembly,obj.get("shape"))
 		return assembly
-	if obj.get("studio",false):message(tr("가구의 모든 부품을 불러오지 못했습니다."));return null
+	if obj.get("studio",false):refuse(tr("가구의 모든 부품을 불러오지 못했습니다."));return null
 	var response: Dictionary = await api.request(prefix+obj.id+"/model",{},HTTPClient.METHOD_GET,true)
 	if not check(response): return null
 	var model := Loader.load_bytes(response.bytes)
@@ -1493,7 +1570,7 @@ func load_object(obj: Dictionary, prefix: String="/v1/objects/") -> Node3D:
 		# The painted surface (painter/paint_apply.gd), cached by object and paint version.
 		await PaintApply.attach(api,model,obj,prefix)
 		ObjectTransform.apply(model,obj.get("shape"))
-	else: message(tr("물건을 꺼내지 못했어요."))
+	else: refuse(tr("물건을 꺼내지 못했어요."))
 	return model
 
 ## The bag's paint entry follows the selected object: objects with UVs open the painting
@@ -1510,7 +1587,7 @@ func update_paint_entry(model: Node3D) -> void:
 func open_painter() -> void:
 	if selected.is_empty() or busy or is_instance_valid(painter): return
 	if selected.state=="listed":
-		message(tr("장터에 올린 물건은 칠할 수 없어요."))
+		refuse(tr("장터에 올린 물건은 칠할 수 없어요."))
 		return
 	if not is_instance_valid(inspect_model):
 		message(tr("물건을 불러오는 중이에요. 잠시 뒤에 다시 눌러 주세요."))
@@ -1532,10 +1609,10 @@ func open_painter() -> void:
 func open_interactions() -> void:
 	if selected.is_empty() or busy or is_instance_valid(interaction_panel) or is_instance_valid(painter) or social.visiting(): return
 	if not selected.get("studio",false) or not is_instance_valid(inspect_model) or not inspect_model.has_method("use_interaction"):
-		message(tr("직접 만든 물건만 상호작용을 넣을 수 있어요."))
+		refuse(tr("직접 만든 물건만 상호작용을 넣을 수 있어요."))
 		return
 	if selected.state=="listed":
-		message(tr("장터에 올린 물건은 바꿀 수 없어요."))
+		refuse(tr("장터에 올린 물건은 바꿀 수 없어요."))
 		return
 	var id: String=selected.id
 	interaction_panel=InteractionPanel.new()
@@ -1573,7 +1650,7 @@ func open_shape_panel() -> void:
 		shape_panel.close()
 		return
 	if selected.state=="listed":
-		message(tr("장터에 올린 물건은 모양을 바꿀 수 없어요."))
+		refuse(tr("장터에 올린 물건은 모양을 바꿀 수 없어요."))
 		return
 	if not is_instance_valid(inspect_model):
 		message(tr("물건을 불러오는 중이에요. 잠시 뒤에 다시 눌러 주세요."))
@@ -1630,9 +1707,11 @@ func paint_object(color: String) -> void:
 			if is_instance_valid(item) and item.get_meta("studio",false):item.paint(reply.data.colors);item.runtime_version=reply.data.version
 		for obj in me.objects:
 			if obj.id==selected.id:obj.runtime_version=reply.data.version
+		RpgUi.sfx("paint",-6.0)
 		message(tr("가구의 모든 부품 색상을 저장했어요."))
 		return
 	if await edit_object({"action":"paint","color":color}):
+		RpgUi.sfx("paint",-6.0)
 		message(tr("새 색으로 칠했어요."))
 		if is_instance_valid(preview): Loader.paint(preview,Color(color))
 		if loaded.has(selected.id): Loader.paint(loaded[selected.id],Color(color))
@@ -1645,6 +1724,7 @@ func retrieve_object() -> void:
 	cancel_preview()
 	if await edit_object({"action":"retrieve"}):
 		await refresh_inventory()
+		RpgUi.sfx("lift",-6.0)
 		message(tr("보관함으로 회수했습니다."))
 
 func begin_place() -> void:
@@ -1652,7 +1732,7 @@ func begin_place() -> void:
 	# Something standing in the village can be picked up again: moved or turned in one step.
 	var moving: bool=selected.state=="placed" and selected.get("room","village")=="village" and loaded.has(selected.id)
 	if selected.state!="inventory" and not moving:
-		message(tr("보관 중인 물건을 선택하세요."))
+		refuse(tr("보관 중인 물건을 선택하세요."))
 		return
 	cancel_preview()
 	if is_instance_valid(shape_panel): shape_panel.close()
@@ -1680,9 +1760,15 @@ func begin_place() -> void:
 		tint.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA;tint.albedo_color=Color(.4,.9,.5,.45)
 		disc.material_override=tint;disc.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		preview.add_child(disc)
+		# The spot's state from the start, so the first frame plays no valid/invalid flip. A picked-up
+		# piece already stands on its spot; a new one has none until the pointer first places it
+		# (_process: that first spot sets the colour and plays no snap tick).
+		disc.set_meta("free",placement_problem().is_empty())
+		if moving: preview.set_meta("ghost_spot",true)
 		player.controls_enabled=false
 		if right.get_parent().visible: toggle_drawer()
 		show_turn_hud(true)
+		RpgUi.sfx("lift",-6.0)
 		message(tr("바닥을 클릭해 놓기 · R·휠 돌리기 · Esc 취소"))
 
 func cancel_preview() -> void:
@@ -1698,6 +1784,7 @@ func cancel_preview() -> void:
 func turn_preview(degrees: int) -> void:
 	if not is_instance_valid(preview): return
 	preview_rotation=ObjectTransform.wrap_degrees(preview_rotation+degrees)
+	RpgUi.sfx("rotate",-9.0)
 	ObjectTransform.show_angle(turn_readout,preview_rotation)
 
 ## ↶ angle ↷ above the prompt chip while placing.
@@ -1756,7 +1843,7 @@ func place_preview() -> void:
 	var p := TownLayout.furniture_local(preview.position)
 	var problem := placement_problem()
 	if not problem.is_empty():
-		message(problem)
+		refuse(problem)
 		return
 	if not preview_moving.is_empty():
 		if await move_object(p):
@@ -1768,6 +1855,7 @@ func place_preview() -> void:
 				Fx.arrive(object_root,standing,self,false)
 			cancel_preview()
 			await refresh_inventory()
+			RpgUi.sfx("place",-8.0)
 			message(tr("자리와 방향을 바꿨어요."))
 		return
 	if selected.is_empty():
@@ -1779,6 +1867,7 @@ func place_preview() -> void:
 		adopt_preview(placing_id,placing_key,TownLayout.furniture_point(p.x,p.y))
 		cancel_preview()
 		await refresh_inventory()
+		RpgUi.sfx("place",-4.0)
 		message(tr("마을에 놓았습니다. 다시 접속해도 유지됩니다."))
 
 ## The ghost the player put down stays as the placed object, so the refresh finds it already loaded:
@@ -1809,7 +1898,7 @@ func move_object(at: Vector2) -> bool:
 func generate() -> void:
 	if busy or not job_id.is_empty(): return
 	if prompt.text.strip_edges().length()<3:
-		message(tr("만들고 싶은 물건을 세 글자 이상 적어 주세요."))
+		refuse(tr("만들고 싶은 물건을 세 글자 이상 적어 주세요."))
 		return
 	busy=true
 	var result: Dictionary = await api.post("/v1/generations",api.mutation({"prompt":prompt.text}))
@@ -1833,9 +1922,11 @@ func poll_job() -> void:
 	if result.data.state=="ready":
 		await refresh_inventory()
 		job_id=""
+		RpgUi.sfx("craft_done",-6.0)
 		message(tr("새 물건이 보관함에 도착했습니다!"))
 	elif result.data.state in ["failed","unknown"]:
 		job_id=""
+		RpgUi.sfx("craft_fail",-6.0)
 		message(tr("생성 상태: ")+result.data.state+" · "+error_message(str(result.data.error_code)))
 	else: message(tr("공방에서 물건을 만들고 있습니다…"))
 	polling_job=false
@@ -1887,9 +1978,20 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		return
 	close_village_modal()
 	cancel_preview()
+	# The first expedition is the tutorial until it is cleared once (/v1/me tutorial_done; a run under
+	# way resumes as it is, a party goes where its leader chose).
+	if party_run_id.is_empty() and not bool(me.get("tutorial_done",true)):
+		map_id="tutorial"
+		chapter_id=""
 	busy=true
-	# The expedition's props read on a worker thread while the server answers and the card comes up.
-	LoadPace.want(preload("res://maps/survival/survival_map.gd").resource_paths(map_id))
+	# The expedition's props read on a worker thread while the server answers and the card comes up,
+	# for the map the run is on: a run under way (resumed) stays on the map it began on. A co-op run's
+	# map is known once its snapshot is in (prefetch_run_map below).
+	var prefetched := ""
+	if party_run_id.is_empty():
+		var active = me.get("active_run_summary")
+		prefetched = str(active.get("map_id",map_id)) if active is Dictionary else map_id
+		LoadPace.want(preload("res://maps/survival/survival_map.gd").resource_paths(prefetched))
 	coop_run = not party_run_id.is_empty()
 	var result: Dictionary = {"ok":true,"data":{"id":party_run_id}} if coop_run else await api.post("/v1/runs",api.mutation({"map_id":map_id,"difficulty":difficulty,"chapter_id":chapter_id}))
 	if not check(result):
@@ -1902,6 +2004,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		busy=false
 		return
 	run=snapshot.data
+	prefetch_run_map(str(run.get("map_id",map_id)),prefetched)
 	# Into the expedition under the same loading card as every other change of place.
 	var veil := Transition.of(get_tree())
 	veil.loading(region_name(str(run.get("map_id",map_id))),"run",str(run.get("map_id",map_id)))
@@ -1923,7 +2026,14 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	region_titles.add_theme_constant_override("separation",-2)
 	region_head.add_child(region_titles)
 	RpgUi.label(region_titles,region_name(run.get("map_id","forest")),23,RpgUi.INK)
-	RpgUi.label(region_titles,tr("%s · 일곱 밤 생존") % difficulty_name(run.get("difficulty","standard")),12,RpgUi.GOLD)
+	# The run's terms: its stages (and the boss of the last night), the tutorial; seven nights before stages.
+	var terms := [difficulty_name(run.get("difficulty","standard"))]
+	if bool(run.get("tutorial",false)): terms.append(tr("튜토리얼"))
+	elif run.has("stage_count"):
+		terms.append(tr("스테이지 %d") % int(run.stage_count))
+		if bool(run.get("has_boss",false)): terms.append(tr("우두머리"))
+	else: terms.append(tr("일곱 밤 생존"))
+	RpgUi.label(region_titles," · ".join(terms),12,RpgUi.GOLD)
 	RpgUi.divider(left,Color(RpgUi.GOLD,.55))
 	metrics=text(left,"",13)
 	metrics.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
@@ -2023,6 +2133,19 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	busy=false
 	veil.fade_in()
 
+## The run is on `actual`; start_run read `prefetched` ahead ("" for none, a co-op run). Another map's
+## reads still queued are dropped and this map's are queued, so its baked ground, props and resource
+## models come from the worker threads instead of loading on the main thread under the card (a read
+## already on a worker finishes and is let go at LoadPace.release()).
+func prefetch_run_map(actual: String, prefetched: String) -> void:
+	if actual == prefetched: return
+	var survival_map := preload("res://maps/survival/survival_map.gd")
+	var needed: Array = survival_map.resource_paths(actual)
+	if not prefetched.is_empty():
+		for path in survival_map.resource_paths(prefetched):
+			if not path in needed: LoadPace.queue.erase(path)
+	LoadPace.want(needed)
+
 func intent(action: String, target := "") -> void:
 	if screen!="survival" or paused or run.get("status","")!="active": return
 	# Eating, healing, crafting and fueling take precedence over a held gather/attack key.
@@ -2035,6 +2158,11 @@ func intent(action: String, target := "") -> void:
 				nearest=dist
 				target=node.id
 		if target.is_empty():
+			# Nothing in reach: the press gets the soft deny the field uses (its toasts are silent),
+			# on the shared 800 ms throttle; a held E repeating the gather stays quiet.
+			if Input.is_action_just_pressed("interact") and Time.get_ticks_msec()-survival_deny_at>800:
+				survival_deny_at=Time.get_ticks_msec()
+				RpgUi.sfx("deny",-9.0)
 			message(tr("채집할 나무·바위·풀·열매 가까이 가세요."))
 			return
 	pending_action=action
@@ -2078,7 +2206,14 @@ func tick_run() -> void:
 		HeroVoice.play(self,"hurt")
 		player.react("hurt")
 		floating_feedback("−%d" % int(ceil(run.hp-result.data.hp)),player.position,Color("ef9983"))
-	if result.data.status=="won" and run.get("status","")!="won": sound.effect("reward")
+	else:
+		# A telegraphed strike ended (windup -> recover) without hurting the hero or being interrupted: it missed.
+		for after in result.data.get("enemies",[]):
+			if str(after.get("phase",""))!="recover": continue
+			for before in run.get("enemies",[]):
+				if before.id==after.id and str(before.get("phase",""))=="windup" and float(after.hp)>=float(before.hp):
+					CombatAudio.play(self,"whiff",Vector3(float(after.get("target_x",after.x)),0,float(after.get("target_z",after.z))))
+	# A won run is voiced once by the hero's level-up chime in update_run (no reward jingle on top).
 	if not str(payload.action).is_empty():
 		var feedback: String=result.data.message
 		if feedback.contains("+"):
@@ -2087,34 +2222,54 @@ func tick_run() -> void:
 					player.equip("axe" if n.kind=="tree" and run.inventory.axe>0 else "")
 					player.face_point(Vector3(n.x,0,n.z))
 					resource_response(n)
-					CombatAudio.harvest(self,n.kind,Vector3(n.x,0,n.z))
+					CombatAudio.harvest(self,n.kind,Vector3(n.x,0,n.z),"axe" if run.inventory.axe>0 else "")
 			player.react("gather")
-			HeroVoice.play(self,"harvest")
+			if not HeroVoice.play(self,"harvest"): HeroVoice.play(self,"pickup")
 			floating_feedback(feedback,player.position,Color("ece1b4"))
 		elif feedback.contains("제작 완료"):
-			sound.effect("craft")
+			if not CombatAudio.craft(self,str(payload.target)): sound.effect("craft")
+			HeroVoice.play(self,"pickup",0.0,true)
 			player.react("craft")
 			floating_feedback(feedback,player.position,Color("b8dfb1"))
-		elif feedback.contains("먹었습니다") or feedback.contains("회복했습니다"):
-			sound.effect("eat")
+		elif feedback.contains("회복했습니다"):
+			# Cloth rip, wrap and pat (combat/bandage, else core/bandage; berries and soup keep core/eat).
+			if not CombatAudio.play(self,"bandage"): sound.effect("bandage")
+			player.react("eat")
+		elif feedback.contains("먹었습니다"):
+			sound.effect("eat_soup" if feedback.contains("수프") else "eat")
 			player.react("eat")
 			HeroVoice.play(self,"eat")
 		elif feedback.contains("피웠습니다"): CombatAudio.play(self,"fuel",Vector3.ZERO)
 		elif feedback.contains("공격!") or feedback=="가까운 적이 없습니다.":
-			CombatAudio.swing(self,"spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else "")
-			HeroVoice.play(self,"attack")
-			player.equip("spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else "")
+			var weapon: String="spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else ""
+			var struck_enemy := {}
+			var hp_left := 0.0
 			for enemy in run.enemies:
 				var hp_after := 0.0
 				for after in result.data.enemies:
 					if after.id==enemy.id: hp_after=after.hp
 				if hp_after<enemy.hp:
-					CombatAudio.impact(self,str(enemy.get("kind","wolf")),Vector3(enemy.x,0,enemy.z),hp_after<=0)
-					player.face_point(Vector3(enemy.x,0,enemy.z))
-					floating_feedback(str(int(enemy.hp-hp_after)),Vector3(enemy.x,0,enemy.z),Color("f3c980"))
+					struck_enemy=enemy
+					hp_left=hp_after
 					break
+			var kill: bool=not struck_enemy.is_empty() and hp_left<=0
+			CombatAudio.swing(self,weapon,kill)
+			HeroVoice.play(self,"attack_heavy" if kill or CombatAudio.combo%3==0 else "attack")
+			player.equip(weapon)
+			if not struck_enemy.is_empty():
+				var at := Vector3(struck_enemy.x,0,struck_enemy.z)
+				CombatAudio.impact(self,str(struck_enemy.get("kind","wolf")),at,kill)
+				# The blow cut a telegraphed strike short: the clash of a parry.
+				if str(struck_enemy.get("phase",""))=="windup" and not kill: CombatAudio.play(self,"block",at)
+				player.face_point(at)
+				floating_feedback(str(int(struck_enemy.hp-hp_left)),at,Color("f3c980"))
 			player.react("attack")
 			attack_sweep()
+		elif str(payload.action) in ["eat","heal","craft","fire"] and Time.get_ticks_msec()-survival_deny_at>800:
+			# A refused key press (nothing to eat, missing materials, away from the camp...): a soft
+			# deny, as the field's toasts are silent. Held gather and attack keys stay quiet.
+			survival_deny_at=Time.get_ticks_msec()
+			RpgUi.sfx("deny",-9.0)
 	run=result.data
 	reconcile_walker(sent_at)
 	update_run()
@@ -2188,11 +2343,16 @@ func update_run() -> void:
 		social.sync_peers(run.get("players", []))
 		social.update_status()
 	var remaining := int(ceil(run.get("phase_remaining",0)))
-	metrics.text=tr("%s   ·   %s %d초") % [tr("달이 뜬 밤") if run.night else tr("탐험하기 좋은 낮"),tr("아침까지") if run.night else tr("밤까지"),remaining]
+	# A night that holds (the boss night, the tutorial's last night) has no clock: phase_remaining
+	# stays 0 until the boss falls or the goals are met.
+	if bool(run.get("boss_night",false)): metrics.text=tr("우두머리의 밤")
+	elif run.has("stage") and int(run.get("stage_remaining",0))<0: metrics.text=tr("달이 뜬 밤")
+	else: metrics.text=tr("%s   ·   %s %d초") % [tr("달이 뜬 밤") if run.night else tr("탐험하기 좋은 낮"),tr("아침까지") if run.night else tr("밤까지"),remaining]
 	if is_instance_valid(day_track):
-		var days := ""
-		for i in 7: days+=("● " if i<int(run.day) else "○ ")
-		day_track.text="DAY %02d   %s" % [run.day,days.strip_edges()]
+		day_track.text=stage_text()
+		# The boss night glows red; the clock reads ∞ until the boss falls.
+		day_track.add_theme_color_override("font_color",RpgUi.ACCENT.lightened(0.35) if bool(run.get("boss_night",false)) else RpgUi.INK)
+	update_boss_bar()
 	hp_bar.value=run.hp
 	CombatAudio.heartbeat(self,run.hp if run.status=="active" else 0.0)
 	if run.status=="active" and float(run.get("stamina",100.0))<5.0: HeroVoice.play(self,"tired")
@@ -2216,7 +2376,7 @@ func update_run() -> void:
 		inventory_slots[item].button.disabled=amount<=0
 	pack.text=tr("탐험 소지품  %d / 80") % total
 	if is_instance_valid(objective):
-		if run.status=="won": objective.text=tr("일곱 밤을 견뎌냈어요!\n귀환하여 %d 별씨를 받으세요.") % run.reward
+		if run.status=="won": objective.text=tr("탐험 성공!\n귀환하여 %d 별씨를 받으세요.") % run.reward
 		elif run.status!="active": objective.text=tr("이번 탐험은 여기까지예요.\n귀환 후 다시 도전할 수 있어요.")
 		elif run.hunger<35: objective.text=tr("먼저 배를 채우세요\nQ로 열매나 수프를 먹으세요.")
 		elif run.night: objective.text=tr("불빛 안에서 밤을 버티세요\nF · 목재 2개로 불 30초 연장\n\n붉은 원 = 적의 공격 예고\nShift로 피하거나 Space로 공격")
@@ -2242,21 +2402,34 @@ func update_run() -> void:
 	if run_line!=last_run_line:
 		last_run_line=run_line
 		message(run_line)
+	var dawn_now: bool=bool(run.night)!=prior_night and not bool(run.night)
+	# A run that ends in this update is heard alone (below): no morning motif or night/dawn sting under it.
+	var going_on: bool=run.status=="active"
 	if int(run.day)!=prior_day:
 		prior_day=int(run.day)
 		message(tr("%d일째 아침이에요. 숲을 둘러보고 다음 밤을 준비하세요.") % run.day)
-		sound.effect("reward")
+		# A morning motif (core/newday). The day turns at dawn, so it waits until the dawn sting
+		# (2.2 s) has rung out instead of overlapping it; skipped if the run is over by then.
+		if going_on and dawn_now: newday_later(DAWN_RING)
+		elif going_on: sound.effect("newday")
 	if bool(run.night)!=prior_night:
 		prior_night=bool(run.night)
-		CombatAudio.play(self,"night" if run.night else "dawn")
+		if going_on: CombatAudio.play(self,"night" if run.night else "dawn")
 		if run.night: message(tr("해가 졌어요. 야영지로 돌아가 불을 지키세요."))
 	if run.status!="active" and not results_shown:
 		results_shown=true
-		HeroVoice.play(self,"levelup" if run.status=="won" else "faint",0.0,true)
+		var won: bool=run.status=="won"
+		# The run's own ending, one phrase each: the hero's level-up chime, then the horn fanfare
+		# (core/win) once that chime has rung; or the faint over a soft falling phrase (core/lose).
+		# The results card adds nothing on top (show_results).
+		var voiced: bool=HeroVoice.play(self,"levelup" if won else "faint",0.0,true)
+		if won: effect_later("win",chime_length(str(HeroVoice.last_take.get("levelup","")),WIN_AFTER_MIN,WIN_AFTER_MAX) if voiced else 0.3)
+		elif run.status=="lost": sound.effect("lose")
 		if is_instance_valid(return_dialog): return_dialog.queue_free()
 		show_results()
 	flame.visible=run.fire_remaining>0
 	warmth_ring.visible=flame.visible
+	survival_audio(remaining)
 	if run.status=="active" and run.elapsed-last_camp_warning>12:
 		if run.night and run.fire_remaining>0 and run.fire_remaining<7:
 			message(tr("모닥불이 곧 꺼져요. 야영지에서 F로 목재를 보태세요."))
@@ -2274,6 +2447,10 @@ func update_run() -> void:
 			# The survival map supplies Tripo trees, stone piles, berry bushes and grass
 			# (plus a stump for felled trees) per map, with the old shapes as fallback.
 			preload("res://scripts/biomes.gd").dress_resource(world,root,n.kind)
+		# A node that was full and is now used up: its last piece breaks off (not on first sight).
+		var spent: bool=n.quantity<=0
+		if spent and nodes[n.id].has_meta("full") and nodes[n.id].get_meta("full"): CombatAudio.depleted(self,str(n.kind),Vector3(n.x,0,n.z))
+		nodes[n.id].set_meta("full",not spent)
 		if n.kind=="tree":
 			for child in nodes[n.id].get_children(): child.visible=(n.quantity<=0) if child.name=="Stump" else (n.quantity>0)
 		else: nodes[n.id].visible=n.quantity>0
@@ -2284,6 +2461,7 @@ func update_run() -> void:
 			var root := preload("res://scripts/shadow_beast.gd").new()
 			root.kind=enemy.get("kind","wolf")
 			root.variant=enemy.get("variant","")
+			root.from_enemy(enemy)
 			world.add_child(root)
 			root.position=Vector3(enemy.x,0,enemy.z)
 			enemy_nodes[enemy.id]=root
@@ -2312,11 +2490,55 @@ func update_run() -> void:
 			# server clears the rest without a fight, so they just dissolve.
 			if run.night and enemy_nodes[id].has_method("die"): enemy_nodes[id].die()
 			else:
-				CombatAudio.play(self,"dissolve",enemy_nodes[id].position)
+				# Not under a run's ending (the dawn of the seventh day): that is heard alone.
+				if run.get("status","")=="active": CombatAudio.play(self,"dissolve",enemy_nodes[id].position)
 				enemy_nodes[id].queue_free()
 			enemy_nodes.erase(id)
 			strike_markers[id].queue_free()
 			strike_markers.erase(id)
+
+## The sprint-start whoosh and the hero's quick exhale, on a real run-key press (_process) while the
+## walker moves and has the stamina to start a sprint. Not on the server's sprinting flag: with the
+## run key latched (run_mode "toggle") that turns on at every start of movement. At most one every
+## SPRINT_CUE_GAP s.
+func sprint_cue() -> void:
+	if run.get("status","")!="active" or not world_movement_allowed() or not GameSettings.running(): return
+	if movement_input().length()<0.2: return
+	if not bool(run.get("sprinting",false)) and float(run.get("stamina",100.0))<=20.0: return
+	var now := Time.get_ticks_msec()*0.001
+	if now-sprint_cue_at<SPRINT_CUE_GAP: return
+	sprint_cue_at=now
+	CombatAudio.play(self,"dodge")
+	HeroVoice.play(self,"dodge")
+
+## Survival sounds that follow the run state on every update: warded beasts, hunger / cold /
+## ember-ground cues, the ten-second night warning, the campfire loop and a newly crafted weapon.
+func survival_audio(remaining: int) -> void:
+	var active: bool=run.get("status","")=="active"
+	# (The sprint-start whoosh follows the run key itself: sprint_cue().)
+	# Warded: the warm campfire pushes the night's beasts back (the server's "warded" phase). One soft,
+	# low shimmer at the fire for the whole group when that starts, never one per beast, and at most
+	# one every WARD_CUE_GAP s (stepping in and out at the ring's edge).
+	var warded := false
+	if active and bool(run.get("warm",false)):
+		for enemy in run.get("enemies",[]):
+			if str(enemy.get("phase",""))=="warded" and Vector2(float(enemy.get("x",0.0)),float(enemy.get("z",0.0))).length()<WARD_REACH:
+				warded=true
+				break
+	if CombatAudio.edge("warded",warded) and Time.get_ticks_msec()*0.001-ward_cue_at>=WARD_CUE_GAP:
+		ward_cue_at=Time.get_ticks_msec()*0.001
+		Fx.sound(self,"twinkle",Vector3.ZERO,0.8,-6.0)
+	var hunger := float(run.get("hunger",100.0))
+	CombatAudio.cue(self,"hunger",active and hunger<30.0,10.0 if hunger<=0.0 else 26.0)
+	# Not on top of the night sting: the cold cue waits until it has rung out.
+	var settling: bool=Time.get_ticks_msec()*0.001-float(CombatAudio.last_time.get("night",-10.0))<3.0
+	CombatAudio.cue(self,"cold",active and bool(run.night) and not bool(run.get("warm",false)) and not settling,14.0)
+	CombatAudio.cue(self,"ember",active and str(run.get("terrain_effect",""))=="ember",2.5)
+	if CombatAudio.edge("night_warn",active and not bool(run.night) and remaining<=10 and remaining>0): CombatAudio.play(self,"night_warn")
+	CombatAudio.campfire(self,float(run.get("fire_remaining",0.0)) if active else 0.0,Vector3.ZERO,bool(run.night))
+	var weapon: String="spear" if int(run.inventory.get("spear",0))>0 else "axe" if int(run.inventory.get("axe",0))>0 else ""
+	# After the crafting sound: the new weapon settles into the hero's hand.
+	if CombatAudio.changed("weapon/"+run_id,weapon) and not weapon.is_empty(): CombatAudio.later(self,"equip",0.6)
 
 func resource_response(resource: Dictionary) -> void:
 	if not nodes.has(resource.id): return
@@ -2400,7 +2622,7 @@ func suspend_run() -> void:
 	run_id=""
 	busy=false
 	await back_to_village()
-	message(tr("탐험을 저장했습니다. 하단의 이어하기로 같은 날부터 돌아갈 수 있어요."))
+	message(tr("탐험을 저장했습니다. 하단의 이어하기로 같은 날부터 돌아갈 수 있어요."),"success")
 
 func floating_feedback(value: String, at: Vector3, color: Color) -> void:
 	var label := Label3D.new()
@@ -2452,8 +2674,10 @@ func show_results() -> void:
 	var card := panel(Vector2(400,150),480,"hero")
 	RpgUi.pin(card.get_parent(),0.5,0.0)
 	RpgUi.pop_in(card.get_parent(),0.32,0.9)
-	RpgUi.sfx("confirm" if won else "close",-6.0)
-	var band := RpgUi.ribbon(card,tr("일곱 밤을 견뎌냈어요") if won else tr("다시 피울 작은 불씨"),not won,24)
+	# The run's ending is already heard (update_run: the level-up chime and then core/win, or the faint
+	# with core/lose), so the card pops in silently; only without those takes does it chime itself.
+	if not SfxBank.has("core/win" if won else "core/lose"): RpgUi.sfx("confirm" if won else "close",-6.0)
+	var band := RpgUi.ribbon(card,tr("탐험 성공") if won else tr("다시 피울 작은 불씨"),not won,24)
 	band.size_flags_horizontal=Control.SIZE_SHRINK_CENTER
 	var destination := "%s · %s" % [region_name(run.get("map_id","forest")),difficulty_name(run.get("difficulty","standard"))]
 	if preload("res://scripts/build_mode.gd").developer(): destination += tr(" · 보상 ×%.3f") % run.get("reward_multiplier",1.0)
@@ -2593,20 +2817,55 @@ func update_world_audio(delta: float) -> void:
 		var day := 1.0
 		if is_instance_valid(daylight) and daylight.has_method("current_hour"):
 			day=float(Daylight.sample(daylight.current_hour()).get("daylight",1.0))
+		# set_ambience keeps any key it is not given: every screen sets zone, room and ember.
 		if screen=="village":
 			sound.play_music(village_track())
 			var waterfall := clampf(1.0-Vector2(player.position.x-1.0,player.position.z+7.9).length()/24.0,0.0,1.0)
-			world_audio.set_ambience({"day":day,"coast":clampf((2.6-player.position.y)/1.7,0.15,1.0),"wind":0.2+0.25*(1.0-day),"waterfall":waterfall,"indoor":false})
+			# The hour lets the rooster crow only at dawn; the windmill (town.gd 04_windmill) creaks from where it stands.
+			var hour: float=float(daylight.current_hour()) if is_instance_valid(daylight) and daylight.has_method("current_hour") else -1.0
+			world_audio.set_ambience({"day":day,"coast":clampf((2.6-player.position.y)/1.7,0.15,1.0),"wind":0.2+0.25*(1.0-day),"waterfall":waterfall,"indoor":false,
+				"zone":"","room":"","ember":0.0,"hour":hour,"windmill_at":Vector3(-18.0,0.0,-44.0)})
 		elif screen=="survival":
-			world_audio.set_ambience({"day":0.0 if run.get("night",false) else 1.0,"coast":0.0,"wind":0.3,"waterfall":0.0,"indoor":false})
+			# Each region its own bed (forest canopy, frost wind and ice, quarry dry wind and pebbles);
+			# the ember roar fades in while the walker stands on the hot cracks.
+			world_audio.set_ambience({"day":0.0 if run.get("night",false) else 1.0,"coast":0.0,"wind":0.3,"waterfall":0.0,"indoor":false,
+				"room":"","hour":-1.0,"zone":str(run.get("map_id","forest")),"ember":1.0 if run.get("terrain_effect","")=="ember" else 0.0})
 		else:
-			world_audio.set_ambience({"day":day,"coast":0.45,"wind":0.15,"waterfall":0.0,"indoor":false})
+			world_audio.set_ambience({"day":day,"coast":0.45,"wind":0.15,"waterfall":0.0,"indoor":false,"zone":"","room":"","ember":0.0})
 	if screen not in ["village","survival"]:
 		last_step_at=player.position
+		was_airborne=false
+		fall_speed=0.0
+		was_wading=false
 		return
 	var moved := Vector2(player.position.x-last_step_at.x,player.position.z-last_step_at.z).length()
+	# Put back on the shore after going under in the sea (player.gd min_ground_y reset): a splash.
+	# Falling in, or walked down to the reset line (a warp while wading higher up is no splash).
+	if screen=="village" and moved>1.5:
+		var sea_floor_value = player.get("min_ground_y")
+		var sea_floor: float=float(sea_floor_value) if sea_floor_value!=null else -INF
+		if last_step_at.y<sea_floor+(0.6 if was_airborne else 0.2): world_audio.splash(1.0)
 	last_step_at=player.position
-	if moved>1.5 or delta<=0.0: return
+	if moved>1.5 or delta<=0.0:
+		# A teleport or a warp is no fall.
+		was_airborne=false
+		fall_speed=0.0
+		return
+	if screen=="village":
+		# A landing after a drop (a ledge, a bridge's edge): a thud scaled by the fall. Seated or
+		# carried (visual_only) the body is not falling.
+		var airborne: bool=not player.is_on_floor() and not bool(player.get("visual_only"))
+		if airborne: fall_speed=maxf(fall_speed,-player.velocity.y)
+		elif was_airborne and fall_speed>4.0: world_audio.land(fall_speed,ground_surface())
+		if not airborne: fall_speed=0.0
+		was_airborne=airborne
+		# Stepping into the shallows: a splash (a little hysteresis and a gap, so walking along the
+		# waterline does not splash on every step).
+		var wading: bool=not airborne and player.position.y<(0.85 if was_wading else 0.75)
+		if wading and not was_wading and Time.get_ticks_msec()-wade_splash_at>1500:
+			wade_splash_at=Time.get_ticks_msec()
+			world_audio.splash(0.5)
+		was_wading=wading
 	var speed := moved/delta
 	if speed<0.4 or (screen=="village" and not player.is_on_floor()):
 		step_distance=0.0
@@ -2614,7 +2873,7 @@ func update_world_audio(delta: float) -> void:
 	step_distance+=moved
 	if step_distance>=(0.98 if speed>3.6 else 0.74):
 		step_distance=0.0
-		world_audio.footstep(ground_surface() if screen=="village" else "grass",speed)
+		world_audio.footstep(ground_surface() if screen=="village" else survival_surface(),speed)
 
 ## Village music follows the hour: the night track once the light is mostly gone, the day
 ## track again after dawn (the gap between the two thresholds stops it flipping at dusk).
@@ -2630,6 +2889,18 @@ func region_track() -> String:
 	var region: String=run.get("map_id","forest")
 	return region if region in ["forest","frost"] else "forest"
 
+## Survival ground by region and by the hazard underfoot: snow (ice on the frozen patches) in the
+## frost basin, gravel (ash on the hot cracks) in the quarry, leaf litter in the forest.
+func survival_surface() -> String:
+	var effect := str(run.get("terrain_effect",""))
+	if effect=="ice": return "ice"
+	if effect=="ember": return "ash"
+	return region_surface()
+
+## The region's own ground, without the hazards (other players' steps on an expedition).
+func region_surface() -> String:
+	return str({"frost":"snow","quarry":"gravel"}.get(str(run.get("map_id","forest")),"leaves"))
+
 func ground_surface() -> String:
 	var from := player.global_position+Vector3(0,0.6,0)
 	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(from,from+Vector3(0,-1.6,0),1|2))
@@ -2637,6 +2908,9 @@ func ground_surface() -> String:
 		if hit.collider.collision_layer&2: return "wood"
 		var owner_name := str(hit.collider.get_parent().name) if hit.collider.get_parent() else ""
 		if "rock" in owner_name.to_lower(): return "rock"
+	# Tilled farm plots are soft soil.
+	var farm = life.get("farm") if is_instance_valid(life) else null
+	if is_instance_valid(farm) and farm.has_method("index_at") and farm.index_at(Vector2(player.position.x,player.position.z),0.95)>=0: return "dirt"
 	if Roads.on_road(Vector2(player.position.x,player.position.z)): return "stone"
 	if player.position.y<0.8: return "shallow"
 	if player.position.y<1.55: return "sand"
@@ -2729,6 +3003,7 @@ func _process(delta: float) -> void:
 		flame.scale=Vector3(1.0+sin(Time.get_ticks_msec()*0.011)*0.07,1.0+sin(Time.get_ticks_msec()*0.015)*0.12,1.0)
 	if screen=="survival":
 		player.sprinting=run.get("sprinting",false)
+		if Input.is_action_just_pressed("run"): sprint_cue()
 		repeat_action+=delta
 		if repeat_action>=0.43 and world_movement_allowed():
 			repeat_action=0
@@ -2793,6 +3068,7 @@ func _process(delta: float) -> void:
 				if is_instance_valid(seat) and seat.resting(): prompt_text=key+tr("일어나기")
 				if is_instance_valid(village_modal): prompt_text=""
 				if str(hint.get_meta("prompt",""))!=prompt_text:
+					# The chip ticks very softly as it appears (RpgUi.prompt, every place alike).
 					RpgUi.set_prompt(hint,prompt_text)
 					fit_chip(hint)
 				hint.visible=not prompt_text.is_empty() and GameSettings.show_prompts()
@@ -2815,13 +3091,29 @@ func _process(delta: float) -> void:
 			if not preview_follow and mouse.distance_to(preview_mouse)>8: preview_follow=true
 			var origin := camera.project_ray_origin(mouse)
 			var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(origin,origin+camera.project_ray_normal(mouse)*400,1|2|8)) if preview_follow else {}
+			# A new piece's ghost has no spot of its own until the pointer first puts it on the ground:
+			# that frame (and the ones before it) stay silent, it only takes its colour.
+			var first_spot := not preview.has_meta("ghost_spot")
 			# Only open ground takes furniture; buildings, bridges and props keep the last spot.
 			if not hit.is_empty() and hit.collider is CollisionObject3D and hit.collider.collision_layer&1:
 				var local := TownLayout.furniture_local(hit.position).snapped(Vector2(0.5,0.5))
-				preview.position=TownLayout.furniture_point(local.x,local.y)
+				var cell := TownLayout.furniture_point(local.x,local.y)
+				# A faint tick when the ghost lands on a new 0.5 m cell (at most ~11 a second).
+				if not first_spot and not preview.position.is_equal_approx(cell) and Time.get_ticks_msec()-snap_tick_at>90:
+					snap_tick_at=Time.get_ticks_msec()
+					RpgUi.sfx("snap",-15.0)
+				preview.position=cell
+				preview.set_meta("ghost_spot",true)
 			preview.rotation.y=ObjectTransform.ease_yaw(preview.rotation.y,preview_rotation,delta)
 			var disc := preview.get_node_or_null("PlacementDisc") as MeshInstance3D
-			if disc: disc.material_override.albedo_color=Color(.4,.9,.5,.45) if placement_problem().is_empty() else Color(.95,.35,.3,.5)
+			if disc:
+				var free := placement_problem().is_empty()
+				# Heard only when the spot flips between free (green) and blocked (red).
+				if bool(disc.get_meta("free",free))!=free and not first_spot and Time.get_ticks_msec()-flip_tick_at>150:
+					flip_tick_at=Time.get_ticks_msec()
+					RpgUi.sfx("valid" if free else "invalid",-11.0)
+				disc.set_meta("free",free)
+				disc.material_override.albedo_color=Color(.4,.9,.5,.45) if free else Color(.95,.35,.3,.5)
 
 func update_canopy_visibility() -> void:
 	if not is_instance_valid(player): return
@@ -2892,13 +3184,17 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and key in [KEY_ESCAPE,KEY_E] and screen=="village" and is_instance_valid(seat) and seat.resting():
+		# The fallback stands up at once (the driver voices its own getting up).
+		if not str(seat.legacy_mode).is_empty(): seat_sound("rise",{"at":player.global_position,"material":"wood"})
 		seat.stand()
 		return
 	if event is InputEventKey and event.pressed and not event.echo and key==KEY_ESCAPE and screen in ["village","survival"]:
 		# Esc backs out of placement, then a side drawer on the window stack, then the bag, then
 		# opens the pause menu.
 		var top := RpgUi.top_window()
-		if screen=="village" and is_instance_valid(preview): cancel_preview()
+		if screen=="village" and is_instance_valid(preview):
+			RpgUi.sfx("cancel",-8.0)
+			cancel_preview()
 		elif not top.is_empty() and not bool(top.get("modal",false)) and RpgUi.close_top(top): pass
 		elif is_instance_valid(right) and right.get_parent().visible: toggle_drawer()
 		elif screen=="survival": toggle_pause()
@@ -2966,20 +3262,80 @@ func _unhandled_input(event: InputEvent) -> void:
 		else: click_furniture(event.position)
 
 func region_name(id: String) -> String:
-	return {"forest":tr("솔바람 숲"),"quarry":tr("노을 채석장"),"frost":tr("서리빛 분지")}.get(id,id)
+	var known: Dictionary={"forest":tr("솔바람 숲"),"quarry":tr("노을 채석장"),"frost":tr("서리빛 분지")}
+	# A map the catalog names (the tutorial, a renamed region) goes by that name.
+	for region in me.get("catalog",{}).get("maps",[]):
+		if region is Dictionary and str(region.get("id",""))==id and not str(region.get("name","")).is_empty(): return str(region.name)
+	return known.get(id,id)
+
+## The expedition's progress line: "스테이지 2/5  1:30" on staged maps (∞ on the boss night),
+## the seven-day dots on a server without stages.
+func stage_text() -> String:
+	if run.has("stage"):
+		var left := int(run.get("stage_remaining",-1))
+		var clock := "∞" if left<0 or bool(run.get("boss_night",false)) else "%d:%02d" % [left/60,left%60]
+		return tr("스테이지 %d/%d") % [int(run.stage),int(run.get("stage_count",1))]+"   "+clock
+	var days := ""
+	for i in 7: days+=("● " if i<int(run.get("day",1)) else "○ ")
+	return "DAY %02d   %s" % [int(run.get("day",1)),days.strip_edges()]
+
+## The boss's health under the stage tracker while run.boss is set: it shakes and flashes when hit,
+## and the toast lane steps down under it.
+func update_boss_bar() -> void:
+	var boss = run.get("boss")
+	if not boss is Dictionary or screen!="survival":
+		if is_instance_valid(boss_panel):
+			boss_panel.queue_free()
+			if is_instance_valid(toast_lane): toast_lane.position.y-=48
+		boss_panel=null
+		boss_last_hp=-1.0
+		return
+	var hp := float(boss.get("hp",0.0))
+	var top := maxf(1.0,float(boss.get("max_hp",1.0)))
+	if not is_instance_valid(boss_panel):
+		var plate := PanelContainer.new()
+		plate.name="BossBar"
+		plate.add_theme_stylebox_override("panel",RpgUi.panel_style("pill"))
+		plate.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		plate.position=Vector2(400,66+(28 if is_instance_valid(ui.get_node_or_null("CoopLine")) else 0))
+		plate.custom_minimum_size=Vector2(480,0)
+		ui.add_child(plate)
+		boss_meter=RpgUi.meter(plate,str(boss.get("name",tr("우두머리"))),RpgUi.ACCENT,"crown")
+		(boss_meter.bar as ProgressBar).custom_minimum_size.y=16
+		(boss_meter.name as Label).add_theme_color_override("font_color",RpgUi.GOLD)
+		(boss_meter.name as Label).add_theme_font_size_override("font_size",15)
+		plate.size=Vector2(480,plate.get_combined_minimum_size().y)
+		RpgUi.pin(plate,0.5,0.0)
+		boss_panel=plate
+		if is_instance_valid(toast_lane): toast_lane.position.y+=48
+		RpgUi.pop_in(plate)
+	(boss_meter.bar as ProgressBar).max_value=top
+	(boss_meter.bar as ProgressBar).value=hp
+	(boss_meter.readout as Label).text="%d / %d" % [int(ceil(hp)),int(top)]
+	if boss_last_hp>=0.0 and hp<boss_last_hp and not RpgUi.calm():
+		# A hit: a short shake and a white flash on the bar.
+		var shake := boss_panel.create_tween()
+		var x := boss_panel.position.x
+		for step in [6.0,-5.0,3.0,0.0]: shake.tween_property(boss_panel,"position:x",x+step,0.04)
+		var flash := (boss_meter.bar as ProgressBar).create_tween()
+		(boss_meter.bar as ProgressBar).modulate=Color(1.8,1.8,1.8)
+		flash.tween_property(boss_meter.bar,"modulate",Color.WHITE,0.25)
+	boss_last_hp=hp
 
 func difficulty_name(id: String) -> String:
 	return {"relaxed":tr("산책"),"standard":tr("탐험"),"veteran":tr("개척")}.get(id,id)
 
-func close_village_modal() -> void:
+## sound false: closed for the next window (its open is the one sound) or by an outcome with its own
+## sound (a seed planted).
+func close_village_modal(sound := true) -> void:
 	if is_instance_valid(life): life.closed()
 	restore_hud()
 	if is_instance_valid(village_modal):
 		# A shared window (modal_card) leaves the window stack; dialogues and the craft window (its
 		# window lives under its holder) are freed whole.
-		if village_modal.has_meta("rpg_window"): RpgUi.close_window(village_modal.get_meta("rpg_window"),false)
+		if village_modal.has_meta("rpg_window"): RpgUi.close_window(village_modal.get_meta("rpg_window"),false,sound)
 		else:
-			RpgUi.sfx("close",-10.0)
+			if sound: RpgUi.sfx("close",-10.0)
 			village_modal.get_parent().remove_child(village_modal)
 			village_modal.queue_free()
 	village_modal=null
@@ -2989,11 +3345,13 @@ func close_village_modal() -> void:
 ## key, an ornamented rule, then the caller's content. `action` is the GameSettings action that
 ## opens it (its key names the close key; "" names Esc). Opens with a fade + pop.
 ## The opening key closes the window too (main._unhandled_input); Esc always does.
-func modal_card(title: String, action := "") -> VBoxContainer:
-	close_village_modal()
+## A window already open is swapped out without its close sound (the new one's open is heard);
+## quiet: the same window rebuilt in place (the stall after a trade), no sound at all.
+func modal_card(title: String, action := "", quiet := false) -> VBoxContainer:
+	close_village_modal(false)
 	cancel_preview()
 	player.controls_enabled=false
-	var w := RpgUi.window(ui,title,{"action":action,"scroll":false,"on_close":close_village_modal,"id":"village_modal"})
+	var w := RpgUi.window(ui,title,{"action":action,"scroll":false,"on_close":close_village_modal,"id":"village_modal","sound":not quiet})
 	village_modal=w.root
 	player.controls_enabled=false
 	return w.body
@@ -3046,7 +3404,7 @@ func open_expedition() -> void:
 	if me.get("active_run_summary") is Dictionary:
 		await start_run()
 		return
-	var v := modal_card(tr("어느 곳에서 일곱 밤을 보낼까요?"))
+	var v := modal_card(tr("어디로 떠날까요?"))
 	button(v,tr("이야기 수첩 · 섬의 세 가지 기록"),open_story)
 	text(v,tr("지역과 난이도는 탐험을 시작하면 고정됩니다."),13)
 	var region_row := HBoxContainer.new()
@@ -3060,7 +3418,9 @@ func open_expedition() -> void:
 	diff_row.add_theme_constant_override("separation",10)
 	var estimate := text(v,"",15)
 	estimate.custom_minimum_size.y=60
-	var maps: Array=me.get("catalog",{}).get("maps",[])
+	var maps: Array=me.get("catalog",{}).get("maps",[]).duplicate()
+	# Left to right as the catalog orders them (the tutorial first), else as listed.
+	maps.sort_custom(func(a,b): return int(a.get("order",0))<int(b.get("order",0)))
 	var difficulties: Array=me.get("catalog",{}).get("difficulties",[])
 	var refresh := func():
 		var multiplier := 1.0
@@ -3076,18 +3436,78 @@ func open_expedition() -> void:
 		for b in region_row.get_children(): b.button_pressed=b.get_meta("id")==chosen_map
 		for b in diff_row.get_children(): b.button_pressed=b.get_meta("id")==chosen_difficulty
 	for region in maps:
-		var b := button(region_row,region.name,func(): chosen_map=region.id; refresh.call(),"choice")
-		b.set_meta("id",region.id)
-		b.toggle_mode=true
-		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size.y=90
+		map_card(region_row,region,func(): chosen_map=region.id; refresh.call())
 	for difficulty in difficulties:
 		var b := button(diff_row,difficulty.name,func(): chosen_difficulty=difficulty.id; refresh.call(),"choice")
 		b.set_meta("id",difficulty.id)
 		b.toggle_mode=true
 		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	button(v,tr("준비 완료 · 일곱 밤 시작"),func(): start_run(chosen_map,chosen_difficulty),"gold")
+	button(v,tr("준비 완료 · 출발하기"),func(): start_run(chosen_map,chosen_difficulty),"gold")
+	if not maps.is_empty() and not maps.any(func(m): return m.id==chosen_map): chosen_map=str(maps[0].id)
 	refresh.call()
+
+## The painted loading backdrop of a map (transition.gd BACKDROPS), for its card.
+const MAP_ART := {"tutorial":"res://assets/ui/loading/camp.jpg","forest":"res://assets/ui/loading/forest.jpg",
+	"quarry":"res://assets/ui/loading/quarry.jpg","frost":"res://assets/ui/loading/frost.jpg"}
+
+## One map as a picture card: its painting, its name, how many stages and whether a boss waits;
+## the tutorial wears a 처음 ribbon. A toggle in the row (meta "id").
+func map_card(row: Container, region: Dictionary, pick: Callable) -> Button:
+	var card := Button.new()
+	card.name="Map_"+str(region.id)
+	card.set_meta("id",region.id)
+	card.toggle_mode=true
+	card.focus_mode=Control.FOCUS_NONE
+	card.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	card.custom_minimum_size=Vector2(170,178)
+	card.add_theme_stylebox_override("normal",RpgUi.frame("card_frame"))
+	card.add_theme_stylebox_override("hover",RpgUi.frame("card_frame",Color(1.08,1.06,1.0)))
+	card.add_theme_stylebox_override("pressed",RpgUi.frame("card_frame",Color(1.25,1.12,0.78)))
+	card.add_theme_stylebox_override("hover_pressed",RpgUi.frame("card_frame",Color(1.25,1.12,0.78)))
+	card.add_theme_stylebox_override("focus",StyleBoxEmpty.new())
+	card.pressed.connect(func(): pick.call())
+	RpgUi.hover_motion(card,1.03)
+	row.add_child(card)
+	var column := VBoxContainer.new()
+	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	column.offset_left=10;column.offset_top=10;column.offset_right=-10;column.offset_bottom=-8
+	column.add_theme_constant_override("separation",4)
+	column.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	card.add_child(column)
+	var frame_box := Control.new()
+	frame_box.custom_minimum_size=Vector2(0,92)
+	frame_box.clip_contents=true
+	frame_box.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	column.add_child(frame_box)
+	var art := TextureRect.new()
+	var path: String=MAP_ART.get(str(region.id),"res://assets/ui/loading/village.jpg")
+	art.texture=load(path) if ResourceLoader.exists(path) else null
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.expand_mode=TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode=TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.texture_filter=CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	art.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	frame_box.add_child(art)
+	if bool(region.get("tutorial",false)):
+		var ribbon := RpgUi.label(frame_box,tr("처음"),13,RpgUi.INK)
+		ribbon.add_theme_stylebox_override("normal",RpgUi.panel_style("pill",4))
+		ribbon.position=Vector2(6,6)
+	var title := RpgUi.label(column,str(region.get("name",region.id)),16,RpgUi.PAPER_INK,false)
+	title.add_theme_font_override("font",RpgUi.FONT_STRONG)
+	title.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	if region.has("stages"):
+		var facts := HBoxContainer.new()
+		facts.alignment=BoxContainer.ALIGNMENT_CENTER
+		facts.add_theme_constant_override("separation",6)
+		facts.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		column.add_child(facts)
+		RpgUi.label(facts,tr("스테이지 %d") % int(region.stages),13,RpgUi.PAPER_MUTED,false)
+		if bool(region.get("has_boss",false)):
+			var crown := RpgUi.icon("crown",18)
+			RpgUi.name_tip(crown,tr("마지막 밤에 우두머리"))
+			crown.mouse_filter=Control.MOUSE_FILTER_PASS
+			facts.add_child(crown)
+	return card
 
 func open_story() -> void:
 	if screen!="village" or busy:return
@@ -3301,7 +3721,7 @@ func open_gift(npc_id: String, speaker: String, portrait: String, anchor: Node3D
 			NpcGifts.thanks_effect(world,anchor.global_position,self)
 			if anchor.has_method("pop"): anchor.pop("♥",1.6)
 			if anchor.has_method("smile"): anchor.smile(3.0)
-		message(NpcGifts.thanks_text(speaker.split(" · ")[0],reply))
+		message(NpcGifts.thanks_text(speaker.split(" · ")[0],reply),"social")
 		# A new heart brings a letter (and at the fourth a present in the bag): say so after the thanks.
 		var note := NpcGifts.letters_note(reply)
 		if not note.is_empty(): create_tween().tween_callback(func(): message(note)).set_delay(2.6)
@@ -3343,7 +3763,7 @@ func open_dialogue(speaker: String, cast: String, lines: Array, choices: Array) 
 			RpgUi.dialogue_skip(window)
 		elif page[0]<lines.size()-1:
 			page[0]+=1
-			RpgUi.sfx("click",-8.0)
+			RpgUi.sfx("page",-8.0)
 			show_page.call(page[0])
 		else:
 			# The last page: the highlighted choice (E, Space or Enter when no choice holds the focus).
@@ -3380,8 +3800,10 @@ func open_wardrobe() -> void:
 		if result.ok:
 			adopt_profile(result.data,true)
 			close_village_modal()
+			RpgUi.sfx("save",-6.0)
 			message(tr("새로운 여행자 모습이 저장되었습니다."))
 		else:
+			RpgUi.sfx("deny",-6.0)
 			status.text=tr("옷을 갈아입지 못했어요. 옷장을 다시 열어 주세요.")
 	)
 	save.custom_minimum_size.y=44
@@ -3397,7 +3819,7 @@ func open_studio(destination: String="workshop") -> void:
 	if social.visiting():
 		# Friends may step into the host's home and public buildings; the workshop stays private.
 		if destination=="workshop":
-			message(tr("친구의 공방은 들어갈 수 없어요. 친구 집에는 놀러 갈 수 있어요."))
+			refuse(tr("친구의 공방은 들어갈 수 없어요. 친구 집에는 놀러 갈 수 있어요."))
 			return
 		if destination=="home":
 			session.visit_host=str(social.data.get("host_id",""))
@@ -3528,7 +3950,7 @@ func open_admin() -> void:
 		button(grants,spec[0],func():
 			var reply: Dictionary = await api.post("/v1/admin/grant",api.mutation(amount))
 			if check(reply):
-				message(tr("지급했어요 · 별씨 %d · 잎전 %d") % [int(reply.data.shards),int(reply.data.coins)])
+				message(tr("지급했어요 · 별씨 %d · 잎전 %d") % [int(reply.data.shards),int(reply.data.coins)],"success")
 				await refresh_inventory()
 				await life.refresh())
 	text(v,tr("순간 이동"),20)
@@ -3561,10 +3983,21 @@ func nearest_furniture() -> String:
 func village_furniture_event(id: String,event: String) -> void:
 	var item: Node3D=loaded.get(id)
 	# A seat or a bed takes the walker, as in rooms; its click behaviour runs too.
-	if event=="click" and is_instance_valid(item) and str(item.get("rest")) in ["sit","lie"]: village_seat().crafted(item,str(item.rest),item.global_position.y)
+	if event=="click" and is_instance_valid(item) and str(item.get("rest")) in ["sit","lie"]:
+		var rest := village_seat()
+		var was_resting: bool=rest.resting()
+		rest.crafted(item,str(item.rest),item.global_position.y)
+		# The fallback (no driver, no socket) seats the walker at once: the contact is now. The driver
+		# voices its own contact when the walker gets there (seat_sound).
+		if not was_resting and not str(rest.legacy_mode).is_empty():
+			seat_sound("settle",{"at":item.global_position,"material":"soft" if str(item.rest)=="lie" else "wood","kind":str(item.rest)})
 	# A visitor plays the host's interactions on this screen only; the host's object is not changed.
 	if social.visiting():
-		if not id.is_empty() and is_instance_valid(item) and item.has_method("local_event"): item.local_event(event)
+		if not id.is_empty() and is_instance_valid(item) and item.has_method("local_event"):
+			item.local_event(event)
+			# The program's own commands for this click (its VM keeps the last run's).
+			var vm = item.get("vm")
+			if event=="click" and vm!=null and vm.get("commands") is Array: use_cue(item,vm.commands)
 		return
 	if id.is_empty() or busy or refreshing:return
 	# Near/leave run every half second and can skip a beat, but a click (E) is the player's own
@@ -3586,14 +4019,44 @@ func village_furniture_event(id: String,event: String) -> void:
 	if epoch!=world_epoch:return
 	if not reply.ok:
 		if reply.get("status")==409:await refresh_inventory()
-		else:message(error_message(reply.error))
+		else:refuse(error_message(reply.error))
 		return
 	if is_instance_valid(item):
 		item.accept_event(reply.data)
 		if event in ["near","leave"]:item.nearby=event=="near"
+		if event=="click" and reply.data.get("commands") is Array: use_cue(item,reply.data.commands)
 	if selected.get("id")==id and is_instance_valid(inspect_model) and inspect_model!=item:inspect_model.accept_event(reply.data)
 	for obj in me.objects:
 		if obj.id==id:obj.runtime_version=reply.data.version
+
+## Using a crafted object (the player's click or E running its program): one soft cue at the piece by
+## what the click did. A light turned on twinkles (a lower twinkle when it goes off), a colour change
+## plucks, a turn or a slide pops. Nothing when the click changed nothing, on seats and beds (sitting
+## down has its own contact) and more than once per USE_CUE_GAP_MS per piece. Clicks only: tick
+## programs run every frame (asset_assembly.gd) and stay silent.
+func use_cue(item: Node3D, commands: Array) -> void:
+	if not is_instance_valid(item) or commands.is_empty() or str(item.get("rest")) in ["sit","lie"]: return
+	var now := Time.get_ticks_msec()
+	if now-int(item.get_meta("use_cue_at",-100000))<USE_CUE_GAP_MS: return
+	var light := -1.0
+	var tint := false
+	var move := false
+	for c in commands:
+		if not c is Dictionary: continue
+		var op := str(c.get("op",""))
+		if op=="emission": light=maxf(light,float(c.get("value",0.0)))
+		elif op=="hue": tint=true
+		elif op.begins_with("rotate_") or op.begins_with("offset_"): move=true
+	if light<0.0 and not tint and not move: return
+	item.set_meta("use_cue_at",now)
+	# The bag's inspect copy lives in its own viewport: heard as is, without distance.
+	var at := Vector3.INF
+	if is_instance_valid(world) and world.is_ancestor_of(item):
+		var size: Vector3=item.get_meta("size",Vector3.ONE)
+		at=item.global_position+Vector3(0,size.y*0.5,0)
+	if light>=0.0: Fx.sound(self,"twinkle",at,1.1 if light>0.05 else 0.85,-9.0)
+	elif tint: Fx.sound(self,"pluck",at,1.15,-10.0)
+	else: Fx.sound(self,"pop",at,0.9,-10.0)
 
 ## The village's rest_seat.gd, following the walker of the current world.
 func village_seat() -> Node:
@@ -3603,7 +4066,36 @@ func village_seat() -> Node:
 		seat.walk_off=world_movement_allowed
 		add_child(seat)
 	seat.hero=player
+	# Its driver (ix/ix_driver.gd, made here for the first seat) voices the contact, lying back,
+	# getting up, the feet down and a rocking piece's creaks through seat_sound().
+	var driver: Node=seat.ensure_driver()
+	if is_instance_valid(driver) and "sound" in driver: driver.sound=seat_sound
 	return seat
+
+## The village seats' sounds (IxDriver.sound): by the seat's material, a wood creak or a cushion as
+## the weight lands, a cushion sink lying back, the seat letting go when getting up, one soft step
+## when the feet are down, a rocking piece's creak at the end of a sway, and a soft deny when the
+## walk up to the seat gives up. All soft; the rock is throttled by the driver.
+func seat_sound(event: String, info: Dictionary) -> void:
+	if screen!="village": return
+	var at: Vector3=info.get("at",Vector3.INF)
+	var material := str(info.get("material","wood"))
+	match event:
+		"settle":
+			match material:
+				"soft": Fx.sound(self,"cushion",at,1.0,-6.0)
+				"ground": Fx.sound(self,"cushion",at,1.1,-11.0)
+				"rope": Fx.sound(self,"field/settle",at,1.0,-3.0)
+				_: Fx.sound(self,"seat",at,1.0,-8.0)
+		"lie": Fx.sound(self,"cushion",at,0.88,-9.0)
+		"rise":
+			if material!="ground": Fx.sound(self,"field/stand",at,1.0,-3.0)
+		"feet":
+			if is_instance_valid(world_audio) and is_instance_valid(player): world_audio.footstep(ground_surface(),1.4)
+		"rock":
+			var amount := clampf(float(info.get("amount",1.0)),0.0,1.0)
+			Fx.sound(self,"field/hammock" if material=="rope" else "field/wood_creak",at,randf_range(0.95,1.05),-10.0+4.0*amount)
+		"refused": RpgUi.sfx("deny",-10.0)
 
 ## A click on crafted furniture within reach uses it, like E.
 func click_furniture(at: Vector2) -> void:

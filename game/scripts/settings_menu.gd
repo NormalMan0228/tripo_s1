@@ -32,6 +32,8 @@ var rows: VBoxContainer
 var status: Label
 var apply_button: Button
 var capture: Dictionary = {}
+## When the last volume preview played (ms).
+var preview_ms := -1000
 ## The unsaved-changes question (its window root) while it is open.
 var confirm: Control
 var refreshing := false
@@ -58,10 +60,11 @@ func _ready() -> void:
 	GameSettings.listen(_on_saved)
 	_build()
 
-func _build() -> void:
+## sound false: the window rebuilt in place (a new language), heard as the save, not an open.
+func _build(sound := true) -> void:
 	# A modal window already open around this one (the pause page) lends its shade.
 	win = RpgUi.window(self, tr("설정"), {"kind":"night", "width":_size().x, "place":"centre", "scroll":false,
-		"on_close":request_close, "id":"settings"})
+		"on_close":request_close, "id":"settings", "sound":sound})
 	panel = win.card
 	var column: VBoxContainer = win.body
 	column.add_theme_constant_override("separation", RpgUi.GAP)
@@ -289,7 +292,8 @@ func _slider(key: String, text: String, hint := "") -> void:
 		readout.text = "%d%%" % int(v)
 		if refreshing: return
 		# Interface size waits for the release: rescaling under the cursor jumps the knob.
-		set_draft(key, int(v), not (key == "ui_scale" and dragging[0])))
+		set_draft(key, int(v), not (key == "ui_scale" and dragging[0]))
+		preview_volume(key))
 	slider.drag_ended.connect(func(_changed: bool):
 		dragging[0] = false
 		if key == "ui_scale": set_draft(key, int(slider.value)))
@@ -372,11 +376,12 @@ func apply() -> void:
 	if language_changed:
 		# Every label on the panel was built in the old language: a new window takes over the shade.
 		var old := win
-		_build()
-		RpgUi.close_window(old, false)
+		_build(false)
+		RpgUi.close_window(old, false, false)
 	else:
 		show_tab(tab)
 	_update_status(tr("설정을 저장했어요."))
+	RpgUi.sfx("save", -6.0)
 
 func request_close() -> void:
 	if is_instance_valid(confirm): return
@@ -417,8 +422,28 @@ func close() -> void:
 	if on_close.is_valid(): on_close.call()
 	queue_free()
 
+## A short sample on the bus a volume slider sets (at most one per 150 ms while dragging), so the
+## new level is heard right away; other sliders stay silent.
+func preview_volume(key: String) -> void:
+	const SfxBank = preload("res://scripts/sfx_bank.gd")
+	if refreshing or DisplayServer.get_name() == "headless": return
+	var bus := ""
+	for pair in GameSettings.BUSES:
+		if pair[1] == key: bus = pair[0]
+	if bus.is_empty() or Time.get_ticks_msec() - preview_ms < 150: return
+	preview_ms = Time.get_ticks_msec()
+	var player := get_node_or_null("VolumePreview") as AudioStreamPlayer
+	if player == null:
+		player = AudioStreamPlayer.new()
+		player.name = "VolumePreview"
+		add_child(player)
+	player.bus = bus if AudioServer.get_bus_index(bus) != -1 else "Master"
+	var family: String = {"Music": "ui/notify", "Ambience": "ui/whisper", "Voice": "ui/chat_in"}.get(bus, "ui/select")
+	SfxBank.play_on(player, family, -6.0, 1.0, 0.03, 0.0)
+
 # ------------------------------------------------------------------ key capture
 func start_capture(action: String, slot: int) -> void:
+	RpgUi.sfx("key_capture", -6.0)
 	capture = {"action":action,"slot":slot}
 	var b := rows.find_child("Bind_%s_%d" % [action, slot], true, false) as Button
 	if b:
@@ -432,14 +457,19 @@ func finish_capture(key: int) -> void:
 	capture = {}
 	var message := ""
 	var warn := false
+	var sound := "cancel"
 	if key in [KEY_BACKSPACE, KEY_DELETE]:
 		draft_bindings[action][slot] = KEY_NONE
 	elif key != KEY_ESCAPE:
 		var result := GameSettings.rebind_in(draft_bindings, action, slot, key)
+		sound = "snap"
 		if not result.ok:
 			message = tr("이 키는 설정할 수 없어요."); warn = true
+			sound = "deny"
 		elif not str(result.swapped).is_empty():
 			message = tr("이미 쓰던 키라서 '%s'의 키와 맞바꿨어요.") % tr(GameSettings.action_label(result.swapped)); warn = true
+			sound = "toast_warn"
+	RpgUi.sfx(sound, -6.0)
 	var focus_name := "Bind_%s_%d" % [action, slot]
 	show_tab("controls")
 	var b := rows.find_child(focus_name, true, false) as Button

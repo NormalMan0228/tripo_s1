@@ -38,6 +38,8 @@ var overlay: ShaderMaterial
 var glow := 0.6
 var rim := 0.22
 var flash := 0.0
+## Scale a stand-in is drawn at (shadow_beast.gd): the walk and run clips cover that much more ground.
+var stride := 1.0
 
 static func path_for(p_species: String, p_variant: String) -> String:
 	return DIR + p_species + "_" + (p_variant if p_variant in VARIANTS else "forest") + ".glb"
@@ -47,17 +49,33 @@ static func available(p_species: String, p_variant := "") -> bool:
 		if ResourceLoader.exists(path_for(p_species, v)): return true
 	return false
 
+## The species whose model shows a creature: its own when it has one (any variant), else the
+## stand-in the server names for it (server/catalog.py ENEMIES stand_in: today's art until the species
+## gets a model), else the species (setup() then fails and the procedural body stands in).
+static func art_species(p_species: String, p_stand_in: String, p_variant := "") -> String:
+	if p_species != "" and available(p_species, p_variant): return p_species
+	return p_stand_in if p_stand_in != "" else p_species
+
+## The variant whose GLB setup() loads for species/variant: that one, else any other variant of the
+## species that exists ("" when none does).
+static func resolved_variant(p_species: String, p_variant: String) -> String:
+	for v in ([p_variant] if p_variant in VARIANTS else []) + VARIANTS:
+		if ResourceLoader.exists(path_for(p_species, v)): return v
+	return ""
+
+## The GLB setup() loads for species/variant ("" when there is none): the survival map reads it on
+## a worker thread before the first night, so the spawn finds it in the resource cache.
+static func resolved_path(p_species: String, p_variant: String) -> String:
+	var v := resolved_variant(p_species, p_variant)
+	return "" if v == "" else path_for(p_species, v)
+
 ## Loads the GLB for species/variant (any other variant of the species if that one is missing).
 func setup(p_species: String, p_variant: String) -> bool:
 	species = p_species
-	var order: Array = ([p_variant] if p_variant in VARIANTS else []) + VARIANTS
-	var path := ""
-	for v in order:
-		if ResourceLoader.exists(path_for(species, v)):
-			path = path_for(species, v)
-			variant = v
-			break
-	if path == "": return false
+	var found := resolved_variant(species, p_variant)
+	if found == "": return false
+	variant = found
+	var path := path_for(species, found)
 	var scene := load(path) as PackedScene
 	if scene == null: return false
 	model = scene.instantiate() as Node3D
@@ -126,8 +144,8 @@ func finished() -> bool:
 
 ## Locomotion clip and speed for a measured ground speed.
 func locomote(ground_speed: float) -> void:
-	var walk_ref: float = WALK_REF.get(species, 1.0)
-	var run_ref: float = RUN_REF.get(species, 2.0)
+	var walk_ref: float = WALK_REF.get(species, 1.0)*stride
+	var run_ref: float = RUN_REF.get(species, 2.0)*stride
 	if ground_speed < 0.12:
 		play("idle", 0.25)
 	elif ground_speed > walk_ref * 1.55 and has("run"):

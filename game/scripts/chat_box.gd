@@ -8,6 +8,10 @@ extends Control
 ## still, and its movement keys are released when it lets go (no key stuck down).
 ## Quiet for 8 s, the log's glass fades out and the text after it; a new line, the mouse or the
 ## field brings it back. U folds it to the header like the other HUD panels (fold id "chat").
+## Sound: a soft tab as the field takes the keys and another as the player hands them back (empty
+## Enter, Esc, a click in the world); a line sent is heard as chat_out (social_hud.gd send), not the
+## tab; a window or a fold taking the keys away is heard as itself. The 함께하기 key's press is the
+## drawer's own slide (no click before it).
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const GameSettings = preload("res://scripts/game_settings.gd")
 const WIDTH := 328.0
@@ -66,7 +70,7 @@ func _ready() -> void:
 	people_key.expand_icon = true
 	RpgUi.name_tip(people_key, tr("함께하기"), RpgUi.key_text("social"))
 	people_key.pressed.connect(func(): hub.toggle_window())
-	RpgUi.hover_motion(people_key, 1.1)
+	RpgUi.hover_motion(people_key, 1.1, Vector2(0.5, 0.5), true, "")
 	head.add_child(people_key)
 	channel_key = Button.new()
 	channel_key.name = "Channel"
@@ -160,31 +164,37 @@ func focus() -> void:
 	field.edit()
 	wake()
 
-func release() -> void:
-	if is_instance_valid(field) and field.has_focus(): field.release_focus()
+## Gives the keys back; sound: the player's own letting go (a soft tab), not a window or a fold.
+func release(sound := false) -> void:
+	if not is_instance_valid(field) or not field.has_focus(): return
+	field.release_focus()
+	if sound: RpgUi.sfx("tab", -16.0)
 
-## Enter in the field: wait one frame so the IME's last syllable is in, send, give the keys back.
+## Enter in the field: wait one frame so the IME's last syllable is in, send, give the keys back
+## (a line going out is heard as chat_out, social_hud.gd send; an empty Enter as the tab).
 func _submitted(_value: String) -> void:
 	await get_tree().process_frame
 	var line := field.text
 	field.clear()
-	release()
-	if not line.strip_edges().is_empty(): hub.send(line, channel)
+	var sending := not line.strip_edges().is_empty()
+	release(not sending)
+	if sending: hub.send(line, channel)
 
 func _field_key(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		field.clear()
-		release()
+		release(true)
 		field.accept_event()
 
 ## A click anywhere outside the box while typing gives the keys back and is used up.
 func _input(event: InputEvent) -> void:
 	if not is_instance_valid(field) or not field.has_focus(): return
 	if event is InputEventMouseButton and event.pressed and not get_global_rect().has_point(get_global_mouse_position()):
-		release()
+		release(true)
 		get_viewport().set_input_as_handled()
 
 func _took_keys() -> void:
+	RpgUi.sfx("tab", -14.0)
 	wake()
 	var place: Node = hub.place if is_instance_valid(hub.place) else null
 	if place and "player" in place and is_instance_valid(place.get("player")): place.player.controls_enabled = false

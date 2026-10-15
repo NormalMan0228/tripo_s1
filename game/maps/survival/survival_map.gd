@@ -2,8 +2,9 @@ extends Node3D
 ## Survival expedition maps (솔바람 숲 / 노을 채석장 / 서리빛 분지) built to the island village's
 ## standard: a sculpted basin terrain (flat, walkable play square; hills, cliffs and shores beyond it)
 ## with detail-mapped ground, authored landmarks on the server's obstacle circles, Tripo props in
-## chunked MultiMeshes (LOD1 when the camera zooms out, no shadows for ground cover), per-map light,
-## haze and night grade, and Tripo resource visuals.
+## chunked MultiMeshes (LOD1 when the camera zooms out, no shadows for ground cover), per-map light
+## and haze through the stage's time of day (survival_daytime.gd), Tripo resource visuals, and on the
+## tutorial its guidance in the world (survival_guide.gd).
 ##
 ## Geometry that matters for play is server-authoritative (server/survival_maps.py); the client reads the
 ## exported copy (layouts.json) for dressing and the run state for obstacles, hazards and resources.
@@ -20,11 +21,20 @@ const GRASS_SHADER := preload("res://maps/survival/survival_grass.gdshader")
 const CHUNK := 12.0
 ## Under the loading card the build is paced over frames and the models load on worker threads.
 const LoadPace = preload("res://scripts/load_pace.gd")
+const Monster = preload("res://scripts/monster.gd")
+## The map's static data baked ahead (ground, water, rim scatter; tools/bake_survival.py).
+const SurvivalBake = preload("res://maps/survival/survival_bake.gd")
+## The stage's time of day (day_progress as an hour of the village's sky, in this map's colours).
+const Daytime = preload("res://maps/survival/survival_daytime.gd")
+## The tutorial's goals shown in the world (beacons, sparkles, rings; no words).
+const TutorialGuide = preload("res://maps/survival/survival_guide.gd")
+const Daylight = preload("res://scripts/daylight.gd")
 const LOD_ZOOM := 18.5
 const FAR := 64.0
 const RESOURCE_KINDS := ["tree","stone","berry","fiber"]
 
-## Per-map look. Colours are the day grade; night values blend in from run.day_progress.
+## Per-map look. The colours are the map's noon grade, the *_night values its night grade; the stage's
+## time of day (survival_daytime.gd) carries them through morning, golden hour, sunset and evening.
 const LOOK := {
 	"forest": {
 		"turf_low":"4f7d2d","turf_high":"92b145","soil":"6d5435","trail":"bfa275","rock":"8e8f80","accent":"3c6a2a",
@@ -67,6 +77,12 @@ const VILLAGE_PROPS := {
 	"reeds":["environment/reeds.glb","prop_lods/45_reeds.glb"],
 	"lamp":["environment/lamp.glb","prop_lods/27_lamp.glb"],
 }
+## Village ground cover (~20k triangles each, LODs 1.2k-1.6k): drawn with its LOD by the village's own
+## screen-size rule (environment_layout.gd: LOD under 260 px tall, the full mesh again from 300 px),
+## which keeps the LOD at every expedition zoom except the closest one on large screens at high detail.
+const GROUND_COVER := ["reeds","white_flowers","yellow_flowers","pink_flowers"]
+const COVER_LIMITS := Vector2(260,300)
+const GameSettings = preload("res://scripts/game_settings.gd")
 
 static var _layout_cache: Dictionary = {}
 
@@ -82,6 +98,7 @@ var glow_materials: Array[ShaderMaterial] = []
 var props := {}
 var batches := {}
 var multimeshes: Array[Dictionary] = []
+var cover_multimeshes: Array[Dictionary] = []
 var low_active := false
 var occupied: Array[Vector3] = []
 var app: Node
@@ -90,9 +107,52 @@ var env: Environment
 var sun: DirectionalLight3D
 var night := 0.0
 var dusk := 0.0
+var daytime := Daytime.new()
+## The camp fire's light (main.gd flame), brighter into the evening.
+var fire_light: OmniLight3D
+var guide: Node3D
 var focus := Vector3.ZERO
 var follow_particles: Array[Node3D] = []
 var adopt_wait := 0.0
+## This build's baked data (survival_bake.gd data(): fresh and made for this layout), or null to
+## build everything here. tools/bake_survival.gd sets bake_record to collect the rim block.
+var baked: Resource = null
+var bake_record := false
+var rim_record: Array = []
+var rng_before_rim := 0
+var rng_after_rim := 0
+## The rim block came from the bake (survival_bake.gd rim_fits) in this build.
+var rim_replayed := false
+## The night's creatures: the models (this map's variant) of the species the coming night can bring
+## (the run's night_species, server/catalog.py night_species: 2-3 species on the first nights, all five
+## by night 4-6), read under the card once the props are in, one at a time on a worker thread, and held
+## for the run: a species' first spawn finds its model in the resource cache (monster.gd setup; read
+## there, the spawn frame held 155 ms). Each model holds ~9 MB of textures, so only the coming night's
+## are read: when a new day brings species of its own, they are read early in that day, one at a time.
+## Each read (~50 ms on its worker) puts ~10 ms of work on the main thread in one frame (~28 ms for the
+## first model in a process, more on a busy machine): read together after the card they made 36-57 ms
+## frames a second into play; two at a time under the card, 52-64 ms frames there and 25-40 ms scatter
+## steps. The build waits for the last one before its batches.
+## Off (--no-monster-prefetch, false before start_run, or a build without the card: tools, headless
+## tests), each loads at its first spawn.
+static var prefetch_monsters := not "--no-monster-prefetch" in OS.get_cmdline_user_args()
+## The most the card waits for the creature models after the build (ms; they take 0.1-0.25 s): a
+## slow disk or a stalled read leaves the rest to the day's reads (or their first spawn) instead of
+## holding the card.
+const MONSTER_FEED_WAIT_MSEC := 1500
+## How far into a day (day_progress) its new species start loading: past the dawn, long before dusk.
+const MONSTER_DAY_FROM := 0.05
+var monster_scenes: Array[Resource] = []
+## The creature models still to come in, the first one loading.
+var monster_feed: Array[String] = []
+## The ones the feed has asked LoadPace for. Each is asked once: one that failed on its worker is
+## dropped (LoadPace would only hand the same failed load back, and the card would wait for ever).
+var monster_asked := {}
+## The models this run has in (or gave up on, failed); built under the card, the map then follows the
+## run's days and reads the species each new night adds (_want_night_species).
+var monster_done := {}
+var monster_follow := false
+var monster_check := 0.0
 var stats := {"instances":0,"multimeshes":0,"props":0,"resource_visuals":0}
 
 static func layouts() -> Dictionary:
@@ -113,11 +173,48 @@ const MAP_PROPS := {
 	"frost":["ice_crystal","log_bench","firewood_pile","sled_empty","tent_orange","signpost","snow_boulder","frost_shrine",
 		"snow_pine","snowman","frost_shrub","snow_fence"]}
 
-static func resource_paths(map: String) -> Array:
-	var paths := []
-	for id in MAP_PROPS.get(map, MAP_PROPS.forest):
+## The map whose look, layout and bake a run's map is built with: the tutorial is the forest basin
+## (server/survival_maps.py ALIASES), an unknown map the forest.
+static func basin(map: String) -> String:
+	return map if LOOK.has(map) else "forest"
+
+static func resource_paths(run_map: String) -> Array:
+	var map := basin(run_map)
+	# The baked data first: the build needs it before anything else.
+	var paths := [SurvivalBake.path(map)]
+	var placed: Array = MAP_PROPS.get(map, MAP_PROPS.forest)
+	for id in placed:
 		for path: String in prop_paths(id): if not path.is_empty(): paths.append(path)
+	# The resource models (dressed when the run's nodes arrive, right after the build) and the
+	# camp hearth; resource-only models without their LOD files, which they never show.
+	for kind in RESOURCE_MODELS.get(map, RESOURCE_MODELS.forest):
+		var id: String = RESOURCE_MODELS.get(map, RESOURCE_MODELS.forest)[kind][0]
+		if id in placed: continue
+		var path: String = prop_paths(id)[0]
+		if not path in paths: paths.append(path)
+	paths.append(CAMP)
 	return paths
+
+## The model of each creature species (every one when `species` is empty) for this map's variant
+## (the ones monster.gd setup loads): the species' own, else its stand-in's (`stand_ins`, the run's
+## night_stand_ins: server/catalog.py ENEMIES stand_in, today's art until a species has a model).
+static func monster_paths(map: String, species: Array = [], stand_ins: Dictionary = {}) -> Array[String]:
+	var paths: Array[String] = []
+	for kind in (species if not species.is_empty() else Monster.WALK_REF.keys()):
+		var art := Monster.art_species(str(kind),str(stand_ins.get(kind,"")),map)
+		var path := Monster.resolved_path(art,map)
+		if path != "" and not path in paths: paths.append(path)
+	return paths
+
+## The species the run's coming night can bring (server/catalog.py night_species, sent with the run);
+## every species when the server does not say (an older server).
+static func night_species(run: Dictionary) -> Array:
+	var listed = run.get("night_species")
+	if listed is Array and not (listed as Array).is_empty(): return listed
+	return Monster.WALK_REF.keys()
+
+## The camp's hearth model (camp centre of every map).
+const CAMP := "res://assets/storybook_camp_v1.glb"
 
 ## A prop's model and its level-of-detail model ("" when it has none).
 static func prop_paths(id: String) -> Array:
@@ -133,6 +230,7 @@ func build(run: Dictionary) -> void:
 	map_id = str(run.get("map_id","forest"))
 	if not LOOK.has(map_id): map_id = "forest"
 	look = LOOK[map_id]
+	daytime.setup(look)
 	var all := layouts()
 	spec = all.maps[map_id]
 	bounds = float(all.bounds)
@@ -143,6 +241,19 @@ func build(run: Dictionary) -> void:
 	process_priority = 100
 	# Its per-frame work starts once it is built (a paced build spans frames).
 	set_process(false)
+	# The village's teardown (main.gd build_world) and this map's first draws in different frames: in
+	# one they held the frame 50-64 ms under the card (the baked ground goes in at once).
+	await LoadPace.step("survival map")
+	# Read on a worker thread since the expedition began (resource_paths); used only when it is
+	# fresh and was made for this run's obstacles and hazards, else the map is built as before.
+	baked = null
+	var bake_path := SurvivalBake.path(map_id)
+	if not SurvivalBake.disabled and ResourceLoader.exists(bake_path):
+		if LoadPace.pending(bake_path): await LoadPace.fetch(bake_path)
+		baked = SurvivalBake.data(map_id,state,spec,bounds)
+		# And only while this code still gives the ground and water the bake holds (its fingerprint:
+		# an exported game cannot compare the scripts' text).
+		if baked != null and not SurvivalBake.ground_fits(self,baked): baked = null
 	var span := LoadPace.narrow(0.0, 0.35)
 	await _build_ground()
 	LoadPace.span = span
@@ -153,19 +264,120 @@ func build(run: Dictionary) -> void:
 	LoadPace.done(0.45)
 	# The props read on a worker thread since the expedition began (main.gd start_run).
 	for path: String in resource_paths(map_id): if LoadPace.pending(path): await LoadPace.fetch(path)
+	# The props are in and the ground is down: the night's creatures load from here (monster_feed).
+	_start_monster_feed()
 	await LoadPace.step("survival features")
 	await _build_features()
+	# The resource models, prepared here under the card: main.gd dresses the run's nodes with them
+	# in the frame the expedition starts (update_run), which then only places nodes.
+	var models: Dictionary = RESOURCE_MODELS[map_id]
+	for kind in models:
+		await LoadPace.step("resource models")
+		_prop(models[kind][0],models[kind][0] in MAP_PROPS[map_id])
 	LoadPace.done(0.6)
 	span = LoadPace.narrow(0.6, 0.9)
 	await _build_scatter()
 	LoadPace.span = span
 	await LoadPace.step("survival particles")
 	_build_particles()
+	# Before the batches: their buffers go to the GPU in the frame the build ends, as without the wait.
+	await _finish_monster_feed()
 	await LoadPace.step("survival batches")
 	_finish_batches()
+	# The tutorial's goals in the world, drawn from here so their shaders compile under the card.
+	if bool(state.get("tutorial",false)) or str(state.get("map_id","")) == "tutorial":
+		guide = TutorialGuide.new()
+		add_child(guide)
+	_advance_time(state,0.0)
 	_apply_grade(true)
 	set_process(true)
 	LoadPace.done(1.0)
+
+## Under the card, the night's creatures start loading (see prefetch_monsters).
+func _start_monster_feed() -> void:
+	monster_scenes.clear()
+	monster_feed.clear()
+	monster_asked.clear()
+	monster_done.clear()
+	monster_follow = prefetch_monsters and LoadPace.covered
+	if not monster_follow: return
+	monster_feed = monster_paths(map_id,night_species(state),state.get("night_stand_ins",{}))
+	var tree := Engine.get_main_loop() as SceneTree
+	if not tree.process_frame.is_connected(_feed_monsters): tree.process_frame.connect(_feed_monsters)
+	_feed_monsters()
+
+## During the run (every half second): early in a day, the models of the species its night can bring
+## that are not in yet (a new day's roster adds species; one the card ran out of time for) join the
+## feed, which reads them one at a time on a worker thread.
+func _want_night_species(run: Dictionary, delta: float) -> void:
+	if not monster_follow or LoadPace.covered: return
+	monster_check -= delta
+	if monster_check > 0.0: return
+	monster_check = 0.5
+	if bool(run.get("night",false)) or float(run.get("day_progress",0.0)) < MONSTER_DAY_FROM: return
+	var added := false
+	for path in monster_paths(map_id,night_species(run),run.get("night_stand_ins",{})):
+		if monster_done.has(path) or path in monster_feed: continue
+		monster_feed.append(path)
+		added = true
+	if not added: return
+	var tree := Engine.get_main_loop() as SceneTree
+	if not tree.process_frame.is_connected(_feed_monsters): tree.process_frame.connect(_feed_monsters)
+
+## Every frame while models are to come: takes the one that came in and asks for the next.
+func _feed_monsters() -> void:
+	while not monster_feed.is_empty():
+		var path: String = monster_feed[0]
+		if LoadPace.pending(path): return
+		if LoadPace.held.has(path) or ResourceLoader.has_cached(path):
+			var scene := LoadPace.take(path)
+			if scene != null: monster_scenes.append(scene)
+			monster_done[path] = true
+			monster_feed.pop_front()
+			continue
+		if not monster_asked.has(path):
+			monster_asked[path] = true
+			LoadPace.want([path])
+			if LoadPace.pending(path): return
+		# Not readable, or asked and gone without coming in (failed on its worker): its first spawn
+		# tries again (monster.gd setup). A failed threaded load stays with ResourceLoader until it
+		# is collected; collected here, that try reads the file afresh.
+		if ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_FAILED:
+			ResourceLoader.load_threaded_get(path)
+		monster_done[path] = true
+		monster_feed.pop_front()
+	_stop_monster_feed()
+
+func _stop_monster_feed() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree.process_frame.is_connected(_feed_monsters): tree.process_frame.disconnect(_feed_monsters)
+
+## The feed stops; the models not in yet are read during the day (_want_night_species) or at their
+## first spawn (monster.gd setup).
+func _drop_monster_feed() -> void:
+	_stop_monster_feed()
+	for path in monster_feed: LoadPace.queue.erase(path)
+	monster_feed.clear()
+	monster_asked.clear()
+
+## Before the batches: the card turns until the last creature model is in (_feed_monsters takes
+## each one, asks for the next and drops a failed one), for at most MONSTER_FEED_WAIT_MSEC.
+func _finish_monster_feed() -> void:
+	var until := Time.get_ticks_msec()+MONSTER_FEED_WAIT_MSEC
+	while not monster_feed.is_empty() and LoadPace.covered and is_inside_tree() and Time.get_ticks_msec() < until:
+		# Frames spent waiting for a worker's file read, counted as LoadPace.fetch counts them. Not
+		# fetch() itself: after a failed read its take() would read the file again on this thread.
+		LoadPace.frame_waited = true
+		await get_tree().process_frame
+		LoadPace.frame_waited = true
+		LoadPace.last_step = Time.get_ticks_usec()
+	# Uncovered meanwhile, out of the tree or out of time: the rest are read during the day.
+	_drop_monster_feed()
+
+func _exit_tree() -> void:
+	# Leaving before they are in: the next place's loads go first.
+	monster_follow = false
+	_drop_monster_feed()
 
 # ------------------------------------------------------------------ terrain
 ## Distance beyond the flat play square (negative inside). A square measure keeps the walkable
@@ -231,6 +443,21 @@ func _grid_axis() -> PackedFloat32Array:
 	return axis
 
 func _build_ground() -> void:
+	var mesh: ArrayMesh
+	if baked != null:
+		mesh = baked.get_meta("ground")
+		LoadPace.done(1.0)
+	else:
+		mesh = await _ground_mesh()
+	var node := MeshInstance3D.new()
+	node.name = "Ground"
+	node.mesh = mesh
+	_ground_material(node)
+	add_child(node)
+
+## The terrain as one mesh on _grid_axis (0.5 m inside +-32 m, 2 m beyond): heights, normals and
+## the splat colours (trail, soil, rock, accent) per vertex. Baked by tools/bake_survival.py.
+func _ground_mesh() -> ArrayMesh:
 	var axis := _grid_axis()
 	var count := axis.size()
 	var heights := PackedFloat32Array()
@@ -258,9 +485,7 @@ func _build_ground() -> void:
 			verts[k] = Vector3(x,y,z)
 			var il := maxi(i-1,0); var ir := mini(i+1,count-1)
 			var jd := maxi(j-1,0); var ju := mini(j+1,count-1)
-			var dx := (heights[j*count+ir]-heights[j*count+il])/maxf(axis[ir]-axis[il],0.001)
-			var dzv := (heights[ju*count+i]-heights[jd*count+i])/maxf(axis[ju]-axis[jd],0.001)
-			normals[k] = Vector3(-dx,1.0,-dzv).normalized()
+			normals[k] = _ground_normal(heights[j*count+il],heights[j*count+ir],axis[ir]-axis[il],heights[jd*count+i],heights[ju*count+i],axis[ju]-axis[jd])
 			colors[k] = _splat(x,z,y,obstacles,hazards)
 	var indices := PackedInt32Array()
 	for j in count-1:
@@ -275,9 +500,15 @@ func _build_ground() -> void:
 	arrays[Mesh.ARRAY_INDEX] = indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
-	var node := MeshInstance3D.new()
-	node.name = "Ground"
-	node.mesh = mesh
+	return mesh
+
+## A ground vertex's normal from its neighbours' heights (left/right `wx` apart, down/up `wz` apart).
+func _ground_normal(left: float, right: float, wx: float, down: float, up: float, wz: float) -> Vector3:
+	var dx := (right-left)/maxf(wx,0.001)
+	var dzv := (up-down)/maxf(wz,0.001)
+	return Vector3(-dx,1.0,-dzv).normalized()
+
+func _ground_material(node: MeshInstance3D) -> void:
 	var mat := ShaderMaterial.new()
 	mat.shader = GROUND_SHADER
 	for key in ["grass_detail","sand_detail","rock_detail"]:
@@ -308,7 +539,6 @@ func _build_ground() -> void:
 	mat.set_shader_parameter("path_count",mini(spec.paths.reduce(func(acc,p): return acc+p.points.size()-1,0),32))
 	node.material_override = mat
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(node)
 	materials.append(mat)
 
 func _splat(x: float, z: float, y: float, obstacles: Array, hazards: Array) -> Color:
@@ -347,12 +577,18 @@ func _splat(x: float, z: float, y: float, obstacles: Array, hazards: Array) -> C
 
 # ------------------------------------------------------------------ water
 func _build_water() -> void:
-	if map_id == "forest":
-		var mat := _water_material(false)
-		_water_patch(Rect2(4.0,3.0,14.0,13.5),0.4,float(look.pond_y),mat,true)
-		_water_patch(Rect2(-FAR,bounds-1.0,FAR*2.0,FAR-bounds+1.0),2.0,float(look.water_y),mat,false)
-	elif map_id == "frost":
-		_water_patch(Rect2(-FAR,bounds-1.0,FAR*2.0,FAR-bounds+1.0),2.0,float(look.water_y),_water_material(true),false)
+	var mat: ShaderMaterial = null
+	for patch in _water_patches():
+		if mat == null: mat = _water_material(map_id == "frost")
+		_water_patch(patch[0],patch[1],patch[2],mat,patch[3])
+
+## The map's water sheets: [area, grid step, level, pond] (the forest's pond and lake, frost's lake).
+func _water_patches() -> Array:
+	var lake := [Rect2(-FAR,bounds-1.0,FAR*2.0,FAR-bounds+1.0),2.0,float(look.water_y),false]
+	match map_id:
+		"forest": return [[Rect2(4.0,3.0,14.0,13.5),0.4,float(look.pond_y),true],lake]
+		"frost": return [lake]
+	return []
 
 func _water_material(frozen: bool) -> ShaderMaterial:
 	var mat := ShaderMaterial.new()
@@ -365,6 +601,23 @@ func _water_material(frozen: bool) -> ShaderMaterial:
 	return mat
 
 func _water_patch(area: Rect2, step: float, level: float, mat: ShaderMaterial, pond: bool) -> void:
+	var mesh: ArrayMesh = _baked_water("Pond" if pond else "Lake") if baked != null else _water_mesh(area,step,level,pond)
+	if mesh == null: return
+	var node := MeshInstance3D.new()
+	node.name = "Pond" if pond else "Lake"
+	node.mesh = mesh
+	node.material_override = mat
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(node)
+
+func _baked_water(water_name: String) -> ArrayMesh:
+	for entry in baked.get_meta("water",[]):
+		if entry[0] == water_name: return entry[1]
+	return null
+
+## A water sheet at `level` over the cells where it is above the ground (null when there are none),
+## shore foam in the vertex colour. Baked by tools/bake_survival.py.
+func _water_mesh(area: Rect2, step: float, level: float, pond: bool) -> ArrayMesh:
 	var nx := int(ceil(area.size.x/step))+1
 	var nz := int(ceil(area.size.y/step))+1
 	var verts := PackedVector3Array(); var colors := PackedColorArray(); var normals := PackedVector3Array()
@@ -372,31 +625,30 @@ func _water_patch(area: Rect2, step: float, level: float, mat: ShaderMaterial, p
 	for j in nz:
 		for i in nx:
 			var x := area.position.x+i*step; var z := area.position.y+j*step
-			var ground := height(x,z)
-			var depth := level-ground
+			var vertex := _water_vertex(x,z,level,pond)
 			verts.append(Vector3(x,level,z)); normals.append(Vector3.UP)
-			var shore := clampf(-pond_distance(x,z)/2.4,0.0,1.0) if pond else clampf(depth/1.4,0.0,1.0)
-			colors.append(Color(shore,0,0,1))
-			wet.append(1 if depth > -0.05 else 0)
+			colors.append(Color(vertex.x,0,0,1))
+			wet.append(1 if vertex.y > 0.0 else 0)
 	var indices := PackedInt32Array()
 	for j in nz-1:
 		for i in nx-1:
 			var a := j*nx+i
 			if wet[a]+wet[a+1]+wet[a+nx]+wet[a+nx+1] == 0: continue
 			indices.append_array([a,a+1,a+nx,a+1,a+nx+1,a+nx])
-	if indices.is_empty(): return
+	if indices.is_empty(): return null
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = verts; arrays[Mesh.ARRAY_NORMAL] = normals
 	arrays[Mesh.ARRAY_COLOR] = colors; arrays[Mesh.ARRAY_INDEX] = indices
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES,arrays)
-	var node := MeshInstance3D.new()
-	node.name = "Pond" if pond else "Lake"
-	node.mesh = mesh
-	node.material_override = mat
-	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(node)
+	return mesh
+
+## A water vertex at (x, z): its shore foam (x) and whether the water is over the ground there (y 1/0).
+func _water_vertex(x: float, z: float, level: float, pond: bool) -> Vector2:
+	var depth := level-height(x,z)
+	var shore := clampf(-pond_distance(x,z)/2.4,0.0,1.0) if pond else clampf(depth/1.4,0.0,1.0)
+	return Vector2(shore,1.0 if depth > -0.05 else 0.0)
 
 # ------------------------------------------------------------------ hazards
 func _build_hazards() -> void:
@@ -479,11 +731,14 @@ func _hazard_dressing(h: Dictionary) -> void:
 		add_child(sparks)
 
 # ------------------------------------------------------------------ props
-func _prop(id: String) -> Dictionary:
-	if props.has(id): return props[id]
-	var paths := prop_paths(id)
-	var path: String = paths[0]
-	var lod_path: String = paths[1]
+## `want_low` false skips the prop's LOD file (resource models, which never show it); a later call
+## that wants it loads it then.
+func _prop(id: String, want_low := true) -> Dictionary:
+	if props.has(id):
+		var known: Dictionary = props[id]
+		if want_low and known.get("low_skipped",false): _add_low(id,known)
+		return known
+	var path: String = prop_paths(id)[0]
 	var entry := {"ok":false}
 	if not ResourceLoader.exists(path):
 		props[id] = entry
@@ -493,40 +748,78 @@ func _prop(id: String) -> Dictionary:
 	var meshes := scene.find_children("*","MeshInstance3D",true,false)
 	if meshes.is_empty():
 		scene.free(); props[id] = entry; return entry
-	# Every mesh node of the GLB merged into one mesh (node transforms baked in), one converted
-	# material per surface, so a prop is one MultiMesh / one node however its GLB is split.
-	var high := ArrayMesh.new()
-	var converted := {}
-	for node in meshes:
-		var source := node as MeshInstance3D
-		var xf := _scene_transform(scene,source)
-		for surface in source.mesh.get_surface_count():
-			_append_surface(high,source.mesh,surface,xf)
-			var original: Material = source.get_surface_override_material(surface)
-			if original == null: original = source.mesh.surface_get_material(surface)
-			var key := original.get_instance_id() if original else 0
-			if not converted.has(key): converted[key] = _convert_material(original,id)
-			high.surface_set_material(high.get_surface_count()-1,converted[key])
-	scene.free()
-	var low: ArrayMesh = null
-	if lod_path != "" and ResourceLoader.exists(lod_path):
-		var lod_scene := (LoadPace.take(lod_path) as PackedScene).instantiate()
-		var lod_meshes := lod_scene.find_children("*","MeshInstance3D",true,false)
-		var candidate := ArrayMesh.new()
-		for node in lod_meshes:
+	var high: Mesh
+	var material: ShaderMaterial = null
+	var plain := _plain_mesh(scene,meshes) if path.begins_with(ASSETS) else null
+	if plain != null:
+		# A survival GLB is one node with one surface and no transform, imported without automatic
+		# LODs: its imported mesh is drawn as it is (no copy read back from the GPU), the converted
+		# material set on the nodes that draw it (material_override).
+		high = plain.mesh
+		material = _convert_material(_source_material(plain,0),id)
+	else:
+		# Every mesh node of the GLB merged into one mesh (node transforms baked in), one converted
+		# material per surface, so a prop is one MultiMesh / one node however its GLB is split.
+		# (Village props stay merged: their imports generate automatic LODs the copy leaves out.)
+		var merged := ArrayMesh.new()
+		var converted := {}
+		for node in meshes:
 			var source := node as MeshInstance3D
+			var xf := _scene_transform(scene,source)
 			for surface in source.mesh.get_surface_count():
-				_append_surface(candidate,source.mesh,surface,_scene_transform(lod_scene,source))
-		lod_scene.free()
-		# LOD files carry geometry only; they reuse the full prop's materials surface by surface.
-		if candidate.get_surface_count() == high.get_surface_count():
-			for surface in candidate.get_surface_count():
-				candidate.surface_set_material(surface,high.surface_get_material(surface))
-			low = candidate
-	entry = {"ok":true,"mesh":high,"low":low if low != null else high,"aabb":high.get_aabb()}
+				_append_surface(merged,source.mesh,surface,xf)
+				var original := _source_material(source,surface)
+				var key := original.get_instance_id() if original else 0
+				if not converted.has(key): converted[key] = _convert_material(original,id)
+				merged.surface_set_material(merged.get_surface_count()-1,converted[key])
+		high = merged
+	scene.free()
+	entry = {"ok":true,"mesh":high,"low":high,"aabb":high.get_aabb(),"material":material}
 	props[id] = entry
 	stats.props += 1
+	if want_low: _add_low(id,entry)
+	else: entry["low_skipped"] = true
 	return entry
+
+## The prop's level-of-detail mesh into entry.low (it stays the full mesh without a usable LOD file).
+func _add_low(id: String, entry: Dictionary) -> void:
+	entry.erase("low_skipped")
+	var lod_path: String = prop_paths(id)[1]
+	if lod_path == "" or not ResourceLoader.exists(lod_path): return
+	var high: Mesh = entry.mesh
+	var lod_scene := (LoadPace.take(lod_path) as PackedScene).instantiate()
+	var lod_meshes := lod_scene.find_children("*","MeshInstance3D",true,false)
+	var plain := _plain_mesh(lod_scene,lod_meshes) if entry.material != null else null
+	if plain != null:
+		if plain.mesh.get_surface_count() == high.get_surface_count(): entry.low = plain.mesh
+		lod_scene.free()
+		return
+	var candidate := ArrayMesh.new()
+	for node in lod_meshes:
+		var source := node as MeshInstance3D
+		for surface in source.mesh.get_surface_count():
+			_append_surface(candidate,source.mesh,surface,_scene_transform(lod_scene,source))
+	lod_scene.free()
+	# LOD files carry geometry only; they reuse the full prop's materials surface by surface.
+	if candidate.get_surface_count() == high.get_surface_count():
+		for surface in candidate.get_surface_count():
+			candidate.surface_set_material(surface,high.surface_get_material(surface))
+		entry.low = candidate
+
+## The scene's only mesh node when it can be drawn as imported: one surface, no node transform, no
+## skin or blend shapes (null otherwise).
+func _plain_mesh(scene: Node, meshes: Array) -> MeshInstance3D:
+	if meshes.size() != 1: return null
+	var node := meshes[0] as MeshInstance3D
+	if node.mesh == null or node.mesh.get_surface_count() != 1 or node.skin != null: return null
+	if node.mesh is ArrayMesh and (node.mesh as ArrayMesh).get_blend_shape_count() > 0: return null
+	if not _scene_transform(scene,node).is_equal_approx(Transform3D.IDENTITY): return null
+	return node
+
+func _source_material(node: MeshInstance3D, surface: int) -> Material:
+	var original: Material = node.get_surface_override_material(surface)
+	if original == null: original = node.mesh.surface_get_material(surface)
+	return original
 
 func _scene_transform(scene: Node, node: Node) -> Transform3D:
 	var xf := Transform3D.IDENTITY
@@ -614,7 +907,7 @@ func _instance(id: String, at: Vector3, yaw: float, scale: float, opts := {}) ->
 	var basis := Basis(Vector3.UP,yaw).scaled(Vector3.ONE*scale)
 	if opts.has("tilt"): basis = Basis(Vector3(cos(yaw),0,sin(yaw)),float(opts.tilt))*basis
 	var shadow: bool = opts.get("shadow",true)
-	var lod: String = opts.get("lod","auto")
+	var lod: String = "cover" if id in GROUND_COVER else opts.get("lod","auto")
 	var key := "%s|%s|%s|%d_%d" % [id,shadow,lod,int(floor(at.x/CHUNK)),int(floor(at.z/CHUNK))]
 	if not batches.has(key):
 		batches[key] = {"id":id,"shadow":shadow,"lod":lod,"xforms":[]}
@@ -632,15 +925,25 @@ func _finish_batches() -> void:
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		var always_low: bool = b.lod == "low"
-		mm.mesh = entry.low if always_low else entry.mesh
+		var cover: bool = b.lod == "cover" and entry.low != entry.mesh
+		mm.mesh = entry.low if always_low or cover else entry.mesh
 		mm.instance_count = b.xforms.size()
-		for i in b.xforms.size(): mm.set_instance_transform(i,b.xforms[i])
+		var largest := 0.0
+		for i in b.xforms.size():
+			mm.set_instance_transform(i,b.xforms[i])
+			var s: Vector3 = (b.xforms[i] as Transform3D).basis.get_scale()
+			largest = maxf(largest,maxf(s.x,maxf(s.y,s.z)))
 		var node := MultiMeshInstance3D.new()
 		node.multimesh = mm
+		if entry.material: node.material_override = entry.material
 		node.set_meta("prop",b.id)
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if b.shadow else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(node)
-		if not always_low and entry.low != entry.mesh:
+		if cover:
+			# Ground cover: its LOD until the tallest instance reaches COVER_LIMITS on screen.
+			var extent: Vector3 = entry.aabb.size
+			cover_multimeshes.append({"mm":mm,"high":entry.mesh,"low":entry.low,"low_active":true,"size":maxf(extent.x,maxf(extent.y,extent.z))*largest})
+		elif not always_low and entry.low != entry.mesh:
 			multimeshes.append({"mm":mm,"high":entry.mesh,"low":entry.low})
 		stats.multimeshes += 1
 	batches.clear()
@@ -652,6 +955,7 @@ func _single(id: String, at: Vector3, yaw: float, scale: float, shadow := true) 
 	var node := MeshInstance3D.new()
 	node.name = id
 	node.mesh = entry.mesh
+	if entry.material: node.material_override = entry.material
 	node.position = at
 	node.rotation.y = yaw
 	node.scale = Vector3.ONE*scale
@@ -727,7 +1031,7 @@ func _landmark(at: Vector3, text: String) -> void:
 	add_child(label)
 
 func _camp_center() -> void:
-	var hearth := load("res://assets/storybook_camp_v1.glb") as PackedScene
+	var hearth := LoadPace.take(CAMP) as PackedScene if ResourceLoader.exists(CAMP) else null
 	if hearth:
 		var node := hearth.instantiate()
 		node.name = "Hearth"
@@ -835,27 +1139,161 @@ func _scatter_rim(id: String, count: int, scale_min: float, scale_max: float, mi
 			spots.append(p)
 		if _instance(id,Vector3(p.x,y-0.1,p.y),rng.randf()*TAU,rng.randf_range(scale_min,scale_max),opts): placed += 1
 
+## The rim block (scatter beyond the play square: the same for every run of a map, baked) then the
+## inside block (it keeps clear of the run's resource nodes, so it is placed here every time) and grass.
 func _build_scatter() -> void:
+	# The baked rim when it starts from this build's random state and the rim code still places what
+	# it placed for the bake (survival_bake.gd rim_fits); else the rim block runs here.
+	var replay := false
+	if baked != null and baked.has_meta("rim"):
+		await LoadPace.step("scatter")
+		replay = SurvivalBake.rim_fits(self,baked)
+	rim_replayed = replay
+	if replay:
+		await LoadPace.step("scatter")
+		_replay_rim(baked.get_meta("rim"))
+		rng.state = int(baked.get_meta("rng_after_rim"))
+	else:
+		var before := {}
+		if bake_record:
+			for key in batches: before[key] = batches[key].xforms.size()
+			rng_before_rim = rng.state
+		await _scatter_rim_block()
+		if bake_record:
+			rim_record = _record_rim(before)
+			rng_after_rim = rng.state
+	await _scatter_inside_block()
+	await LoadPace.step("scatter")
+	await _grass()
+
+## The instances the rim block queued, per batch key in the batches' order: [key, id, shadow, lod,
+## 12 floats per transform (basis columns, origin)].
+func _record_rim(before: Dictionary) -> Array:
+	var out := []
+	for key in batches:
+		var b: Dictionary = batches[key]
+		var from: int = before.get(key,0)
+		if b.xforms.size() <= from: continue
+		var flat := PackedFloat32Array()
+		for i in range(from,b.xforms.size()):
+			var xf: Transform3D = b.xforms[i]
+			flat.append_array([xf.basis.x.x,xf.basis.x.y,xf.basis.x.z,xf.basis.y.x,xf.basis.y.y,xf.basis.y.z,
+				xf.basis.z.x,xf.basis.z.y,xf.basis.z.z,xf.origin.x,xf.origin.y,xf.origin.z])
+		out.append([key,b.id,b.shadow,b.lod,flat])
+	return out
+
+## Queues the baked rim block as _instance() did: keys new to the batches in their first order, each
+## key's transforms appended in their order.
+func _replay_rim(rim: Array) -> void:
+	for record in rim:
+		var key: String = record[0]
+		var id: String = record[1]
+		if not _prop(id).ok: continue
+		if not batches.has(key): batches[key] = {"id":id,"shadow":record[2],"lod":record[3],"xforms":[]}
+		var list: Array = batches[key].xforms
+		var flat: PackedFloat32Array = record[4]
+		for i in range(0,flat.size(),12):
+			list.append(Transform3D(Vector3(flat[i],flat[i+1],flat[i+2]),Vector3(flat[i+3],flat[i+4],flat[i+5]),
+				Vector3(flat[i+6],flat[i+7],flat[i+8]),Vector3(flat[i+9],flat[i+10],flat[i+11])))
+		stats.instances += flat.size()/12
+
+## The bake's fingerprints of this map's code (survival_bake.gd ground_fits, rim_fits). An exported
+## game cannot read its scripts' text, so it compares what the code gives now with what it gave when
+## the bake was made: at fixed points, and for a short seeded run of the rim block.
+const PROBE_SEED := 20261015
+const PROBE_POINTS := 48
+const PROBE_WATER_POINTS := 12
+const RIM_PROBE_COUNT := 3
+
+## The ground grid, and at PROBE_POINTS grid vertices the height, normal and splat colour as the
+## ground mesh has them (heights in float32 as it holds them); per water sheet its area, step and
+## level, and the shore foam and wet flag at PROBE_WATER_POINTS of its vertices. For the run's layout.
+func bake_probe() -> PackedFloat64Array:
+	var out := PackedFloat64Array()
+	var axis := _grid_axis()
+	var count := axis.size()
+	out.append_array([count,axis[0],axis[count/2],axis[count-1]])
+	var obstacles: Array = state.get("obstacles",spec.obstacles)
+	var hazards: Array = state.get("hazards",spec.hazards)
+	var pick := RandomNumberGenerator.new()
+	pick.seed = PROBE_SEED
+	var h := PackedFloat32Array()
+	h.resize(5)
+	for n in PROBE_POINTS:
+		var i := pick.randi_range(1,count-2)
+		var j := pick.randi_range(1,count-2)
+		h[0] = height(axis[i],axis[j])
+		h[1] = height(axis[i-1],axis[j]); h[2] = height(axis[i+1],axis[j])
+		h[3] = height(axis[i],axis[j-1]); h[4] = height(axis[i],axis[j+1])
+		var normal := _ground_normal(h[1],h[2],axis[i+1]-axis[i-1],h[3],h[4],axis[j+1]-axis[j-1])
+		var color := _splat(axis[i],axis[j],h[0],obstacles,hazards)
+		out.append_array([h[0],normal.x,normal.y,normal.z,color.r,color.g,color.b,color.a])
+	for patch in _water_patches():
+		var area: Rect2 = patch[0]
+		var step: float = patch[1]
+		out.append_array([area.position.x,area.position.y,area.size.x,area.size.y,step,patch[2],1.0 if patch[3] else 0.0])
+		var nx := int(ceil(area.size.x/step))+1
+		var nz := int(ceil(area.size.y/step))+1
+		for n in PROBE_WATER_POINTS:
+			var i := pick.randi_range(0,nx-1)
+			var j := pick.randi_range(0,nz-1)
+			var vertex := _water_vertex(area.position.x+i*step,area.position.y+j*step,patch[2],patch[3])
+			out.append_array([vertex.x,vertex.y])
+	return out
+
+## The rim block's code in a short run of its own: every entry capped at RIM_PROBE_COUNT (the quarry
+## wall's first row over a few metres), from a seeded random state into batches of its own. The
+## instances it queues, per batch key. The build's batches, random state and stats are left as they were.
+func rim_probe() -> PackedFloat64Array:
+	var keep_state := rng.state
+	var keep_batches := batches
+	var keep_instances: int = stats.instances
+	batches = {}
+	rng.seed = PROBE_SEED
+	for entry: Array in RIM_BLOCK.get(map_id,[]): _rim_entry(entry,RIM_PROBE_COUNT)
+	var out := PackedFloat64Array()
+	for key: String in batches:
+		out.append(key.hash())
+		for xf: Transform3D in batches[key].xforms:
+			out.append_array([xf.origin.x,xf.origin.y,xf.origin.z,xf.basis.x.x,xf.basis.x.y,xf.basis.x.z,xf.basis.y.y])
+	batches = keep_batches
+	rng.state = keep_state
+	stats.instances = keep_instances
+	return out
+
+## The rim block, per map in its order (the build steps the card between entries):
+## ["rim", id, count, scale_min, scale_max, min_rim, max_rim, south_ok, opts, spacing] (_scatter_rim),
+## ["shore", id, count, scale_min, scale_max] (_shore) and ["cliff"] (_cliff_wall, CLIFF_ROWS).
+## Constants, so an exported game sees a change here in the bake's fingerprint (survival_bake.gd).
+const RIM_BLOCK := {
+	"forest":[["rim","pine_tall",55,0.75,1.1,1.0,8.0,false,{},2.6],["rim","pine_tall",110,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8],
+		["rim","oak_broad",10,0.85,1.05,2.0,8.0,false,{},4.5],["rim","oak_broad",18,0.9,1.2,8.0,26.0,false,{"lod":"low"},4.5],
+		["rim","birch_slim",16,0.8,1.05,0.8,8.0,false,{},2.8],["rim","birch_slim",16,0.85,1.15,8.0,24.0,false,{"lod":"low"},2.8],
+		["rim","bush_round",50,0.8,1.3,0.0,16.0,true,{"shadow":false},0.0],["rim","fern_clump",60,0.8,1.3,0.0,14.0,true,{"shadow":false},0.0],
+		["shore","reeds",70,0.8,1.2]],
+	"quarry":[["cliff"],["rim","dead_tree",14,0.8,1.2,6.0,26.0,false,{"lod":"low"},5.0],
+		["rim","dry_shrub",70,0.8,1.4,0.0,24.0,true,{"shadow":false},0.0],["rim","sandstone_boulder",40,0.5,1.1,0.8,20.0,true,{"lod":"low"},0.0]],
+	"frost":[["rim","snow_pine",60,0.75,1.1,1.0,8.0,false,{},2.6],["rim","snow_pine",120,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8],
+		["rim","snow_boulder",26,0.6,1.3,0.8,22.0,true,{"lod":"low"},0.0],["rim","frost_shrub",40,0.8,1.2,0.0,14.0,true,{"shadow":false},0.0],
+		["rim","ice_crystal",10,0.5,0.9,2.0,14.0,false,{},0.0]]}
+## Quarry wall rows: [offset beyond the square, gap, scale_min, scale_max, lod].
+const CLIFF_ROWS := [[1.2,2.1,1.5,2.2,"auto"],[5.2,2.6,1.4,2.1,"auto"],[9.5,3.2,1.5,2.3,"low"],[14.0,4.0,1.6,2.4,"low"]]
+
+func _scatter_rim_block() -> void:
+	for entry: Array in RIM_BLOCK.get(map_id,[]):
+		await LoadPace.step("scatter")
+		_rim_entry(entry,-1)
+
+## One rim block entry; `most` >= 0 caps its count (the fingerprint's short run, rim_probe()).
+func _rim_entry(entry: Array, most: int) -> void:
+	match String(entry[0]):
+		"rim": _scatter_rim(entry[1],int(entry[2]) if most < 0 else mini(int(entry[2]),most),entry[3],entry[4],entry[5],entry[6],entry[7],entry[8],entry[9])
+		"shore": _shore(entry[1],int(entry[2]) if most < 0 else mini(int(entry[2]),most),entry[3],entry[4])
+		"cliff": _cliff_wall(CLIFF_ROWS if most < 0 else CLIFF_ROWS.slice(0,1),INF if most < 0 else float(most)*3.0)
+
+func _scatter_inside_block() -> void:
 	match map_id:
 		"forest":
-			await LoadPace.step("scatter")
-			_scatter_rim("pine_tall",55,0.75,1.1,1.0,8.0,false,{},2.6)
-			await LoadPace.step("scatter")
-			_scatter_rim("pine_tall",110,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8)
-			await LoadPace.step("scatter")
-			_scatter_rim("oak_broad",10,0.85,1.05,2.0,8.0,false,{},4.5)
-			await LoadPace.step("scatter")
-			_scatter_rim("oak_broad",18,0.9,1.2,8.0,26.0,false,{"lod":"low"},4.5)
-			await LoadPace.step("scatter")
-			_scatter_rim("birch_slim",16,0.8,1.05,0.8,8.0,false,{},2.8)
-			await LoadPace.step("scatter")
-			_scatter_rim("birch_slim",16,0.85,1.15,8.0,24.0,false,{"lod":"low"},2.8)
-			await LoadPace.step("scatter")
-			_scatter_rim("bush_round",50,0.8,1.3,0.0,16.0,true,{"shadow":false})
-			await LoadPace.step("scatter")
-			_scatter_rim("fern_clump",60,0.8,1.3,0.0,14.0,true,{"shadow":false})
-			await LoadPace.step("scatter")
-			_shore("reeds",70,0.8,1.2)
 			await LoadPace.step("scatter")
 			_scatter_inside("bush_round",16,0.7,1.0,1.4,{"shadow":false},true,0.9)
 			await LoadPace.step("scatter")
@@ -869,14 +1307,6 @@ func _build_scatter() -> void:
 				_scatter_inside(flower,14,0.55,0.8,0.3,{"shadow":false},true)
 		"quarry":
 			await LoadPace.step("scatter")
-			_cliff_wall()
-			await LoadPace.step("scatter")
-			_scatter_rim("dead_tree",14,0.8,1.2,6.0,26.0,false,{"lod":"low"},5.0)
-			await LoadPace.step("scatter")
-			_scatter_rim("dry_shrub",70,0.8,1.4,0.0,24.0,true,{"shadow":false})
-			await LoadPace.step("scatter")
-			_scatter_rim("sandstone_boulder",40,0.5,1.1,0.8,20.0,true,{"lod":"low"})
-			await LoadPace.step("scatter")
 			_scatter_inside("dry_shrub",26,0.6,1.0,0.8,{"shadow":false},true,0.6)
 			await LoadPace.step("scatter")
 			_scatter_inside("sandstone_boulder",12,0.14,0.22,0.5,{"shadow":false},true)
@@ -884,23 +1314,11 @@ func _build_scatter() -> void:
 			_scatter_inside("cut_blocks",4,0.18,0.24,1.2,{},true,1.0)
 		"frost":
 			await LoadPace.step("scatter")
-			_scatter_rim("snow_pine",60,0.75,1.1,1.0,8.0,false,{},2.6)
-			await LoadPace.step("scatter")
-			_scatter_rim("snow_pine",120,0.85,1.25,8.0,30.0,false,{"lod":"low"},2.8)
-			await LoadPace.step("scatter")
-			_scatter_rim("snow_boulder",26,0.6,1.3,0.8,22.0,true,{"lod":"low"})
-			await LoadPace.step("scatter")
-			_scatter_rim("frost_shrub",40,0.8,1.2,0.0,14.0,true,{"shadow":false})
-			await LoadPace.step("scatter")
-			_scatter_rim("ice_crystal",10,0.5,0.9,2.0,14.0,false,{})
-			await LoadPace.step("scatter")
 			_scatter_inside("frost_shrub",18,0.6,0.95,1.0,{"shadow":false},true,0.7)
 			await LoadPace.step("scatter")
 			_scatter_inside("ice_crystal",8,0.22,0.32,0.6,{"shadow":false},true)
 			await LoadPace.step("scatter")
 			_snow_fences()
-	await LoadPace.step("scatter")
-	await _grass()
 
 func _shore(id: String, count: int, smin: float, smax: float) -> void:
 	var placed := 0
@@ -913,13 +1331,13 @@ func _shore(id: String, count: int, smin: float, smax: float) -> void:
 
 ## Quarry walls: rows of sandstone shelves along the terrace risers (north, east, west; the south
 ## stays open as the cart road out) sell the cut pit; scattered blocks fill the upper ledges.
-func _cliff_wall() -> void:
-	for row in [[1.2,2.1,1.5,2.2,"auto"],[5.2,2.6,1.4,2.1,"auto"],[9.5,3.2,1.5,2.3,"low"],[14.0,4.0,1.6,2.4,"low"]]:
+func _cliff_wall(rows: Array = CLIFF_ROWS, reach := INF) -> void:
+	for row in rows:
 		var offset: float = row[0]
 		var gap: float = row[1]
 		var edge := bounds+1.3+offset
 		var t := -FAR
-		while t < FAR:
+		while t < minf(FAR,-FAR+reach):
 			for side in 3:
 				var p := Vector2(t,-edge) if side == 0 else Vector2(edge*(1.0 if side == 1 else -1.0),t)
 				if p.y > bounds+2.0 or absf(p.x) > FAR-2.0 or absf(p.y) > FAR-2.0: continue
@@ -956,6 +1374,29 @@ func _grass() -> void:
 	mat.set_shader_parameter("high_color",Color(look.grass_high))
 	mat.set_shader_parameter("frost",float(look.snow))
 	materials.append(mat)
+	var chunks: Dictionary = await _grass_chunks()
+	for key in chunks:
+		await LoadPace.step("grass chunk")
+		var list: Array = chunks[key]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_custom_data = true
+		mm.mesh = blade
+		mm.instance_count = list.size()
+		for i in list.size():
+			mm.set_instance_transform(i,list[i][0])
+			mm.set_instance_custom_data(i,list[i][1])
+		var node := MultiMeshInstance3D.new()
+		node.multimesh = mm
+		node.material_override = mat
+		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(node)
+		stats.multimeshes += 1
+		stats.instances += list.size()
+
+## The grass tufts per CHUNK cell (Vector2i): [transform, custom data] in the order they are placed.
+## They draw from the map's rng after the inside scatter, so they change with the run's nodes.
+func _grass_chunks() -> Dictionary:
 	var chunks := {}
 	var total := int(look.grass)+int(look.rim_grass)
 	for i in total*2:
@@ -979,24 +1420,7 @@ func _grass() -> void:
 		if not chunks.has(key): chunks[key] = []
 		var s := rng.randf_range(0.7,1.3)
 		chunks[key].append([Transform3D(Basis(Vector3.UP,rng.randf()*TAU).scaled(Vector3(s,s*rng.randf_range(0.8,1.25),s)),Vector3(p.x,y-0.02,p.y)),Color(rng.randf(),rng.randf(),0,0)])
-	for key in chunks:
-		await LoadPace.step("grass chunk")
-		var list: Array = chunks[key]
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.use_custom_data = true
-		mm.mesh = blade
-		mm.instance_count = list.size()
-		for i in list.size():
-			mm.set_instance_transform(i,list[i][0])
-			mm.set_instance_custom_data(i,list[i][1])
-		var node := MultiMeshInstance3D.new()
-		node.multimesh = mm
-		node.material_override = mat
-		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		add_child(node)
-		stats.multimeshes += 1
-		stats.instances += list.size()
+	return chunks
 
 func _tuft_mesh() -> ArrayMesh:
 	var st := SurfaceTool.new()
@@ -1088,21 +1512,23 @@ func dress_resource(root: Node3D, kind: String) -> void:
 		root.remove_child(child)
 		child.queue_free()
 	var pick: Array = models[kind]
-	var entry := _prop(pick[0])
+	var entry := _prop(pick[0],false)
 	if not entry.ok: return
 	var h := absi(hash(Vector2i(roundi(root.position.x*10.0),roundi(root.position.z*10.0))))
 	var model := MeshInstance3D.new()
 	model.name = "Model"
 	model.mesh = entry.mesh
+	if entry.material: model.material_override = entry.material
 	model.rotation.y = float(h%628)/100.0
 	model.scale = Vector3.ONE*float(pick[1])*(0.92+float(h%17)/100.0)
 	root.add_child(model)
 	if kind == "tree":
-		var stump_entry := _prop(models.stump[0])
+		var stump_entry := _prop(models.stump[0],false)
 		if stump_entry.ok:
 			var stump := MeshInstance3D.new()
 			stump.name = "Stump"
 			stump.mesh = stump_entry.mesh
+			if stump_entry.material: stump.material_override = stump_entry.material
 			stump.scale = Vector3.ONE*float(models.stump[1])
 			stump.visible = false
 			root.add_child(stump)
@@ -1122,12 +1548,8 @@ func _process(delta: float) -> void:
 	var run: Dictionary = state
 	if is_instance_valid(app) and app.get("run") is Dictionary and not (app.get("run") as Dictionary).is_empty():
 		run = app.get("run")
-	var progress := float(run.get("day_progress",0.3))
-	var target_night := smoothstep(0.62,0.70,progress)*(1.0-smoothstep(0.95,1.0,progress))
-	if bool(run.get("night",false)): target_night = maxf(target_night,0.9)
-	var target_dusk := smoothstep(0.50,0.62,progress)*(1.0-smoothstep(0.66,0.72,progress))
-	night = lerpf(night,target_night,minf(1.0,delta*1.5)) if delta > 0.0 else target_night
-	dusk = lerpf(dusk,target_dusk,minf(1.0,delta*1.5)) if delta > 0.0 else target_dusk
+	_want_night_species(run,delta)
+	_advance_time(run,delta)
 	if is_instance_valid(app) and app.get("player") is Node3D and is_instance_valid(app.get("player")):
 		focus = (app.get("player") as Node3D).global_position
 	var cam_pos := camera.global_position if is_instance_valid(camera) else Vector3(0,1000,0)
@@ -1147,6 +1569,15 @@ func _process(delta: float) -> void:
 		if want_low != low_active:
 			low_active = want_low
 			for m in multimeshes: m.mm.mesh = m.low if low_active else m.high
+		if not cover_multimeshes.is_empty():
+			# The village's rule (environment_layout.gd _update_prop_lods) for an orthographic camera.
+			var pixels := get_viewport().get_visible_rect().size.y*GameSettings.lod_multiplier()
+			for m in cover_multimeshes:
+				var projected: float = m.size*pixels/maxf(camera.size,0.1)
+				var use_low := projected < (COVER_LIMITS.y if m.low_active else COVER_LIMITS.x)
+				if use_low != bool(m.low_active):
+					m.low_active = use_low
+					m.mm.mesh = m.low if use_low else m.high
 	_apply_grade(false)
 	adopt_wait -= delta
 	if adopt_wait <= 0.0:
@@ -1174,28 +1605,57 @@ func _bind() -> void:
 		var lights := scene.find_children("*","DirectionalLight3D",true,false)
 		if not lights.is_empty(): sun = lights[0]
 
-func _haze() -> Color:
-	var day := Color(look.haze)
-	if dusk > 0.0: day = day.lerp(Color("f2b98c") if map_id != "frost" else Color("e0c4d8"),dusk*0.6)
-	return day.lerp(Color(look.haze_night),night)
+## The stage's hour from the run's day_progress (eased; delta <= 0 snaps): night and dusk for the
+## shaders, the colours _apply_grade sets.
+func _advance_time(run: Dictionary, delta: float) -> void:
+	daytime.advance(float(run.get("day_progress",0.3)),bool(run.get("night",false)),bool(run.get("boss_night",false)),delta)
+	night = daytime.night
+	dusk = daytime.dusk
 
-## Day / dusk / night grade for this map. main.gd lerps its own survival values every frame; this
-## node runs after it (process_priority) and sets the map's grade instead.
+func _haze() -> Color:
+	return daytime.haze
+
+## The map's grade at the stage's hour. main.gd lerps its own survival values every frame; this
+## node runs after it (process_priority) and sets the map's grade instead. The night colour grade
+## (daylight.gd's curve, a share of it) follows the graphics setting as in the village.
 func _apply_grade(_snap: bool) -> void:
 	if env == null or sun == null:
 		_bind()
 	if env != null:
 		env.background_mode = Environment.BG_COLOR
-		env.background_color = Color(look.background).lerp(Color(look.background_night),night)
+		env.background_color = daytime.background
 		env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-		env.ambient_light_color = Color(look.ambient).lerp(Color(look.ambient_night),night)
-		env.ambient_light_energy = lerpf(float(look.ambient_energy),float(look.ambient_night_energy),night)
+		env.ambient_light_color = daytime.ambient_color
+		env.ambient_light_energy = daytime.ambient_energy
 		env.fog_enabled = false
+		# Stepped, so the curve's texture is redrawn a few times over an evening, not every frame.
+		var grade := snappedf(daytime.grade,1.0/32.0) if GameSettings.night_grade() else 0.0
+		env.adjustment_enabled = daytime.saturation < 0.995 or grade > 0.002
+		env.adjustment_saturation = daytime.saturation
+		Daylight._grade(env,grade)
 	if sun != null:
-		var day_sun := Color(look.sun).lerp(Color("ffb27a"),dusk*0.55)
-		sun.light_color = day_sun.lerp(Color(look.sun_night),night)
-		sun.light_energy = lerpf(float(look.sun_energy),float(look.sun_night_energy),night)
-		sun.rotation_degrees = Vector3(lerpf(float(look.sun_pitch),-58.0,night)+dusk*14.0,float(look.sun_yaw)+night*40.0,0)
+		sun.light_color = daytime.sun_color
+		sun.light_energy = daytime.sun_energy
+		sun.rotation_degrees = daytime.sun_rotation
+	# The camp fire burns brighter and reaches further as the light goes.
+	if not is_instance_valid(fire_light): fire_light = _find_fire_light()
+	if fire_light != null:
+		fire_light.light_energy = float(fire_light.get_meta("survival_base_energy"))*(1.0+FIRE_NIGHT_GAIN*night)
+		fire_light.omni_range = float(fire_light.get_meta("survival_base_range"))*(1.0+0.2*night)
+
+## Night multiplier on the camp fire's light (main.gd flame).
+const FIRE_NIGHT_GAIN := 0.6
+
+func _find_fire_light() -> OmniLight3D:
+	var flame = app.get(&"flame") if is_instance_valid(app) else null
+	if not is_instance_valid(flame) or not (flame is Node3D): return null
+	for child in (flame as Node3D).get_children():
+		if child is OmniLight3D:
+			if not child.has_meta("survival_base_energy"):
+				child.set_meta("survival_base_energy",child.light_energy)
+				child.set_meta("survival_base_range",child.omni_range)
+			return child
+	return null
 
 func report() -> Dictionary:
 	var out := stats.duplicate()

@@ -5,12 +5,16 @@ extends RefCounted
 ## collision.res  every collider the build makes from a render mesh, as simplified faces
 ##                (meshoptimizer, at most EPSILON off the render mesh) in chunks of at most
 ##                CHUNK_TRIS triangles: one cheap shape a frame instead of a 30-130 ms trimesh.
-## island.scn     the unchanging part of the map as the build leaves it (terrain with its levelled
-##                ground pads and materials, buildings, bridges, props placed and fitted, rock walls,
-##                ramps, roads), GLB models referenced, not copied. The colliders with simplified faces
+## island.scn     the unchanging part of the map as the build leaves it (terrain with its materials,
+##                the chunked ground, buildings, bridges, props placed and fitted, rock walls, ramps,
+##                roads), GLB models and ground.scn referenced, not copied. The colliders with simplified faces
 ##                are left out (their bodies stay) and listed in the root's "baked_colliders" meta:
 ##                read on a worker thread, a scene's shapes would all reach the physics server in one
 ##                frame; they are made a chunk a frame after it is in (Archipelago.build).
+## ground.scn     the levelled ground cut into chunks on a 32 m grid without the triangles under the
+##                sea (those near the shore kept as shadow casters only), and the ocean surface as the
+##                LODs it is drawn with (ground_chunks.gd): the island references it (an instance), the
+##                map's own ground and ocean meshes are emptied.
 ## manifest.json  {"format", "engine", "key", "stamp", "content_key", ...}: `key` hashes the inputs
 ##                that decide the build (KEY_FILES: layouts and the scripts that build; the engine
 ##                version); `stamp` lists every map asset's modification time, so a source run
@@ -23,7 +27,8 @@ const DIR := "res://maps/archipelago/generated/"
 const MANIFEST := DIR+"manifest.json"
 const COLLISION := DIR+"collision.res"
 const ISLAND := DIR+"island.scn"
-const FORMAT := 3
+const GROUND := DIR+"ground.scn"
+const FORMAT := 4
 ## Simplification error (metres in the world): the ground, then everything else.
 const GROUND_EPSILON := 0.01
 const EPSILON := 0.02
@@ -40,12 +45,16 @@ const KEY_FILES := [
 	"res://maps/archipelago/building_placements.json", "res://maps/archipelago/environment_layout.json",
 	"res://maps/archipelago/archipelago.gd", "res://maps/archipelago/building_layout.gd",
 	"res://maps/archipelago/environment_layout.gd", "res://maps/archipelago/island_bake.gd",
+	"res://maps/archipelago/ground_chunks.gd", "res://maps/archipelago/ground_simplify.gd",
 	"res://scripts/roads.gd", "res://scripts/town.gd", "res://scripts/load_pace.gd", "res://scripts/art.gd",
 ]
 ## --no-bake: build the map as if there were no generated data (tests compare both).
 static var disabled := "--no-bake" in OS.get_cmdline_user_args()
 ## --no-island: build at runtime (with the generated collision) instead of loading the baked island.
 static var island_disabled := "--no-island" in OS.get_cmdline_user_args()
+## --no-ground-chunks: the ground as one levelled mesh per island, built at runtime (the baked island
+## holds the chunked ground, so it is not used either): the map as it was drawn before the chunks.
+static var ground_disabled := "--no-ground-chunks" in OS.get_cmdline_user_args()
 static var _checked := false
 static var _fresh := false
 static var _collision: Dictionary = {}
@@ -125,9 +134,13 @@ static func fresh() -> bool:
 		if not _fresh and why != "missing": push_warning("Archipelago bake is stale (%s): the map builds without it; run tools/bake_archipelago.py" % why)
 	return _fresh
 
-## The baked island can be used: fresh, present, and not switched off.
+## The baked island can be used: fresh, present, and not switched off (it holds the chunked ground).
 static func island_ready() -> bool:
-	return not island_disabled and fresh() and ResourceLoader.exists(ISLAND)
+	return not island_disabled and not ground_disabled and fresh() and ResourceLoader.exists(ISLAND)
+
+## The chunked ground can be used: fresh, present, and not switched off.
+static func ground_ready() -> bool:
+	return not ground_disabled and fresh() and ResourceLoader.exists(GROUND)
 
 ## The simplified collision chunks for a collider key (see collider_key), or [] for none.
 static func collision_chunks(collider: String) -> Array:

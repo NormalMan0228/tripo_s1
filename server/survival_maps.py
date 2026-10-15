@@ -109,8 +109,23 @@ PATHS = {
     ],
 }
 
+# The tutorial is the forest basin: the same ground, landmarks, trails and camp (the client builds
+# it from the forest's layout and bake). It is small and gentle in play instead: fewer resources,
+# all close to camp (TUTORIAL_NODES within TUTORIAL_NODE_EXTENT), creatures come from a nearer ring
+# (catalog spawn_radius) and there are no hazards.
+ALIASES = {'tutorial': 'forest'}
+TUTORIAL_NODES = 36
+TUTORIAL_NODE_EXTENT = 12.0
+
+
+def basin(map_id):
+    """The authored layout a map is built on (the tutorial: the forest's)."""
+    return ALIASES.get(map_id, map_id)
+
+
 # Generated (non-intro) resource kinds cycle through these per map.
 RESOURCE_CYCLE = {
+    'tutorial': ['tree', 'berry', 'fiber', 'stone', 'berry'],
     'forest': ['tree', 'berry', 'stone', 'fiber'],
     'quarry': ['stone', 'tree', 'berry', 'stone', 'fiber'],
     'frost': ['tree', 'fiber', 'stone', 'tree', 'berry'],
@@ -138,12 +153,12 @@ def circles(feature):
 
 
 def obstacles(map_id):
-    return [circle for feature in FEATURES[map_id] for circle in circles(feature)]
+    return [circle for feature in FEATURES[basin(map_id)] for circle in circles(feature)]
 
 
 def hazards(map_id):
     return [{'x': f['x'], 'z': f['z'], 'radius': f['radius'], 'kind': f['kind']}
-            for f in FEATURES[map_id] if f['kind'] in HAZARD_KINDS]
+            for f in FEATURES[basin(map_id)] if f['kind'] in HAZARD_KINDS]
 
 
 def segment_distance(x, z, a, b):
@@ -154,7 +169,7 @@ def segment_distance(x, z, a, b):
 
 
 def on_path(map_id, x, z, margin=0.):
-    for path in PATHS.get(map_id, []):
+    for path in PATHS.get(basin(map_id), []):
         points = path['points']
         for a, b in zip(points, points[1:]):
             if segment_distance(x, z, a, b) < path['width'] * .5 + margin:
@@ -164,12 +179,15 @@ def on_path(map_id, x, z, margin=0.):
 
 def layout(map_id):
     """Fields merged into catalog.MAPS[map_id]."""
-    return {'bounds': BOUNDS, 'node_extent': NODE_EXTENT, 'obstacles': obstacles(map_id),
-            'hazards': hazards(map_id), 'paths': deepcopy(PATHS[map_id]), 'layout_version': LAYOUT_VERSION}
+    tutorial = map_id == 'tutorial'
+    return {'bounds': BOUNDS, 'node_extent': TUTORIAL_NODE_EXTENT if tutorial else NODE_EXTENT,
+            'nodes': TUTORIAL_NODES if tutorial else 60, 'obstacles': obstacles(map_id),
+            'hazards': hazards(map_id), 'paths': deepcopy(PATHS[basin(map_id)]), 'layout_version': LAYOUT_VERSION}
 
 
 def client_export():
-    """The copy the Godot client reads (game/maps/survival/layouts.json)."""
+    """The copy the Godot client reads (game/maps/survival/layouts.json): the authored basins (a map
+    on another's basin, the tutorial, is built from that one's)."""
     return {'version': LAYOUT_VERSION, 'bounds': BOUNDS, 'node_extent': NODE_EXTENT, 'camp_clear': CAMP_CLEAR,
             'maps': {map_id: {'features': deepcopy(FEATURES[map_id]), 'paths': deepcopy(PATHS[map_id]),
                               'obstacles': obstacles(map_id), 'hazards': hazards(map_id)} for map_id in FEATURES}}

@@ -3,11 +3,15 @@ extends Node3D
 ## Body: the Tripo monster GLB for kind/variant (monster.gd: res://assets/monsters/<kind>_<variant>.glb),
 ## else the legacy brute.glb (brute only), else a cheap procedural body. The variant is the map's
 ## creature variant sent by the server with every enemy (forest / quarry / frost); set `variant` before
-## add_child or let the first snapshot provide it.
+## add_child or let the first snapshot provide it. A staged run's creature names its species and
+## stand-in (from_enemy): the species' own model when it has one, else the stand-in (`kind`) scaled to
+## the species' height (a boss: a big stand-in until its model lands).
 const A = preload("res://scripts/art.gd")
 const Monster = preload("res://scripts/monster.gd")
 const AUDIO_PATH := "res://scripts/creature_audio.gd"
 const WINDUP_TEXT := {"brute": "내려찍기!", "wisp": "불꽃!", "boar": "돌진!", "shroom": "포자!"}
+## A species drawn with another's model says what its behaviour does.
+const BEHAVIOR_TEXT := {"charge": "돌진!", "spore": "광역 공격!"}
 const HOVER := {"wisp": 0.3}
 ## Procedural fallback tint per map variant (the GLBs carry their own regional look).
 const TINT := {"forest": [Color.WHITE, 0.0], "quarry": [Color("6b3a24"), 0.28], "frost": [Color("d8ecf7"), 0.38]}
@@ -25,6 +29,11 @@ var last_hp := 45.0
 var flash := 0.0
 var kind := "wolf"
 var variant := ""
+## The server's species (server/catalog.py ENEMIES; "" = kind), its behaviour and the height a
+## stand-in is scaled to (0 = as modelled).
+var species := ""
+var behavior := ""
+var size_hint := 0.0
 var animator: AnimationPlayer
 var clip := ""
 var monster: Node3D  ## monster.gd instance when the Tripo GLB is used
@@ -38,6 +47,16 @@ var idle_call := 0.0
 var alerted := false
 var audio: Script
 var showcase := false  ## galleries drive monster clips directly; skips the phase -> clip mapping
+## Metres travelled per footfall sound (creature_audio.gd step(): paw / hoof / stomp / flutter / squelch).
+const STRIDE := {"wolf": 1.15, "boar": 0.95, "brute": 1.7, "wisp": 1.9, "shroom": 0.75}
+## Below this snapshot ground speed (m/s) the body only settles onto its target: no footfall.
+const STEP_MIN_SPEED := 0.25
+var stride_left := 0.5
+## Per-creature minimum seconds between two of the same call (a phase that flickers between two
+## snapshots, rapid hits); the pack-wide limits (idle gap, voices per species, 40 ms merge, staggered
+## alerts, step budget) live in creature_audio.gd.
+const VOICE_GAP := {"windup": 0.5, "strike": 0.3, "hurt": 0.3, "charge": 0.6, "dazed": 0.6}
+var voice_at := {}
 
 func _ready() -> void:
 	health=Label3D.new()
@@ -49,6 +68,13 @@ func _ready() -> void:
 	idle_call=randf_range(3.0,7.0)
 	if variant!="": build()
 
+## Species, stand-in (kind), behaviour and size from the server's enemy (before add_child).
+func from_enemy(enemy: Dictionary) -> void:
+	kind=str(enemy.get("stand_in",enemy.get("kind",kind)))
+	species=str(enemy.get("species",kind))
+	behavior=str(enemy.get("behavior",""))
+	size_hint=float(enemy.get("height",0.0))
+
 func build() -> void:
 	if built: return
 	built=true
@@ -56,11 +82,17 @@ func build() -> void:
 	add_child(body)
 	var height := 1.4
 	var creature := Monster.new()
-	if creature.setup(kind,variant):
+	var art := Monster.art_species(species,kind,variant) if species!="" else kind
+	if creature.setup(art,variant):
 		monster=creature
 		body.add_child(creature)
 		animator=creature.player
 		height=creature.height
+		if art!=species and species!="" and size_hint>0.0:
+			# The stand-in at the species' height; its strides grow with it.
+			creature.stride=size_hint/maxf(creature.height,0.1)
+			creature.scale=Vector3.ONE*creature.stride
+			height=size_hint
 	else:
 		creature.free()
 		match kind:
@@ -75,6 +107,8 @@ func build() -> void:
 			if mesh not in eyes and mesh.material_override is StandardMaterial3D:
 				materials.append(mesh.material_override)
 				if tint[1]>0: mesh.material_override.albedo_color=mesh.material_override.albedo_color.lerp(tint[0],tint[1])
+		# A procedural stand-in grows as a whole (its body's own scale animates the crouch).
+		if species!="" and species!=kind and size_hint>0.0: scale=Vector3.ONE*(size_hint/height)
 	health.position.y=height+HOVER.get(kind,0.0)+0.45
 
 func build_wolf() -> void:
@@ -197,7 +231,7 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 	# Follow the actual path while walking; committed attacks keep their announced aim.
 	if phase not in ["windup","recover"] and position.distance_to(target_position)>0.06:
 		direction=target_position-position
-	if kind=="shroom" and phase=="windup": direction=player_at-target_position
+	if spore() and phase=="windup": direction=player_at-target_position
 	if Vector2(direction.x,direction.z).length()>0.001: target_angle=atan2(direction.x,direction.z)
 	if not alerted:
 		alerted=true
@@ -206,8 +240,11 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 		voice("windup")
 		if monster: monster.play("attack",0.08,1.0,true)
 	if previous=="windup" and phase in ["recover","charge"]:
-		voice("strike")
-		if kind=="shroom": burst(SPORE.get(variant,SPORE.forest),Vector3(0,0.5,0),float(state.get("impact",2.0)),26)
+		# A blow that interrupts the wind-up (hp drops in the same snapshot) cancels the strike call.
+		if phase=="charge": voice("charge")
+		elif state.hp>=last_hp: voice("strike")
+		if spore(): burst(SPORE.get(variant,SPORE.forest),Vector3(0,0.5,0),float(state.get("impact",2.0)),26)
+	if previous=="charge" and phase=="recover": voice("dazed")
 	if state.hp<last_hp:
 		flash=0.16
 		hurt_left=0.0
@@ -218,8 +255,16 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 				monster.play("hurt",0.05,1.0,true)
 				hurt_left=monster.length("hurt")
 	last_hp=state.hp
-	health.text=tr(WINDUP_TEXT.get(kind,"!")) if phase=="windup" else "%d / %d" % [state.hp,state.get("max_hp",45)]
+	health.text=windup_text() if phase=="windup" else "%d / %d" % [state.hp,state.get("max_hp",45)]
 	health.modulate=Color("f08d72") if phase=="windup" else Color("d4dcca")
+
+## The puff centred on itself (server behaviour "spore"; the shroom before stages).
+func spore() -> bool:
+	return behavior=="spore" or (behavior=="" and kind=="shroom")
+
+func windup_text() -> String:
+	if species=="" or species==kind: return tr(WINDUP_TEXT.get(kind,"!"))
+	return tr(BEHAVIOR_TEXT.get(behavior,"!"))
 
 ## Plays the death clip (or a collapse for procedural bodies), sinks into the ground and frees itself.
 func die() -> void:
@@ -246,7 +291,20 @@ func die() -> void:
 
 func voice(event: String) -> void:
 	if audio==null or not is_inside_tree(): return
+	var now := Time.get_ticks_msec()*0.001
+	if now-float(voice_at.get(event,-10.0))<float(VOICE_GAP.get(event,0.0)): return
+	voice_at[event]=now
 	audio.call("play",self,kind,event,global_position,variant)
+
+## One footfall per STRIDE metres travelled while actually moving; creature_audio.gd throttles by
+## distance, species gap, voice count and a pack-wide rate.
+func footfall(moved: float) -> void:
+	if moved<0.0005 or audio==null or not is_inside_tree(): return
+	stride_left-=moved
+	if stride_left>0.0: return
+	stride_left=float(STRIDE.get(kind,1.1))*randf_range(0.88,1.12)
+	if ground_speed<STEP_MIN_SPEED: return
+	audio.call("step",self,kind,global_position,ground_speed)
 
 ## Small one-shot mote burst (spore puff, death smoke). CPUParticles3D works on Compatibility.
 func burst(color: Color, at: Vector3, radius: float, amount: int) -> void:
@@ -287,8 +345,10 @@ func _process(delta: float) -> void:
 	clock+=delta
 	var moving := position.distance_to(target_position)>0.04
 	if not dying:
+		var before := position
 		position=position.lerp(target_position,minf(1,delta*15))
 		rotation.y=lerp_angle(rotation.y,target_angle,minf(1,delta*10))
+		footfall(position.distance_to(before))
 	idle_call-=delta
 	if idle_call<=0 and not dying:
 		idle_call=randf_range(5.0,10.0)

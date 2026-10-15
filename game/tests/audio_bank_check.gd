@@ -9,13 +9,16 @@ extends SceneTree
 ##    (each slot sounds and is silent at its end), resolve() maps casts and titles.
 ## 3. Pooled playback: voices never exceed the pool, species and idle limits hold, far
 ##    sounds are skipped, low-priority sounds can't steal from high-priority ones, the
-##    heartbeat loops and fades, and the babble follows a typing Label (rate-limited,
+##    heartbeat loops and fades (also while the out-call repeats), the campfire fade finishes
+##    under repeated out-calls and its watchdog, timers for a freed app stay silent, footfalls
+##    keep a pack-wide budget, and the babble follows a typing Label (rate-limited,
 ##    stops on skip, "" stays silent).
 ## Writes artifacts/audio-bank-check.txt. Exit code 1 on any failure.
 const CreatureAudio := preload("res://scripts/creature_audio.gd")
 const CombatAudio := preload("res://scripts/combat_audio.gd")
 const HeroVoice := preload("res://scripts/hero_voice.gd")
 const VoiceBabble := preload("res://scripts/voice_babble.gd")
+const SfxBank := preload("res://scripts/sfx_bank.gd")
 const MAX_BYTES := 150000
 ## group: [min s, max s, max peak, min st-rms dBFS, max st-rms dBFS]
 const RANGES := {
@@ -24,6 +27,25 @@ const RANGES := {
 	"hero": [0.15, 2.3, 0.95, -27.0, -14.0],
 	"voice": [3.0, 3.4, 0.95, -40.0, -8.0],
 }
+## Files whose name starts with a key use its range instead of the group's (monster footfalls are short).
+const RANGE_PREFIX := {"step_": [0.08, 1.0, 0.95, -28.0, -14.0]}
+## Loops (name contains "_loop"): longer, bigger, no fade at the ends; the wrap must be continuous.
+const LOOP_RANGE := [0.5, 10.0, 0.95, -30.0, -12.0]
+const LOOP_MAX_BYTES := 450000
+## Minimum takes per event (tools/sfx/gen_combat.py families; most hold more, counting the older takes).
+## Creature pools = region-neutral takes + the region's own takes.
+const CREATURE_MIN := 8
+const CREATURE_EXTRA_MIN := {"boar": 6}
+const STEP_MIN := 6
+const LAYER_MIN := 4
+const COMBAT_MIN := {"swing_axe": 12, "swing_spear": 12, "swing_fist": 12, "swing_axe_heavy": 6, "swing_spear_heavy": 6,
+	"swing_fist_heavy": 6, "hit_flesh": 10, "hit_stone": 10, "hit_wood": 10, "hit_spirit": 10, "block": 6, "dodge": 8,
+	"whiff": 6, "critical": 5, "spawn": 6, "dissolve": 6, "player_hit": 8, "equip": 5, "fuel": 5, "sputter": 5, "night": 3,
+	"dawn": 3, "night_warn": 3, "cold": 4, "hunger": 4, "ember": 4, "depleted_tree": 3, "depleted_stone": 3,
+	"depleted_fiber": 3, "depleted_berry": 3, "craft_tool": 4, "craft_soup": 4, "craft_bandage": 4, "bandage": 4,
+	"harvest_tree": 12, "harvest_stone": 12, "harvest_fiber": 12, "harvest_berry": 10}
+const HERO_MIN := {"attack": 10, "attack_heavy": 5, "hurt": 8, "pickup": 6, "harvest": 8, "dodge": 5, "tired": 5, "eat": 5,
+	"faint": 3, "reward": 4, "levelup": 3}
 
 var failures := 0
 var lines := PackedStringArray()
@@ -40,7 +62,10 @@ func run() -> void:
 	check_files()
 	check_events()
 	await check_pool()
+	await check_variety()
+	await check_timers()
 	await check_heartbeat()
+	await check_campfire()
 	await check_babble()
 	lines.append("RESULT %s (%d problems, %.1f s)" % ["PASS" if failures == 0 else "FAIL", failures, (Time.get_ticks_msec()-started)*0.001])
 	var text := "\n".join(lines)
@@ -53,7 +78,9 @@ func run() -> void:
 func check_files() -> void:
 	for group in RANGES:
 		var dir := "res://assets/sfx/%s/" % group
-		var names := Array(DirAccess.get_files_at(dir)).filter(func(f: String) -> bool: return f.ends_with(".wav"))
+		# voice/: only the syllable banks (<id>.wav, <id>_2.wav ...); the emote/greet barks and
+		# quill ticks there are checked by voice_variety_check.gd.
+		var names := Array(DirAccess.get_files_at(dir)).filter(func(f: String) -> bool: return f.ends_with(".wav") and not (group == "voice" and VoiceBabble.is_bark_file(f)))
 		names.sort()
 		check(not names.is_empty(), group+": no wav files")
 		var spec: Array = RANGES[group]
@@ -70,16 +97,21 @@ func check_files() -> void:
 			check(stream.get_length() > 0.05, path+" is empty")
 			var bytes := FileAccess.get_file_as_bytes(ProjectSettings.globalize_path(path)).size()
 			total_kb += bytes/1024.0
-			check(bytes < MAX_BYTES, "%s is %d bytes" % [path, bytes])
+			var looped: bool = group != "voice" and name.contains("_loop")
+			check(bytes < (LOOP_MAX_BYTES if looped else MAX_BYTES), "%s is %d bytes" % [path, bytes])
 			var m := measure(path)
 			if m.is_empty():
 				check(false, path+" unreadable")
 				continue
+			var fspec: Array = LOOP_RANGE if looped else spec
+			for prefix in RANGE_PREFIX:
+				if group != "voice" and name.begins_with(prefix): fspec = RANGE_PREFIX[prefix]
 			longest = maxf(longest, m.seconds)
-			check(m.seconds >= spec[0] and m.seconds <= spec[1], "%s length %.2f s outside %.2f..%.2f" % [path, m.seconds, spec[0], spec[1]])
-			check(m.peak <= spec[2], "%s peak %.3f" % [path, m.peak])
-			check(m.rms_db >= spec[3] and m.rms_db <= spec[4], "%s st-rms %.1f dBFS outside %.0f..%.0f" % [path, m.rms_db, spec[3], spec[4]])
-			check(absf(m.first) < 0.02 and absf(m.last) < 0.02, "%s starts/ends with a step (%.3f / %.3f)" % [path, m.first, m.last])
+			check(m.seconds >= fspec[0] and m.seconds <= fspec[1], "%s length %.2f s outside %.2f..%.2f" % [path, m.seconds, fspec[0], fspec[1]])
+			check(m.peak <= fspec[2], "%s peak %.3f" % [path, m.peak])
+			check(m.rms_db >= fspec[3] and m.rms_db <= fspec[4], "%s st-rms %.1f dBFS outside %.0f..%.0f" % [path, m.rms_db, fspec[3], fspec[4]])
+			if looped: check(absf(m.last-m.first) < 0.15, "%s loop seam jumps %.3f -> %.3f" % [path, m.last, m.first])
+			else: check(absf(m.first) < 0.02 and absf(m.last) < 0.02, "%s starts/ends with a step (%.3f / %.3f)" % [path, m.first, m.last])
 			if m.rms_db > -100.0:
 				lo_rms = minf(lo_rms, m.rms_db)
 				hi_rms = maxf(hi_rms, m.rms_db)
@@ -161,18 +193,32 @@ func check_events() -> void:
 		for event in CreatureAudio.EVENTS:
 			for region in CreatureAudio.REGIONS:
 				var takes := CreatureAudio.streams(species, event, region)
-				check(takes.size() >= 2, "creature %s/%s/%s has %d takes" % [species, event, region, takes.size()])
+				check(takes.size() >= CREATURE_MIN, "creature %s/%s/%s has %d takes (want >= %d)" % [species, event, region, takes.size(), CREATURE_MIN])
+				var own := 0
+				for path in CreatureAudio.pool_paths(species, event, region):
+					if path.contains("_%s_" % region): own += 1
+				check(own >= 2 and takes.size()-own >= 6, "creature %s/%s/%s: %d region-neutral + %d own takes" % [species, event, region, takes.size()-own, own])
 				resolved += takes.size()
+		for event in CreatureAudio.EXTRA:
+			var extra := CreatureAudio.streams(species, event, "forest")
+			check(extra.size() >= int(CREATURE_EXTRA_MIN.get(species, 1)), "creature %s/%s has %d takes" % [species, event, extra.size()])
+			resolved += extra.size()
+		check(SfxBank.count("creatures/step_"+CreatureAudio.GAIT[species]) >= STEP_MIN, "%s footfalls: %d takes" % [species, SfxBank.count("creatures/step_"+CreatureAudio.GAIT[species])])
+	for region in CreatureAudio.REGIONS:
+		for kind in ["accent", "bed"]:
+			check(SfxBank.count("creatures/layer_%s_%s" % [region, kind]) >= LAYER_MIN, "region layer %s/%s: %d takes" % [region, kind, SfxBank.count("creatures/layer_%s_%s" % [region, kind])])
 	check(CreatureAudio.species_name("golem") == "brute" and CreatureAudio.species_name("???") == "wolf", "species aliases")
 	check(CreatureAudio.event_name("attack") == "strike" and CreatureAudio.event_name("aggro") == "alert", "event aliases")
+	check(CreatureAudio.event_name("charge") == "charge" and CreatureAudio.event_name("stunned") == "dazed", "boar cue aliases")
 	check(CreatureAudio.region_name("ember") == "quarry" and CreatureAudio.region_name("ice") == "frost" and CreatureAudio.region_name("") == "forest", "region aliases")
 	for event in CombatAudio.EVENTS:
 		var takes := CombatAudio.streams(event)
-		check(takes.size() >= (1 if event in ["night", "dawn", "harvest_tree", "harvest_stone", "harvest_fiber"] else 2), "combat %s has %d takes" % [event, takes.size()])
+		check(takes.size() >= int(COMBAT_MIN.get(event, 2)), "combat %s has %d takes (want >= %d)" % [event, takes.size(), int(COMBAT_MIN.get(event, 2))])
 		resolved += takes.size()
+	check(ResourceLoader.exists(CombatAudio.DIR+"campfire_loop.wav"), "combat/campfire_loop.wav missing")
 	for event in HeroVoice.EVENTS:
 		var takes := HeroVoice.streams(event)
-		check(takes.size() >= 1, "hero %s has no take" % event)
+		check(takes.size() >= int(HERO_MIN.get(event, 1)), "hero %s has %d takes (want >= %d)" % [event, takes.size(), int(HERO_MIN.get(event, 1))])
 		resolved += takes.size()
 	for id in VoiceBabble.VOICES:
 		var bank := VoiceBabble.bank(id)
@@ -256,6 +302,153 @@ func check_pool() -> void:
 	app.queue_free()
 	await process_frame
 
+## Take variety and the cues added with it: shuffle bags never repeat a take back to back, every
+## third swing of a combo is heavy, a roster's spawn is staggered and capped, region layers sound
+## under region-neutral takes, footfalls are throttled, status cues fire on their edge and period.
+func check_variety() -> void:
+	var app := make_app()
+	await process_frame
+	var seen := {}
+	var repeats := 0
+	var last := ""
+	for i in 24:
+		CreatureAudio.stop_all()
+		check(CombatAudio.play(app, "hit_flesh", Vector3(1, 0, 1)), "hit_flesh play %d failed" % i)
+		var take: String = CombatAudio.last_take.get("hit_flesh", "")
+		if take == last: repeats += 1
+		last = take
+		seen[take] = true
+	check(repeats == 0, "hit_flesh repeated a take back to back %d times" % repeats)
+	check(seen.size() >= 10, "hit_flesh used only %d different takes in 24 plays" % seen.size())
+	var hero_seen := {}
+	var hero_repeats := 0
+	var hero_last := ""
+	for i in 16:
+		check(HeroVoice.play(app, "hurt", 0.0, true), "hero hurt %d did not play" % i)
+		var take: String = HeroVoice.last_take.get("hurt", "")
+		if take == hero_last: hero_repeats += 1
+		hero_last = take
+		hero_seen[take] = true
+	check(hero_repeats == 0 and hero_seen.size() >= 8, "hero hurt: %d back-to-back repeats, %d different takes" % [hero_repeats, hero_seen.size()])
+	CreatureAudio.stop_all()
+	CombatAudio.combo = 0
+	CombatAudio.combo_at = -10.0
+	CombatAudio.last_time.erase("swing_axe_heavy")
+	for i in 3: CombatAudio.swing(app, "axe")
+	check(CombatAudio.last_time.has("swing_axe_heavy"), "the third swing of a quick combo was not the heavy take")
+	CreatureAudio.stop_all()
+	await process_frame
+	var before := CreatureAudio.played
+	for i in 7: CombatAudio.play(app, "spawn", Vector3(i, 0, 2))
+	check(CreatureAudio.played-before == 1, "a spawn burst started %d sounds at once (want 1)" % (CreatureAudio.played-before))
+	await create_timer(0.45).timeout
+	var spawned := CreatureAudio.active("combat/spawn")
+	check(spawned >= 2 and spawned <= CombatAudio.GROUP_MAX, "a spawn burst of 7 played %d (want 2..%d)" % [spawned, CombatAudio.GROUP_MAX])
+	var layered := 0
+	for i in 12:
+		CreatureAudio.last_key.clear()
+		CreatureAudio.stop_all()
+		CreatureAudio.play(app, "wolf", "death", Vector3(2, 0, 0))
+		await process_frame
+		if CreatureAudio.active("layer/frost") > 0: layered += 1
+	check(layered >= 3, "the frost layer sounded under only %d of 12 wolf deaths" % layered)
+	CreatureAudio.stop_all()
+	CreatureAudio.last_step.clear()
+	CreatureAudio.step_tokens = CreatureAudio.STEP_BURST
+	check(CreatureAudio.step(app, "boar", Vector3(2, 0, 0), 2.0), "boar footfall did not play")
+	check(not CreatureAudio.step(app, "boar", Vector3(2, 0, 0), 2.0), "two boar footfalls within STEP_GAP")
+	check(not CreatureAudio.step(app, "wolf", Vector3(40, 0, 0), 2.0), "a footfall 40 m away played")
+	check(CreatureAudio.step(app, "brute", Vector3(-2, 0, 0), 1.0), "brute footfall did not play")
+	await process_frame
+	check(not CreatureAudio.step(app, "shroom", Vector3(0, 0, 2), 1.0), "more than MAX_STEPS footfalls at once")
+	# A whole pack stepping in one frame (voices freed between): the pack budget lets STEP_BURST through.
+	CreatureAudio.last_step.clear()
+	CreatureAudio.step_tokens = CreatureAudio.STEP_BURST
+	var pack_steps := 0
+	for species in CreatureAudio.SPECIES:
+		CreatureAudio.stop_all()
+		if CreatureAudio.step(app, species, Vector3(1, 0, 1), 2.0): pack_steps += 1
+	check(pack_steps == int(CreatureAudio.STEP_BURST), "a pack stepping at once started %d footfalls (want %d)" % [pack_steps, int(CreatureAudio.STEP_BURST)])
+	check(CreatureAudio.pool_paths("boar", "charge", "quarry").size() >= 6, "boar charge pool")
+	check(CreatureAudio.pool_paths("wolf", "dazed", "forest") == CreatureAudio.pool_paths("wolf", "hurt", "forest"), "dazed falls back to hurt")
+	CreatureAudio.stop_all()
+	check(CombatAudio.cue(app, "hunger", true, 30.0), "hunger cue did not play when it started")
+	check(not CombatAudio.cue(app, "hunger", true, 30.0), "hunger cue repeated before its period")
+	CombatAudio.cue(app, "hunger", false)
+	check(CombatAudio.cue(app, "hunger", true, 30.0), "hunger cue did not play again after it ended")
+	lines.append("variety    hit_flesh %d takes in 24 plays, hero hurt %d in 16, no back-to-back repeat; spawn burst 7 -> %d; frost layer %d/12" % [
+		seen.size(), hero_seen.size(), spawned, layered])
+	CreatureAudio.stop_all()
+	app.queue_free()
+	await process_frame
+
+## Delayed sounds (staggered spawn/dissolve and alerts, CombatAudio.later) for an app that is freed
+## before they fire: dropped without a sound and without "Lambda capture ... was freed" errors.
+func check_timers() -> void:
+	var doomed := make_app()
+	await process_frame
+	CreatureAudio.stop_all()
+	CombatAudio.group_start.clear()
+	CreatureAudio.alert_start = -10.0
+	CreatureAudio.last_key.clear()
+	for i in 3: CombatAudio.play(doomed, "dissolve", Vector3(i, 0, 1))
+	for species in ["wolf", "boar", "brute"]: CreatureAudio.play(doomed, species, "alert", Vector3(2, 0, 1))
+	CombatAudio.later(doomed, "equip", 0.05)
+	var at_free := CreatureAudio.played
+	doomed.free()
+	await create_timer(0.45).timeout
+	check(CreatureAudio.played == at_free, "%d delayed sounds played for an app freed before its timers" % (CreatureAudio.played-at_free))
+	# A live app still gets them.
+	var app := make_app()
+	await process_frame
+	CombatAudio.last_time.erase("equip")
+	CombatAudio.later(app, "equip", 0.05)
+	var before := CreatureAudio.played
+	await create_timer(0.2).timeout
+	check(CreatureAudio.played > before, "CombatAudio.later() did not play for a live app")
+	lines.append("timers     freed app: %d delayed sounds dropped quietly; live app: later() plays" % 5)
+	CreatureAudio.stop_all()
+	app.queue_free()
+	await process_frame
+
+func check_campfire() -> void:
+	var app := make_app()
+	var camera := Camera3D.new()
+	app.add_child(camera)
+	camera.current = true
+	await process_frame
+	CombatAudio.campfire(app, 40.0, Vector3(1, 0, 0))
+	await process_frame
+	check(CombatAudio.campfire_playing(), "campfire loop did not start")
+	var stream: AudioStreamWAV = CombatAudio.fire.stream as AudioStreamWAV if is_instance_valid(CombatAudio.fire) else null
+	check(stream != null and stream.loop_mode != AudioStreamWAV.LOOP_DISABLED, "campfire stream does not loop")
+	await create_timer(0.6).timeout
+	CombatAudio.campfire(app, 40.0, Vector3(1, 0, 0))
+	check(CombatAudio.campfire_playing(), "campfire stopped while it was fed")
+	CombatAudio.campfire(app, 0.0, Vector3(1, 0, 0))
+	await create_timer(1.0).timeout
+	check(not CombatAudio.campfire_playing(), "campfire did not fade out when the fire went out")
+	CombatAudio.campfire(app, 30.0, Vector3(1, 0, 0))
+	await process_frame
+	check(CombatAudio.campfire_playing(), "campfire did not restart")
+	await create_timer(3.2).timeout
+	check(not CombatAudio.campfire_playing(), "campfire kept playing after the run stopped calling it")
+	# The run keeps reporting the fire out on every update (and the watchdog polls): one fade, then silence.
+	CombatAudio.campfire(app, 30.0, Vector3(1, 0, 0))
+	await process_frame
+	check(CombatAudio.campfire_playing(), "campfire did not restart for the repeated out-call check")
+	var sputters := CreatureAudio.played
+	var until := Time.get_ticks_msec()+1300
+	while Time.get_ticks_msec() < until:
+		CombatAudio.campfire(app, 0.0, Vector3(1, 0, 0))
+		await create_timer(0.1).timeout
+	sputters = CreatureAudio.played-sputters
+	check(not CombatAudio.campfire_playing(), "campfire kept playing while the out-call repeated")
+	check(sputters <= 1, "the fire going out sputtered %d times (want 1)" % sputters)
+	lines.append("campfire   loops while fed, fades once when the fire goes out (repeated out-calls: %d sputter) or the run is left" % sputters)
+	app.queue_free()
+	await process_frame
+
 func check_heartbeat() -> void:
 	var app := make_app()
 	CombatAudio.heartbeat(app, 80.0)
@@ -270,9 +463,12 @@ func check_heartbeat() -> void:
 	check(CombatAudio.heart.pitch_scale > slow, "heartbeat does not speed up at lower HP")
 	await create_timer(1.0).timeout
 	check(CombatAudio.heartbeat_playing(), "heartbeat loop ended by itself")
-	CombatAudio.heartbeat(app, 60.0)
-	await create_timer(0.9).timeout
-	check(not CombatAudio.heartbeat_playing(), "heartbeat did not fade out above 30 %")
+	# HP updates keep arriving several times a second above 30 %: the fade must still reach its stop.
+	var until := Time.get_ticks_msec()+900
+	while Time.get_ticks_msec() < until:
+		CombatAudio.heartbeat(app, 60.0)
+		await create_timer(0.1).timeout
+	check(not CombatAudio.heartbeat_playing(), "heartbeat did not fade out above 30 % while HP updates kept coming")
 	lines.append("heartbeat  starts below 30 %%, pitch %.2f -> %.2f, loops, fades out" % [slow, CombatAudio.heart.pitch_scale])
 	app.queue_free()
 

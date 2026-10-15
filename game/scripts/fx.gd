@@ -46,15 +46,26 @@ extends RefCounted
 ##       Short floating caption. Only for information (names, places), never chatter.
 ## --- sound ------------------------------------------------------------------------
 ##   Fx.sound(app, kind: String, at := Vector3.INF, pitch := 1.0, db := 0.0)
-##       Synthesized one-shots on the Master bus (so M-mute silences them): "thud",
-##       "leaves", "twinkle", "crackle", "splash", "pluck", "pop", "chirp", "whoosh",
-##       "tune", "drink". Quieter with distance from app.player when `at` is given.
+##       One-shots on the SFX bus. Each kind is a family of baked takes
+##       (assets/sfx/fx/<kind>_<n>.wav, tools/sfx/gen_props.py) picked through sfx_bank.gd's
+##       shuffle bag (never the same take twice in a row, so a burst of fruit thuds varies) with
+##       +-4 % pitch and +-1 dB jitter; the old synth stands in while a family has no WAVs.
+##       Kinds: "thud", "leaves", "leaves_needle", "leaves_palm", "twinkle", "crackle",
+##       "sputter", "splash", "pluck", "pop", "chirp", "whoosh", "tune", "speaker", "drink",
+##       "canvas", "hull", "seat", "cushion", "dragonfly"; a "<dir>/<event>" kind plays that
+##       family ("interior/clink"). Quieter with distance from app.player when `at` is given.
 ## --- tests ------------------------------------------------------------------------
 ##   Fx.played: int   counts every effect started (harnesses check it went up).
 const Icon := preload("res://scripts/life_icon.gd")
 ## Reduced motion (settings) thins every particle effect.
 const GameSettings := preload("res://scripts/game_settings.gd")
 const Art := preload("res://scripts/life_art.gd")
+const SfxBank := preload("res://scripts/sfx_bank.gd")
+## Kinds the runtime synth (_synth) can make, and the synth kind a baked-only family falls back to
+## while its WAVs are missing (not imported yet, or a trimmed export).
+const SYNTH_KINDS := ["thud","leaves","twinkle","crackle","splash","pluck","pop","chirp","whoosh","tune","drink"]
+const SYNTH_FALLBACK := {"leaves_needle":"leaves","leaves_palm":"leaves","canvas":"leaves","hull":"splash","seat":"pluck",
+	"cushion":"thud","speaker":"tune","dragonfly":"whoosh","sputter":"crackle","interior/clink":"pluck"}
 const POOL_MAX := 6
 const TEX := 48
 
@@ -630,14 +641,25 @@ static func sound(app, kind: String, at := Vector3.INF, pitch := 1.0, db := 0.0)
 			v.bus = &"SFX"
 			holder.add_child(v)
 			voices.append(v)
-	if not streams.has(kind): streams[kind] = _synth(kind)
 	var voice: AudioStreamPlayer = voices[voice_next]
 	voice_next = (voice_next+1)%voices.size()
 	if not voice.is_inside_tree(): return
-	voice.stream = streams[kind]
-	voice.pitch_scale = pitch*randf_range(0.96, 1.04)
-	voice.volume_db = volume
+	var take := take_for(kind)
+	if take == null: return
+	voice.stream = take
+	voice.pitch_scale = clampf(pitch*SfxBank.pitch(0.04), 0.25, 4.0)
+	voice.volume_db = volume+SfxBank.db(1.0)
 	voice.play()
+
+## The next take of `kind`: a baked one from the family's shuffle bag, else the runtime synth
+## (SYNTH_FALLBACK maps baked-only kinds to their nearest synth); null for an unknown kind.
+static func take_for(kind: String) -> AudioStream:
+	var take := SfxBank.pick(kind if kind.contains("/") else "fx/"+kind)
+	if take != null: return take
+	var synth: String = SYNTH_FALLBACK.get(kind, kind)
+	if not synth in SYNTH_KINDS: return null
+	if not streams.has(synth): streams[synth] = _synth(synth)
+	return streams[synth]
 
 static func _synth(kind: String) -> AudioStreamWAV:
 	var rate := 22050

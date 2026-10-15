@@ -95,6 +95,7 @@ func begin(target: Dictionary) -> void:
 	cast_at=target.at
 	app.player.face_point(cast_at)
 	app.player.equip("rod")
+	life.sfx.play("rod_equip",1.0,-3)
 	rig_rod()
 	build_hud()
 	phase="ready"
@@ -148,12 +149,14 @@ func press() -> void:
 
 func cast() -> void:
 	if int(life.state.bag.get("bait",0))<1:
+		# The deny stamps the toast dedupe, so the message's chime stays quiet (one sound).
+		life.deny()
 		app.message(tr("미끼가 없어요. 씨앗 노점에서 미끼를 사 오세요."))
-		life.sfx.play("escape")
 		return
 	phase="casting"
 	refresh_hud()
 	app.player.face_point(cast_at)
+	life.sfx.play("windup",1.0,-4)
 	var t := create_tween()
 	t.tween_method(set_rod,0.0,1.15,0.28).set_ease(Tween.EASE_OUT)
 	await t.finished
@@ -173,6 +176,7 @@ func cast() -> void:
 	swing.tween_method(set_rod,-0.55,-0.25,0.4)
 	ensure_bobber()
 	flight=0.0
+	life.sfx.play("whiz",randf_range(0.94,1.06),-5)
 	phase="flying"
 	refresh_hud()
 
@@ -213,6 +217,7 @@ func land_bobber() -> void:
 
 func hook() -> void:
 	phase="hooking"
+	life.sfx.play("strike")
 	app.player.react("gather")
 	var t := create_tween()
 	t.tween_method(set_rod,rod_angle,0.9,0.12)
@@ -233,6 +238,7 @@ func reel_back() -> void:
 	phase="reeling"
 	refresh_hud()
 	if is_instance_valid(bobber):
+		life.sfx.play("reel_back",1.0,-3)
 		var from := bobber.global_position
 		var t := create_tween()
 		t.tween_method(func(v: float):
@@ -269,6 +275,7 @@ func start_fight(fish: Dictionary) -> void:
 
 func land() -> void:
 	phase="landing"
+	life.sfx.play("strike",0.86,-2)
 	refresh_hud()
 	var data: Dictionary=await life.request("reel",{"outcome":"landed"})
 	if phase!="landing": return
@@ -328,8 +335,9 @@ func update(delta: float) -> void:
 		bobber.global_position=Vector3(cast_at.x,y,cast_at.z)
 		ripple_clock+=delta
 		if ripple_clock>2.3:
-			ripple_clock=0
+			ripple_clock=randf_range(-0.6,0.4)
 			Art.ripple(app.world,cast_at,0.6,1.4,Color(1,1,1,0.28))
+			life.sfx.play("ripple",randf_range(0.92,1.08),-11)
 		stretch_line(0.18 if not bite else 0.0)
 		if is_instance_valid(status) and phase=="waiting":
 			status.text=tr("입질! 지금 E!") if bite else tr("찌를 지켜보세요…")
@@ -381,14 +389,17 @@ func fight(delta: float) -> void:
 	if hold:
 		tick_clock-=delta
 		if tick_clock<=0:
-			tick_clock=0.075
-			life.sfx.play("tick",randf_range(0.95,1.1),-6)
+			# Reel ratchet: uneven pawl spacing, brighter and quicker as the line tightens.
+			tick_clock=0.075*randf_range(0.8,1.2)*(1.0-0.2*progress)
+			life.sfx.play("tick",lerpf(0.93,1.08,progress),0.0+2.0*progress+randf_range(-1.0,1.0))
 	splash_clock-=delta
 	if splash_clock<=0:
 		splash_clock=randf_range(0.35,0.8)
 		var jitter := Vector3(randf_range(-0.5,0.5),0,randf_range(-0.5,0.5))
 		Art.burst(app.world,cast_at+jitter,"splash",6 if shadow_kind=="small" else 10)
 		Art.ripple(app.world,cast_at+jitter,0.6,0.7,Color(1,1,1,0.4))
+		if shadow_kind=="small": life.sfx.play("thrash",randf_range(1.08,1.2),-7)
+		else: life.sfx.play("thrash",randf_range(0.84,0.96),-2)
 	if is_instance_valid(bobber):
 		var t := Time.get_ticks_msec()*0.001
 		bobber.global_position=cast_at+Vector3(sin(t*7)*0.35,-0.12+sin(t*23)*0.05,cos(t*5)*0.3)
@@ -405,6 +416,7 @@ func fight(delta: float) -> void:
 func show_catch(reward: Dictionary) -> void:
 	phase="card"
 	card_clock=0.0
+	life.sfx.play("fish_out")
 	life.sfx.play("catch")
 	var kind: String=reward.item
 	var length := clampf(0.45+float(reward.size)/100.0*1.1,0.6,1.8)
@@ -425,10 +437,12 @@ func show_catch(reward: Dictionary) -> void:
 	Art.burst(app.world,cast_at,"splash",22)
 	app.player.react("craft")
 	build_card(reward)
+	get_tree().create_timer(0.22).timeout.connect(func(): if is_instance_valid(card): life.sfx.play("card",1.0,-7))
 	refresh_hud()
 
 func dismiss_card() -> void:
 	if is_instance_valid(card):
+		life.sfx.play("card",1.12,-6)
 		var c := card
 		var t := c.create_tween()
 		t.tween_property(c,"modulate:a",0.0,0.2)

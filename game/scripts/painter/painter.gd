@@ -122,6 +122,9 @@ var warm_previews := 0
 var refreshing_layers := false
 var pending_task := -1
 var backdrop: ColorRect
+## Bristle sound pacing: the last brush sound's time (ms) and cursor position.
+var brush_sound_ms := -1000
+var brush_sound_at := Vector2.ZERO
 
 func setup(api_node: Node, object: Dictionary, model_node: Node3D, extra := {}) -> void:
 	api = api_node
@@ -318,6 +321,7 @@ func _button(parent: Node, text: String, callback: Callable, variation := "", ti
 	b.add_theme_font_size_override("font_size", 13)
 	b.pressed.connect(func(): callback.call())
 	if not tip.is_empty(): b.tooltip_text = tip
+	RpgUi.hover_motion(b, 1.03)
 	parent.add_child(b)
 	return b
 
@@ -1045,6 +1049,7 @@ func _confirm(text: String, accept: String, callback: Callable) -> void:
 
 func _select_tool(kind: String) -> void:
 	if stroke_active(): return
+	if kind != tool and ready_to_paint: RpgUi.sfx("tab", -10.0)
 	tool = kind
 	_close_popover()
 	for name in tool_buttons: tool_buttons[name].set_pressed_no_signal(name == kind)
@@ -1093,6 +1098,7 @@ func _on_view_event(event: InputEvent) -> void:
 		if stroke_active() and not stroke.is_empty():
 			var pressure: float = event.pressure if event.pressure > 0.0 else 1.0
 			stroke.queue.append([event.position, pressure])
+			_brush_sound(event.position, false)
 		elif not gradient_start.is_empty():
 			view.line_to = event.position
 			view.overlay.queue_redraw()
@@ -1117,6 +1123,16 @@ func _stroke_begin(at: Vector2) -> void:
 	core.begin_stroke(tool == ERASER)
 	stroke = {"lazy": at, "last": at, "pressure": 1.0, "carry": 0.0, "queue": [], "seed": randi() % 100000, "count": 0, "cursor": at}
 	_stamp_at(at, 1.0)
+	_brush_sound(at, true)
+
+## A bristle stroke sound at the start of a stroke, then one per ~180 ms while the cursor keeps
+## moving (at least 40 px since the last one); the eraser is a little quieter.
+func _brush_sound(at: Vector2, start: bool) -> void:
+	var now := Time.get_ticks_msec()
+	if not start and (now - brush_sound_ms < 180 or at.distance_to(brush_sound_at) < 40.0): return
+	brush_sound_ms = now
+	brush_sound_at = at
+	RpgUi.sfx("brush", -15.0 if tool == ERASER else -12.0)
 
 func _stroke_end() -> void:
 	if not stroke_active(): return
@@ -1206,7 +1222,7 @@ func _pick_color(at: Vector2) -> void:
 	var texel := core.nearest_texel(hit.position, hit.normal)
 	if texel < 0: return
 	picker.set_color(core.sample(texel))
-	RpgUi.sfx("click", -10.0)
+	RpgUi.sfx("swatch", -10.0)
 
 func _fill_at(at: Vector2) -> void:
 	var hit := _hit_at(at)
@@ -1221,6 +1237,7 @@ func _fill_at(at: Vector2) -> void:
 	if int(result.get("count", 0)) > 0:
 		dirty = true
 		picker.use(color)
+		RpgUi.sfx("fill", -8.0)
 	_after_change(false)
 
 func _gradient_begin(at: Vector2) -> void:
@@ -1253,7 +1270,9 @@ func _gradient_end(at: Vector2) -> void:
 	var result := {}
 	await _work(tr("그라데이션을 그리는 중…"), func():
 		result.count = core.gradient(a, b, bool(s.radial), c1, c2, {"opacity": float(s.opacity), "mode": int(s.mode)}, slot))
-	if int(result.get("count", 0)) > 0: dirty = true
+	if int(result.get("count", 0)) > 0:
+		dirty = true
+		RpgUi.sfx("paint", -9.0)
 	_after_change(false)
 
 func _swap_colors() -> void:
@@ -1262,12 +1281,14 @@ func _swap_colors() -> void:
 	secondary = keep
 	picker.set_color(primary, false)
 	_refresh_colors()
+	RpgUi.sfx("swatch", -10.0)
 
 func _reset_colors() -> void:
 	primary = Color.BLACK
 	secondary = Color.WHITE
 	picker.set_color(primary, false)
 	_refresh_colors()
+	RpgUi.sfx("swatch", -12.0)
 
 # ------------------------------------------------------------------ layers and history
 
@@ -1297,6 +1318,7 @@ func _refresh_layers() -> void:
 		row.custom_minimum_size.y = 44
 		row.pressed.connect(func():
 			if stroke_active(): return
+			if core.current != at: RpgUi.sfx("select", -10.0)
 			core.current = at
 			_refresh_layers())
 		row.gui_input.connect(func(event: InputEvent):
@@ -1374,26 +1396,34 @@ func _add_layer() -> void:
 	if core == null or busy or stroke_active(): return
 	if core.add_layer(tr("레이어 %d") % (core.layers.size())) < 0:
 		_status(tr("레이어는 8개까지 만들 수 있어요."))
+		RpgUi.sfx("deny", -8.0)
 		return
+	RpgUi.sfx("layer", -8.0)
 	_after_change(true)
 
 func _duplicate_layer() -> void:
 	if core == null or busy or stroke_active(): return
 	if core.duplicate_layer(core.current, core.layers[core.current].name + tr(" 복사")) < 0:
 		_status(tr("레이어는 8개까지 만들 수 있어요."))
+		RpgUi.sfx("deny", -8.0)
 		return
+	RpgUi.sfx("layer", -8.0)
 	_after_change(true)
 
 func _delete_layer() -> void:
 	if core == null or busy or stroke_active(): return
 	if not core.delete_layer(core.current):
 		_status(tr("마지막 레이어는 지울 수 없어요."))
+		RpgUi.sfx("deny", -8.0)
 		return
+	RpgUi.sfx("cancel", -9.0)
 	_after_change(true)
 
 func _move_layer(direction: int) -> void:
 	if core == null or busy or stroke_active(): return
-	if core.move_layer(core.current, core.current + direction): _after_change(true)
+	if core.move_layer(core.current, core.current + direction):
+		RpgUi.sfx("layer", -10.0)
+		_after_change(true)
 
 func _start_rename() -> void:
 	if core == null: return
@@ -1423,12 +1453,14 @@ func _finish_rename() -> void:
 func undo() -> void:
 	if core == null or busy or not core.can_undo(): return
 	core.undo()
+	RpgUi.sfx("undo", -8.0)
 	dirty = true
 	_after_change(false)
 
 func redo() -> void:
 	if core == null or busy or not core.can_redo(): return
 	core.redo()
+	RpgUi.sfx("redo", -8.0)
 	dirty = true
 	_after_change(false)
 
@@ -1530,18 +1562,19 @@ func save() -> void:
 	_hide_busy()
 	if not reply.get("ok", false):
 		_status(tr("저장하지 못했어요: %s") % _error_text(str(reply.get("error", ""))))
-		RpgUi.sfx("close", -6.0)
+		RpgUi.sfx("deny", -6.0)
 		return
 	var version = reply.data.get("paint_version")
 	if version == null:
 		_status(tr("저장하지 못했어요: %s") % "paint_version")
+		RpgUi.sfx("deny", -6.0)
 		return
 	var key := str(obj.id) + ":" + str(int(version))
 	PaintApply.remember(key, result.image)
 	obj.paint_version = int(version)
 	var saved = options.get("saved")
 	if saved is Callable and (saved as Callable).is_valid(): saved.call(result.image, int(version))
-	RpgUi.sfx("confirm", -6.0)
+	RpgUi.sfx("save", -6.0)
 	_close(true)
 
 func _error_text(code: String) -> String:

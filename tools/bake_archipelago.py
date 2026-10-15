@@ -7,9 +7,9 @@
                                                                            # the pack carries this bake?
 
 What it holds and when it counts: game/maps/archipelago/island_bake.gd. The bake itself is
-tools/bake_archipelago.gd (Godot, headless): simplified collision for every render-mesh collider and
-the baked island. Fresh means: same layouts, build scripts, engine and map assets (MD5 of every GLB,
-PNG and .import) as when it was made.
+tools/bake_archipelago.gd (Godot, headless): simplified collision for every render-mesh collider, the
+ground cut into chunks (ground.scn) and the baked island. Fresh means: same layouts, build scripts,
+engine and map assets (MD5 of every GLB, PNG and .import) as when it was made.
 
 The export steps keep it fresh: tools/build_game.ps1 bakes before exporting, tools/game_patch.py
 before exporting a patch, and tools/package_release.py refuses a pack whose bake is stale or older
@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 GODOT = ROOT / ".tools" / "godot" / "Godot_v4.7.2-stable_win64_console.exe"
 GENERATED = ROOT / "game" / "maps" / "archipelago" / "generated"
-FILES = ["manifest.json", "collision.res", "island.scn"]
+FILES = ["manifest.json", "collision.res", "island.scn", "ground.scn"]
 PACK_PREFIX = "maps/archipelago/generated/"
 
 
@@ -49,7 +49,7 @@ def check() -> tuple[bool, str]:
 def bake() -> None:
     result = _godot()
     for line in result.stdout.splitlines():
-        if line.startswith(("BAKE_COLLISION", "BAKE_ISLAND", "BAKE_DONE")):
+        if line.startswith(("BAKE_COLLISION", "BAKE_GROUND", "BAKE_ISLAND", "BAKE_DONE")):
             print(line)
     if result.returncode != 0:
         tail = "\n".join((result.stdout + result.stderr).splitlines()[-15:])

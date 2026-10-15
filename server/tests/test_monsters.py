@@ -1,9 +1,11 @@
-"""Survival monsters: roster per map/day, regional art variant, boar charge, shroom spore swarm, balance."""
+"""Survival monsters: roster per map/stage and tier, stand-in art, regional art variant, boar charge,
+shroom spore swarm, balance; runs saved before stages keep their old rosters."""
 import math
 
 import pytest
 
-from server import catalog, coop, simulation
+from server import catalog, coop, simulation, stages
+from server.tests.legacy_saves import legacy_run
 
 SPECIES = {'wolf', 'boar', 'brute', 'wisp', 'shroom'}
 
@@ -29,40 +31,75 @@ def run(s, enemy, seconds, dt=.05, move=None):
         simulation.advance_enemy(s, enemy, dt, 1, False)
 
 
-def test_catalog_has_five_species_with_known_behaviours():
-    assert set(catalog.ENEMIES) == SPECIES
+def test_catalog_species_have_known_behaviours_and_todays_art_as_stand_ins():
+    assert set(catalog.LEGACY_SPECIES) == SPECIES
     for kind, stats in catalog.ENEMIES.items():
         assert stats['behavior'] in ('melee', 'charge', 'spore')
         assert stats['name'] and stats['hp'] > 0 and stats['damage'] > 0 and stats['windup'] >= .6
+        assert stats['stand_in'] in SPECIES and catalog.ENEMIES[stats['stand_in']]['stand_in'] == stats['stand_in']
+        if stats['behavior'] == 'charge':
+            assert {'charge_speed', 'charge_overshoot', 'stun'} <= set(stats)
     assert catalog.ENEMIES['boar']['behavior'] == 'charge' and catalog.ENEMIES['shroom']['swarm'] == 2
 
 
 @pytest.mark.parametrize('map_id', catalog.MAPS)
 @pytest.mark.parametrize('difficulty', catalog.DIFFICULTIES)
-def test_night_roster_sends_the_map_variant_and_valid_unique_enemies(map_id, difficulty):
+def test_night_roster_sends_species_stand_in_variant_and_valid_unique_enemies(map_id, difficulty):
     s = simulation.new_run(5, 0, 60, map_id, difficulty)
     seen = set()
-    for day in range(1, 8):
+    for day in range(1, s['stage_count'] + 1):
         enemies = simulation.night_enemies(s, day)
         ids = [e['id'] for e in enemies]
         assert len(ids) == len(set(ids)) and not seen & set(ids)
         seen |= set(ids)
-        assert all(e['variant'] == catalog.MAPS[map_id]['creature_variant'] == map_id for e in enemies)
-        assert all(e['kind'] in catalog.night_species(map_id, day) for e in enemies)
+        assert all(e['variant'] == catalog.MAPS[map_id]['creature_variant'] for e in enemies)
+        tonight = catalog.night_species(map_id, day, s['difficulty'])
+        for e in enemies:
+            assert e['species'] in tonight and e['species'] in catalog.ROSTERS[map_id][catalog.ENEMIES[e['species']]['tier']]
+            assert e['kind'] == e['stand_in'] == catalog.ENEMIES[e['species']]['stand_in']
+            assert e.get('height') == catalog.ENEMIES[e['species']].get('height')
         assert all(simulation.clear_position(s, e['x'], e['z']) for e in enemies)
         slots = {e['id'].split('_')[0] + '_' + e['id'].split('_')[1] for e in enemies}
         for slot in slots:
             members = [e for e in enemies if e['id'] == slot or e['id'].startswith(slot + '_')]
-            assert len(members) == catalog.ENEMIES[members[0]['kind']].get('swarm', 1)
+            assert len(members) == catalog.ENEMIES[members[0]['species']].get('swarm', 1)
 
 
 @pytest.mark.parametrize('map_id', catalog.MAPS)
-def test_every_species_appears_during_a_standard_week(map_id):
+def test_every_species_of_the_map_appears_during_a_standard_run(map_id):
     s = simulation.new_run(5, 0, 60, map_id, 'standard')
-    kinds = {e['kind'] for day in range(1, 8) for e in simulation.night_enemies(s, day)}
-    assert kinds == SPECIES
-    first = {e['kind'] for e in simulation.night_enemies(s, 1)}
-    assert 'brute' not in first  # the heavy hitter waits for later nights
+    kinds = {e['species'] for day in range(1, s['stage_count'] + 1) for e in simulation.night_enemies(s, day)}
+    assert kinds == {k for tier in catalog.ROSTERS[map_id].values() for k in tier}
+    first = {catalog.ENEMIES[e['species']]['tier'] for e in simulation.night_enemies(s, 1)}
+    assert first == {'weak'}  # the heavy hitters wait for later nights
+
+
+@pytest.mark.parametrize('map_id', catalog.MAPS)
+def test_public_state_names_the_species_tonight_can_bring(map_id):
+    s = simulation.new_run(5, 0, 60, map_id, 'veteran')
+    for day in range(1, s['stage_count'] + 1):
+        s['elapsed'] = stages.start(s, day) + 10.
+        shown = simulation.public_state(s)
+        assert shown['day'] == shown['stage'] == day
+        assert shown['night_species'] == catalog.night_species(map_id, day, s['difficulty'])
+        assert {e['species'] for e in simulation.night_enemies(s, day)} <= set(shown['night_species'])
+        assert shown['night_stand_ins'] == {k: catalog.ENEMIES[k]['stand_in'] for k in shown['night_species']}
+        # The boss's model is read ahead on its stage, from its dawn.
+        assert (catalog.MAPS[map_id]['boss'] in shown['night_species']) == bool(s['boss'] and day == s['stage_count'])
+
+
+@pytest.mark.parametrize('map_id', [m for m in catalog.MAPS if m != 'tutorial'])
+def test_runs_saved_before_stages_keep_their_old_rosters(map_id):
+    s = legacy_run(5, 60, map_id, 'veteran')
+    for day in range(1, 8):
+        enemies = simulation.night_enemies(s, day)
+        assert {e['kind'] for e in enemies} <= set(catalog.legacy_night_species(map_id, day))
+        assert not any('species' in e or 'stand_in' in e for e in enemies)  # the old saved fields
+        s['elapsed'] = (day - 1) * 60 + 10.
+        shown = simulation.public_state(s)
+        assert shown['day'] == shown['stage'] == day and shown['stage_count'] == 7
+        assert shown['night_species'] == list(catalog.legacy_night_species(map_id, day))
+        assert not shown['boss_night'] and shown['boss'] is None
 
 
 def test_public_state_shows_variant_but_hides_charge_internals():
@@ -137,31 +174,23 @@ def test_coop_charging_boar_keeps_its_announced_target():
 
 
 def old_roster(map_id, difficulty):
-    """The pre-boar/shroom roster (wolf/wisp/brute cycling): total HP and damage per night."""
-    tuning = catalog.DIFFICULTIES[difficulty]
-    old = {'wolf': (45., 8.), 'brute': (90., 16.), 'wisp': (30., 6.)}
-    hp, nights = 0., []
-    for day in range(1, 8):
-        damage = 0.
-        for i in range(max(1, min(2 + day // 3, 4) + tuning['extra_enemies'])):
-            species = ['wolf'] if day == 1 and map_id == 'forest' else ['wolf', 'wisp', 'brute']
-            kind = species[(i + day + (1 if map_id == 'quarry' else 0)) % len(species)]
-            hp += old[kind][0] * tuning['hp']
-            damage += old[kind][1] * tuning['damage']
-        nights.append(damage)
-    return hp, nights
+    """The roster before stages (wolf/shroom/boar/brute/wisp pools): HP and damage per night."""
+    s = legacy_run(5, 60, map_id, difficulty)
+    nights = [simulation.night_enemies(s, day) for day in range(1, 8)]
+    return [sum(e['hp'] for e in night) for night in nights], [sum(e['damage'] for e in night) for night in nights]
 
 
-@pytest.mark.parametrize('map_id', catalog.MAPS)
+@pytest.mark.parametrize('map_id', [m for m in catalog.MAPS if m != 'tutorial'])
 @pytest.mark.parametrize('difficulty', catalog.DIFFICULTIES)
-def test_week_threat_stays_within_the_previous_envelope(map_id, difficulty):
-    """Seven nights on 탐험 stay winnable: the new roster stays inside the old roster's threat envelope."""
+def test_stage_threat_starts_like_the_old_first_nights_and_grows(map_id, difficulty):
+    """Stage 1 is about as hard as the old first night (one slot, a little more health); later
+    nights are tougher than the first; one hit (bosses aside) stays within 1.5x the old heaviest blow."""
     s = simulation.new_run(5, 0, 60, map_id, difficulty)
     tuning = catalog.DIFFICULTIES[difficulty]
-    old_hp, old_nights = old_roster(map_id, difficulty)
-    nights = [simulation.night_enemies(s, day) for day in range(1, 8)]
-    assert sum(e['hp'] for night in nights for e in night) <= old_hp * 1.05
-    assert max(e['damage'] for night in nights for e in night) <= catalog.ENEMIES['brute']['damage'] * tuning['damage']
+    old_hp, old_volleys = old_roster(map_id, difficulty)
+    nights = [simulation.night_enemies(s, day) for day in range(1, s['stage_count'] + 1)]
+    hp = [sum(e['hp'] for e in night) for night in nights]
     volleys = [sum(e['damage'] for e in night) for night in nights]
-    assert sum(volleys) <= sum(old_nights) * 1.1
-    assert max(volleys) <= max(old_nights) * 1.2 + 1e-6
+    assert hp[0] <= old_hp[0] * 1.4 and volleys[0] <= old_volleys[0] * 1.4
+    assert all(later > hp[0] for later in hp[1:]) and hp[-1] >= 2 * hp[0]
+    assert max(e['damage'] for night in nights for e in night) <= catalog.ENEMIES['brute']['damage'] * 1.5 * tuning['damage']

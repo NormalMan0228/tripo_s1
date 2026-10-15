@@ -50,7 +50,7 @@ class AdminGrant(Mutation):
     coins: int = Field(default=0, ge=0, le=100000)
 
 class RunStart(Mutation):
-    map_id: Literal['forest','quarry','frost'] = 'forest'
+    map_id: Literal['tutorial','forest','quarry','frost'] = 'forest'
     difficulty: Literal['relaxed','standard','veteran'] = 'standard'
     chapter_id: Literal['','first_fire','quiet_quarry','returning_light'] = ''
 

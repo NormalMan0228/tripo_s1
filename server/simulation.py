@@ -3,7 +3,11 @@ import math
 import random
 from copy import deepcopy
 from decimal import Decimal
-from . import navigation, catalog, campaign, survival_maps
+from . import navigation, catalog, campaign, stages, survival_maps
+
+# The tutorial: health never drops below this; a cleared field refills after this many seconds.
+TUTORIAL_HP_FLOOR = 1.
+TUTORIAL_REFILL = 6.
 
 ITEMS = {'wood': '목재', 'stone': '돌', 'berry': '열매', 'fiber': '섬유',
          'axe': '돌도끼', 'spear': '창', 'soup': '열매 수프', 'bandage': '붕대'}
@@ -157,46 +161,129 @@ def advance_charge(s, enemy, dt, now):
         enemy.update(phase='recover', phase_until=now+enemy.get('stun', 1.4))
 
 
-def night_enemies(s, day):
-    """Server-chosen roster for one night: species per map/day, count per difficulty, swarms, variant art id."""
+def creature(s, kind, enemy_id, angle, day, radius=14., hp_scale=1.):
+    """One creature of `kind` on the spawn ring: server stats by difficulty and stage, the species and
+    the stand-in whose model the client shows until the species has its own (kind = the stand-in, so
+    an older client draws today's art)."""
+    _, tuning = catalog.rules(s)
+    stats = catalog.ENEMIES[kind]
+    enemy = {'id': enemy_id, 'x': math.cos(angle)*radius, 'z': math.sin(angle)*radius,
+             'kind': stats['stand_in'], 'species': kind, 'stand_in': stats['stand_in'],
+             'variant': catalog.creature_variant(s.get('map_id', 'forest')), 'behavior': stats['behavior'],
+             'hp': stats['hp']*tuning['hp']*hp_scale, 'max_hp': stats['hp']*tuning['hp']*hp_scale,
+             'damage': stats['damage']*tuning['damage'],
+             'speed': (stats['speed']+(day-1)*.08)*tuning['speed'],
+             'windup': stats['windup'], 'reach': stats['reach'], 'impact': stats['impact'],
+             'phase': 'chase', 'phase_until': 0.}
+    for key in ('height', 'body'):
+        if key in stats: enemy[key] = stats[key]
+    if stats['behavior'] == 'charge':
+        enemy.update(charge_speed=stats['charge_speed']*tuning['speed'],
+                     charge_overshoot=stats['charge_overshoot'], stun=stats['stun'])
+    for offset in range(16):
+        if clear_position(s, enemy['x'], enemy['z']):
+            break
+        enemy['x'], enemy['z'] = math.cos(angle+offset*.25)*radius, math.sin(angle+offset*.25)*radius
+    return enemy
+
+
+def night_enemies(s, day, wave=''):
+    """Server-chosen roster for one night: species per map/stage and tier, count per difficulty,
+    swarms, variant art id. Runs saved before stages draw from their old pools."""
     region, tuning = catalog.rules(s)
     map_id = s.get('map_id', 'forest')
-    pool = catalog.night_species(map_id, day)
-    variant = catalog.creature_variant(map_id)
+    radius = region.get('spawn_radius', 14.)
+    if stages.staged(s):
+        plan = catalog.night_plan(map_id, day, tuning['extra_enemies'])
+    else:
+        pool = catalog.legacy_night_species(map_id, day)
+        plan = [pool[(i+day-1) % len(pool)] for i in range(max(1, min(2+day//3, 4)+tuning['extra_enemies']))]
     enemies = []
-    for i in range(max(1, min(2+day//3, 4)+tuning['extra_enemies'])):
-        angle = i*2.4+day
-        kind = pool[(i+day-1) % len(pool)]
-        stats = catalog.ENEMIES[kind]
-        for member in range(stats.get('swarm', 1)):
-            spread = angle+member*.22
-            enemy = {'id': f'e{day}_{i}' + (f'_{member}' if member else ''), 'x': math.cos(spread)*14,
-                     'z': math.sin(spread)*14, 'kind': kind, 'variant': variant, 'behavior': stats['behavior'],
-                     'hp': stats['hp']*tuning['hp'], 'max_hp': stats['hp']*tuning['hp'],
-                     'damage': stats['damage']*tuning['damage'],
-                     'speed': (stats['speed']+(day-1)*.08)*tuning['speed'],
-                     'windup': stats['windup'], 'reach': stats['reach'], 'impact': stats['impact'],
-                     'phase': 'chase', 'phase_until': 0.}
-            if stats['behavior'] == 'charge':
-                enemy.update(charge_speed=stats['charge_speed']*tuning['speed'],
-                             charge_overshoot=stats['charge_overshoot'], stun=stats['stun'])
-            for offset in range(16):
-                if clear_position(s, enemy['x'], enemy['z']):
-                    break
-                enemy['x'], enemy['z'] = math.cos(spread+offset*.25)*14, math.sin(spread+offset*.25)*14
+    for i, kind in enumerate(plan):
+        angle = i*2.4+day+len(wave)*1.3
+        for member in range(catalog.ENEMIES[kind].get('swarm', 1)):
+            enemy_id = f'e{day}{wave}_{i}' + (f'_{member}' if member else '')
+            enemy = creature(s, kind, enemy_id, angle+member*.22, day, radius)
+            if not stages.staged(s):
+                # Saved before stages: the old enemy fields (the species is its own art).
+                for key in ('species', 'stand_in'): enemy.pop(key)
             enemies.append(enemy)
     return enemies
 
+
+def boss_enemy(s, members=1):
+    """The map's boss on the open last night, from the north of the ring; a party's is tougher."""
+    stage = stages.count(s)
+    hp_scale = 1+catalog.BOSS_PARTY_HP*max(0, members-1)
+    boss = creature(s, s['boss'], f'boss{stage}', -math.pi/2, stage, 15., hp_scale)
+    boss['boss'] = True
+    return boss
+
+
+def spawn_due(s, clock, members=1):
+    """Tonight's creatures once per stage; the boss as the open last night begins; on the tutorial's
+    open night a new wave a few seconds after the field is clear (its kills are a goal)."""
+    if s['spawned_night'] < clock['stage']:
+        s['spawned_night'] = clock['stage']
+        s['enemies'].extend(night_enemies(s, clock['stage']))
+    if not clock['open_night']:
+        return
+    if s.get('boss') and not s.get('boss_spawned'):
+        s['boss_spawned'] = True
+        s['enemies'].append(boss_enemy(s, members))
+    if s.get('tutorial') and not s['enemies']:
+        if s.get('refill_at') is None:
+            s['refill_at'] = s['elapsed']+TUTORIAL_REFILL
+        elif s['elapsed'] >= s['refill_at']:
+            s['refills'] = s.get('refills', 0)+1
+            s['refill_at'] = None
+            s['enemies'].extend(night_enemies(s, clock['stage'], 'r'*s['refills']))
+
+
+def protect(s):
+    """Nobody falls on the tutorial: health stops at TUTORIAL_HP_FLOOR."""
+    if s.get('tutorial') and s['hp'] < TUTORIAL_HP_FLOOR:
+        s['hp'] = TUTORIAL_HP_FLOOR
+        s['message'] = '튜토리얼에서는 쓰러지지 않아요. 열매나 붕대로 회복하고 다시 도전하세요.'
+
+
+def requirement_totals(s):
+    """The tutorial's counters (catalog.TUTORIAL_REQUIREMENTS) on one run or one party member."""
+    return {key: s.get('crafted', {}).get(key, 0) if key in RECIPES else s.get(key, 0)
+            for key, _, _ in catalog.TUTORIAL_REQUIREMENTS}
+
+
+def requirements_met(totals):
+    return all(totals.get(key, 0) >= target for key, _, target in catalog.TUTORIAL_REQUIREMENTS)
+
+
+def settle(s):
+    """Solo win checks: the boss fell, the tutorial's requirements, every stage survived."""
+    if s['status'] != 'active':
+        return
+    if s.get('boss_defeated'):
+        s['status'] = 'won'
+        s['message'] = '우두머리를 쓰러뜨렸습니다! 별씨를 받고 마을로 돌아가세요.'
+    elif s.get('tutorial') and requirements_met(requirement_totals(s)):
+        s['status'] = 'won'
+        s['message'] = '첫 탐험을 마쳤어요! 마을로 돌아가 별씨를 받으세요.'
+    elif stages.time_up(s):
+        s['status'] = 'won'
+        s['message'] = ('일곱 번의 밤을 버텼습니다! 별씨를 받고 마을로 돌아가세요.' if not stages.staged(s)
+                        else '모든 스테이지를 버텼습니다! 별씨를 받고 마을로 돌아가세요.')
+
 def new_run(seed, now, day_seconds, map_id='forest', difficulty='standard'):
+    """A staged run: `day_seconds` is stage 1's length (stages.py; 90 on the servers players use)."""
     rng = random.Random(seed)
     region=catalog.MAPS[map_id]
+    if region.get('tutorial'): difficulty=catalog.TUTORIAL_DIFFICULTY
     tuning=catalog.DIFFICULTIES[difficulty]
     # Reserve camp and the four introductory resources before placing the forest.
     nodes = [dict(id=f'n{i}', kind=k, x=x, z=z, quantity=6, regrow_at=0)
              for i,(k,x,z) in enumerate([('tree', 3, 0), ('berry', -3, 0), ('stone', 0, -3), ('fiber', 0, 3)])]
     extent=region.get('node_extent',17.)
     cycle=survival_maps.RESOURCE_CYCLE[map_id]
-    for i in range(4,60):
+    for i in range(4,region.get('nodes',60)):
         kind = cycle[i % len(cycle)]
         for attempt in range(5000):
             x, z = round(rng.uniform(-extent,extent),2), round(rng.uniform(-extent,extent),2)
@@ -212,12 +299,15 @@ def new_run(seed, now, day_seconds, map_id='forest', difficulty='standard'):
     return {'map_id':map_id,'difficulty':difficulty,'obstacles':deepcopy(region['obstacles']),
             'hazards':deepcopy(region['hazards']), 'layout_version':region.get('layout_version'), 'x': 0., 'z': 1.4, 'hp': 100., 'hunger': 100., 'stamina': 100., 'sprinting': False,
             'sprint_recover_at': 0., 'elapsed': 0., 'last_wall': now,
-            'day_seconds': day_seconds, 'inventory': {'wood': 5 if difficulty=='relaxed' else 3, 'stone': 0, 'berry': 6 if difficulty=='relaxed' else 4, 'fiber': 0,
+            'day_seconds': day_seconds, 'stage_base': day_seconds, 'stage_count': region['stages'],
+            'boss': region['boss'], 'tutorial': bool(region.get('tutorial')), 'inventory': {'wood': 5 if difficulty=='relaxed' else 3, 'stone': 0, 'berry': 6 if difficulty=='relaxed' else 4, 'fiber': 0,
             'axe': 0, 'spear': 0, 'soup': 0, 'bandage': 0}, 'nodes': nodes, 'enemies': [],
             'fire_until': 0., 'harvested': 0, 'kills': 0, 'last_action': -10., 'last_attack': -10.,
             'spawned_night': 0, 'sequence': 0, 'message': '낮에는 채집하고 밤에는 모닥불 곁을 지키세요.', 'status': 'active'}
 
-def advance(s, now, dx=0., dz=0., sprint=False):
+def advance(s, now, dx=0., dz=0., sprint=False, solo=True):
+    """One tick of a solo run. A party member's view (coop.py, solo=False) takes only its own
+    movement, hunger, cold and terrain here; the world's creatures and its outcome are coop's."""
     # Disconnection pauses the prototype simulation; missed time cannot be banked for movement.
     dt = max(0., min(now - s['last_wall'], 0.3))
     s['last_wall'] = now
@@ -244,13 +334,11 @@ def advance(s, now, dx=0., dz=0., sprint=False):
     s['hunger'] = max(0., s['hunger'] - dt * (0.54 if s['sprinting'] else 0.42)*tuning['hunger'])
     if s['hunger'] == 0:
         s['hp'] -= dt * 3
-    day = min(7, int(s['elapsed'] / s['day_seconds']) + 1)
-    night = (s['elapsed'] % s['day_seconds']) / s['day_seconds'] >= 0.65
+    clock = stages.clock(s)
+    day = clock['stage']
     warm = s['fire_until'] > s['elapsed'] and math.hypot(s['x'], s['z']) < 4.0
-    if night:
-        if s['spawned_night'] < day:
-            s['spawned_night'] = day
-            s['enemies'].extend(night_enemies(s, day))
+    if clock['night']:
+        if solo: spawn_due(s, clock)
         if not warm:
             s['hp'] -= dt * 0.28*region['cold']*tuning['cold']
         for enemy in s['enemies']:
@@ -268,12 +356,12 @@ def advance(s, now, dx=0., dz=0., sprint=False):
             # Never grow a solid obstacle inside the player or a creature.
             occupied = any(math.hypot(a['x']-node['x'],a['z']-node['z'])<1.1 for a in [s,*s['enemies']])
             if node['kind'] not in ('tree','stone') or not occupied: node['quantity'] = 4
+    protect(s)
     if s['hp'] <= 0:
         s['hp'], s['status'] = 0., 'lost'
         s['message'] = '탐험이 끝났습니다. 마을에서 다시 준비해 보세요.'
-    elif s['elapsed'] >= s['day_seconds'] * 7:
-        s['status'] = 'won'
-        s['message'] = '일곱 번의 밤을 버텼습니다! 별씨를 받고 마을로 돌아가세요.'
+    elif solo:
+        settle(s)
 
 def action(s, kind, target=''):
     if s['status'] != 'active':
@@ -342,41 +430,92 @@ def action(s, kind, target=''):
         if now-s['last_attack'] < 0.7:
             return '다음 공격을 준비 중입니다.'
         s['last_attack'] = now
-        enemy = min((e for e in s['enemies'] if clear_swing(s,s,e)), key=lambda e: math.hypot(e['x']-s['x'],e['z']-s['z']), default=None)
-        if enemy is None or math.hypot(enemy['x']-s['x'],enemy['z']-s['z']) > 2.6:
+        # The nearest by the gap to its body: a large creature is reached from further away.
+        gap = lambda e: math.hypot(e['x']-s['x'],e['z']-s['z'])-e.get('body',0.)
+        enemy = min((e for e in s['enemies'] if clear_swing(s,s,e)), key=gap, default=None)
+        if enemy is None or gap(enemy) > 2.6:
             return '가까운 적이 없습니다.'
         enemy['hp'] -= 25 if inv['spear'] else 10
-        # Successful hits interrupt a telegraphed strike briefly.
-        enemy.update(phase='recover',phase_until=now+.4)
+        # Successful hits interrupt a telegraphed strike briefly (a boss only while it walks).
+        if not enemy.get('boss') or enemy.get('phase') == 'chase':
+            enemy.update(phase='recover',phase_until=now+.4)
         if enemy['hp'] <= 0:
             s['enemies'].remove(enemy)
             s['kills'] += 1
+            if enemy.get('boss'):
+                s['boss_defeated'] = True
+                settle(s)
+                return '우두머리를 쓰러뜨렸습니다!'
         return '창 공격!' if inv['spear'] else '맨손 공격!'
     return '허용되지 않은 행동입니다.'
 
 def public_state(s):
-    data = {k:v for k,v in s.items() if k not in ('last_wall','last_action','last_attack')}
+    data = {k:v for k,v in s.items() if k not in ('last_wall','last_action','last_attack','refill_at')}
+    # Every creature names its species and the stand-in drawn until that species has a model (runs
+    # saved before stages: the species is its own art).
     data['enemies']=[{k:v for k,v in e.items() if not k.startswith('_')} for e in s['enemies']]
+    for enemy in data['enemies']:
+        enemy.setdefault('species',enemy.get('kind','wolf'))
+        enemy.setdefault('stand_in',enemy.get('kind','wolf'))
     data['map_id']=s.get('map_id','forest')
     data['difficulty']=s.get('difficulty','standard')
     data['reward_multiplier']=catalog.combined_multiplier(s)
     data['obstacles']=s.get('obstacles',[])
     data['hazards']=s.get('hazards',[])
-    data['day'] = min(7, int(s['elapsed']/s['day_seconds'])+1)
-    data['night'] = s['elapsed'] % s['day_seconds'] / s['day_seconds'] >= 0.65
-    data['day_progress'] = s['elapsed'] % s['day_seconds'] / s['day_seconds']
+    # The stage clock (stages.py): one stage is one day; the open last night has no limit
+    # (stage_remaining -1, day_progress held at a night value). `day` stays the stage for older readers.
+    clock=stages.clock(s)
+    data['stage']=clock['stage']
+    data['stage_count']=clock['count']
+    data['stage_seconds']=clock['seconds']
+    data['stage_remaining']=clock['remaining']
+    data['day']=clock['stage']
+    data['night']=clock['night']
+    data['day_progress']=clock['progress']
+    data['phase_remaining']=clock['phase_remaining']
+    data['has_boss']=bool(s.get('boss'))
+    data['tutorial']=bool(s.get('tutorial'))
+    data['boss_night']=bool(s.get('boss')) and clock['open_night']
+    boss=next((e for e in s['enemies'] if e.get('boss')),None)
+    data['boss']=({'id':boss['id'],'name':catalog.ENEMIES[boss['species']]['name'],'hp':max(0.,boss['hp']),'max_hp':boss['max_hp']}
+                  if boss and data['boss_night'] and s['status']=='active' else None)
+    # The species tonight's roster draws from (night_enemies; the boss on its stage), so the client
+    # reads only their models ahead of the night: under the expedition's loading card, and the new
+    # ones while a day is young; night_stand_ins names the model each is drawn with until it has its own.
+    if stages.staged(s):
+        data['night_species']=catalog.night_species(data['map_id'],data['day'],data['difficulty'],bool(s.get('boss')))
+    else:
+        data['night_species']=list(catalog.legacy_night_species(data['map_id'],data['day']))
+    data['night_stand_ins']={kind:catalog.stand_in(kind) for kind in data['night_species']}
     data['fire_remaining'] = max(0., s['fire_until']-s['elapsed'])
     data['stamina'] = s.get('stamina',100.)
     data['sprinting'] = s.get('sprinting',False)
     data['warm'] = data['fire_remaining']>0 and math.hypot(s['x'],s['z'])<4
-    data['phase_remaining'] = max(0.,((1 if data['night'] else .65)-data['day_progress'])*s['day_seconds'])
     data['action_cooldown'] = max(0.,.35-(s['elapsed']-s['last_action']))
     data['attack_cooldown'] = max(0.,.7-(s['elapsed']-s['last_attack']))
     data['story']=campaign.progress(s)
     return data
 
+# Rewards for a won run (starseeds), before the map x difficulty multiplier:
+#   staged map: STAGE_BASE + STAGE_PAY per stage + play (harvested/4 + 2 per kill + hp/10, at most
+#               PLAY_CAP + PLAY_PER_STAGE per stage) + the boss bonus BOSS_BASE + BOSS_PER_STAGE per stage
+#   tutorial:   TUTORIAL_REWARD, flat
+#   saved before stages (seven days): 35 + play, at most 100 (the old rule)
+STAGE_BASE, STAGE_PAY, PLAY_CAP, PLAY_PER_STAGE = 20, 12, 10, 8
+BOSS_BASE, BOSS_PER_STAGE = 15, 10
+TUTORIAL_REWARD = 20
+
+
 def reward(s):
     if s['status'] != 'won':
         return 0
-    base=min(100, 35 + s['harvested']//4 + s['kills']*2 + int(s['hp']//10))
+    play = s['harvested']//4 + s['kills']*2 + int(s['hp']//10)
+    if not stages.staged(s):
+        base = min(100, 35 + play)
+    elif s.get('tutorial'):
+        return TUTORIAL_REWARD
+    else:
+        count = stages.count(s)
+        base = STAGE_BASE + STAGE_PAY*count + min(PLAY_CAP + PLAY_PER_STAGE*count, play)
+        if s.get('boss_defeated'): base += BOSS_BASE + BOSS_PER_STAGE*count
     return math.floor(Decimal(base)*Decimal(str(catalog.combined_multiplier(s))))

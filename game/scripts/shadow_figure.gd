@@ -44,6 +44,8 @@ extends CharacterBody3D
 const SILHOUETTE := preload("res://shaders/shadow_silhouette.gdshader")
 const VILLAGER := preload("res://shaders/villager_look.gdshader")
 const DayFolk = preload("res://scripts/day_folk.gd")
+## Emote bubbles get a bark in the figure's register (voice_babble.gd; preloads only sfx_bank.gd).
+const VoiceBabble = preload("res://scripts/voice_babble.gd")
 const IxPose = preload("res://scripts/ix/ix_pose.gd")
 const DAY_SECONDS := 2.5
 const EYE_SHADER := """
@@ -101,8 +103,13 @@ void fragment() {
 """
 static var _library: AnimationLibrary
 static var _eye_shader: Shader
+## The same emote bubble again within this many seconds gets no new bark (pop()).
+const BARK_REPEAT_GAP := 15.0
 
 var spec: Dictionary = {}
+## The last bubble that barked and when (s), for BARK_REPEAT_GAP.
+var bark_text := ""
+var bark_time := -100.0
 var folk: Node
 var paths: RefCounted
 var title := ""
@@ -822,6 +829,14 @@ func pop(text: String, seconds := 1.8) -> void:
 	bubble.scale = Vector3.ONE*0.3
 	var tween := bubble.create_tween()
 	tween.tween_property(bubble, "scale", Vector3.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	# The bubble's bark (♪ ! … ♥ ✉ zz) in this resident's voice; throttled per voice and overall
+	# and quieter with distance inside VoiceBabble.emote. A bubble that repeats (an activity cue
+	# every few seconds) barks again only after BARK_REPEAT_GAP s.
+	var now := Time.get_ticks_msec()*0.001
+	if is_inside_tree() and (text != bark_text or now-bark_time >= BARK_REPEAT_GAP):
+		if VoiceBabble.emote(null, str(spec.get("id", "")), text, global_position+Vector3(0, 1.8, 0)):
+			bark_text = text
+			bark_time = now
 
 ## ------------------------------------------------------------------ poses
 
