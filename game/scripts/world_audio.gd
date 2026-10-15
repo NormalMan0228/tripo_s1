@@ -353,8 +353,8 @@ func remote_playing() -> int:
 ## grass. Walkers not updated for 5 s are forgotten.
 func stride(key: String, at: Vector3, delta: float, surface := "", own := false, db := -8.0) -> void:
 	var now := Time.get_ticks_msec()
-	var entry: Dictionary = walkers.get(key, {})
-	walkers[key] = entry
+	if not walkers.has(key): walkers[key] = {}
+	var entry: Dictionary = walkers[key]
 	var before: Vector3 = entry.get("at", at)
 	entry.at = at
 	entry.seen = now

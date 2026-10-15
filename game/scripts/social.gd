@@ -114,7 +114,7 @@ func _process(delta: float) -> void:
 				entry["ground_at"]=Time.get_ticks_msec()
 				if place=="village": entry["ground"]="stone" if preload("res://scripts/roads.gd").on_road(Vector2(at.x,at.z)) else "grass"
 				else: entry["ground"]=app.region_surface() if app.has_method("region_surface") else "grass"
-			audio.stride("peer%d" % entry.node.get_instance_id(),at,delta,str(entry.get("ground","grass")))
+			audio.stride(entry.audio_key,at,delta,str(entry.get("ground","grass")))
 	if not enabled or app.api.token.is_empty(): return
 	var interval := 0.0
 	match app.screen:
@@ -273,7 +273,7 @@ func sync_peers(players: Array) -> void:
 			nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 			preload("res://scripts/art.gd").plate_priority(nameplate)
 			actor.add_child(nameplate)
-			peers[id] = {"node":actor, "label":nameplate, "motion":RemoteMotion.new()}
+			peers[id] = {"node":actor, "label":nameplate, "motion":RemoteMotion.new(), "audio_key":"peer%d" % actor.get_instance_id()}
 		peers[id].motion.push_record(record, target)
 		AvatarLook.wear(peers[id].node, record.get("avatar", {}), version, true)
 		peers[id].node.sprinting = bool(record.get("sprinting", false))
