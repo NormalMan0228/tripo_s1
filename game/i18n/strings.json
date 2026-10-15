@@ -11399,6 +11399,42 @@
   "밀짚모자": {
    "en": "Straw hat",
    "zh": "草帽"
+  },
+  "이름": {
+   "en": "Name",
+   "zh": "名字"
+  },
+  "다른 사람에게 보일 이름 · 2~12자": {
+   "en": "Name others see · 2-12 letters",
+   "zh": "别人看到的名字 · 2~12字"
+  },
+  "이름은 2~12자로 지어 주세요.": {
+   "en": "Use 2-12 letters for the name.",
+   "zh": "名字请用2~12个字。"
+  },
+  "이름은 2~12자, 글자와 숫자로 지어 주세요.": {
+   "en": "Use 2-12 letters or numbers for the name.",
+   "zh": "名字请用2~12个字母或数字。"
+  },
+  "쓸 수 없는 말이 들어 있어요.": {
+   "en": "That name has a word that is not allowed.",
+   "zh": "名字中含有不允许的词。"
+  },
+  "운영자처럼 보이는 이름은 쓸 수 없어요.": {
+   "en": "Names that look like staff are not allowed.",
+   "zh": "不能使用像管理员的名字。"
+  },
+  "이미 다른 모험가가 쓰는 이름이에요.": {
+   "en": "Another adventurer already has that name.",
+   "zh": "这个名字已被其他冒险者使用。"
+  },
+  "이름은 하루에 한 번 바꿀 수 있어요.": {
+   "en": "You can change your name once a day.",
+   "zh": "名字每天只能改一次。"
+  },
+  "이 이름은 쓸 수 없어요.": {
+   "en": "That name cannot be used.",
+   "zh": "这个名字不能使用。"
   }
  },
  "templates": [],
