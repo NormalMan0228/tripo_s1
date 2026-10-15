@@ -1,6 +1,7 @@
 extends Node3D
 
 const Art = preload("res://scripts/art.gd")
+const VillageBag = preload("res://scripts/village_bag.gd")
 const Loader = preload("res://scripts/model_loader.gd")
 const PaintApply = preload("res://scripts/painter/paint_apply.gd")
 const ObjectTransform = preload("res://scripts/object_transform.gd")
@@ -106,6 +107,8 @@ var wallet: Label
 var metrics: Label
 var pack: Label
 var objects_list: ItemList
+## The village bag drawer (village_bag.gd); null outside the village.
+var bag: RefCounted
 ## Left clicks that reached the world (furniture, placement) past the HUD.
 var world_clicks := 0
 var object_info: Label
@@ -1018,58 +1021,8 @@ func enter_village() -> void:
 	reward_button.visible=false
 	right = panel(Vector2(948,20),308,"hero")
 	RpgUi.pin(right.get_parent(),1.0,0.0)
-	var drawer_title := HBoxContainer.new()
-	right.add_child(drawer_title)
-	drawer_title.add_child(RpgUi.icon("res://assets/ui/bag.svg",30))
-	text(drawer_title,tr("가방"),24).size_flags_horizontal=Control.SIZE_EXPAND_FILL
-	close_button(drawer_title,toggle_drawer,"I")
-	rule(right)
-	objects_list = ItemList.new()
-	objects_list.custom_minimum_size = Vector2(252,150)
-	objects_list.item_selected.connect(select_object)
-	objects_list.item_selected.connect(func(_index: int): RpgUi.sfx("select",-9.0))
-	right.add_child(objects_list)
-	object_info = text(right,tr("물건을 선택하세요."),13)
-	object_info.custom_minimum_size.x = 250
-	object_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var palette := HBoxContainer.new()
-	palette.add_theme_constant_override("separation",8)
-	palette.alignment = BoxContainer.ALIGNMENT_CENTER
-	right.add_child(palette)
-	for color in COLORS: RpgUi.name_tip(swatch(palette,Color(color),func(): paint_object(color)),RpgUi.color_name(color))
-	paint_palette = palette
-	# Objects with UVs are painted in the workspace; the swatches stay for the others.
-	paint_button = button(right,tr("색칠하기"),open_painter,"primary")
-	paint_button.tooltip_text = tr("붓·채우기·그라데이션으로 표면을 직접 칠해요")
-	paint_hint = text(right,"",12)
-	paint_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	paint_hint.custom_minimum_size.x = 250
-	paint_hint.visible = false
-	shape_button = button(right,tr("모양 바꾸기"),open_shape_panel)
-	shape_button.tooltip_text = tr("가로 · 깊이 · 높이 · 크기 · 좌우 반전")
-	button(right,tr("선택한 물건 놓기"),begin_place)
-	button(right,tr("선택한 물건 회수"),retrieve_object)
-	button(right,tr("선택한 가구 사용"),func():await village_furniture_event(selected.get("id",""),"click"))
-	RpgUi.name_tip(button(right,tr("상호작용"),open_interactions),tr("누르거나 다가가면 움직이고 빛나게"))
-	if TRADING_UI_ENABLED:
-		var sell_row := HBoxContainer.new()
-		right.add_child(sell_row)
-		price = SpinBox.new()
-		price.min_value = 1
-		price.max_value = 10000
-		price.value = 25
-		price.custom_minimum_size.x = 115
-		sell_row.add_child(price)
-		button(sell_row,tr("별씨로 판매"),sell_object)
-	RpgUi.name_tip(button(right,tr("새 물건 제작 의뢰"),open_craft,"gold"),tr("새 물건 제작 의뢰"),RpgUi.key_text("craft"))
-	prompt = LineEdit.new()
-	prompt.max_length = 500
-	right.add_child(prompt)
-	prompt.visible=false # Retained for legacy integration/recovery, outside the player flow.
-	var utilities := HBoxContainer.new()
-	right.add_child(utilities)
-	button(utilities,tr("가방 정리"),refresh_inventory)
-	button(utilities,tr("로그아웃"),logout)
+	# The bag drawer: slots, pages and the action board (village_bag.gd).
+	bag = VillageBag.build(self,right,toggle_drawer)
 	right.get_parent().visible=false
 	await LoadPace.step("village hud")
 	build_play_hud(false)
@@ -1412,6 +1365,7 @@ func refresh_inventory() -> void:
 	for obj in me.objects:
 		var state_name: String = {"inventory":tr("보관"),"placed":tr("배치"),"listed":tr("판매")}[obj.state]
 		objects_list.add_item("[%s] %s" % [state_name,obj.name])
+	if bag: bag.refresh()
 	await sync_placed(me.objects.filter(func(obj): return obj.state=="placed" and obj.get("room","village")=="village"))
 	if epoch!=world_epoch:
 		refreshing=false
@@ -1557,6 +1511,7 @@ func select_object(index: int) -> void:
 	selected = me.objects[index]
 	var state_name: String={"inventory":tr("보관 중"),"placed":tr("배치됨 · ")+{"home":tr("내 집"),"workshop":tr("공방"),"village":tr("마을")}.get(selected.get("room","village"),tr("다른 공간")),"listed":tr("장터에서 판매 중")}[selected.state]
 	object_info.text = "%s\n%s" % [selected.name,state_name]
+	if bag: bag.mark(index)
 	inspect_object(selected.duplicate())
 
 func load_object(obj: Dictionary, prefix: String="/v1/objects/") -> Node3D:
@@ -1585,7 +1540,9 @@ func update_paint_entry(model: Node3D) -> void:
 	var paintable := PaintApply.has_uvs(model)
 	paint_palette.visible = not paintable
 	paint_button.visible = true
-	paint_button.text = tr("색칠하기") if paintable else tr("전체 색 고르기")
+	# Short words for the bag's action board (village_bag.gd); the tooltip says the rest.
+	paint_button.text = tr("색칠") if paintable else tr("전체 색")
+	paint_button.tooltip_text = tr("붓·채우기·그라데이션으로 표면을 직접 칠해요") if paintable else tr("전체 색 고르기")
 	paint_hint.visible = not paintable
 	paint_hint.text = tr("이 물건은 표면 좌표(UV) 없이 만들어져 전체 색만 바꿀 수 있어요.")
 

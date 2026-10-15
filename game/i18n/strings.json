@@ -10783,6 +10783,46 @@
   "오늘 판매로 받을 별씨를 다 받았어요. 내일 다시 팔아 주세요.": {
    "en": "You have received today's star-seeds from selling. Sell again tomorrow.",
    "zh": "今天出售可获得的星种已领完。明天再来卖吧。"
+  },
+  "%d개": {
+   "en": "%d items",
+   "zh": "%d件"
+  },
+  "가방 정리 · 서버에서 다시 받아요": {
+   "en": "Tidy the bag · fetch it again",
+   "zh": "整理背包 · 重新获取"
+  },
+  "색칠": {
+   "en": "Paint",
+   "zh": "上色"
+  },
+  "모양": {
+   "en": "Shape",
+   "zh": "形状"
+  },
+  "값": {
+   "en": "Price",
+   "zh": "价格"
+  },
+  "전체 색": {
+   "en": "Colour",
+   "zh": "整体颜色"
+  },
+  "물건을 고르세요.": {
+   "en": "Pick an object.",
+   "zh": "请选择物品。"
+  },
+  "배치됨": {
+   "en": "Placed",
+   "zh": "已放置"
+  },
+  "판매 중": {
+   "en": "For sale",
+   "zh": "出售中"
+  },
+  "놓아 둔 가구를 써 봐요": {
+   "en": "Use a placed piece of furniture",
+   "zh": "使用已放置的家具"
   }
  },
  "templates": []

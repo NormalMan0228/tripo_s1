@@ -70,7 +70,7 @@ func run() -> void:
 	# The welcome chair has no UVs: the bag keeps its swatches; the painter offers the whole colour.
 	app.select_object(0)
 	check(await wait_until(func(): return is_instance_valid(app.inspect_model)), "welcome chair inspected")
-	check(not PaintApply.has_uvs(app.inspect_model) and app.paint_palette.visible and app.paint_button.text == tr("전체 색 고르기"), "UV-less object keeps the swatches with a reason")
+	check(not PaintApply.has_uvs(app.inspect_model) and app.paint_palette.visible and app.paint_button.text == tr("전체 색"), "UV-less object keeps the swatches with a reason")
 	app.open_painter()
 	var fallback: Control = app.painter
 	check(await wait_until(func(): return is_instance_valid(fallback) and is_instance_valid(fallback.picker)), "painter opens the colour panel")
@@ -98,7 +98,7 @@ func run() -> void:
 		if app.me.objects[i].id == id: index = i
 	app.select_object(index)
 	check(await wait_until(func(): return is_instance_valid(app.inspect_model) and app.selected.get("id") == id and app.inspect_model.get_meta("studio", false)), "crafted assembly inspected")
-	check(PaintApply.has_uvs(app.inspect_model) and not app.paint_palette.visible and app.paint_button.text == tr("색칠하기"), "the bag offers the painter for a UV object")
+	check(PaintApply.has_uvs(app.inspect_model) and not app.paint_palette.visible and app.paint_button.text == tr("색칠"), "the bag offers the painter for a UV object")
 	check(app.me.objects[index].get("paint_version") == null, "not painted yet")
 
 	app.open_painter()
