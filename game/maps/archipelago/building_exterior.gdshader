@@ -40,11 +40,14 @@ uniform vec2 glow_band = vec2(0.6, 7.5);
 uniform float fade = 0.0;
 const float BAYER[16] = {0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0};
 
+// A door leaf (maps/archipelago/building_doors.gd) has its origin at its threshold: this lifts it
+// back to its height in the building for the contact shade and the window band.
+uniform float local_lift = 0.0;
 varying vec3 local_pos;
 varying vec3 local_normal;
 
 void vertex() {
-	local_pos = VERTEX;
+	local_pos = VERTEX+vec3(0.0, local_lift, 0.0);
 	local_normal = NORMAL;
 }
 
