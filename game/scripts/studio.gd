@@ -300,6 +300,7 @@ var story_home: Node
 
 func _ready() -> void:
 	I18n.setup()
+	Art.watch_labels(get_tree())
 	Loader.warm_up_compression()
 	var veil := Transition.of(get_tree())
 	veil.cover()
