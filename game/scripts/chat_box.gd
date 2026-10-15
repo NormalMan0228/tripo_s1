@@ -55,7 +55,8 @@ func _ready() -> void:
 	style.content_margin_bottom = 8
 	glass.add_theme_stylebox_override("panel", style)
 	glass.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	glass.mouse_filter = Control.MOUSE_FILTER_PASS
+	# The glass ends a click (62): the log's links still answer first, nothing goes to the world.
+	glass.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(glass)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 6)

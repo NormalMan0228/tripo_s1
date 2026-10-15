@@ -106,6 +106,8 @@ var wallet: Label
 var metrics: Label
 var pack: Label
 var objects_list: ItemList
+## Left clicks that reached the world (furniture, placement) past the HUD.
+var world_clicks := 0
 var object_info: Label
 var prompt: LineEdit
 var price: SpinBox
@@ -1206,7 +1208,8 @@ func build_village_hud() -> void:
 	plate.content_margin_top = 14
 	plate.content_margin_bottom = 16
 	tracker.add_theme_stylebox_override("panel",plate)
-	tracker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# The card takes clicks on its glass, not the furniture behind it (62).
+	tracker.mouse_filter = Control.MOUSE_FILTER_STOP
 	ui.add_child(tracker)
 	RpgUi.pin(tracker,1.0,0.0)
 	var column := VBoxContainer.new()
@@ -3272,6 +3275,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			elif key==KEY_E and near(TownLayout.WORKSHOP_DOOR,2.5): open_studio()
 			elif key==KEY_E: village_furniture_event(nearest_furniture(),"click")
 	if screen=="village" and event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT:
+		# Counted for tests/hud_click_tour.gd: a click on the HUD must never get here.
+		world_clicks+=1
 		if is_instance_valid(preview): place_preview()
 		else: click_furniture(event.position)
 

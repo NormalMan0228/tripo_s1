@@ -1292,7 +1292,8 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 	tray.position = Vector2(640.0 - width * 0.5, y + 6)
 	tray.size = Vector2(width, SLOT + 8)
 	tray.custom_minimum_size = tray.size
-	tray.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# The tray takes the clicks between and around its slots: none reaches the world behind (62).
+	tray.mouse_filter = Control.MOUSE_FILTER_STOP
 	tray.modulate = Color(1,1,1,.92)
 	ui.add_child(tray)
 	pin(tray, 0.5, 1.0)
@@ -1495,7 +1496,8 @@ static func toast(lane: Control, text: String, kind := "info", opts := {}) -> Co
 	pill.add_theme_stylebox_override("panel", panel_style("pill"))
 	pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var actions: Array = opts.get("actions", [])
-	pill.mouse_filter = Control.MOUSE_FILTER_STOP if not actions.is_empty() else Control.MOUSE_FILTER_IGNORE
+	# A click on a toast stays on it (62: it went through to the furniture behind).
+	pill.mouse_filter = Control.MOUSE_FILTER_STOP
 	var width: float = float(lane.get_meta("width", 0.0))
 	var widest := width if width > 0.0 else float(lane.get_meta("max_width", 640.0))
 	# On a narrowed canvas (UI scale above 100 %) a top toast stays between the side columns.

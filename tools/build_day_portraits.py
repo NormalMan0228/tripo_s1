@@ -31,6 +31,9 @@ from build_brand_art import raw_dir  # noqa: E402
 
 PICKS = {"postman": 3, "fisher": 1, "farmer": 3, "sweeper": 3, "gentleman": 3, "stargazer": 3, "lamplighter": 4,
          "gardener": 3, "scout": 1, "regular": 4, "miller": 2, "shopkeeper": 1, "kid": 1, "stroller": 2, "poet": 2}
+## The two villagers from the first cover art (2026-10-16, user picks and names): 보니 the workshop
+## crafter (lavender-blue hair, mallet on her shoulder) and 솔 the gardener girl; id -> (source, take).
+EXTRAS = {"boni": ("crafter", 1), "sol": ("cgardener", 3)}
 UI = ROOT / "game" / "assets" / "ui"
 CARD = (600, 720)
 
@@ -96,8 +99,9 @@ def card(standee: Image.Image) -> Image.Image:
 def main() -> None:
     folder = raw_dir().parent / "portraits"
     (UI / "standee").mkdir(parents=True, exist_ok=True)
-    for ident, take in PICKS.items():
-        source = folder / f"dayp_{ident}_{take}.jpg"
+    jobs = [(ident, ident, take) for ident, take in PICKS.items()] + [(ident, stem, take) for ident, (stem, take) in EXTRAS.items()]
+    for ident, stem, take in jobs:
+        source = folder / f"dayp_{stem}_{take}.jpg"
         if not source.exists():
             sys.exit(f"missing {source}")
         rgb = np.asarray(Image.open(source).convert("RGB"), np.float32) / 255.0
