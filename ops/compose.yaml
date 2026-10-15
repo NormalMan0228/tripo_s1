@@ -30,6 +30,8 @@ services:
       TRIPOTHON_SELL_COINS_PER_STAR: ${TRIPOTHON_SELL_COINS_PER_STAR:-3}
       # Residents' requests: their starseed rewards times this (server/quests.py STARS; 0 = off).
       TRIPOTHON_QUEST_STARS_SCALE: ${TRIPOTHON_QUEST_STARS_SCALE:-1.0}
+      # Treasure chests: their starseed rewards times this (server/treasure.py STARS; 0 = off).
+      TRIPOTHON_CHEST_STARS_SCALE: ${TRIPOTHON_CHEST_STARS_SCALE:-1.0}
       # The trial game has no invitation field: sign-up is open by default (limited per address/day).
       TRIPOTHON_OPEN_REGISTRATION: ${TRIPOTHON_OPEN_REGISTRATION:-true}
       # Trial cap on Tripo credits per craft: 10 = one untextured H3 mesh from text.

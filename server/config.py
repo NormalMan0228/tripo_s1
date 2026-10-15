@@ -133,6 +133,9 @@ class Settings:
     # Residents' requests (server/quests.py): their starseed rewards (quests.STARS) times this;
     # 0 turns the rewards off (the requests still run and pay nothing).
     quest_stars_scale: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_QUEST_STARS_SCALE', '1.0')))
+    # Treasure chests (server/treasure.py): their starseed rewards (treasure.STARS) times this;
+    # 0 turns the rewards off (the chests still open and pay nothing).
+    chest_stars_scale: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_CHEST_STARS_SCALE', '1.0')))
     # Friendship points for hearts 1..4 (each new heart brings a letter, the fourth a return gift).
     npc_levels: tuple = field(default_factory=lambda: tuple(int(v) for v in os.getenv('TRIPOTHON_NPC_LEVELS', '30,80,160,300').split(',')))
     session_seconds: int = 12 * 60 * 60
@@ -242,6 +245,8 @@ class Settings:
             raise ValueError('Invalid presence budget')
         if not (math.isfinite(self.quest_stars_scale) and 0 <= self.quest_stars_scale <= 5):
             raise ValueError('TRIPOTHON_QUEST_STARS_SCALE must be between 0 (off) and 5')
+        if not (math.isfinite(self.chest_stars_scale) and 0 <= self.chest_stars_scale <= 5):
+            raise ValueError('TRIPOTHON_CHEST_STARS_SCALE must be between 0 (off) and 5')
         if self.usage_key and len(self.usage_key) < 32:
             raise ValueError('The usage key must be at least 32 characters (ops/usage_key.sh makes one)')
         self.data_dir.mkdir(parents=True, exist_ok=True)

@@ -201,7 +201,7 @@ var npcs: Array[Node3D]=[]
 ##   leave()                             the village is about to be torn down
 ## Missing scripts are skipped, so each add-on can land on its own.
 ## story.gd (the opening chapter) comes before shadow_folk.gd: it holds 모카's plan before her walker is placed.
-const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/story.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd"]
+const VILLAGE_MODULES := ["res://scripts/building_dressing.gd","res://scripts/field_objects.gd","res://scripts/story.gd","res://scripts/shadow_folk.gd","res://scripts/occluder_fade.gd","res://scripts/guide.gd","res://scripts/treasure.gd"]
 var modules: Array[Node]=[]
 var prompt_wait := 0.0
 var chosen_map := "forest"
