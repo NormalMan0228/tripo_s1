@@ -160,6 +160,8 @@ var tick_elapsed := 0.0
 var poll_elapsed := 0.0
 var entitlement_elapsed := 0.0
 var polling_entitlements := false
+## /v1/me polls that failed in a row without a session answer (timeouts while dressing, dropped Wi-Fi).
+var entitlement_failures := 0
 var refreshing := false
 var polling_job := false
 var reward_button: Button
@@ -1539,7 +1541,15 @@ func poll_entitlements() -> void:
 	if epoch!=world_epoch: return
 	# Maintenance or a too-old game is not a lost session: the gate's screen waits it out.
 	if not result.ok and result.error in Api.GATE_CODES: return
+	if not result.ok and not (int(result.get("status",0)) in [401,403]):
+		# A timeout (slow frames while dressing), a dropped connection or a proxy page is not a lost
+		# session: the next poll tries again, and only a run of failures signs the player out.
+		entitlement_failures += 1
+		print("[Villagen] /v1/me poll failed: %s (%d in a row)" % [result.error, entitlement_failures])
+		if entitlement_failures < 5: return
 	if not result.ok:
+		print("[Villagen] poll logout: ", result.error)
+		entitlement_failures = 0
 		# Fail closed on auth loss or disconnection; don't retain protected models.
 		cancel_preview()
 		CraftTracker.end(api)
@@ -1549,6 +1559,7 @@ func poll_entitlements() -> void:
 		login_ui()
 		refuse(error_message(result.error))
 		return
+	entitlement_failures = 0
 	# Residents' home versions: a house cached at this version opens without asking again.
 	NpcGifts.set_versions(result.data.get("npc_homes"),result.data.get("npc_homes_host",""))
 	var story := chapter()

@@ -596,7 +596,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             return {'residents':residency,'username':user['username'],'shards':user['shards'],'mode':settings.mode,'role':user['role'],
                 'generation_enabled': settings.mode=='demo' or bool(settings.legacy_generation_enabled and settings.tripo_key and settings.paid_enabled),
                 'studio_tripo_enabled': bool(settings.tripo_key and settings.paid_enabled),
-                'generation_cost':25,'profile':profile(conn,user['id']),**shown_name(conn,user['id']),'catalog':catalog.public_catalog(),'campaign':campaign.public(conn,user['id']),
+                'generation_cost':25,'profile':(own_profile:=profile(conn,user['id'])),
+                # Top level too: the game reads it here to send pre-0.11.9 accounts to the eight-character select once.
+                'needs_character_select':own_profile['needs_character_select'],**shown_name(conn,user['id']),'catalog':catalog.public_catalog(),'campaign':campaign.public(conn,user['id']),
                 'active_run':active['id'] if active else None,
                 # False until the expedition tutorial is cleared once: the game starts it for the first expedition.
                 'tutorial_done':tutorial.done(conn,user['id']),

@@ -97,8 +97,10 @@ func _ready() -> void:
 		free.color=Color(str(avatar[key]))
 		free.set_meta("free_part",key)
 		RpgUi.name_tip(free,label.text+" · "+tr("직접 고르기"))
-		free.color_changed.connect(func(value: Color): avatar[key]="#"+value.to_html(false); refresh())
-		free.popup_closed.connect(func(): RpgUi.sfx("swatch",-8.0))
+		# Dragging in the picker sends a colour per mouse move; rebuilding the body each time stalled
+		# weak laptops for seconds, so the look is rebuilt once when the picker closes.
+		free.color_changed.connect(func(value: Color): avatar[key]="#"+value.to_html(false))
+		free.popup_closed.connect(func(): RpgUi.sfx("swatch",-8.0); refresh())
 		palette.add_child(free)
 	var hat := OptionButton.new()
 	var hats := ["none","cap","beret"]+(["straw"] if v2 else [])
