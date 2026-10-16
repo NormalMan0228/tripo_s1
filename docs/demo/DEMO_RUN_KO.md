@@ -45,8 +45,8 @@
 ## 3. 준비 체크리스트
 
 **서버 (시연 전날까지)**
-- [ ] 시연은 학교 서버 0.11.7 (2026-10-15 21:10 배포). **시연 전에는 서버 업데이트를 다시 돌리지 않습니다** — `update_online_server.sh`는 최신 브랜치를 받아 다시 빌드하고, `--announce`를 쓰면 접속한 사람을 모두 타이틀로 내보냅니다.
-- [ ] **하루 제작 횟수 확인 (읽기만)** — 학교 서버 설정은 `--per-day 3 --craft-day-limit 105`: 서버 전체 하루 **105회**, 계정당 하루 **3회**. 시연(의자 + 자유 제작 = 2회)에는 충분합니다.
+- [ ] 시연은 메인 서버 0.11.9 (2026-10-16 배포). **0.11.9 배포·점검이 끝난 뒤에는 서버 업데이트를 다시 돌리지 않습니다** — `update_online_server.sh`는 최신 브랜치를 받아 다시 빌드하고, `--announce`를 쓰면 접속한 사람을 모두 타이틀로 내보냅니다.
+- [ ] **하루 제작 횟수 확인 (읽기만)** — 메인 서버 설정: 서버 전체 하루 횟수 **제한 없음**(Tripo 크레딧 예산이 한도), 계정당 하루 **5회**, 제작 1회 최대 별씨 **200** · 크레딧 **200**(고품질 P2 가능). '움직이는 캐릭터'(뼈대 + 기본 동작)는 켜져 있고 제작 비용에 함께 잡힙니다. 탐험 모닥불은 **버프** 방식입니다. 시연(의자 + 자유 제작 = 2회)에는 충분합니다.
   - 실패·취소한 제작도 1회로 셉니다. 횟수는 UTC 날짜로 셉니다(한국 시간 **오전 9시**에 초기화).
   - 그래서 **체험 계정으로 리허설하지 않기** — 리허설은 다른 계정으로. 오전 9시 이후 같은 계정으로 3번 만들면 그날은 더 못 만듭니다.
 - [ ] Tripo 예산: 브라우저로 `https://<학교 서버 주소>/health` → `"tripo_budget": {"used": …, "total": 4000}`. 제작 1번에 최대 35크레딧 → 시연 2~6회면 최대 210.
@@ -78,7 +78,7 @@
 
 **학교 서버 (EC2 Instance Connect 브라우저 창에 붙여 넣기)**
 
-설정 확인(읽기만, 바꾸지 않음). 예상: `TRIPO_DAILY_REQUEST_LIMIT=105`, `TRIPO_USER_DAILY_REQUEST_LIMIT=3`, `TRIPOTHON_WELCOME_STARS=70` (판매·상자 줄이 없으면 기본값 15 · 1.0).
+설정 확인(읽기만, 바꾸지 않음). 예상: `TRIPO_DAILY_REQUEST_LIMIT=0`, `TRIPO_USER_DAILY_REQUEST_LIMIT=5`, `TRIPOTHON_WELCOME_STARS=150`, `TRIPOTHON_MAX_STARS_PER_CRAFT=200`, `TRIPOTHON_MAX_CREDITS_PER_CRAFT=200`, `TRIPOTHON_TRIPO_CREDIT_BUDGET=29106` (판매·상자 줄이 없으면 기본값 15 · 1.0).
 ```text
 cd ~/tripo_s1
 grep -E "TRIPO_DAILY_REQUEST_LIMIT|TRIPO_USER_DAILY_REQUEST_LIMIT|WELCOME_STARS|SELL_STARS|CHEST_STARS|CREDIT_BUDGET" ops/production.env
