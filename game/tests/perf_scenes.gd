@@ -35,6 +35,16 @@ func run() -> void:
 	var fixture: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/ui_gallery.json"))
 	fixture["/v1/social/presence"] = {"self_id":"me", "host_id":"me", "host_name":"haneul", "visiting":false, "party":null, "invites":[],
 		"pending_rewards":[], "village":{"players":[{"id":"me", "username":"haneul", "x":0, "z":0}]}, "messages":[]}
+	# --preset=low|medium|high: that graphics level (the laptop measurement).
+	var preset := arg("preset", "")
+	var Settings = load("res://scripts/game_settings.gd")
+	var preset_before := str(Settings.get_value("preset"))
+	if arg("window", "") != "":
+		var size := arg("window", "").split("x")
+		DisplayServer.window_set_size(Vector2i(int(size[0]), int(size[1])))
+	if not preset.is_empty():
+		Settings.set_value("preset", preset)
+		for key in Settings.PRESETS[preset]: Settings.set_value(key, Settings.PRESETS[preset][key])
 	app = Main.new()
 	root.add_child(app)
 	current_scene = app
@@ -59,6 +69,10 @@ func run() -> void:
 	f.store_string(JSON.stringify(results, "  "))
 	f.close()
 	print("PERF_SCENES_DONE ", path)
+	# The QA settings file keeps the level it had.
+	if not preset.is_empty() and Settings.PRESETS.has(preset_before):
+		Settings.set_value("preset", preset_before)
+		for key in Settings.PRESETS[preset_before]: Settings.set_value(key, Settings.PRESETS[preset_before][key])
 	app.queue_free()
 	await settle(0.4)
 	SocialHud.end()

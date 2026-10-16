@@ -95,7 +95,7 @@ const RANGES := {
 const PRESETS := {
 	"high": {"shadows":"high","msaa":"4x","render_scale":100,"view_detail":"high"},
 	"medium": {"shadows":"low","msaa":"2x","render_scale":100,"view_detail":"medium"},
-	"low": {"shadows":"off","msaa":"off","render_scale":80,"view_detail":"low"},
+	"low": {"shadows":"off","msaa":"off","render_scale":75,"view_detail":"low"},
 }
 ## Keys whose change is cheap enough to show while a slider moves.
 const LIVE_KEYS := ["master","music","sfx","ambience","voice","ui","mute_all","brightness","ui_scale","large_text"]
@@ -166,6 +166,10 @@ static var default_keys: Dictionary = {}
 static var tracked_viewports: Array = []
 static var tracked_lights: Array = []
 static var runtime: Node
+## The level picked by detect_preset() on a first start ("" once the player has a saved level).
+static var auto_preset := ""
+## Adapter names of integrated / software GPUs (when the adapter type is not reported).
+const LOW_GPU_WORDS := ["intel", "uhd", "iris", "radeon(tm) graphics", "radeon graphics", "vega", "llvmpipe", "swiftshader", "microsoft basic", "mali", "adreno"]
 static var focus_lost := false
 static var run_latched := false
 static var container_material: ShaderMaterial
@@ -194,6 +198,11 @@ static func ensure_loaded() -> void:
 		if PRESETS.has(legacy):
 			values.preset = legacy
 			values.merge(PRESETS[legacy], true)
+	# First start (no graphics level saved yet): an integrated or software GPU starts on "low".
+	if not config.has_section_key("graphics", "preset") and not config.has_section_key("game", "graphics"):
+		auto_preset = detect_preset()
+		values.preset = auto_preset
+		values.merge(PRESETS[auto_preset], true)
 	if config.has_section("input"):
 		for entry in ACTIONS:
 			if config.has_section_key("input", entry[0]):
@@ -633,9 +642,20 @@ static func shake_scale() -> float:
 	if reduced_motion(): return 0.0
 	return 0.25 if bool(get_value("reduce_shake")) else 1.0
 
-## Multiplier for particle counts (Fx.burst/gust/stream).
+## Multiplier for particle counts (Fx.burst/gust/stream); halved on the "low" view detail.
 static func particle_scale() -> float:
-	return 0.35 if reduced_motion() else 1.0
+	if reduced_motion(): return 0.35
+	return 0.5 if str(get_value("view_detail")) == "low" else 1.0
+
+## "low" for an integrated or software GPU (a laptop's Intel UHD / Iris, an AMD APU), else "medium".
+static func detect_preset() -> String:
+	var kind := RenderingServer.get_video_adapter_type()
+	if kind in [RenderingDevice.DEVICE_TYPE_INTEGRATED_GPU, RenderingDevice.DEVICE_TYPE_CPU, RenderingDevice.DEVICE_TYPE_VIRTUAL_GPU]: return "low"
+	var name := (RenderingServer.get_video_adapter_name()+" "+RenderingServer.get_video_adapter_vendor()).to_lower()
+	if kind != RenderingDevice.DEVICE_TYPE_DISCRETE_GPU:
+		for word in LOW_GPU_WORDS:
+			if word in name: return "low"
+	return "medium"
 
 ## Full-screen flashes (photo flash, hit flashes).
 static func flashes_allowed() -> bool:
