@@ -46,6 +46,12 @@ var look_builds := 0
 ## Character models stay loaded once used: a model nothing showed any more was read from disk
 ## again (about 0.3 s) at the next change of look, in the wardrobe preview at every click.
 static var models := {}
+## Reads the weapon models into `models` ahead of their first swing (an expedition's start, under its
+## card): the first equip of the axe read its GLB from disk in the swing's frame.
+static func warm_tools() -> void:
+	for item in ["axe", "spear"]:
+		var path: String = "res://assets/authored_"+item+"_v1.glb"
+		if not models.has(path) and ResourceLoader.exists(path): models[path]=load(path)
 var action_until := 0.0
 var tool_grip := Basis.IDENTITY
 var ambient_clip := "idle"
@@ -293,7 +299,9 @@ func build_tool(item: String, tool: Node3D) -> void:
 		Art.box(tool,Vector3(0.3,0.1,0),Vector3(0.5,0.09,0.09),Color("b1d1cd"))
 		return
 	if item in ["axe","spear"]:
-		var source := load("res://assets/authored_"+item+"_v1.glb") as PackedScene
+		var path: String = "res://assets/authored_"+item+"_v1.glb"
+		if not models.has(path) and ResourceLoader.exists(path): models[path]=load(path)
+		var source := models.get(path) as PackedScene
 		if source:
 			tool.add_child(source.instantiate())
 			return
