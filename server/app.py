@@ -442,7 +442,12 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             if name==current['display_name']:return current
             if current['display_name_changeable_at']:
                 raise HTTPException(429,'name_change_limited',headers={'Retry-After':str(max(1,int(current['display_name_changeable_at']-now)))})
-            try:conn.execute('UPDATE users SET display_name=?,display_key=?,name_changed=? WHERE id=?',(name,display_names.key(name),now,user['id']))
+            # A rename must not free the account's permanent login identity for
+            # someone else's display name. This check shares the write transaction.
+            name_key = display_names.key(name)
+            if conn.execute('SELECT 1 FROM users WHERE username=? AND id!=?',(name_key,user['id'])).fetchone():
+                fail('name_taken')
+            try:conn.execute('UPDATE users SET display_name=?,display_key=?,name_changed=? WHERE id=?',(name,name_key,now,user['id']))
             except sqlite3.IntegrityError:fail('name_taken')
             return shown_name(conn,user['id'])
         return mutate(request,body,'display_name',save)
@@ -496,6 +501,11 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             fail('invalid_invitation',403)
         # Operator accounts are provisioned by tools/admin_accounts.py, never here.
         if reserved_username(body.username): fail('username_reserved',422)
+        # The login id is also the initial display name. Apply the same naming
+        # policy without changing the existing 3..24-character login contract.
+        try: display_names.check_policy(body.username)
+        except display_names.NameError_ as error:
+            fail('username_reserved' if str(error)=='name_reserved' else 'invalid_request',422)
         if not strong_password(body.password): fail('weak_password',422)
         def check_signup_limits(conn):
             if settings.mode=='live' and not invited:

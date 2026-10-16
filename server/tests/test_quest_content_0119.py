@@ -44,7 +44,11 @@ def test_pack_sizes_unique_ids_and_complete_resident_coverage():
     assert all(re.fullmatch(r'[a-z][a-z0-9_]*', ident) for ident in ids)
     resident_source = (ROOT / 'game/scripts/residents.gd').read_text(encoding='utf-8')
     resident_array = resident_source.split('const RESIDENTS := [', 1)[1].split('\n]', 1)[0]
-    assert set(re.findall(r'"id"\s*:\s*"([a-z_]+)"', resident_array)) == RESIDENTS
+    # Boni and Sol joined the client after this 19-resident content pack. They
+    # have no server quest/reward hooks; all supported residents must still match.
+    client_only = {'boni', 'sol'}
+    assert RESIDENTS.isdisjoint(client_only)
+    assert set(re.findall(r'"id"\s*:\s*"([a-z_]+)"', resident_array)) == RESIDENTS | client_only
     assert Counter(entry['npc'] for entry in TEMPLATES) == Counter(
         {npc: 4 if npc in {'regular', 'naru', 'kid'} else 3 for npc in RESIDENTS})
     assert {entry['quest_id'] for entry in TEMPLATES} == set(quests.QUESTS)

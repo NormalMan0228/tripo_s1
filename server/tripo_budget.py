@@ -54,6 +54,16 @@ def job_billing(conn, job_id):
             'billing_complete':complete}
 
 
+def legacy_bills(parts):
+    """Every provider step stored before the durable attempt ledger existed."""
+    for part in parts.values():
+        for task, key in (('task','credits_consumed'), ('image_task','image_credits_consumed'),
+                          ('concept_task','concept_credits_consumed')):
+            yield part.get(task), part.get(key)
+        for entry in [part.get('rig', {}), *part.get('anims', {}).values()]:
+            yield entry.get('task'), entry.get('credits_consumed')
+
+
 def legacy_credits(conn, exclude='', tester=False):
     # Worlds predating the ledger retain their old conservative accounting until
     # that craft is adopted. Tester references are job_id:build, job_id:legacy or
@@ -64,25 +74,28 @@ def legacy_credits(conn, exclude='', tester=False):
         job_id = row['reference'].split(':', 1)[0]
         if job_id != exclude:
             by_job[job_id] = by_job.get(job_id, 0) + row['credits']
-    if tester or not conn.execute("SELECT 1 FROM sqlite_master WHERE name='studio_jobs'").fetchone():
+    if not conn.execute("SELECT 1 FROM sqlite_master WHERE name='studio_jobs'").fetchone():
         return sum(by_job.values())
     for row in conn.execute('SELECT id,state,parts,provenance FROM studio_jobs WHERE id!=? '
                             'AND id NOT IN (SELECT job_id FROM tripo_job_holds)', (exclude,)):
+        # A legacy tester reference proves that this craft used the shared tester
+        # budget, even if the account was deleted or its current role changed.
+        # Apply known overruns before adoption too; ordinary crafts stay separate.
+        if tester and row['id'] not in by_job:
+            continue
         try:
             parts = json.loads(row['parts'] or '{}')
             quote = float(json.loads(row['provenance'] or '{}').get('estimated_tripo_credits') or 0)
         except (TypeError, ValueError):
             parts, quote = {}, 0
         known, missing = 0.0, False
-        for part in parts.values():
-            for task, key in (('task','credits_consumed'), ('image_task','image_credits_consumed'),
-                              ('concept_task','concept_credits_consumed')):
-                if not part.get(task):
-                    continue
-                if valid_credits(part.get(key)):
-                    known += part[key]
-                else:
-                    missing = True
+        for task, amount in legacy_bills(parts):
+            if not task:
+                continue
+            if valid_credits(amount):
+                known += amount
+            else:
+                missing = True
         studio_credits = max(known, quote) if row['state'] in ('building','submitting','unknown') or missing else known
         # These are two records of the same old craft, not separate liabilities.
         # A failed concept can exist only in the tester ledger; a provider overrun
@@ -116,11 +129,10 @@ def manage_job(conn, job_id, owner_id, is_tester, now):
         if row:
             created = row['created']
             parts = json.loads(row['parts'] or '{}')
-            bill = sum(part.get(key) or 0 for part in parts.values()
-                       for key in ('credits_consumed','image_credits_consumed','concept_credits_consumed')
-                       if valid_credits(part.get(key)))
+            bills = list(legacy_bills(parts))
+            bill = sum(amount for _, amount in bills if valid_credits(amount))
             known = bill
-            submitted = any(part.get(key) for part in parts.values() for key in ('task','image_task','concept_task'))
+            submitted = any(task for task, _ in bills)
             if submitted or row['state'] in ('submitting','unknown'):
                 previous = max(previous, bill, float(json.loads(row['provenance'] or '{}').get('estimated_tripo_credits') or 0))
     conn.execute('INSERT INTO tripo_job_holds VALUES (?,?,?,0)', (job_id,owner_id,int(is_tester)))

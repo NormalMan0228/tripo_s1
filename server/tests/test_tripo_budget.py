@@ -266,22 +266,22 @@ def test_old_tester_reservations_count_for_server_without_duplicate_studio_costs
             # Build is counted once, the failed picture remains, the orphaned
             # reservations remain, and the larger actual overrun also remains.
             assert tripo_budget.committed_credits(conn) == 287
-            assert tripo_budget.committed_credits(conn, tester=True) == 237
+            assert tripo_budget.committed_credits(conn, tester=True) == 287
             assert tripo_budget.committed_credits(conn, 'old-build') == 187
             assert tripo_budget.committed_credits(conn, 'old-concepts') == 277
             assert tripo_budget.committed_credits(conn, 'deleted-job') == 267
-            assert tripo_budget.committed_credits(conn, 'old-concepts', tester=True) == 227
+            assert tripo_budget.committed_credits(conn, 'old-concepts', tester=True) == 277
 
             # Adoption moves the old tester rows to the durable attempt ledger
             # without changing either total or forgetting their tester origin.
             tripo_budget.manage_job(conn, 'old-concepts', owner, False, 1)
             assert tripo_budget.committed_credits(conn) == 287
-            assert tripo_budget.committed_credits(conn, tester=True) == 237
+            assert tripo_budget.committed_credits(conn, tester=True) == 287
             assert tripo_budget.committed_credits(conn, 'old-concepts') == 277
-            assert tripo_budget.committed_credits(conn, 'old-concepts', tester=True) == 227
+            assert tripo_budget.committed_credits(conn, 'old-concepts', tester=True) == 277
             conn.execute("DELETE FROM studio_jobs WHERE id='old-concepts'")
             assert tripo_budget.committed_credits(conn) == 287
-            assert tripo_budget.committed_credits(conn, tester=True) == 237
+            assert tripo_budget.committed_credits(conn, tester=True) == 287
 
 
 def test_old_deleted_tester_reservation_blocks_new_normal_account_submission(tmp_path):
