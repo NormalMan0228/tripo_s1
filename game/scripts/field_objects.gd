@@ -337,8 +337,10 @@ func play(sound_name: String, at := Vector3.INF, db := -9.0) -> void:
 # ------------------------------------------------------------------ mesh helpers
 ## Each object is built from a dozen primitives, and drawing every one on its own
 ## cost ~200 draw calls (plus shadow passes) around the square. Fixed parts hanging
-## straight off the object root are merged into one mesh per material; anything an
-## animation holds (stored in the entry), lamps and transparent parts stay separate.
+## straight off the object root are merged into one mesh per surface finish (metal,
+## roughness), each part's colour carried in its vertices, so an object is about one
+## draw; anything an animation holds (stored in the entry), lamps and transparent
+## parts stay separate.
 func merge_static(entry: Dictionary) -> void:
 	var root: Node3D = entry.root
 	var keep := {}
@@ -352,7 +354,13 @@ func merge_static(entry: Dictionary) -> void:
 		if not child is MeshInstance3D or keep.has(child) or child.get_child_count() > 0: continue
 		var material := (child as MeshInstance3D).material_override as StandardMaterial3D
 		if material == null or material.emission_enabled or material.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED: continue
-		var key := "%s|%.2f|%.2f" % [material.albedo_color.to_html(), material.metallic, material.roughness]
+		if material.vertex_color_use_as_albedo or material.albedo_texture != null: continue
+		# Everything about the material but its colour (finish, shading, culling) and the shadow setting.
+		var key := "%d" % (child as MeshInstance3D).cast_shadow
+		for property in material.get_property_list():
+			var property_name: String = property.name
+			if not (int(property.usage) & PROPERTY_USAGE_STORAGE) or property_name == "albedo_color" or property_name.begins_with("resource_") or property_name == "script": continue
+			key += "|%s=%s" % [property_name, str(material.get(property_name))]
 		if not groups.has(key): groups[key] = []
 		groups[key].append(child)
 	for key in groups:
@@ -360,10 +368,23 @@ func merge_static(entry: Dictionary) -> void:
 		if parts.size() < 2: continue
 		var tool := SurfaceTool.new()
 		for part: MeshInstance3D in parts:
-			tool.append_from(part.mesh, 0, part.transform)
+			# The part's colour in its vertices (sRGB, as the material's albedo colour was).
+			var arrays := part.mesh.surface_get_arrays(0)
+			var colors := PackedColorArray()
+			colors.resize((arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+			colors.fill((part.material_override as StandardMaterial3D).albedo_color)
+			arrays[Mesh.ARRAY_COLOR] = colors
+			var coloured := ArrayMesh.new()
+			coloured.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			tool.append_from(coloured, 0, part.transform)
 		var merged := MeshInstance3D.new()
 		merged.mesh = tool.commit()
-		merged.material_override = parts[0].material_override
+		var finish := (parts[0].material_override as StandardMaterial3D).duplicate() as StandardMaterial3D
+		finish.albedo_color = Color.WHITE
+		finish.vertex_color_use_as_albedo = true
+		finish.vertex_color_is_srgb = true
+		merged.material_override = finish
+		merged.cast_shadow = (parts[0] as MeshInstance3D).cast_shadow
 		root.add_child(merged)
 		for part: MeshInstance3D in parts:
 			root.remove_child(part)

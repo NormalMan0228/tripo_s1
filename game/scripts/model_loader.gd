@@ -12,6 +12,11 @@ static func load_bytes(bytes: PackedByteArray) -> Node3D:
 		return null
 	var document := GLTFDocument.new()
 	var state := GLTFState.new()
+	# A loaded craft is always drawn in a flat colour (paint() below) or with the painter's own
+	# textures (painter/paint_apply.gd): its colour, normal and ORM maps are never shown. They are not
+	# decoded at all, and none stays in video memory (5-17 MB and ~0.2 s per object before). Studio
+	# assemblies (asset_assembly.gd) load their parts themselves and keep their maps.
+	state.handle_binary_image = GLTFState.HANDLE_BINARY_DISCARD_TEXTURES
 	if document.append_from_buffer(bytes, "", state) != OK:
 		return null
 	var imported := document.generate_scene(state) as Node3D
@@ -24,7 +29,7 @@ static func load_bytes(bytes: PackedByteArray) -> Node3D:
 		return null
 	# The model's own surfaces (painter slots); markers added later are not painted.
 	for instance in meshes: instance.set_meta("craft_surface", true)
-	shrink_textures(imported)
+	drop_textures(imported)
 	var bounds := AABB()
 	var first := true
 	for instance in meshes:
@@ -105,6 +110,22 @@ static func shrink_textures(root: Node, limit := TEXTURE_LIMIT) -> Dictionary:
 						replaced[texture] = _shrink_texture(texture, limit, param == BaseMaterial3D.TEXTURE_NORMAL, stats)
 					if replaced[texture] != null: material.set_texture(param, replaced[texture])
 	return stats
+
+## Clears every map from the model's own materials (whatever the importer still made): load_bytes
+## models never show them (see there). Returns how many were dropped.
+static func drop_textures(root: Node) -> int:
+	var dropped := 0
+	var meshes: Array[MeshInstance3D] = []
+	_collect_meshes(root, meshes)
+	for instance in meshes:
+		for surface in instance.mesh.get_surface_count():
+			for material in [instance.mesh.surface_get_material(surface), instance.get_surface_override_material(surface)]:
+				if not material is BaseMaterial3D: continue
+				for param in BaseMaterial3D.TEXTURE_MAX:
+					if material.get_texture(param) == null: continue
+					material.set_texture(param, null)
+					dropped += 1
+	return dropped
 
 static func _shrink_texture(texture: Texture2D, limit: int, normal: bool, stats: Dictionary) -> Texture2D:
 	var image := texture.get_image()
