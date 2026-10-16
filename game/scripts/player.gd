@@ -270,6 +270,14 @@ func build_tool(item: String, tool: Node3D) -> void:
 		Art.box(tool,Vector3(0,0.85,0),Vector3(0.045,2.9,0.045),Color("ac8758"))
 		Art.sphere(tool,Vector3(0.1,0.03,0),Vector3(0.18,0.18,0.12),Color("819f9d"))
 		return
+	if item in ["pickaxe","broom","umbrella","lantern"] and ResourceLoader.exists("res://assets/tools/"+item+".glb"):
+		# Low-poly hand tools (05, tools/body_gen/build_hand_tools.py): origin on the grip, +Y to the head.
+		var model := (load("res://assets/tools/"+item+".glb") as PackedScene).instantiate() as Node3D
+		tool.add_child(model)
+		if item=="umbrella":
+			var canopy := model.find_child("Canopy", true, false) as Node3D
+			if canopy: canopy.visible=false
+		return
 	if item=="hoe":
 		# The flat-bladed hoe (was dressed afterwards by village_life.gd dress_hoe(), which now sees the meta).
 		tool.set_meta("hoe",true)
@@ -339,9 +347,31 @@ func equip_socketed(previous: String, item: String) -> void:
 		hold.add_child(node)
 		build_tool(item, node)
 		node.transform=EquipSockets.placement(record)
+	# The working end (blade edge, spout) for the tool-contact effects (tool_contact.gd).
+	var tip: Array = record.get("tip", [])
+	if tip.size() == 3: node.set_meta("tip", Vector3(float(tip[0]), float(tip[1]), float(tip[2])))
 	tool_node=node
 	equipment=node
 	tool_grip=node.basis
+
+## The item in hand turns to its use direction (equip_sockets.json items.<item>.use.<kind>.rot) for
+## the action and back after it: the hoe's blade comes down onto the ground, the can tips its spout.
+func use_pose(kind: String) -> void:
+	if not uses_sockets() or not is_instance_valid(tool_node) or equipped.is_empty(): return
+	var record := EquipSockets.item(equipped)
+	var uses: Dictionary = record.get("use", {})
+	if not uses.has(kind): return
+	var turned := record.duplicate()
+	turned["rot"] = uses[kind].get("rot", record.get("rot", [0, 0, 0]))
+	if tool_node.has_meta("socket_tween"):
+		var running = tool_node.get_meta("socket_tween")
+		if running is Tween and running.is_valid(): running.kill()
+	var length: float = action_pose.duration if is_instance_valid(action_pose) else 0.4
+	var tween := tool_node.create_tween()
+	tween.tween_property(tool_node,"transform",EquipSockets.placement(turned),minf(0.18,length*0.4)).set_trans(Tween.TRANS_SINE)
+	tween.tween_interval(maxf(0.0,length*0.4))
+	tween.tween_property(tool_node,"transform",EquipSockets.placement(record),0.16).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tool_node.set_meta("socket_tween",tween)
 
 ## Puts a fresh copy of `item` straight onto its stow socket (a rebuilt body, a loaded save).
 func stow_new(item: String) -> void:
@@ -535,7 +565,7 @@ func _physics_process(delta: float) -> void:
 ## goes back to where it last walked freely. Against a wall it can still turn away, so it stays.
 func watch_trapped(delta: float, wants: bool) -> void:
 	var speed_now := get_real_velocity().length()
-	if not wants or speed_now > 0.3:
+	if not wants or not controls_enabled or speed_now > 0.3:
 		trapped_time = 0.0
 		if speed_now > 0.5 and is_on_floor() and position.y >= min_ground_y:
 			free_clock += delta
@@ -549,7 +579,11 @@ func watch_trapped(delta: float, wants: bool) -> void:
 	for i in 8:
 		var angle := TAU*i/8.0
 		if not test_move(global_transform, Vector3(cos(angle), 0.0, sin(angle))*0.15): return
-	if free_position == Vector3.INF or free_position.distance_to(global_position) < 0.05: return
+	# Only a short step back to a spot just walked from, and only when walking on the ground:
+	# never a long jump (a stale spot from another place).
+	if free_position == Vector3.INF or not is_on_floor(): return
+	var back := free_position.distance_to(global_position)
+	if back < 0.05 or back > 4.0: return
 	global_position = free_position
 	velocity = Vector3.ZERO
 	trapped_escapes += 1
@@ -584,6 +618,7 @@ func react(kind: String) -> void:
 		action_until=Time.get_ticks_msec()*0.001+0.7
 		current_clip=""
 	elif is_instance_valid(action_pose): action_pose.trigger(kind)
+	use_pose(kind)
 	if reaction_tween and reaction_tween.is_valid(): reaction_tween.kill()
 	visual.scale=Vector3.ONE
 	# Seated or lying, the whole-body squash would bob the seat contact: the gesture alone plays.
