@@ -2881,6 +2881,7 @@ func make_body(id: String, holder: Node3D) -> Node3D:
 			if figure is Node3D:
 				holder.add_child(figure)
 				figure.set_day(DayFolk.is_day(id,float(resident_clock().hour)),true)
+				Interiors.wear_day_model(figure,id)
 				# The figure's tag keeps one size on screen, made for the far village camera; the room's
 				# close camera blew it up over the whole café. Sized in the room like the other residents'.
 				var own = figure.get("nameplate")
@@ -2917,6 +2918,7 @@ func pose_resident(entry: Dictionary) -> void:
 			holder.position=record.center+Vector3(0,top,0)
 			body.face(atan2(head.x,head.z))
 			body.set_pose("lie")
+			Interiors.show_day_model(body,true)
 		else:
 			holder.position=record.center-head*(size.z*0.5-0.2)+Vector3(0,top+0.12,0)
 			holder.basis=Basis(head.cross(Vector3.UP),head,Vector3.UP)
@@ -2938,6 +2940,7 @@ func pose_resident(entry: Dictionary) -> void:
 		holder.position=record.center+Vector3(0,0,0.04).rotated(Vector3.UP,float(record.yaw))+Vector3(0,height+0.02,0)
 		body.face(float(record.yaw))
 		body.set_pose("sit")
+		Interiors.show_day_model(body,false)
 		record["occupant"]=entry.id
 		return
 	entry.pose="stand"
@@ -2948,7 +2951,9 @@ func pose_resident(entry: Dictionary) -> void:
 	holder.position=at
 	var look: Vector3=(record.center if not record.is_empty() else at+Vector3(0,0,1))-at
 	face_body(entry,atan2(look.x,look.z) if Vector2(look.x,look.z).length()>0.05 else 0.0)
-	if still: body.set_pose("stand")
+	if still:
+		body.set_pose("stand")
+		Interiors.show_day_model(body,true)
 	var talk := {"kind":"resident","id":entry.id,"node":holder,"center":at,"yaw":0.0,"mounted":false,"solid":true,"interactive":true,"glb":false,
 		"size":Vector3(0.6,1.75,0.6),"half":Vector2(0.28,0.28),"world_half":Vector2(0.28,0.28),"top":1.75,"floor":level,"room":Interiors.room_at(f,at.x)}
 	decor_by_floor[level].append(talk)

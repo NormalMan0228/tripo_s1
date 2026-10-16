@@ -3039,3 +3039,60 @@ static func stand_in_figure(id: String) -> Node3D:
 		eye.material_override.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
 	for x in [-0.1,0.1]: Detail.cylinder(root,Vector3(x,0.08,0),0.06,0.16,dark,6)
 	return root
+
+## A resident with their own model (shadow_folk.gd DAY_MODELS) wears it in rooms too, in place of
+## the drawn shadow, the way the village walkers do (shadow_folk attach_day_model). The model sits
+## under the figure's visual, so the lying pose lays it down with the figure; the models have no sit
+## clip, so a seated resident keeps the drawn figure (show_day_model).
+static func wear_day_model(figure: Node3D, id: String) -> void:
+	var folk := load("res://scripts/shadow_folk.gd") as GDScript
+	if folk == null: return
+	var consts := folk.get_script_constant_map()
+	var heights: Dictionary = consts.get("DAY_MODELS", {})
+	var path := "res://assets/npc/%s.glb" % id
+	if not bool(consts.get("DAY_MODELS_ENABLED", false)) or not heights.has(id) or not ResourceLoader.exists(path): return
+	var visual = figure.get("visual")
+	if not visual is Node3D:
+		# The figure builds its visual when it enters the tree.
+		if not figure.is_inside_tree(): figure.ready.connect(func(): wear_day_model(figure, id), CONNECT_ONE_SHOT)
+		return
+	var scene := load(path) as PackedScene
+	if scene == null: return
+	var model := scene.instantiate() as Node3D
+	if model == null: return
+	model.name = "DayModel"
+	(visual as Node3D).add_child(model)
+	# Feet on the floor at the resident's height (the same fit as shadow_folk and npc.gd).
+	var box := AABB()
+	var first := true
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		var xf := Transform3D()
+		var walk: Node = mesh
+		while walk != model and walk is Node3D:
+			xf = (walk as Node3D).transform*xf
+			walk = walk.get_parent()
+		var local: AABB = xf*mesh.get_aabb()
+		box = local if first else box.merge(local)
+		first = false
+	if not first and box.size.y > 0.01:
+		var factor := float(heights[id])/box.size.y
+		model.scale = Vector3.ONE*factor
+		model.position.y = -box.position.y*factor
+	var players := model.find_children("*", "AnimationPlayer", true, false)
+	if not players.is_empty():
+		var player := players[0] as AnimationPlayer
+		if player.has_animation("idle"):
+			player.get_animation("idle").loop_mode = Animation.LOOP_LINEAR
+			player.play("idle")
+	figure.set_meta("day_model", model)
+	show_day_model(figure, not str(figure.get("pose")).begins_with("sit"))
+
+## Model or drawn figure (wear_day_model): the model while standing or lying, the figure when seated.
+static func show_day_model(figure: Node3D, shown: bool) -> void:
+	if not figure.has_meta("day_model"): return
+	var model = figure.get_meta("day_model")
+	if not is_instance_valid(model): return
+	model.visible = shown
+	var drawn = figure.get("figure")
+	if drawn is Node3D: drawn.visible = not shown
