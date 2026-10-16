@@ -150,12 +150,12 @@ def test_sessions_are_capped_purged_and_logout_still_works(world):
 
 def test_staff_looking_names_are_reserved_but_operators_still_log_in(world):
     app, c, now = world
-    for name in ('admin', 'Administrator', 'ROOT_user', 'gm7', 'Operator', 'system_bot', 'MODERATOR', 'polytech1', 'PolyTech9'):
+    for name in ('admin', 'Administrator', 'ROOT_user', 'gm7', 'Operator', 'system_bot', 'MODERATOR', 'polytech1', 'PolyTech9', 'bob_admin'):
         r = register(c, name)
         assert (r.status_code, r.json()) == (422, {'detail': 'username_reserved'}), name
-    for name in ('bob_admin', 'groot', 'agm'):  # Only a leading prefix is reserved.
+    for name in ('groot', 'agm'):  # Incidental substrings inside ordinary words are allowed.
         assert register(c, name).status_code == 200, name
-    assert [json.loads(e['detail'])['username'] for e in events(app, 'register')] == ['bob_admin', 'groot', 'agm']
+    assert [json.loads(e['detail'])['username'] for e in events(app, 'register')] == ['groot', 'agm']
     # Operator accounts are provisioned directly (tools/admin_accounts.py) and log in as usual.
     hashed = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1).hash('operator-only-pw')
     with app.state.db.transaction() as db:

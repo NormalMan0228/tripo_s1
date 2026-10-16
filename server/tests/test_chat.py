@@ -40,7 +40,8 @@ def test_released_clients_keep_the_old_messages_field_and_room(world):
     assert w.say(alice, 'hello')['ok']
     old = w.presence(bravo)
     assert 'chat' not in old and 'social' not in old
-    assert [set(m) for m in old['messages']] == [{'id', 'username', 'display_name', 'text', 'created'}]
+    # Released clients retain the exact legacy shape; display_name belongs to chat v2.
+    assert [set(m) for m in old['messages']] == [{'id', 'username', 'text', 'created'}]
     assert old['messages'][0]['username'] == 'alice' and old['messages'][0]['text'] == 'hello'
     # No channel: the party room when in a party, as before chat v2.
     w.call(alice, '/v1/party')
@@ -292,6 +293,8 @@ def test_history_reads_only_the_last_hour_of_a_busy_room(world):
     alice = w.player('alice')
     room = 'village:'+alice.id
     with w.db() as conn:
+        # Fixture setup is not the measured query: avoid 20,000 durable commits.
+        conn.execute('BEGIN')
         conn.executemany("INSERT INTO mp_messages(room,user_id,text,created,channel) VALUES (?,?,?,?,'local')",
                          [(room, alice.id, 'old %d' % i, w.now[0]-7200+i*0.01) for i in range(20000)])
         conn.executemany("INSERT INTO mp_messages(room,user_id,text,created,channel) VALUES (?,?,?,?,'local')",

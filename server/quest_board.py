@@ -123,7 +123,7 @@ class QuestBoard:
                         quests.fail('quest_board_daily_limit', 429)
                     baseline = quests.baseline_for(conn, user['id'], quest)
                     progress = {}
-                    if quest['kind'] == 'visit' and body.place in quest['places'] and (not quest.get('night') or homestead.night(now)):
+                    if quest['kind'] == 'visit' and body.place in quest['places'] and (not quest.get('night') or homestead.reward_night(now)):
                         progress = {'places': [body.place], 'last': now}
                     conn.execute('INSERT INTO quest_board_progress(user_id,day,quest_id,state,accepted,baseline,progress) '
                                  "VALUES (?,?,?,'active',?,?,?)",
@@ -143,7 +143,7 @@ class QuestBoard:
                     quests.fail('quest_bad_place', 422)
                 state = json.loads(row['progress'])
                 places = state.get('places', [])
-                if quest.get('night') and body.place not in places and not homestead.night(now):
+                if quest.get('night') and body.place not in places and not homestead.reward_night(now):
                     quests.fail('quest_not_night')
                 if body.place not in places and len(places) < quest['count']:
                     if now - float(state.get('last', 0)) < quests.VISIT_GAP:

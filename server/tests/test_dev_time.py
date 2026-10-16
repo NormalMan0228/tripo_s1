@@ -22,9 +22,9 @@ def test_only_server_granted_testers_and_operators_have_access(world):
     normal = account(client, 'regular_time')
     named_tester = account(client, 'tripo1')
     tester = account(client, 'tester_time')
-    operator = account(client, 'staff_time')
+    operator = account(client, 'timekeeper')
     permit(app, 'tester_time', tester=True)
-    permit(app, 'staff_time', role='admin')
+    permit(app, 'timekeeper', role='admin')
     assert client.get(ROUTE).status_code == 401
     assert client.post(ROUTE, json={'time_override': 'night'}).status_code == 401
     for headers in (normal, named_tester):
