@@ -179,7 +179,7 @@ def test_party_batched_presence_preserves_missing_and_expired_members(world):
     members = w.get(a, '/v1/social')['party']['members']
     assert [m['id'] for m in members] == [a.id, b.id, c.id]
     assert [m['online'] for m in members] == [True, False, False]
-    assert all(set(m) == {'id', 'username', 'joined', 'online'} for m in members)
+    assert all(set(m) == {'id', 'username', 'display_name', 'joined', 'online'} for m in members)
 
 
 def test_presence_connection_restores_full_durability_after_failure(tmp_path):
