@@ -24,6 +24,8 @@ from mathutils import Vector
 a = sys.argv[sys.argv.index('--') + 1:]
 src, out = a[0], a[1]
 rep_path = a[2] if len(a) > 2 else None
+# optional hair sample band as fractions of the head height, e.g. 0.2,0.55 for a hat on top
+band = [float(x) for x in a[3].split(',')] if len(a) > 3 else [0.6, 1.01]
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=src)
@@ -110,10 +112,11 @@ def dist(c, ref):
 
 refs = {'skin': med(region == 'hand', k=2)}
 not_skin = dist(cols, refs['skin']) > 0.16
-refs['coat'] = med(((region == 'torso') | (region == 'arm')) & not_skin & (z > np.percentile(z[region == 'torso'], 40)))
+refs['hair'] = med((region == 'head') & not_skin & (z > head_z + band[0] * (z.max() - head_z)) & (z < head_z + band[1] * (z.max() - head_z)))
+not_hair = dist(cols, refs['hair']) > 0.18 if refs['hair'] is not None else np.ones(len(cols), bool)
+refs['coat'] = med(((region == 'torso') | (region == 'arm')) & not_skin & not_hair & (z > np.percentile(z[region == 'torso'], 40)))
 refs['pants'] = med((region == 'leg') & np.isin(bone, ['L_Thigh', 'R_Thigh']) & not_skin & (z < np.percentile(z[region == 'leg'], 80)))
 refs['boots'] = med(region == 'foot')
-refs['hair'] = med((region == 'head') & not_skin & (z > head_z + 0.6 * (z.max() - head_z)))
 refs = {k: v for k, v in refs.items() if v is not None}
 ALLOW = {'head': ['hair', 'skin'], 'arm': ['coat', 'skin', 'hair'], 'hand': ['skin', 'coat'], 'torso': ['coat', 'pants', 'skin', 'hair'],
          'leg': ['pants', 'skin', 'boots', 'coat'], 'foot': ['boots', 'skin', 'pants']}
