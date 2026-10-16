@@ -52,13 +52,25 @@ const FOLK := [
 	{"id":"kid","title":"수상한 그림자 · 꼬마","home":Vector2(-29,42),"radius":17.0,"speed":1.55,"build":[0.72,1.0],"gear":["cap"],"hours":"day","spot_bias":1.0,"tint":"f0d27e","eyes":[0.037,0.027],"eye_tilt":4.0,"always_grin":true},
 	{"id":"stroller","title":"수상한 그림자 · 밤 산책자","home":Vector2(57,3.5),"radius":0.0,"speed":1.15,"build":[1.08,1.0],"gear":["fedora","lantern"],"hours":"night","bridge_bias":1.2,"tint":"8f9bd9"},
 	{"id":"poet","title":"수상한 그림자 · 시인","home":Vector2(63,-25),"radius":13.0,"speed":0.9,"build":[1.05,0.95],"gear":["beret","scarf"],"hours":"always","spot_bias":1.5,"tint":"c7a6d9"},
+	# 보니 (공방 제작 담당) and 솔 (초록's apprentice): procedural day folk until their models are ready.
+	{"id":"boni","title":"수상한 그림자 · 공방 제작 담당","home":Vector2(-33.1,34.0),"radius":10.0,"speed":1.1,"build":[0.95,1.0],"gear":["beret","satchel"],"hours":"always","tint":"9fd3f0"},
+	{"id":"sol","title":"수상한 그림자 · 꼬마 정원사","home":Vector2(44,-13),"radius":14.0,"speed":1.3,"build":[0.84,1.0],"gear":["straw","satchel"],"hours":"always","tint":"f2dd8a","eyes":[0.036,0.026]},
 ]
 
 ## Outdoor work and leisure by residents.gd activity: the hand prop shown while the
 ## shadow pauses, how far it roams from its spot, and whether it stays put.
 const TASKS := {"fish":"fish","sweep":"sweep","farm":"hoe","write":"write","deliver":"deliver","light_lamps":"lamp"}
-const ROAM := {"sweep":13.0,"farm":9.0,"scout":15.0,"play":12.0,"stroll":11.0}
+const ROAM := {"sweep":13.0,"farm":9.0,"scout":15.0,"play":12.0,"stroll":11.0,"craft":3.5,"garden":6.0}
 const STAY := ["fish","write"]
+## 보니 and 솔's own models (res://assets/npc/<id>.glb, clips idle/walk/work) wear their daytime
+## look in place of the procedural villager while the files are there; without them, or with
+## this off, they keep the procedural look (sky-blue / yellow hair). After dark (and indoors,
+## interiors.gd) they are the usual silhouette.
+const DAY_MODELS_ENABLED := true
+## Model height (m) per resident: 보니 grown-up, 솔 a child.
+const DAY_MODELS := {"boni":1.66,"sol":1.36}
+## Outdoor activities shown with the model's "work" clip while it stands at its spot.
+const MODEL_WORK := ["craft","garden","tend","farm","sweep"]
 ## The schedule only moves a shadow on screen near the walker; elsewhere it hops
 ## (still through its door) so a far-away village keeps time without walking it.
 const NEAR := 28.0
@@ -128,6 +140,7 @@ func setup(main: Node) -> void:
 		walker.configure(entry, self, paths)
 		add_child(walker)
 		walker.dress()
+		attach_day_model(walker)
 		walker.set_day(DayFolk.is_day(str(entry.id), hour), true)
 		walker.min_ground_y = Town.SHORE_MIN_Y
 		walker.set_night(night)
@@ -145,7 +158,7 @@ func setup(main: Node) -> void:
 		configure_activity(walker)
 		var start := activity_node(walker)
 		if start < 0 or start in used:
-			start = start_node(door_for(str(resident.home)).get("step", entry.home), used)
+			start = start_node(door_for(Residents.home_of(str(entry.id))).get("step", entry.home), used)
 		used.append(start)
 		var links: Array = paths.links[start]
 		walker.place_at(start, links[randi() % links.size()] if not links.is_empty() and not walker.stay else -1)
@@ -271,6 +284,8 @@ func _process(delta: float) -> void:
 		if not walker.present and walker.state == "hidden": continue
 		walker.anim_stride = AnimLod.stride(frustum, walker.global_position, Vector3(focus.x, 0, focus.y))
 		if walker.visible: walker.draw(fraction)
+	for walker in model_walkers:
+		if is_instance_valid(walker): drive_day_model(walker, delta)
 	# A closed conversation lets the shadow go back to what it was doing.
 	var modal = app.get("village_modal")
 	for walker in walkers:
@@ -311,6 +326,9 @@ func refresh_schedule() -> void:
 		elif walker.present and walker.task_shown == "fish" and randf() < 0.05:
 			walker.cast_rod()
 			if near_player(walker.xz()): walker.pop("~", 1.2)
+		elif walker.present and walker.activity in ["craft", "garden"] and randf() < 0.04 and near_player(walker.xz()):
+			# 보니 at her work and 솔 in the herb beds: a little sparkle now and then.
+			walker.pop("✦" if walker.activity == "craft" else "♪", 1.2)
 
 ## Follows a new block: out of a door, on to the next spot, or in through a door.
 func adopt(walker: Node, block: Dictionary) -> void:
@@ -355,7 +373,7 @@ func adopt(walker: Node, block: Dictionary) -> void:
 	go_in(walker, block.place)
 
 func home_of(walker: Node) -> String:
-	return str(Residents.resident(str(walker.spec.id)).get("home", ""))
+	return Residents.home_of(str(walker.spec.id))
 
 ## Roam area, pace, prop and stay-put flag for the walker's outdoor activity.
 func configure_activity(walker: Node) -> void:
@@ -587,10 +605,72 @@ func interact(entry: Dictionary) -> void:
 	var walker = entry.get("walker")
 	if is_instance_valid(walker): talk(walker)
 
+## Puts the resident's own model (DAY_MODELS) under the walker's drawn body, hidden until
+## drive_day_model() shows it by day. Nothing happens without the file.
+func attach_day_model(walker: Node) -> void:
+	var id := str(walker.spec.id)
+	var path := "res://assets/npc/%s.glb" % id
+	if not DAY_MODELS_ENABLED or not DAY_MODELS.has(id) or not ResourceLoader.exists(path) or not is_instance_valid(walker.visual): return
+	var scene := LoadPace.take(path) as PackedScene
+	if scene == null: return
+	var model := scene.instantiate() as Node3D
+	if model == null: return
+	model.name = "DayModel"
+	walker.visual.add_child(model)
+	# Feet on the ground at the resident's height (the same fit as npc.gd).
+	var box := AABB()
+	var first := true
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		var local: AABB = model.global_transform.affine_inverse()*mesh.global_transform*mesh.get_aabb()
+		box = local if first else box.merge(local)
+		first = false
+	if not first and box.size.y > 0.01:
+		var factor := float(DAY_MODELS[id])/box.size.y
+		model.scale = Vector3.ONE*factor
+		model.position.y = -box.position.y*factor
+	model.visible = false
+	var players := model.find_children("*", "AnimationPlayer", true, false)
+	var player: AnimationPlayer = players[0] if not players.is_empty() else null
+	if player:
+		for clip in player.get_animation_list():
+			player.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+		player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	walker.set_meta("day_model", model)
+	walker.set_meta("day_model_player", player)
+	model_walkers.append(walker)
+
+## Walkers wearing a model by day (attach_day_model).
+var model_walkers: Array = []
+
+## By day the model stands in for the procedural villager (whole figure and its gear), with
+## the clip that matches what the walker does; at night, in a doorway fade or indoors the
+## usual figure is back.
+func drive_day_model(walker: Node, delta: float) -> void:
+	var model = walker.get_meta("day_model", null)
+	if not is_instance_valid(model): return
+	var shown: bool = walker.visible and walker.day_blend >= 0.5 and walker.fade > 0.4
+	if model.visible != shown:
+		model.visible = shown
+		if is_instance_valid(walker.figure): walker.figure.visible = not shown
+	if is_instance_valid(walker.task_node): walker.task_node.visible = not shown
+	if not shown: return
+	var player = walker.get_meta("day_model_player", null)
+	if not is_instance_valid(player): return
+	var clip := "idle"
+	if walker.current_clip == Figure.WALK: clip = "walk"
+	elif walker.state != "talk" and walker.place == "outside" and str(walker.activity) in MODEL_WORK: clip = "work"
+	if not player.has_animation(clip): clip = "idle"
+	if player.current_animation != clip and player.has_animation(clip):
+		player.play(clip, 0.25)
+	player.speed_scale = float(walker.clip_speed) if clip == "walk" else 1.0
+	player.advance(delta)
+
 func leave() -> void:
 	for walker in walkers:
 		if is_instance_valid(walker): walker.queue_free()
 	walkers.clear()
+	model_walkers.clear()
 	if is_instance_valid(dropped): dropped.queue_free()
 	leader = null
 	app = null
@@ -632,6 +712,7 @@ func talk(walker: Node) -> void:
 		return
 	var opening := DayFolk.greeting(id) if walker.day_target else greeting(id)
 	if night >= 0.5 and NIGHT_OPENERS.has(id) and not walker.day_target: opening[0] = tr(NIGHT_OPENERS[id])
+	elif walker.day_target and DayFolk.BAND_OPENERS.has(id): opening[0] = DayFolk.opener(id, hour)
 	# What it is doing right now comes first; the introduction follows.
 	var now_line := situation(walker)
 	if not now_line.is_empty():
@@ -663,6 +744,15 @@ const DOING := {
 	"write":["정자에서 시를 쓰는 중이에요. 오늘의 단어는 '그늘'.","방금 한 줄 떠올랐는데… 앗, 잊어버렸어요.","바람이 종이를 넘겨 주니 시가 절로 써져요."],
 	"play":["헤헤, 연못 한 바퀴 더 뛰어야지!","술래잡기 할래? 내가 술래 안 할 거야!","나 엄청 빠르지? 그림자는 숨도 안 차!"],
 	"scout":["캠프 둘레를 살피는 중이에요. 이상한 발자국은 없네요.","돌문 쪽 바람이 오늘은 조용해요.","텐트 줄을 다시 매던 참이에요."],
+	"craft":["공방 앞에서 재료를 고르는 중이에요. 오늘은 어떤 물건이 태어날까요?","별씨 가루를 살짝 뿌리면 반짝, 하고 모양이 잡혀요.","방금 의자 다리 길이를 맞췄어요. 딱 맞으면 기분이 좋아요!"],
+	"garden":["향초밭에 물 주는 중이에요! 흙이 촉촉해야 잘 자라요.","토마토가 빨갛게 익었어요. 하나 맛볼래요? …앗, 초록 선배한테 혼나려나.","씨앗은 손가락 한 마디 깊이로 콕! 초록 선배가 알려 줬어요."],
+}
+## What the day's outing (residents.gd event) sounds like, in place of the activity line.
+const EVENT_LINES := {
+	"market":["토요일 아침 장이 섰어요! 광장이 북적북적하죠?","장 구경 나왔어요. 오늘은 뭘 살까 고민돼요."],
+	"picnic":["오늘은 소풍 왔어요! 도시락이 꿀맛이에요.","바다 보며 먹는 점심, 최고죠?"],
+	"fishing":["오늘은 낚시하러 왔어요. 저녁거리 한 마리만!","가끔은 이렇게 찌를 바라보며 쉬는 게 좋아요."],
+	"unwind":["일 끝나고 한숨 돌리는 중이에요. 오늘도 수고했어요!","하루 일을 마치면 이렇게 쉬어 줘야 해요."],
 }
 const STROLL := {
 	"morning":["아침 산책이에요. 공기가 맑죠?","일찍 일어난 그림자가 길을 먼저 걷는답니다."],
@@ -685,6 +775,8 @@ func situation(walker: Node) -> String:
 		var title := str(door_for(walker.building).get("title", ""))
 		if not title.is_empty(): return tr(HEADING_TO[randi() % HEADING_TO.size()]) % tr(title)
 	var pool: Array = DOING.get(str(walker.activity), [])
+	var event := str(Residents.now(str(walker.spec.id), hour, day).get("event", ""))
+	if EVENT_LINES.has(event): pool = EVENT_LINES[event]
 	if pool.is_empty() and walker.activity == "stroll": pool = STROLL[time_band(hour)]
 	return t(walker, pool[randi() % pool.size()]) if not pool.is_empty() else ""
 
@@ -701,6 +793,8 @@ const NIGHT_OPENERS := {
 	"shopkeeper":"가게는 닫았지만, 안경 너머로 별은 잘 보여요.",
 	"gardener":"밤에는 향초 향이 더 짙어져요. 맡아 보세요.",
 	"poet":"밤의 정자는 시가 저절로 써지는 곳이에요.",
+	"boni":"공방 불은 꺼졌지만, 머릿속에선 아직 뚝딱뚝딱 만드는 중이에요.",
+	"sol":"밤에도 새싹은 자라요. 쉿, 자라는 소리 들려요?",
 }
 
 func greeting(id: String) -> Array:
@@ -720,6 +814,8 @@ func greeting(id: String) -> Array:
 		"kid": return [tr("헤헤, 깜짝 놀랐지?"), tr("나 술래잡기 엄청 잘한다? 따라올 수 있으면 따라와 봐!")]
 		"stroller": return [tr("밤 산책 중이에요. 이 시간엔 그림자들이 다 나와요."), tr("낮에는 나무 그늘 속에서 낮잠을 자요.")]
 		"poet": return [tr("정자에 앉아 시를 짓던 참이에요. 그림자의 시는 행간이 길죠."), tr("한 수 들어 보실래요?")]
+		"boni": return [tr("별씨 공방의 제작 담당이에요. 그림자 손도 꽤 야무지답니다."), tr("만들고 싶은 게 있으면 언제든 말해요.")]
+		"sol": return [tr("초록 선배의 제자, 솔이에요! 그림자라도 씨앗은 잘 심어요."), tr("궁금한 게 있으면 뭐든 물어봐요!")]
 	return [tr("…")]
 
 func actions(id: String) -> Array:
@@ -739,19 +835,22 @@ func actions(id: String) -> Array:
 		"kid": return ["follow", "riddle"]
 		"stroller": return ["rumour", "follow"]
 		"poet": return ["poem", "riddle"]
+		"boni": return ["craft", "tips"]
+		"sol": return ["tips", "riddle"]
 	return ["rumour"]
 
 func action_choice(walker: Node, action: String) -> Array:
 	var id := str(walker.spec.id)
 	match action:
 		"letter": return [tr("편지 배달 돕기"), func(): letter(walker)]
+		"craft": return [tr("제작 의뢰하기"), func(): ask_craft(walker)]
 		"fish": return [tr("물고기 보여 주기"), func(): show_fish(walker)]
 		"hoe": return [tr("호미 찾아 주기"), func(): ask_hoe(walker)]
 		"riddle": return [tr("수수께끼 풀기"), func(): riddle(walker)]
 		"follow": return [tr("따라가기"), func(): follow(walker)]
 		"poem": return [tr("시 듣기"), func(): say(walker, [t(walker, "햇살이 길을 그리면, 나는 그 옆에 가만히 눕는다."), t(walker, "다섯 섬이 잠들 무렵, 나는 비로소 눈을 뜬다."), t(walker, "…어때요? 그림자의 시라서 조금 어둡죠?")])]
 		"tips":
-			var label: String = {"fisher":tr("낚시 비결 듣기"),"farmer":tr("농사 비결 듣기"),"gardener":tr("정원 비결 듣기"),"scout":tr("탐험 요령 듣기"),"regular":tr("카페 이야기 듣기"),"miller":tr("방앗간 이야기 듣기"),"shopkeeper":tr("가게 이야기 듣기")}.get(id, tr("이야기 듣기"))
+			var label: String = {"fisher":tr("낚시 비결 듣기"),"farmer":tr("농사 비결 듣기"),"gardener":tr("정원 비결 듣기"),"scout":tr("탐험 요령 듣기"),"regular":tr("카페 이야기 듣기"),"miller":tr("방앗간 이야기 듣기"),"shopkeeper":tr("가게 이야기 듣기"),"boni":tr("제작 요령 듣기"),"sol":tr("씨앗 심기 요령 듣기")}.get(id, tr("이야기 듣기"))
 			return [label, func(): say(walker, tips(id, walker))]
 	return [tr("소문 듣기"), func(): rumour(walker)]
 
@@ -764,7 +863,19 @@ func tips(id: String, walker: Node = null) -> Array:
 		"miller": return [tr("방앗간은 아침 일곱 시쯤 맷돌을 돌리기 시작해요. 저녁엔 문을 닫고요."), tr("바람이 센 날엔 풍차가 신나서 가루가 문밖까지 날려요."), t(walker, "햇살 텃밭 바로 위가 방앗간이에요. 농부 그림자가 자주 놀러 와요.")]
 		"shopkeeper": return [tr("잡화점은 아침 아홉 시쯤 열고 저녁 일곱 시쯤 닫아요."), tr("불이 꺼져 있으면 문을 두드려도 소용없어요. 다들 자거나 나갔거든요."), t(walker, "카페 주인 그림자가 저녁마다 커피 한 잔 하러 와요. 제가 가는 날도 있고요.")]
 		"regular": return [tr("카페는 아침 여덟 시쯤 열어요. 창문에 불이 켜져 있으면 들어와요."), tr("풍차 들판 서쪽 사과 과수원 상자에서 사과를 얻을 수 있어요."), tr("둥근 나무를 살살 흔들어도 사과가 떨어지죠. 저는 그 소리가 좋아요."), tr("과수원 오솔길 끝은 조용해서, 커피 생각날 때 가끔 가요. 같이 가 볼래요?")]
+		"boni": return [tr("만들고 싶은 물건을 말할 때는 모양, 색, 재료를 같이 알려 줘요."), tr("'둥근 나무 의자, 하늘색 쿠션' 처럼 말하면 훨씬 비슷하게 나와요."), tr("별씨는 탐험에서 모아 와요. 많을수록 더 큰 물건도 만들 수 있어요.")]
+		"sol": return [tr("씨앗은 밭을 일군 다음 콕 심고, 물을 한 번만 주면 돼요."), tr("순무는 금방 자라고, 호박은 조금 더 기다려야 해요. 기다림도 정원 일이래요."), tr("게임을 꺼도 작물은 계속 자라요. 다음에 오면 쑥 커 있을 거예요!")]
 	return [tr("…")]
+
+## 보니's craft request: a tip about describing the piece, then the craft window (main.gd open_craft).
+func ask_craft(walker: Node) -> void:
+	var visiting: bool = app.get("social") != null and app.social.visiting()
+	if visiting or not app.has_method("open_craft"):
+		say(walker, [tr("제작은 내 마을 공방에서 맡아 줄게요. 집에 돌아가면 불러 줘요!")])
+		return
+	walker.pop("✦", 1.4)
+	say(walker, [tr("좋아요, 무엇을 만들어 볼까요?"), tr("모양, 색, 재료를 함께 말해 주면 더 꼭 맞게 만들 수 있어요.")],
+		[[tr("제작 창 열기"), func(): app.open_craft()], [tr("다음에요"), Callable()]])
 
 func rumour(walker: Node) -> void:
 	var id := str(walker.spec.id)
@@ -791,6 +902,7 @@ const RIDDLES := {
 	"kid":["다리가 네 개인데 걷지 못하고, 앉으면 편한 것은?",["의자","강아지","탁자"],0],
 	"poet":["보이지 않지만 풍차를 돌리고 나뭇잎을 흔드는 것은?",["물결","그림자","바람"],2],
 	"miller":["하루 종일 돌고 도는데 제자리에 있고, 바람이 불면 더 신나는 것은?",["풍차","팽이","시계"],0],
+	"sol":["땅속에 숨겨 두면 언젠가 초록 손을 흔들며 인사하는 것은?",["돌멩이","씨앗","보물상자"],1],
 }
 
 func riddle(walker: Node) -> void:

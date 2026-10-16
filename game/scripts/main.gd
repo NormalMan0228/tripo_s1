@@ -1411,6 +1411,7 @@ func refresh_inventory() -> void:
 	var story := chapter()
 	if story: story.adopt(me.get("story"))
 	if story: story.adopt_quests(me.get("quests"))
+	if story: story.adopt_residents(me)
 	# A newer look adopted while this answer was on its way stays.
 	if int(newer.get("version",-1))>int(me.get("profile",{}).get("version",-1)): me.profile=newer
 	# Also while the village is still loading (screen "loading"): the walker built before /v1/me
@@ -1572,6 +1573,7 @@ func poll_entitlements() -> void:
 	var story := chapter()
 	if story: story.adopt(result.data.get("story"))
 	if story: story.adopt_quests(result.data.get("quests"))
+	if story: story.adopt_residents(result.data)
 	# Back from a room, `me` holds only the look until the first refresh answers.
 	if objects_signature(result.data.objects)!=objects_signature(me.get("objects",[])) or result.data.shards!=me.get("shards",-1):
 		cancel_preview()
@@ -3769,6 +3771,8 @@ func talk_to(npc: Node3D) -> void:
 	# Residents of a house take gifts from their own village's player (npc_gifts.gd).
 	if NpcGifts.can_receive(cast) and can_gift():
 		plan.choices.insert(maxi(0,plan.choices.size()-1),[tr("선물하기"),func(): open_gift(cast,str(npc.get_meta("title")),cast,npc)])
+	# A shop's "가게 보기" and the notice board's "전하기" when the server has them (shop_window.gd).
+	for extra in preload("res://scripts/shop_window.gd").village_choices(self,cast,str(npc.get_meta("title")),npc): plan.choices.insert(maxi(0,plan.choices.size()-1),extra)
 	# The resident's request (quests.gd) comes first.
 	var request: Array=preload("res://scripts/quests.gd").choice(self,cast,str(npc.get_meta("title")),cast,npc)
 	if not request.is_empty(): plan.choices.insert(0,request)

@@ -12,6 +12,9 @@ extends Node3D
 ## activity spots, water, buildings, bridges and other props, then turned to face
 ## the nearest road so it is used from the path side.
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
+## Event letters (npc_letters.gd) and the board's "오늘의 부탁" (quest_board.gd), both feature-detected.
+const NpcLetters = preload("res://scripts/npc_letters.gd")
+const QuestBoard = preload("res://scripts/quest_board.gd")
 const A := preload("res://scripts/art.gd")
 const Town := preload("res://scripts/town.gd")
 const Roads := preload("res://scripts/roads.gd")
@@ -99,6 +102,7 @@ func setup(main: Node) -> void:
 		add_child(voice)
 		voices.append(voice)
 	await build()
+	QuestBoard.watch(self, app)
 
 ## Places and builds every object. Safe to call once per village build. Paced under the loading
 ## card (load_pace.gd), in one go otherwise.
@@ -1027,7 +1031,7 @@ func use_mailbox(entry: Dictionary) -> void:
 	var shown := []
 	for letter in letters:
 		if letter.get("read", true): continue
-		lines.append_array(NpcGifts.letter_lines(letter))
+		lines.append_array(NpcLetters.letter_lines(letter))
 		shown.append(letter.id)
 	lines.append_array(mail_lines() if shown.is_empty() else [])
 	var choices := []
@@ -1042,7 +1046,7 @@ func use_mailbox(entry: Dictionary) -> void:
 ## Every letter again, newest first.
 func reread_letters(letters: Array) -> void:
 	var lines := []
-	for letter in letters: lines.append_array(NpcGifts.letter_lines(letter))
+	for letter in letters: lines.append_array(NpcLetters.letter_lines(letter))
 	if lines.is_empty(): lines = [tr("아직 받은 편지가 없어요.")]
 	if app.has_method("open_dialogue"): app.open_dialogue(tr("나의 우편함"), "", lines, [[tr("우편함 닫기"), Callable()]])
 
@@ -1094,9 +1098,16 @@ func use_notice(entry: Dictionary) -> void:
 	wobble.tween_property(board, "rotation:z", -0.015, 0.1)
 	wobble.tween_property(board, "rotation:z", 0.0, 0.1)
 	var choices := []
+	var lines := notice_lines()
+	# Today's requests (quest_board.gd) when the server pins them; else the board stays read-only.
+	var posts: Dictionary = {}
+	if app.get("api") != null: posts = await QuestBoard.fetch(app.api)
+	if not posts.is_empty():
+		lines.insert(1, QuestBoard.summary(posts))
+		choices.append([tr("✦ 오늘의 부탁"), func(): QuestBoard.open(app, posts)])
 	if app.life and app.life.has_method("open_map"): choices.append([tr("섬 지도 펼치기"), app.life.open_map])
 	choices.append([tr("게시판 닫기"), Callable()])
-	if app.has_method("open_dialogue"): app.open_dialogue(tr("마을 게시판"), "", notice_lines(), choices)
+	if app.has_method("open_dialogue"): app.open_dialogue(tr("마을 게시판"), "", lines, choices)
 
 func notice_lines() -> Array:
 	var now := Time.get_datetime_dict_from_system()

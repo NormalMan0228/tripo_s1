@@ -1725,6 +1725,9 @@ func show_story() -> void:
 	story_home=null
 	# A resident's request to come to this room (quests.gd: 하늘's observatory at night).
 	preload("res://scripts/quests.gd").entered_room(self,room)
+	# The notice board's visit requests and the shops' feature check (quest_board.gd, shop_window.gd).
+	preload("res://scripts/quest_board.gd").entered_room(self,room)
+	preload("res://scripts/shop_window.gd").probe(api)
 	# The treasure chest in the owner's own home (treasure.gd).
 	preload("res://scripts/treasure.gd").enter_room(self)
 	if room!="home" or public_room or not visit_host.is_empty() or visiting or api.token.is_empty(): return
@@ -3080,6 +3083,9 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	# 단비 at the counter buys the bag's finds: leaf coins and a daily starseed allowance (shop_sell.gd).
 	if lines.is_empty() and id=="shopkeeper" and str(entry.state.get("activity",""))=="shopkeep" and not visiting and not api.token.is_empty():
 		talk.choices.insert(0,["물건 팔기","sell"])
+	# A shop's "가게 보기" and the notice board's "전하기" when the server has them (shop_window.gd).
+	for extra in preload("res://scripts/shop_window.gd").room_choices(self,id,entry.state) if lines.is_empty() else []:
+		talk.choices.insert(maxi(0,talk.choices.size()-1),extra)
 	# The resident's request (quests.gd) comes first, as in the village.
 	if lines.is_empty() and not visiting:
 		var request: Array=preload("res://scripts/quests.gd").room_choice(self,id)
