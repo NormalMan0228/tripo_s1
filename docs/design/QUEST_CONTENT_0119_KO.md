@@ -63,15 +63,15 @@
 
 ## 의뢰·편지 예시
 
-나루의 `quest_0119_naru_01`은 제목이 “표지판 친구들”인 방문 의뢰다. `quest_id`와 `reward_tier`는 모두 `naru_islands`, 분류는 `difficulty: "normal"`, `activity: "visit"`이다. JSON의 `request` 원문은 다음과 같으며, 응답에서는 `{count}`를 기존 조건인 `3`으로 바꾼다.
+나루의 `quest_0119_naru_01`은 제목이 “이정표 친구들”인 방문 의뢰다. `quest_id`와 `reward_tier`는 모두 `naru_islands`, 분류는 `difficulty: "normal"`, `activity: "visit"`이다. JSON의 `request` 원문은 다음과 같으며, 응답에서는 `{count}`를 기존 조건인 `3`으로 바꾼다.
 
 | 언어 | 부탁 본문 |
 |---|---|
-| `ko` | 다섯 섬 중 서로 다른 {count}곳의 표지판을 찾아가 봐. 길잡이의 작은 산책 숙제야! |
+| `ko` | 다섯 섬 중 서로 다른 {count}곳의 이정표을 찾아가 봐. 길잡이의 작은 산책 숙제야! |
 | `en` | Visit signposts on {count} different islands out of our five. A little walk from your guide! |
-| `zh` | 去五座岛中不同的{count}座岛看看路牌吧。向导给你一份小小的散步作业！ |
+| `zh` | 去五座岛中不同的{count}座岛看看路标吧。向导给你一份小小的散步作业！ |
 
-한국어 수락 대사는 “광장부터 시작해도 좋아. 순서는 네 마음대로!”, 완료 대사는 “잘 다녀왔구나! 이제 표지판들도 너를 알아보겠어.”다. 실제 방문 후보는 기존 `square`, `fields`, `garden`, `camp`, `lighthouse`이며, 이 가운데 서로 다른 3곳을 방문하는 조건을 유지한다.
+한국어 수락 대사는 “광장부터 시작해도 좋아. 순서는 네 마음대로!”, 완료 대사는 “잘 다녀왔구나! 이제 이정표들도 너를 알아보겠어.”다. 실제 방문 후보는 기존 `square`, `fields`, `garden`, `camp`, `lighthouse`이며, 이 가운데 서로 다른 3곳을 방문하는 조건을 유지한다.
 
 콩이의 일상 편지 `letter_0119_kid_small_talk`은 장난기 있는 성격과 연못에서 노는 일과를 따른다.
 

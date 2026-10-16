@@ -38,21 +38,21 @@
       "activity": "gather",
       "text": {
         "ko": {
-          "title": "비 오는 날의 파이",
-          "request": "비를 기다리며 파이 재료를 챙기는 중이야. 사과 {count}개를 가져다줄래?",
-          "accept": "날씨는 상관없어. 사과만 있으면 준비 끝이야!",
+          "title": "오후 손님의 파이",
+          "request": "오후 손님들께 낼 파이 재료를 챙기는 중이야. 사과 {count}개를 가져다줄래?",
+          "accept": "사과만 있으면 준비 끝이야! 오븐은 미리 데워 둘게.",
           "complete": "이제 오븐 차례야. 고마워, 든든한 이웃!"
         },
         "en": {
-          "title": "A Pie for Rainy Days",
-          "request": "I am getting pie ingredients ready for a rainy day. Could you bring {count} apples?",
-          "accept": "Any weather is fine. The apples are all I need!",
+          "title": "A Pie for Afternoon Guests",
+          "request": "I am getting pie ingredients ready for our afternoon guests. Could you bring {count} apples?",
+          "accept": "The apples are all I need! I will warm up the oven.",
           "complete": "Now it is the oven’s turn. Thanks, dear neighbor!"
         },
         "zh": {
-          "title": "雨天的苹果派",
-          "request": "我在准备雨天烤派的材料。能带来{count}个苹果吗？",
-          "accept": "什么天气都行。有苹果就准备好啦！",
+          "title": "下午客人的苹果派",
+          "request": "我在准备给下午客人烤派的材料。能带来{count}个苹果吗？",
+          "accept": "有苹果就准备好啦！我先把烤箱预热好。",
           "complete": "接下来轮到烤箱了。谢谢你，可靠的邻居！"
         }
       }
@@ -122,10 +122,10 @@
       "activity": "visit",
       "text": {
         "ko": {
-          "title": "표지판 친구들",
-          "request": "다섯 섬 중 서로 다른 {count}곳의 표지판을 찾아가 봐. 길잡이의 작은 산책 숙제야!",
+          "title": "이정표 친구들",
+          "request": "다섯 섬 중 서로 다른 {count}곳의 이정표을 찾아가 봐. 길잡이의 작은 산책 숙제야!",
           "accept": "광장부터 시작해도 좋아. 순서는 네 마음대로!",
-          "complete": "잘 다녀왔구나! 이제 표지판들도 너를 알아보겠어."
+          "complete": "잘 다녀왔구나! 이제 이정표들도 너를 알아보겠어."
         },
         "en": {
           "title": "Signpost Friends",
@@ -134,10 +134,10 @@
           "complete": "Welcome back! Those signposts must know you by now."
         },
         "zh": {
-          "title": "路牌朋友",
-          "request": "去五座岛中不同的{count}座岛看看路牌吧。向导给你一份小小的散步作业！",
+          "title": "路标朋友",
+          "request": "去五座岛中不同的{count}座岛看看路标吧。向导给你一份小小的散步作业！",
           "accept": "可以从广场出发。顺序随你！",
-          "complete": "回来啦！路牌们一定也认识你了。"
+          "complete": "回来啦！路标们一定也认识你了。"
         }
       }
     },
@@ -151,7 +151,7 @@
       "text": {
         "ko": {
           "title": "지도에 발자국",
-          "request": "지도 위 길을 진짜 발자국으로 이어 볼래? 다섯 섬 중 서로 다른 {count}곳의 표지판에 들러 줘.",
+          "request": "지도 위 길을 진짜 발자국으로 이어 볼래? 다섯 섬 중 서로 다른 {count}곳의 이정표에 들러 줘.",
           "accept": "서두르지 마. 길을 익히는 게 오늘의 모험이야.",
           "complete": "네 발자국 덕분에 지도가 더 친근해졌네!"
         },
@@ -163,7 +163,7 @@
         },
         "zh": {
           "title": "地图上的脚印",
-          "request": "把地图上的路变成脚印，好吗？去五座岛中不同的{count}座岛看看路牌吧。",
+          "request": "把地图上的路变成脚印，好吗？去五座岛中不同的{count}座岛看看路标吧。",
           "accept": "慢慢走。熟悉道路就是今天的冒险。",
           "complete": "有了你的脚印，地图也亲切多了！"
         }
@@ -179,8 +179,8 @@
       "text": {
         "ko": {
           "title": "다리 건너 인사",
-          "request": "다리 너머 풍경이 궁금하지? 다섯 섬 중 서로 다른 {count}곳의 표지판을 찾아가 봐.",
-          "accept": "같은 표지판은 한 번만 세면 돼. 즐겁게 다녀와!",
+          "request": "다리 너머 풍경이 궁금하지? 다섯 섬 중 서로 다른 {count}곳의 이정표을 찾아가 봐.",
+          "accept": "같은 이정표은 한 번만 세면 돼. 즐겁게 다녀와!",
           "complete": "좋았어! 이제 다음 산책길도 자신 있겠네."
         },
         "en": {
@@ -191,8 +191,8 @@
         },
         "zh": {
           "title": "桥那边的问候",
-          "request": "好奇桥那边的风景吗？去五座岛中不同的{count}座岛看看路牌吧。",
-          "accept": "同一块路牌只算一次。开心地走一走！",
+          "request": "好奇桥那边的风景吗？去五座岛中不同的{count}座岛看看路标吧。",
+          "accept": "同一块路标只算一次。开心地走一走！",
           "complete": "太棒啦！下次散步一定更有把握了。"
         }
       }
@@ -207,7 +207,7 @@
       "text": {
         "ko": {
           "title": "오늘의 길잡이 연습",
-          "request": "오늘은 네가 길잡이 연습을 해 볼래? 다섯 섬 중 서로 다른 {count}곳의 표지판을 방문해 줘.",
+          "request": "오늘은 네가 길잡이 연습을 해 볼래? 다섯 섬 중 서로 다른 {count}곳의 이정표을 방문해 줘.",
           "accept": "어느 섬을 고를지는 네게 맡길게!",
           "complete": "멋진 연습이었어. 우리 마을 길잡이가 늘었네!"
         },
@@ -219,7 +219,7 @@
         },
         "zh": {
           "title": "今天的向导练习",
-          "request": "今天想练习当向导吗？去五座岛中不同的{count}座岛看看路牌吧。",
+          "request": "今天想练习当向导吗？去五座岛中不同的{count}座岛看看路标吧。",
           "accept": "选哪几座岛，由你决定！",
           "complete": "练习得真棒。村里又多了一位小向导！"
         }
@@ -235,19 +235,19 @@
       "text": {
         "ko": {
           "title": "오늘의 작은 단장",
-          "request": "수락한 뒤 옷차림을 바꾸고 {count}번 저장해 주실래요? 재단사의 눈도 즐겁게 해 주세요.",
+          "request": "제 옷장에서 새 차림으로 갈아입고 저장해 볼래요? 재단사의 눈도 즐겁게 해 주세요.",
           "accept": "큰 변화가 아니어도 좋아요. 마음에 드는 모습으로요.",
           "complete": "참 잘 어울려요. 오늘 걸음도 조금 가벼워 보이네요."
         },
         "en": {
           "title": "A Little Freshening Up",
-          "request": "After accepting, change your look and save it {count} time. Give this tailor a little inspiration.",
+          "request": "Would you change into a new look from my wardrobe and save it? Give this tailor a little inspiration.",
           "accept": "A small change is lovely too. Choose what feels like you.",
           "complete": "It suits you beautifully. Your steps look a little lighter."
         },
         "zh": {
           "title": "今天的小小打扮",
-          "request": "接下委托后，改变装扮并保存{count}次，好吗？也让裁缝欣赏一下吧。",
+          "request": "从我的衣橱里换一身新装扮并保存，好吗？也让裁缝欣赏一下吧。",
           "accept": "一点小变化也很好。选自己喜欢的样子。",
           "complete": "真适合你。今天的脚步似乎都轻快了。"
         }
@@ -263,19 +263,19 @@
       "text": {
         "ko": {
           "title": "거울 앞의 기분 전환",
-          "request": "작은 단장으로 기분을 바꿔 볼까요? 수락한 뒤 옷차림을 바꿔 {count}번 저장해 주세요.",
+          "request": "작은 단장으로 기분을 바꿔 볼까요? 옷장에서 새 차림으로 갈아입고 저장해 주세요.",
           "accept": "서두르지 말고 거울 앞 시간을 즐겨요.",
           "complete": "좋네요. 가장 멋진 옷차림은 편안한 표정과 어울리죠."
         },
         "en": {
           "title": "A Change by the Mirror",
-          "request": "Shall we brighten the day with a little change? After accepting, change your look and save it {count} time.",
+          "request": "Shall we brighten the day with a little change? Change into a new look from the wardrobe and save it.",
           "accept": "Take your time and enjoy a moment by the mirror.",
           "complete": "Lovely. The best look goes with a comfortable smile."
         },
         "zh": {
           "title": "镜前换个心情",
-          "request": "用一点小打扮换换心情吧？接下委托后，改变装扮并保存{count}次。",
+          "request": "用一点小打扮换换心情吧？在衣橱里换上新装扮并保存。",
           "accept": "不用着急，享受镜子前的片刻吧。",
           "complete": "真好。最美的装扮，总配着自在的笑容。"
         }
@@ -291,19 +291,19 @@
       "text": {
         "ko": {
           "title": "소라의 옷차림 노트",
-          "request": "옷차림 노트에 새 영감이 필요해요. 수락한 뒤 모습을 바꿔 {count}번 저장해 주실래요?",
+          "request": "옷차림 노트에 새 영감이 필요해요. 옷장에서 새 차림으로 갈아입고 저장해 주실래요?",
           "accept": "어떤 변화든 좋아요. 당신다운 선택이 궁금해요.",
           "complete": "고마워요. 오늘 노트에는 산뜻한 생각이 가득하겠네요."
         },
         "en": {
           "title": "Sora’s Style Notes",
-          "request": "My style notebook could use fresh inspiration. After accepting, change your look and save it {count} time.",
+          "request": "My style notebook could use fresh inspiration. Would you change into a new look from the wardrobe and save it?",
           "accept": "Any change is welcome. I would love to see your choice.",
           "complete": "Thank you. My notebook will be full of fresh ideas today."
         },
         "zh": {
           "title": "小空的穿搭笔记",
-          "request": "穿搭笔记需要一点新灵感。接下委托后，改变装扮并保存{count}次，好吗？",
+          "request": "穿搭笔记需要一点新灵感。能在衣橱里换上新装扮并保存吗？",
           "accept": "怎样改变都好。我想看看你的选择。",
           "complete": "谢谢。今天的笔记一定会装满清新的想法。"
         }
@@ -403,9 +403,9 @@
       "text": {
         "ko": {
           "title": "바다에서 온 저녁",
-          "request": "오늘 저녁은 바다 맛으로 하고 싶어! 바다에서 잡히는 물고기 {count}마리를 가져다줄래?",
-          "accept": "가방에 둔 바닷물고기도 좋아. 낚싯대는 잠깐 쉬어도 돼!",
-          "complete": "오, 딱 좋다! 저녁 식탁에도 파도 소리가 나겠네."
+          "request": "오늘 저녁은 바다 맛으로 하고 싶어요! 바다에서 잡히는 물고기 {count}마리를 가져다줄래요?",
+          "accept": "가방에 둔 바다 물고기도 좋아요. 낚싯대는 잠깐 쉬어도 돼요!",
+          "complete": "오, 딱 좋네요! 저녁 식탁에도 파도 소리가 나겠어요."
         },
         "en": {
           "title": "Supper from the Sea",
@@ -431,9 +431,9 @@
       "text": {
         "ko": {
           "title": "해루의 빈 접시",
-          "request": "낚시 이야기는 많은데 접시가 비었네! 바다 물고기 {count}마리만 부탁해.",
-          "accept": "바다에서 잡히는 종류면 돼. 이미 가진 것도 좋아!",
-          "complete": "고마워! 오늘은 접시도 낚시 이야기를 듣겠어."
+          "request": "낚시 이야기는 많은데 접시가 비었네요! 바다 물고기 {count}마리만 부탁해요.",
+          "accept": "바다에서 잡히는 종류면 돼요. 이미 가진 것도 좋아요!",
+          "complete": "고마워요! 오늘은 접시도 낚시 이야기를 듣겠네요."
         },
         "en": {
           "title": "Haeru’s Empty Plate",
@@ -459,9 +459,9 @@
       "text": {
         "ko": {
           "title": "짭짤한 저녁 준비",
-          "request": "부두에서 일하다 보니 배가 고파졌어. 바다 물고기 {count}마리를 가져다줄래?",
-          "accept": "잡아 둔 바닷물고기가 있다면 그걸로 충분해!",
-          "complete": "고마워! 이제 내 배에서도 잔잔한 파도가 치겠네."
+          "request": "부두에서 일하다 보니 배가 고파졌어요. 바다 물고기 {count}마리를 가져다줄래요?",
+          "accept": "잡아 둔 바다 물고기가 있다면 그걸로 충분해요!",
+          "complete": "고마워요! 이제 꼬르륵 소리도 잔잔해지겠어요."
         },
         "en": {
           "title": "A Seaside Supper",
@@ -487,19 +487,19 @@
       "text": {
         "ko": {
           "title": "말 없는 작은 편지",
-          "request": "선물은 글자 없는 편지예요! 수락한 뒤 선물을 받는 주민 누구에게든 물건 {count}개를 선물해 주세요.",
+          "request": "선물은 글자 없는 편지예요! 마을 주민 누구에게든 선물을 하나 건네 주세요.",
           "accept": "가방 속 물건으로 마음을 전해도 좋아요.",
           "complete": "배달 완료네요! 오늘 마을에 미소가 하나 늘었어요."
         },
         "en": {
           "title": "A Letter Without Words",
-          "request": "A gift is a letter without words! After accepting, give {count} item to any resident who accepts gifts.",
+          "request": "A gift is a letter without words! Give a gift to any resident in the village.",
           "accept": "Something already in your bag can carry your kindness.",
           "complete": "Delivery complete! There is one more smile in the village."
         },
         "zh": {
           "title": "没有字的小信",
-          "request": "礼物是没有字的信！接下委托后，给任意一位能收礼的居民送{count}件物品吧。",
+          "request": "礼物是没有字的信！给村里任意一位居民送一件礼物吧。",
           "accept": "包里已有的物品也能传达心意。",
           "complete": "投递完成！今天村里又多了一个笑容。"
         }
@@ -515,19 +515,19 @@
       "text": {
         "ko": {
           "title": "다온의 마음 배달",
-          "request": "오늘은 마음을 배달해 볼까요? 수락한 뒤 선물을 받는 주민에게 물건 {count}개를 건네 주세요.",
+          "request": "오늘은 마음을 배달해 볼까요? 마을 주민 누구에게든 선물을 하나 건네 주세요.",
           "accept": "받을 주민은 직접 골라 주세요. 저는 응원할게요!",
           "complete": "좋은 배달이었어요! 마음에는 우표가 필요 없군요."
         },
         "en": {
           "title": "Daon’s Kind Delivery",
-          "request": "Shall we deliver a little kindness today? After accepting, give {count} item to a resident who accepts gifts.",
+          "request": "Shall we deliver a little kindness today? Give a gift to any resident you like.",
           "accept": "You choose the recipient. I will cheer you on!",
           "complete": "A fine delivery! Kindness really does not need a stamp."
         },
         "zh": {
           "title": "多温的心意投递",
-          "request": "今天来投递一份心意吧？接下委托后，给一位能收礼的居民送{count}件物品。",
+          "request": "今天来投递一份心意吧？给任意一位居民送一件礼物。",
           "accept": "收件人由你来选。我会为你加油！",
           "complete": "投递得真好！原来心意不需要邮票呢。"
         }
@@ -543,19 +543,19 @@
       "text": {
         "ko": {
           "title": "우편 가방 밖의 선물",
-          "request": "우편 가방에 담지 않아도 전할 마음이 있죠. 수락한 뒤 선물을 받는 주민에게 물건 {count}개를 선물해 주세요.",
+          "request": "우편 가방에 담지 않아도 전할 수 있는 마음이 있죠. 주민 한 분께 선물을 하나 건네 주세요.",
           "accept": "새로 만들 필요는 없어요. 가진 물건도 훌륭한 선물이에요.",
           "complete": "고마워요! 오늘 배달 길은 한결 따뜻하겠어요."
         },
         "en": {
           "title": "A Gift Beyond the Mailbag",
-          "request": "Some kindness travels without a mailbag. After accepting, give {count} item to a resident who accepts gifts.",
+          "request": "Some kindness travels without a mailbag. Give a gift to one of our residents.",
           "accept": "No need to make anything new. Something you own is a lovely gift.",
           "complete": "Thank you! My delivery route feels warmer today."
         },
         "zh": {
           "title": "邮包外的礼物",
-          "request": "有些心意不用放进邮包。接下委托后，给一位能收礼的居民送{count}件物品吧。",
+          "request": "有些心意不用放进邮包。给一位居民送一件礼物吧。",
           "accept": "不用新做。已有的物品也是好礼物。",
           "complete": "谢谢！今天的送信路会更温暖呢。"
         }
@@ -655,19 +655,19 @@
       "text": {
         "ko": {
           "title": "길을 밝히는 등불",
-          "request": "마을 야외에 빛나는 물건 {count}개를 놓아 주세요. 작은 등불이나 램프도 좋아요.",
+          "request": "집 밖 마을 어딘가에 빛나는 물건을 하나 놓아 주세요. 작은 등불이나 램프도 좋아요.",
           "accept": "가진 조명을 써도 되고 새로 만들어도 돼요. 이미 놓인 조명도 괜찮아요.",
           "complete": "불빛이 하나 늘었네요. 돌아오는 발걸음이 편안하겠어요."
         },
         "en": {
           "title": "A Light for the Path",
-          "request": "Place {count} glowing object outdoors in the village. A little lantern or lamp is lovely.",
+          "request": "Place one glowing object somewhere outdoors in the village. A little lantern or lamp is lovely.",
           "accept": "Use a light you own or make one. A light already placed is fine too.",
           "complete": "Another light is shining. The walk home will feel easier."
         },
         "zh": {
           "title": "照路的小灯",
-          "request": "请在村庄室外摆放{count}件发光的物品。小灯笼或台灯都很好。",
+          "request": "请在村里的室外摆放一件发光的物品。小灯笼或台灯都很好。",
           "accept": "可以用已有的灯，也可以新做。已经摆好的灯也行。",
           "complete": "又多了一点灯光。回家的脚步会更安心。"
         }
@@ -683,19 +683,19 @@
       "text": {
         "ko": {
           "title": "노을의 작은 불빛",
-          "request": "마을 야외에 빛나는 물건 {count}개가 있으면 좋겠어요. 랜턴처럼 은은한 조명도 충분해요.",
+          "request": "집 밖 마을 어딘가에 빛나는 물건이 하나 있으면 좋겠어요. 랜턴처럼 은은한 조명도 충분해요.",
           "accept": "이미 마을에 놓은 조명도 좋아요. 새로 만들 필요는 없어요.",
           "complete": "고마워요. 오늘 마을에 따뜻한 점 하나가 더 생겼네요."
         },
         "en": {
           "title": "Noeul’s Little Light",
-          "request": "I would love {count} glowing object outdoors in the village. A gentle lantern light is plenty.",
+          "request": "I would love one glowing object somewhere outdoors in the village. A gentle lantern light is plenty.",
           "accept": "A light already placed in the village is fine. No need to make a new one.",
           "complete": "Thank you. Our village has another warm little spot today."
         },
         "zh": {
           "title": "晚霞的小小灯光",
-          "request": "希望村庄室外能有{count}件发光的物品。灯笼那样柔和的灯光就够了。",
+          "request": "希望村里的室外能有一件发光的物品。灯笼那样柔和的灯光就够了。",
           "accept": "村里已经摆好的灯也行，不用新做。",
           "complete": "谢谢。今天村里又多了一个温暖的小光点。"
         }
@@ -711,19 +711,19 @@
       "text": {
         "ko": {
           "title": "등불지기의 동료",
-          "request": "제 불빛에 동료가 있으면 좋겠어요. 마을 야외에 램프 같은 빛나는 물건 {count}개를 놓아 주세요.",
+          "request": "제 불빛에 동료가 있으면 좋겠어요. 집 밖 마을 어딘가에 램프 같은 빛나는 물건을 하나 놓아 주세요.",
           "accept": "가진 등불도 좋아요. 이미 마을에 놓여 있어도 괜찮아요.",
           "complete": "이제 불빛들이 함께 길을 지키겠네요. 고마워요."
         },
         "en": {
           "title": "A Companion for the Lamps",
-          "request": "My lights could use some company. Place {count} glowing object, such as a lamp, outdoors in the village.",
+          "request": "My lights could use some company. Place one glowing object, such as a lamp, somewhere outdoors in the village.",
           "accept": "A lantern you own is lovely. It can already be placed in the village.",
           "complete": "Now our lights can watch over the paths together. Thank you."
         },
         "zh": {
           "title": "灯光的小伙伴",
-          "request": "我的灯光也想有个伴。请在村庄室外摆放{count}件发光的物品，比如台灯。",
+          "request": "我的灯光也想有个伴。请在村里的室外摆放一件发光的物品，比如台灯。",
           "accept": "已有的灯笼就很好。已经摆在村里也可以。",
           "complete": "现在灯光们能一起守着小路了。谢谢。"
         }
@@ -739,19 +739,19 @@
       "text": {
         "ko": {
           "title": "물고기 도감의 이웃",
-          "request": "수락한 뒤 서로 다른 물고기 {count}종류를 낚아 주세요. 도감 속 이웃들을 만나 보고 싶어요.",
+          "request": "지금부터 서로 다른 물고기 {count}종류를 낚아 주세요. 도감 속 이웃들을 만나 보고 싶어요.",
           "accept": "같은 종류를 여러 마리 낚아도 한 종류로 세어요.",
           "complete": "서로 다른 지느러미들이네요. 차분히 기다린 보람이 있어요."
         },
         "en": {
           "title": "Neighbors in the Fish Book",
-          "request": "After accepting, catch {count} different kinds of fish. I would like to meet the fish book’s neighbors.",
+          "request": "From now on, catch {count} different kinds of fish. I would like to meet the fish book’s neighbors.",
           "accept": "Several fish of the same kind still count as one kind.",
           "complete": "Such different little fins. Your patience was worth it."
         },
         "zh": {
           "title": "鱼类图鉴里的邻居",
-          "request": "接下委托后，请钓到{count}种不同的鱼。我想认识图鉴里的邻居。",
+          "request": "从现在起，请钓到{count}种不同的鱼。我想认识图鉴里的邻居。",
           "accept": "同一种鱼钓到好几条，也只算一种。",
           "complete": "各不相同的小鱼鳍呢。耐心等待真值得。"
         }
@@ -767,19 +767,19 @@
       "text": {
         "ko": {
           "title": "잔물결 관찰 노트",
-          "request": "오늘 낚시 노트를 채워 볼까요? 수락한 뒤 서로 다른 물고기 {count}종류를 낚아 주세요.",
+          "request": "오늘 낚시 노트를 채워 볼까요? 지금부터 서로 다른 물고기 {count}종류를 낚아 주세요.",
           "accept": "예전에 낚은 종류도 다시 낚으면 괜찮아요.",
           "complete": "고맙습니다. 노트에 잔물결 같은 이야기가 늘었네요."
         },
         "en": {
           "title": "Notes on Little Ripples",
-          "request": "Shall we fill today’s fishing notes? After accepting, catch {count} different kinds of fish.",
+          "request": "Shall we fill today’s fishing notes? From now on, catch {count} different kinds of fish.",
           "accept": "A kind you caught before is fine if you catch it again now.",
           "complete": "Thank you. Our notes have a few more gentle stories."
         },
         "zh": {
           "title": "小波纹观察笔记",
-          "request": "来填一填今天的钓鱼笔记吧？接下委托后，请钓到{count}种不同的鱼。",
+          "request": "来填一填今天的钓鱼笔记吧？从现在起，请钓到{count}种不同的鱼。",
           "accept": "以前钓过的种类，现在再钓到也算。",
           "complete": "谢谢。笔记里又添了几段小波纹般的故事。"
         }
@@ -795,19 +795,19 @@
       "text": {
         "ko": {
           "title": "느긋한 낚시 비교",
-          "request": "서두르지 않는 낚시를 해 볼까요? 수락한 뒤 물고기를 서로 다른 {count}종류 낚아 주세요.",
+          "request": "서두르지 않는 낚시를 해 볼까요? 지금부터 서로 다른 물고기 {count}종류를 낚아 주세요.",
           "accept": "연못도 바다도 좋아요. 종류가 서로 다르면 돼요.",
           "complete": "좋은 기다림이었네요. 물가가 조금 더 친숙해졌어요."
         },
         "en": {
           "title": "A Leisurely Fishing Study",
-          "request": "How about some unhurried fishing? After accepting, catch {count} different kinds of fish.",
+          "request": "How about some unhurried fishing? From now on, catch {count} different kinds of fish.",
           "accept": "Pond or sea is fine. The kinds just need to be different.",
           "complete": "That was time well spent. The waterside feels more familiar now."
         },
         "zh": {
           "title": "悠闲的钓鱼观察",
-          "request": "来慢慢钓会儿鱼吧？接下委托后，请钓到{count}种不同的鱼。",
+          "request": "来慢慢钓会儿鱼吧？从现在起，请钓到{count}种不同的鱼。",
           "accept": "池塘和大海都行，只要种类不同。",
           "complete": "这份等待真好。水边也变得更亲切了。"
         }
@@ -907,19 +907,19 @@
       "text": {
         "ko": {
           "title": "정자로 보내는 안부",
-          "request": "수락한 뒤 가람 씨에게 제 안부를 {count}번 전해 주시겠습니까? 산책 중 문득 생각났습니다.",
+          "request": "가람 씨에게 제 안부를 전해 주시겠습니까? 산책하다가 문득 생각이 났습니다.",
           "accept": "가람 씨와 이야기해 주시면 됩니다. 고맙습니다.",
           "complete": "안부가 잘 닿았군요. 오늘 산책은 더욱 즐겁겠습니다."
         },
         "en": {
           "title": "Regards for the Gazebo",
-          "request": "After accepting, give Garam my regards {count} time, would you? I thought of him during my walk.",
+          "request": "Would you give Garam my regards? He came to mind during my walk.",
           "accept": "Simply speak with Garam for me. Thank you.",
           "complete": "My regards reached him. Today’s stroll will be all the better."
         },
         "zh": {
           "title": "送往凉亭的问候",
-          "request": "接下委托后，能向伽蓝转达{count}次我的问候吗？散步时忽然想起了他。",
+          "request": "能替我向伽蓝转达问候吗？散步时忽然想起了他。",
           "accept": "替我和伽蓝说说话就好。谢谢。",
           "complete": "问候传到了。今天的散步会更加愉快。"
         }
@@ -935,19 +935,19 @@
       "text": {
         "ko": {
           "title": "윤재의 짧은 인사",
-          "request": "가람 씨에게 좋은 하루 보내시라 전하고 싶군요. 수락한 뒤 제 안부를 {count}번 전해 주십시오.",
+          "request": "가람 씨에게 좋은 하루 보내시라 전하고 싶군요. 제 안부를 전해 주십시오.",
           "accept": "말 한마디에도 온기가 있지요. 부탁드립니다.",
           "complete": "고맙습니다. 짧은 인사로도 마음이 넉넉해지는군요."
         },
         "en": {
           "title": "A Brief Hello from Yunjae",
-          "request": "I would like to wish Garam a pleasant day. After accepting, give him my regards {count} time.",
+          "request": "I would like to wish Garam a pleasant day. Please give him my regards.",
           "accept": "Even a few words can carry warmth. Thank you for helping.",
           "complete": "Thank you. A brief greeting can make the heart feel full."
         },
         "zh": {
           "title": "允在的简短问候",
-          "request": "想祝伽蓝度过愉快的一天。接下委托后，请替我问候他{count}次。",
+          "request": "想祝伽蓝度过愉快的一天。请替我问候他。",
           "accept": "一句话也能带着温暖。拜托了。",
           "complete": "谢谢。简短的问候也能让心里暖暖的。"
         }
@@ -963,19 +963,19 @@
       "text": {
         "ko": {
           "title": "시인에게 띄우는 인사",
-          "request": "가람 씨의 시가 문득 떠올랐습니다. 수락한 뒤 가람 씨에게 제 안부를 {count}번 전해 주십시오.",
+          "request": "가람 씨의 시가 문득 떠올랐습니다. 가람 씨에게 제 안부를 전해 주십시오.",
           "accept": "선물은 필요 없습니다. 다정한 인사면 충분하지요.",
           "complete": "고맙습니다. 덕분에 오늘은 시 한 줄 같은 날입니다."
         },
         "en": {
           "title": "A Greeting for the Poet",
-          "request": "A poem by Garam came to mind. After accepting, please give Garam my regards {count} time.",
+          "request": "A poem by Garam came to mind. Please give him my regards.",
           "accept": "No gift is needed. A kind greeting is plenty.",
           "complete": "Thank you. You have made today feel like a line of poetry."
         },
         "zh": {
           "title": "给诗人的问候",
-          "request": "忽然想起了伽蓝的诗。接下委托后，请向伽蓝转达{count}次我的问候。",
+          "request": "忽然想起了伽蓝的诗。请替我向他问好。",
           "accept": "不用礼物，亲切的问候就足够了。",
           "complete": "谢谢。多亏你，今天也像一行诗了。"
         }
@@ -991,19 +991,19 @@
       "text": {
         "ko": {
           "title": "별빛 아래 초대",
-          "request": "밤에 별빛 천문대 안으로 {count}번 들어와 주세요. 조용한 별빛을 함께 나누고 싶어요.",
+          "request": "해가 진 뒤에 별빛 천문대 안으로 들어와 주세요. 조용한 별빛을 함께 나누고 싶어요.",
           "accept": "밤에 오시면 돼요. 망원경은 제가 닦아 둘게요.",
           "complete": "와 주셨네요. 오늘 별빛은 혼자 보기 아까웠어요."
         },
         "en": {
           "title": "An Invitation Under Stars",
-          "request": "Come inside the Starlight Observatory {count} time at night. I would love to share the quiet starlight.",
+          "request": "Come inside the Starlight Observatory after dark. I would love to share the quiet starlight.",
           "accept": "Come at night. I will polish the telescope.",
           "complete": "You came. Tonight’s starlight was too lovely to keep to myself."
         },
         "zh": {
           "title": "星光下的邀请",
-          "request": "请在夜里进入星光天文台{count}次。想和你分享安静的星光。",
+          "request": "天黑以后，请到星光天文台里面来。想和你分享安静的星光。",
           "accept": "晚上来就好。我会把望远镜擦亮。",
           "complete": "你来了。今晚的星光真舍不得独自欣赏。"
         }
@@ -1019,19 +1019,19 @@
       "text": {
         "ko": {
           "title": "천문대의 밤 손님",
-          "request": "천문대에 밤 손님을 기다리고 있어요. 밤에 별빛 천문대 안으로 {count}번 들어와 주실래요?",
+          "request": "천문대에서 밤 손님을 기다리고 있어요. 해가 진 뒤에 별빛 천문대 안으로 들어와 줄래요?",
           "accept": "해가 진 뒤의 방문이에요. 별들이 길동무가 되어 줄 거예요.",
           "complete": "고마워요. 발소리가 들리니 천문대도 반가워하네요."
         },
         "en": {
           "title": "A Night Guest at the Observatory",
-          "request": "The observatory is waiting for a night guest. Could you come inside the Starlight Observatory {count} time at night?",
+          "request": "The observatory is waiting for a night guest. Could you come inside the Starlight Observatory after dark?",
           "accept": "This is a nighttime visit. The stars will keep you company.",
           "complete": "Thank you. Even the observatory seems happy to hear your steps."
         },
         "zh": {
           "title": "天文台的夜间客人",
-          "request": "天文台正在等一位夜里的客人。能在夜里进入星光天文台{count}次吗？",
+          "request": "天文台正在等一位夜里的客人。天黑以后，能到星光天文台里面来吗？",
           "accept": "请晚上来。星星会陪你走这段路。",
           "complete": "谢谢。听到你的脚步，天文台也高兴起来了。"
         }
@@ -1047,19 +1047,19 @@
       "text": {
         "ko": {
           "title": "별을 기다리는 자리",
-          "request": "별을 기다리는 자리가 비어 있어요. 밤에 별빛 천문대 안으로 {count}번 와 주세요.",
+          "request": "별을 기다리는 자리가 비어 있어요. 해가 진 뒤에 별빛 천문대 안으로 와 주세요.",
           "accept": "별을 세지 않아도 좋아요. 밤에 들러 주시는 것만으로 충분해요.",
           "complete": "함께 기다리니 별빛도 조금 가까워진 듯해요."
         },
         "en": {
           "title": "A Place to Wait for Stars",
-          "request": "There is an empty place to wait for the stars. Come inside the Starlight Observatory {count} time at night.",
+          "request": "There is an empty seat for waiting on the stars. Come inside the Starlight Observatory after dark.",
           "accept": "No need to count stars. A nighttime visit is enough.",
           "complete": "With someone beside me, the starlight feels a little closer."
         },
         "zh": {
           "title": "等星星的位置",
-          "request": "等星星的位置还空着。请在夜里进入星光天文台{count}次。",
+          "request": "等星星的位置还空着。天黑以后，请到星光天文台里面来。",
           "accept": "不用数星星。晚上来坐坐就足够了。",
           "complete": "一起等待时，星光仿佛也近了一点。"
         }
@@ -1282,7 +1282,7 @@
           "complete": "Lovely! The mill has a happy snack break ahead."
         },
         "zh": {
-          "title": "杜蕾的橙色点心",
+          "title": "杜雷的橙色点心",
           "request": "今天的点心带点橙色，好吗？请带来{count}根胡萝卜。",
           "accept": "已有的胡萝卜也行，现种也可以！",
           "complete": "太好了！磨坊要迎来开心的点心时间啦。"
@@ -1327,19 +1327,19 @@
       "text": {
         "ko": {
           "title": "우리 집 작은 변화",
-          "request": "수락한 뒤 당신의 집 안에 물건 {count}개를 새로 놓거나 옮겨 보세요. 잡화점 주인의 작은 꾸미기 제안이에요!",
+          "request": "집 안에 물건 하나를 새로 놓거나 옮겨 보세요. 잡화점 주인의 작은 꾸미기 제안이에요!",
           "accept": "가진 물건으로 충분해요. 자리를 조금 바꿔도 좋아요.",
           "complete": "멋져요! 집이 새 표정으로 인사하는 것 같네요."
         },
         "en": {
           "title": "A Little Change at Home",
-          "request": "After accepting, place or move {count} object inside your own home. A little decorating idea from your shopkeeper!",
+          "request": "Place or move one object inside your home. A little decorating idea from your shopkeeper!",
           "accept": "Something you own is enough. Just changing its spot is lovely.",
           "complete": "Wonderful! Your home looks ready to greet you with a new smile."
         },
         "zh": {
           "title": "家里的一点变化",
-          "request": "接下委托后，在自己家里摆放或移动{count}件物品吧。杂货店老板的小小布置建议！",
+          "request": "在自己家里摆放或移动一件物品吧。杂货店老板的小小布置建议！",
           "accept": "已有的物品就够了。换个位置也很好。",
           "complete": "真棒！家仿佛换了个笑脸来迎接你。"
         }
@@ -1355,19 +1355,19 @@
       "text": {
         "ko": {
           "title": "단비의 집 꾸미기 메모",
-          "request": "수락한 뒤 당신의 집 안의 물건 {count}개를 옮기거나 새로 놓아 보실래요? 작은 변화도 재미있어요.",
+          "request": "집 안의 물건 하나를 옮기거나 새로 놓아 보실래요? 작은 변화도 재미있어요.",
           "accept": "새 물건을 살 필요는 없어요. 가방 속 물건도 좋아요!",
-          "complete": "좋아요! 집 꾸미기 메모에 즐거운 예가 늘었어요."
+          "complete": "좋아요! 집 꾸미기 메모에 즐거운 예시가 하나 늘었어요."
         },
         "en": {
           "title": "Danbi’s Decorating Notes",
-          "request": "After accepting, move or place {count} object inside your own home. Even a small change can be fun.",
+          "request": "Would you move or place one object inside your home? Even a small change can be fun.",
           "accept": "No need to buy anything new. Something in your bag is lovely!",
           "complete": "Great! My decorating notes have another cheerful example."
         },
         "zh": {
-          "title": "丹妃的布置笔记",
-          "request": "接下委托后，在自己家里移动或摆放{count}件物品，好吗？小变化也很有趣。",
+          "title": "丹比的布置笔记",
+          "request": "在家里移动或摆放一件物品，好吗？小变化也很有趣。",
           "accept": "不用买新的。包里的物品也很好！",
           "complete": "真好！布置笔记里又多了一个开心的例子。"
         }
@@ -1383,19 +1383,19 @@
       "text": {
         "ko": {
           "title": "가구의 새 자리",
-          "request": "가구도 가끔 새 자리를 좋아할까요? 수락한 뒤 당신의 집 안에 물건 {count}개를 놓거나 옮겨 주세요.",
+          "request": "가구도 가끔 새 자리를 좋아할까요? 집 안에 물건 하나를 놓거나 옮겨 주세요.",
           "accept": "집 안에서 자리만 바꿔도 돼요. 취향대로 해 보세요!",
           "complete": "딱 어울리는 자리를 찾았네요! 저까지 기분이 좋아요."
         },
         "en": {
           "title": "A Fresh Spot for Furniture",
-          "request": "Do furnishings enjoy a fresh spot too? After accepting, place or move {count} object inside your own home.",
+          "request": "Do furnishings enjoy a fresh spot too? Place or move one object inside your home.",
           "accept": "Moving something within your home is enough. Follow your own taste!",
           "complete": "You found a lovely spot! It has cheered me up too."
         },
         "zh": {
           "title": "家具的新位置",
-          "request": "家具偶尔也会喜欢新位置吧？接下委托后，在自己家里摆放或移动{count}件物品。",
+          "request": "家具偶尔也会喜欢新位置吧？在家里摆放或移动一件物品吧。",
           "accept": "在家里换个位置就行。按自己的喜好来吧！",
           "complete": "找到了合适的位置呢！连我都开心起来了。"
         }
@@ -1411,19 +1411,19 @@
       "text": {
         "ko": {
           "title": "보물상자의 새 친구",
-          "request": "수락한 뒤 나한테 장난감이나 동물 모양 물건 {count}개를 선물해 줘! 보물상자 친구가 필요해.",
+          "request": "나한테 장난감이나 동물 모양 물건을 하나 선물해 줘! 보물상자 친구가 필요해.",
           "accept": "가진 장난감도 좋아! 만들고 싶으면 방울 공 장난감 같은 건 어때?",
           "complete": "와아! 보물상자에서 환영 파티를 열어야겠어!"
         },
         "en": {
           "title": "A Friend for the Treasure Box",
-          "request": "After accepting, give me {count} toy or animal-shaped object! My treasure box needs a friend.",
+          "request": "Give me a toy or an animal-shaped thing! My treasure box needs a friend.",
           "accept": "A toy you own is great! If you want to make one, how about a toy ball with a bell?",
           "complete": "Wow! My treasure box needs a welcome party!"
         },
         "zh": {
           "title": "宝箱的新朋友",
-          "request": "接下委托后，送我{count}件玩具或动物形状的物品吧！宝箱需要一个朋友。",
+          "request": "送我一件玩具或动物形状的东西吧！宝箱需要一个朋友。",
           "accept": "已有的玩具也好！想做的话，带铃铛的玩具球怎么样？",
           "complete": "哇！要在宝箱里开欢迎会啦！"
         }
@@ -1439,19 +1439,19 @@
       "text": {
         "ko": {
           "title": "콩이의 작은 놀이 친구",
-          "request": "수락한 뒤 장난감이나 동물 모양 물건 {count}개를 나한테 선물해 줄래? 같이 놀 친구를 찾고 있어!",
+          "request": "장난감이나 동물 모양 물건을 하나 선물해 줄래? 같이 놀 친구를 찾고 있어!",
           "accept": "새로 안 만들어도 돼. 가방에 있는 장난감도 반가워!",
           "complete": "고마워! 오늘 놀이에는 네 이름도 넣어 줄게!"
         },
         "en": {
           "title": "Kongi’s Little Playmate",
-          "request": "After accepting, give me {count} toy or animal-shaped object. I am looking for a playmate!",
+          "request": "Will you give me a toy or an animal-shaped thing? I am looking for a playmate!",
           "accept": "You do not have to make it. A toy in your bag is welcome!",
           "complete": "Thanks! I will put your name in today’s game too!"
         },
         "zh": {
           "title": "小豆的小玩伴",
-          "request": "接下委托后，送我{count}件玩具或动物形状的物品，好吗？我在找玩伴！",
+          "request": "送我一件玩具或动物形状的东西，好吗？我在找玩伴！",
           "accept": "不用新做。包里的玩具也欢迎！",
           "complete": "谢谢！今天的游戏也要放进你的名字！"
         }
@@ -1467,19 +1467,19 @@
       "text": {
         "ko": {
           "title": "장난감 탐험대",
-          "request": "내 장난감 탐험대에 친구가 모자라! 수락한 뒤 나에게 장난감이나 동물 모양 물건 {count}개를 선물해 줘.",
+          "request": "내 장난감 탐험대에 친구가 모자라! 장난감이나 동물 모양 물건을 하나 선물해 줘.",
           "accept": "가진 것도 좋아! 만들 거면 장난감 로봇도 멋지겠다.",
           "complete": "탐험대 준비 끝! 보물은 집 안에서 찾을 거야!"
         },
         "en": {
           "title": "The Toy Expedition",
-          "request": "My toy expedition needs a friend! After accepting, give me {count} toy or animal-shaped object.",
+          "request": "My toy expedition needs a friend! Give me a toy or an animal-shaped thing.",
           "accept": "One you own is great! If you make one, a toy robot would be fun.",
           "complete": "The expedition is ready! We are hunting for treasure right at home!"
         },
         "zh": {
           "title": "玩具探险队",
-          "request": "我的玩具探险队还缺朋友！接下委托后，送我{count}件玩具或动物形状的物品吧。",
+          "request": "我的玩具探险队还缺朋友！送我一件玩具或动物形状的东西吧。",
           "accept": "已有的也好！想做的话，玩具机器人一定很棒。",
           "complete": "探险队准备好啦！就在家里找宝藏！"
         }
@@ -1495,19 +1495,19 @@
       "text": {
         "ko": {
           "title": "콩이의 비밀 전시회",
-          "request": "장난감 전시회를 열고 싶어! 수락한 뒤 나에게 장난감이나 동물 모양 물건 {count}개를 선물해 줘.",
+          "request": "장난감 전시회를 열고 싶어! 장난감이나 동물 모양 물건을 하나 선물해 줘.",
           "accept": "새로 만들지 않아도 돼! 가방 속 친구를 소개해 줘.",
           "complete": "짜잔! 첫 손님은 너야. 정말 고마워!"
         },
         "en": {
           "title": "Kongi’s Secret Toy Show",
-          "request": "I want to put on a toy show! After accepting, give me {count} toy or animal-shaped object.",
+          "request": "I want to put on a toy show! Give me a toy or an animal-shaped thing.",
           "accept": "No need to make a new one! Introduce me to a friend from your bag.",
           "complete": "Ta-da! You are the first guest. Thank you so much!"
         },
         "zh": {
           "title": "小豆的秘密展览",
-          "request": "我想办玩具展览！接下委托后，送我{count}件玩具或动物形状的物品吧。",
+          "request": "我想办玩具展览！送我一件玩具或动物形状的东西吧。",
           "accept": "不用新做！介绍一位包里的朋友给我吧。",
           "complete": "锵锵！你是第一位客人。太谢谢你啦！"
         }
@@ -1523,19 +1523,19 @@
       "text": {
         "ko": {
           "title": "밤바람이 닿는 부두",
-          "request": "밤에 등대 부두 끝을 {count}번 찾아가 주세요. 파도와 나누는 조용한 인사가 좋아요.",
+          "request": "해가 진 뒤에 등대 부두 끝까지 걸어가 봐요. 파도와 나누는 조용한 인사가 좋아요.",
           "accept": "밤길은 천천히 걸어요. 부두 끝에 닿으면 충분해요.",
           "complete": "다녀오셨군요. 밤바람도 반가워했을 거예요."
         },
         "en": {
           "title": "The Pier in the Night Breeze",
-          "request": "Visit the end of the lighthouse pier {count} time at night. I love a quiet greeting with the waves.",
+          "request": "After dark, walk to the end of the lighthouse pier. I love a quiet hello with the waves.",
           "accept": "Walk gently through the night. Reaching the end of the pier is enough.",
           "complete": "You are back. The night breeze must have been glad to see you."
         },
         "zh": {
           "title": "夜风吹过的码头",
-          "request": "请在夜里去灯塔码头尽头{count}次。我喜欢和海浪安静地打招呼。",
+          "request": "天黑以后，走到灯塔码头的尽头吧。我喜欢和海浪安静地打招呼。",
           "accept": "夜路慢慢走。到码头尽头就足够了。",
           "complete": "回来啦。夜风一定也很高兴见到你。"
         }
@@ -1551,19 +1551,19 @@
       "text": {
         "ko": {
           "title": "새벽의 밤 산책",
-          "request": "오늘 밤은 바다 쪽으로 걸어 볼까요? 밤에 등대 부두 끝을 {count}번 방문해 주세요.",
+          "request": "오늘 밤은 바다 쪽으로 걸어 볼까요? 해가 진 뒤에 등대 부두 끝까지 가 봐요.",
           "accept": "밤에 다녀오는 작은 산책이에요. 오래 머물 필요는 없어요.",
           "complete": "고마워요. 같은 밤바람을 나눈 기분이네요."
         },
         "en": {
           "title": "Saebyeok’s Night Stroll",
-          "request": "Shall we walk toward the sea tonight? Visit the end of the lighthouse pier {count} time at night.",
+          "request": "Shall we walk toward the sea tonight? After dark, go to the end of the lighthouse pier.",
           "accept": "Just a little nighttime stroll. No need to stay long.",
           "complete": "Thank you. It feels like we shared the same night breeze."
         },
         "zh": {
           "title": "晨曦的夜间散步",
-          "request": "今晚朝海边走走吧？请在夜里去灯塔码头尽头{count}次。",
+          "request": "今晚朝海边走走吧？天黑以后，去灯塔码头的尽头看看。",
           "accept": "只是一次夜间小散步，不用久留。",
           "complete": "谢谢。仿佛和你分享了同一阵夜风。"
         }
@@ -1579,19 +1579,19 @@
       "text": {
         "ko": {
           "title": "파도에게 건네는 안녕",
-          "request": "밤 파도에게 안부를 전해 볼래요? 밤에 등대 부두 끝을 {count}번 찾아가 주세요.",
+          "request": "밤 파도에게 안부를 전해 볼래요? 해가 진 뒤에 등대 부두 끝까지 걸어가 봐요.",
           "accept": "말을 하지 않아도 괜찮아요. 밤에 발걸음만 닿으면 돼요.",
           "complete": "다녀온 발걸음이 한결 잔잔해 보여요. 고맙습니다."
         },
         "en": {
           "title": "A Hello for the Waves",
-          "request": "Would you say hello to the night waves? Visit the end of the lighthouse pier {count} time at night.",
+          "request": "Would you say hello to the night waves? After dark, walk to the end of the lighthouse pier.",
           "accept": "No need to speak. Just let your steps reach it at night.",
           "complete": "Your steps seem calmer now. Thank you for taking that walk."
         },
         "zh": {
           "title": "向海浪问好",
-          "request": "想向夜里的海浪问好吗？请在夜里去灯塔码头尽头{count}次。",
+          "request": "想向夜里的海浪问好吗？天黑以后，走到灯塔码头的尽头吧。",
           "accept": "不用说话。晚上走到那里就好。",
           "complete": "回来时的脚步似乎更平静了。谢谢你。"
         }
@@ -1607,19 +1607,19 @@
       "text": {
         "ko": {
           "title": "다섯 섬의 첫 줄",
-          "request": "천문대 전망대를 {count}번 찾아가 주세요. 다섯 섬을 보면 시의 첫 줄이 떠오를 것 같아요.",
+          "request": "천문대 전망대에 올라 다섯 섬을 내려다봐 주세요. 그 풍경이면 시의 첫 줄이 떠오를 것 같아요.",
           "accept": "별빛 천문대 바로 옆이에요. 어느 시간이든 좋아요.",
           "complete": "고마워요. 풍경을 나눠 보니 시가 한 걸음 가까워졌어요."
         },
         "en": {
           "title": "A First Line for Five Islands",
-          "request": "Visit the Observatory Lookout {count} time. Seeing the five islands might bring a poem’s first line.",
+          "request": "Climb up to the Observatory Lookout and look out over the five islands. That view might bring me a poem’s first line.",
           "accept": "It is beside the Starlight Observatory. Any time is fine.",
           "complete": "Thank you. Sharing the view has brought the poem a little closer."
         },
         "zh": {
           "title": "五座岛的第一行诗",
-          "request": "请去天文台瞭望台{count}次。看见五座岛，也许就能想到诗的第一行。",
+          "request": "请登上天文台瞭望台，俯瞰五座岛。那片风景也许能带来诗的第一行。",
           "accept": "就在星光天文台旁边，什么时间都好。",
           "complete": "谢谢。分享了风景，诗也近了一步。"
         }
@@ -1635,19 +1635,19 @@
       "text": {
         "ko": {
           "title": "전망대의 쉼표",
-          "request": "시에도 쉼표가 필요하죠. 천문대 전망대에 {count}번 들러 잠깐 풍경을 만나 주세요.",
+          "request": "시에도 쉼표가 필요하죠. 천문대 전망대에 들러 잠깐 풍경을 만나 주세요.",
           "accept": "그곳에 가 보는 것만으로 좋아요. 시를 써 오실 필요는 없어요.",
           "complete": "고맙습니다. 오늘 하루에 좋은 쉼표가 생겼네요."
         },
         "en": {
           "title": "A Pause at the Lookout",
-          "request": "Even a poem needs a pause. Visit the Observatory Lookout {count} time and meet the view.",
+          "request": "Even a poem needs a pause. Stop by the Observatory Lookout and meet the view for a moment.",
           "accept": "Just visiting is lovely. No need to bring back a poem.",
           "complete": "Thank you. Today has found a lovely little pause."
         },
         "zh": {
           "title": "瞭望台的逗号",
-          "request": "诗也需要逗号。请去天文台瞭望台{count}次，和风景见个面。",
+          "request": "诗也需要逗号。请去天文台瞭望台，和风景见个面。",
           "accept": "去看看就好，不用带回一首诗。",
           "complete": "谢谢。今天多了一个美好的小停顿。"
         }
@@ -1663,19 +1663,19 @@
       "text": {
         "ko": {
           "title": "섬들을 잇는 문장",
-          "request": "다섯 섬과 다리를 한 문장에 담고 싶어요. 천문대 전망대를 {count}번 방문해 주세요.",
+          "request": "다섯 섬과 다리를 한 문장에 담고 싶어요. 천문대 전망대에 다녀와 주세요.",
           "accept": "낮도 밤도 좋아요. 전망대에서 만나는 풍경이면 충분해요.",
           "complete": "고마워요. 멀리 있던 문장이 다리처럼 이어지네요."
         },
         "en": {
           "title": "A Sentence Between Islands",
-          "request": "I want to fit five islands and their bridges into a sentence. Visit the Observatory Lookout {count} time.",
+          "request": "I want to fit five islands and their bridges into a sentence. Please visit the Observatory Lookout.",
           "accept": "Day or night is fine. The view from the lookout is enough.",
           "complete": "Thank you. The distant words are joining like bridges."
         },
         "zh": {
           "title": "连接岛屿的句子",
-          "request": "想把五座岛和桥写进一个句子。请去天文台瞭望台{count}次。",
+          "request": "想把五座岛和桥写进一个句子。请去天文台瞭望台看看。",
           "accept": "白天夜晚都好，去看看那里的风景就够了。",
           "complete": "谢谢。远处的词语也像桥一样连起来了。"
         }
