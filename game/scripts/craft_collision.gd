@@ -16,6 +16,8 @@ const FALLBACK_GRIDS := [7, 5]
 
 ## Root-local boxes (AABB) fitted to the model's own surfaces, [] when it has none.
 static func boxes_for(root: Node3D) -> Array:
+	# A moving character (rig_motion.gd): one box that holds its whole stride, not its rest pose's shape.
+	if root.has_meta("motion_box"): return [root.get_meta("motion_box")]
 	var parts := surfaces(root)
 	if parts.is_empty(): return []
 	var bounds := AABB()

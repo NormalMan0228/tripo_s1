@@ -70,5 +70,38 @@ func run() -> void:
 	await shot(out, "walk-a")
 	await create_timer(0.35).timeout
 	await shot(out, "walk-b")
+	# On the spot: across each whole clip the craft's own transform never changes, its root bone stays
+	# over the placed spot, no bone leaves the collision footprint, and its feet neither sink nor float.
+	var size: Vector3 = character.get_meta("size", Vector3.ONE)
+	var box: AABB = character.get_meta("motion_box", AABB())
+	expect(box.size.length() > 0.1 and preload("res://scripts/craft_collision.gd").boxes_for(character) == [box], "collision is one box holding the stride (%s)" % box)
+	var placed := character.global_transform
+	var skeleton: Skeleton3D = skeletons[0]
+	var rest_low := INF
+	for bone in skeleton.get_bone_count(): rest_low = minf(rest_low, (character.global_transform.affine_inverse() * skeleton.global_transform * skeleton.get_bone_global_rest(bone).origin).y)
+	for clip in ["idle", "walk"]:
+		var animation := players[0].get_animation(clip)
+		players[0].play(clip)
+		var drift := 0.0
+		var outside := 0.0
+		var low := INF
+		var high_low := -INF
+		var root_start := Vector3.INF
+		for step in 24:
+			players[0].seek(animation.length * step / 24.0, true)
+			var lowest := INF
+			for bone in skeleton.get_bone_count():
+				var at: Vector3 = character.global_transform.affine_inverse() * skeleton.global_transform * skeleton.get_bone_global_pose(bone).origin
+				lowest = minf(lowest, at.y)
+				outside = maxf(outside, maxf(maxf(box.position.x - at.x, at.x - box.end.x), maxf(box.position.z - at.z, at.z - box.end.z)))
+				if skeleton.get_bone_parent(bone) == -1:
+					if root_start == Vector3.INF: root_start = at
+					drift = maxf(drift, Vector2(at.x - root_start.x, at.z - root_start.z).length())
+			low = minf(low, lowest)
+			high_low = maxf(high_low, lowest)
+		expect(character.global_transform.is_equal_approx(placed), "%s: the craft stays where it was placed" % clip)
+		expect(drift < maxf(0.03, size.y * 0.03), "%s: the root stays on the spot (drift %.3f m)" % [clip, drift])
+		expect(outside <= 0.02, "%s: no bone leaves the collision footprint (%.3f m out)" % [clip, outside])
+		expect(low > rest_low - 0.06 and high_low < rest_low + size.y * 0.25, "%s: feet neither sink nor float (lowest %.3f..%.3f, rest %.3f)" % [clip, low, high_low, rest_low])
 	print("RIG_FILE " + ("FAILED" if failed else "OK"))
 	quit(1 if failed else 0)

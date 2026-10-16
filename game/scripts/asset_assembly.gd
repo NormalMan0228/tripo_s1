@@ -192,6 +192,13 @@ func build(value: Dictionary, blobs: Dictionary) -> bool:
 	if rig.get("moves",false) is bool and rig.get("moves",false):
 		set_meta("rig",rig)
 		RigMotion.start(self,rig)
+		# It moves on the spot, but its legs swing and its arms reach: collision and the placing footprint
+		# hold the whole stride (craft_collision.gd boxes_for, ObjectTransform via the size meta).
+		var body: Vector3=total.size*factor
+		var reach := body.y*RigMotion.STRIDE
+		var box := AABB(Vector3(-maxf(body.x*0.5,reach),0,-maxf(body.z*0.5,reach)),Vector3(maxf(body.x,reach*2),body.y,maxf(body.z,reach*2)))
+		set_meta("motion_box",box)
+		set_meta("size",box.size)
 	return true
 
 func _ready() -> void:
