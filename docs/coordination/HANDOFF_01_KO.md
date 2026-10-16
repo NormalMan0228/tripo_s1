@@ -112,3 +112,14 @@
 - 진행 중: 총괄이 탐험 버그 목록과 패치를 만들고 있습니다(docs/coordination/patches/expedition/<id>.patch, 기준 62dd6afe). 서버 패치는 0.11.9.4 그대로 서버만 배포합니다. 클라이언트 패치는 0.11.9.5로 냅니다(git apply → compile_all → docs/coordination/ship_01194.ps1을 0.11.9.5로 고쳐 실행: 빌드·pck 검사·업로드·점검·배포). 배포 명령은 `deploy_school.py --announce 3 --min-version 0.11.9.4 --message "…"`입니다(--block-older 금지).
 - 다음 패치 대기열 전체: docs/coordination/NEXT_PATCH_QUEUE_01.txt(맨 아래가 최신). 빌드 스크립트 본: docs/coordination/build_01194.ps1, ship_01194.ps1(경로는 01 scratchpad 기준이라 고쳐 써야 함).
 - 디스크: C:\lsm26\old_release_0119, C:\lsm26\old_release_01194, D:\lsm26\old_release_01193(각 2.2GB, 모두 S3에 있음)은 사용자 승인을 받으면 지웁니다.
+
+## 2026-10-16 16:00 (주간 99%)
+
+- 탐험 패치 9개(docs/coordination/patches/expedition)를 merge-vg에 적용했습니다(커밋 eba03e7b, 게임 버전 0.11.9.4 그대로).
+- 서버 쪽 탐험 수정: scratchpad의 ship_server_expedition.ps1이 서버 전체 pytest를 돌리고, 통과하면 서버만 배포합니다(--min-version 0.11.9.4). /health build가 이 커밋 이후 것인지 확인해 주세요.
+- 클라이언트 쪽(3·4·5의 클라 부분, 6~9)은 0.11.9.5 패치로 내야 합니다. 아직 빌드하지 않았습니다. 할 일:
+  1. 사용자가 켜 둔 게임(C:\lsm26\Villagen_0.11.9.4, builds/school에 하드링크)을 닫습니다. 열려 있으면 내보내기가 파일 잠금으로 실패합니다.
+  2. project.godot 버전을 0.11.9.5로 바꾸고 school_changes_KO.txt에 항목을 더합니다.
+  3. compile_all을 돌립니다. 총괄 패치는 compile 전입니다.
+  4. docs/coordination/ship_01194.ps1을 0.11.9.5로 고쳐 실행합니다. deploy 줄은 --block-older 대신 --min-version 0.11.9.4로 바꿉니다.
+- monster-anim-quality(9)를 넣었으므로 N6 d609a47은 넣지 않습니다.
