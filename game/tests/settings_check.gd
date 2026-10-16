@@ -146,6 +146,19 @@ func check_round_trip() -> void:
 	check(GameSettings.get_value("render_scale") == 100, "render_scale clamps")
 	check(GameSettings.get_value("shadows") == "low", "unknown shadows falls back")
 	check(GameSettings.get_value("music") == 0, "music clamps at 0")
+	# A file from before the quieter defaults: an untouched volume (still the old 100) moves to the
+	# new default, a volume the player set stays; the next save marks the file as migrated.
+	config = ConfigFile.new()
+	config.load(I18n.settings_path())
+	if config.has_section_key("audio", "defaults_v"): config.erase_section_key("audio", "defaults_v")
+	config.set_value("audio", "master", 100)
+	config.set_value("audio", "music", 40)
+	config.save(I18n.settings_path())
+	GameSettings.reload_settings()
+	check(GameSettings.get_value("master") == GameSettings.DEFAULTS.master and GameSettings.get_value("music") == 40, "old default volumes migrate, chosen ones stay (%s, %s)" % [GameSettings.get_value("master"), GameSettings.get_value("music")])
+	GameSettings.set_value("master", 100)
+	GameSettings.reload_settings()
+	check(GameSettings.get_value("master") == 100, "a master the player sets to 100 after the migration stays 100")
 	GameSettings.commit(GameSettings.defaults_for("graphics").merged(GameSettings.defaults_for("audio")))
 	# Language goes through I18n's [game] key.
 	GameSettings.set_value("language", "en")
