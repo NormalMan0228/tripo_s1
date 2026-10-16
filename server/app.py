@@ -515,7 +515,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 day = int(clock()//86400)*86400
                 if conn.execute("SELECT count(*) FROM security_events WHERE kind='register' AND created>=?",(day,)).fetchone()[0] >= settings.signups_per_day:
                     fail('registration_closed_today',429)
-                if conn.execute("SELECT count(*) FROM security_events WHERE kind='register' AND created>=? AND json_extract(detail,'$.ip')=?",
+                # 0 = no per-address limit (the main server: several players share one school network).
+                if settings.signups_per_ip_day and conn.execute("SELECT count(*) FROM security_events WHERE kind='register' AND created>=? AND json_extract(detail,'$.ip')=?",
                                 (day,client_ip(request))).fetchone()[0] >= settings.signups_per_ip_day:
                     fail('too_many_registrations',429)
         # Reject exhausted quotas before spending Argon2 CPU/memory. The second check

@@ -1297,7 +1297,15 @@ class Studio:
                         self.update(job_id,state='building',parts=json.dumps(parts));return
                     # Tripo's content check banned the task: refused, not a held (unknown) submission.
                     if result.get('status')=='banned':raise Refused('other')
-                    if result.get('status') in ('failed','cancelled','expired'):raise ProviderError('generation_failed')
+                    if result.get('status') in ('failed','cancelled','expired'):
+                        # A failed Tripo task is submitted again (settings.studio_retries times) before the craft
+                        # fails. The failed attempt keeps its own bill in the attempt ledger; budgets apply again.
+                        retries=int(entry.get('retries',0))
+                        if retries<self.settings.studio_retries:
+                            for key in ('task','mesh_attempt','submitted','credits_consumed','progress'):entry.pop(key,None)
+                            entry.update(state='image_ready' if entry.get('image_task') else 'pending',retries=retries+1)
+                            self.update(job_id,state='building',parts=json.dumps(parts));return
+                        raise ProviderError('generation_failed')
                     if result.get('status')!='success':raise ProviderError('upstream_schema',uncertain=True)
                     entry['credits_consumed']=result.get('credits_consumed')
                     # Keep actual provider billing even if download/validation subsequently fails.

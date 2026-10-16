@@ -429,3 +429,38 @@ def test_reference_refinement_to_model_keeps_task_chain_and_costs(tmp_path):
         value=c.get('/v1/studio/jobs/'+job,headers=a).json()
         assert value['state']=='ready' and value['provenance']['tripo_credits_consumed']==25
         assert value['provenance']['image_refinement_credits']==5
+
+
+def test_failed_tripo_task_is_retried_then_ready_and_charged_once(tmp_path):
+    class FailsFirst(FurnitureProvider):
+        async def task(self,task):
+            if task=='task-1':return {'status':'failed','credits_consumed':0}
+            return await super().task(task)
+    provider=FailsFirst();app,client=paid_world(tmp_path,provider)
+    with client as c:
+        a=account(c,'alice')
+        job=c.post('/v1/studio/jobs',headers=a,json=mutation(prompt='wooden chest',geometry='tripo',motion='static')).json()['id']
+        asyncio.run(app.state.studio.process(job))
+        c.post('/v1/studio/jobs/'+job+'/confirm',headers=a,json=mutation())
+        charged=c.get('/v1/me',headers=a).json()['shards']
+        for _ in range(8):asyncio.run(app.state.studio.process(job))
+        result=c.get('/v1/studio/jobs/'+job,headers=a).json()
+        assert result['state']=='ready',result
+        assert len(provider.calls)==2
+        assert c.get('/v1/me',headers=a).json()['shards']==charged
+
+
+def test_failed_tripo_task_stops_after_the_retries(tmp_path):
+    class AlwaysFails(FurnitureProvider):
+        async def task(self,task):return {'status':'failed','credits_consumed':0}
+    provider=AlwaysFails();app,client=paid_world(tmp_path,provider)
+    with client as c:
+        a=account(c,'alice')
+        job=c.post('/v1/studio/jobs',headers=a,json=mutation(prompt='wooden chest',geometry='tripo',motion='static')).json()['id']
+        asyncio.run(app.state.studio.process(job))
+        c.post('/v1/studio/jobs/'+job+'/confirm',headers=a,json=mutation())
+        for _ in range(12):asyncio.run(app.state.studio.process(job))
+        result=c.get('/v1/studio/jobs/'+job,headers=a).json()
+        assert result['state']=='failed' and result['error']=='generation_failed'
+        assert len(provider.calls)==1+app.state.settings.studio_retries
+        assert c.get('/v1/me',headers=a).json()['shards']==80

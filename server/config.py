@@ -140,6 +140,8 @@ class Settings:
     # Seconds one submitted Tripo part may take (queued, running or unreachable) before the craft
     # fails and its starseeds come back; the task is never submitted again.
     studio_part_deadline: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_PART_DEADLINE', '1200')))
+    # A Tripo task that reports failed is submitted again this many times before the craft fails.
+    studio_retries: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_RETRIES', '2')))
     # Village residents decorate their homes with gifts (server/npc_homes.py). Seconds from a gift
     # until the resident puts it up (random in this range), and between later rearrangements.
     # Tests and QA shorten them; NPC_SEED fixes every home's dice (0 = a fresh seed per home).
@@ -236,7 +238,7 @@ class Settings:
             raise ValueError('Invalid craft credit cap')
         if not 0 <= self.tripo_credit_budget <= 10000000:
             raise ValueError('Invalid Tripo credit budget')
-        if not 1 <= self.signups_per_ip_day <= 1000 or not 1 <= self.signups_per_day <= 100000:
+        if not 0 <= self.signups_per_ip_day <= 1000 or not 1 <= self.signups_per_day <= 100000:
             raise ValueError('Invalid open sign-up limits')
         if not 0 <= self.user_total_generation_limit <= 1000 or not 0 <= self.welcome_stars <= 10000:
             raise ValueError('Invalid account craft limit or welcome stars')
@@ -246,6 +248,8 @@ class Settings:
         # Tripo credit budget is the limit); each account keeps its own daily limit.
         if self.credit_reserve <= 0 or self.daily_generation_limit < 0 or self.user_daily_generation_limit < 1:
             raise ValueError('Generation budget must be positive')
+        if not 0 <= self.studio_retries <= 5:
+            raise ValueError('Invalid studio retries')
         if not 60 <= self.studio_part_deadline <= 86400:
             raise ValueError('Invalid studio part deadline')
         if self.fake_tripo:
