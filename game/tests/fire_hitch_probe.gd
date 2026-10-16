@@ -39,6 +39,13 @@ func run() -> void:
 	BuffFx.apply(app, run_state); await frames("buff_first", 30)
 	BuffFx.apply(app, {"campfire":{"mode":"buff"},"buffs":[]}); await frames("buff_off", 60)
 	BuffFx.apply(app, run_state); await frames("buff_second", 30)
+	for i in 2:
+		var beast := preload("res://scripts/shadow_beast.gd").new()
+		beast.kind = "wolf"
+		beast.from_enemy({"id": "probe%d" % i, "kind": "wolf", "x": 1.5+i, "z": -1.0, "hp": 30.0, "max_hp": 30.0, "phase": "idle"})
+		app.world.add_child(beast)
+		beast.position = Vector3(1.5+i, 0, -1.0)
+		await frames("beast_%s" % ["first", "second"][i])
 	CombatFx.strike(app, Vector3(0.5,0,-1), true); await frames("strike_first")
 	CombatFx.strike(app, Vector3(0.5,0,-1), true); await frames("strike_second")
 	quit(0)
