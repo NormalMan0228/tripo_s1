@@ -64,3 +64,10 @@
 - `rm_wt.ps1`, `make_wt.ps1`, `strings_merge.py`, `verify_quick.ps1`, `verify_final.ps1`
 - `notes_0118_draft.txt`, `after_0118_queue.txt`, `rel0118_runbook.png`
 - `.import` 줄바꿈 변화(수천 개)와 추적되지 않는 `.uid`는 커밋하지 않습니다.
+
+## 2026-10-16 11:20 현재
+
+- 메인 서버는 0.11.9(a286f78)이고 최소 버전 0.11.9입니다. S3에는 0.11.9 설치 파일과 0.11.7·0.11.8 → 0.11.9 패치가 있습니다. 기준판은 D:\lsm26ases(0.11.7, 0.11.8, 0.11.9)입니다.
+- 서버 설정은 compose.yaml 기본값입니다: 리깅·애니 켜짐, 모닥불 buff, 이사 off, 계정당 하루 5회, 서버 전체 횟수 제한 없음, 예산 29106.
+- 내보낸 뒤에는 반드시 pck 안의 project.binary를 검사합니다(ECFG로 시작하고 버전이 맞아야 함). 0.11.9 첫 내보내기에서 0바이트가 나온 적이 있습니다.
+- 다음 패치 대기열(도움 파일 after_0118_queue.txt 끝부분): codex/secaudit2 efdc67a(서버 핫픽스 후보), wt/lowspec 64e4650, codex/lownet c59cbd9, wt/tooluse2 672d294, wt/voices a666d589, wt/mapdoor-cut-3 95bae15(문 절단 도구 실행), wt/body 28104c9(몬스터 11종, GLB 15개 복사), wt/ja 495ea9d(두 단계 import), texdiet와 건물 2048 텍스처, wt/uibag 756c5df.
