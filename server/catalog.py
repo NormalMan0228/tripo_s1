@@ -118,14 +118,14 @@ for _kind, _stats in ENEMIES.items():
     _stats.setdefault('tier', 'legacy')
 
 # Species per map and tier (each species belongs to one map; the tutorial borrows the forest's weak).
-# Only species with their own model are rostered; the quarry has no modelled mid species yet, so
-# its mummy king also fills the mid slot (it comes out from stage 2 there).
+# Only species with their own model are rostered (category 2 flyers joined 2026-10-16: harpy, imp,
+# gargoyle, frost wraith, lich; they hover in their GLBs).
 ROSTERS = {
     'tutorial': {'weak':('goblin',)},
-    'forest': {'weak':('goblin',),'mid':('werewolf','troll'),'strong':('cyclops',)},
-    'quarry': {'weak':('skeleton','lizardman'),'mid':('mummy_king',),'strong':('minotaur','mummy_king')},
-    'frost': {'weak':('ghoul','ice_shardling','draugr'),'mid':('yeti','wendigo','frost_hag','frost_knight'),
-              'strong':('ice_golem','glacier_giant')},
+    'forest': {'weak':('goblin','harpy'),'mid':('werewolf','troll'),'strong':('cyclops',)},
+    'quarry': {'weak':('skeleton','lizardman','imp'),'mid':('gargoyle',),'strong':('minotaur','mummy_king')},
+    'frost': {'weak':('ghoul','ice_shardling','draugr','frost_wraith'),'mid':('yeti','wendigo','frost_hag','frost_knight'),
+              'strong':('ice_golem','glacier_giant','lich')},
 }
 # The first stage each tier comes out at night.
 TIER_FROM = {

@@ -1,0 +1,167 @@
+{
+ "fps": 30,
+ "texture_max": 1024,
+ "notes": "clips: game clip name -> text found in the Tripo action name, or {match,start,end} seconds for one stage of a multi-stage motion. cleanup: tools/body_gen/mesh_cleanup.py options (same as mon_v3/clean). Heights in metres (player is about 1.7 m).",
+ "monsters": {
+  "harpy": {
+   "height_m": 1.8,
+   "tripo_task": "c7aa15d0-acfc-4e47-8588-0a5babb797f5",
+   "clips": {
+    "idle": "A fierce winged harpy hovers in place: both arms sprea",
+    "walk": "A winged harpy glides slowly forward in place: torso l",
+    "run": "A winged harpy flies fast in a diving charge in place:",
+    "attack": "A winged harpy hovering with arms spread wide leans ba",
+    "hurt": "A hovering winged harpy is hit and knocked sideways: i",
+    "death": "A winged harpy is struck in mid-air: head snaps back a"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "hover": {
+    "height": 0.9,
+    "bob": 0.08,
+    "period": 2.0,
+    "fall": 0.6
+   },
+   "catalog": {
+    "name": "하피",
+    "map": "forest",
+    "tier": "weak"
+   }
+  },
+  "imp": {
+   "height_m": 1.1,
+   "tripo_task": "806a361e-b7b3-498f-94d9-ce7ee6ed3ddf",
+   "clips": {
+    "idle": "A small cocky winged imp hovers in place: arms crossed",
+    "walk": "A small winged imp drifts slowly forward in place: han",
+    "run": "A small winged imp zips forward in a fast flying charg",
+    "attack": "A small winged imp hovering in place with legs danglin",
+    "hurt": "A small hovering imp is hit and knocked backward: head",
+    "death": "A small winged imp clutches its belly with both hands "
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "hover": {
+    "height": 0.8,
+    "bob": 0.08,
+    "period": 2.0,
+    "fall": 0.6
+   },
+   "catalog": {
+    "name": "임프",
+    "map": "quarry",
+    "tier": "weak"
+   }
+  },
+  "gargoyle": {
+   "height_m": 2.2,
+   "tripo_task": "cd39284d-9f78-4fde-8e84-d76cbb6bd77e",
+   "clips": {
+    "idle": "A heavy stone gargoyle hovers in place, hunched forwar",
+    "walk": "A heavy stone gargoyle drifts slowly forward in place:",
+    "run": "A heavy stone gargoyle charges forward in fast flight ",
+    "attack": "A heavy stone gargoyle hovering hunched with legs hang",
+    "hurt": "A heavy stone gargoyle takes a hit and barely moves: t",
+    "death": "A heavy stone gargoyle loses its flight and drops heav"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "hover": {
+    "height": 0.7,
+    "bob": 0.08,
+    "period": 2.0,
+    "fall": 0.6
+   },
+   "catalog": {
+    "name": "가고일",
+    "map": "quarry",
+    "tier": "mid"
+   }
+  },
+  "frost_wraith": {
+   "height_m": 2.0,
+   "tripo_task": "99dd73a0-53c8-4022-a39f-1c8342a1ea20",
+   "clips": {
+    "idle": "A hooded ice wraith floats in place, legs hanging limp",
+    "walk": "A hooded ice wraith glides slowly forward in place wit",
+    "run": "A hooded ice wraith flies forward at high speed in pla",
+    "attack": "A hooded ice wraith floating in place with legs hangin",
+    "hurt": "A hooded ice wraith floating in place is struck: it jo",
+    "death": "A hooded ice wraith is struck down in the air: its hea"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "hover": {
+    "height": 0.5,
+    "bob": 0.08,
+    "period": 2.0,
+    "fall": 0.6
+   },
+   "catalog": {
+    "name": "서리 망령",
+    "map": "frost",
+    "tier": "weak"
+   }
+  },
+  "lich": {
+   "height_m": 2.2,
+   "tripo_task": "c5ba96fc-af75-4534-99f2-823b5432975a",
+   "clips": {
+    "idle": "A crowned skeletal lich hovers upright in place, legs ",
+    "walk": "A crowned skeletal lich glides forward in place withou",
+    "run": "A crowned skeletal lich charges forward through the ai",
+    "attack": "A crowned skeletal lich hovering in place with legs da",
+    "hurt": "A crowned skeletal lich hovering in place is struck: i",
+    "death": "A crowned skeletal lich is struck in the air: it strai"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
+   "loop_min_seconds": {
+    "run": 0.5
+   },
+   "hover": {
+    "height": 0.45,
+    "bob": 0.08,
+    "period": 2.0,
+    "fall": 0.6
+   },
+   "catalog": {
+    "name": "리치",
+    "map": "frost",
+    "tier": "strong"
+   }
+  }
+ }
+}

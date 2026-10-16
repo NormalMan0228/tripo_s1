@@ -17,13 +17,13 @@ from server.tests.legacy_saves import legacy_run, legacy_world, strip
 STAGES = {'tutorial': 1, 'forest': 3, 'quarry': 5, 'frost': 7}
 ROSTER = {
     'tutorial': {'weak': ('goblin',)},
-    'forest': {'weak': ('goblin',), 'mid': ('werewolf', 'troll'), 'strong': ('cyclops',)},
-    'quarry': {'weak': ('skeleton', 'lizardman'), 'mid': ('mummy_king',), 'strong': ('minotaur', 'mummy_king')},
-    'frost': {'weak': ('ghoul', 'ice_shardling', 'draugr'),
-              'mid': ('yeti', 'wendigo', 'frost_hag', 'frost_knight'), 'strong': ('ice_golem', 'glacier_giant')},
+    'forest': {'weak': ('goblin', 'harpy'), 'mid': ('werewolf', 'troll'), 'strong': ('cyclops',)},
+    'quarry': {'weak': ('skeleton', 'lizardman', 'imp'), 'mid': ('gargoyle',), 'strong': ('minotaur', 'mummy_king')},
+    'frost': {'weak': ('ghoul', 'ice_shardling', 'draugr', 'frost_wraith'),
+              'mid': ('yeti', 'wendigo', 'frost_hag', 'frost_knight'), 'strong': ('ice_golem', 'glacier_giant', 'lich')},
 }
 # Rostered outside their own tier (no modelled species of that tier on that map yet).
-FILLERS = {('mummy_king', 'mid')}
+FILLERS = set()
 BOSSES = {'forest': 'treant', 'quarry': 'chimera', 'frost': 'dragon'}
 TIERS_FROM = {'tutorial': {'weak': 1}, 'forest': {'weak': 1, 'mid': 2, 'strong': 3},
               'quarry': {'weak': 1, 'mid': 2, 'strong': 4}, 'frost': {'weak': 1, 'mid': 2, 'strong': 4}}
