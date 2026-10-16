@@ -55,10 +55,18 @@ const CATEGORIES := {
 	"gameplay": ["language","text_speed","nameplates","prompts","route_guide","minimap_rotate","clock_24h","reduce_shake"],
 	"accessibility": ["ui_scale","large_text","reduced_motion"],
 }
+## Volume defaults (2026-10-16, players found the game loud): master 71 % is about -6 dB on the
+## squared taper (volume_db), music 85 % sits another ~3 dB under the effects; effects, ambience,
+## voices and UI keep 100 % so footsteps, clicks and the night beds stay audible over the music.
+## AUDIO_DEFAULTS_V marks settings files written with these defaults; an older file that still holds
+## an earlier default (OLD_AUDIO_DEFAULTS) for a volume moves to the new one, a value the player
+## changed stays.
+const AUDIO_DEFAULTS_V := 2
+const OLD_AUDIO_DEFAULTS := {"master": 100, "music": 100}
 const DEFAULTS := {
 	"preset": "medium", "window_mode": "windowed", "render_scale": 100, "vsync": true, "fps_cap": 0, "perf_overlay": false,
 	"shadows": "low", "msaa": "2x", "view_detail": "medium", "night_grade": true, "brightness": 100,
-	"master": 100, "music": 100, "sfx": 100, "ambience": 100, "voice": 100, "ui": 100,
+	"master": 71, "music": 85, "sfx": 100, "ambience": 100, "voice": 100, "ui": 100,
 	"mute_all": false, "background_mute": false,
 	"zoom_speed": 100, "run_mode": "hold", "zoom_invert": false,
 	"language": "ko", "text_speed": "normal", "nameplates": true, "prompts": true, "route_guide": true,
@@ -176,6 +184,10 @@ static func ensure_loaded() -> void:
 			if config.has_section_key(category, key):
 				values[key] = _validate(key, config.get_value(category, key))
 	values["language"] = I18n.language()
+	if int(config.get_value("audio", "defaults_v", 1)) < AUDIO_DEFAULTS_V:
+		for key in OLD_AUDIO_DEFAULTS:
+			if config.has_section_key("audio", key) and int(values[key]) == int(OLD_AUDIO_DEFAULTS[key]):
+				values[key] = DEFAULTS[key]
 	# Before this file, the title screen kept a single [game] graphics level.
 	if not config.has_section_key("graphics", "preset") and config.has_section_key("game", "graphics"):
 		var legacy := str(config.get_value("game", "graphics"))
@@ -201,6 +213,7 @@ static func save() -> void:
 			config.set_value(category, key, values[key])
 	for entry in ACTIONS:
 		config.set_value("input", entry[0], bindings[entry[0]])
+	config.set_value("audio", "defaults_v", AUDIO_DEFAULTS_V)
 	# Older builds read [game] graphics; keep it in step with the preset.
 	config.set_value("game", "graphics", values.preset if PRESETS.has(values.preset) else "medium")
 	config.save(I18n.settings_path())
