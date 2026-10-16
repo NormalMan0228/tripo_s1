@@ -28,6 +28,16 @@ services:
       TRIPOTHON_MAX_STARS_PER_CRAFT: ${TRIPOTHON_MAX_STARS_PER_CRAFT:-200}
       TRIPOTHON_TESTER_WELCOME_STARS: ${TRIPOTHON_TESTER_WELCOME_STARS:-1500}
       TRIPOTHON_TESTER_CREDIT_BUDGET: ${TRIPOTHON_TESTER_CREDIT_BUDGET:-10000}
+      # 0.11.9 switches (set them in ops/production.env; compose passes only the variables listed here).
+      # Campfire: barrier (the old ring) or buff (heal near it, a short strength boost after).
+      TRIPOTHON_CAMPFIRE_MODE: ${TRIPOTHON_CAMPFIRE_MODE:-barrier}
+      # Residents moving in and out of the village houses (off = as before).
+      TRIPOTHON_RESIDENT_MOVES: ${TRIPOTHON_RESIDENT_MOVES:-off}
+      # Rigging and animation with a craft ('움직이는 캐릭터'): off until its Tripo budget accounting is done.
+      TRIPOTHON_RIG_ANIM_ENABLED: ${TRIPOTHON_RIG_ANIM_ENABLED:-false}
+      # Design (LLM) calls a day: per account and for the whole server.
+      TRIPOTHON_LLM_USER_DAILY_CALL_LIMIT: ${TRIPOTHON_LLM_USER_DAILY_CALL_LIMIT:-20}
+      TRIPOTHON_LLM_SERVER_DAILY_CALL_LIMIT: ${TRIPOTHON_LLM_SERVER_DAILY_CALL_LIMIT:-1000}
       # Selling at the village shop: one starseed per N leaf coins, at most this many a day (0 = off).
       TRIPOTHON_SELL_STARS_DAILY: ${TRIPOTHON_SELL_STARS_DAILY:-15}
       TRIPOTHON_SELL_COINS_PER_STAR: ${TRIPOTHON_SELL_COINS_PER_STAR:-3}
