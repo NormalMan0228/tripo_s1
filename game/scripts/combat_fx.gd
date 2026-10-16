@@ -245,3 +245,16 @@ static func harvest_on_contact(app, kind: String, at: Vector3) -> void:
 	var aim := ground+Vector3(0, 0.9 if kind == "tree" else 0.35, 0)
 	preload("res://scripts/tool_contact.gd").strike(app.player, aim, func(hit: Vector3):
 		if is_instance_valid(app): harvest(app, kind, Vector3(hit.x, ground.y, hit.z)), 0.6)
+
+## The first use of each effect material compiles its shader on that frame (measured on 0.11.9: a
+## 53 ms hitch when the campfire is first lit, 184 ms when the buff first shows). Drawn once, almost
+## invisible, while the expedition loads under its veil, they are ready before play.
+static func warm_up(app, at: Vector3) -> void:
+	var world := _world(app)
+	if world == null: return
+	var faint := Color(1, 1, 1, 0.01)
+	for kind in ["spark", "smoke", "sparkle", "seed", "scuff", "leaf", "blade", "drop", "snow", "litter", "zz", "heart"]:
+		Fx.burst(world, at, kind, 1, faint, 0.01)
+	Fx.glow(world, at, Color(0.01, 0.01, 0.01), 0.05, 0.8)
+	Fx.ring(world, at, 0.05, faint, 0.8)
+	preload("res://scripts/campfire_buff_fx.gd").warm_up(world, at)
