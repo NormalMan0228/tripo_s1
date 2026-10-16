@@ -100,3 +100,5 @@
 - 사용자는 "11.9.a"로 전부 합쳐 바로 배포하라고 했습니다. 남은 브랜치 병합은 자동 권한 검사가 두 번 막았습니다(vfx3). 이유는 표시되지 않았습니다. 사용자가 "지금 합친 것만 바로 배포"를 골랐습니다. 글자가 든 버전은 패처·서버·도구가 읽지 못해서 숫자 버전만 씁니다.
 - 남은 대기열(after_0118_queue.txt 끝부분): vfx3 6af6cdb7(G 들기·보따리), voices 038b17c2, mapdoor-obs-1 38252a78, dress-3 cceac441, ground82-2 299990dc, mapperf-2 7d647e85, maptex-1 0a562ed3, uibag f035517e(4cca7681 되돌리기 먼저), craftcol-4 1a7984b9 + wt/build 3cbe26b9(02 먼저), storyq d5a287d4, ja 495ea9d8, texdiet d321dc20, craftnpc 581b0746(꺼진 상태), mergeplan 26a74434.
 - 설치 파일·zip은 S3에 올린 뒤 D:\lsm26\old_release_0119x로 옮겼습니다(지우지 않음). C:\lsm26\old_release_0119에는 0.11.9가 있습니다.
+
+- 사용자 규칙(15:30): 0.11.9.4는 이후 버전(0.11.9.10 등)이 나와도 실행돼야 합니다. 다음 배포부터 `deploy_school.py --announce 3 --min-version 0.11.9.4 --message "…"`를 씁니다. --block-older는 쓰지 않습니다. 서버는 0.11.9.4 클라이언트와 호환을 유지합니다(예전 응답 필드는 그대로 두고 새 필드만 더함).
