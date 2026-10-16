@@ -63,6 +63,16 @@ git 밖 GLB: `game/assets/monsters/<id>_<map>.glb` 29종(원본 `mon_v3/anim/gam
 6. 텍스처 줄이기(codex/texdiet d321dc2, tools/tex_diet/apply_import_limits.py): 새 캐릭터 8명·몬스터 29종 포함해 dry run 뒤 적용.
 7. 다시 검사: `tests/monster_motion.gd`(29종 약 10분), stage_smoke, combat_play.
 
+## 주민 NPC 7명 (0.11.9.1 긴급, 11:40 추가)
+
+- 사용자: "지금 급한게 npc 적용임". 보니·솔은 0.11.9에 들어 있지만 낮에만 보여서, 밤에도 보이게 고쳤습니다(wt/npc-hotfix b619b25, wt/hotfix0191 위 1커밋, shadow_folk.gd). 같은 커밋 DAY_MODELS에 주민 7명 키를 넣었습니다.
+- 짝: fisher=r02, gentleman=r05, lamplighter=r06, scout=r07, kid=r08, stroller=r09, poet=r10. Tripo task id는 ledger.json "residents"에 있습니다.
+- 남은 일(유료 단계는 사용자가 05 세션에 직접 "주민 NPC 7명 텍스처·리깅 250 승인"을 써야 함):
+  1. Tripo 텍스처 2K(조명 제거) → Mixamo 리깅. 1명당 30.
+  2. 리깅 FBX 내보내기(메모리 tripo-studio-flows의 실제 클릭 순서).
+  3. `blender -b --factory-startup -P tools/body_gen/retarget_npc.py -- <rig.fbx> <out.glb> [game/assets/npc/boni.glb]`로 보니의 idle/walk/work를 옮긴 뒤(솔 리그로 시험 완료) `game/assets/npc/<id>.glb`에 둡니다(fisher.glb 등). 키는 DAY_MODELS가 맞춥니다.
+  4. 01에 병합 요청: GLB는 git 밖이라 공용 npc 폴더에 복사하고 import합니다.
+
 ## 실행 예시
 
 ```powershell
