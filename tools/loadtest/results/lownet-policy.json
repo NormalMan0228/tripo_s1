@@ -1,0 +1,86 @@
+{
+  "completed": true,
+  "mode": "policy",
+  "server_source_sha256": "7889bb8242d2be41a051c11b2034665e291803e91b55db8e3d12b3e31a3a0a7c",
+  "baseline_commit": "5f7c6c1",
+  "settings": {
+    "bits_per_second_each_direction": 1500000,
+    "rtt_ms": 300,
+    "modeled_segment_loss": 0.01,
+    "seed": 119,
+    "poll_intervals_seconds": {
+      "presence": 1.0,
+      "chat": 4,
+      "social": 5,
+      "studio": 20,
+      "studio_job_after_response": 2
+    }
+  },
+  "poll_seconds": 60.001,
+  "polling": {
+    "presence": {
+      "upload_http_bytes": 22969,
+      "http_wire_bytes": 137816,
+      "modeled_retransmitted_bytes": 1221,
+      "modeled_lost_segments": 4,
+      "download_http_bytes": 114847,
+      "http_wire_bytes_per_minute": 137814.12,
+      "requests": 60,
+      "requests_per_minute": 60.0,
+      "decoded_response_bytes": 926216,
+      "statuses": {
+        "200": 60
+      }
+    },
+    "chat": {
+      "upload_http_bytes": 4980,
+      "http_wire_bytes": 11025,
+      "modeled_retransmitted_bytes": 403,
+      "modeled_lost_segments": 1,
+      "download_http_bytes": 6045,
+      "http_wire_bytes_per_minute": 11024.85,
+      "requests": 15,
+      "requests_per_minute": 15.0,
+      "decoded_response_bytes": 0,
+      "statuses": {
+        "304": 15
+      }
+    },
+    "social": {
+      "upload_http_bytes": 3852,
+      "http_wire_bytes": 9396,
+      "modeled_retransmitted_bytes": 403,
+      "modeled_lost_segments": 1,
+      "download_http_bytes": 5544,
+      "http_wire_bytes_per_minute": 9395.87,
+      "requests": 12,
+      "requests_per_minute": 12.0,
+      "decoded_response_bytes": 2738,
+      "statuses": {
+        "304": 11,
+        "200": 1
+      }
+    },
+    "studio": {
+      "upload_http_bytes": 10198,
+      "http_wire_bytes": 21885,
+      "modeled_retransmitted_bytes": 0,
+      "modeled_lost_segments": 0,
+      "download_http_bytes": 11687,
+      "http_wire_bytes_per_minute": 21884.7,
+      "requests": 29,
+      "requests_per_minute": 29.0,
+      "decoded_response_bytes": 0,
+      "statuses": {
+        "304": 29
+      }
+    }
+  },
+  "asset_original_bytes": 49971684,
+  "asset_part_original_bytes": 16657228,
+  "asset_original_sha256_per_part": [
+    "3694888aa111d36599d10a204b4219229d9d9135ea54caa671d16f40dda4fccd",
+    "9f8aa2d1d26cad509bcc16fa044a81e725a6fe84db2656ebe6e699c2be57b683",
+    "7c35d1ce3013eac48472b922ac1ee64c8e39688a073aef42f669843efb1ef6fa"
+  ]
+}

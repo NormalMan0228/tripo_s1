@@ -28,6 +28,7 @@ from . import tripo_budget, llm_budget
 from . import room_budget, rig_rules
 from .rig_pipeline import advance_rig, rig_bill_entries, RIG_STATES
 from .stored_assets import read_glb
+from .asset_delivery import asset_response, prepare_low_variant
 from .homestead import village_reserved
 from .object_paint import version_column as paint_version
 from . import object_shape
@@ -781,8 +782,7 @@ class Studio:
                 user=auth(conn,request);_,value,_=manifest(conn,user['id'],object_id)
                 p=next((p for p in value['plan']['parts'] if p['id']==part_id),None)
                 if not p:fail('part_not_found',404)
-                blob=read_glb(assets,p['file'],p['sha256'])
-                return Response(blob,media_type='model/gltf-binary',headers={'Cache-Control':'no-store'})
+                return asset_response(request,assets,p['file'],p['sha256'])
 
         @app.post('/v1/objects/{object_id}/event')
         def event(object_id:str,body:StudioEvent,request:Request):
@@ -1300,6 +1300,8 @@ class Studio:
                         'clips':stats['clips'],'default_clip':'idle','moves':True,'bones':stats['bones'],'seconds':stats['seconds']}
                 filename=job_id+'-'+p['id']+'.glb'
                 target=self.assets/filename;temporary=target.with_suffix('.tmp');temporary.write_bytes(blob);temporary.replace(target)
+                # LOWNET: optional texture derivative is ready before this part is published.
+                await asyncio.to_thread(prepare_low_variant,self.assets,filename,hashlib.sha256(blob).hexdigest(),blob)
                 entry.update(state='ready',file=filename,sha256=hashlib.sha256(blob).hexdigest(),bytes=len(blob),render_budget=stats)
                 self.update(job_id,state='building',parts=json.dumps(parts))
             for p in plan['parts']:

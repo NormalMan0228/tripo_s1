@@ -14,7 +14,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse
 from .config import Settings, ROOT, server_version
 from .client_policy import ClientPolicy, ClientGate, FILE_NAME as CLIENT_POLICY_FILE
 from .database import Database
@@ -24,7 +24,7 @@ from .provider import TripoProvider, ProviderError, validate_glb
 from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial, last_spot, build_rules
 from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
                        LOGIN_WINDOW_SECONDS, LOGIN_LOCK_SECONDS, MAX_SESSIONS_PER_USER)
-from .stored_assets import read_glb
+from .asset_delivery import asset_response, prepare_low_variant
 from .studio_pricing import mesh_credits
 from .account_limits import daily_counts, record_tester_bill
 from . import tripo_budget
@@ -201,6 +201,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             validate_glb(blob)
             asset_id = uid()
             (assets/(asset_id+'.glb')).write_bytes(blob)
+            # LOWNET: prepare the optional derivative before publication, off the event loop.
+            await asyncio.to_thread(prepare_low_variant, assets, asset_id+'.glb', hashlib.sha256(blob).hexdigest(), blob)
             with db.transaction() as conn:
                 conn.execute('INSERT INTO assets VALUES (?,?,?,?)',
                              (asset_id,asset_id+'.glb',hashlib.sha256(blob).hexdigest(),settings.mode))
@@ -640,8 +642,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             row = own(conn,user['id'],object_id)
             asset = conn.execute('SELECT * FROM assets WHERE id=?',(row['asset_id'],)).fetchone()
             # Read while holding ownership transaction. No signed/public download links.
-            blob = read_glb(assets,asset['relative_path'],asset['digest'])
-            return Response(blob,media_type='model/gltf-binary',headers={'Cache-Control':'no-store'})
+            return asset_response(request,assets,asset['relative_path'],asset['digest'])
 
     @app.post('/v1/runs')
     def start(body:RunStart,request:Request):
@@ -846,6 +847,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     # Before everything else: maintenance (503) and too-old games (426) stop here; every reply,
     # 413/429 included, carries the notice version.
     app.add_middleware(ClientGate,policy=client_policy)
+    # LOWNET: negotiate JSON compression; authenticate before conditional GETs.
+    from .low_network import LowNetworkMiddleware
+    app.add_middleware(LowNetworkMiddleware)
     # Outermost, so 413/429 replies from the layers above also carry the headers.
     app.add_middleware(SecurityHeadersMiddleware)
     return app

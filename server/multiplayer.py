@@ -4,11 +4,11 @@ import secrets
 import uuid
 from typing import Literal
 from fastapi import Request, HTTPException
-from fastapi.responses import Response, JSONResponse
+from fastapi.responses import JSONResponse
 from starlette.background import BackgroundTask
 from pydantic import Field
 from .models import Strict, Mutation, Input, RunStart
-from .stored_assets import read_glb
+from .asset_delivery import asset_response
 from . import coop, homestead, object_paint, object_shape, interactions, tutorial, home_access, last_spot, build_rules
 from . import friends as social_db
 from .chat import Chat
@@ -610,7 +610,7 @@ class Multiplayer:
                 user = auth(conn, request)
                 obj = visible_object(conn, user['id'], object_id)
                 asset = conn.execute('SELECT * FROM assets WHERE id=?', (obj['asset_id'],)).fetchone()
-                return Response(read_glb(assets, asset['relative_path'], asset['digest']), media_type='model/gltf-binary', headers={'Cache-Control': 'no-store'})
+                return asset_response(request, assets, asset['relative_path'], asset['digest'])
 
         @app.get('/v1/social/village/objects/{object_id}/assembly')
         def assembly(object_id: str, request: Request):
@@ -641,7 +641,7 @@ class Multiplayer:
                 entry = next((p for p in value.get('plan', {}).get('parts', []) if p['id'] == part_id), None)
                 if not entry:
                     fail('part_not_found', 404)
-                return Response(read_glb(assets, entry['file'], entry['sha256']), media_type='model/gltf-binary', headers={'Cache-Control': 'no-store'})
+                return asset_response(request, assets, entry['file'], entry['sha256'])
 
         # The painted surface follows the same rule as the model: only furniture the host has
         # placed where guests can see it (village or home) is readable during a visit.
