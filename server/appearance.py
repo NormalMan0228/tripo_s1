@@ -1,10 +1,35 @@
 """Saved appearances of the 8 characters (m1..m4, f1..f4), old saves read safely, and the avatar8
 migration (old character ids mapped, originals kept in profile_avatar8_backup, selection reopened)."""
+import contextvars
 import json
 
 from pydantic import ValidationError
 
-from .models import Avatar, AvatarPatch, CHARACTERS
+from .models import Avatar, AvatarPatch, CHARACTERS, SELECT_FROM
+
+# The x-villagen-version of the request being answered (app.py ClientVersion sets it).
+CLIENT_VERSION = contextvars.ContextVar('client_version', default=None)
+
+
+def legacy_client():
+    """A game older than the character select (0.11.8 and before, or no version header)."""
+    from .client_policy import older
+    version = CLIENT_VERSION.get()
+    return bool(version) and older(version, SELECT_FROM)
+
+
+def legacy_look(value):
+    """What a 0.11.8 game can draw: its player.gd builds the wardrobe model only for explorer_b and
+    otherwise loads assets/<id>.glb (none ship for m1..f4: a primitive placeholder), so it gets the
+    released ids. accent is dropped by its normalize(); straw shows as its round hat."""
+    return dict(value, character='explorer' if value['character'].startswith('m') else 'explorer_b')
+
+
+def legacy_echo(patch, saved):
+    """A 0.11.8 wardrobe re-sending the released id it was served (a colour-only save): the saved
+    m1..f4 character stays."""
+    return (legacy_client() and 'character' in patch.model_fields_set and patch.character not in CHARACTERS
+            and legacy_look(saved)['character'] == patch.character)
 
 
 EDIT_LIMIT = 10
@@ -55,9 +80,10 @@ def saved_avatar(raw=None):
 
 
 def public_avatar(raw=None):
-    """The avatar every reply carries (profile, presence, visits, friends). The names are the released
-    ones, so 0.11.8 games keep reading it: they load one wardrobe model whatever the character id."""
-    return saved_avatar(raw)
+    """The avatar every reply carries (profile, presence, visits, friends): the saved look, with the
+    released character ids for games older than 0.11.9 (legacy_look)."""
+    value = saved_avatar(raw)
+    return legacy_look(value) if legacy_client() else value
 
 
 def migrate(db):

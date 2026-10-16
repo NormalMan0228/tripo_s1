@@ -452,3 +452,24 @@ def test_a_released_wardrobe_save_never_completes_the_selection(world):
     # The new game's select screen (it sends accent, and says it is 0.11.9) completes it.
     chosen = client.post('/v1/profile', headers=old_game, json=mutation(version=saved['version'], avatar={'character': 'm3', 'accent': '#ffcc00'})).json()
     assert chosen['avatar']['character'] == 'm3' and chosen['needs_character_select'] is False
+
+
+def test_released_games_are_served_ids_they_can_draw(world):
+    """0.11.8 draws the wardrobe model only for explorer_b (else assets/<id>.glb, none for m1..f4): it
+    gets explorer / explorer_b, and its colour-only saves keep the new character the new game chose."""
+    app, client, now = world
+    new_game = account(client, 'drawer')
+    old_game = {k: v for k, v in new_game.items() if k != 'x-villagen-version'}
+    old_game['x-villagen-version'] = '0.11.8'
+    assert client.get('/v1/me', headers=old_game).json()['profile']['avatar']['character'] == 'explorer_b'
+    chosen = client.post('/v1/profile', headers=new_game, json=mutation(version=0, avatar={'character': 'm3', 'accent': '#ffcc00', 'headwear': 'straw'})).json()
+    assert chosen['avatar']['character'] == 'm3'
+    seen = client.get('/v1/profile', headers=old_game).json()
+    assert seen['avatar']['character'] == 'explorer'
+    # The old wardrobe echoes what it was served with a new coat colour.
+    echo = dict(seen['avatar'], coat='#123456')
+    echo.pop('accent', None)
+    saved = client.post('/v1/profile', headers=old_game, json=mutation(version=seen['version'], avatar=echo)).json()
+    assert saved['avatar']['character'] == 'explorer'
+    mine = client.get('/v1/profile', headers=new_game).json()['avatar']
+    assert mine['character'] == 'm3' and mine['coat'] == '#123456' and mine['accent'] == '#ffcc00' and mine['headwear'] == 'straw'
