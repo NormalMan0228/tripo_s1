@@ -258,3 +258,27 @@ static func warm_up(app, at: Vector3) -> void:
 	Fx.glow(world, at, Color(0.01, 0.01, 0.01), 0.05, 0.8)
 	Fx.ring(world, at, 0.05, faint, 0.8)
 	preload("res://scripts/campfire_buff_fx.gd").warm_up(world, at)
+	_warm_monster_overlay(app)
+
+## The monsters' rim/hit-flash overlay (monster.gd OVERLAY_CODE) compiled when the first beast
+## appeared. Skinned meshes need their own variant, so it is drawn for a few frames, at zero
+## strength (adds nothing), over the hero's own skinned meshes, then taken off again.
+static func _warm_monster_overlay(app) -> void:
+	var hero = app.get("player")
+	if not (hero is Node3D) or not is_instance_valid(hero): return
+	var Monster = preload("res://scripts/monster.gd")
+	if Monster.overlay_shader == null:
+		Monster.overlay_shader = Shader.new()
+		Monster.overlay_shader.code = Monster.OVERLAY_CODE
+	var mat := ShaderMaterial.new()
+	mat.shader = Monster.overlay_shader
+	for key in ["rim", "glow", "flash"]: mat.set_shader_parameter(key, 0.0)
+	var dressed: Array = []
+	for mesh in hero.find_children("*", "MeshInstance3D", true, false):
+		if mesh.material_overlay == null:
+			mesh.material_overlay = mat
+			dressed.append(mesh)
+	if dressed.is_empty(): return
+	hero.get_tree().create_timer(0.5).timeout.connect(func():
+		for mesh in dressed:
+			if is_instance_valid(mesh) and mesh.material_overlay == mat: mesh.material_overlay = null)
