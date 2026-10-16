@@ -105,3 +105,10 @@
 
 - 15:50 서버 핫픽스(게임 0.11.9.4 그대로): Tripo 메시 작업이 실패하면 다시 제출합니다(TRIPOTHON_STUDIO_RETRIES 기본 2). 메인 서버의 주소(기기)당 가입 제한을 없앴습니다(compose에서 TRIPOTHON_SIGNUPS_PER_IP_DAY "0" 고정, 하루 전체 200은 그대로). 서버 전체 pytest 1,806 통과.
 - 06 호환 규칙: 0.11.9.4 이하 클라이언트(x-villagen-version)에는 기존 주민 부탁 19개 id만 보냅니다. 모르는 id가 오면 BOOK[id]에서 스크립트 오류가 납니다. 게시판 의뢰는 괜찮습니다.
+
+## 2026-10-16 15:50 (주간 98%, 언제든 끊길 수 있음)
+
+- 서버 핫픽스 62dd6af를 배포했습니다(게임 0.11.9.4 그대로, 최소 0.11.9.4). 15:43에는 아직 18c30d6이 돌고 있었습니다. /health build가 62dd6af인지 확인해 주세요.
+- 진행 중: 총괄이 탐험 버그 목록과 패치를 만들고 있습니다(docs/coordination/patches/expedition/<id>.patch, 기준 62dd6afe). 서버 패치는 0.11.9.4 그대로 서버만 배포합니다. 클라이언트 패치는 0.11.9.5로 냅니다(git apply → compile_all → docs/coordination/ship_01194.ps1을 0.11.9.5로 고쳐 실행: 빌드·pck 검사·업로드·점검·배포). 배포 명령은 `deploy_school.py --announce 3 --min-version 0.11.9.4 --message "…"`입니다(--block-older 금지).
+- 다음 패치 대기열 전체: docs/coordination/NEXT_PATCH_QUEUE_01.txt(맨 아래가 최신). 빌드 스크립트 본: docs/coordination/build_01194.ps1, ship_01194.ps1(경로는 01 scratchpad 기준이라 고쳐 써야 함).
+- 디스크: C:\lsm26\old_release_0119, C:\lsm26\old_release_01194, D:\lsm26\old_release_01193(각 2.2GB, 모두 S3에 있음)은 사용자 승인을 받으면 지웁니다.

@@ -1,0 +1,50 @@
+After 0.11.8 (dev only):
+- wt/build 5f4e1c5: room wall/ceiling/on-object placing client (studio.gd few lines, strings +8). Test: build_mode_room (22).
+- codex/farm d1902a7 (with N4 client), codex/rig67, codex/movein43, codex/secaudit, codex/perf, codex/shops, codex/ja (via 총괄)
+- wt/expedition roguelike a208479 (switch default off)
+- wt/home 031ae19: village_doors.gd wired to building_doors hooks (DoorLeaf, inner_light); no change while ENABLED is empty
+- wt/body monster swap (P2 models, catalog rosters, monster.gd refs, 18 GLB local files) if not in 0.11.8
+- wt/uibag c7989d8 (village bag, 6) after 0.11.8
+Order after deploy (dev): codex/secaudit e1b5622 (first; then M2 home asset check in multiplayer.visible_object) -> build 5f4e1c5 -> home 031ae19 -> codex/farm d1902a7 (+N4) -> codex/rig67 43e36f0 -> codex/shops 36d067d -> codex/movein43 b5815d6 -> codex/storysrv f7a064e -> codex/ja d9abeed -> wt/body monsters -> roguelike a208479 -> wt/uibag c7989d8 -> N6 motion_continuity test fix
+More Codex (dev): codex/legacybudget 35fa525 (i18n_check, 166 missing keys report), codex/campfire b42b839 (default barrier), codex/perf eebc0cf (touches multiplayer.py 2 spots: review), codex/respath cca071f (tools/predeploy; run vs 0.11.8 after 07:30). Coming: codex/lifesrv (replaces storysrv+movein43+shops), budgetsafe, loadtest, lifeauth.
+UPDATE 07:25: use codex/lifesrv e4c6039 INSTEAD of storysrv/movein43/shops. codex/budgetsafe c8932b9 right after secaudit. codex/lifeauth 7c31bc0. codex/loadtest 5c7767d (report: 30 users ok on 2 vCPU, 60 degraded). Coming: i18n166, perf100, campfireui.
+0.11.9 next batch: aigen 6695eb6c, build ae04293, body 5a97790 (+20 GLB copy +boni/sol npc), sockets d620eba (incl motion 56e294c), home (ask hash), uibag (ask), N1 avatar8 (pending), roguelike (ask), ja d9abeed last; tools respath cca071f, loadtest 5c7767d
+- home 42043b2 (lambda fix etc.) + test village_peer_door_check
+- next patch: wt/lowspec 64e4650, codex texdiet + 02 building textures 2048 together, wt/ja 495ea9d (two-step import), 03 portrait faces fa2ede6/47f386c, 02 mapperf WIP 1bea6c80, N6 equip/hoe clip, avatar_everywhere old-id expectations
+- next patch: wt/body 28104c9 (11 more monsters; copy 15 GLBs from D:/lsm26/wt/body/game/assets/monsters then import); wt/uibag 756c5df (avatar_everywhere expectations)
+- next patch: wt/mapdoor-cut-3 95bae15 (all 14 doors on); after merge run tools/door_cutter.gd then building_doors_check --all-doors
+- next patch: wt/tooluse2 0a083f1 (replaces 672d294; adds player.tool_contact(item, point) signal for N4 tool_contact.gd), codex/lownet c59cbd9, wt/voices a666d589, codex/secaudit2 efdc67a (server hotfix candidate)
+- next patch: wt/vfx3 16c3ae2e (N4; contains wt/vfx2 4ce32822 + wt/tooluse2 0a083f1, so merge vfx3 INSTEAD of tooluse2 separately; tool effects on tool_contact; test tool_contact_check; handoff docs/vfx/HANDOFF_N4_KO.md)
+  (vfx3: run tool_contact_check windowed with -Capture; compile_all failed=0 on 16c3ae2e per N4)
+- next patch: wt/body 1b893ba (05; shadow_beast.gd ~10 lines after 08ee4ff: attack_speed replay, spawn flash under 45 hp, 5 m boss vanishing; test monster_motion.gd)
+- next patch: wt/mapdoor-cut-4 d54b18c4 INSTEAD of mapdoor-cut-3 (02; window glass 14 houses, +1.9MB; after merge run tools/door_cutter.gd (18_meadow_house) then building_doors_check --all-doors; window_capture test; cut-5 coming)
+- next patch: wt/body 42dadc2 (05; includes 1b893ba + 813ae01 wisp hover only for stand-in, 42dadc2 hit/death blend 0.12/0.15 s) - merge 42dadc2 instead of 1b893ba
+- next patch (02): wt/mapperf-2 7d647e85 (supersedes mapperf WIP 1bea6c80; camera far fit, forage merge, collision simplify; re-bake island) ; wt/maptex-1 0a562ed3 (= the "02 building textures 2048"; 17 shared .import change; ~95MB textures in patch; lighten_archipelago_map.py --ensure runs automatically) ; wt/ground82-1 30330d4b (ground B baked; re-bake; world_transitions failed once headless -> run windowed; drop only 3) if it keeps failing). NOT wt/dress-1 (WIP).
+- next patch (03): wt/uibag bc1887a5 (12 commits; standee moods 136 png ~0.5MB, portrait_faces, 9d3da11 QA skip, 756c5df avatar check, 47f386c face_frames fix). CAUTION: gate has fa2ede6 then its revert 4cca7681 -> merging uibag will NOT re-apply fa2ede6 (47f386c builds on it). First `git revert 4cca7681` (revert the revert), then merge bc1887a5, then compile_all + rpg_ui parse. Shared portraits/standee (gitignored junction) now has hero _sad/_angry/_shy/_surprised/_blink/_talk png: check they land in the pck.
+- next patch (02 update): wt/ground82-2 299990dc INSTEAD of ground82-1 (roads MultiMesh buffer saved; 1,496 instances in place). ADD wt/dress-2 60616977 (plaza dressing, game/maps/archipelago/dressing 1.1MB + 10 .import; after merge --import then re-bake) ONLY if the user approves the pictures (via 총괄); otherwise leave it out.
+- world_transitions first-step failure on gate = character select on first login (1aa18204); fixed by 03's 9d3da11 (skip first look under --qa), which comes with wt/uibag bc1887a5 -> merge uibag BEFORE running world_transitions.
+- next patch (02): wt/mapdoor-cut-5 614276dc INSTEAD of cut-4 d54b18c4 (greenhouse glass, door frame profile, observatory tilt). After merge: door_cutter.gd (18_meadow_house) -> building_doors_check --all-doors; look at window_capture/door captures for the 12 houses only checked by tests.
+- PENDING user pick (02, via 총괄): wt/mapsky-1 2dd0821f (World Labs village day sky; daylight.gd +98, sky webp). If chosen: cherry-pick 2dd0821f only (independent of dress-2), no re-bake. If not chosen: leave out. Do not merge until 02 says.
+- next patch (02): wt/mapdoor-cut-6 f3e7a519 INSTEAD of cut-5 (observatory only: leaves meet in one plane; sky-blue sliver when open remains). Sheet: D:\lsm26\wt\map\artifacts\mapdoor\fix_v2\fix_v2_sheet.png
+- CONFIRMED (user via 총괄: '넣기 + 랜턴만 조금 밝게'): wt/dress-2 60616977 goes in. wt/dress-3 (lantern brightness, 1 commit on dress-2, no sky) coming; if merging before it arrives, merge dress-2 and add dress-3 later.
+- DROPPED (user chose current sky): wt/mapsky-1 2dd0821f - do NOT merge.
+- next patch (02): wt/mapguide-1 f60dbdcc INSTEAD of mapdoor-cut-6 (contains it). Guide route: walk_route.gd new; touches game/scripts/guide.gd (story/UI/sound also edit it: merge-order care). Tests: guide_walk_check, guide_check 63.
+- next patch (02): wt/dress-3 cceac441 INSTEAD of dress-2 (contains it; lanterns brighter per user, no sky).
+- next patch (04): wt/voices 038b17c2 INSTEAD of a666d589 (adds docs/sound/HANDOFF_KO.md). Tell 04 when merged (they delete D:\lsm26\wt\monstersfx after).
+- next patch (02, conditional): wt/craftcol-1 498429e0 (craft collision P1; switch CRAFT_COLLISION=legacy). Needs ix_sources_check fix (shrunk bed 0.227m < derive_sit 0.25m) first or together; merge before N2 build if same day.
+- (02) craftcol-1 498429e0 condition 1 solved by N2 wt/build 8e778284 (derive_sit floor 0.15m): merge craftcol-1 then wt/build 8e778284 together (02 first). ix_sources_check 129 pass with both.
+- 0.11.9.4 candidate (N6): wt/hotfix-preload 5b062ba (region sounds + tool GLBs preloaded at expedition start; main.gd/creature_audio.gd/player.gd).
+- next patch (N2): wt/build tip (8e77828 sit floor 0.15 + 5f9a407 low-shelf stacking + handoff); merge AFTER 02 craftcol-1 498429e0.
+  (N6) wt/hotfix-preload tip now 53bce554: +⑤ combat_fx slash trail built once at fade (merge tip, not 5b062ba)
+- 0.11.9.4: N6 wt/hotfix-preload 53bce554 + 05 wt/hero-heights 268bb60 (both on 5b062ba; player.gd HERO_MODEL_HEIGHT, pivot.scale line 181). compile_all needed.
+  (N6) preload tip now f881ff0 (all 29 monsters' sounds + combat/hero, ~76 MB in memory)
+- next patch (N4): wt/vfx3 tip 880f0721 (adds G carry key, bundle pose 70551279; settings_check temp key J).
+- next patch (N2): wt/build tip b432433 (rebased on merge-version-gate; + move-in e2e test build_move_in.gd 12/12). Merge after 02 craftcol-1.
+- (02) wt/craftcol-2 0cd000eb INSTEAD of craftcol-1 (P2 convex for round items, worker-thread build). Same pairing with N2 wt/build (02 first).
+- (02) wt/mapdoor-obs-1 38252a78 INSTEAD of mapguide-1 f60dbdcc (observatory door: no sky sliver/gaps). After merge: door_cutter.gd (18_meadow_house) -> building_doors_check --all-doors.
+- next patch (06): wt/storyq d5a287d4 (time_override.gd tester time; main.gd 3 lines; time_override_check 7/7). story_chapter 'naru first greeting' 3 fails in daytime (timing, see docs/demo/STORY_HANDOFF_KO.md).
+- (02) wt/craftcol-3 73d037a8 INSTEAD of craftcol-2 (P3 interior furniture tight blocks; switch Interiors.tight_blocks=false). Pair with N2 wt/build tip (02 first).
+- (02) wt/craftcol-4 1a7984b9 INSTEAD of craftcol-3 (same game code + tests/interior_blocks_probe.gd).
+- (06) wt/storyq tip 1cc95b70 (quests.gd skips unknown quest ids). RULE: new resident quests must not reach clients <=0.11.9.4 (BOOK[id] crash) - filter by x-villagen-version.
+- next patch (N3, stopped at 98%): wt/home ec3d7b8 (indoor doors show only when used; room_door_check/peer_door_check/home_roundtrip pass). Known: interior_walk 'Lambda capture freed' x122 also on base (suspects studio.gd portrait_view.rendered lambda, quests.gd/quest_board.gd create_timer(3.2) lambdas).
+- Japanese: wt/ja 495ea9d + codex/i18n0119 (D:\lsm26\wt\codex32) together, two-step import; Codex wins on overlapping keys.
