@@ -82,10 +82,13 @@ static var current: Node
 const Quests := preload("res://scripts/quests.gd")
 ## The epilogue after the gift: 다온 runs up with news from the forest (story_forest.gd).
 const StoryForest := preload("res://scripts/story_forest.gd")
+## Residents moving in and out (단비 and her lot, move_in.gd; /v1/me "residents" when the server has it).
+const MoveIn := preload("res://scripts/move_in.gd")
 
 var app: Node
 var quests: Node
 var forest: Node
+var move_in: Node
 ## server/story.py public() for this account ({} without the chapter or while visiting).
 var story: Dictionary = {}
 var busy := false
@@ -137,10 +140,19 @@ func setup(main: Node) -> void:
 	forest.name = "StoryForest"
 	forest.story = self
 	add_child(forest)
+	move_in = MoveIn.new()
+	move_in.name = "MoveIn"
+	move_in.story = self
+	add_child(move_in)
+	move_in.start()
 
 ## The residents' requests from the server (main.gd, with /v1/me).
 func adopt_quests(data) -> void:
 	if is_instance_valid(quests): quests.adopt(data)
+
+## The whole /v1/me answer (main.gd): residents' moves, when the server sends them (move_in.gd).
+func adopt_residents(me) -> void:
+	if is_instance_valid(move_in): move_in.adopt_me(me)
 
 func leave() -> void:
 	if is_instance_valid(quests): quests.leave()
@@ -822,7 +834,8 @@ func greet_nearby() -> void:
 		if not is_instance_valid(module) or not "walkers" in module: continue
 		for walker in module.walkers:
 			var id := str(walker.spec.id)
-			if id == MOKA or id in greeted or id in greeted_here or not walker.present or float(walker.fade) < 0.6 or walker.state == "talk": continue
+			# Only the residents the server knows as greeters (보니, 솔 and later arrivals are not).
+			if id == MOKA or not GREETINGS.has(id) or id in greeted or id in greeted_here or not walker.present or float(walker.fade) < 0.6 or walker.state == "talk": continue
 			var d: float = here.distance_to(walker.xz())
 			if d < gap:
 				gap = d

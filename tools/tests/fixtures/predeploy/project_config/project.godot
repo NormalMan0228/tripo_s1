@@ -1,0 +1,11 @@
+config_version=5
+
+[autoload]
+Existing="*res://existing.gd"
+Missing="*res://missing_autoload.gd"
+
+[input]
+jump={
+"deadzone": 0.5,
+"events": []
+}

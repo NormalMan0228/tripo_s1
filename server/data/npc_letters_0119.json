@@ -1,0 +1,405 @@
+{
+  "version": "0.11.9",
+  "letters": [
+    {
+      "id": "letter_0119_naru_request_done",
+      "npc": "naru",
+      "occasion": "request_done",
+      "text": {
+        "ko": "내 부탁을 끝내 줘서 고마워! 길을 알려 주는 나도 가끔은 네 도움이 있어야 씩씩하게 걸을 수 있나 봐.",
+        "en": "Thanks for finishing my request! Even a guide needs your help to put a spring in their step sometimes.",
+        "zh": "谢谢你完成我的委托！看来就算是向导，有时也需要你的帮助，才能精神满满地迈步呀。"
+      }
+    },
+    {
+      "id": "letter_0119_scout_request_done",
+      "npc": "scout",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 마쳐 주셔서 고마워요. 탐험 수첩에 오늘은 든든한 이웃 덕분에 마음이 가벼웠다고 적어 둘게요.",
+        "en": "Thank you for taking care of my request. My expedition journal will say that a dependable neighbor made today feel lighter.",
+        "zh": "谢谢你帮我办好了委托。我会在探险手记里写下，今天多亏了可靠的邻居，心里轻松了许多。"
+      }
+    },
+    {
+      "id": "letter_0119_sora_request_done",
+      "npc": "sora",
+      "occasion": "request_done",
+      "text": {
+        "ko": "제 부탁을 정성껏 마쳐 주셔서 고마워요. 고마운 마음도 옷깃처럼 곱게 접어 이 편지에 담았어요.",
+        "en": "Thank you for handling my request with such care. I folded my gratitude as neatly as a collar and tucked it into this letter.",
+        "zh": "谢谢你用心完成我的委托。我把谢意像衣领一样折得整整齐齐，放进了这封信里。"
+      }
+    },
+    {
+      "id": "letter_0119_gentleman_request_done",
+      "npc": "gentleman",
+      "occasion": "request_done",
+      "text": {
+        "ko": "제 부탁을 들어주셔서 감사합니다. 다음 산책에서는 다리 위에서 잠시 멈추고, 오늘의 친절을 떠올려 보려 합니다.",
+        "en": "Thank you for helping with my request. On my next stroll, I shall pause on the bridge and think of your kindness today.",
+        "zh": "感谢您帮我完成了委托。下次散步时，我想在桥上稍作停留，回味今天这份善意。"
+      }
+    },
+    {
+      "id": "letter_0119_poet_request_done",
+      "npc": "poet",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 마쳐 주신 마음이 시 한 줄보다 오래 남네요. 오늘 정자에서 쓰는 시에는 고맙다는 말을 꼭 넣을게요.",
+        "en": "The kindness you put into my request lingers longer than a line of poetry. The poem I write at the gazebo today will surely include a thank-you.",
+        "zh": "你完成委托时的那份心意，比一行诗还让人回味。今天在凉亭写诗时，我一定会写上一句谢谢。"
+      }
+    },
+    {
+      "id": "letter_0119_moru_request_done",
+      "npc": "moru",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 차근차근 마쳐 줘서 고마워. 야영 준비도 이웃과 나누니 배낭이 조금 가벼워지는 기분이야.",
+        "en": "Thanks for seeing my request through with care. Sharing camp preparations with a neighbor makes the backpack feel a little lighter.",
+        "zh": "谢谢你踏踏实实地完成了委托。和邻居一起分担露营准备，感觉背包也轻了一些。"
+      }
+    },
+    {
+      "id": "letter_0119_lamplighter_request_done",
+      "npc": "lamplighter",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 마쳐 주셔서 고마워요. 저녁에 등불을 하나씩 켤 때마다 이웃의 친절도 함께 떠올릴게요.",
+        "en": "Thank you for completing my request. As I light each lamp this evening, I will think of a neighbor's kindness too.",
+        "zh": "谢谢你完成了我的委托。傍晚一盏盏点亮路灯时，我也会想起邻居的这份善意。"
+      }
+    },
+    {
+      "id": "letter_0119_haeru_request_done",
+      "npc": "haeru",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 해결해 줘서 고마워요! 낚싯줄 끝은 조용해도, 고마운 마음은 벌써 팔딱팔딱 뛰고 있어요.",
+        "en": "Thanks for taking care of my request! My fishing line may be still, but my grateful heart is already doing little leaps.",
+        "zh": "谢谢你帮我完成委托！鱼线那头虽然安安静静，我这颗感激的心已经扑腾扑腾跳起来啦。"
+      }
+    },
+    {
+      "id": "letter_0119_stroller_request_done",
+      "npc": "stroller",
+      "occasion": "request_done",
+      "text": {
+        "ko": "제 부탁을 마쳐 주셨네요, 고마워요. 밤바다를 걷다가 반짝이는 물결을 보면 오늘 받은 다정함이 생각날 것 같아요.",
+        "en": "You took care of my request, thank you. When the waves sparkle on my nighttime walk, I think they will remind me of your kindness.",
+        "zh": "你帮我办好了委托，谢谢你。夜里沿着海边散步，看见闪闪发亮的波纹时，我想起的一定会是今天这份温柔。"
+      }
+    },
+    {
+      "id": "letter_0119_postman_request_done",
+      "npc": "postman",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 끝내 주셔서 고마워요! 늘 남의 편지를 배달하지만, 오늘은 제 고마운 마음도 한 장 보냅니다.",
+        "en": "Thanks for finishing my request! I usually deliver everyone else's letters, but today I am sending a little gratitude of my own.",
+        "zh": "谢谢你完成我的委托！平时总在投递别人的信，今天也寄一封装着我自己谢意的信。"
+      }
+    },
+    {
+      "id": "letter_0119_sweeper_request_done",
+      "npc": "sweeper",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 도와주셔서 고마워요. 빗자루로 쓸어 낸 광장처럼 마음 한쪽도 말끔해졌어요.",
+        "en": "Thank you for helping with my request. A little corner of my mind feels as tidy as the square after a good sweep.",
+        "zh": "谢谢你帮我完成委托。心里的一角也像扫干净的广场一样，变得清清爽爽了。"
+      }
+    },
+    {
+      "id": "letter_0119_fisher_request_done",
+      "npc": "fisher",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 마쳐 주셔서 고마워요. 물때를 기다리는 동안 천천히 편지를 쓰니, 말로 못 전한 고마움도 잘 담기네요.",
+        "en": "Thank you for completing my request. Writing slowly while I wait for the tide helps me say the thanks I could not quite put into words before.",
+        "zh": "谢谢你完成我的委托。等潮水的时候慢慢写信，平时说不出口的谢意也能好好写下来了。"
+      }
+    },
+    {
+      "id": "letter_0119_kid_request_done",
+      "npc": "kid",
+      "occasion": "request_done",
+      "text": {
+        "ko": "내 부탁을 해내다니, 역시 우리 편이야! 고마운 마음은 술래잡기해도 못 숨길 만큼 커졌어.",
+        "en": "You finished my request, just like a real teammate! My thanks are too big to hide, even in hide-and-seek.",
+        "zh": "你完成了我的委托，果然是我的好队友！我的谢意变得好大，连捉迷藏都藏不住啦。"
+      }
+    },
+    {
+      "id": "letter_0119_regular_request_done",
+      "npc": "regular",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 들어줘서 고마워! 커피를 내리는 동안에도 자꾸 웃음이 나. 오늘 카페는 고소한 향이랑 좋은 기분으로 가득하겠어.",
+        "en": "Thanks for taking care of my request! I keep smiling while I brew, so the café should be full of rich coffee aromas and good cheer today.",
+        "zh": "谢谢你帮我完成委托！冲咖啡时也忍不住微笑，今天的咖啡馆一定会充满醇香和好心情。"
+      }
+    },
+    {
+      "id": "letter_0119_farmer_request_done",
+      "npc": "farmer",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 마쳐 주셔서 참 고마워요. 덕분에 한결 가벼운 마음으로 밭에 나가 새싹들을 살필 수 있겠어요.",
+        "en": "Thank you kindly for completing my request. Now I can head to the field and check on the seedlings with a lighter heart.",
+        "zh": "真谢谢你完成了我的委托。这下能轻轻松松地去田里，看看那些小苗了。"
+      }
+    },
+    {
+      "id": "letter_0119_stargazer_request_done",
+      "npc": "stargazer",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 마쳐 주셔서 고마워요. 별을 세다가 졸더라도 오늘 받은 친절 하나만큼은 빠뜨리지 않고 기억할게요.",
+        "en": "Thank you for finishing my request. Even if I doze off while counting stars, I will not lose count of the kindness you showed me today.",
+        "zh": "谢谢你完成我的委托。就算数星星时打起瞌睡，今天收到的这份善意，我也一定不会漏掉。"
+      }
+    },
+    {
+      "id": "letter_0119_gardener_request_done",
+      "npc": "gardener",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 정성껏 마쳐 주셔서 고마워요. 온실의 새잎처럼 이웃 사이의 마음도 조금씩 자라는 것 같아요.",
+        "en": "Thank you for giving my request such care. Like fresh leaves in the greenhouse, the warmth between neighbors seems to grow a little at a time.",
+        "zh": "谢谢你用心完成我的委托。邻里间的温暖，也像温室里的新叶一样，一点一点长大了。"
+      }
+    },
+    {
+      "id": "letter_0119_miller_request_done",
+      "npc": "miller",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 도와주셔서 고마워요! 맷돌이 도는 소리까지 흥겹게 들리니, 고마운 마음이 방앗간에 가득 찼나 봐요.",
+        "en": "Thanks for helping with my request! Even the turning millstone sounds cheerful, so I suppose my gratitude has filled the whole mill.",
+        "zh": "谢谢你帮我完成委托！连磨盘转动的声音都变得轻快了，大概是谢意把磨坊装满了吧。"
+      }
+    },
+    {
+      "id": "letter_0119_shopkeeper_request_done",
+      "npc": "shopkeeper",
+      "occasion": "request_done",
+      "text": {
+        "ko": "부탁을 끝내 주셔서 고마워요! 장부에는 물건 수를 적지만, 이웃에게 받은 친절은 마음에 따로 모아 둔답니다.",
+        "en": "Thanks for finishing my request! I count the goods in my ledger, but I keep a neighbor's kindness in a special place in my heart.",
+        "zh": "谢谢你完成我的委托！货物的数量记在账本上，邻居的善意则另外珍藏在心里。"
+      }
+    },
+    {
+      "id": "letter_0119_naru_resident_day",
+      "npc": "naru",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일을 함께 축하하자! 늘 안내하던 길도 오늘은 천천히 걸으면서 우리가 이웃인 걸 기뻐하고 싶어.",
+        "en": "Let's celebrate this village anniversary together! Today I want to walk my usual guiding route slowly and enjoy being your neighbor.",
+        "zh": "一起庆祝这个村庄纪念日吧！今天想沿着平时带路的小径慢慢走，为能和你做邻居而开心。"
+      }
+    },
+    {
+      "id": "letter_0119_scout_resident_day",
+      "npc": "scout",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일이라 탐험 지도 옆에 작은 표시를 해 두었어요. 먼 숲길만큼이나 돌아올 이웃이 있는 이곳도 소중하네요.",
+        "en": "I made a little mark beside my expedition map for this village anniversary. Having neighbors to come home to matters as much as any distant forest trail.",
+        "zh": "为了这个村庄纪念日，我在探险地图旁做了一个小记号。远方的林间小路很珍贵，能回到邻居身边的这个村庄也一样。"
+      }
+    },
+    {
+      "id": "letter_0119_sora_resident_day",
+      "npc": "sora",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일을 축하하는 마음으로 옷깃을 곱게 다듬었어요. 우리가 나누는 인사도 한 땀씩 이어져 오래도록 따뜻하면 좋겠어요.",
+        "en": "I tidied my collar to celebrate this village anniversary. I hope our greetings keep stitching together something warm and lasting.",
+        "zh": "为了庆祝这个村庄纪念日，我把衣领仔细整理好了。愿我们的一声声问候，也能一针一线地缝成长久的温暖。"
+      }
+    },
+    {
+      "id": "letter_0119_gentleman_resident_day",
+      "npc": "gentleman",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일을 맞아 이웃께 인사를 전합니다. 익숙한 다리도 함께 걷는 분이 있으면 훌륭한 축하의 자리가 되겠지요.",
+        "en": "Please accept a neighbor's greetings on this village anniversary. Even a familiar bridge becomes a fine place to celebrate with someone beside you.",
+        "zh": "值此村庄纪念日，谨向邻居致以问候。熟悉的小桥，有人同行时，也会成为美好的庆祝之地吧。"
+      }
+    },
+    {
+      "id": "letter_0119_poet_resident_day",
+      "npc": "poet",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일을 위한 시를 쓰다가 첫 줄에 이웃이라는 말을 놓았어요. 그다음 줄은 함께 보내는 하루가 채워 주겠지요.",
+        "en": "While writing a poem for this village anniversary, I placed the word neighbor in the first line. A day spent together will surely fill the next.",
+        "zh": "为村庄纪念日写诗时，我把邻居这个词放在了第一行。下一行，就让一起度过的一天来填满吧。"
+      }
+    },
+    {
+      "id": "letter_0119_moru_resident_day",
+      "npc": "moru",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일에는 배낭을 잠시 내려놓고 쉬어 가려 해. 함께 쉬어 갈 이웃이 있다는 게 가장 든든한 야영 준비 같아.",
+        "en": "For this village anniversary, I am setting down my backpack for a little rest. Having a neighbor to rest beside feels like the best camp preparation of all.",
+        "zh": "这个村庄纪念日，我想先放下背包歇一歇。有邻居一起休息，感觉就是最让人安心的露营准备。"
+      }
+    },
+    {
+      "id": "letter_0119_lamplighter_resident_day",
+      "npc": "lamplighter",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일이라 등불 유리를 조금 더 정성껏 닦았어요. 오늘도 이웃들의 돌아오는 길이 포근하기를 바라요.",
+        "en": "I polished the lamp glass with extra care for this village anniversary. I hope every neighbor's walk home feels warm and welcoming today.",
+        "zh": "为了这个村庄纪念日，我格外仔细地擦亮了灯罩。愿今天每位邻居回家的路，也都暖暖的。"
+      }
+    },
+    {
+      "id": "letter_0119_haeru_resident_day",
+      "npc": "haeru",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일을 축하해요! 오늘은 커다란 물고기 이야기보다 이웃과 함께 웃은 이야기를 더 많이 하고 싶어요.",
+        "en": "Happy village anniversary! Today I would rather tell stories about laughing with neighbors than about enormous fish.",
+        "zh": "村庄纪念日快乐！今天比起大鱼的故事，我更想多聊聊和邻居一起笑过的事。"
+      }
+    },
+    {
+      "id": "letter_0119_stroller_resident_day",
+      "npc": "stroller",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일을 맞아 밤 산책길을 천천히 걸어 보려 해요. 저마다 다른 창문 불빛을 보면 우리가 한 마을에 산다는 게 새삼 다정하게 느껴져요.",
+        "en": "For this village anniversary, I plan to take my nighttime walk slowly. Each different glow in the windows makes sharing this village feel especially warm.",
+        "zh": "这个村庄纪念日，我想把夜间散步的脚步放慢一些。看着每扇窗里不同的灯光，就觉得住在同一个村庄格外温暖。"
+      }
+    },
+    {
+      "id": "letter_0119_postman_resident_day",
+      "npc": "postman",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일을 축하하는 마음을 편지에 실었어요! 다리를 건너며 떠올린 이웃의 얼굴 덕분에 오늘 배달길도 즐거울 것 같아요.",
+        "en": "I tucked a village anniversary greeting into this letter! Thinking of my neighbors as I cross the bridges should make today's rounds a happy journey.",
+        "zh": "我把村庄纪念日的祝福装进这封信啦！过桥时想到邻居们的笑脸，今天的送信路一定也会很愉快。"
+      }
+    },
+    {
+      "id": "letter_0119_sweeper_resident_day",
+      "npc": "sweeper",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일을 기분 좋게 맞으려고 광장을 쓱싹 청소했어요. 깨끗한 길 위로 이웃들의 반가운 발걸음이 오가면 좋겠네요.",
+        "en": "I gave the square a good sweep to welcome this village anniversary. I hope its tidy paths fill with the happy footsteps of neighbors.",
+        "zh": "为了开开心心迎接村庄纪念日，我把广场扫得干干净净了。希望整洁的小路上，响起邻居们欢快的脚步声。"
+      }
+    },
+    {
+      "id": "letter_0119_fisher_resident_day",
+      "npc": "fisher",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일을 축하하며 부두에서 조용히 인사를 보냅니다. 물고기를 기다리는 시간도 이웃과 나누면 좋은 추억이 되겠지요.",
+        "en": "A quiet greeting from the pier to celebrate this village anniversary. Even time spent waiting for a bite can become a lovely memory with a neighbor.",
+        "zh": "在码头静静送上一声问候，庆祝这个村庄纪念日。等待鱼儿咬钩的时光，和邻居一起度过，也会成为美好的回忆吧。"
+      }
+    },
+    {
+      "id": "letter_0119_kid_resident_day",
+      "npc": "kid",
+      "occasion": "resident_day",
+      "text": {
+        "ko": "마을 기념일이라니, 이웃끼리 축하할 핑계가 생겼다! 오늘 술래잡기에서 찾은 친구한테는 잡았다 대신 반갑다고 해 볼래.",
+        "en": "A village anniversary means an excuse to celebrate with the neighbors! In hide-and-seek today, I will say glad to see you instead of found you.",
+        "zh": "村庄纪念日，正好有理由和邻居一起庆祝啦！今天捉迷藏找到朋友时，我要把找到你啦换成见到你真高兴。"
+      }
+    },
+    {
+      "id": "letter_0119_naru_small_talk",
+      "npc": "naru",
+      "occasion": "small_talk",
+      "text": {
+        "ko": "오늘 길을 안내하다가 구름 모양이 작은 배낭 같아서 웃었어. 너도 하늘을 잠깐 보면 재미있는 길동무를 찾을지 몰라!",
+        "en": "A cloud looked like a tiny backpack while I was guiding today, and it made me smile. Look up for a moment and you might find a funny travel companion too!",
+        "zh": "今天带路时，有朵云像个小背包，把我逗笑了。你也抬头看看，说不定能找到有趣的旅伴！"
+      }
+    },
+    {
+      "id": "letter_0119_sora_small_talk",
+      "npc": "sora",
+      "occasion": "small_talk",
+      "text": {
+        "ko": "햇빛에 실타래를 비춰 보니 같은 색도 조금씩 다르게 보이더라고요. 다음 옷을 지을 때는 그런 작은 차이도 아껴 보고 싶어요.",
+        "en": "In the sunlight, even threads of the same color looked a little different. I want to cherish those tiny differences in the next garment I make.",
+        "zh": "把线团放到阳光下，连同一种颜色也会显出细微的不同。下次做衣服时，也想好好珍惜这些小小的差别。"
+      }
+    },
+    {
+      "id": "letter_0119_moru_small_talk",
+      "npc": "moru",
+      "occasion": "small_talk",
+      "text": {
+        "ko": "야영 배낭을 정리하다가 쉬어 갈 자리부터 떠올렸어. 준비를 잘한 날일수록 느긋하게 쉬는 시간도 꼭 챙겨야지.",
+        "en": "While sorting my camping pack, the first thing I pictured was a place to rest. A well-prepared day ought to include some unhurried time too.",
+        "zh": "整理露营背包时，我最先想到的却是歇脚的地方。准备周全的一天，也该留出一点悠闲休息的时间吧。"
+      }
+    },
+    {
+      "id": "letter_0119_haeru_small_talk",
+      "npc": "haeru",
+      "occasion": "small_talk",
+      "text": {
+        "ko": "오늘은 물고기보다 물결을 더 오래 구경했어요. 낚시꾼에게도 바다 구경만 하는 날이 있어야죠!",
+        "en": "I spent longer watching the ripples than the fish today. Even a fisher needs a day just to admire the sea!",
+        "zh": "今天看波纹的时间，比看鱼还长呢。钓鱼的人也该有一天，只顾着欣赏大海呀！"
+      }
+    },
+    {
+      "id": "letter_0119_kid_small_talk",
+      "npc": "kid",
+      "occasion": "small_talk",
+      "text": {
+        "ko": "연못 옆에서 내 그림자랑 누가 더 멀리 뛰나 겨뤄 봤어. 자꾸 같이 도착하는 걸 보니 꽤 좋은 짝꿍인가 봐!",
+        "en": "By the pond, I challenged my shadow to see who could jump farther. We keep landing together, so I guess we make a pretty good team!",
+        "zh": "我在池塘边和自己的影子比谁跳得更远。每次都一起落地，看来我们是很不错的搭档！"
+      }
+    },
+    {
+      "id": "letter_0119_shopkeeper_move_in",
+      "npc": "shopkeeper",
+      "occasion": "move_in",
+      "text": {
+        "ko": "새 보금자리에 짐을 풀고 이웃께 첫 인사를 보내요! 장부를 덮고 창문을 열었더니, 이 마을에서 보낼 날들이 벌써 기대돼요.",
+        "en": "I have unpacked in my new home and am sending my first hello to a neighbor! I closed my ledger, opened the window, and already feel excited for the days ahead here.",
+        "zh": "在新家安顿好行李，先给邻居送上一声问候！合上账本推开窗，已经开始期待在这个村庄度过的日子了。"
+      }
+    },
+    {
+      "id": "letter_0119_shopkeeper_move_out",
+      "npc": "shopkeeper",
+      "occasion": "move_out",
+      "text": {
+        "ko": "살던 집을 떠나며 다정했던 이웃께 인사를 남겨요. 장부보다 두툼해진 좋은 기억을 챙겼으니, 어디서든 이 마을을 따뜻하게 떠올릴 거예요.",
+        "en": "As I leave my home here, I want to say goodbye to a kind neighbor. My good memories have grown thicker than my ledger, and I will think warmly of this village wherever I go.",
+        "zh": "离开住过的家时，给温暖的邻居留下一声道别。带上比账本还厚的美好回忆，无论去哪里，都会暖暖地想起这个村庄。"
+      }
+    },
+    {
+      "id": "letter_0119_shopkeeper_came_back",
+      "npc": "shopkeeper",
+      "occasion": "came_back",
+      "text": {
+        "ko": "다시 이 마을의 이웃이 되어 돌아왔어요! 짐을 풀다 익숙한 창밖 풍경을 보니, 장부 첫 장부터 기쁜 소식을 적고 싶어지네요.",
+        "en": "I am back to be your neighbor in this village again! Seeing the familiar view while unpacking makes me want to fill the first page of my ledger with happy news.",
+        "zh": "我回来啦，又能做这个村庄的邻居了！整理行李时看见熟悉的窗外风景，真想从账本第一页起就写满开心的消息。"
+      }
+    }
+  ]
+}

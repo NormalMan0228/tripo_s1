@@ -776,15 +776,117 @@
  "monsters_v3_cat23": {
   "cap": 1000,
   "approved": "2026-10-16 07:20 user via 총괄: \"A 한도 1,000 (추천)\" — 5 winged/floating humanoids: texture+rig+6 AI motions (150 each); 6 others: texture+rig, Blender procedural motion (30 each). Frost dragon colour: B1 (deep glacier teal).",
-  "spent": 10,
+  "spent": 100,
   "monsters": {
    "harpy": {
     "task": "c7aa15d0-acfc-4e47-8588-0a5babb797f5",
     "texture_2k": 10,
     "credits": 10,
     "date": "2026-10-16"
+   },
+   "imp": {
+    "texture_2k": 10,
+    "credits": 10,
+    "date": "2026-10-16"
+   },
+   "gargoyle": {
+    "texture_2k": 10,
+    "credits": 10,
+    "date": "2026-10-16"
+   },
+   "frost_wraith": {
+    "texture_2k": 10,
+    "credits": 10,
+    "date": "2026-10-16"
+   },
+   "lich": {
+    "texture_2k": 10,
+    "credits": 10,
+    "date": "2026-10-16"
+   },
+   "centipede": {
+    "texture_2k": 10,
+    "credits": 10,
+    "date": "2026-10-16"
+   },
+   "mimic": {
+    "texture_2k": 10,
+    "credits": 10,
+    "date": "2026-10-16"
+   },
+   "basilisk": {
+    "texture_2k": 10,
+    "credits": 10,
+    "date": "2026-10-16"
+   },
+   "naga": {
+    "texture_2k": 10,
+    "credits": 10,
+    "date": "2026-10-16"
+   },
+   "chimera": {
+    "texture_2k": 10,
+    "credits": 10,
+    "date": "2026-10-16"
    }
   },
-  "note": "07:25 the rest stopped: Claude Code auto-mode permission check refused further paid clicks; waits for the user to allow it in this session."
+  "note": "07:25 paid clicks were refused by the Claude Code auto-mode check (approval had come via 총괄); resumed after the direct approval.",
+  "approved_direct": "2026-10-16 ~07:52 user in session 05: \"몬스터 11종 A안 1,000 승인.\""
+ },
+ "player_chars": {
+  "cap": 1200,
+  "approved": "2026-10-16 ~07:52 user in session 05: \"캐릭터 8명 모두, 1,200 승인.\" (m1-m4, f1-f4 from charsel/charsel_new_candidates.png)",
+  "plan": "2x2 4K turnaround (free) -> P2 multiview 100 -> texture 2K 10 -> humanoid rig 20; motions retargeted from the current player clips (0)",
+  "spent": 800,
+  "chars": {
+   "m1": {
+    "p2_task": "d1e02188-ae20-42ef-bd66-0d076b01aa19",
+    "p2": 100,
+    "credits": 100,
+    "refs": "charsel/turn/m1/{front,left,right,back}.png (Tripo multiview slots replaced)"
+   },
+   "f1": {
+    "p2_task": "41eb1c02-5ec0-42e9-a755-7a802f9589aa",
+    "p2": 100,
+    "credits": 100,
+    "refs": "charsel/turn/f1/{front,left,right,back}.png (Tripo multiview slots replaced)"
+   },
+   "m2": {
+    "p2_task": "6b4a62d4-7303-45f2-8612-d3512e63580d",
+    "p2": 100,
+    "credits": 100,
+    "refs": "charsel/turn/m2/{front,left,right,back}.png (Tripo multiview slots replaced)"
+   },
+   "f2": {
+    "p2_task": "fea622a4-355d-4f30-9b05-4991284f99aa",
+    "p2": 100,
+    "credits": 100,
+    "refs": "charsel/turn/f2/{front,left,right,back}.png (Tripo multiview slots replaced)"
+   },
+   "m3": {
+    "p2_task": "16ce04cd-7a03-4455-b82e-230d2daecd92",
+    "p2": 100,
+    "credits": 100,
+    "refs": "charsel/turn/m3/{front,left,right,back}.png (Tripo multiview slots replaced)"
+   },
+   "f3": {
+    "p2_task": "c607d3a7-8163-4c62-b7c2-085c86c23657",
+    "p2": 100,
+    "credits": 100,
+    "refs": "charsel/turn/f3/{front,left,right,back}.png (Tripo multiview slots replaced)"
+   },
+   "m4": {
+    "p2_task": "91a88ab4-25fa-43e6-b566-642252f0be9b",
+    "p2": 100,
+    "credits": 100,
+    "refs": "charsel/turn/m4/{front,left,right,back}.png (Tripo multiview slots replaced)"
+   },
+   "f4": {
+    "p2_task": "b6f34f4d-03a1-4107-a3ea-aecd4cf16053",
+    "p2": 100,
+    "credits": 100,
+    "refs": "charsel/turn/f4/{front,left,right,back}.png (Tripo multiview slots replaced)"
+   }
+  }
  }
 }

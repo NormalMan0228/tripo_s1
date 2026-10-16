@@ -7,7 +7,8 @@ extends SceneTree
 ## materials, shadows, LOD bias, lights, collision layers and shapes) or when a probe of their
 ## collision differs (rays from above on a 1 m grid, the walker's capsule standing there), or when either
 ## map lacks the chunked ground as the bake made it (ground_chunks.gd: "Ground" the map's third child with
-## its chunks and ocean, the model's ground and ocean meshes emptied and hidden).
+## its chunks and ocean, the model's ground and ocean meshes emptied and hidden), or when the two maps
+## do not register the same number of prop LODs (environment_layout.gd restore()).
 ## Prints ISLAND_BAKE_CHECK {...}.
 const Map = preload("res://maps/archipelago/archipelago.gd")
 const IslandBake = preload("res://maps/archipelago/island_bake.gd")
@@ -43,6 +44,8 @@ func run() -> void:
 	report["node_differences"] = differ.size()
 	report["first_differences"] = differ.slice(0, 12).map(func(line): return line.substr(0, 300))
 	if not differ.is_empty(): failures.append("%d node differences" % differ.size())
+	report["prop_lods"] = [runtime.lods, baked.lods]
+	if runtime.lods == 0 or runtime.lods != baked.lods: failures.append("prop LODs: %d in the runtime map, %d on the baked island" % [runtime.lods, baked.lods])
 	var probes := 0
 	var probe_differences := []
 	for index in runtime.probes.size():
@@ -90,6 +93,8 @@ func build(label: String) -> Dictionary:
 		await roads.build(map.get_world_3d().direct_space_state, map.get_node_or_null("Environment"))
 		for i in 4: await physics_frame
 	var environment := map.get_node("Environment")
+	# The props' LODs (environment_layout.gd), registered in both maps alike (the baked island once had none).
+	var lods: int = environment.lod_entries.size()
 	environment.set_process(false)
 	environment.settle_for_bake()
 	# The settled boats reach the physics server at the next steps.
@@ -126,7 +131,7 @@ func build(label: String) -> Dictionary:
 	print("BUILT %s in %d ms: %d nodes" % [label, ms, nodes.size()])
 	viewport.queue_free()
 	await process_frame
-	return {"ms": ms, "nodes": nodes, "probes": probes, "ground": ground}
+	return {"ms": ms, "nodes": nodes, "probes": probes, "ground": ground, "lods": lods}
 
 ## Names the engine makes ("@Node@12") and their readable stand-ins in the bake ("StaticBody3D2")
 ## compare as the node's class; same names under one parent are told apart by their order.

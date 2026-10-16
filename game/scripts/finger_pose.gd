@@ -3,6 +3,9 @@ extends SkeletonModifier3D
 var samples: Array[Dictionary]=[]
 var holding := false
 var grip := 0.12
+## The left hand closes too while both hands carry something (held_items.gd hold_front).
+var holding_left := false
+var grip_left := 0.12
 
 func configure(animator: AnimationPlayer) -> void:
 	if not animator.has_animation("Hands_Open_Grasp"):return
@@ -23,8 +26,9 @@ func configure(animator: AnimationPlayer) -> void:
 
 func _process_modification_with_delta(delta: float) -> void:
 	grip=lerpf(grip,1.0 if holding else .12,1.0-exp(-10.0*delta))
+	grip_left=lerpf(grip_left,1.0 if holding_left else .12,1.0-exp(-10.0*delta))
 	var skeleton := get_skeleton()
 	if not skeleton:return
 	for sample in samples:
 		var from: Quaternion=sample.open
-		skeleton.set_bone_pose_rotation(sample.index,from.slerp(sample.closed,grip if sample.right else .12))
+		skeleton.set_bone_pose_rotation(sample.index,from.slerp(sample.closed,grip if sample.right else grip_left))

@@ -1,0 +1,1685 @@
+{
+  "version": "0.11.9",
+  "templates": [
+    {
+      "id": "quest_0119_regular_01",
+      "quest_id": "moka_pie",
+      "npc": "regular",
+      "difficulty": "easy",
+      "reward_tier": "moka_pie",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "테라스의 사과 향",
+          "request": "테라스 손님께 파이를 구워 주고 싶어. 사과 {count}개만 가져다줄래?",
+          "accept": "고마워! 가방에 모아 둔 사과도 좋아.",
+          "complete": "덕분에 카페가 달콤해졌어. 손님들도 웃겠는걸!"
+        },
+        "en": {
+          "title": "Apples for the Terrace",
+          "request": "I want to bake a pie for our terrace guests. Could you bring {count} apples?",
+          "accept": "Thanks! Apples you already have are lovely too.",
+          "complete": "You made the café smell sweet. Our guests will be smiling!"
+        },
+        "zh": {
+          "title": "露台的苹果香",
+          "request": "想给露台上的客人烤个派。能带来{count}个苹果吗？",
+          "accept": "谢谢！包里存着的苹果也很好。",
+          "complete": "多亏你，咖啡馆香甜起来了。客人们一定会笑的！"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_regular_02",
+      "quest_id": "moka_pie",
+      "npc": "regular",
+      "difficulty": "easy",
+      "reward_tier": "moka_pie",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "오후 손님의 파이",
+          "request": "오후 손님들께 낼 파이 재료를 챙기는 중이야. 사과 {count}개를 가져다줄래?",
+          "accept": "사과만 있으면 준비 끝이야! 오븐은 미리 데워 둘게.",
+          "complete": "이제 오븐 차례야. 고마워, 든든한 이웃!"
+        },
+        "en": {
+          "title": "A Pie for Afternoon Guests",
+          "request": "I am getting pie ingredients ready for our afternoon guests. Could you bring {count} apples?",
+          "accept": "The apples are all I need! I will warm up the oven.",
+          "complete": "Now it is the oven’s turn. Thanks, dear neighbor!"
+        },
+        "zh": {
+          "title": "下午客人的苹果派",
+          "request": "我在准备给下午客人烤派的材料。能带来{count}个苹果吗？",
+          "accept": "有苹果就准备好啦！我先把烤箱预热好。",
+          "complete": "接下来轮到烤箱了。谢谢你，可靠的邻居！"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_regular_03",
+      "quest_id": "moka_pie",
+      "npc": "regular",
+      "difficulty": "easy",
+      "reward_tier": "moka_pie",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "커피 곁의 한 조각",
+          "request": "커피 옆에 사과 파이 한 조각이면 참 좋지. 사과 {count}개를 부탁해.",
+          "accept": "둥근 나무나 과수원 상자에서 찾을 수 있어.",
+          "complete": "이 향기에는 커피도 살짝 양보하겠어. 고마워!"
+        },
+        "en": {
+          "title": "A Slice Beside Coffee",
+          "request": "Apple pie belongs beside a cup of coffee. Please bring {count} apples.",
+          "accept": "Try the round trees or the orchard crate.",
+          "complete": "Even the coffee will make room for this lovely smell. Thanks!"
+        },
+        "zh": {
+          "title": "咖啡旁的一块派",
+          "request": "咖啡旁边放一块苹果派就太好了。拜托带来{count}个苹果吧。",
+          "accept": "圆圆的树和果园箱子里都能找到。",
+          "complete": "连咖啡都要给这香气让让位了。谢谢！"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_regular_04",
+      "quest_id": "moka_pie",
+      "npc": "regular",
+      "difficulty": "easy",
+      "reward_tier": "moka_pie",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "빨간 지붕의 간식",
+          "request": "카페 손님들의 간식을 준비하려고 해. 사과 {count}개만 가져다줄래?",
+          "accept": "파이는 내가 구울게. 사과만 부탁해!",
+          "complete": "좋아, 이제 달콤한 쉬는 시간을 만들 수 있겠어."
+        },
+        "en": {
+          "title": "A Red Roof Treat",
+          "request": "I am preparing a treat for our café guests. Could you bring {count} apples?",
+          "accept": "I will bake the pie. Just bring the apples!",
+          "complete": "Lovely! Now I can make their break a little sweeter."
+        },
+        "zh": {
+          "title": "红屋顶的小点心",
+          "request": "我想给咖啡馆的客人准备点心。能带来{count}个苹果吗？",
+          "accept": "派由我来烤。苹果就拜托你啦！",
+          "complete": "太好啦，现在能让休息时间甜一点了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_naru_01",
+      "quest_id": "naru_islands",
+      "npc": "naru",
+      "difficulty": "normal",
+      "reward_tier": "naru_islands",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "이정표 친구들",
+          "request": "다섯 섬 중 서로 다른 {count}곳의 이정표을 찾아가 봐. 길잡이의 작은 산책 숙제야!",
+          "accept": "광장부터 시작해도 좋아. 순서는 네 마음대로!",
+          "complete": "잘 다녀왔구나! 이제 이정표들도 너를 알아보겠어."
+        },
+        "en": {
+          "title": "Signpost Friends",
+          "request": "Visit signposts on {count} different islands out of our five. A little walk from your guide!",
+          "accept": "You can start at the square. Any order is fine!",
+          "complete": "Welcome back! Those signposts must know you by now."
+        },
+        "zh": {
+          "title": "路标朋友",
+          "request": "去五座岛中不同的{count}座岛看看路标吧。向导给你一份小小的散步作业！",
+          "accept": "可以从广场出发。顺序随你！",
+          "complete": "回来啦！路标们一定也认识你了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_naru_02",
+      "quest_id": "naru_islands",
+      "npc": "naru",
+      "difficulty": "normal",
+      "reward_tier": "naru_islands",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "지도에 발자국",
+          "request": "지도 위 길을 진짜 발자국으로 이어 볼래? 다섯 섬 중 서로 다른 {count}곳의 이정표에 들러 줘.",
+          "accept": "서두르지 마. 길을 익히는 게 오늘의 모험이야.",
+          "complete": "네 발자국 덕분에 지도가 더 친근해졌네!"
+        },
+        "en": {
+          "title": "Footsteps on the Map",
+          "request": "Shall we turn map lines into footsteps? Visit signposts on {count} different islands out of the five.",
+          "accept": "Take your time. Learning the paths is today’s adventure.",
+          "complete": "Your footsteps have made the map feel friendlier!"
+        },
+        "zh": {
+          "title": "地图上的脚印",
+          "request": "把地图上的路变成脚印，好吗？去五座岛中不同的{count}座岛看看路标吧。",
+          "accept": "慢慢走。熟悉道路就是今天的冒险。",
+          "complete": "有了你的脚印，地图也亲切多了！"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_naru_03",
+      "quest_id": "naru_islands",
+      "npc": "naru",
+      "difficulty": "normal",
+      "reward_tier": "naru_islands",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "다리 건너 인사",
+          "request": "다리 너머 풍경이 궁금하지? 다섯 섬 중 서로 다른 {count}곳의 이정표을 찾아가 봐.",
+          "accept": "같은 이정표은 한 번만 세면 돼. 즐겁게 다녀와!",
+          "complete": "좋았어! 이제 다음 산책길도 자신 있겠네."
+        },
+        "en": {
+          "title": "Hello Across the Bridges",
+          "request": "Curious about the view across the bridges? Visit signposts on {count} different islands out of the five.",
+          "accept": "Each signpost counts once. Enjoy your walk!",
+          "complete": "Well done! You will know your way on the next stroll."
+        },
+        "zh": {
+          "title": "桥那边的问候",
+          "request": "好奇桥那边的风景吗？去五座岛中不同的{count}座岛看看路标吧。",
+          "accept": "同一块路标只算一次。开心地走一走！",
+          "complete": "太棒啦！下次散步一定更有把握了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_naru_04",
+      "quest_id": "naru_islands",
+      "npc": "naru",
+      "difficulty": "normal",
+      "reward_tier": "naru_islands",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "오늘의 길잡이 연습",
+          "request": "오늘은 네가 길잡이 연습을 해 볼래? 다섯 섬 중 서로 다른 {count}곳의 이정표을 방문해 줘.",
+          "accept": "어느 섬을 고를지는 네게 맡길게!",
+          "complete": "멋진 연습이었어. 우리 마을 길잡이가 늘었네!"
+        },
+        "en": {
+          "title": "A Guide’s Practice Walk",
+          "request": "Would you like a little guide practice? Visit signposts on {count} different islands out of the five.",
+          "accept": "You get to choose which islands!",
+          "complete": "Wonderful practice. Our village has another guide!"
+        },
+        "zh": {
+          "title": "今天的向导练习",
+          "request": "今天想练习当向导吗？去五座岛中不同的{count}座岛看看路标吧。",
+          "accept": "选哪几座岛，由你决定！",
+          "complete": "练习得真棒。村里又多了一位小向导！"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_sora_01",
+      "quest_id": "sora_outfit",
+      "npc": "sora",
+      "difficulty": "easy",
+      "reward_tier": "sora_outfit",
+      "activity": "outfit",
+      "text": {
+        "ko": {
+          "title": "오늘의 작은 단장",
+          "request": "제 옷장에서 새 차림으로 갈아입고 저장해 볼래요? 재단사의 눈도 즐겁게 해 주세요.",
+          "accept": "큰 변화가 아니어도 좋아요. 마음에 드는 모습으로요.",
+          "complete": "참 잘 어울려요. 오늘 걸음도 조금 가벼워 보이네요."
+        },
+        "en": {
+          "title": "A Little Freshening Up",
+          "request": "Would you change into a new look from my wardrobe and save it? Give this tailor a little inspiration.",
+          "accept": "A small change is lovely too. Choose what feels like you.",
+          "complete": "It suits you beautifully. Your steps look a little lighter."
+        },
+        "zh": {
+          "title": "今天的小小打扮",
+          "request": "从我的衣橱里换一身新装扮并保存，好吗？也让裁缝欣赏一下吧。",
+          "accept": "一点小变化也很好。选自己喜欢的样子。",
+          "complete": "真适合你。今天的脚步似乎都轻快了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_sora_02",
+      "quest_id": "sora_outfit",
+      "npc": "sora",
+      "difficulty": "easy",
+      "reward_tier": "sora_outfit",
+      "activity": "outfit",
+      "text": {
+        "ko": {
+          "title": "거울 앞의 기분 전환",
+          "request": "작은 단장으로 기분을 바꿔 볼까요? 옷장에서 새 차림으로 갈아입고 저장해 주세요.",
+          "accept": "서두르지 말고 거울 앞 시간을 즐겨요.",
+          "complete": "좋네요. 가장 멋진 옷차림은 편안한 표정과 어울리죠."
+        },
+        "en": {
+          "title": "A Change by the Mirror",
+          "request": "Shall we brighten the day with a little change? Change into a new look from the wardrobe and save it.",
+          "accept": "Take your time and enjoy a moment by the mirror.",
+          "complete": "Lovely. The best look goes with a comfortable smile."
+        },
+        "zh": {
+          "title": "镜前换个心情",
+          "request": "用一点小打扮换换心情吧？在衣橱里换上新装扮并保存。",
+          "accept": "不用着急，享受镜子前的片刻吧。",
+          "complete": "真好。最美的装扮，总配着自在的笑容。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_sora_03",
+      "quest_id": "sora_outfit",
+      "npc": "sora",
+      "difficulty": "easy",
+      "reward_tier": "sora_outfit",
+      "activity": "outfit",
+      "text": {
+        "ko": {
+          "title": "소라의 옷차림 노트",
+          "request": "옷차림 노트에 새 영감이 필요해요. 옷장에서 새 차림으로 갈아입고 저장해 주실래요?",
+          "accept": "어떤 변화든 좋아요. 당신다운 선택이 궁금해요.",
+          "complete": "고마워요. 오늘 노트에는 산뜻한 생각이 가득하겠네요."
+        },
+        "en": {
+          "title": "Sora’s Style Notes",
+          "request": "My style notebook could use fresh inspiration. Would you change into a new look from the wardrobe and save it?",
+          "accept": "Any change is welcome. I would love to see your choice.",
+          "complete": "Thank you. My notebook will be full of fresh ideas today."
+        },
+        "zh": {
+          "title": "小空的穿搭笔记",
+          "request": "穿搭笔记需要一点新灵感。能在衣橱里换上新装扮并保存吗？",
+          "accept": "怎样改变都好。我想看看你的选择。",
+          "complete": "谢谢。今天的笔记一定会装满清新的想法。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_moru_01",
+      "quest_id": "moru_soup",
+      "npc": "moru",
+      "difficulty": "easy",
+      "reward_tier": "moru_soup",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "야영 냄비의 저녁",
+          "request": "야영지에서 수프를 끓이려 해. 숲 버섯이나 금빛 송이를 합쳐 {count}개 가져다줄래?",
+          "accept": "이미 모아 둔 버섯도 좋아. 냄비는 내가 챙길게.",
+          "complete": "좋은 재료네. 오늘 야영지에는 따뜻한 냄새가 나겠어."
+        },
+        "en": {
+          "title": "Supper in the Camp Pot",
+          "request": "I am making soup at camp. Bring {count} Forest Mushrooms or Golden Mushrooms in any combination.",
+          "accept": "Mushrooms you already have are fine. I will get the pot ready.",
+          "complete": "Good ingredients. Camp will smell warm and welcoming tonight."
+        },
+        "zh": {
+          "title": "营地锅里的晚餐",
+          "request": "我想在营地煮汤。带来森林蘑菇或金色松茸，共{count}朵就好。",
+          "accept": "已经收集的也行。锅由我来准备。",
+          "complete": "好食材。今晚营地一定会飘着暖暖的香气。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_moru_02",
+      "quest_id": "moru_soup",
+      "npc": "moru",
+      "difficulty": "easy",
+      "reward_tier": "moru_soup",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "모루의 수프 연습",
+          "request": "수프 맛을 조금 더 다듬고 싶어. 숲 버섯이나 금빛 송이 {count}개를 부탁할게.",
+          "accept": "두 종류를 섞어 가져와도 괜찮아.",
+          "complete": "고마워. 불은 천천히, 마음은 넉넉하게 끓여 볼게."
+        },
+        "en": {
+          "title": "Moru’s Soup Practice",
+          "request": "I want to work on my soup recipe. Please bring {count} Forest Mushrooms or Golden Mushrooms.",
+          "accept": "A mix of both kinds is fine.",
+          "complete": "Thanks. I will cook it gently, with plenty of care."
+        },
+        "zh": {
+          "title": "莫鲁的煮汤练习",
+          "request": "想把汤的味道再调好一点。拜托带来{count}朵森林蘑菇或金色松茸。",
+          "accept": "两种混在一起也没关系。",
+          "complete": "谢谢。我会用小火，慢慢煮出暖意。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_moru_03",
+      "quest_id": "moru_soup",
+      "npc": "moru",
+      "difficulty": "easy",
+      "reward_tier": "moru_soup",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "숲 향기 한 냄비",
+          "request": "숲 향기 나는 수프가 생각나네. 숲 버섯과 금빛 송이 중 {count}개를 가져다줄래?",
+          "accept": "어느 쪽이든 좋아. 합친 개수만 맞으면 돼.",
+          "complete": "이 정도면 든든해. 덕분에 야영 준비가 한결 편해졌어."
+        },
+        "en": {
+          "title": "A Pot of Woodland Warmth",
+          "request": "I feel like a soup that smells of the woods. Could you bring {count} Forest Mushrooms or Golden Mushrooms?",
+          "accept": "Either kind is fine, or a mix totaling that many.",
+          "complete": "That is plenty. You have made camp preparations much easier."
+        },
+        "zh": {
+          "title": "一锅森林香",
+          "request": "想喝一碗带着森林香气的汤。能带来{count}朵森林蘑菇或金色松茸吗？",
+          "accept": "哪种都好，混着凑够数量也行。",
+          "complete": "这样就够啦。有你帮忙，准备露营轻松多了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_haeru_01",
+      "quest_id": "haeru_fish",
+      "npc": "haeru",
+      "difficulty": "easy",
+      "reward_tier": "haeru_fish",
+      "activity": "fish",
+      "text": {
+        "ko": {
+          "title": "바다에서 온 저녁",
+          "request": "오늘 저녁은 바다 맛으로 하고 싶어요! 바다에서 잡히는 물고기 {count}마리를 가져다줄래요?",
+          "accept": "가방에 둔 바다 물고기도 좋아요. 낚싯대는 잠깐 쉬어도 돼요!",
+          "complete": "오, 딱 좋네요! 저녁 식탁에도 파도 소리가 나겠어요."
+        },
+        "en": {
+          "title": "Supper from the Sea",
+          "request": "I fancy a taste of the sea tonight! Could you bring {count} fish of a sea species?",
+          "accept": "A sea fish already in your bag is fine. Your rod can take a break!",
+          "complete": "Oh, perfect! Supper will feel like a little trip to the shore."
+        },
+        "zh": {
+          "title": "来自大海的晚餐",
+          "request": "今晚想尝尝大海的味道！能带来{count}条海里的鱼吗？",
+          "accept": "包里已有的海鱼也行。鱼竿可以歇一会儿！",
+          "complete": "哦，正合适！晚餐桌上都像有海浪声啦。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_haeru_02",
+      "quest_id": "haeru_fish",
+      "npc": "haeru",
+      "difficulty": "easy",
+      "reward_tier": "haeru_fish",
+      "activity": "fish",
+      "text": {
+        "ko": {
+          "title": "해루의 빈 접시",
+          "request": "낚시 이야기는 많은데 접시가 비었네요! 바다 물고기 {count}마리만 부탁해요.",
+          "accept": "바다에서 잡히는 종류면 돼요. 이미 가진 것도 좋아요!",
+          "complete": "고마워요! 오늘은 접시도 낚시 이야기를 듣겠네요."
+        },
+        "en": {
+          "title": "Haeru’s Empty Plate",
+          "request": "I have plenty of fishing stories, but an empty plate! Please bring {count} sea fish.",
+          "accept": "Any sea species will do. One you already have is welcome!",
+          "complete": "Thanks! Today my plate gets to join the fishing stories."
+        },
+        "zh": {
+          "title": "海鲁的空盘子",
+          "request": "钓鱼故事倒是不少，盘子却空着呢！拜托带来{count}条海鱼。",
+          "accept": "海里能钓到的种类就行，已有的也可以！",
+          "complete": "谢谢！今天盘子也能加入钓鱼故事啦。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_haeru_03",
+      "quest_id": "haeru_fish",
+      "npc": "haeru",
+      "difficulty": "easy",
+      "reward_tier": "haeru_fish",
+      "activity": "fish",
+      "text": {
+        "ko": {
+          "title": "짭짤한 저녁 준비",
+          "request": "부두에서 일하다 보니 배가 고파졌어요. 바다 물고기 {count}마리를 가져다줄래요?",
+          "accept": "잡아 둔 바다 물고기가 있다면 그걸로 충분해요!",
+          "complete": "고마워요! 이제 꼬르륵 소리도 잔잔해지겠어요."
+        },
+        "en": {
+          "title": "A Seaside Supper",
+          "request": "Working by the pier has made me hungry. Could you bring {count} sea fish?",
+          "accept": "If you already have a sea fish, that is all I need!",
+          "complete": "Thanks! My hungry tummy can finally settle down."
+        },
+        "zh": {
+          "title": "海边的晚餐准备",
+          "request": "在码头忙了一阵，肚子饿啦。能带来{count}条海鱼吗？",
+          "accept": "如果已经有海鱼，带那个就够啦！",
+          "complete": "谢谢！这下肚子里的小海浪也能平静了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_postman_01",
+      "quest_id": "daon_gift",
+      "npc": "postman",
+      "difficulty": "easy",
+      "reward_tier": "daon_gift",
+      "activity": "deliver",
+      "text": {
+        "ko": {
+          "title": "말 없는 작은 편지",
+          "request": "선물은 글자 없는 편지예요! 마을 주민 누구에게든 선물을 하나 건네 주세요.",
+          "accept": "가방 속 물건으로 마음을 전해도 좋아요.",
+          "complete": "배달 완료네요! 오늘 마을에 미소가 하나 늘었어요."
+        },
+        "en": {
+          "title": "A Letter Without Words",
+          "request": "A gift is a letter without words! Give a gift to any resident in the village.",
+          "accept": "Something already in your bag can carry your kindness.",
+          "complete": "Delivery complete! There is one more smile in the village."
+        },
+        "zh": {
+          "title": "没有字的小信",
+          "request": "礼物是没有字的信！给村里任意一位居民送一件礼物吧。",
+          "accept": "包里已有的物品也能传达心意。",
+          "complete": "投递完成！今天村里又多了一个笑容。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_postman_02",
+      "quest_id": "daon_gift",
+      "npc": "postman",
+      "difficulty": "easy",
+      "reward_tier": "daon_gift",
+      "activity": "deliver",
+      "text": {
+        "ko": {
+          "title": "다온의 마음 배달",
+          "request": "오늘은 마음을 배달해 볼까요? 마을 주민 누구에게든 선물을 하나 건네 주세요.",
+          "accept": "받을 주민은 직접 골라 주세요. 저는 응원할게요!",
+          "complete": "좋은 배달이었어요! 마음에는 우표가 필요 없군요."
+        },
+        "en": {
+          "title": "Daon’s Kind Delivery",
+          "request": "Shall we deliver a little kindness today? Give a gift to any resident you like.",
+          "accept": "You choose the recipient. I will cheer you on!",
+          "complete": "A fine delivery! Kindness really does not need a stamp."
+        },
+        "zh": {
+          "title": "多温的心意投递",
+          "request": "今天来投递一份心意吧？给任意一位居民送一件礼物。",
+          "accept": "收件人由你来选。我会为你加油！",
+          "complete": "投递得真好！原来心意不需要邮票呢。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_postman_03",
+      "quest_id": "daon_gift",
+      "npc": "postman",
+      "difficulty": "easy",
+      "reward_tier": "daon_gift",
+      "activity": "deliver",
+      "text": {
+        "ko": {
+          "title": "우편 가방 밖의 선물",
+          "request": "우편 가방에 담지 않아도 전할 수 있는 마음이 있죠. 주민 한 분께 선물을 하나 건네 주세요.",
+          "accept": "새로 만들 필요는 없어요. 가진 물건도 훌륭한 선물이에요.",
+          "complete": "고마워요! 오늘 배달 길은 한결 따뜻하겠어요."
+        },
+        "en": {
+          "title": "A Gift Beyond the Mailbag",
+          "request": "Some kindness travels without a mailbag. Give a gift to one of our residents.",
+          "accept": "No need to make anything new. Something you own is a lovely gift.",
+          "complete": "Thank you! My delivery route feels warmer today."
+        },
+        "zh": {
+          "title": "邮包外的礼物",
+          "request": "有些心意不用放进邮包。给一位居民送一件礼物吧。",
+          "accept": "不用新做。已有的物品也是好礼物。",
+          "complete": "谢谢！今天的送信路会更温暖呢。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_farmer_01",
+      "quest_id": "hangyeol_turnips",
+      "npc": "farmer",
+      "difficulty": "easy",
+      "reward_tier": "hangyeol_turnips",
+      "activity": "farm",
+      "text": {
+        "ko": {
+          "title": "고랑 끝의 순무",
+          "request": "밭에서 기른 순무 {count}개를 가져다주시겠어요? 오늘 수확물을 살펴보고 싶어요.",
+          "accept": "가방에 둔 순무도 괜찮아요. 서두르지 마세요.",
+          "complete": "잘 여문 순무네요. 땅도 수고했다고 말하는 듯해요."
+        },
+        "en": {
+          "title": "Turnips from the Row",
+          "request": "Could you bring {count} turnips from the field? I would like to look over the harvest.",
+          "accept": "Turnips already in your bag are fine. Take your time.",
+          "complete": "Fine turnips. Even the soil seems to be thanking you."
+        },
+        "zh": {
+          "title": "田垄里的芜菁",
+          "request": "能带来地里种的{count}个芜菁吗？我想看看收成。",
+          "accept": "包里已有的芜菁也行。慢慢来。",
+          "complete": "长得真好。连土地都像在说辛苦了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_farmer_02",
+      "quest_id": "hangyeol_turnips",
+      "npc": "farmer",
+      "difficulty": "easy",
+      "reward_tier": "hangyeol_turnips",
+      "activity": "farm",
+      "text": {
+        "ko": {
+          "title": "씨앗 가게의 수확 이야기",
+          "request": "씨앗 가게에서 수확 이야기를 나누고 싶어요. 순무 {count}개를 가져다주시겠어요?",
+          "accept": "이미 거둔 순무면 충분해요. 새로 기르셔도 좋고요.",
+          "complete": "고맙습니다. 작은 씨앗이 참 든든하게 자랐네요."
+        },
+        "en": {
+          "title": "Harvest Talk at the Seed Shop",
+          "request": "I would like to share some harvest talk at the seed shop. Could you bring {count} turnips?",
+          "accept": "Turnips you have already harvested are fine. Growing more is fine too.",
+          "complete": "Thank you. Those little seeds grew into something lovely."
+        },
+        "zh": {
+          "title": "种子店的收获闲话",
+          "request": "想在种子店聊聊收成。能带来{count}个芜菁吗？",
+          "accept": "已经收好的就行，现种也可以。",
+          "complete": "谢谢。小小的种子长得真结实啊。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_farmer_03",
+      "quest_id": "hangyeol_turnips",
+      "npc": "farmer",
+      "difficulty": "easy",
+      "reward_tier": "hangyeol_turnips",
+      "activity": "farm",
+      "text": {
+        "ko": {
+          "title": "흙 냄새 나는 부탁",
+          "request": "오늘은 순무를 챙기려 해요. 순무 {count}개만 가져다주세요.",
+          "accept": "물 주며 기다리는 시간도 농사의 한 부분이지요. 가진 순무도 좋아요.",
+          "complete": "고맙습니다. 이만하면 오늘 일도 차분히 마무리하겠어요."
+        },
+        "en": {
+          "title": "A Request from the Soil",
+          "request": "I am gathering turnips today. Please bring me {count} turnips.",
+          "accept": "Watering and waiting are part of farming. Turnips you have are welcome too.",
+          "complete": "Thank you. Now I can finish today’s work at an easy pace."
+        },
+        "zh": {
+          "title": "带着泥土香的请求",
+          "request": "今天想备些芜菁。请带来{count}个芜菁吧。",
+          "accept": "浇水和等待也是种田的一部分。已有的芜菁也很好。",
+          "complete": "谢谢。有了这些，今天的活儿能从容收尾了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_lamplighter_01",
+      "quest_id": "noeul_light",
+      "npc": "lamplighter",
+      "difficulty": "normal",
+      "reward_tier": "noeul_light",
+      "activity": "craft",
+      "text": {
+        "ko": {
+          "title": "길을 밝히는 등불",
+          "request": "집 밖 마을 어딘가에 빛나는 물건을 하나 놓아 주세요. 작은 등불이나 램프도 좋아요.",
+          "accept": "가진 조명을 써도 되고 새로 만들어도 돼요. 이미 놓인 조명도 괜찮아요.",
+          "complete": "불빛이 하나 늘었네요. 돌아오는 발걸음이 편안하겠어요."
+        },
+        "en": {
+          "title": "A Light for the Path",
+          "request": "Place one glowing object somewhere outdoors in the village. A little lantern or lamp is lovely.",
+          "accept": "Use a light you own or make one. A light already placed is fine too.",
+          "complete": "Another light is shining. The walk home will feel easier."
+        },
+        "zh": {
+          "title": "照路的小灯",
+          "request": "请在村里的室外摆放一件发光的物品。小灯笼或台灯都很好。",
+          "accept": "可以用已有的灯，也可以新做。已经摆好的灯也行。",
+          "complete": "又多了一点灯光。回家的脚步会更安心。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_lamplighter_02",
+      "quest_id": "noeul_light",
+      "npc": "lamplighter",
+      "difficulty": "normal",
+      "reward_tier": "noeul_light",
+      "activity": "craft",
+      "text": {
+        "ko": {
+          "title": "노을의 작은 불빛",
+          "request": "집 밖 마을 어딘가에 빛나는 물건이 하나 있으면 좋겠어요. 랜턴처럼 은은한 조명도 충분해요.",
+          "accept": "이미 마을에 놓은 조명도 좋아요. 새로 만들 필요는 없어요.",
+          "complete": "고마워요. 오늘 마을에 따뜻한 점 하나가 더 생겼네요."
+        },
+        "en": {
+          "title": "Noeul’s Little Light",
+          "request": "I would love one glowing object somewhere outdoors in the village. A gentle lantern light is plenty.",
+          "accept": "A light already placed in the village is fine. No need to make a new one.",
+          "complete": "Thank you. Our village has another warm little spot today."
+        },
+        "zh": {
+          "title": "晚霞的小小灯光",
+          "request": "希望村里的室外能有一件发光的物品。灯笼那样柔和的灯光就够了。",
+          "accept": "村里已经摆好的灯也行，不用新做。",
+          "complete": "谢谢。今天村里又多了一个温暖的小光点。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_lamplighter_03",
+      "quest_id": "noeul_light",
+      "npc": "lamplighter",
+      "difficulty": "normal",
+      "reward_tier": "noeul_light",
+      "activity": "craft",
+      "text": {
+        "ko": {
+          "title": "등불지기의 동료",
+          "request": "제 불빛에 동료가 있으면 좋겠어요. 집 밖 마을 어딘가에 램프 같은 빛나는 물건을 하나 놓아 주세요.",
+          "accept": "가진 등불도 좋아요. 이미 마을에 놓여 있어도 괜찮아요.",
+          "complete": "이제 불빛들이 함께 길을 지키겠네요. 고마워요."
+        },
+        "en": {
+          "title": "A Companion for the Lamps",
+          "request": "My lights could use some company. Place one glowing object, such as a lamp, somewhere outdoors in the village.",
+          "accept": "A lantern you own is lovely. It can already be placed in the village.",
+          "complete": "Now our lights can watch over the paths together. Thank you."
+        },
+        "zh": {
+          "title": "灯光的小伙伴",
+          "request": "我的灯光也想有个伴。请在村里的室外摆放一件发光的物品，比如台灯。",
+          "accept": "已有的灯笼就很好。已经摆在村里也可以。",
+          "complete": "现在灯光们能一起守着小路了。谢谢。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_fisher_01",
+      "quest_id": "boram_catch",
+      "npc": "fisher",
+      "difficulty": "normal",
+      "reward_tier": "boram_catch",
+      "activity": "fish",
+      "text": {
+        "ko": {
+          "title": "물고기 도감의 이웃",
+          "request": "지금부터 서로 다른 물고기 {count}종류를 낚아 주세요. 도감 속 이웃들을 만나 보고 싶어요.",
+          "accept": "같은 종류를 여러 마리 낚아도 한 종류로 세어요.",
+          "complete": "서로 다른 지느러미들이네요. 차분히 기다린 보람이 있어요."
+        },
+        "en": {
+          "title": "Neighbors in the Fish Book",
+          "request": "From now on, catch {count} different kinds of fish. I would like to meet the fish book’s neighbors.",
+          "accept": "Several fish of the same kind still count as one kind.",
+          "complete": "Such different little fins. Your patience was worth it."
+        },
+        "zh": {
+          "title": "鱼类图鉴里的邻居",
+          "request": "从现在起，请钓到{count}种不同的鱼。我想认识图鉴里的邻居。",
+          "accept": "同一种鱼钓到好几条，也只算一种。",
+          "complete": "各不相同的小鱼鳍呢。耐心等待真值得。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_fisher_02",
+      "quest_id": "boram_catch",
+      "npc": "fisher",
+      "difficulty": "normal",
+      "reward_tier": "boram_catch",
+      "activity": "fish",
+      "text": {
+        "ko": {
+          "title": "잔물결 관찰 노트",
+          "request": "오늘 낚시 노트를 채워 볼까요? 지금부터 서로 다른 물고기 {count}종류를 낚아 주세요.",
+          "accept": "예전에 낚은 종류도 다시 낚으면 괜찮아요.",
+          "complete": "고맙습니다. 노트에 잔물결 같은 이야기가 늘었네요."
+        },
+        "en": {
+          "title": "Notes on Little Ripples",
+          "request": "Shall we fill today’s fishing notes? From now on, catch {count} different kinds of fish.",
+          "accept": "A kind you caught before is fine if you catch it again now.",
+          "complete": "Thank you. Our notes have a few more gentle stories."
+        },
+        "zh": {
+          "title": "小波纹观察笔记",
+          "request": "来填一填今天的钓鱼笔记吧？从现在起，请钓到{count}种不同的鱼。",
+          "accept": "以前钓过的种类，现在再钓到也算。",
+          "complete": "谢谢。笔记里又添了几段小波纹般的故事。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_fisher_03",
+      "quest_id": "boram_catch",
+      "npc": "fisher",
+      "difficulty": "normal",
+      "reward_tier": "boram_catch",
+      "activity": "fish",
+      "text": {
+        "ko": {
+          "title": "느긋한 낚시 비교",
+          "request": "서두르지 않는 낚시를 해 볼까요? 지금부터 서로 다른 물고기 {count}종류를 낚아 주세요.",
+          "accept": "연못도 바다도 좋아요. 종류가 서로 다르면 돼요.",
+          "complete": "좋은 기다림이었네요. 물가가 조금 더 친숙해졌어요."
+        },
+        "en": {
+          "title": "A Leisurely Fishing Study",
+          "request": "How about some unhurried fishing? From now on, catch {count} different kinds of fish.",
+          "accept": "Pond or sea is fine. The kinds just need to be different.",
+          "complete": "That was time well spent. The waterside feels more familiar now."
+        },
+        "zh": {
+          "title": "悠闲的钓鱼观察",
+          "request": "来慢慢钓会儿鱼吧？从现在起，请钓到{count}种不同的鱼。",
+          "accept": "池塘和大海都行，只要种类不同。",
+          "complete": "这份等待真好。水边也变得更亲切了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_sweeper_01",
+      "quest_id": "miso_flowers",
+      "npc": "sweeper",
+      "difficulty": "easy",
+      "reward_tier": "miso_flowers",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "벤치 옆 작은 꽃다발",
+          "request": "청소한 벤치 옆에 꽃을 두고 싶어요. 들꽃 {count}송이를 가져다주시겠어요?",
+          "accept": "모아 둔 들꽃도 좋아요. 꽃병은 제가 챙길게요.",
+          "complete": "고마워요. 깨끗한 자리에 환한 표정이 더해졌네요."
+        },
+        "en": {
+          "title": "A Posy by the Bench",
+          "request": "I would like flowers beside the bench I swept. Could you bring {count} wildflowers?",
+          "accept": "Wildflowers you already have are fine. I will find the vase.",
+          "complete": "Thank you. Our tidy little corner looks happier now."
+        },
+        "zh": {
+          "title": "长椅旁的小花束",
+          "request": "想在扫干净的长椅旁放点花。能带来{count}朵野花吗？",
+          "accept": "已经收集的野花也行。花瓶我来准备。",
+          "complete": "谢谢。干净的小角落又多了一份明亮。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_sweeper_02",
+      "quest_id": "miso_flowers",
+      "npc": "sweeper",
+      "difficulty": "easy",
+      "reward_tier": "miso_flowers",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "빗자루가 쉬는 시간",
+          "request": "빗자루도 잠깐 꽃구경을 하면 좋겠어요. 들꽃 {count}송이를 가져다주세요.",
+          "accept": "길가 풀숲에서 찾거나 가진 꽃을 가져오셔도 돼요.",
+          "complete": "고마워요. 저도 빗자루도 잠깐 웃고 갈게요."
+        },
+        "en": {
+          "title": "A Break for the Broom",
+          "request": "Even my broom deserves a moment with flowers. Please bring {count} wildflowers.",
+          "accept": "Look in the roadside grass, or bring flowers you already have.",
+          "complete": "Thank you. My broom and I will enjoy a little smile."
+        },
+        "zh": {
+          "title": "扫帚休息的时候",
+          "request": "扫帚也该歇一歇看看花了。请带来{count}朵野花吧。",
+          "accept": "路边草丛里能找到，已有的花也可以。",
+          "complete": "谢谢。我和扫帚都要笑一笑再出发。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_sweeper_03",
+      "quest_id": "miso_flowers",
+      "npc": "sweeper",
+      "difficulty": "easy",
+      "reward_tier": "miso_flowers",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "광장에 놓을 색깔",
+          "request": "쓸고 닦은 광장에 작은 색깔을 더하고 싶어요. 들꽃 {count}송이를 부탁해요.",
+          "accept": "어떤 들꽃이든 좋아요. 가방에 있는 것도 반가워요.",
+          "complete": "이제 광장이 더 다정해 보이네요. 고맙습니다."
+        },
+        "en": {
+          "title": "A Little Color for the Square",
+          "request": "I want to add a little color to our swept square. Please bring {count} wildflowers.",
+          "accept": "Any wildflowers are lovely. Ones in your bag are welcome too.",
+          "complete": "The square looks kinder now. Thank you."
+        },
+        "zh": {
+          "title": "广场的一点颜色",
+          "request": "想给扫干净的广场添一点颜色。拜托带来{count}朵野花。",
+          "accept": "野花就好。包里已有的也很欢迎。",
+          "complete": "广场看起来更温柔了。谢谢你。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_gentleman_01",
+      "quest_id": "yunjae_regards",
+      "npc": "gentleman",
+      "difficulty": "easy",
+      "reward_tier": "yunjae_regards",
+      "activity": "deliver",
+      "text": {
+        "ko": {
+          "title": "정자로 보내는 안부",
+          "request": "가람 씨에게 제 안부를 전해 주시겠습니까? 산책하다가 문득 생각이 났습니다.",
+          "accept": "가람 씨와 이야기해 주시면 됩니다. 고맙습니다.",
+          "complete": "안부가 잘 닿았군요. 오늘 산책은 더욱 즐겁겠습니다."
+        },
+        "en": {
+          "title": "Regards for the Gazebo",
+          "request": "Would you give Garam my regards? He came to mind during my walk.",
+          "accept": "Simply speak with Garam for me. Thank you.",
+          "complete": "My regards reached him. Today’s stroll will be all the better."
+        },
+        "zh": {
+          "title": "送往凉亭的问候",
+          "request": "能替我向伽蓝转达问候吗？散步时忽然想起了他。",
+          "accept": "替我和伽蓝说说话就好。谢谢。",
+          "complete": "问候传到了。今天的散步会更加愉快。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_gentleman_02",
+      "quest_id": "yunjae_regards",
+      "npc": "gentleman",
+      "difficulty": "easy",
+      "reward_tier": "yunjae_regards",
+      "activity": "deliver",
+      "text": {
+        "ko": {
+          "title": "윤재의 짧은 인사",
+          "request": "가람 씨에게 좋은 하루 보내시라 전하고 싶군요. 제 안부를 전해 주십시오.",
+          "accept": "말 한마디에도 온기가 있지요. 부탁드립니다.",
+          "complete": "고맙습니다. 짧은 인사로도 마음이 넉넉해지는군요."
+        },
+        "en": {
+          "title": "A Brief Hello from Yunjae",
+          "request": "I would like to wish Garam a pleasant day. Please give him my regards.",
+          "accept": "Even a few words can carry warmth. Thank you for helping.",
+          "complete": "Thank you. A brief greeting can make the heart feel full."
+        },
+        "zh": {
+          "title": "允在的简短问候",
+          "request": "想祝伽蓝度过愉快的一天。请替我问候他。",
+          "accept": "一句话也能带着温暖。拜托了。",
+          "complete": "谢谢。简短的问候也能让心里暖暖的。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_gentleman_03",
+      "quest_id": "yunjae_regards",
+      "npc": "gentleman",
+      "difficulty": "easy",
+      "reward_tier": "yunjae_regards",
+      "activity": "deliver",
+      "text": {
+        "ko": {
+          "title": "시인에게 띄우는 인사",
+          "request": "가람 씨의 시가 문득 떠올랐습니다. 가람 씨에게 제 안부를 전해 주십시오.",
+          "accept": "선물은 필요 없습니다. 다정한 인사면 충분하지요.",
+          "complete": "고맙습니다. 덕분에 오늘은 시 한 줄 같은 날입니다."
+        },
+        "en": {
+          "title": "A Greeting for the Poet",
+          "request": "A poem by Garam came to mind. Please give him my regards.",
+          "accept": "No gift is needed. A kind greeting is plenty.",
+          "complete": "Thank you. You have made today feel like a line of poetry."
+        },
+        "zh": {
+          "title": "给诗人的问候",
+          "request": "忽然想起了伽蓝的诗。请替我向他问好。",
+          "accept": "不用礼物，亲切的问候就足够了。",
+          "complete": "谢谢。多亏你，今天也像一行诗了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_stargazer_01",
+      "quest_id": "haneul_stars",
+      "npc": "stargazer",
+      "difficulty": "normal",
+      "reward_tier": "haneul_stars",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "별빛 아래 초대",
+          "request": "해가 진 뒤에 별빛 천문대 안으로 들어와 주세요. 조용한 별빛을 함께 나누고 싶어요.",
+          "accept": "밤에 오시면 돼요. 망원경은 제가 닦아 둘게요.",
+          "complete": "와 주셨네요. 오늘 별빛은 혼자 보기 아까웠어요."
+        },
+        "en": {
+          "title": "An Invitation Under Stars",
+          "request": "Come inside the Starlight Observatory after dark. I would love to share the quiet starlight.",
+          "accept": "Come at night. I will polish the telescope.",
+          "complete": "You came. Tonight’s starlight was too lovely to keep to myself."
+        },
+        "zh": {
+          "title": "星光下的邀请",
+          "request": "天黑以后，请到星光天文台里面来。想和你分享安静的星光。",
+          "accept": "晚上来就好。我会把望远镜擦亮。",
+          "complete": "你来了。今晚的星光真舍不得独自欣赏。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_stargazer_02",
+      "quest_id": "haneul_stars",
+      "npc": "stargazer",
+      "difficulty": "normal",
+      "reward_tier": "haneul_stars",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "천문대의 밤 손님",
+          "request": "천문대에서 밤 손님을 기다리고 있어요. 해가 진 뒤에 별빛 천문대 안으로 들어와 줄래요?",
+          "accept": "해가 진 뒤의 방문이에요. 별들이 길동무가 되어 줄 거예요.",
+          "complete": "고마워요. 발소리가 들리니 천문대도 반가워하네요."
+        },
+        "en": {
+          "title": "A Night Guest at the Observatory",
+          "request": "The observatory is waiting for a night guest. Could you come inside the Starlight Observatory after dark?",
+          "accept": "This is a nighttime visit. The stars will keep you company.",
+          "complete": "Thank you. Even the observatory seems happy to hear your steps."
+        },
+        "zh": {
+          "title": "天文台的夜间客人",
+          "request": "天文台正在等一位夜里的客人。天黑以后，能到星光天文台里面来吗？",
+          "accept": "请晚上来。星星会陪你走这段路。",
+          "complete": "谢谢。听到你的脚步，天文台也高兴起来了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_stargazer_03",
+      "quest_id": "haneul_stars",
+      "npc": "stargazer",
+      "difficulty": "normal",
+      "reward_tier": "haneul_stars",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "별을 기다리는 자리",
+          "request": "별을 기다리는 자리가 비어 있어요. 해가 진 뒤에 별빛 천문대 안으로 와 주세요.",
+          "accept": "별을 세지 않아도 좋아요. 밤에 들러 주시는 것만으로 충분해요.",
+          "complete": "함께 기다리니 별빛도 조금 가까워진 듯해요."
+        },
+        "en": {
+          "title": "A Place to Wait for Stars",
+          "request": "There is an empty seat for waiting on the stars. Come inside the Starlight Observatory after dark.",
+          "accept": "No need to count stars. A nighttime visit is enough.",
+          "complete": "With someone beside me, the starlight feels a little closer."
+        },
+        "zh": {
+          "title": "等星星的位置",
+          "request": "等星星的位置还空着。天黑以后，请到星光天文台里面来。",
+          "accept": "不用数星星。晚上来坐坐就足够了。",
+          "complete": "一起等待时，星光仿佛也近了一点。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_gardener_01",
+      "quest_id": "chorok_herbs",
+      "npc": "gardener",
+      "difficulty": "easy",
+      "reward_tier": "chorok_herbs",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "온실의 향주머니",
+          "request": "온실에서 작은 향주머니를 준비해요. 향초 {count}줌을 가져다주시겠어요?",
+          "accept": "이미 모은 향초도 좋아요. 향주머니는 제가 만들게요.",
+          "complete": "고맙습니다. 손끝에 싱그러운 향기가 남겠네요."
+        },
+        "en": {
+          "title": "A Scent Pouch for the Greenhouse",
+          "request": "I am preparing a little scent pouch in the greenhouse. Could you bring {count} herbs?",
+          "accept": "Herbs you have gathered are fine. I will make the pouch.",
+          "complete": "Thank you. My fingertips will smell wonderfully fresh."
+        },
+        "zh": {
+          "title": "温室的小香囊",
+          "request": "我在温室里准备小香囊。能带来{count}份香草吗？",
+          "accept": "已经收集的香草也行。香囊由我来做。",
+          "complete": "谢谢。指尖会留下一点清新的香气呢。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_gardener_02",
+      "quest_id": "chorok_herbs",
+      "npc": "gardener",
+      "difficulty": "easy",
+      "reward_tier": "chorok_herbs",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "초록의 향기 모으기",
+          "request": "오늘은 향초 향을 곁에 두고 싶어요. 향초 {count}줌만 가져다주세요.",
+          "accept": "가방에 넣어 둔 향초도 반가워요.",
+          "complete": "이 향이면 온실을 돌보는 시간도 더 편안하겠어요."
+        },
+        "en": {
+          "title": "Chorok’s Little Fragrance",
+          "request": "I would like some herbal fragrance nearby today. Please bring {count} herbs.",
+          "accept": "Herbs tucked away in your bag are welcome too.",
+          "complete": "This scent will make tending the greenhouse even more peaceful."
+        },
+        "zh": {
+          "title": "翠绿的小小清香",
+          "request": "今天想让香草的气息陪着我。请带来{count}份香草吧。",
+          "accept": "包里存着的香草也欢迎。",
+          "complete": "有了这份清香，照顾温室的时光会更安宁。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_gardener_03",
+      "quest_id": "chorok_herbs",
+      "npc": "gardener",
+      "difficulty": "easy",
+      "reward_tier": "chorok_herbs",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "정원사의 쉬는 향기",
+          "request": "화분을 돌본 뒤 맡을 향기가 필요해요. 향초 {count}줌을 부탁드려요.",
+          "accept": "새로 모으셔도, 가진 걸 가져오셔도 좋아요.",
+          "complete": "고맙습니다. 작은 잎들이 큰 쉼을 주네요."
+        },
+        "en": {
+          "title": "A Gardener’s Scented Break",
+          "request": "I would love a fresh scent after tending the pots. Please bring {count} herbs.",
+          "accept": "Gather some, or bring herbs you already have.",
+          "complete": "Thank you. Little leaves can bring such a restful moment."
+        },
+        "zh": {
+          "title": "园丁休息时的清香",
+          "request": "照顾完花盆，想闻一点清香。拜托带来{count}份香草。",
+          "accept": "新采的和已有的都好。",
+          "complete": "谢谢。小小的叶子也能带来满满的安宁。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_scout_01",
+      "quest_id": "bau_pinecones",
+      "npc": "scout",
+      "difficulty": "easy",
+      "reward_tier": "bau_pinecones",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "야영지의 작은 불씨",
+          "request": "야영지 불쏘시개를 챙기고 있어요. 솔방울 {count}개를 가져다주시겠어요?",
+          "accept": "뾰족한 나무를 흔들어 보세요. 이미 가진 솔방울도 좋아요.",
+          "complete": "고맙습니다. 작은 준비가 야영을 든든하게 하죠."
+        },
+        "en": {
+          "title": "A Little Kindling for Camp",
+          "request": "I am getting the camp kindling ready. Could you bring {count} pinecones?",
+          "accept": "Try shaking a pointed tree. Pinecones you have are fine too.",
+          "complete": "Thank you. Small preparations make a comfortable camp."
+        },
+        "zh": {
+          "title": "营地的小小引火物",
+          "request": "我在准备营地的引火物。能带来{count}个松果吗？",
+          "accept": "可以摇摇尖尖的树，已有的松果也行。",
+          "complete": "谢谢。小小的准备能让露营更安心。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_scout_02",
+      "quest_id": "bau_pinecones",
+      "npc": "scout",
+      "difficulty": "easy",
+      "reward_tier": "bau_pinecones",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "탐험 가방의 솔방울",
+          "request": "다음 야영을 위해 솔방울 {count}개를 모아 두려 해요. 가져다주시겠어요?",
+          "accept": "새로 줍지 않아도 괜찮아요. 가방에 있는 걸 나눠 주세요.",
+          "complete": "이만하면 든든하네요. 탐험은 준비할 때부터 시작되죠."
+        },
+        "en": {
+          "title": "Pinecones for the Scout’s Bag",
+          "request": "I am setting aside {count} pinecones for the next camp. Could you bring them?",
+          "accept": "No need to gather new ones. Ones in your bag are welcome.",
+          "complete": "That will do nicely. An adventure begins with preparations."
+        },
+        "zh": {
+          "title": "探险包里的松果",
+          "request": "想为下次露营备好{count}个松果。能带来吗？",
+          "accept": "不用重新捡。包里已有的也可以。",
+          "complete": "这下踏实了。探险从准备的时候就开始了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_scout_03",
+      "quest_id": "bau_pinecones",
+      "npc": "scout",
+      "difficulty": "easy",
+      "reward_tier": "bau_pinecones",
+      "activity": "gather",
+      "text": {
+        "ko": {
+          "title": "모닥불 준비 시간",
+          "request": "모닥불에 쓸 솔방울 {count}개가 필요해요. 천천히 가져다주세요.",
+          "accept": "불을 피우는 건 제가 할게요. 솔방울만 부탁해요.",
+          "complete": "고맙습니다. 오늘 준비는 여기까지면 충분해요."
+        },
+        "en": {
+          "title": "Getting the Campfire Ready",
+          "request": "I need {count} pinecones for the campfire. Bring them when you can.",
+          "accept": "I will take care of the fire. Just bring the pinecones.",
+          "complete": "Thank you. That is all the preparation we need today."
+        },
+        "zh": {
+          "title": "准备篝火的时候",
+          "request": "篝火需要{count}个松果。慢慢带来就好。",
+          "accept": "生火由我负责，松果就拜托你了。",
+          "complete": "谢谢。今天的准备到这里就够了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_miller_01",
+      "quest_id": "dure_carrots",
+      "npc": "miller",
+      "difficulty": "easy",
+      "reward_tier": "dure_carrots",
+      "activity": "farm",
+      "text": {
+        "ko": {
+          "title": "풍차의 당근 케이크",
+          "request": "방앗간 쉬는 시간에 당근 케이크를 구우려고요! 당근 {count}개를 가져다주세요.",
+          "accept": "가방에 거둬 둔 당근도 좋아요. 케이크는 제가 맡을게요!",
+          "complete": "고마워요! 풍차도 달콤한 냄새에 신나게 돌겠어요."
+        },
+        "en": {
+          "title": "Carrot Cake at the Windmill",
+          "request": "I want to bake carrot cake for a break at the mill! Please bring {count} carrots.",
+          "accept": "Carrots you already harvested are lovely. I will handle the cake!",
+          "complete": "Thank you! The windmill might spin faster for that sweet smell."
+        },
+        "zh": {
+          "title": "风车边的胡萝卜蛋糕",
+          "request": "想给磨坊的休息时间烤个胡萝卜蛋糕！请带来{count}根胡萝卜。",
+          "accept": "包里收好的也行。蛋糕交给我吧！",
+          "complete": "谢谢！闻到甜香，风车也要高兴地转起来啦。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_miller_02",
+      "quest_id": "dure_carrots",
+      "npc": "miller",
+      "difficulty": "easy",
+      "reward_tier": "dure_carrots",
+      "activity": "farm",
+      "text": {
+        "ko": {
+          "title": "두레의 주황빛 간식",
+          "request": "오늘 간식은 주황빛으로 해 볼까요? 당근 {count}개만 가져다주세요.",
+          "accept": "이미 가진 당근도 좋아요. 새로 키우셔도 되고요!",
+          "complete": "좋아요! 방앗간에 즐거운 간식 시간이 오겠네요."
+        },
+        "en": {
+          "title": "Dure’s Orange Treat",
+          "request": "Shall today’s treat have a little orange color? Please bring {count} carrots.",
+          "accept": "Carrots you own are fine. You can grow some too!",
+          "complete": "Lovely! The mill has a happy snack break ahead."
+        },
+        "zh": {
+          "title": "杜雷的橙色点心",
+          "request": "今天的点心带点橙色，好吗？请带来{count}根胡萝卜。",
+          "accept": "已有的胡萝卜也行，现种也可以！",
+          "complete": "太好了！磨坊要迎来开心的点心时间啦。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_miller_03",
+      "quest_id": "dure_carrots",
+      "npc": "miller",
+      "difficulty": "easy",
+      "reward_tier": "dure_carrots",
+      "activity": "farm",
+      "text": {
+        "ko": {
+          "title": "방앗간의 달콤한 계획",
+          "request": "밀가루 옆에 당근이 있으면 케이크가 되겠죠! 당근 {count}개를 부탁해요.",
+          "accept": "당근만 가져오시면 돼요. 나머지는 제가 준비할게요.",
+          "complete": "고맙습니다! 오늘 계획은 벌써 맛있어졌네요."
+        },
+        "en": {
+          "title": "A Sweet Plan at the Mill",
+          "request": "Flour and carrots sound like the start of a cake! Please bring {count} carrots.",
+          "accept": "Just bring the carrots. I will prepare the rest.",
+          "complete": "Thank you! Today’s plan already looks delicious."
+        },
+        "zh": {
+          "title": "磨坊的甜蜜计划",
+          "request": "面粉旁边再来点胡萝卜，就能做蛋糕啦！拜托带来{count}根胡萝卜。",
+          "accept": "只带胡萝卜就好。其他的我来准备。",
+          "complete": "谢谢！今天的计划已经变得香甜啦。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_shopkeeper_01",
+      "quest_id": "danbi_home",
+      "npc": "shopkeeper",
+      "difficulty": "easy",
+      "reward_tier": "danbi_home",
+      "activity": "arrange",
+      "text": {
+        "ko": {
+          "title": "우리 집 작은 변화",
+          "request": "집 안에 물건 하나를 새로 놓거나 옮겨 보세요. 잡화점 주인의 작은 꾸미기 제안이에요!",
+          "accept": "가진 물건으로 충분해요. 자리를 조금 바꿔도 좋아요.",
+          "complete": "멋져요! 집이 새 표정으로 인사하는 것 같네요."
+        },
+        "en": {
+          "title": "A Little Change at Home",
+          "request": "Place or move one object inside your home. A little decorating idea from your shopkeeper!",
+          "accept": "Something you own is enough. Just changing its spot is lovely.",
+          "complete": "Wonderful! Your home looks ready to greet you with a new smile."
+        },
+        "zh": {
+          "title": "家里的一点变化",
+          "request": "在自己家里摆放或移动一件物品吧。杂货店老板的小小布置建议！",
+          "accept": "已有的物品就够了。换个位置也很好。",
+          "complete": "真棒！家仿佛换了个笑脸来迎接你。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_shopkeeper_02",
+      "quest_id": "danbi_home",
+      "npc": "shopkeeper",
+      "difficulty": "easy",
+      "reward_tier": "danbi_home",
+      "activity": "arrange",
+      "text": {
+        "ko": {
+          "title": "단비의 집 꾸미기 메모",
+          "request": "집 안의 물건 하나를 옮기거나 새로 놓아 보실래요? 작은 변화도 재미있어요.",
+          "accept": "새 물건을 살 필요는 없어요. 가방 속 물건도 좋아요!",
+          "complete": "좋아요! 집 꾸미기 메모에 즐거운 예시가 하나 늘었어요."
+        },
+        "en": {
+          "title": "Danbi’s Decorating Notes",
+          "request": "Would you move or place one object inside your home? Even a small change can be fun.",
+          "accept": "No need to buy anything new. Something in your bag is lovely!",
+          "complete": "Great! My decorating notes have another cheerful example."
+        },
+        "zh": {
+          "title": "丹比的布置笔记",
+          "request": "在家里移动或摆放一件物品，好吗？小变化也很有趣。",
+          "accept": "不用买新的。包里的物品也很好！",
+          "complete": "真好！布置笔记里又多了一个开心的例子。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_shopkeeper_03",
+      "quest_id": "danbi_home",
+      "npc": "shopkeeper",
+      "difficulty": "easy",
+      "reward_tier": "danbi_home",
+      "activity": "arrange",
+      "text": {
+        "ko": {
+          "title": "가구의 새 자리",
+          "request": "가구도 가끔 새 자리를 좋아할까요? 집 안에 물건 하나를 놓거나 옮겨 주세요.",
+          "accept": "집 안에서 자리만 바꿔도 돼요. 취향대로 해 보세요!",
+          "complete": "딱 어울리는 자리를 찾았네요! 저까지 기분이 좋아요."
+        },
+        "en": {
+          "title": "A Fresh Spot for Furniture",
+          "request": "Do furnishings enjoy a fresh spot too? Place or move one object inside your home.",
+          "accept": "Moving something within your home is enough. Follow your own taste!",
+          "complete": "You found a lovely spot! It has cheered me up too."
+        },
+        "zh": {
+          "title": "家具的新位置",
+          "request": "家具偶尔也会喜欢新位置吧？在家里摆放或移动一件物品吧。",
+          "accept": "在家里换个位置就行。按自己的喜好来吧！",
+          "complete": "找到了合适的位置呢！连我都开心起来了。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_kid_01",
+      "quest_id": "kongi_toy",
+      "npc": "kid",
+      "difficulty": "normal",
+      "reward_tier": "kongi_toy",
+      "activity": "craft",
+      "text": {
+        "ko": {
+          "title": "보물상자의 새 친구",
+          "request": "나한테 장난감이나 동물 모양 물건을 하나 선물해 줘! 보물상자 친구가 필요해.",
+          "accept": "가진 장난감도 좋아! 만들고 싶으면 방울 공 장난감 같은 건 어때?",
+          "complete": "와아! 보물상자에서 환영 파티를 열어야겠어!"
+        },
+        "en": {
+          "title": "A Friend for the Treasure Box",
+          "request": "Give me a toy or an animal-shaped thing! My treasure box needs a friend.",
+          "accept": "A toy you own is great! If you want to make one, how about a toy ball with a bell?",
+          "complete": "Wow! My treasure box needs a welcome party!"
+        },
+        "zh": {
+          "title": "宝箱的新朋友",
+          "request": "送我一件玩具或动物形状的东西吧！宝箱需要一个朋友。",
+          "accept": "已有的玩具也好！想做的话，带铃铛的玩具球怎么样？",
+          "complete": "哇！要在宝箱里开欢迎会啦！"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_kid_02",
+      "quest_id": "kongi_toy",
+      "npc": "kid",
+      "difficulty": "normal",
+      "reward_tier": "kongi_toy",
+      "activity": "craft",
+      "text": {
+        "ko": {
+          "title": "콩이의 작은 놀이 친구",
+          "request": "장난감이나 동물 모양 물건을 하나 선물해 줄래? 같이 놀 친구를 찾고 있어!",
+          "accept": "새로 안 만들어도 돼. 가방에 있는 장난감도 반가워!",
+          "complete": "고마워! 오늘 놀이에는 네 이름도 넣어 줄게!"
+        },
+        "en": {
+          "title": "Kongi’s Little Playmate",
+          "request": "Will you give me a toy or an animal-shaped thing? I am looking for a playmate!",
+          "accept": "You do not have to make it. A toy in your bag is welcome!",
+          "complete": "Thanks! I will put your name in today’s game too!"
+        },
+        "zh": {
+          "title": "小豆的小玩伴",
+          "request": "送我一件玩具或动物形状的东西，好吗？我在找玩伴！",
+          "accept": "不用新做。包里的玩具也欢迎！",
+          "complete": "谢谢！今天的游戏也要放进你的名字！"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_kid_03",
+      "quest_id": "kongi_toy",
+      "npc": "kid",
+      "difficulty": "normal",
+      "reward_tier": "kongi_toy",
+      "activity": "craft",
+      "text": {
+        "ko": {
+          "title": "장난감 탐험대",
+          "request": "내 장난감 탐험대에 친구가 모자라! 장난감이나 동물 모양 물건을 하나 선물해 줘.",
+          "accept": "가진 것도 좋아! 만들 거면 장난감 로봇도 멋지겠다.",
+          "complete": "탐험대 준비 끝! 보물은 집 안에서 찾을 거야!"
+        },
+        "en": {
+          "title": "The Toy Expedition",
+          "request": "My toy expedition needs a friend! Give me a toy or an animal-shaped thing.",
+          "accept": "One you own is great! If you make one, a toy robot would be fun.",
+          "complete": "The expedition is ready! We are hunting for treasure right at home!"
+        },
+        "zh": {
+          "title": "玩具探险队",
+          "request": "我的玩具探险队还缺朋友！送我一件玩具或动物形状的东西吧。",
+          "accept": "已有的也好！想做的话，玩具机器人一定很棒。",
+          "complete": "探险队准备好啦！就在家里找宝藏！"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_kid_04",
+      "quest_id": "kongi_toy",
+      "npc": "kid",
+      "difficulty": "normal",
+      "reward_tier": "kongi_toy",
+      "activity": "craft",
+      "text": {
+        "ko": {
+          "title": "콩이의 비밀 전시회",
+          "request": "장난감 전시회를 열고 싶어! 장난감이나 동물 모양 물건을 하나 선물해 줘.",
+          "accept": "새로 만들지 않아도 돼! 가방 속 친구를 소개해 줘.",
+          "complete": "짜잔! 첫 손님은 너야. 정말 고마워!"
+        },
+        "en": {
+          "title": "Kongi’s Secret Toy Show",
+          "request": "I want to put on a toy show! Give me a toy or an animal-shaped thing.",
+          "accept": "No need to make a new one! Introduce me to a friend from your bag.",
+          "complete": "Ta-da! You are the first guest. Thank you so much!"
+        },
+        "zh": {
+          "title": "小豆的秘密展览",
+          "request": "我想办玩具展览！送我一件玩具或动物形状的东西吧。",
+          "accept": "不用新做！介绍一位包里的朋友给我吧。",
+          "complete": "锵锵！你是第一位客人。太谢谢你啦！"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_stroller_01",
+      "quest_id": "saebyeok_walk",
+      "npc": "stroller",
+      "difficulty": "normal",
+      "reward_tier": "saebyeok_walk",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "밤바람이 닿는 부두",
+          "request": "해가 진 뒤에 등대 부두 끝까지 걸어가 봐요. 파도와 나누는 조용한 인사가 좋아요.",
+          "accept": "밤길은 천천히 걸어요. 부두 끝에 닿으면 충분해요.",
+          "complete": "다녀오셨군요. 밤바람도 반가워했을 거예요."
+        },
+        "en": {
+          "title": "The Pier in the Night Breeze",
+          "request": "After dark, walk to the end of the lighthouse pier. I love a quiet hello with the waves.",
+          "accept": "Walk gently through the night. Reaching the end of the pier is enough.",
+          "complete": "You are back. The night breeze must have been glad to see you."
+        },
+        "zh": {
+          "title": "夜风吹过的码头",
+          "request": "天黑以后，走到灯塔码头的尽头吧。我喜欢和海浪安静地打招呼。",
+          "accept": "夜路慢慢走。到码头尽头就足够了。",
+          "complete": "回来啦。夜风一定也很高兴见到你。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_stroller_02",
+      "quest_id": "saebyeok_walk",
+      "npc": "stroller",
+      "difficulty": "normal",
+      "reward_tier": "saebyeok_walk",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "새벽의 밤 산책",
+          "request": "오늘 밤은 바다 쪽으로 걸어 볼까요? 해가 진 뒤에 등대 부두 끝까지 가 봐요.",
+          "accept": "밤에 다녀오는 작은 산책이에요. 오래 머물 필요는 없어요.",
+          "complete": "고마워요. 같은 밤바람을 나눈 기분이네요."
+        },
+        "en": {
+          "title": "Saebyeok’s Night Stroll",
+          "request": "Shall we walk toward the sea tonight? After dark, go to the end of the lighthouse pier.",
+          "accept": "Just a little nighttime stroll. No need to stay long.",
+          "complete": "Thank you. It feels like we shared the same night breeze."
+        },
+        "zh": {
+          "title": "晨曦的夜间散步",
+          "request": "今晚朝海边走走吧？天黑以后，去灯塔码头的尽头看看。",
+          "accept": "只是一次夜间小散步，不用久留。",
+          "complete": "谢谢。仿佛和你分享了同一阵夜风。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_stroller_03",
+      "quest_id": "saebyeok_walk",
+      "npc": "stroller",
+      "difficulty": "normal",
+      "reward_tier": "saebyeok_walk",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "파도에게 건네는 안녕",
+          "request": "밤 파도에게 안부를 전해 볼래요? 해가 진 뒤에 등대 부두 끝까지 걸어가 봐요.",
+          "accept": "말을 하지 않아도 괜찮아요. 밤에 발걸음만 닿으면 돼요.",
+          "complete": "다녀온 발걸음이 한결 잔잔해 보여요. 고맙습니다."
+        },
+        "en": {
+          "title": "A Hello for the Waves",
+          "request": "Would you say hello to the night waves? After dark, walk to the end of the lighthouse pier.",
+          "accept": "No need to speak. Just let your steps reach it at night.",
+          "complete": "Your steps seem calmer now. Thank you for taking that walk."
+        },
+        "zh": {
+          "title": "向海浪问好",
+          "request": "想向夜里的海浪问好吗？天黑以后，走到灯塔码头的尽头吧。",
+          "accept": "不用说话。晚上走到那里就好。",
+          "complete": "回来时的脚步似乎更平静了。谢谢你。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_poet_01",
+      "quest_id": "garam_lookout",
+      "npc": "poet",
+      "difficulty": "easy",
+      "reward_tier": "garam_lookout",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "다섯 섬의 첫 줄",
+          "request": "천문대 전망대에 올라 다섯 섬을 내려다봐 주세요. 그 풍경이면 시의 첫 줄이 떠오를 것 같아요.",
+          "accept": "별빛 천문대 바로 옆이에요. 어느 시간이든 좋아요.",
+          "complete": "고마워요. 풍경을 나눠 보니 시가 한 걸음 가까워졌어요."
+        },
+        "en": {
+          "title": "A First Line for Five Islands",
+          "request": "Climb up to the Observatory Lookout and look out over the five islands. That view might bring me a poem’s first line.",
+          "accept": "It is beside the Starlight Observatory. Any time is fine.",
+          "complete": "Thank you. Sharing the view has brought the poem a little closer."
+        },
+        "zh": {
+          "title": "五座岛的第一行诗",
+          "request": "请登上天文台瞭望台，俯瞰五座岛。那片风景也许能带来诗的第一行。",
+          "accept": "就在星光天文台旁边，什么时间都好。",
+          "complete": "谢谢。分享了风景，诗也近了一步。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_poet_02",
+      "quest_id": "garam_lookout",
+      "npc": "poet",
+      "difficulty": "easy",
+      "reward_tier": "garam_lookout",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "전망대의 쉼표",
+          "request": "시에도 쉼표가 필요하죠. 천문대 전망대에 들러 잠깐 풍경을 만나 주세요.",
+          "accept": "그곳에 가 보는 것만으로 좋아요. 시를 써 오실 필요는 없어요.",
+          "complete": "고맙습니다. 오늘 하루에 좋은 쉼표가 생겼네요."
+        },
+        "en": {
+          "title": "A Pause at the Lookout",
+          "request": "Even a poem needs a pause. Stop by the Observatory Lookout and meet the view for a moment.",
+          "accept": "Just visiting is lovely. No need to bring back a poem.",
+          "complete": "Thank you. Today has found a lovely little pause."
+        },
+        "zh": {
+          "title": "瞭望台的逗号",
+          "request": "诗也需要逗号。请去天文台瞭望台，和风景见个面。",
+          "accept": "去看看就好，不用带回一首诗。",
+          "complete": "谢谢。今天多了一个美好的小停顿。"
+        }
+      }
+    },
+    {
+      "id": "quest_0119_poet_03",
+      "quest_id": "garam_lookout",
+      "npc": "poet",
+      "difficulty": "easy",
+      "reward_tier": "garam_lookout",
+      "activity": "visit",
+      "text": {
+        "ko": {
+          "title": "섬들을 잇는 문장",
+          "request": "다섯 섬과 다리를 한 문장에 담고 싶어요. 천문대 전망대에 다녀와 주세요.",
+          "accept": "낮도 밤도 좋아요. 전망대에서 만나는 풍경이면 충분해요.",
+          "complete": "고마워요. 멀리 있던 문장이 다리처럼 이어지네요."
+        },
+        "en": {
+          "title": "A Sentence Between Islands",
+          "request": "I want to fit five islands and their bridges into a sentence. Please visit the Observatory Lookout.",
+          "accept": "Day or night is fine. The view from the lookout is enough.",
+          "complete": "Thank you. The distant words are joining like bridges."
+        },
+        "zh": {
+          "title": "连接岛屿的句子",
+          "request": "想把五座岛和桥写进一个句子。请去天文台瞭望台看看。",
+          "accept": "白天夜晚都好，去看看那里的风景就够了。",
+          "complete": "谢谢。远处的词语也像桥一样连起来了。"
+        }
+      }
+    }
+  ]
+}

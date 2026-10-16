@@ -58,6 +58,9 @@ var min_ground_y := -INF
 const ACCELERATION := 14.0
 const DECELERATION := 18.0
 const STEP_HEIGHT := 0.36
+## Where and until which physics frame a step up was refused (step_up()).
+var step_refused_at := Vector3.INF
+var step_refused_until := 0
 var safe_position := Vector3.ZERO
 var has_safe_position := false
 ## A step up or a drop off a ledge moves the body in one tick; the drawn body (and the camera,
@@ -220,6 +223,9 @@ func equip(item: String) -> void:
 	var previous := equipped
 	equipped=item
 	if is_instance_valid(finger_pose):finger_pose.holding=not item.is_empty()
+	# A tool out puts the carried thing away until it goes back (held_items.gd).
+	var held_node := get_node_or_null("Held")
+	if held_node: held_node.call_deferred("refresh", false)
 	if uses_sockets():
 		equip_socketed(previous, item)
 		return
@@ -426,6 +432,12 @@ func render_position() -> Vector3:
 	var fraction := clampf(Engine.get_physics_interpolation_fraction(), 0.0, 1.0)
 	return tick_from.lerp(tick_to, fraction)+Vector3(0, lerpf(step_lag_from, step_lag, fraction), 0)
 
+## Profiling (tests/perf_scenes.gd): microseconds in move_and_slide and step_up, and slide contacts.
+static var profile := false
+static var profile_slide_us := 0
+static var profile_step_us := 0
+static var profile_slides := 0
+
 func _physics_process(delta: float) -> void:
 	tick_from = global_position
 	step_lag_from = step_lag
@@ -451,8 +463,14 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 	if not visual_only:
+		var t0 := Time.get_ticks_usec() if profile else 0
 		move_and_slide()
+		var t1 := Time.get_ticks_usec() if profile else 0
 		step_up(delta)
+		if profile:
+			profile_slide_us += t1-t0
+			profile_step_us += Time.get_ticks_usec()-t1
+			profile_slides += get_slide_collision_count()
 		if position.y < min_ground_y and has_safe_position:
 			position = safe_position
 			velocity = Vector3.ZERO
@@ -546,15 +564,19 @@ func step_up(delta: float) -> void:
 	if ix != null and is_instance_valid(ix) and ix.busy(): return
 	var motion := Vector3(velocity.x,0,velocity.z)*delta
 	if motion.length()<0.001: return
+	# Pressed against the same wall as a moment ago: that step was already refused. The two
+	# test_moves against a dense collider (the pond pier's 11,687-face mesh) cost ~10 ms a tick.
+	if Engine.get_physics_frames()<step_refused_until and global_position.distance_squared_to(step_refused_at)<0.01: return
 	var lift := Vector3(0,STEP_HEIGHT,0)
-	if test_move(global_transform,lift): return
-	var raised := global_transform.translated(lift)
-	if test_move(raised,motion*2.0): return
 	# Only a real ledge: terrain or a building floor under the new spot, no higher than a step.
-	# Without it the walker hopped onto prop bases (a signboard) and slid off again.
+	# Without it the walker hopped onto prop bases (a signboard) and slid off again. The ray is the
+	# cheap test, so it goes first.
 	var spot := global_position+lift+motion*2.0
 	var hit := get_world_3d().direct_space_state.intersect_ray(PhysicsRayQueryParameters3D.create(spot+Vector3.UP*0.05, spot+Vector3.DOWN*(STEP_HEIGHT+0.2), 1|2))
-	if hit.is_empty() or hit.position.y < global_position.y+0.08 or hit.position.y > global_position.y+STEP_HEIGHT+0.02: return
+	if hit.is_empty() or hit.position.y < global_position.y+0.08 or hit.position.y > global_position.y+STEP_HEIGHT+0.02 or test_move(global_transform,lift) or test_move(global_transform.translated(lift),motion*2.0):
+		step_refused_at=global_position
+		step_refused_until=Engine.get_physics_frames()+12
+		return
 	global_position+=lift+motion*2.0
 	apply_floor_snap()
 
@@ -618,6 +640,11 @@ func apply_avatar(value: Dictionary) -> bool:
 	apply_colors()
 	look_builds+=1
 	equip(old_tool)
+	# The carried thing goes into the new hands (held_items.gd).
+	var held_node := get_node_or_null("Held")
+	if held_node:
+		held_node.rebuild()
+		held_node.refresh(false)
 	for name in was_stowed: stow_new(name)
 	return true
 

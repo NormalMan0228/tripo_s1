@@ -298,6 +298,8 @@ func _ready() -> void:
 	add_child(world_audio)
 	# Under-foot puffs follow the footstep sound's surface (foot_fx.gd).
 	preload("res://scripts/foot_fx.gd").attach(self, world_audio)
+	# Fireflies at night, petals on the breeze by day, round the hero in the village (ambient_fx.gd).
+	preload("res://scripts/ambient_fx.gd").attach(self)
 	# The first start sets it up once the village is built (by then its thread is done).
 	if Engine.has_meta("studio_session"): world_audio.setup()
 	life=preload("res://scripts/village_life.gd").new()
@@ -906,6 +908,8 @@ func build_world(survival: bool) -> bool:
 	player = AvatarLook.walker(profile.get("avatar",{}),int(profile.get("version",-1)))
 	player.visual_only=survival
 	world.add_child(player)
+	# The carried thing (held_items.gd, #64) comes along into the village.
+	if not survival: preload("res://scripts/held_items.gd").adopt(self, player)
 	if not survival: VillageBuild.PassThrough.for_walker(player)
 	LoadPace.done(0.88)
 	if not survival: await spawn_villagers()
@@ -1070,6 +1074,9 @@ func enter_village() -> void:
 	build_inspector()
 	await refresh_inventory()
 	screen = "village"
+	# A long frame makes the next one run up to 8 physics ticks, which makes it long again: in the
+	# village (client physics only) at most 4, so a hitch passes instead of snowballing.
+	Engine.max_physics_steps_per_frame = 4
 	if social.visiting(): social.accept_crops()
 	else: await life.enter()
 	player.controls_enabled = true
@@ -1382,6 +1389,7 @@ func refresh_inventory() -> void:
 	var story := chapter()
 	if story: story.adopt(me.get("story"))
 	if story: story.adopt_quests(me.get("quests"))
+	if story: story.adopt_residents(me)
 	# A newer look adopted while this answer was on its way stays.
 	if int(newer.get("version",-1))>int(me.get("profile",{}).get("version",-1)): me.profile=newer
 	# Also while the village is still loading (screen "loading"): the walker built before /v1/me
@@ -1544,6 +1552,7 @@ func poll_entitlements() -> void:
 	var story := chapter()
 	if story: story.adopt(result.data.get("story"))
 	if story: story.adopt_quests(result.data.get("quests"))
+	if story: story.adopt_residents(result.data)
 	# Back from a room, `me` holds only the look until the first refresh answers.
 	if objects_signature(result.data.objects)!=objects_signature(me.get("objects",[])) or result.data.shards!=me.get("shards",-1):
 		cancel_preview()
@@ -2037,6 +2046,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	await LoadPace.step("expedition hud")
 	clear_ui()
 	screen="survival"
+	Engine.max_physics_steps_per_frame = 8
 	player.controls_enabled=false
 	left=panel(Vector2(20,20),256,"night")
 	var region_head := HBoxContainer.new()
@@ -2251,7 +2261,7 @@ func tick_run() -> void:
 					player.face_point(Vector3(n.x,0,n.z))
 					resource_response(n)
 					CombatAudio.harvest(self,n.kind,Vector3(n.x,0,n.z),"axe" if run.inventory.axe>0 else "")
-					preload("res://scripts/combat_fx.gd").harvest(self,n.kind,Vector3(n.x,0,n.z))
+					preload("res://scripts/combat_fx.gd").harvest_on_contact(self,n.kind,Vector3(n.x,0,n.z))
 			player.react("gather")
 			if not HeroVoice.play(self,"harvest"): HeroVoice.play(self,"pickup")
 			floating_feedback(feedback,player.position,Color("ece1b4"))
@@ -2265,11 +2275,15 @@ func tick_run() -> void:
 			# Cloth rip, wrap and pat (combat/bandage, else core/bandage; berries and soup keep core/eat).
 			if not CombatAudio.play(self,"bandage"): sound.effect("bandage")
 			player.react("eat")
+			preload("res://scripts/combat_fx.gd").heal(self)
 		elif feedback.contains("먹었습니다"):
 			sound.effect("eat_soup" if feedback.contains("수프") else "eat")
 			player.react("eat")
+			preload("res://scripts/combat_fx.gd").eat(self)
 			HeroVoice.play(self,"eat")
-		elif feedback.contains("피웠습니다"): CombatAudio.play(self,"fuel",Vector3.ZERO)
+		elif feedback.contains("피웠습니다"):
+			CombatAudio.play(self,"fuel",Vector3.ZERO)
+			preload("res://scripts/combat_fx.gd").fuel(self)
 		elif feedback.contains("공격!") or feedback=="가까운 적이 없습니다.":
 			var weapon: String="spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else ""
 			var struck_enemy := {}
@@ -2454,11 +2468,14 @@ func update_run() -> void:
 		# (core/win) once that chime has rung; or the faint over a soft falling phrase (core/lose).
 		# The results card adds nothing on top (show_results).
 		var voiced: bool=HeroVoice.play(self,"levelup" if won else "faint",0.0,true)
+		preload("res://scripts/combat_fx.gd").ended(self,won)
 		if won: effect_later("win",chime_length(str(HeroVoice.last_take.get("levelup","")),WIN_AFTER_MIN,WIN_AFTER_MAX) if voiced else 0.3)
 		elif run.status=="lost": sound.effect("lose")
 		if is_instance_valid(return_dialog): return_dialog.queue_free()
 		show_results()
 	flame.visible=run.fire_remaining>0
+	# Campfire buff mode: the hero's empowered look while the fire's buffs are on (campfire_buff_fx.gd).
+	preload("res://scripts/campfire_buff_fx.gd").apply(self,run)
 	warmth_ring.visible=flame.visible
 	survival_audio(remaining)
 	if run.status=="active" and run.elapsed-last_camp_warning>12:
@@ -3743,6 +3760,8 @@ func talk_to(npc: Node3D) -> void:
 	# Residents of a house take gifts from their own village's player (npc_gifts.gd).
 	if NpcGifts.can_receive(cast) and can_gift():
 		plan.choices.insert(maxi(0,plan.choices.size()-1),[tr("선물하기"),func(): open_gift(cast,str(npc.get_meta("title")),cast,npc)])
+	# A shop's "가게 보기" and the notice board's "전하기" when the server has them (shop_window.gd).
+	for extra in preload("res://scripts/shop_window.gd").village_choices(self,cast,str(npc.get_meta("title")),npc): plan.choices.insert(maxi(0,plan.choices.size()-1),extra)
 	# The resident's request (quests.gd) comes first.
 	var request: Array=preload("res://scripts/quests.gd").choice(self,cast,str(npc.get_meta("title")),cast,npc)
 	if not request.is_empty(): plan.choices.insert(0,request)

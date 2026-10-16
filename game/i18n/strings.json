@@ -1,5 +1,173 @@
 {
  "strings": {
+  "%d개": {
+   "en": "%d items",
+   "zh": "%d件"
+  },
+  "가방 정리 · 서버에서 다시 받아요": {
+   "en": "Tidy the bag · fetch it again",
+   "zh": "整理背包 · 重新获取"
+  },
+  "모양": {
+   "en": "Shape",
+   "zh": "形状"
+  },
+  "값": {
+   "en": "Price",
+   "zh": "价格"
+  },
+  "전체 색": {
+   "en": "Colour",
+   "zh": "整体颜色"
+  },
+  "물건을 고르세요.": {
+   "en": "Pick an object.",
+   "zh": "请选择物品。"
+  },
+  "배치됨": {
+   "en": "Placed",
+   "zh": "已放置"
+  },
+  "판매 중": {
+   "en": "For sale",
+   "zh": "出售中"
+  },
+  "놓아 둔 가구를 써 봐요": {
+   "en": "Use a placed piece of furniture",
+   "zh": "使用已放置的家具"
+  },
+  "입력 언어 · 입력한 글자로 알아봐요 (한/영 키로 바꿔요)": {
+   "en": "Input language · read from what you type (switch with the Han/Eng key)",
+   "zh": "输入语言 · 根据输入的文字判断（用韩/英键切换）"
+  },
+  "나의 여행자 만들기": {
+   "en": "Make your traveller",
+   "zh": "创建你的旅行者"
+  },
+  "함께 모험할 여행자를 고르고 꾸며 보세요. 나중에 옷장에서 언제든 바꿀 수 있어요.": {
+   "en": "Pick and dress the traveller you will adventure with. You can change it any time in the wardrobe.",
+   "zh": "挑选并打扮与你一起冒险的旅行者。之后可以随时在衣柜里更换。"
+  },
+  "모험 시작": {
+   "en": "Start the adventure",
+   "zh": "开始冒险"
+  },
+  "모습을 저장하지 못했어요. 옷장(O)에서 다시 골라 주세요.": {
+   "en": "Could not save the look. Pick it again in the wardrobe (O).",
+   "zh": "未能保存外观。请在衣柜(O)中重新选择。"
+  },
+  "여": {
+   "en": "Female",
+   "zh": "女"
+  },
+  "모험가": {
+   "en": "Adventurer",
+   "zh": "冒险家"
+  },
+  "장인": {
+   "en": "Artisan",
+   "zh": "工匠"
+  },
+  "낚시꾼": {
+   "en": "Fisher",
+   "zh": "钓鱼人"
+  },
+  "대장장이": {
+   "en": "Smith",
+   "zh": "铁匠"
+  },
+  "약초사": {
+   "en": "Herbalist",
+   "zh": "草药师"
+  },
+  "발명가": {
+   "en": "Inventor",
+   "zh": "发明家"
+  },
+  "선원": {
+   "en": "Sailor",
+   "zh": "水手"
+  },
+  "준비 중": {
+   "en": "Coming soon",
+   "zh": "准备中"
+  },
+  "곧 만나요": {
+   "en": "See you soon",
+   "zh": "即将登场"
+  },
+  "장식": {
+   "en": "Accent",
+   "zh": "饰品"
+  },
+  "밀짚모자": {
+   "en": "Straw hat",
+   "zh": "草帽"
+  },
+  "이름": {
+   "en": "Name",
+   "zh": "名字"
+  },
+  "다른 사람에게 보일 이름 · 2~12자": {
+   "en": "Name others see · 2-12 letters",
+   "zh": "别人看到的名字 · 2~12字"
+  },
+  "이름은 2~12자로 지어 주세요.": {
+   "en": "Use 2-12 letters for the name.",
+   "zh": "名字请用2~12个字。"
+  },
+  "이름은 2~12자, 글자와 숫자로 지어 주세요.": {
+   "en": "Use 2-12 letters or numbers for the name.",
+   "zh": "名字请用2~12个字母或数字。"
+  },
+  "쓸 수 없는 말이 들어 있어요.": {
+   "en": "That name has a word that is not allowed.",
+   "zh": "名字中含有不允许的词。"
+  },
+  "운영자처럼 보이는 이름은 쓸 수 없어요.": {
+   "en": "Names that look like staff are not allowed.",
+   "zh": "不能使用像管理员的名字。"
+  },
+  "이미 다른 모험가가 쓰는 이름이에요.": {
+   "en": "Another adventurer already has that name.",
+   "zh": "这个名字已被其他冒险者使用。"
+  },
+  "이름은 하루에 한 번 바꿀 수 있어요.": {
+   "en": "You can change your name once a day.",
+   "zh": "名字每天只能改一次。"
+  },
+  "이 이름은 쓸 수 없어요.": {
+   "en": "That name cannot be used.",
+   "zh": "这个名字不能使用。"
+  },
+  "기능": {
+   "en": "Function",
+   "zh": "功能"
+  },
+  "완성된 물건이 할 일을 골라요. 자동이면 설명을 읽고 정해요.": {
+   "en": "Pick what the finished object does. Auto decides from your description.",
+   "zh": "选择成品的功能。选自动时会根据描述决定。"
+  },
+  "설명을 읽고 공방이 알맞은 기능을 정해요.": {
+   "en": "The workshop reads your description and picks a fitting function.",
+   "zh": "工坊会读取描述并选择合适的功能。"
+  },
+  "기능: %s · %s": {
+   "en": "Function: %s · %s",
+   "zh": "功能：%s · %s"
+  },
+  " (자동)": {
+   "en": " (auto)",
+   "zh": "（自动）"
+  },
+  "지금 고를 수 없는 기능이에요. 창을 다시 열어 주세요.": {
+   "en": "That function can't be picked right now. Please reopen the window.",
+   "zh": "现在无法选择这个功能。请重新打开窗口。"
+  },
+  "%s의 기능은 따로 움직이는 부품이 있어야 해서 움직이는 가구로 만들어요.": {
+   "en": "The %s only works with a separate moving part, so it is made as moving furniture.",
+   "zh": "%s的功能需要单独活动的部件，所以会做成可动家具。"
+  },
   "움직이는 캐릭터로 만들기": {
    "en": "Make a moving character",
    "zh": "制作会动的角色"
@@ -824,6 +992,10 @@
    "en": "Morning of Day %d. Explore the forest and prepare for the next night.",
    "zh": "第%d天早上了。在森林里逛逛，为下一个夜晚做准备吧。"
   },
+  "%d잎전": {
+   "en": "%d leaf coins",
+   "zh": "%d叶钱"
+  },
   "%d초 · 수확 %d": {
    "en": "%ds · yield %d",
    "zh": "%d秒 · 收获 %d"
@@ -863,6 +1035,10 @@
   "%s · 판매가 %d잎전": {
    "en": "%s · sells for %d leaf coins",
    "zh": "%s · 售价 %d 叶币"
+  },
+  "%s → +%d잎전": {
+   "en": "%s → +%d leaf coins",
+   "zh": "%s → +%d叶钱"
   },
   "%s 건네기": {
    "en": "Give %s",
@@ -999,6 +1175,10 @@
   "%s의 소중한 선물 · %s": {
    "en": "%s's treasured gift · %s",
    "zh": "%s珍爱的礼物 · %s"
+  },
+  "'둥근 나무 의자, 하늘색 쿠션' 처럼 말하면 훨씬 비슷하게 나와요.": {
+   "en": "Say something like 'round wooden chair, sky-blue cushion' and it comes out much closer.",
+   "zh": "像\"圆木椅、天蓝色坐垫\"这样说，做出来会像得多。"
   },
   "+%d잎전": {
    "en": "+%d leaf coins",
@@ -1388,6 +1568,10 @@
    "en": "♥  Health",
    "zh": "♥  生命"
   },
+  "♨ 마음이 포근해요 · %d분": {
+   "en": "♨ Cosy · %d min",
+   "zh": "♨ 心里暖暖的 · %d分钟"
+  },
   "♪ 건반을 눌러 봤어요. 맑은 소리가 울려요.": {
    "en": "♪ You pressed a key. A clear note rings out.",
    "zh": "♪ 你按下琴键，清亮的声音响起。"
@@ -1424,6 +1608,10 @@
    "en": "✦  Seven Nights Goals",
    "zh": "✦  七夜的目标"
   },
+  "✦ 게시판 부탁 전하기": {
+   "en": "✦ Pass on the board request",
+   "zh": "✦ 转达公告板委托"
+  },
   "✦ 다른 부탁 %d개 · 수첩 보기": {
    "en": "✦ %d more requests · open the book",
    "zh": "✦ 还有 %d 个委托 · 查看手册"
@@ -1443,6 +1631,14 @@
   "✦ 새 부탁 %d개 · 수첩 보기": {
    "en": "✦ %d new requests · open the book",
    "zh": "✦ %d 个新委托 · 查看手册"
+  },
+  "✦ 오늘의 부탁 %d개 · 받은 부탁 %d/%d · 끝낸 부탁 %d/%d": {
+   "en": "✦ %d requests today · taken %d/%d · done %d/%d",
+   "zh": "✦ 今日委托%d个 · 已接%d/%d · 已完成%d/%d"
+  },
+  "✦ 오늘의 부탁 · 마을 일을 먼저 마치면 받을 수 있어요": {
+   "en": "✦ Today's requests · finish the village tasks first",
+   "zh": "✦ 今日委托 · 先完成村庄任务即可领取"
   },
   "✦ 윤재의 안부 전하기": {
    "en": "✦ Pass on Yunjae's regards",
@@ -1504,6 +1700,14 @@
    "en": "I live in the back room of the shop. When there are no customers, I do the books.",
    "zh": "我住在店后面的房间。没客人时就整理账本。"
   },
+  "가게 문이 잠겨 있어요. 잠시 뒤 다시 와 주세요.": {
+   "en": "The shop is locked. Come back shortly.",
+   "zh": "店门锁着，请稍后再来。"
+  },
+  "가게 보기": {
+   "en": "Browse shop",
+   "zh": "查看商店"
+  },
   "가게 이야기 듣기": {
    "en": "Hear about the shop",
    "zh": "听商店的故事"
@@ -1511,6 +1715,10 @@
   "가게는 닫았지만, 안경 너머로 별은 잘 보여요.": {
    "en": "The shop's closed, but I can see the stars just fine through my glasses.",
    "zh": "店虽然关了，透过眼镜星星看得很清楚。"
+  },
+  "가게를 여는 중…": {
+   "en": "Opening the shop…",
+   "zh": "正在开店…"
   },
   "가구": {
    "en": "Furniture",
@@ -1620,6 +1828,10 @@
    "en": "You walked up to it.",
    "zh": "试着靠近了。"
   },
+  "가끔은 이렇게 찌를 바라보며 쉬는 게 좋아요.": {
+   "en": "Sometimes it's nice to just rest and watch the float.",
+   "zh": "偶尔这样看着浮漂休息一下也不错。"
+  },
   "가끔은 텐트 말고 하늘 아래서 쉬어야 해.": {
    "en": "Sometimes you need to rest under the sky instead of a tent.",
    "zh": "有时候该在天空下休息，而不是帐篷里。"
@@ -1692,6 +1904,10 @@
    "en": "It's in your Bag. Place it in any open spot, in the village or at home.",
    "zh": "已放入背包。可以摆放在村庄或家里的任何空位。"
   },
+  "가방에 물건이 모자라요.": {
+   "en": "Not enough items in your bag.",
+   "zh": "背包里的物品不够。"
+  },
   "가방에 선물할 만한 가구가 없네요.": {
    "en": "There's no furniture in your bag to give.",
    "zh": "你的背包里没有可以送的家具。"
@@ -1715,6 +1931,10 @@
   "가방이 가벼워질수록 발걸음도 가벼워져요.": {
    "en": "The lighter the bag, the lighter my steps.",
    "zh": "包越轻，脚步也越轻快。"
+  },
+  "가방이 바뀌어서 다시 불러왔어요.": {
+   "en": "Your bag changed, so it was reloaded.",
+   "zh": "背包有变化，已重新载入。"
   },
   "가방이 비어 있네. 공방에서 하나 만들어 와 줄래?": {
    "en": "Your bag is empty. Could you make something at the workshop?",
@@ -1860,13 +2080,53 @@
    "en": "Test shapes: Tripo cost 0",
    "zh": "验证用几何体：Tripo 费用 0"
   },
+  "게시물이 바뀌었어요. 새 부탁을 확인해 보세요.": {
+   "en": "The board changed. Check the new requests.",
+   "zh": "公告已更新，请查看新委托。"
+  },
   "게시판 닫기": {
    "en": "Close the board",
    "zh": "关闭告示板"
   },
+  "게시판 부탁 %d/%d · %s": {
+   "en": "Board request %d/%d · %s",
+   "zh": "公告板委托 %d/%d · %s"
+  },
+  "게시판 부탁 다 됐어요! 게시판에서 완료하기": {
+   "en": "Board request ready! Hand it in at the board",
+   "zh": "公告板委托完成了！到公告板提交"
+  },
+  "게시판 부탁 다 됐어요! 게시판에서 완료하기 · %s": {
+   "en": "Board request ready! Hand it in at the board · %s",
+   "zh": "公告板委托完成了！到公告板提交 · %s"
+  },
+  "게시판 부탁 완료 · %s": {
+   "en": "Board request done · %s",
+   "zh": "公告板委托完成 · %s"
+  },
+  "게시판 부탁 완료 · %s · %s": {
+   "en": "Board request done · %s · %s",
+   "zh": "公告板委托完成 · %s · %s"
+  },
+  "게시판 부탁은 내 마을에서만 할 수 있어요.": {
+   "en": "Board requests work only in your own village.",
+   "zh": "公告板委托只能在自己的村庄进行。"
+  },
+  "게시판 부탁을 들어줘서": {
+   "en": "For the board request",
+   "zh": "感谢你完成公告板委托"
+  },
   "게시판에 '이번 주말 바닷가 소풍' 공지가 붙어 있어요.": {
    "en": "The board has a notice: 'Beach picnic this weekend'.",
    "zh": "告示板上贴着“本周末海边野餐”的通知。"
+  },
+  "게시판에 붙여 둔 부탁, 정말 들어줄 줄은 몰랐어요. 덕분에 하루가 한결 가벼워졌어요.": {
+   "en": "I never thought someone would take my board request. My day feels much lighter.",
+   "zh": "没想到真有人接了我贴的委托，今天轻松多了。"
+  },
+  "게시판에 알릴게요": {
+   "en": "I'll tell the board",
+   "zh": "我会告诉公告板"
   },
   "게임 별씨는 환불했지만 이미 실행된 제공사 비용은 남을 수 있습니다.\n": {
    "en": "In-game Starseeds were refunded, but provider costs already incurred may remain.\n",
@@ -1883,6 +2143,10 @@
   "게임 중에는 M 키로도 켜고 끌 수 있어요.": {
    "en": "In game you can also toggle it with the M key.",
    "zh": "游戏中也可以按 M 键开关。"
+  },
+  "게임을 꺼도 작물은 계속 자라요. 다음에 오면 쑥 커 있을 거예요!": {
+   "en": "Crops keep growing even when the game is off. They'll be big next time!",
+   "zh": "关掉游戏作物也会继续长。下次来就长高啦！"
   },
   "게임을 종료할까요?": {
    "en": "Quit the game?",
@@ -2080,6 +2344,14 @@
    "en": "Workshop",
    "zh": "工坊"
   },
+  "공방 불은 꺼졌지만, 머릿속에선 아직 뚝딱뚝딱 만드는 중이에요.": {
+   "en": "The workshop lights are out, but in my head I'm still building away.",
+   "zh": "工坊的灯灭了，可我脑子里还在叮叮当当地做东西。"
+  },
+  "공방 앞에서 재료를 고르는 중이에요. 오늘은 어떤 물건이 태어날까요?": {
+   "en": "Picking materials outside the workshop. What will be born today?",
+   "zh": "正在工坊前挑材料。今天会诞生什么呢？"
+  },
   "공방 열기 · C": {
    "en": "Open the workshop · C",
    "zh": "打开工坊 · C"
@@ -2211,6 +2483,10 @@
   "구매": {
    "en": "Buy",
    "zh": "购买"
+  },
+  "궁금한 게 있으면 뭐든 물어봐요!": {
+   "en": "Ask me anything you're curious about!",
+   "zh": "有什么想知道的尽管问！"
   },
   "귀환": {
    "en": "Return",
@@ -3020,6 +3296,10 @@
    "en": "Done! Tell %s",
    "zh": "完成了！告诉%s"
   },
+  "다 됐어요! 게시판에서 완료하기": {
+   "en": "Done! Hand it in at the board",
+   "zh": "完成了！到公告板提交"
+  },
   "다 모았어요! %s에게 가져가 보세요": {
    "en": "All gathered! Bring them to %s",
    "zh": "收集齐了！拿去给%s吧"
@@ -3168,6 +3448,10 @@
    "en": "Click again to stop guiding",
    "zh": "再次点击关闭导航"
   },
+  "다시 돌아왔어요! 그동안 보고 싶었어요. 집에 한번 들러 줘요.": {
+   "en": "I'm back! I missed you. Come visit my house.",
+   "zh": "我回来了！好想你。来我家坐坐吧。"
+  },
   "다시 로그인해 주세요.": {
    "en": "Please log in again.",
    "zh": "请重新登录。"
@@ -3175,6 +3459,22 @@
   "다시 시도": {
    "en": "Try again",
    "zh": "重试"
+  },
+  "다시 왔어요": {
+   "en": "I'm back",
+   "zh": "我回来了"
+  },
+  "다시 왔어요! 그동안 잘 지냈어요?": {
+   "en": "I'm back! Have you been well?",
+   "zh": "我回来了！这段时间过得好吗？"
+  },
+  "다시 왔어요! 그동안 잘 지냈어요? 정말 보고 싶었어요.": {
+   "en": "I'm back! Have you been well? I really missed you.",
+   "zh": "我回来了！这段时间过得好吗？我真的很想你。"
+  },
+  "다시 왔어요! 그동안 잘 지냈어요? 제일 먼저 당신 얼굴이 떠올랐어요!": {
+   "en": "I'm back! Have you been well? Yours was the first face I thought of!",
+   "zh": "我回来了！这段时间过得好吗？我第一个想到的就是你！"
   },
   "다시 자라는 중이에요. 잠시 뒤에 찾아오세요.": {
    "en": "Still regrowing. Come back in a bit.",
@@ -3216,6 +3516,10 @@
    "en": "I need to leave a letter at the next door. Knock knock!",
    "zh": "要把信放到下一户门口。咚咚！"
   },
+  "다음에 게시판에서 또 만나요. 고마워요!": {
+   "en": "See you at the board again. Thank you!",
+   "zh": "下次公告板见，谢谢！"
+  },
   "다음에 다시 물어봐 줘요. 그림자는 기다리는 걸 잘하거든요.": {
    "en": "Ask me again another time. Shadows are good at waiting.",
    "zh": "下次再来问我吧。影子很擅长等待。"
@@ -3255,6 +3559,22 @@
   "단비 · 잡화점 주인": {
    "en": "Danbi · Shopkeeper",
    "zh": "丹妃 · 杂货店老板"
+  },
+  "단비 님이 다시 돌아왔어요!": {
+   "en": "Danbi is back!",
+   "zh": "丹菲回来了！"
+  },
+  "단비 님이 이사 왔어요!": {
+   "en": "Danbi has moved in!",
+   "zh": "丹菲搬来了！"
+  },
+  "단비 님이 잠시 마을을 떠났어요": {
+   "en": "Danbi has left the village for a while",
+   "zh": "丹菲暂时离开了村子"
+  },
+  "단비가 잠시 떠났어요": {
+   "en": "Danbi has left for a while",
+   "zh": "丹菲暂时离开了"
   },
   "단비의 잡화점 · 물건 팔기": {
    "en": "Danbi's general store · Sell",
@@ -3708,6 +4028,10 @@
    "en": "Ting-a-ling, the clear chimes drift on the breeze.",
    "zh": "叮铃叮铃，清脆的风铃声随风飘荡。"
   },
+  "땅속에 숨겨 두면 언젠가 초록 손을 흔들며 인사하는 것은?": {
+   "en": "Hide it in the ground and one day it waves hello with a green hand. What is it?",
+   "zh": "藏在土里，总有一天会挥着绿色小手打招呼的是什么？"
+  },
   "땡! 아쉽지만 아니에요.": {
    "en": "Bzzt! Close, but no.",
    "zh": "错！可惜不对。"
@@ -3876,6 +4200,14 @@
    "en": "Read the village notice board",
    "zh": "阅读村庄告示板"
   },
+  "마을 게시판에 새 부탁이 붙었어요": {
+   "en": "New requests on the village board",
+   "zh": "村庄公告板贴出了新委托"
+  },
+  "마을 기념일": {
+   "en": "Village anniversary",
+   "zh": "村庄纪念日"
+  },
   "마을 깃발에 별씨 문장이 수놓여 있어요.": {
    "en": "The village flag is embroidered with the starseed crest.",
    "zh": "村旗上绣着星种纹章。"
@@ -3895,6 +4227,14 @@
   "마을 생활 창고": {
    "en": "Village Life Storage",
    "zh": "村庄生活仓库"
+  },
+  "마을 소식": {
+   "en": "Village news",
+   "zh": "村庄消息"
+  },
+  "마을 소식을 전해요. 늘 고마워요!": {
+   "en": "News from the village. Thanks as always!",
+   "zh": "送上村庄消息，一直以来谢谢你！"
   },
   "마을 식탁 배달 완료! 잎전 20개를 받았어요.": {
    "en": "Village table delivery done! You received 20 Leaf coins.",
@@ -4044,6 +4384,14 @@
    "en": "Describe the item in at least two characters.",
    "zh": "请写下要制作的物品（至少两个字）。"
   },
+  "만들고 싶은 게 있으면 언제든 말해요.": {
+   "en": "Tell me anytime you want something made.",
+   "zh": "想做什么随时告诉我。"
+  },
+  "만들고 싶은 물건을 말할 때는 모양, 색, 재료를 같이 알려 줘요.": {
+   "en": "When you describe what to make, tell me its shape, colour and material.",
+   "zh": "说想做的东西时，把形状、颜色和材料一起告诉我。"
+  },
   "만들고 싶은 물건을 세 글자 이상 적어 주세요.": {
    "en": "Describe the item you want in at least three characters.",
    "zh": "请写下想制作的物品（至少三个字）。"
@@ -4055,6 +4403,10 @@
   "만들고 싶은 물건을 짧게 적어 주세요. 가장 간단한 한 덩어리 모양으로 만들어 드려요.": {
    "en": "Briefly describe the item you want. We'll make it as one simple solid shape.",
    "zh": "请简短写下想制作的物品。我们会做成最简单的一体造型。"
+  },
+  "만들고 싶은 물건이 있으면 저한테 맡겨요. 뚝딱 만들어 드릴게요!": {
+   "en": "If there's something you want made, leave it to me. I'll whip it up!",
+   "zh": "想做什么东西就交给我吧，马上给你做好！"
   },
   "만들기": {
    "en": "Create",
@@ -4131,6 +4483,10 @@
   "맡겨 줘요 · 별씨 +%d": {
    "en": "Leave it to me · Starseeds +%d",
    "zh": "交给我吧 · 星籽 +%d"
+  },
+  "매일 자정에 새 부탁이 붙어요. 끝내지 못한 부탁은 자정에 내려가요.": {
+   "en": "New requests are pinned at midnight; unfinished ones come down then.",
+   "zh": "每天午夜贴出新委托，未完成的会在午夜撤下。"
   },
   "매장": {
    "en": "Shop Floor",
@@ -4319,6 +4675,10 @@
   "모양 바꾸기": {
    "en": "Reshape",
    "zh": "改变形状"
+  },
+  "모양, 색, 재료를 함께 말해 주면 더 꼭 맞게 만들 수 있어요.": {
+   "en": "Tell me the shape, colour and material and I can make it just right.",
+   "zh": "把形状、颜色和材料一起说，就能做得更合心意。"
   },
   "모양을 바꿨어요.": {
    "en": "Shape changed.",
@@ -4696,6 +5056,10 @@
    "en": "Catch sea fish %d/%d",
    "zh": "钓海鱼 %d/%d 条"
   },
+  "바다 보며 먹는 점심, 최고죠?": {
+   "en": "Lunch with a sea view — the best, right?",
+   "zh": "看着大海吃午饭，最棒了吧？"
+  },
   "바다 지도 위에 항로가 그려져 있어요.": {
    "en": "Sea routes are drawn on the nautical chart.",
    "zh": "海图上画着航线。"
@@ -4784,6 +5148,10 @@
    "en": "Base",
    "zh": "底色"
   },
+  "반가운 얼굴": {
+   "en": "A Welcome Face",
+   "zh": "熟悉的面孔"
+  },
   "반가워요. 이 섬은 산책하기 참 좋아요.": {
    "en": "Nice to meet you. This island is perfect for walks.",
    "zh": "很高兴认识你。这座岛很适合散步。"
@@ -4811,6 +5179,10 @@
   "받는 곳은 운영자 공지를 확인해 주세요.": {
    "en": "Check the operator's notice for the download.",
    "zh": "下载地址请查看运营公告。"
+  },
+  "받으면 별씨를 받을 수 있어요": {
+   "en": "Take it to earn starseeds",
+   "zh": "接下可获得星籽"
   },
   "받은 파일을 확인하고 있어요…": {
    "en": "Checking the downloaded file…",
@@ -4928,9 +5300,17 @@
    "en": "The herbs smell stronger at night. Take a sniff.",
    "zh": "夜里香草的味道更浓，闻闻看。"
   },
+  "밤에도 새싹은 자라요. 쉿, 자라는 소리 들려요?": {
+   "en": "Sprouts grow at night too. Shh, can you hear them?",
+   "zh": "夜里嫩芽也在长。嘘，听到生长的声音了吗？"
+  },
   "밤에만 나와요. 별을 세는 게 일이거든요.": {
    "en": "I only come out at night. Counting stars is my job.",
    "zh": "我只在晚上出来。数星星是我的工作。"
+  },
+  "밤에만 할 수 있는 부탁이에요.": {
+   "en": "This request is night-only.",
+   "zh": "这个委托只能在夜晚进行。"
   },
   "밤엔 돌문도 조용해. 별이 잘 보이지?": {
    "en": "The stone gate is quiet at night. Can you see the stars?",
@@ -4979,6 +5359,10 @@
   "방금 모카 씨를 도와준 제작자님이라면 뭔가 해낼 수 있을 거예요. 같이 가 봐 줄래요?": {
    "en": "You just helped Moka, so I'm sure you can do something. Will you come and look with me?",
    "zh": "你刚帮了摩卡，一定能做点什么。能和我一起去看看吗？"
+  },
+  "방금 의자 다리 길이를 맞췄어요. 딱 맞으면 기분이 좋아요!": {
+   "en": "I just evened out the chair legs. A perfect fit feels great!",
+   "zh": "刚把椅子腿调好长度。刚刚好的感觉真棒！"
   },
   "방금 한 줄 떠올랐는데… 앗, 잊어버렸어요.": {
    "en": "A line just came to me… oh, I forgot it.",
@@ -5068,6 +5452,10 @@
    "en": "Hungry? Want a spoonful?",
    "zh": "饿了吗？要尝一勺吗？"
   },
+  "배달하기": {
+   "en": "Deliver",
+   "zh": "送货"
+  },
   "배치": {
    "en": "Place",
    "zh": "摆放"
@@ -5119,6 +5507,10 @@
   "벌써 세 섬이나! 이제 어디든 혼자 다닐 수 있겠다.": {
    "en": "Three islands already! You can go anywhere on your own now.",
    "zh": "已经三座岛了！现在你哪里都能自己去了。"
+  },
+  "벌써 이렇게 늦었네요. 내일 또 공방에서 봐요.": {
+   "en": "It's late already. See you at the workshop tomorrow.",
+   "zh": "已经这么晚了。明天工坊见。"
   },
   "벌써 첫 손님이네!": {
    "en": "Our first guest already!",
@@ -5212,6 +5604,10 @@
    "en": "Starseeds +10000",
    "zh": "星种 +10000"
   },
+  "별씨 가루를 살짝 뿌리면 반짝, 하고 모양이 잡혀요.": {
+   "en": "A pinch of starseed dust and — sparkle — it takes shape.",
+   "zh": "撒一点星种粉，闪一下就成形了。"
+  },
   "별씨 공방": {
    "en": "Starseed Workshop",
    "zh": "星种工坊"
@@ -5228,9 +5624,17 @@
    "en": "They say the Starseed Workshop turns starseeds from the forest into new things.",
    "zh": "听说星种工坊可以用森林里得到的星种做新东西。"
   },
+  "별씨 공방의 제작 담당이에요. 그림자 손도 꽤 야무지답니다.": {
+   "en": "I'm the Starseed Workshop's crafter. Shadow hands are pretty handy too.",
+   "zh": "我是星种工坊的制作担当。影子的手也很灵巧哦。"
+  },
   "별씨 장터": {
    "en": "Starseed Market",
    "zh": "星种市集"
+  },
+  "별씨가 모자라요.": {
+   "en": "Not enough starseeds.",
+   "zh": "星籽不够。"
   },
   "별씨가 부족합니다. 생존 도전을 완료해 보세요.": {
    "en": "Not enough Starseeds. Try completing a Survival challenge.",
@@ -5247,6 +5651,10 @@
   "별씨는 게임 재화입니다. API 크레딧과 같은 단위가 아닙니다. 검증용 도형은 생성 메시의 완성도를 보여주지 않습니다.": {
    "en": "Starseeds are an in-game currency, not the same as API credits. Test shapes don't show the quality of a generated mesh.",
    "zh": "星种是游戏货币，与 API 积分不是同一单位。验证用几何体无法体现生成网格的完成度。"
+  },
+  "별씨는 탐험에서 모아 와요. 많을수록 더 큰 물건도 만들 수 있어요.": {
+   "en": "Starseeds come from expeditions. The more you have, the bigger things you can make.",
+   "zh": "星种是在探险中收集的。越多就能做越大的东西。"
   },
   "별씨로 판매": {
    "en": "Sell for Starseeds",
@@ -5324,6 +5732,10 @@
    "en": "Write something to send.",
    "zh": "请输入要发送的内容。"
   },
+  "보니 · 공방 제작 담당": {
+   "en": "Boni · Workshop Crafter",
+   "zh": "波妮 · 工坊制作担当"
+  },
   "보라 지붕 집": {
    "en": "Purple-Roof House",
    "zh": "紫顶房子"
@@ -5343,6 +5755,10 @@
   "보람의 낚시 도감": {
    "en": "Boram's Fish Book",
    "zh": "宝蓝的钓鱼图鉴"
+  },
+  "보물상자": {
+   "en": "Treasure Chest",
+   "zh": "宝箱"
   },
   "보물상자 · 별씨 +%d": {
    "en": "Treasure chest · Starseeds +%d",
@@ -5624,6 +6040,10 @@
    "en": "Set something that glows in the village · I bag or C workshop",
    "zh": "请在村里放一件会发光的东西 · I 背包或 C 工坊"
   },
+  "빨간 지붕": {
+   "en": "Red Roof",
+   "zh": "红屋顶"
+  },
   "뾰족한 나무 · 솔방울": {
    "en": "Pointed tree · pinecones",
    "zh": "尖尖的树 · 松果"
@@ -5644,6 +6064,14 @@
    "en": "You can get apples from the orchard crate or the round trees. %d/%d so far.",
    "zh": "苹果可以从果园的箱子或圆圆的树上得到。现在 %d/%d 个。"
   },
+  "사기": {
+   "en": "Buy",
+   "zh": "购买"
+  },
+  "새 게시판 부탁 · %s": {
+   "en": "New board request · %s",
+   "zh": "新的公告板委托 · %s"
+  },
   "새 부탁 · %s": {
    "en": "New request · %s",
    "zh": "新委托 · %s"
@@ -5651,6 +6079,14 @@
   "새 부탁 · 이야기를 걸어 보세요": {
    "en": "New request · talk to them",
    "zh": "新委托 · 去和他们说说话"
+  },
+  "새 이웃": {
+   "en": "New Neighbour",
+   "zh": "新邻居"
+  },
+  "새 집으로 이사 왔어요! 짐 정리가 끝나면 꼭 놀러 와 주세요.": {
+   "en": "I've moved into my new home! Come visit once I've unpacked.",
+   "zh": "我搬进新家了！收拾好后一定来玩。"
   },
   "새벽의 밤바다 산책": {
    "en": "Saebyeok's Night Sea Walk",
@@ -6760,6 +7196,10 @@
    "en": "Applies when you release.",
    "zh": "松开后应用。"
   },
+  "솔 · 꼬마 정원사": {
+   "en": "Sol · Little Gardener",
+   "zh": "索尔 · 小园丁"
+  },
   "솔바람 숲": {
    "en": "Pinebreeze Forest",
    "zh": "松风森林"
@@ -6784,9 +7224,17 @@
    "en": "Mysterious Shadow · …",
    "zh": "神秘的影子 · …"
   },
+  "수상한 그림자 · 공방 제작 담당": {
+   "en": "Mysterious Shadow · Workshop Crafter",
+   "zh": "可疑的影子 · 工坊制作担当"
+  },
   "수상한 그림자 · 꼬마": {
    "en": "Mysterious Shadow · Kid",
    "zh": "神秘的影子 · 小家伙"
+  },
+  "수상한 그림자 · 꼬마 정원사": {
+   "en": "Mysterious Shadow · Little Gardener",
+   "zh": "可疑的影子 · 小园丁"
   },
   "수상한 그림자 · 낚시꾼": {
    "en": "Mysterious Shadow · Angler",
@@ -6903,6 +7351,10 @@
   "순무는 90초, 호박은 150초면 자라요.\n심은 뒤 물을 한 번 주고 마을을 돌아보세요.\n수확물과 물고기는 잎전으로 바꾸거나 식탁에 배달할 수 있어요.": {
    "en": "Turnips grow in 90 seconds, pumpkins in 150.\nWater them once after planting, then stroll around the village.\nTrade crops and fish for Leaf coins, or deliver them to the dinner table.",
    "zh": "芜菁90秒、南瓜150秒就能长成。\n种下后浇一次水，再去村里逛逛吧。\n收获物和鱼可以换成叶币，或送到餐桌上。"
+  },
+  "순무는 금방 자라고, 호박은 조금 더 기다려야 해요. 기다림도 정원 일이래요.": {
+   "en": "Turnips grow fast; pumpkins take a little longer. Waiting is gardening too, they say.",
+   "zh": "萝卜长得快，南瓜要多等等。听说等待也是园艺的一部分。"
   },
   "술래잡기 할래? 내가 술래 안 할 거야!": {
    "en": "Wanna play tag? I'm not going to be it!",
@@ -7076,6 +7528,10 @@
    "en": "Swish, swish… lots of petals fell today.",
    "zh": "唰唰……今天掉了好多花瓣。"
   },
+  "씨앗": {
+   "en": "Seed",
+   "zh": "种子"
+  },
   "씨앗 가게": {
    "en": "Seed Shop",
    "zh": "种子店"
@@ -7112,9 +7568,21 @@
    "en": "Plant seeds → Water once → Grow → Harvest\nCrops keep growing even after you leave or quit the game.",
    "zh": "播种 → 浇一次水 → 生长 → 收获\n即使离开村庄或关闭游戏，作物也会继续生长。"
   },
+  "씨앗 심기 요령 듣기": {
+   "en": "Planting Tips",
+   "zh": "听播种诀窍"
+  },
   "씨앗과 미끼 가게": {
    "en": "Seed & Bait Shop",
    "zh": "种子与鱼饵商店"
+  },
+  "씨앗은 밭을 일군 다음 콕 심고, 물을 한 번만 주면 돼요.": {
+   "en": "Till the plot, pop the seed in, and water it just once.",
+   "zh": "先翻地，再把种子按进去，浇一次水就行。"
+  },
+  "씨앗은 손가락 한 마디 깊이로 콕! 초록 선배가 알려 줬어요.": {
+   "en": "Seeds go one finger-joint deep! Chorok taught me.",
+   "zh": "种子要按进一个指节深！初绿前辈教我的。"
   },
   "씨앗을 심었어요": {
    "en": "Seeds planted",
@@ -7148,6 +7616,10 @@
    "en": "Enter your username and password.",
    "zh": "请输入账号和密码。"
   },
+  "아직 게시판 부탁을 받을 수 없어요. 마을 일을 먼저 마쳐 보세요.": {
+   "en": "You can't take board requests yet. Finish the village tasks first.",
+   "zh": "还不能接公告板委托，请先完成村庄任务。"
+  },
   "아직 대화가 없습니다.": {
    "en": "No messages yet.",
    "zh": "还没有聊天记录。"
@@ -7172,6 +7644,10 @@
    "en": "No letters yet.",
    "zh": "还没有收到信。"
   },
+  "아직 받을 수 없어요": {
+   "en": "Not available yet",
+   "zh": "暂时无法领取"
+  },
   "아침 바다는 거울 같아요. 찌가 또렷하게 보여요.": {
    "en": "The morning sea is like a mirror. You can see the float clearly.",
    "zh": "早晨的大海像镜子一样，浮漂看得清清楚楚。"
@@ -7179,6 +7655,10 @@
   "아침 산책이에요. 공기가 맑죠?": {
    "en": "A morning stroll. The air's so fresh, isn't it?",
    "zh": "早晨散步。空气很清新吧？"
+  },
+  "아침 이슬 맺힌 새싹, 봤어요? 반짝반짝해요!": {
+   "en": "Did you see the sprouts with morning dew? They sparkle!",
+   "zh": "看到挂着晨露的嫩芽了吗？亮晶晶的！"
   },
   "아침 햇살이 창으로 쏟아져요.": {
    "en": "Morning sunlight pours through the window.",
@@ -7220,9 +7700,17 @@
    "en": "Hello!",
    "zh": "你好！"
   },
+  "안녕하세요! 별씨 공방 제작 담당 보니예요.": {
+   "en": "Hi! I'm Boni, the crafter at the Starseed Workshop.",
+   "zh": "你好！我是星种工坊的制作担当波妮。"
+  },
   "안녕하세요! 이 섬의 우편배달부 다온이에요.": {
    "en": "Hello! I'm Daon, the island's postman.",
    "zh": "你好！我是这座岛的邮递员多温。"
+  },
+  "안녕하세요! 초록 선배 제자, 꼬마 정원사 솔이에요.": {
+   "en": "Hi! I'm Sol, Chorok's apprentice and little gardener.",
+   "zh": "你好！我是初绿前辈的徒弟，小园丁索尔。"
   },
   "안녕하세요! 👋": {
    "en": "Hello! 👋",
@@ -7264,6 +7752,10 @@
    "en": "Oh, that one can't be given right now. Could you check your bag again?",
    "zh": "哎呀，那件现在好像不能给。能再看看背包吗？"
   },
+  "앗, 아직 다 되지 않았어요.": {
+   "en": "Oops, it's not done yet.",
+   "zh": "哎呀，还没完成。"
+  },
   "앞뒤로 열기": {
    "en": "Open front-back",
    "zh": "前后打开"
@@ -7291,6 +7783,10 @@
   "앞으로 이동": {
    "en": "Move forward",
    "zh": "向前移动"
+  },
+  "앞으로 이웃으로 잘 부탁해요.": {
+   "en": "Glad to be your neighbour.",
+   "zh": "以后请多关照。"
   },
   "야영지": {
    "en": "Campsite",
@@ -7432,6 +7928,10 @@
    "en": "Any time",
    "zh": "随时"
   },
+  "언젠가 다시 만나요. 건강해요!": {
+   "en": "Let's meet again someday. Take care!",
+   "zh": "后会有期，保重！"
+  },
   "얼음 · 이동 둔화": {
    "en": "Ice · Slows movement",
    "zh": "冰面 · 移动减速"
@@ -7491,6 +7991,10 @@
   "여기는 밭을 일굴 수 없는 땅이에요. 풍차 들판에서 일궈 보세요.": {
    "en": "This ground can't be tilled. Try the Windmill Meadow.",
    "zh": "这里的土地不能开垦。去风车田野试试吧。"
+  },
+  "여기서는 다루지 않는 물건이에요.": {
+   "en": "This shop doesn't deal in that.",
+   "zh": "这里不经营这种物品。"
   },
   "여기에 놓기": {
    "en": "Place Here",
@@ -7608,6 +8112,10 @@
    "en": "e.g. A small mushroom-shaped chair",
    "zh": "例：小蘑菇形状的椅子"
   },
+  "오늘 %d개 남음": {
+   "en": "%d left today",
+   "zh": "今天剩%d个"
+  },
   "오늘 들어온 물건\n%s": {
    "en": "Found today\n%s",
    "zh": "今天收到的物品\n%s"
@@ -7619,6 +8127,10 @@
   "오늘 맡길 수 있는 제작을 모두 썼어요. 내일 다시 찾아와 주세요.": {
    "en": "You've used today's crafting requests. Please come back tomorrow.",
    "zh": "今天的制作委托已用完。请明天再来。"
+  },
+  "오늘 몫은 다 팔렸어요. 내일 다시 와 주세요.": {
+   "en": "Today's share is sold out. Come back tomorrow.",
+   "zh": "今天的份已经卖完了，明天再来吧。"
   },
   "오늘 물때가 좋아요.": {
    "en": "The tide is good today.",
@@ -7640,9 +8152,17 @@
    "en": "Today's Delivery Done",
    "zh": "今日配送已完成"
   },
+  "오늘 배달은 벌써 마쳤어요.": {
+   "en": "Today's delivery is already done.",
+   "zh": "今天的送货已经完成了。"
+  },
   "오늘 생성 한도에 도달했습니다.": {
    "en": "You've reached today's crafting limit.",
    "zh": "已达到今日生成上限。"
+  },
+  "오늘 일은 끝! 따뜻한 차 한 잔이 생각나네요.": {
+   "en": "Work's done for today! I could use a warm cup of tea.",
+   "zh": "今天的活干完了！好想来杯热茶。"
   },
   "오늘 지급할 수 있는 양을 모두 썼어요.": {
    "en": "Today's grant limit has been reached.",
@@ -7652,6 +8172,10 @@
    "en": "All of today's letters are delivered. Thanks to you!",
    "zh": "今天的信已经全部送完了。多亏了你！"
   },
+  "오늘 하루, 마을 어디서든 마주치면 꼭 인사해 줘요!": {
+   "en": "If we meet anywhere today, say hello!",
+   "zh": "今天在村里遇到我，一定要打招呼哦！"
+  },
   "오늘 하루는 어땠어요?": {
    "en": "How was your day?",
    "zh": "今天过得怎么样？"
@@ -7660,9 +8184,33 @@
    "en": "How many times today already? Thanks, but don't overdo it.",
    "zh": "今天都第几次了？谢谢，不过别太勉强自己。"
   },
+  "오늘부터 이웃이 됐어요! 빈 집터에 작은 집을 지었어요. 언제든 놀러 와요.": {
+   "en": "From today we're neighbours! I built a little house on the empty lot. Drop by any time.",
+   "zh": "从今天起我们是邻居了！我在空地上盖了一座小房子，随时来玩吧。"
+  },
+  "오늘은 게시판이 비어 있어요.": {
+   "en": "The board is empty today.",
+   "zh": "今天公告板是空的。"
+  },
+  "오늘은 낚시하러 왔어요. 저녁거리 한 마리만!": {
+   "en": "Out fishing today. Just one for dinner!",
+   "zh": "今天来钓鱼。钓一条当晚饭就好！"
+  },
   "오늘은 낚싯대 내려놓고 쉬는 중이에요.": {
    "en": "I've put my rod down and I'm resting today.",
    "zh": "今天放下鱼竿休息一下。"
+  },
+  "오늘은 내가 이 마을에 처음 온 날이에요. 같이 축하해 줄 이웃이 있다니 참 기뻐요.": {
+   "en": "Today is the day I first came here. I'm glad to have neighbours to celebrate with.",
+   "zh": "今天是我第一次来到这个村庄的日子，有邻居一起庆祝真开心。"
+  },
+  "오늘은 다 팔렸어요": {
+   "en": "Sold out today",
+   "zh": "今天已售罄"
+  },
+  "오늘은 더 받을 수 없어요 · 자정에 새 부탁이 붙어요": {
+   "en": "No more today · new requests at midnight",
+   "zh": "今天不能再接了 · 午夜会有新委托"
   },
   "오늘은 더 설명할 수 없어요. 내일 다시 해 보세요.": {
    "en": "No more descriptions today. Try again tomorrow.",
@@ -7692,9 +8240,21 @@
    "en": "Gifts are falling like stars today.",
    "zh": "今天的礼物像星星一样洒落下来。"
   },
+  "오늘은 소풍 왔어요! 도시락이 꿀맛이에요.": {
+   "en": "I'm on a picnic today! The lunchbox tastes amazing.",
+   "zh": "今天来野餐啦！便当超好吃。"
+  },
   "오늘은 순무 고랑을 하나 더 내 볼까 해요.": {
    "en": "I think I'll make one more turnip row today.",
    "zh": "今天想再开一垄萝卜。"
+  },
+  "오늘은 쉬는 날이라 문을 닫았어요. 내일 다시 와 주세요.": {
+   "en": "Closed today — it's our day off. Please come back tomorrow.",
+   "zh": "今天休息，关门了。请明天再来。"
+  },
+  "오늘은 씨앗 세 개나 심었어요. 칭찬해 줄래요?": {
+   "en": "I planted three seeds today. Will you praise me?",
+   "zh": "今天种了三颗种子呢。夸夸我好吗？"
   },
   "오늘은 어떤 차림으로 섬을 걸어 볼까요?": {
    "en": "What outfit shall we wear around the island today?",
@@ -7703,6 +8263,10 @@
   "오늘은 입질이 영 없네요… 그래도 찌 보는 맛이 있죠.": {
    "en": "No bites at all today… but watching the float is fun in itself.",
    "zh": "今天一直没咬钩……不过看着浮漂也挺有意思。"
+  },
+  "오늘은 팔지 않는 물건이에요.": {
+   "en": "Not sold today.",
+   "zh": "今天不卖这个。"
   },
   "오늘의 도움말 · %s": {
    "en": "Today's tip · %s",
@@ -7723,6 +8287,10 @@
   "오늘의 배달을 이미 마쳤어요.": {
    "en": "You've already finished today's delivery.",
    "zh": "今天的配送已完成。"
+  },
+  "오늘의 부탁": {
+   "en": "Today's Requests",
+   "zh": "今日委托"
   },
   "오늘의 블렌드는 고소하고 향이 짙답니다.": {
    "en": "Today's blend is nutty and rich in aroma.",
@@ -7796,6 +8364,10 @@
    "en": "The afternoon sun was nice, so I came out for a bit.",
    "zh": "午后阳光很好，出来走走。"
   },
+  "오후엔 손이 제일 잘 풀려요. 뭐 만들어 볼까요?": {
+   "en": "My hands work best in the afternoon. What shall we make?",
+   "zh": "下午手最灵巧了。做点什么好呢？"
+  },
   "오후엔 입질이 뜸해요. 그래도 기다리는 게 낚시죠.": {
    "en": "Bites are rare in the afternoon. But waiting is what fishing is about.",
    "zh": "下午很少咬钩。不过钓鱼就是要等。"
@@ -7851,6 +8423,14 @@
   "와, 혹시 그거…! 나를 위해 만들어 온 거야?": {
    "en": "Oh, is that…! Did you make that for me?",
    "zh": "哇，难道那是……！是为我做的吗？"
+  },
+  "완료 · 감사 편지가 우편함에 왔어요": {
+   "en": "Done · a thank-you letter is in your mailbox",
+   "zh": "完成 · 感谢信已送到信箱"
+  },
+  "완료하기": {
+   "en": "Hand in",
+   "zh": "提交"
   },
   "완료한 협동 탐험 보상 받기": {
    "en": "Claim Completed Co-op Expedition Rewards",
@@ -8336,6 +8916,10 @@
    "en": "Show nameplates",
    "zh": "显示名牌"
   },
+  "이미 끝낸 부탁이에요.": {
+   "en": "Already completed.",
+   "zh": "这个委托已经完成了。"
+  },
   "이미 던진 찌가 있어요.": {
    "en": "Your bobber is already out.",
    "zh": "鱼漂已经抛出了。"
@@ -8408,9 +8992,21 @@
    "en": "The quilt smells of sunshine.",
    "zh": "被子里有阳光的味道。"
   },
+  "이사 소식": {
+   "en": "Moving news",
+   "zh": "搬家消息"
+  },
+  "이사 소식을 전해요.": {
+   "en": "Here's some moving news.",
+   "zh": "告诉你搬家的消息。"
+  },
   "이사 온 걸 환영해!": {
    "en": "Welcome to your new home!",
    "zh": "欢迎搬来！"
+  },
+  "이사 왔어요": {
+   "en": "Moved in",
+   "zh": "搬来了"
   },
   "이삿날 아침, 편지가 와 있어요": {
    "en": "Moving-day morning: a letter has arrived",
@@ -8483,6 +9079,10 @@
   "일": {
    "en": "Sun",
    "zh": "日"
+  },
+  "일 끝나고 한숨 돌리는 중이에요. 오늘도 수고했어요!": {
+   "en": "Catching my breath after work. Good work today!",
+   "zh": "下班后歇口气。今天也辛苦啦！"
   },
   "일 쉬는 중이에요. 바람 쐬면 새 무늬가 떠오르거든요.": {
    "en": "Taking a break from work. Fresh air gives me new patterns.",
@@ -8588,6 +9188,10 @@
    "en": "Leaf coins %d  ·  Harvested %d  ·  Fish caught %d  ·  Gathered %d",
    "zh": "叶币 %d  ·  收获 %d 个  ·  钓到 %d 条鱼  ·  采集 %d 次"
   },
+  "잎전 %d · 별씨 %d": {
+   "en": "%d leaf coins · %d starseeds",
+   "zh": "叶钱%d · 星籽%d"
+  },
   "잎전 +500": {
    "en": "Leaf coins +500",
    "zh": "叶币 +500"
@@ -8599,6 +9203,10 @@
   "잎전은 씨앗과 미끼를 사는 마을 전용 돈이에요. 별씨와는 별개입니다.": {
    "en": "Leaf coins are village money for buying seeds and Bait. They're separate from Starseeds.",
    "zh": "叶币是用来买种子和鱼饵的村庄专用货币，与星种不同。"
+  },
+  "잎전이 모자라요.": {
+   "en": "Not enough leaf coins.",
+   "zh": "叶钱不够。"
   },
   "잎전이 부족해요. 수확물이나 물고기를 팔아 보세요.": {
    "en": "Not enough Leaf coins. Try selling crops or fish.",
@@ -8668,6 +9276,10 @@
    "en": "A half-read letter lies on the small table.",
    "zh": "小桌上放着一封读了一半的信。"
   },
+  "잘 있어요": {
+   "en": "Farewell",
+   "zh": "再见了"
+  },
   "잠금": {
    "en": "Locked",
    "zh": "锁定"
@@ -8704,6 +9316,14 @@
    "en": "Please try again shortly · ",
    "zh": "请稍后再试 · "
   },
+  "잠시 떠나요": {
+   "en": "Leaving for a while",
+   "zh": "暂时离开"
+  },
+  "잠시 마을을 떠나게 됐어요. 그동안 정말 고마웠어요. 꼭 다시 올게요.": {
+   "en": "I have to leave the village for a while. Thank you for everything. I'll definitely be back.",
+   "zh": "我要暂时离开村子了。这段时间真的很感谢你，我一定会回来的。"
+  },
   "잠시 앉아 숨을 돌렸어요": {
    "en": "You sat down to catch your breath",
    "zh": "你坐下来歇了口气"
@@ -8727,6 +9347,10 @@
   "잡화점은 아침 아홉 시쯤 열고 저녁 일곱 시쯤 닫아요.": {
    "en": "The general store opens around nine in the morning and closes around seven in the evening.",
    "zh": "杂货店早上九点左右开门，晚上七点左右关门。"
+  },
+  "장 구경 나왔어요. 오늘은 뭘 살까 고민돼요.": {
+   "en": "Just browsing the market. Can't decide what to buy today.",
+   "zh": "出来逛集市。今天买什么好纠结。"
   },
   "장밋빛 갈색": {
    "en": "Rosewood",
@@ -8872,6 +9496,10 @@
    "en": "Fullscreen",
    "zh": "全屏"
   },
+  "전해 줘서 고마워요!": {
+   "en": "Thanks for passing it on!",
+   "zh": "谢谢你帮忙转达！"
+  },
   "점심 먹고 나니 손이 더 잘 움직여요.": {
    "en": "My hands work better after lunch.",
    "zh": "吃完午饭手更灵活了。"
@@ -8891,6 +9519,10 @@
   "정답! …역시 눈썰미가 좋네요.": {
    "en": "Correct! …You've got a sharp eye.",
    "zh": "答对了！……眼光真好。"
+  },
+  "정든 마을을 잠시 떠나게 됐어요. 함께한 날들, 오래 기억할게요.": {
+   "en": "I'm leaving the village for a while. I'll remember our days together.",
+   "zh": "我要暂时离开这个村庄了，会一直记得一起度过的日子。"
   },
   "정말요? 고마워요!": {
    "en": "Really? Thank you!",
@@ -8988,9 +9620,17 @@
    "en": "Crafted",
    "zh": "制作完成"
   },
+  "제작 요령 듣기": {
+   "en": "Crafting Tips",
+   "zh": "听制作诀窍"
+  },
   "제작 요청을 확인하고 있어요. 운영자가 확인하면 맡긴 별씨가 돌아와요.": {
    "en": "We're checking your craft request. Your starseeds come back once an operator confirms it.",
    "zh": "正在确认制作请求。运营者确认后会退还托付的星种。"
+  },
+  "제작 의뢰하기": {
+   "en": "Request a Craft",
+   "zh": "委托制作"
   },
   "제작 재료가 부족합니다.": {
    "en": "Not enough crafting materials.",
@@ -9011,6 +9651,10 @@
   "제작 중이에요…": {
    "en": "Crafting…",
    "zh": "制作中…"
+  },
+  "제작 창 열기": {
+   "en": "Open Crafting",
+   "zh": "打开制作窗口"
   },
   "제작 취소": {
    "en": "Crafting canceled",
@@ -9035,6 +9679,10 @@
   "제작에 실패했어요. 맡긴 별씨는 돌려드렸어요.": {
    "en": "Crafting failed. Your Starseeds have been returned.",
    "zh": "制作失败了。委托的星种已退还给你。"
+  },
+  "제작은 내 마을 공방에서 맡아 줄게요. 집에 돌아가면 불러 줘요!": {
+   "en": "I take craft orders at your own village's workshop. Call me when you're home!",
+   "zh": "制作要在你自己村子的工坊接哦。回家后叫我吧！"
   },
   "제작을 마치지 못했어요. 맡긴 별씨는 돌려드렸어요.": {
    "en": "The craft couldn't be finished. Your starseeds were returned.",
@@ -9088,6 +9736,10 @@
    "en": "A little later",
    "zh": "等一下再说"
   },
+  "조금 천천히 둘러봐요.": {
+   "en": "Take it a little slower.",
+   "zh": "慢慢逛吧。"
+  },
   "조명": {
    "en": "Lamp",
    "zh": "灯具"
@@ -9128,6 +9780,10 @@
    "en": "Sure, I'll make one",
    "zh": "好的，我来做"
   },
+  "좋아요, 무엇을 만들어 볼까요?": {
+   "en": "Great, what shall we make?",
+   "zh": "好呀，做点什么呢？"
+  },
   "좋은 날씨군요. 윤재라고 합니다.": {
    "en": "Lovely weather. My name is Yunjae.",
    "zh": "天气真好。我叫允哉。"
@@ -9156,6 +9812,10 @@
    "en": "Good morning!",
    "zh": "早上好！"
   },
+  "좋은 아침이에요! 오늘도 공방 문 활짝 열었어요.": {
+   "en": "Good morning! The workshop's wide open today too.",
+   "zh": "早上好！今天工坊也大门敞开哦。"
+  },
   "좋은 아침이에요. 오늘은 어떤 색이 끌려요?": {
    "en": "Good morning. Which colour catches your eye today?",
    "zh": "早上好。今天喜欢什么颜色？"
@@ -9168,9 +9828,17 @@
    "en": "Have a nice day!",
    "zh": "祝你今天愉快！"
   },
+  "주문": {
+   "en": "Orders",
+   "zh": "订单"
+  },
   "주문을 접수했어요": {
    "en": "Order received",
    "zh": "订单已接收"
+  },
+  "주문하기": {
+   "en": "Order",
+   "zh": "下单"
   },
   "주민과 장소 위에 이름을 띄워요.": {
    "en": "Shows names above villagers and places.",
@@ -9264,6 +9932,14 @@
    "en": "It's %s now. Some fish only come out at night.",
    "zh": "现在是%s。有些鱼只在夜里出现。"
   },
+  "지금은 거래할 수 없어요. 다시 해 볼게요.": {
+   "en": "Can't trade right now. Trying again.",
+   "zh": "现在无法交易，再试一次。"
+  },
+  "지금은 게시판을 쓸 수 없어요. 잠시 뒤 다시 해 보세요.": {
+   "en": "The board is unavailable. Try again shortly.",
+   "zh": "公告板暂时无法使用，请稍后再试。"
+  },
   "지금은 괜찮아": {
    "en": "Not right now",
    "zh": "现在不用了"
@@ -9275,6 +9951,10 @@
   "지금은 글로 설명하기를 쓸 수 없어요.": {
    "en": "Describing in words isn't available right now.",
    "zh": "现在无法使用文字描述。"
+  },
+  "지금은 문을 닫았어요.": {
+   "en": "Closed right now.",
+   "zh": "现在已打烊。"
   },
   "지금은 문을 닫았어요. 주인이 자리를 비웠나 봐요.": {
    "en": "It's closed for now. The owner must be out.",
@@ -9367,6 +10047,10 @@
   "진행 상황은 서버에 안전하게 남아 있어요.": {
    "en": "Your progress is safe on the server.",
    "zh": "你的进度已安全保存在服务器上。"
+  },
+  "진행 중": {
+   "en": "In progress",
+   "zh": "进行中"
   },
   "진행 중인 생성이 있습니다.": {
    "en": "A craft is already in progress.",
@@ -9723,6 +10407,10 @@
   "초록 · 정원사": {
    "en": "Chorok · Gardener",
    "zh": "翠绿 · 园丁"
+  },
+  "초록 선배의 제자, 솔이에요! 그림자라도 씨앗은 잘 심어요.": {
+   "en": "I'm Sol, Chorok's apprentice! Even as a shadow I plant seeds well.",
+   "zh": "我是初绿前辈的徒弟索尔！就算是影子也很会种种子。"
   },
   "초침": {
    "en": "Second Hand",
@@ -10176,6 +10864,18 @@
    "en": "Sat",
    "zh": "六"
   },
+  "토마토 하나 줄까요? 오늘 아침에 딴 거예요!": {
+   "en": "Want a tomato? I picked it this morning!",
+   "zh": "要不要来个番茄？今天早上刚摘的！"
+  },
+  "토마토가 빨갛게 익었어요. 하나 맛볼래요? …앗, 초록 선배한테 혼나려나.": {
+   "en": "The tomatoes are ripe. Want to try one? …Oops, Chorok might scold me.",
+   "zh": "番茄红透了。要尝一个吗？……啊，会不会被初绿前辈骂呀。"
+  },
+  "토요일 아침 장이 섰어요! 광장이 북적북적하죠?": {
+   "en": "It's Saturday market morning! The square is bustling, isn't it?",
+   "zh": "周六早市开张啦！广场好热闹吧？"
+  },
   "톱니바퀴 다락": {
    "en": "Gear Loft",
    "zh": "齿轮阁楼"
@@ -10488,6 +11188,10 @@
    "en": "The sky is clear and blue.",
    "zh": "天空晴朗湛蓝。"
   },
+  "하루 일을 마치면 이렇게 쉬어 줘야 해요.": {
+   "en": "After a day's work you've got to rest like this.",
+   "zh": "忙完一天就得这样休息一下。"
+  },
   "하루 종일 돌고 도는데 제자리에 있고, 바람이 불면 더 신나는 것은?": {
    "en": "It spins round and round all day yet stays in place, and loves it when the wind blows. What is it?",
    "zh": "一整天转个不停却待在原地，风一吹就更起劲。是什么？"
@@ -10495,6 +11199,10 @@
   "하암… 밤새 별을 보느라 졸려요.": {
    "en": "Yawn… I'm sleepy from watching the stars all night.",
    "zh": "哈啊……整晚看星星，好困。"
+  },
+  "하암… 새싹들도 저도 이제 잘 시간이에요.": {
+   "en": "Yawn… bedtime for the sprouts and me.",
+   "zh": "哈欠……嫩芽和我都该睡觉了。"
   },
   "하의": {
    "en": "Bottoms",
@@ -10640,6 +11348,10 @@
    "en": "Sunflower",
    "zh": "向日葵"
   },
+  "햇볕이 쨍쨍! 향초밭에 물 줄 시간이에요.": {
+   "en": "So sunny! Time to water the herb beds.",
+   "zh": "阳光灿烂！该给香草田浇水了。"
+  },
   "햇살 온실": {
    "en": "Sunny Greenhouse",
    "zh": "阳光温室"
@@ -10735,6 +11447,10 @@
   "향초는 정원 향초밭이나 덤불 속에 있어요. 지금 %d/%d줌.": {
    "en": "Herbs grow in the garden herb patch or in bushes. %d/%d so far.",
    "zh": "香草在花园香草田或灌木丛里。现在 %d/%d 把。"
+  },
+  "향초밭에 물 주는 중이에요! 흙이 촉촉해야 잘 자라요.": {
+   "en": "Watering the herb beds! Moist soil makes them grow.",
+   "zh": "正在给香草田浇水！土湿润才长得好。"
   },
   "허용": {
    "en": "Allowed",
@@ -11296,145 +12012,73 @@
    "en": "It overlaps another piece.",
    "zh": "与其他物品重叠。"
   },
-  "%d개": {
-   "en": "%d items",
-   "zh": "%d件"
+  "감자": {
+   "en": "Potato",
+   "zh": "土豆"
   },
-  "가방 정리 · 서버에서 다시 받아요": {
-   "en": "Tidy the bag · fetch it again",
-   "zh": "整理背包 · 重新获取"
+  "감자 씨앗": {
+   "en": "Potato Seeds",
+   "zh": "土豆种子"
   },
-  "모양": {
-   "en": "Shape",
-   "zh": "形状"
+  "토마토": {
+   "en": "Tomato",
+   "zh": "番茄"
   },
-  "값": {
-   "en": "Price",
-   "zh": "价格"
+  "토마토 씨앗": {
+   "en": "Tomato Seeds",
+   "zh": "番茄种子"
   },
-  "전체 색": {
-   "en": "Colour",
-   "zh": "整体颜色"
+  "옥수수": {
+   "en": "Corn",
+   "zh": "玉米"
   },
-  "물건을 고르세요.": {
-   "en": "Pick an object.",
-   "zh": "请选择物品。"
+  "옥수수 씨앗": {
+   "en": "Corn Seeds",
+   "zh": "玉米种子"
   },
-  "배치됨": {
-   "en": "Placed",
-   "zh": "已放置"
+  "무": {
+   "en": "Radish",
+   "zh": "萝卜"
   },
-  "판매 중": {
-   "en": "For sale",
-   "zh": "出售中"
+  "무 씨앗": {
+   "en": "Radish Seeds",
+   "zh": "萝卜种子"
   },
-  "놓아 둔 가구를 써 봐요": {
-   "en": "Use a placed piece of furniture",
-   "zh": "使用已放置的家具"
+  "우산": {
+   "en": "Umbrella",
+   "zh": "雨伞"
   },
-  "입력 언어 · 입력한 글자로 알아봐요 (한/영 키로 바꿔요)": {
-   "en": "Input language · read from what you type (switch with the Han/Eng key)",
-   "zh": "输入语言 · 根据输入的文字判断（用韩/英键切换）"
+  "등불": {
+   "en": "Lantern",
+   "zh": "灯笼"
   },
-  "나의 여행자 만들기": {
-   "en": "Make your traveller",
-   "zh": "创建你的旅行者"
+  "부채": {
+   "en": "Fan",
+   "zh": "扇子"
   },
-  "함께 모험할 여행자를 고르고 꾸며 보세요. 나중에 옷장에서 언제든 바꿀 수 있어요.": {
-   "en": "Pick and dress the traveller you will adventure with. You can change it any time in the wardrobe.",
-   "zh": "挑选并打扮与你一起冒险的旅行者。之后可以随时在衣柜里更换。"
+  "풍선": {
+   "en": "Balloon",
+   "zh": "气球"
   },
-  "모험 시작": {
-   "en": "Start the adventure",
-   "zh": "开始冒险"
+  "꽃다발": {
+   "en": "Bouquet",
+   "zh": "花束"
   },
-  "모습을 저장하지 못했어요. 옷장(O)에서 다시 골라 주세요.": {
-   "en": "Could not save the look. Pick it again in the wardrobe (O).",
-   "zh": "未能保存外观。请在衣柜(O)中重新选择。"
+  "과일 바구니": {
+   "en": "Fruit basket",
+   "zh": "水果篮"
   },
-  "여": {
-   "en": "Female",
-   "zh": "女"
+  "자랑 물고기": {
+   "en": "Prize fish",
+   "zh": "得意的鱼"
   },
-  "모험가": {
-   "en": "Adventurer",
-   "zh": "冒险家"
+  "보따리": {
+   "en": "Bundle",
+   "zh": "包袱"
   },
-  "장인": {
-   "en": "Artisan",
-   "zh": "工匠"
-  },
-  "낚시꾼": {
-   "en": "Fisher",
-   "zh": "钓鱼人"
-  },
-  "대장장이": {
-   "en": "Smith",
-   "zh": "铁匠"
-  },
-  "약초사": {
-   "en": "Herbalist",
-   "zh": "草药师"
-  },
-  "발명가": {
-   "en": "Inventor",
-   "zh": "发明家"
-  },
-  "선원": {
-   "en": "Sailor",
-   "zh": "水手"
-  },
-  "준비 중": {
-   "en": "Coming soon",
-   "zh": "准备中"
-  },
-  "곧 만나요": {
-   "en": "See you soon",
-   "zh": "即将登场"
-  },
-  "장식": {
-   "en": "Accent",
-   "zh": "饰品"
-  },
-  "밀짚모자": {
-   "en": "Straw hat",
-   "zh": "草帽"
-  },
-  "이름": {
-   "en": "Name",
-   "zh": "名字"
-  },
-  "다른 사람에게 보일 이름 · 2~12자": {
-   "en": "Name others see · 2-12 letters",
-   "zh": "别人看到的名字 · 2~12字"
-  },
-  "이름은 2~12자로 지어 주세요.": {
-   "en": "Use 2-12 letters for the name.",
-   "zh": "名字请用2~12个字。"
-  },
-  "이름은 2~12자, 글자와 숫자로 지어 주세요.": {
-   "en": "Use 2-12 letters or numbers for the name.",
-   "zh": "名字请用2~12个字母或数字。"
-  },
-  "쓸 수 없는 말이 들어 있어요.": {
-   "en": "That name has a word that is not allowed.",
-   "zh": "名字中含有不允许的词。"
-  },
-  "운영자처럼 보이는 이름은 쓸 수 없어요.": {
-   "en": "Names that look like staff are not allowed.",
-   "zh": "不能使用像管理员的名字。"
-  },
-  "이미 다른 모험가가 쓰는 이름이에요.": {
-   "en": "Another adventurer already has that name.",
-   "zh": "这个名字已被其他冒险者使用。"
-  },
-  "이름은 하루에 한 번 바꿀 수 있어요.": {
-   "en": "You can change your name once a day.",
-   "zh": "名字每天只能改一次。"
-  },
-  "이 이름은 쓸 수 없어요.": {
-   "en": "That name cannot be used.",
-   "zh": "这个名字不能使用。"
+  "가방에 재료가 있으면 들 수 있어요": {
+   "en": "You can carry this once it is in your bag",
+   "zh": "包里有材料就能拿着"
   }
  },
  "templates": [],

@@ -1,0 +1,1976 @@
+{
+  "baseline": "PREDEPLOY_CHECK_0119_before.json",
+  "after": "PREDEPLOY_CHECK_0119_after.json",
+  "counts": {
+    "bake-generated": 2,
+    "copied-build-asset": 181,
+    "export-generated": 1,
+    "real-missing-resource": 1,
+    "sound-family": 3,
+    "test-only": 90,
+    "tool-only": 2
+  },
+  "total": 280,
+  "entries": [
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 11,
+      "resource": "res://assets/interior/bed.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 43,
+      "resource": "res://assets/interior/wardrobe_closet.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 75,
+      "resource": "res://assets/interior/bookshelf.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 107,
+      "resource": "res://assets/interior/dining_table.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 139,
+      "resource": "res://assets/interior/wooden_chair.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 171,
+      "resource": "res://assets/interior/sofa.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 203,
+      "resource": "res://assets/interior/kitchen_counter.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 235,
+      "resource": "res://assets/interior/cooking_stove.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 267,
+      "resource": "res://assets/interior/potted_plant.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 299,
+      "resource": "res://assets/interior/floor_lamp.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 331,
+      "resource": "res://assets/interior/shop_counter.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 363,
+      "resource": "res://assets/interior/display_shelf.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 395,
+      "resource": "res://assets/interior/crate_stack.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 427,
+      "resource": "res://assets/interior/barrel.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 459,
+      "resource": "res://assets/interior/workbench.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 491,
+      "resource": "res://assets/interior/telescope.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 523,
+      "resource": "res://assets/interior/seedling_bench.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 555,
+      "resource": "res://assets/interior/cafe_counter.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 587,
+      "resource": "res://assets/interior/round_cafe_table.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 619,
+      "resource": "res://assets/interior/piano.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 651,
+      "resource": "res://assets/interior/fireplace.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 683,
+      "resource": "res://assets/interior/lighthouse_lens.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 715,
+      "resource": "res://assets/interior/rug.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/interior/manifest.json",
+      "line": 750,
+      "resource": "res://assets/interior/wall_clock.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 20,
+      "resource": "res://assets/monsters/wolf_forest.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 146,
+      "resource": "res://assets/monsters/boar_forest.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 272,
+      "resource": "res://assets/monsters/brute_forest.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 433,
+      "resource": "res://assets/monsters/wisp_forest.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 581,
+      "resource": "res://assets/monsters/shroom_forest.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 729,
+      "resource": "res://assets/monsters/wolf_quarry.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 857,
+      "resource": "res://assets/monsters/boar_quarry.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 985,
+      "resource": "res://assets/monsters/brute_quarry.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 1143,
+      "resource": "res://assets/monsters/wisp_quarry.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 1295,
+      "resource": "res://assets/monsters/shroom_quarry.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 1447,
+      "resource": "res://assets/monsters/wolf_frost.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 1571,
+      "resource": "res://assets/monsters/boar_frost.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 1695,
+      "resource": "res://assets/monsters/brute_frost.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 1849,
+      "resource": "res://assets/monsters/wisp_frost.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "assets/monsters/manifest.json",
+      "line": 1997,
+      "resource": "res://assets/monsters/shroom_frost.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_layout.gd",
+      "line": 10,
+      "resource": "res://../art/maps/archipelago_placement_v1/",
+      "category": "tool-only",
+      "evidence": "game/maps/archipelago/building_layout.gd:188,237,265 capture WRITE/PNG output"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 12,
+      "resource": "res://maps/archipelago/assets/buildings/cafe.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 76,
+      "resource": "res://maps/archipelago/assets/buildings/timber_house.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 140,
+      "resource": "res://maps/archipelago/assets/buildings/teal_cottage.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 204,
+      "resource": "res://maps/archipelago/assets/buildings/windmill.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 268,
+      "resource": "res://maps/archipelago/assets/buildings/observatory.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 332,
+      "resource": "res://maps/archipelago/assets/buildings/orange_cottage.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 396,
+      "resource": "res://maps/archipelago/assets/buildings/greenhouse.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 460,
+      "resource": "res://maps/archipelago/assets/buildings/gazebo.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 524,
+      "resource": "res://maps/archipelago/assets/buildings/town_hall.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 588,
+      "resource": "res://maps/archipelago/assets/buildings/red_house.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 652,
+      "resource": "res://maps/archipelago/assets/buildings/purple_house.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 716,
+      "resource": "res://maps/archipelago/assets/buildings/blue_house.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 780,
+      "resource": "res://maps/archipelago/assets/buildings/shop.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 844,
+      "resource": "res://maps/archipelago/assets/buildings/stage.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 897,
+      "resource": "res://maps/archipelago/assets/buildings/picnic_shelter.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 961,
+      "resource": "res://maps/archipelago/assets/buildings/blue_cottage.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 1025,
+      "resource": "res://maps/archipelago/assets/buildings/lighthouse.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/building_placements.json",
+      "line": 1089,
+      "resource": "res://maps/archipelago/assets/buildings/blue_house.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 9,
+      "resource": "res://maps/archipelago/assets/buildings/cafe.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 83,
+      "resource": "res://maps/archipelago/assets/buildings/timber_house.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 153,
+      "resource": "res://maps/archipelago/assets/buildings/teal_cottage.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 247,
+      "resource": "res://maps/archipelago/assets/buildings/windmill.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 341,
+      "resource": "res://maps/archipelago/assets/buildings/observatory.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 387,
+      "resource": "res://maps/archipelago/assets/buildings/orange_cottage.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 473,
+      "resource": "res://maps/archipelago/assets/buildings/greenhouse.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 519,
+      "resource": "res://maps/archipelago/assets/buildings/town_hall.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 565,
+      "resource": "res://maps/archipelago/assets/buildings/red_house.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 631,
+      "resource": "res://maps/archipelago/assets/buildings/purple_house.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 729,
+      "resource": "res://maps/archipelago/assets/buildings/blue_house.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 819,
+      "resource": "res://maps/archipelago/assets/buildings/shop.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 865,
+      "resource": "res://maps/archipelago/assets/buildings/blue_cottage.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 951,
+      "resource": "res://maps/archipelago/assets/buildings/lighthouse.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/door_leaves.json",
+      "line": 1049,
+      "resource": "res://maps/archipelago/assets/buildings/blue_house.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.gd",
+      "line": 20,
+      "resource": "res://../art/maps/archipelago_environment_v1/",
+      "category": "tool-only",
+      "evidence": "game/maps/archipelago/environment_layout.gd:31-32,450,503,540 optional authoring data and capture WRITE/PNG output"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 10,
+      "resource": "res://maps/archipelago/assets/environment/bridge_short.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 41,
+      "resource": "res://maps/archipelago/assets/environment/bridge_long.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 72,
+      "resource": "res://maps/archipelago/assets/environment/tent_orange.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 103,
+      "resource": "res://maps/archipelago/assets/environment/tent_green.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 134,
+      "resource": "res://maps/archipelago/assets/environment/firepit.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 165,
+      "resource": "res://maps/archipelago/assets/environment/bench.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 196,
+      "resource": "res://maps/archipelago/assets/environment/lamp.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 238,
+      "resource": "res://maps/archipelago/assets/environment/round_tree.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 269,
+      "resource": "res://maps/archipelago/assets/environment/conifer.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 300,
+      "resource": "res://maps/archipelago/assets/environment/palm.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 331,
+      "resource": "res://maps/archipelago/assets/environment/shrub.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 362,
+      "resource": "res://maps/archipelago/assets/environment/white_flowers.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 393,
+      "resource": "res://maps/archipelago/assets/environment/yellow_flowers.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 424,
+      "resource": "res://maps/archipelago/assets/environment/bridge_rope.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 455,
+      "resource": "res://maps/archipelago/assets/environment/bridge_boardwalk.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 486,
+      "resource": "res://maps/archipelago/assets/environment/pier.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 517,
+      "resource": "res://maps/archipelago/assets/environment/boat.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 548,
+      "resource": "res://maps/archipelago/assets/environment/picnic_table.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 579,
+      "resource": "res://maps/archipelago/assets/environment/beach_umbrella.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 610,
+      "resource": "res://maps/archipelago/assets/environment/beach_lounger.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 641,
+      "resource": "res://maps/archipelago/assets/environment/cafe_umbrella.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 672,
+      "resource": "res://maps/archipelago/assets/environment/cafe_table.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 703,
+      "resource": "res://maps/archipelago/assets/environment/cafe_chair.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 734,
+      "resource": "res://maps/archipelago/assets/environment/signboard.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 765,
+      "resource": "res://maps/archipelago/assets/environment/timber_fence.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 796,
+      "resource": "res://maps/archipelago/assets/environment/picket_fence.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 827,
+      "resource": "res://maps/archipelago/assets/environment/speaker.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 858,
+      "resource": "res://maps/archipelago/assets/environment/planter.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 889,
+      "resource": "res://maps/archipelago/assets/environment/pink_flowers.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 920,
+      "resource": "res://maps/archipelago/assets/environment/reeds.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 8323,
+      "resource": "res://maps/archipelago/assets/fitted_bridges/18_bridge_short.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 8567,
+      "resource": "res://maps/archipelago/assets/fitted_bridges/49_bridge_boardwalk.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 8816,
+      "resource": "res://maps/archipelago/assets/fitted_bridges/48_bridge_rope.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/environment_layout.json",
+      "line": 9060,
+      "resource": "res://maps/archipelago/assets/fitted_bridges/19_bridge_long.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/island_bake.gd",
+      "line": 26,
+      "resource": "res://maps/archipelago/generated/",
+      "category": "bake-generated",
+      "evidence": ".gitignore:43-44; tools/build_game.ps1:9,12; tools/bake_archipelago.py and tools/bake_survival.py FILES; tools/game_patch.py:162-166; tools/package_release.py:109,112"
+    },
+    {
+      "file": "maps/archipelago/island_bake.gd",
+      "line": 42,
+      "resource": "res://maps/archipelago/assets/",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/archipelago/plots.gd",
+      "line": 27,
+      "resource": "res://maps/archipelago/assets/buildings/teal_cottage.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 10,
+      "resource": "res://maps/survival/assets/pine_tall.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 11,
+      "resource": "res://maps/survival/assets/pine_tall_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 32,
+      "resource": "res://maps/survival/assets/oak_broad.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 33,
+      "resource": "res://maps/survival/assets/oak_broad_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 54,
+      "resource": "res://maps/survival/assets/birch_slim.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 55,
+      "resource": "res://maps/survival/assets/birch_slim_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 76,
+      "resource": "res://maps/survival/assets/bush_round.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 77,
+      "resource": "res://maps/survival/assets/bush_round_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 98,
+      "resource": "res://maps/survival/assets/berry_bush.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 99,
+      "resource": "res://maps/survival/assets/berry_bush_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 120,
+      "resource": "res://maps/survival/assets/fiber_grass.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 121,
+      "resource": "res://maps/survival/assets/fiber_grass_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 142,
+      "resource": "res://maps/survival/assets/stone_pile.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 143,
+      "resource": "res://maps/survival/assets/stone_pile_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 164,
+      "resource": "res://maps/survival/assets/fern_clump.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 165,
+      "resource": "res://maps/survival/assets/fern_clump_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 186,
+      "resource": "res://maps/survival/assets/mushroom_cluster.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 187,
+      "resource": "res://maps/survival/assets/mushroom_cluster_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 208,
+      "resource": "res://maps/survival/assets/fallen_log.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 209,
+      "resource": "res://maps/survival/assets/fallen_log_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 230,
+      "resource": "res://maps/survival/assets/tree_stump.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 231,
+      "resource": "res://maps/survival/assets/tree_stump_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 252,
+      "resource": "res://maps/survival/assets/mossy_boulder.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 253,
+      "resource": "res://maps/survival/assets/mossy_boulder_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 274,
+      "resource": "res://maps/survival/assets/signpost.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 275,
+      "resource": "res://maps/survival/assets/signpost_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 296,
+      "resource": "res://maps/survival/assets/log_bench.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 297,
+      "resource": "res://maps/survival/assets/log_bench_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 318,
+      "resource": "res://maps/survival/assets/camp_supplies.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 319,
+      "resource": "res://maps/survival/assets/camp_supplies_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 340,
+      "resource": "res://maps/survival/assets/firewood_pile.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 341,
+      "resource": "res://maps/survival/assets/firewood_pile_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 362,
+      "resource": "res://maps/survival/assets/forest_ruin.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 363,
+      "resource": "res://maps/survival/assets/forest_ruin_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 384,
+      "resource": "res://maps/survival/assets/sandstone_cliff.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 385,
+      "resource": "res://maps/survival/assets/sandstone_cliff_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 406,
+      "resource": "res://maps/survival/assets/sandstone_boulder.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 407,
+      "resource": "res://maps/survival/assets/sandstone_boulder_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 428,
+      "resource": "res://maps/survival/assets/cut_blocks.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 429,
+      "resource": "res://maps/survival/assets/cut_blocks_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 450,
+      "resource": "res://maps/survival/assets/mine_cart.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 451,
+      "resource": "res://maps/survival/assets/mine_cart_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 472,
+      "resource": "res://maps/survival/assets/quarry_crane.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 473,
+      "resource": "res://maps/survival/assets/quarry_crane_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 494,
+      "resource": "res://maps/survival/assets/dead_tree.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 495,
+      "resource": "res://maps/survival/assets/dead_tree_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 516,
+      "resource": "res://maps/survival/assets/dry_shrub.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 517,
+      "resource": "res://maps/survival/assets/dry_shrub_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 538,
+      "resource": "res://maps/survival/assets/ember_rock.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 539,
+      "resource": "res://maps/survival/assets/ember_rock_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 560,
+      "resource": "res://maps/survival/assets/tool_rack.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 561,
+      "resource": "res://maps/survival/assets/tool_rack_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 582,
+      "resource": "res://maps/survival/assets/snow_pine.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 583,
+      "resource": "res://maps/survival/assets/snow_pine_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 604,
+      "resource": "res://maps/survival/assets/ice_crystal.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 605,
+      "resource": "res://maps/survival/assets/ice_crystal_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 626,
+      "resource": "res://maps/survival/assets/snow_boulder.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 627,
+      "resource": "res://maps/survival/assets/snow_boulder_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 648,
+      "resource": "res://maps/survival/assets/frost_shrub.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 649,
+      "resource": "res://maps/survival/assets/frost_shrub_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 670,
+      "resource": "res://maps/survival/assets/snowman.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 671,
+      "resource": "res://maps/survival/assets/snowman_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 692,
+      "resource": "res://maps/survival/assets/sled.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 693,
+      "resource": "res://maps/survival/assets/sled_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 714,
+      "resource": "res://maps/survival/assets/sled_empty.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 715,
+      "resource": "res://maps/survival/assets/sled_empty_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 736,
+      "resource": "res://maps/survival/assets/snow_fence.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 737,
+      "resource": "res://maps/survival/assets/snow_fence_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 758,
+      "resource": "res://maps/survival/assets/frost_shrine.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/assets/manifest.json",
+      "line": 759,
+      "resource": "res://maps/survival/assets/frost_shrine_lod1.glb",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/survival_bake.gd",
+      "line": 34,
+      "resource": "res://maps/survival/generated/",
+      "category": "bake-generated",
+      "evidence": ".gitignore:43-44; tools/build_game.ps1:9,12; tools/bake_archipelago.py and tools/bake_survival.py FILES; tools/game_patch.py:162-166; tools/package_release.py:109,112"
+    },
+    {
+      "file": "maps/survival/survival_map.gd",
+      "line": 14,
+      "resource": "res://maps/archipelago/assets/",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "maps/survival/survival_map.gd",
+      "line": 15,
+      "resource": "res://maps/archipelago/assets/v5/",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "scripts/interaction_panel.gd",
+      "line": 331,
+      "resource": "res://assets/ui/starseed.svg",
+      "category": "real-missing-resource",
+      "evidence": "game/scripts/interaction_panel.gd:331; use existing res://assets/starseed.svg (PNG fallback: game/scripts/rpg_ui.gd:212-214)"
+    },
+    {
+      "file": "scripts/interiors.gd",
+      "line": 23,
+      "resource": "res://maps/archipelago/assets/environment/",
+      "category": "copied-build-asset",
+      "evidence": ".gitignore:41,50-51,55-56,61-62,67-68; tools/package_release.py:29-31; tracked asset manifest/layout at the reported location"
+    },
+    {
+      "file": "scripts/life_sfx.gd",
+      "line": 17,
+      "resource": "res://assets/sfx/combat/harvest_fiber",
+      "category": "sound-family",
+      "evidence": "game/scripts/life_sfx.gd:64,98; SAMPLES entries resolve to existing <family>_<number>.wav files"
+    },
+    {
+      "file": "scripts/life_sfx.gd",
+      "line": 17,
+      "resource": "res://assets/sfx/combat/harvest_stone",
+      "category": "sound-family",
+      "evidence": "game/scripts/life_sfx.gd:64,98; SAMPLES entries resolve to existing <family>_<number>.wav files"
+    },
+    {
+      "file": "scripts/life_sfx.gd",
+      "line": 18,
+      "resource": "res://assets/sfx/combat/harvest_tree",
+      "category": "sound-family",
+      "evidence": "game/scripts/life_sfx.gd:64,98; SAMPLES entries resolve to existing <family>_<number>.wav files"
+    },
+    {
+      "file": "scripts/patch_boot.gd",
+      "line": 125,
+      "resource": "res://project.binary",
+      "category": "export-generated",
+      "evidence": "tools/build_game.ps1 --export-release; tools/game_patch.py:24,118-120,144-146; game/scripts/patch_boot.gd:125"
+    },
+    {
+      "file": "tests/archetype_gallery.gd",
+      "line": 241,
+      "resource": "res://../artifacts/archetype-gallery.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/asset_motion.gd",
+      "line": 64,
+      "resource": "res://../artifacts/explorer-walk.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/asset_motion.gd",
+      "line": 77,
+      "resource": "res://../artifacts/explorer-gather.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/asset_motion.gd",
+      "line": 85,
+      "resource": "res://../artifacts/explorer-attack.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/audio_bank_check.gd",
+      "line": 76,
+      "resource": "res://../artifacts/audio-bank-check.txt",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/audio_bank_check.gd",
+      "line": 232,
+      "resource": "res://assets/portraits/haeru.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/avatar_everywhere_check.gd",
+      "line": 168,
+      "resource": "res://../artifacts/avatar-everywhere",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/character_scale_review.gd",
+      "line": 49,
+      "resource": "res://../artifacts",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/content_patch.gd",
+      "line": 13,
+      "resource": "res://../artifacts",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/controller_acceptance.gd",
+      "line": 18,
+      "resource": "res://../artifacts",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/controller_motion_review.gd",
+      "line": 17,
+      "resource": "res://../artifacts/controller-motion",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/craft_badge_check.gd",
+      "line": 40,
+      "resource": "res://../artifacts/craft-badge.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/craft_one_check.gd",
+      "line": 171,
+      "resource": "res://../artifacts/craft-one-side-by-side.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/door_sounds_check.gd",
+      "line": 75,
+      "resource": "res://../artifacts/door-sounds-check.txt",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/door_test_capture.gd",
+      "line": 20,
+      "resource": "res://../artifacts/mapdoor/door_test/",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/explorer_b_integration.gd",
+      "line": 12,
+      "resource": "res://../artifacts/explorer-b-game.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/explorer_b_integration.gd",
+      "line": 24,
+      "resource": "res://../artifacts/explorer-b-tool.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/field_objects_check.gd",
+      "line": 148,
+      "resource": "res://../artifacts/field-objects-check.txt",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/furniture_stress.gd",
+      "line": 16,
+      "resource": "res://../artifacts/furniture-stress.json",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/furniture_stress.gd",
+      "line": 39,
+      "resource": "res://../artifacts/furniture-stress.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/furniture_stress.gd",
+      "line": 41,
+      "resource": "res://../artifacts/furniture-stress-results.json",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/haeru_motion_review.gd",
+      "line": 19,
+      "resource": "res://../artifacts/haeru-motion",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/home_visit.gd",
+      "line": 61,
+      "resource": "res://../artifacts/home-visit-guest.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/home_visit.gd",
+      "line": 66,
+      "resource": "res://../artifacts/home-visit-host.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ime_probe.gd",
+      "line": 37,
+      "resource": "res://../artifacts/ime-probe.txt",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/interaction_check.gd",
+      "line": 108,
+      "resource": "res://../artifacts/interaction-editor.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_lab.gd",
+      "line": 20,
+      "resource": "res://maps/archipelago/assets/environment/bench.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_lab.gd",
+      "line": 20,
+      "resource": "res://maps/archipelago/assets/environment/cafe_chair.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_lab.gd",
+      "line": 21,
+      "resource": "res://maps/archipelago/assets/environment/beach_lounger.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_lab.gd",
+      "line": 21,
+      "resource": "res://maps/archipelago/assets/environment/picnic_table.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_lab.gd",
+      "line": 72,
+      "resource": "res://../artifacts/ix",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_lab.gd",
+      "line": 287,
+      "resource": "res://../artifacts/ix/ix_sheet.jpg",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_prop_probe.gd",
+      "line": 9,
+      "resource": "res://maps/archipelago/assets/environment/bench.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_prop_probe.gd",
+      "line": 9,
+      "resource": "res://maps/archipelago/assets/environment/picnic_table.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_prop_probe.gd",
+      "line": 10,
+      "resource": "res://maps/archipelago/assets/environment/beach_lounger.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_prop_probe.gd",
+      "line": 10,
+      "resource": "res://maps/archipelago/assets/environment/cafe_chair.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_sources_check.gd",
+      "line": 153,
+      "resource": "res://maps/archipelago/assets/environment/bench.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_sources_check.gd",
+      "line": 153,
+      "resource": "res://maps/archipelago/assets/environment/picnic_table.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_sources_check.gd",
+      "line": 154,
+      "resource": "res://maps/archipelago/assets/environment/beach_lounger.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/ix_sources_check.gd",
+      "line": 154,
+      "resource": "res://maps/archipelago/assets/environment/cafe_chair.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/life_loop.gd",
+      "line": 26,
+      "resource": "res://../.tools/server-venv/Scripts/python.exe",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/living_objects_check.gd",
+      "line": 138,
+      "resource": "res://../artifacts/clock-tick-1.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/living_objects_check.gd",
+      "line": 140,
+      "resource": "res://../artifacts/clock-tick-2.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/locomotion_continuity.gd",
+      "line": 51,
+      "resource": "res://../artifacts/production-lab-20261003",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/material_restore.gd",
+      "line": 6,
+      "resource": "res://../artifacts/material-cases.json",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/measure_gait.gd",
+      "line": 42,
+      "resource": "res://../artifacts/production-lab-20261003/source-gait-measurement.json",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/monster_gallery.gd",
+      "line": 27,
+      "resource": "res://../artifacts/monsters",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/monsters.gd",
+      "line": 39,
+      "resource": "res://../artifacts/monsters.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/monsters.gd",
+      "line": 46,
+      "resource": "res://../artifacts/monsters-windup.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/patch_update_check.gd",
+      "line": 161,
+      "resource": "res://qa_patch_probe.txt",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/patch_update_check.gd",
+      "line": 162,
+      "resource": "res://qa_patch_filler.bin",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/patch_update_check.gd",
+      "line": 192,
+      "resource": "res://../artifacts/qa-patch/client_policy.json",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/patch_update_check.gd",
+      "line": 278,
+      "resource": "res://qa_patch_probe.txt",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/perf_overlay_check.gd",
+      "line": 96,
+      "resource": "res://../artifacts",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/perf_overlay_hud.gd",
+      "line": 38,
+      "resource": "res://../artifacts",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/picture_furniture.gd",
+      "line": 4,
+      "resource": "res://../artifacts/picture-furniture-20261002/",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/plot_views.gd",
+      "line": 42,
+      "resource": "res://../artifacts/mapinterior",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/settings_check.gd",
+      "line": 498,
+      "resource": "res://../artifacts",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/sfx_bank_check.gd",
+      "line": 23,
+      "resource": "res://assets/sfx/combat/hit_flesh",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/sfx_bank_check.gd",
+      "line": 24,
+      "resource": "res://assets/sfx/ui/hover",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/sfx_bank_check.gd",
+      "line": 25,
+      "resource": "res://assets/sfx/combat/hit_stone",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/sfx_bank_check.gd",
+      "line": 26,
+      "resource": "res://assets/sfx/ui/__no_such_family__",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/sfx_bank_check.gd",
+      "line": 28,
+      "resource": "res://assets/sfx/__test__/single_take",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/shadow_folk_portraits.gd",
+      "line": 21,
+      "resource": "res://../artifacts/shadow-folk-portraits/",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/smoke.gd",
+      "line": 83,
+      "resource": "res://../artifacts/village-preview.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/story_journal.gd",
+      "line": 18,
+      "resource": "res://../artifacts/story-journal.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/studio_binding.gd",
+      "line": 26,
+      "resource": "res://../artifacts/studio-binding.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/studio_e2e.gd",
+      "line": 59,
+      "resource": "res://../artifacts/studio-e2e.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/studio_e2e.gd",
+      "line": 68,
+      "resource": "res://../artifacts/studio-e2e.json",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/studio_flow.gd",
+      "line": 40,
+      "resource": "res://../artifacts/studio-interaction.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/studio_mode_review.gd",
+      "line": 25,
+      "resource": "res://../artifacts",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/studio_review.gd",
+      "line": 13,
+      "resource": "res://../artifacts/studio-review.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/studio_sync.gd",
+      "line": 71,
+      "resource": "res://../artifacts/generated-controls.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/terrain_ab_capture.gd",
+      "line": 22,
+      "resource": "res://../artifacts/terrain_p2/ab/",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/terrain_probe.gd",
+      "line": 190,
+      "resource": "res://maps/archipelago/assets/archipelago_terrain_environment_v1.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/texture_shrink_check.gd",
+      "line": 15,
+      "resource": "res://assets/interior/barrel.glb",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/title_art_check.gd",
+      "line": 29,
+      "resource": "res://assets/title_",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/transition_frames.gd",
+      "line": 114,
+      "resource": "res://../artifacts/transition-frames.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/transition_frames.gd",
+      "line": 115,
+      "resource": "res://../artifacts/transition-frames.txt",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/treasure_spots.gd",
+      "line": 141,
+      "resource": "res://../artifacts/treasure-spots.txt",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/version_gate_check.gd",
+      "line": 176,
+      "resource": "res://../artifacts/qa-version/client_policy.json",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/vfx_check.gd",
+      "line": 201,
+      "resource": "res://../artifacts/vfx_sheet.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/village_furniture.gd",
+      "line": 44,
+      "resource": "res://../artifacts/village-furniture.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/village_rest_check.gd",
+      "line": 133,
+      "resource": "res://../artifacts/village-sit.jpg",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/village_rest_check.gd",
+      "line": 134,
+      "resource": "res://../artifacts/village-sit.jpg",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/vm_edges.gd",
+      "line": 3,
+      "resource": "res://../artifacts/vm-edges.json",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/vm_edges.gd",
+      "line": 13,
+      "resource": "res://../artifacts/vm-edges-results.json",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/vm_parity.gd",
+      "line": 4,
+      "resource": "res://../artifacts/vm-parity.json",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/world_navigation.gd",
+      "line": 27,
+      "resource": "res://../artifacts/harbor-walk.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    },
+    {
+      "file": "tests/world_polish_capture.gd",
+      "line": 135,
+      "resource": "res://assets/portraits/haeru.png",
+      "category": "test-only",
+      "evidence": "game/tests/: test entry point, capture output or deliberately invalid fixture; excluded from deployment sources"
+    }
+  ]
+}

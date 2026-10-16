@@ -1044,17 +1044,21 @@ static func front(root: Node3D, s: Dictionary) -> void:
 		Art.box(root,Vector3(0,KNEE+0.035,hd+WALL*0.5),Vector3(w+2*WALL,0.07,WALL+0.05),cut)
 		return
 	var dx: float = s.door_x
+	# The doorway fits the building's own door (a wide door widens the frame; the walkable gap is
+	# walkable()'s, unchanged).
+	var half := doorway_half(s)
 	for x in [-1,1]:
 		var outer: float = hw+WALL if x>0 else -hw-WALL
-		var inner: float = dx+x*(DOOR_HALF+0.12)
+		var inner: float = dx+x*(half+0.12)
+		if (x>0 and inner>=outer) or (x<0 and inner<=outer): continue
 		var span := absf(outer-inner)
 		var cx := (outer+inner)*0.5
 		Art.box(root,Vector3(cx,KNEE*0.5,hd+WALL*0.5),Vector3(span,KNEE,WALL),wall_color)
 		Art.box(root,Vector3(cx,0.08,hd-0.035),Vector3(span,0.16,0.07),trim)
 		Art.box(root,Vector3(cx,KNEE+0.035,hd+WALL*0.5),Vector3(span,0.07,WALL+0.05),cut)
-		Art.box(root,Vector3(dx+x*(DOOR_HALF+0.06),KNEE*0.5+0.12,hd+WALL*0.5),Vector3(0.14,KNEE+0.24,WALL+0.08),trim)
-		Art.box(root,Vector3(dx+x*(DOOR_HALF+0.06),KNEE+0.27,hd+WALL*0.5),Vector3(0.2,0.06,WALL+0.14),cut)
-	Art.box(root,Vector3(dx,0.02,hd+WALL*0.5),Vector3(DOOR_HALF*2,0.05,WALL+0.12),col(t,"floor_a").lightened(0.15))
+		Art.box(root,Vector3(dx+x*(half+0.06),KNEE*0.5+0.12,hd+WALL*0.5),Vector3(0.14,KNEE+0.24,WALL+0.08),trim)
+		Art.box(root,Vector3(dx+x*(half+0.06),KNEE+0.27,hd+WALL*0.5),Vector3(0.2,0.06,WALL+0.14),cut)
+	Art.box(root,Vector3(dx,0.02,hd+WALL*0.5),Vector3(half*2,0.05,WALL+0.12),col(t,"floor_a").lightened(0.15))
 	var mat_color := col(t,"accent").darkened(0.15)
 	Art.box(root,Vector3(dx,0.03,hd-0.5),Vector3(1.35,0.02,0.72),mat_color.darkened(0.25))
 	Art.box(root,Vector3(dx,0.036,hd-0.5),Vector3(1.15,0.02,0.54),mat_color)
@@ -1091,12 +1095,51 @@ static func front(root: Node3D, s: Dictionary) -> void:
 ## room's front door: real size, centred in the doorway, the hinge (FrontDoor's origin) on its right-hand
 ## edge, opening outward like outside. False when the building has none yet (front() keeps its box door).
 const BuildingDoors = preload("res://maps/archipelago/building_doors.gd")
+## Half the doorway's width in front(): DOOR_HALF, or wider for a building whose own door is wider.
+static func doorway_half(s: Dictionary) -> float:
+	var id := str(s.get("building",""))
+	if BuildingDoors.leaf_mesh(id)==null: return DOOR_HALF
+	return maxf(DOOR_HALF, BuildingDoors.leaf_size(id).x*0.5+0.04)
+
 static func building_door(hinge: Node3D, s: Dictionary, dx: float) -> bool:
 	var id := str(s.get("building",""))
 	var mesh := BuildingDoors.leaf_mesh(id)
 	if mesh==null: return false
+	var leaves := BuildingDoors.leaf_entries(id)
+	if not leaves.is_empty():
+		# Cut along the user's outline: the same leaves as outside (FrontDoor, FrontDoor2), each hinged
+		# where it is outside across the opening, centred in the doorway, opening the same way.
+		var width := BuildingDoors.leaf_size(id).x
+		for i in leaves.size():
+			var entry: Dictionary = leaves[i]
+			var node := hinge
+			if i>0:
+				node=Node3D.new()
+				node.name="FrontDoor%d" % (i+1)
+				hinge.get_parent().add_child(node)
+			var pivot: Array = entry.pivot
+			node.position=Vector3(dx-width*0.5+float(pivot[0]),0,hinge.position.z if i==0 else hinge.position.z)
+			node.set_meta("sign",float(entry.get("sign",1.0)))
+			node.set_meta("door_leaf",id)
+			node.rotation.y=deg_to_rad(FRONT_DOOR_OPEN_DEGREES)*float(entry.get("sign",1.0))
+			var piece := MeshInstance3D.new()
+			piece.name="Mesh"
+			piece.mesh=load(String(entry.mesh))
+			node.add_child(piece)
+		return true
 	var size := BuildingDoors.leaf_size(id)
 	hinge.position.x=dx+size.x*0.5
+	if BuildingDoors.hinge_side(id)=="left":
+		# Hung on the left post like outside: FrontDoor sits in a mount turned over about z, so it
+		# still opens outward with a positive rotation.y (the leaf's frame is turned the same way).
+		var mount := Node3D.new()
+		mount.name="FrontDoorMount"
+		hinge.get_parent().add_child(mount)
+		mount.position=Vector3(dx-size.x*0.5,0,hinge.position.z)
+		mount.basis=Basis(Vector3(-1,0,0),Vector3(0,-1,0),Vector3(0,0,1))
+		hinge.get_parent().remove_child(hinge)
+		mount.add_child(hinge)
+		hinge.position=Vector3.ZERO
 	var leaf := MeshInstance3D.new()
 	leaf.name="Mesh"
 	leaf.mesh=mesh
@@ -1118,7 +1161,11 @@ static func front_door(root: Node3D) -> Node3D:
 ## callers tween it (tween_method). No-op without a door.
 static func set_front_door_open(root: Node3D, amount: float) -> void:
 	var hinge := front_door(root)
-	if hinge: hinge.rotation.y = deg_to_rad(FRONT_DOOR_OPEN_DEGREES)*clampf(amount, 0.0, 1.0)
+	if hinge == null: return
+	# Every leaf of the room's door (FrontDoor, FrontDoor2), each the way it opens ("sign").
+	for leaf in hinge.get_parent().get_children():
+		if String(leaf.name).begins_with("FrontDoor") and leaf is Node3D and not String(leaf.name).ends_with("Mount"):
+			(leaf as Node3D).rotation.y = deg_to_rad(FRONT_DOOR_OPEN_DEGREES)*clampf(amount, 0.0, 1.0)*float(leaf.get_meta("sign", 1.0))
 
 ## A window on a wall: frame, curtains and a view of the outside that follows the
 ## real clock (see view_material). Returns its interaction record.

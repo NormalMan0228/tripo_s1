@@ -7,7 +7,11 @@ extends RefCounted
 ##   CombatFx.strike(app, at, kill := false, parried := false)   a blow lands on an enemy at `at`
 ##   CombatFx.hurt(app)                            the hero takes a hit (sparks + a red edge flash)
 ##   CombatFx.harvest(app, kind, at)               tree / stone / fiber / berry gathered at `at`
+##   CombatFx.harvest_on_contact(app, kind, at)    the same, when the axe/pick actually reaches it
 ##   CombatFx.crafted(app)                         an expedition recipe is made
+##   CombatFx.fuel(app)                            fuel on the campfire (sparks, flare, a puff of smoke)
+##   CombatFx.heal(app) / CombatFx.eat(app)        a bandage / a meal
+##   CombatFx.ended(app, won)                      the run ends: a golden column, or a grey faint
 const Fx := preload("res://scripts/fx.gd")
 const GameSettings := preload("res://scripts/game_settings.gd")
 
@@ -187,3 +191,57 @@ static func crafted(app) -> void:
 	Fx.glow(world, feet+Vector3(0, 1.0, 0), Color("ffd27a"), 2.0, 0.9)
 	Fx.burst(world, feet+Vector3(0, 0.9, 0), "sparkle", 16, Color(0,0,0,0), 0.55)
 	Fx.ring(world, feet, 1.8, Color(1.0, 0.9, 0.6, 0.7), 0.8)
+
+## Fuel on the campfire: a flare and a rising stream of sparks over the flame, a puff of smoke.
+static func fuel(app) -> void:
+	var world := _world(app)
+	if world == null: return
+	var at := Vector3.ZERO
+	var flame = app.get("flame")
+	if flame is Node3D and is_instance_valid(flame) and flame.is_inside_tree(): at = flame.global_position
+	Fx.glow(world, at+Vector3(0, 0.8, 0), Color("ff9a3c"), 2.6, 1.1)
+	Fx.burst(world, at+Vector3(0, 0.5, 0), "spark", 16, Color(0,0,0,0), 0.3)
+	Fx.stream(world, at+Vector3(0, 0.6, 0), "spark", 1.4, 14.0, Color(0,0,0,0), 0.25)
+	Fx.burst(world, at+Vector3(0, 1.1, 0), "smoke", 5, Color("8d8781"), 0.3)
+
+## A bandage: green glints rise round the hero inside a soft green glow and ring.
+static func heal(app) -> void:
+	var world := _world(app)
+	if world == null or not is_instance_valid(app.player): return
+	var feet: Vector3 = app.player.global_position
+	Fx.glow(world, feet+Vector3(0, 1.0, 0), Color("8fe39a"), 1.9, 0.9)
+	Fx.burst(world, feet+Vector3(0, 0.9, 0), "sparkle", 14, Color("b4f5a6"), 0.45)
+	Fx.ring(world, feet, 1.3, Color(0.6, 1.0, 0.65, 0.6), 0.7)
+
+## A meal: a few crumbs at the mouth and a small heart.
+static func eat(app) -> void:
+	var world := _world(app)
+	if world == null or not is_instance_valid(app.player): return
+	var head: Vector3 = app.player.global_position+Vector3(0, 1.45, 0)
+	Fx.burst(world, head, "seed", 6, Color("e2bf7c"), 0.12)
+	Fx.burst(world, head+Vector3(0, 0.3, 0), "heart", 2, Color(0,0,0,0), 0.15)
+
+## The run ends: a won run raises a golden column of glitter with two widening rings; a lost one
+## sinks into a grey puff with a few sleepy z's.
+static func ended(app, won: bool) -> void:
+	var world := _world(app)
+	if world == null or not is_instance_valid(app.player): return
+	var feet: Vector3 = app.player.global_position
+	if won:
+		Fx.glow(world, feet+Vector3(0, 1.2, 0), Color("ffd66b"), 3.2, 1.6)
+		Fx.burst(world, feet+Vector3(0, 1.0, 0), "sparkle", 28, Color(0,0,0,0), 0.7)
+		Fx.stream(world, feet+Vector3(0, 0.4, 0), "sparkle", 2.2, 12.0, Color(0,0,0,0), 0.5)
+		Fx.ring(world, feet, 2.6, Color(1.0, 0.86, 0.45, 0.8), 1.0)
+		Fx.ring(world, feet, 4.0, Color(1.0, 0.9, 0.6, 0.5), 1.5)
+	else:
+		Fx.burst(world, feet+Vector3(0, 0.6, 0), "smoke", 8, Color("7d7a80"), 0.5)
+		Fx.burst(world, feet+Vector3(0, 1.4, 0), "zz", 3, Color(0,0,0,0), 0.2)
+
+## Gathering chips on the frame the tool in hand reaches the node (tool_contact.gd): a trunk is met
+## about chest-high, stone, fibre and berries lower down. Bare hands: at once.
+static func harvest_on_contact(app, kind: String, at: Vector3) -> void:
+	if app == null or not is_instance_valid(app) or not is_instance_valid(app.get("player")): return
+	var ground := _ground(app, at)
+	var aim := ground+Vector3(0, 0.9 if kind == "tree" else 0.35, 0)
+	preload("res://scripts/tool_contact.gd").strike(app.player, aim, func(hit: Vector3):
+		if is_instance_valid(app): harvest(app, kind, Vector3(hit.x, ground.y, hit.z)), 0.6)

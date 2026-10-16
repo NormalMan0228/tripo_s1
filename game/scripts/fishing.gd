@@ -8,6 +8,7 @@ const Art=preload("res://scripts/life_art.gd")
 const Icon=preload("res://scripts/life_icon.gd")
 const Town=preload("res://scripts/town.gd")
 const RpgUi=preload("res://scripts/rpg_ui.gd")
+const Fx=preload("res://scripts/fx.gd")
 ## Ponds: centre, radii, surface height. Everything else wet is the sea at 0 m;
 ## the sea under the north waterfall counts as the stream ("river").
 const PONDS := [[Vector2(51,-42.5),Vector2(12.5,9.5),1.35],[Vector2(-47,44.8),Vector2(16.5,12),1.18]]
@@ -521,10 +522,24 @@ func show_catch(reward: Dictionary) -> void:
 	var t := trophy.create_tween()
 	t.tween_method(func(v: float): trophy.global_position=from.lerp(head,v)+Vector3(0,sin(v*PI)*1.5,0),0.0,1.0,0.55).set_ease(Tween.EASE_OUT)
 	Art.burst(app.world,cast_at,"splash",22)
+	catch_fx(reward,head)
 	app.player.react("craft")
 	build_card(reward)
 	get_tree().create_timer(0.22).timeout.connect(func(): if is_instance_valid(card): life.sfx.play("card",1.0,-7))
 	refresh_hud()
+
+## The catch answers with effects: a ring where it broke the surface; a rare one (3 stars), a new
+## species or a new record also gets a golden glow over the head as it lands and a shower of glints.
+func catch_fx(reward: Dictionary, head: Vector3) -> void:
+	Fx.ring(app.world,cast_at,1.8,Color(1,1,1,0.6),0.8)
+	var data: Dictionary=life.state.get("catalog",{}).get("fish",{}).get(str(reward.get("item","")),{})
+	var special: bool=reward.get("first",false) or reward.get("record",false) or int(data.get("rarity",1))>=3
+	if not special: return
+	get_tree().create_timer(0.5).timeout.connect(func():
+		if not is_instance_valid(trophy): return
+		Fx.glow(app.world,head,Color("ffd66b"),2.4,1.3)
+		Fx.burst(app.world,head,"sparkle",22,Color(0,0,0,0),0.6)
+		Fx.ring(app.world,app.player.global_position,2.4,Color(1.0,0.86,0.45,0.75),1.0))
 
 func dismiss_card() -> void:
 	if is_instance_valid(card):

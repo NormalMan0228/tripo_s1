@@ -29,6 +29,10 @@ const LOOKS := {
 	"kid":{"title":"콩이 · 꼬마","coat":"#e0a43a","pants":"#4a6fa5","boots":"#c0503a","hair":"#3b2a1f","skin":"#f2c8a6","hat":"#e05a4a","bag":"#8a6a40","gear":["cap"]},
 	"stroller":{"title":"새벽 · 산책자","coat":"#4a6a8a","pants":"#3f4248","boots":"#30302e","hair":"#151418","skin":"#c99a74","hat":"#8a3a4a","bag":"#c9b27a","gear":["beanie","scarf"]},
 	"poet":{"title":"가람 · 시인","coat":"#8a5a7a","pants":"#3e3a48","boots":"#3a2a2a","hair":"#4a2a1a","skin":"#efcaa8","hat":"#5a3a6a","bag":"#d9b46a","gear":["beret","scarf"]},
+	# Models not ready yet (ui/day_boni.png, ui/day_sol.png are the reference art): sky-blue and
+	# yellow hair on the procedural villager, 보니's leather tool bag, 솔's tomato-red basket.
+	"boni":{"title":"보니 · 공방 제작 담당","coat":"#f0e2c4","pants":"#4f6a8a","boots":"#7a5034","hair":"#7cc8ee","skin":"#f6d3b8","hat":"#e8875a","bag":"#9a6438","gear":["beret","satchel"]},
+	"sol":{"title":"솔 · 꼬마 정원사","coat":"#7fb35a","pants":"#c7a26a","boots":"#6a4a2e","hair":"#f2cf45","skin":"#f3cfae","hat":"#e6cf8a","bag":"#d4472f","gear":["straw","satchel"]},
 }
 ## Prop colours that do not change from villager to villager.
 const WOOD := "#8b6a48"
@@ -57,6 +61,16 @@ const GREETINGS := {
 	"kid":["헤헤, 깜짝 놀랐지? 나 콩이야!","나 술래잡기 엄청 잘한다? 따라올 수 있으면 따라와 봐!"],
 	"stroller":["산책 중이에요. 새벽이라고 해요.","밤 산책을 더 좋아하지만, 낮의 바다도 예쁘네요."],
 	"poet":["정자에 앉아 시를 짓던 참이에요. 시인 가람이에요.","한 수 들어 보실래요?"],
+	"boni":["안녕하세요! 별씨 공방 제작 담당 보니예요.","만들고 싶은 물건이 있으면 저한테 맡겨요. 뚝딱 만들어 드릴게요!"],
+	"sol":["안녕하세요! 초록 선배 제자, 꼬마 정원사 솔이에요.","토마토 하나 줄까요? 오늘 아침에 딴 거예요!"],
+}
+## First lines by time of day (time_band: morning, afternoon, evening, night) for residents
+## who have them; the GREETINGS line follows.
+const BAND_OPENERS := {
+	"boni":{"morning":"좋은 아침이에요! 오늘도 공방 문 활짝 열었어요.","afternoon":"오후엔 손이 제일 잘 풀려요. 뭐 만들어 볼까요?",
+		"evening":"오늘 일은 끝! 따뜻한 차 한 잔이 생각나네요.","night":"벌써 이렇게 늦었네요. 내일 또 공방에서 봐요."},
+	"sol":{"morning":"아침 이슬 맺힌 새싹, 봤어요? 반짝반짝해요!","afternoon":"햇볕이 쨍쨍! 향초밭에 물 줄 시간이에요.",
+		"evening":"오늘은 씨앗 세 개나 심었어요. 칭찬해 줄래요?","night":"하암… 새싹들도 저도 이제 잘 시간이에요."},
 }
 ## Shadow folk lines that only a shadow would say -> what the daytime villager says.
 const DAY_LINES := {
@@ -117,6 +131,11 @@ static func colour(id: String, key: String) -> Color:
 		"straw": return Color(STRAW)
 	var look: Dictionary = LOOKS.get(id, {})
 	return Color(str(look.get(key, look.get("bag", WOOD))))
+
+## The time-of-day opener for `id` at `hour` (local), translated; "" when it has none.
+static func opener(id: String, hour: float) -> String:
+	var band := "night" if hour < 5.0 or hour >= 21.0 else "morning" if hour < 11.0 else "afternoon" if hour < 17.0 else "evening"
+	return TranslationServer.translate(str(BAND_OPENERS.get(id, {}).get(band, "")))
 
 static func greeting(id: String) -> Array:
 	var lines: Array = []

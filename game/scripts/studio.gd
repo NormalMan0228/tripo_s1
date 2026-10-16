@@ -802,6 +802,7 @@ func build_stage() -> void:
 	if ResourceLoader.exists("res://assets/explorer_b_reference.glb"):
 		hero=AvatarLook.walker(session_avatar,session_version);hero.controls_enabled=false;hero.visual_only=true
 		stage.add_child(hero)
+		preload("res://scripts/held_items.gd").adopt(null,hero) # carried thing (held_items.gd, #64)
 		if not is_instance_valid(seat):
 			seat=RestSeat.new();add_child(seat)
 			# The walk up to a seat uses the room's own walking (no doors or stairs on the way).
@@ -1725,6 +1726,9 @@ func show_story() -> void:
 	story_home=null
 	# A resident's request to come to this room (quests.gd: 하늘's observatory at night).
 	preload("res://scripts/quests.gd").entered_room(self,room)
+	# The notice board's visit requests and the shops' feature check (quest_board.gd, shop_window.gd).
+	preload("res://scripts/quest_board.gd").entered_room(self,room)
+	preload("res://scripts/shop_window.gd").probe(api)
 	# The treasure chest in the owner's own home (treasure.gd).
 	preload("res://scripts/treasure.gd").enter_room(self)
 	if room!="home" or public_room or not visit_host.is_empty() or visiting or api.token.is_empty(): return
@@ -1775,6 +1779,7 @@ func share_presence() -> void:
 	if rich_presence: spot.merge({"vx":clampf(moving.x,-30,30),"vz":clampf(moving.y,-30,30),"t":RemoteMotion.now()})
 	var hub := social_hub()
 	if hub: spot.merge(hub.presence_extra(social_place(),floor_index))
+	spot.merge(preload("res://scripts/held_items.gd").presence_extra(hub)) # carried thing (#64)
 	var response: Dictionary=await api.post_kept("/v1/social/presence",spot,4.0)
 	presence_pending=false
 	if not response.ok and int(response.get("status",0))==422 and not (hub and hub.presence_refused(response)): rich_presence=false
@@ -1829,6 +1834,7 @@ func share_presence() -> void:
 			# Someone who just came in walks in through the front door (not those already here).
 			if peer_baseline and level==0 and is_instance_valid(front_door): front_door.arrive(peers[record.id])
 		AvatarLook.wear(peers[record.id].node,record.get("avatar",{}),version,true)
+		preload("res://scripts/held_items.gd").show_on(peers[record.id].node,record.get("held","")) # carried thing (#64)
 		SocialHud.host_crown(peers[record.id].node,str(record.id)==str(space.get("host_id","")))
 		if int(peers[record.id].get("floor",-1))!=level:
 			# Changing floors is a jump, not a glide across the room.
@@ -3080,6 +3086,9 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	# 단비 at the counter buys the bag's finds: leaf coins and a daily starseed allowance (shop_sell.gd).
 	if lines.is_empty() and id=="shopkeeper" and str(entry.state.get("activity",""))=="shopkeep" and not visiting and not api.token.is_empty():
 		talk.choices.insert(0,["물건 팔기","sell"])
+	# A shop's "가게 보기" and the notice board's "전하기" when the server has them (shop_window.gd).
+	for extra in preload("res://scripts/shop_window.gd").room_choices(self,id,entry.state) if lines.is_empty() else []:
+		talk.choices.insert(maxi(0,talk.choices.size()-1),extra)
 	# The resident's request (quests.gd) comes first, as in the village.
 	if lines.is_empty() and not visiting:
 		var request: Array=preload("res://scripts/quests.gd").room_choice(self,id)

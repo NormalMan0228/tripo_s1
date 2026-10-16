@@ -2,6 +2,7 @@
 import asyncio
 import hashlib
 import json
+import math
 import secrets
 import sqlite3
 import time
@@ -17,8 +18,8 @@ from fastapi.responses import JSONResponse, Response
 from .config import Settings, ROOT, server_version
 from .client_policy import ClientPolicy, ClientGate, FILE_NAME as CLIENT_POLICY_FILE
 from .database import Database
-from . import economy
-from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, Avatar, AvatarEdit, LifeAction, PrefsUpdate
+from . import economy, appearance, display_names
+from .models import strong_password, reserved_username, AdminGrant, Credentials, Mutation, ObjectEdit, Input, Generate, Listing, RunStart, AvatarEdit, NameEdit, LifeAction, PrefsUpdate, CHARACTERS
 from .provider import TripoProvider, ProviderError, validate_glb
 from . import simulation, catalog, homestead, campaign, object_paint, object_shape, tutorial, last_spot, build_rules
 from .security import (BodyLimitMiddleware, SecurityHeadersMiddleware, clean_text, record_event, login_retry_after,
@@ -122,13 +123,27 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
     def mutate(request, body, operation, callback):
         with db.transaction() as conn:
             user = auth(conn,request)
-            fingerprint = digest(body.model_dump_json())
+            # A profile patch's omitted fields preserve the saved values; an explicit
+            # default character also completes selection. They are different writes.
+            fingerprint = digest(body.model_dump_json(exclude_unset=operation=='profile_edit'))
             previous = conn.execute('SELECT * FROM requests WHERE user_id=? AND request_id=?',
                                    (user['id'],str(body.request_id))).fetchone()
             if previous:
-                if previous['operation'] != operation or previous['fingerprint'] != fingerprint:
+                result = json.loads(previous['response'])
+                matches = previous['fingerprint'] == fingerprint
+                legacy_profile = operation == 'profile_edit' and previous['operation'] == operation and 'needs_character_select' not in result
+                if legacy_profile:
+                    legacy_json = appearance.legacy_request_json(body)
+                    matches = matches or (legacy_json is not None and previous['fingerprint'] == digest(legacy_json))
+                if previous['operation'] != operation or not matches:
                     fail('request_id_reused')
-                return json.loads(previous['response'])
+                if legacy_profile:
+                    result['avatar'] = appearance.public_avatar(result['avatar'])
+                if operation == 'profile_edit':
+                    # Selection is account state, not an old outfit snapshot. Retrying
+                    # an earlier save must never reopen a completed selection screen.
+                    result['needs_character_select'] = profile(conn,user['id'])['needs_character_select']
+                return result
             result = callback(conn,user)
             conn.execute('INSERT INTO requests VALUES (?,?,?,?,?,?)',
                          (user['id'],str(body.request_id),operation,fingerprint,json.dumps(result),clock()))
@@ -297,6 +312,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                     code=str((error.get('ctx') or {}).get('error') or '')
                     if error.get('type')=='string_too_long':code='image_too_large'
                     return JSONResponse({'detail':code if code in IMAGE_CODES else 'invalid_image'},422)
+                # A kind this server does not offer (server/craft_kinds.py): the window reloads its list.
+                if tuple(error.get('loc',()))[-1:]==('archetype',):return JSONResponse({'detail':'unknown_craft_kind'},422)
             return JSONResponse({'detail':'invalid_craft_request'},422)
         return JSONResponse({'detail':'invalid_request'},422)
 
@@ -327,6 +344,8 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
               'tripo_keys':len(settings.tripo_keys) or (1 if settings.tripo_key else 0),
               'open_registration':bool(settings.mode=='live' and settings.open_registration)}
         if build_commit: data['build']=build_commit
+        # The 8 characters (models.CHARACTERS): the game unlocks its new character select with these.
+        data.update(avatar_v2=1,characters=list(CHARACTERS))
         if settings.environment: data['environment']=settings.environment
         if settings.fake_tripo: data['tripo_fake']=True
         # Chat v2, friends and the roster (server/friends.py): one definition of the social flags.
@@ -400,19 +419,67 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         return mutate(request,body,'homestead',edit)
 
     def profile(conn,user_id):
-        row=conn.execute('SELECT avatar,version FROM profiles WHERE user_id=?',(user_id,)).fetchone()
-        return {'avatar':json.loads(row['avatar']),'version':row['version']} if row else {'avatar':Avatar().model_dump(),'version':0}
+        row=conn.execute('SELECT avatar,version,needs_character_select FROM profiles WHERE user_id=?',(user_id,)).fetchone()
+        return {'avatar':appearance.public_avatar(row['avatar'] if row else None),
+                'version':row['version'] if row else 0,
+                'needs_character_select':bool(row['needs_character_select']) if row else True}
+
+    def shown_name(conn,user_id):
+        """The shown name (server/display_names.py) and when it may change next (0 = now)."""
+        named=conn.execute('SELECT username,display_name,name_changed FROM users WHERE id=?',(user_id,)).fetchone()
+        changed=float(named['name_changed'] or 0) if named else 0.0
+        return {'display_name':(named['display_name'] or named['username']) if named else '',
+                'display_name_changeable_at':int(changed+display_names.CHANGE_SECONDS) if changed and clock()<changed+display_names.CHANGE_SECONDS else 0}
+
+    # A new display name: checked, unique after normalising (users.display_key), once a day.
+    @app.post('/v1/profile/name')
+    def edit_name(body:NameEdit,request:Request):
+        def save(conn,user):
+            now=clock()
+            current=shown_name(conn,user['id'])
+            try:name=display_names.clean(body.display_name)
+            except display_names.NameError_ as error:fail(str(error),422)
+            if name==current['display_name']:return current
+            if current['display_name_changeable_at']:
+                raise HTTPException(429,'name_change_limited',headers={'Retry-After':str(max(1,int(current['display_name_changeable_at']-now)))})
+            try:conn.execute('UPDATE users SET display_name=?,display_key=?,name_changed=? WHERE id=?',(name,display_names.key(name),now,user['id']))
+            except sqlite3.IntegrityError:fail('name_taken')
+            return shown_name(conn,user['id'])
+        return mutate(request,body,'display_name',save)
+
+    # The characters, their default looks and the parts that can be coloured (no sign-in needed).
+    @app.get('/v1/avatar/catalog')
+    def avatar_catalog():
+        return appearance.catalog()
+
+    @app.get('/v1/profile')
+    def get_profile(request:Request):
+        with db.read() as conn:
+            return profile(conn,auth(conn,request)['id'])
 
     @app.post('/v1/profile')
     def edit_profile(body:AvatarEdit,request:Request):
         def save(conn,user):
             previous=profile(conn,user['id'])
             if body.version!=previous['version']: fail('stale_profile_version')
-            value=body.avatar.model_dump()
+            now=clock()
+            recent=conn.execute('SELECT created FROM profile_edit_events WHERE user_id=? AND created>? ORDER BY created',
+                                (user['id'],now-appearance.EDIT_WINDOW_SECONDS)).fetchall()
+            if len(recent)>=appearance.EDIT_LIMIT:
+                wait=max(1,math.ceil(recent[0]['created']+appearance.EDIT_WINDOW_SECONDS-now))
+                raise HTTPException(429,'avatar_rate_limited',headers={'Retry-After':str(wait)})
+            value=body.avatar.resolve(appearance.saved_avatar(previous['avatar']))
             version=previous['version']+1
-            conn.execute('INSERT INTO profiles VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET avatar=excluded.avatar,version=excluded.version',
-                         (user['id'],json.dumps(value),version))
-            return {'avatar':value,'version':version}
+            # Only one of the 8 new characters completes the first selection (an 0.11.8 wardrobe save does not).
+            needs_select=previous['needs_character_select'] and not body.avatar.chooses_character(request.headers.get('x-villagen-version','')[:40])
+            conn.execute('INSERT INTO profiles(user_id,avatar,version,needs_character_select) VALUES (?,?,?,?) '
+                         'ON CONFLICT(user_id) DO UPDATE SET avatar=excluded.avatar,version=excluded.version,'
+                         'needs_character_select=excluded.needs_character_select',
+                         (user['id'],json.dumps(value),version,int(needs_select)))
+            conn.execute('DELETE FROM profile_edit_events WHERE user_id=? AND created<=?',
+                         (user['id'],now-appearance.EDIT_WINDOW_SECONDS))
+            conn.execute('INSERT INTO profile_edit_events(user_id,created) VALUES (?,?)',(user['id'],now))
+            return {'avatar':appearance.public_avatar(value),'version':version,'needs_character_select':needs_select}
         return mutate(request,body,'profile_edit',save)
 
     def client_ip(request):
@@ -443,8 +510,12 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         with db.transaction() as conn:
             check_signup_limits(conn)
             user_id = uid()
+            # A login id that is someone's display name would let its owner pose as them.
+            name_key = display_names.key(body.username.lower())
+            if conn.execute('SELECT 1 FROM users WHERE display_key=?',(name_key,)).fetchone(): fail('username_unavailable')
             try:
-                conn.execute('INSERT INTO users(id,username,password_hash,shards,created) VALUES (?,?,?,?,?)',(user_id,body.username.lower(),password_hash,0,clock()))
+                conn.execute('INSERT INTO users(id,username,password_hash,shards,created,display_name,display_key) VALUES (?,?,?,?,?,?,?)',
+                             (user_id,body.username.lower(),password_hash,0,clock(),body.username.lower(),name_key))
             except sqlite3.IntegrityError: fail('username_unavailable')
             new_object(conn,user_id,'starter','환영의 나무 의자')
             # The opening story chapter starts with a letter on the desk at home (server/story.py).
@@ -511,7 +582,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             return {'residents':residency,'username':user['username'],'shards':user['shards'],'mode':settings.mode,'role':user['role'],
                 'generation_enabled': settings.mode=='demo' or bool(settings.legacy_generation_enabled and settings.tripo_key and settings.paid_enabled),
                 'studio_tripo_enabled': bool(settings.tripo_key and settings.paid_enabled),
-                'generation_cost':25,'profile':profile(conn,user['id']),'catalog':catalog.public_catalog(),'campaign':campaign.public(conn,user['id']),
+                'generation_cost':25,'profile':profile(conn,user['id']),**shown_name(conn,user['id']),'catalog':catalog.public_catalog(),'campaign':campaign.public(conn,user['id']),
                 'active_run':active['id'] if active else None,
                 # False until the expedition tutorial is cleared once: the game starts it for the first expedition.
                 'tutorial_done':tutorial.done(conn,user['id']),

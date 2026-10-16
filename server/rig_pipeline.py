@@ -2,6 +2,7 @@
 import hashlib
 import json
 
+from . import tripo_budget
 from . import rig_rules
 from .provider import ProviderError
 from .rigged_glb import merge_clips
@@ -34,15 +35,19 @@ async def advance_rig(studio, job, body, parts, part_id, provenance):
             task_entry = entry.setdefault('anims', {}).setdefault(clip, {})
             route, payload = '/animations/retarget', rig_rules.animation_payload(entry['rig']['task'], clip)
             next_state = 'animating'
-        # The same provider key owns the whole dependency chain. The complete estimate was
-        # reserved at confirmation, before even the first mesh POST.
-        studio.reserve_build(job, parts, provenance)
+        # The same provider key owns the whole dependency chain. Each request is reserved before
+        # its POST like a mesh (tripo_budget attempts, codex/budgetsafe).
+        kind = 'rig' if state == 'rig_pending' else 'anim_' + clip
+        predicted = rig_rules.RIG_CREDITS if state == 'rig_pending' else rig_rules.CLIP_CREDITS
+        attempt = studio.reserve_build(job, parts, provenance, part_id, kind, predicted, provider)
         studio.update(job['id'], state='submitting', parts=json.dumps(parts), provenance=json.dumps(provenance))
         result = await provider.request('POST', route, payload)
         task = result.get('task_id')
         if not isinstance(task, str) or not task or len(task) > 200 or '/' in task:
             raise ProviderError('upstream_schema', uncertain=True)
-        task_entry.update(task=task, state='running')
+        with studio.db.transaction() as conn:
+            tripo_budget.record_task(conn, attempt, task, studio.clock())
+        task_entry.update(task=task, state='running', attempt=attempt)
         entry.pop('progress', None)
         save(state=next_state, submitted=studio.clock())
         return None
@@ -53,6 +58,7 @@ async def advance_rig(studio, job, body, parts, part_id, provenance):
         task_entry = entry['anims'][clip]
     studio.overdue(parts)
     result = await provider.task(task_entry['task'])
+    studio.record_attempt(task_entry.get('attempt'), result)
     if result.get('credits_consumed') is not None:
         task_entry['credits_consumed'] = result['credits_consumed']
         studio.record_build_bill(job, parts)

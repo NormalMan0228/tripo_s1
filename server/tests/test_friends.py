@@ -155,7 +155,7 @@ def test_roster_privacy(make_world):
     assert view['bravo']['where'] == {'place': 'workshop'} and view['bravo']['friend']
     assert view['charlie']['where']['host_name'] == 'alice'      # the same village
     assert 'where' not in view['delta'] and view['delta']['place'] == 'expedition'
-    assert set(view['delta']) == {'id', 'username', 'avatar', 'avatar_version', 'friend', 'place'}
+    assert set(view['delta']) == {'id', 'username', 'display_name', 'avatar', 'avatar_version', 'friend', 'place'}
     assert names(w.people(alice)['online'])[0] == 'bravo'           # friends first
     assert w.people(delta)['online_count'] == 4
     # Appear offline: gone from every list, shown offline to friends.
@@ -183,7 +183,7 @@ def test_friends_list_place_last_seen_and_joinable(world):
     w.befriend(alice, bravo)
     w.presence(bravo, scene='home', place='home', floor=1)
     friend = w.people(alice)['friends'][0]
-    assert friend['online'] and friend['where'] == {'place': 'home', 'host_id': bravo.id, 'host_name': 'bravo', 'floor': 1}
+    assert friend['online'] and friend['where'] == {'place': 'home', 'host_id': bravo.id, 'host_name': 'bravo', 'host_display_name': 'bravo', 'floor': 1}
     assert friend['joinable'] and friend['drop_in'] is False and friend['last_seen'] is None
     w.call(bravo, '/v1/social/prefs', drop_in='friends')
     assert w.people(alice)['friends'][0]['drop_in'] is True
@@ -202,7 +202,7 @@ def test_my_village_lists_guests_indoors_invites_and_knocks(world):
     w.call(alice, '/v1/social/invites', username='charlie', kind='village')
     mine = w.people(alice)['my_village']
     assert mine['host']['username'] == 'alice' and not mine['visiting']
-    assert mine['guests'] == [{'id': bravo.id, 'username': 'bravo', 'online': True, 'place': 'home', 'floor': 0}]
+    assert mine['guests'] == [{'id': bravo.id, 'username': 'bravo', 'display_name': 'bravo', 'online': True, 'place': 'home', 'floor': 0}]
     assert names(mine['invites_out']) == ['charlie']
     guest_view = w.people(bravo)['my_village']
     assert guest_view['visiting'] and guest_view['host']['username'] == 'alice' and 'invites_out' not in guest_view

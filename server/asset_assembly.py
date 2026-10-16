@@ -176,8 +176,13 @@ def mesh_glb(vertices, normals, uv, indices, textured=False, generator='Tripotho
     return struct.pack('<III',0x46546c67,2,28+len(js)+len(blob))+struct.pack('<II',len(js),0x4e4f534a)+js+struct.pack('<II',len(blob),0x004e4942)+blob
 
 
-def demo_design(prompt):
-    """Explicit offline fixtures. No claim that this is an LLM prompt interpreter."""
+def demo_design(prompt,archetype=''):
+    """Explicit offline fixtures. No claim that this is an LLM prompt interpreter. A kind the player
+    picked (server/craft_kinds.py) is built as that library type whatever the words say."""
+    if archetype:
+        from .archetypes import fixture_design
+        known=fixture_design(prompt,archetype)
+        if known:return known
     low=prompt.lower()
     def part(id,shape,size,position,pivot=None,rotation=None,color='#d8ab6a',parent=''):
         return dict(id=id,parent=parent,prompt='A standalone '+id,shape=shape,size=size,position=position,pivot=pivot or [0,0,0],rotation=rotation or [0,0,0],color=color)

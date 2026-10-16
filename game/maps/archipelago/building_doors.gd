@@ -8,7 +8,8 @@ extends RefCounted
 ##   DoorFrame               Node3D on the wall: origin on the door's right-hand edge seen from
 ##                           outside, at the threshold; x across, y up, z out of the wall.
 ##   DoorFrame/DoorLeaf      Node3D, the hinge: rotates about its local +Y, rotation.y 0 closed,
-##                           +OPEN_DEGREES open (outward). Child "Mesh": the leaf, drawn with the
+##                           +OPEN_DEGREES open outward (a door hung on its left edge too: its
+##                           DoorFrame is turned over). Child "Mesh": the leaf, drawn with the
 ##                           building's exterior material.
 ##   DoorFrame/DoorOpening   MeshInstance3D, the dark doorway just in front of the painted door,
 ##                           hidden behind the closed leaf; material_override's `inner_light` (0..1).
@@ -28,7 +29,7 @@ const OPENING_LIFT := 0.002
 ## Buildings whose door is made this way. Empty for now: the user is drawing the door outlines the
 ## leaves will be cut along, so every building keeps its painted door and every room its box door
 ## (the hooks are here, they find no leaf). ALL_DOORS true applies it to every door in door_leaves.json.
-const ENABLED := []
+const ENABLED := ["10_red_house"]
 const ALL_DOORS := false
 ## Doors tools/door_leaves.gd cannot find by their wood paint: id -> [across from the door point, height
 ## above the pad, width, height, arch rise] in metres on the wall (the top `rise` a half ellipse). The
@@ -43,7 +44,7 @@ const RECT_OVERRIDES := {
 }
 const OPENING_SHADER := """
 shader_type spatial;
-render_mode unshaded, cull_back, shadows_disabled;
+render_mode unshaded, cull_disabled, shadows_disabled, fog_disabled;
 // 0: nobody home, a dark doorway; 1: a lit room behind it (the 집·문·방문 session drives this).
 uniform float inner_light : hint_range(0.0, 1.0) = 0.0;
 uniform vec3 light_color : source_color = vec3(1.0, 0.74, 0.44);
@@ -59,7 +60,8 @@ void fragment() {
 }
 """
 
-## --no-doors: every building and room keeps the painted door / box door it had (comparisons).
+## --no-doors: every building and room keeps the painted door / box door it had (comparisons);
+## --all-doors: every door in door_leaves.json is on (tests and captures before ALL_DOORS is).
 static var disabled := "--no-doors" in OS.get_cmdline_user_args()
 static var _table: Dictionary = {}
 static var _buildings: Dictionary = {}
@@ -73,11 +75,19 @@ static func table() -> Dictionary:
 	return _table
 
 static func enabled(id: String) -> bool:
-	return not disabled and table().has(id) and (ALL_DOORS or ENABLED.has(id))
+	return not disabled and table().has(id) and (ALL_DOORS or ENABLED.has(id) or "--all-doors" in OS.get_cmdline_user_args())
 
 ## The door leaf of a building (shared by every building with the same model), or null.
+## The leaves of a door cut along the user's outline (tools/door_cutter.gd): [{mesh, hinge, reason,
+## pivot (in the door frame), sign (+1/-1: the rotation that opens it), width, height}]; [] otherwise.
+static func leaf_entries(id: String) -> Array:
+	if not enabled(id): return []
+	return table()[id].get("leaves", [])
+
 static func leaf_mesh(id: String) -> ArrayMesh:
 	if not enabled(id): return null
+	var leaves := leaf_entries(id)
+	if not leaves.is_empty(): return load(String(leaves[0].mesh)) as ArrayMesh if ResourceLoader.exists(String(leaves[0].mesh)) else null
 	var path := String(table()[id].get("mesh", ""))
 	return load(path) as ArrayMesh if ResourceLoader.exists(path) else null
 
@@ -95,6 +105,10 @@ static func leaf_size(id: String) -> Vector3:
 ## opening plane; x across, y up, z out of the wall).
 static func hinge_frame(id: String) -> Transform3D:
 	var rect: Dictionary = table()[id]
+	if rect.has("frame"):
+		# Cut along a drawn outline (tools/door_cutter.gd): the frame as it was cut.
+		var f: Array = rect.frame
+		return Transform3D(Basis(Vector3(f[0], f[1], f[2]), Vector3(f[3], f[4], f[5]), Vector3(f[6], f[7], f[8])), Vector3(f[9], f[10], f[11]))
 	var origin := _vec(rect.origin)
 	var out := _vec(rect.out)
 	var side := _vec(rect.side)
@@ -110,17 +124,54 @@ static func install(host: Node3D) -> void:
 		var building := buildings.get_node_or_null(id) as Node3D
 		if building and enabled(id): attach(building, id)
 
+## "right" or "left": the door's hinge edge seen from outside. Either way DoorLeaf opens outward with a
+## positive rotation.y about its +Y (a left-hung door's DoorFrame is turned over: its +Y points down).
+static func hinge_side(id: String) -> String:
+	return String(table().get(id, {}).get("hinge", "right"))
+
 static func attach(building: Node3D, id: String) -> void:
 	_buildings[id] = building
 	if building.has_node(FRAME): return
 	var mesh := leaf_mesh(id)
 	var doorway := opening_mesh(id)
 	if mesh == null or doorway == null: return
+	cut_building(building, id)
 	var frame := hinge_frame(id)
 	var holder := Node3D.new()
 	holder.name = FRAME
 	holder.transform = frame
 	building.add_child(holder)
+	var leaves := leaf_entries(id)
+	if not leaves.is_empty():
+		# Cut along the user's outline: one hinge per leaf (DoorLeaf, DoorLeaf2) at its pivot in the
+		# frame, each turning by its own sign; the doorway sits right on the cut (nothing left to hide).
+		for i in leaves.size():
+			var entry: Dictionary = leaves[i]
+			var pivot := Node3D.new()
+			pivot.name = "DoorLeaf" if i == 0 else "DoorLeaf%d" % (i+1)
+			pivot.position = _vec(entry.pivot)
+			pivot.set_meta("sign", float(entry.get("sign", 1.0)))
+			holder.add_child(pivot)
+			var piece := MeshInstance3D.new()
+			piece.name = "Mesh"
+			piece.mesh = load(String(entry.mesh)) as ArrayMesh
+			piece.set_meta("door_local_lift", frame.origin.y+pivot.position.y)
+			pivot.add_child(piece)
+		# The cut wall's edge, in the wall's colour, round the doorway (tools/door_cutter.gd REVEAL).
+		var path := String(table()[id].get("reveal", ""))
+		if ResourceLoader.exists(path):
+			var edge := MeshInstance3D.new()
+			edge.name = "DoorReveal"
+			edge.mesh = load(path) as ArrayMesh
+			edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			holder.add_child(edge)
+		var hole := MeshInstance3D.new()
+		hole.name = "DoorOpening"
+		hole.mesh = doorway
+		hole.material_override = _opening_material()
+		hole.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		holder.add_child(hole)
+		return
 	var hinge := Node3D.new()
 	hinge.name = "DoorLeaf"
 	hinge.position = Vector3(0, 0, LEAF_LIFT)
@@ -139,6 +190,52 @@ static func attach(building: Node3D, id: String) -> void:
 	opening.material_override = _opening_material()
 	opening.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	holder.add_child(opening)
+
+## A door cut along a drawn outline leaves nothing of itself on the wall: the building's render meshes
+## lose the triangles that went into the leaf ("drop") and take the parts of split triangles that stay
+## outside the outline (<model>_cut.res). Collision keeps the building's own shapes.
+static func cut_building(building: Node3D, id: String) -> void:
+	var rect: Dictionary = table()[id]
+	if not rect.has("drop") or not ResourceLoader.exists(String(rect.get("cut", ""))): return
+	var pieces := load(String(rect.cut)) as ArrayMesh
+	var drop: Dictionary = rect.drop
+	var by_mesh := {}
+	for key: String in drop:
+		var parts := key.split("|")
+		if parts.size() != 2: continue
+		if not by_mesh.has(parts[0]): by_mesh[parts[0]] = {}
+		by_mesh[parts[0]][int(parts[1])] = drop[key]
+	for path: String in by_mesh:
+		var item := building.get_node_or_null(NodePath(path)) as MeshInstance3D
+		if item == null or item.mesh == null: continue
+		var source := item.mesh
+		var mesh := ArrayMesh.new()
+		for s in source.get_surface_count():
+			var arrays := source.surface_get_arrays(s)
+			if by_mesh[path].has(s):
+				var gone := PackedByteArray()
+				var index: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+				gone.resize(index.size()/3)
+				for tri in by_mesh[path][s]: gone[int(tri)] = 1
+				var kept := PackedInt32Array()
+				kept.resize(index.size())
+				var n := 0
+				for tri in gone.size():
+					if gone[tri] == 1: continue
+					kept[n] = index[tri*3]
+					kept[n+1] = index[tri*3+1]
+					kept[n+2] = index[tri*3+2]
+					n += 3
+				kept.resize(n)
+				arrays[Mesh.ARRAY_INDEX] = kept
+			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			mesh.surface_set_material(mesh.get_surface_count()-1, item.get_active_material(s))
+		for s in pieces.get_surface_count():
+			if pieces.surface_get_name(s).begins_with("cut|"+path+"|"):
+				mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, pieces.surface_get_arrays(s))
+				mesh.surface_set_material(mesh.get_surface_count()-1, pieces.surface_get_material(s))
+		for s in item.get_surface_override_material_count(): item.set_surface_override_material(s, null)
+		item.mesh = mesh
 
 static func _opening_material() -> ShaderMaterial:
 	if _opening_shader == null:
@@ -175,8 +272,11 @@ static func door_opening(id: String) -> MeshInstance3D:
 ## Opens a door by `amount` (0 closed .. 1 open), at once: tween this for an animation.
 static func set_door_open(id: String, amount: float) -> void:
 	var hinge := door_leaf(id)
-	if hinge: hinge.rotation.y = deg_to_rad(OPEN_DEGREES)*clampf(amount, 0.0, 1.0)
+	if hinge == null: return
+	# Every leaf of the door (a pair opens both), each the way it opens (its "sign": in or out).
+	for leaf in hinge.get_parent().get_children():
+		if String(leaf.name).begins_with("DoorLeaf"): (leaf as Node3D).rotation.y = deg_to_rad(OPEN_DEGREES)*clampf(amount, 0.0, 1.0)*float(leaf.get_meta("sign", 1.0))
 
 static func door_open(id: String) -> float:
 	var hinge := door_leaf(id)
-	return clampf(hinge.rotation.y/deg_to_rad(OPEN_DEGREES), 0.0, 1.0) if hinge else 0.0
+	return clampf(hinge.rotation.y*float(hinge.get_meta("sign", 1.0))/deg_to_rad(OPEN_DEGREES), 0.0, 1.0) if hinge else 0.0

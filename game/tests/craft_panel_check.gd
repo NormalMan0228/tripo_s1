@@ -195,6 +195,37 @@ func run() -> void:
 	panel.show_job({"id": "rig", "state": "failed", "error": "rig_failed", "reason": "rig"})
 	expect(labels(panel.status).contains("뼈대와 동작"), "a failed rig says why")
 	panel.show_job({})
+	# The "기능" row (server kinds): 자동 by default; a picked kind goes out as archetype and sets the form's
+	# motion like a guessed one; the craft is built as that kind and the row is 자동 again.
+	var kinds: Array = panel.info.get("kinds", [])
+	expect(panel.kinds_row.visible and kinds.size() >= 10 and panel.kinds_row.buttons.size() == kinds.size() + 1 and panel.kinds_row.chosen == ""
+		and panel.kinds_row.buttons[""].button_pressed and not panel._body().has("archetype"), "the 기능 row offers 자동 and %d kinds" % kinds.size())
+	panel.prompt.text = "작은 나무 상자"
+	panel.kind_info = {}
+	panel.kinds_row.buttons["clock"].pressed.emit()
+	expect(panel.motion.selected == 1 and panel.motion.is_item_disabled(0) and panel.concept_note.text.contains("바늘"), "a picked clock is made moving like a guessed one")
+	panel.kinds_row.buttons["chest"].pressed.emit()
+	expect(panel.motion.selected == 1 and panel.concept_note.text.contains("움직이는 부품"), "a picked chest is made moving (its lid is a separate part)")
+	panel.kinds_row.buttons["lamp"].pressed.emit()
+	panel.kind_info = {}
+	panel._update_options()
+	expect(panel.kinds_row.chosen == "lamp" and panel.kinds_row.buttons["lamp"].theme_type_variation == "GoldButton" and panel.motion.selected == 0
+		and panel._body().get("archetype") == "lamp" and panel.kinds_row.buttons["lamp"].tooltip_text.contains("0.4"), "picking 램프 turns its chip gold and sends archetype")
+	await create_timer(0.4).timeout
+	await capture("kinds")
+	shards = int(app.me.shards)
+	await panel.request()
+	expect(not panel.job_id.is_empty() and panel.kinds_row.chosen == "", "the kind craft is accepted and the row is 자동 again")
+	job = await wait_state(panel, ["awaiting_confirmation", "failed"])
+	expect(str(job.get("provenance", {}).get("archetype")) == "lamp" and bool(job.get("provenance", {}).get("archetype_picked", false))
+		and labels(panel.status).contains("기능: 램프"), "the quote names the picked kind")
+	await capture("kinds-quote")
+	# Cancelled here (the 80 demo starseeds pay for the room craft below, which is built with a picked kind).
+	await app.cancel_craft()
+	await create_timer(0.5).timeout
+	await app.refresh_inventory()
+	expect(app.craft_job.is_empty() and int(app.me.shards) == shards and panel.form.visible, "the kind craft is cancelled and refunded")
+	expect(panel._explain("unknown_craft_kind").contains("기능"), "a kind the server no longer offers is worded")
 	# Photos: any size up to 20 MB is scaled down and re-encoded under 1 MB; bad files say why.
 	var big := Image.create(3000, 2000, false, Image.FORMAT_RGB8)
 	big.fill(Color(0.8, 0.5, 0.2))
@@ -254,16 +285,24 @@ func run() -> void:
 	panel.size_buttons["large"].pressed.emit()
 	expect(panel.style_id == "anime" and panel.size_id == "large" and panel.style_buttons["anime"].button_pressed and not panel.style_buttons["rpg"].button_pressed, "picking a style and a size")
 	studio.prompt.text = "tiny round stool"
+	# The words name a plain seat; the player picks 흔들의자 in the 기능 row.
+	expect(panel.kinds_row.visible and panel.kinds_row.chosen == "", "the room window has the 기능 row on 자동")
+	panel.kinds_row.buttons["rocking_chair"].pressed.emit()
+	expect(panel._body().get("archetype") == "rocking_chair", "the room craft goes out picked as 흔들의자")
 	await studio.generate()
-	expect(not studio.job_id.is_empty(), "room craft request accepted")
+	expect(not studio.job_id.is_empty() and panel.kinds_row.chosen == "", "room craft request accepted")
 	job = await wait_state(panel, ["awaiting_confirmation"])
 	expect(not job.get("concept", {}).is_empty(), "room craft shows the concept picture too")
 	expect(str(job.get("provenance", {}).get("style")) == "anime" and float(job.get("provenance", {}).get("size_m", 0)) == 1.8, "the craft carries the chosen style and size")
 	expect(labels(panel.status).contains("애니메이션"), "the quote names the style")
+	expect(labels(panel.status).contains("기능: 흔들의자"), "the quote names the picked kind")
 	await capture("room-concept")
 	await studio.confirm_job()
 	job = await wait_state(panel, ["ready", "failed"], 40.0)
 	expect(str(job.get("state")) == "ready" and labels(panel.status).contains(tr("여기에 놓기")), "room craft finished with a place-here button")
+	var made: Dictionary = job.get("provenance", {})
+	expect(str(made.get("archetype")) == "rocking_chair" and bool(made.get("archetype_picked", false)) and str(made.get("behaviour", {}).get("rest")) == "sit",
+		"the craft is built as the picked kind (%s, %s)" % [made.get("archetype"), made.get("behaviour")])
 	await create_timer(0.8).timeout
 	await studio.place_crafted(str(job.get("object_id", "")))
 	expect(studio.placement_mode and str(studio.selected.get("id", "")) == str(job.get("object_id", "")), "place-here starts placing the new object")

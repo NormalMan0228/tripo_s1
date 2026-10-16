@@ -12,6 +12,9 @@ extends Node3D
 ## activity spots, water, buildings, bridges and other props, then turned to face
 ## the nearest road so it is used from the path side.
 const NpcGifts = preload("res://scripts/npc_gifts.gd")
+## Event letters (npc_letters.gd) and the board's "오늘의 부탁" (quest_board.gd), both feature-detected.
+const NpcLetters = preload("res://scripts/npc_letters.gd")
+const QuestBoard = preload("res://scripts/quest_board.gd")
 const A := preload("res://scripts/art.gd")
 const Town := preload("res://scripts/town.gd")
 const Roads := preload("res://scripts/roads.gd")
@@ -99,6 +102,7 @@ func setup(main: Node) -> void:
 		add_child(voice)
 		voices.append(voice)
 	await build()
+	QuestBoard.watch(self, app)
 
 ## Places and builds every object. Safe to call once per village build. Paced under the loading
 ## card (load_pace.gd), in one go otherwise.
@@ -337,8 +341,10 @@ func play(sound_name: String, at := Vector3.INF, db := -9.0) -> void:
 # ------------------------------------------------------------------ mesh helpers
 ## Each object is built from a dozen primitives, and drawing every one on its own
 ## cost ~200 draw calls (plus shadow passes) around the square. Fixed parts hanging
-## straight off the object root are merged into one mesh per material; anything an
-## animation holds (stored in the entry), lamps and transparent parts stay separate.
+## straight off the object root are merged into one mesh per surface finish (metal,
+## roughness), each part's colour carried in its vertices, so an object is about one
+## draw; anything an animation holds (stored in the entry), lamps and transparent
+## parts stay separate.
 func merge_static(entry: Dictionary) -> void:
 	var root: Node3D = entry.root
 	var keep := {}
@@ -352,7 +358,13 @@ func merge_static(entry: Dictionary) -> void:
 		if not child is MeshInstance3D or keep.has(child) or child.get_child_count() > 0: continue
 		var material := (child as MeshInstance3D).material_override as StandardMaterial3D
 		if material == null or material.emission_enabled or material.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED: continue
-		var key := "%s|%.2f|%.2f" % [material.albedo_color.to_html(), material.metallic, material.roughness]
+		if material.vertex_color_use_as_albedo or material.albedo_texture != null: continue
+		# Everything about the material but its colour (finish, shading, culling) and the shadow setting.
+		var key := "%d" % (child as MeshInstance3D).cast_shadow
+		for property in material.get_property_list():
+			var property_name: String = property.name
+			if not (int(property.usage) & PROPERTY_USAGE_STORAGE) or property_name == "albedo_color" or property_name.begins_with("resource_") or property_name == "script": continue
+			key += "|%s=%s" % [property_name, str(material.get(property_name))]
 		if not groups.has(key): groups[key] = []
 		groups[key].append(child)
 	for key in groups:
@@ -360,10 +372,23 @@ func merge_static(entry: Dictionary) -> void:
 		if parts.size() < 2: continue
 		var tool := SurfaceTool.new()
 		for part: MeshInstance3D in parts:
-			tool.append_from(part.mesh, 0, part.transform)
+			# The part's colour in its vertices (sRGB, as the material's albedo colour was).
+			var arrays := part.mesh.surface_get_arrays(0)
+			var colors := PackedColorArray()
+			colors.resize((arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size())
+			colors.fill((part.material_override as StandardMaterial3D).albedo_color)
+			arrays[Mesh.ARRAY_COLOR] = colors
+			var coloured := ArrayMesh.new()
+			coloured.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+			tool.append_from(coloured, 0, part.transform)
 		var merged := MeshInstance3D.new()
 		merged.mesh = tool.commit()
-		merged.material_override = parts[0].material_override
+		var finish := (parts[0].material_override as StandardMaterial3D).duplicate() as StandardMaterial3D
+		finish.albedo_color = Color.WHITE
+		finish.vertex_color_use_as_albedo = true
+		finish.vertex_color_is_srgb = true
+		merged.material_override = finish
+		merged.cast_shadow = (parts[0] as MeshInstance3D).cast_shadow
 		root.add_child(merged)
 		for part: MeshInstance3D in parts:
 			root.remove_child(part)
@@ -1006,7 +1031,7 @@ func use_mailbox(entry: Dictionary) -> void:
 	var shown := []
 	for letter in letters:
 		if letter.get("read", true): continue
-		lines.append_array(NpcGifts.letter_lines(letter))
+		lines.append_array(NpcLetters.letter_lines(letter))
 		shown.append(letter.id)
 	lines.append_array(mail_lines() if shown.is_empty() else [])
 	var choices := []
@@ -1021,7 +1046,7 @@ func use_mailbox(entry: Dictionary) -> void:
 ## Every letter again, newest first.
 func reread_letters(letters: Array) -> void:
 	var lines := []
-	for letter in letters: lines.append_array(NpcGifts.letter_lines(letter))
+	for letter in letters: lines.append_array(NpcLetters.letter_lines(letter))
 	if lines.is_empty(): lines = [tr("아직 받은 편지가 없어요.")]
 	if app.has_method("open_dialogue"): app.open_dialogue(tr("나의 우편함"), "", lines, [[tr("우편함 닫기"), Callable()]])
 
@@ -1073,9 +1098,16 @@ func use_notice(entry: Dictionary) -> void:
 	wobble.tween_property(board, "rotation:z", -0.015, 0.1)
 	wobble.tween_property(board, "rotation:z", 0.0, 0.1)
 	var choices := []
+	var lines := notice_lines()
+	# Today's requests (quest_board.gd) when the server pins them; else the board stays read-only.
+	var posts: Dictionary = {}
+	if app.get("api") != null: posts = await QuestBoard.fetch(app.api)
+	if not posts.is_empty():
+		lines.insert(1, QuestBoard.summary(posts))
+		choices.append([tr("✦ 오늘의 부탁"), func(): QuestBoard.open(app, posts)])
 	if app.life and app.life.has_method("open_map"): choices.append([tr("섬 지도 펼치기"), app.life.open_map])
 	choices.append([tr("게시판 닫기"), Callable()])
-	if app.has_method("open_dialogue"): app.open_dialogue(tr("마을 게시판"), "", notice_lines(), choices)
+	if app.has_method("open_dialogue"): app.open_dialogue(tr("마을 게시판"), "", lines, choices)
 
 func notice_lines() -> Array:
 	var now := Time.get_datetime_dict_from_system()
