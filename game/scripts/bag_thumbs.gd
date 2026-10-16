@@ -43,7 +43,9 @@ static func _run(app: Node) -> void:
 	running = true
 	while not queue.is_empty() and is_instance_valid(app) and app.is_inside_tree():
 		var job: Dictionary = queue.pop_front()
-		var model: Node3D = await (loader.call(job.obj) if loader.is_valid() else app.load_object(job.obj))
+		var model: Node3D = null
+		if loader.is_valid(): model = loader.call(job.obj)
+		else: model = await app.load_object(job.obj)
 		if not is_instance_valid(app) or not app.is_inside_tree():
 			if model: model.queue_free()
 			break
