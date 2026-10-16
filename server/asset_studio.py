@@ -373,6 +373,14 @@ def billing(parts):
 
 # A quote awaiting the owner's confirmation has not reached Tripo, so it must
 # not block other players. The single-provider limit is enforced again at confirm.
+ANIMATE_SQL="COALESCE(json_extract(request,'$.animate'),0)=1"
+
+
+def animate_job(row):
+    try:return json.loads(row['request'] or '{}').get('animate') is True
+    except (TypeError,ValueError):return True
+
+
 def tripo_credits_committed(conn,exclude=''):
     """Tripo credits this server has spent or committed: the reported bill of finished jobs, and for
     builds still running (or with an incomplete bill) at least their confirmed quote.
@@ -465,7 +473,8 @@ class Studio:
                 conn.execute("UPDATE studio_jobs SET state='failed',error='planning_interrupted' WHERE id=?",(r['id'],))
                 self.refund(conn,r)
             conn.execute("UPDATE studio_jobs SET state='unknown',error='submission_interrupted' WHERE state='submitting' AND id NOT IN (SELECT job_id FROM studio_leases WHERE expires>?)",(clock(),))
-            conn.execute("UPDATE tripo_job_holds SET credits=0 WHERE job_id IN (SELECT id FROM studio_jobs WHERE state='unknown')")
+            # An unknown rig craft keeps its rig-chain hold (conservative, like the legacy quote) until an operator reconciles it.
+            conn.execute("UPDATE tripo_job_holds SET credits=0 WHERE job_id IN (SELECT id FROM studio_jobs WHERE state='unknown' AND NOT "+ANIMATE_SQL+")")
 
         def manifest(conn,user_id,object_id):
             obj=own(conn,user_id,object_id)
@@ -891,6 +900,11 @@ class Studio:
                 needed+=mesh_credits(model,body.material=='textured',image)
             if body.image_mode=='refine' and not part.get('image_task') and not part.get('refine_attempt'):
                 needed+=CONCEPT_CREDITS
+            if body.animate:
+                # The rig chain (rig + one retarget per clip) is held until each request has its own attempt.
+                if not part.get('rig_attempt') and not part.get('rig',{}).get('task'):needed+=rig_rules.RIG_CREDITS
+                for clip in rig_rules.CLIPS:
+                    if not part.get('anim_'+clip+'_attempt') and not part.get('anims',{}).get(clip,{}).get('task'):needed+=rig_rules.CLIP_CREDITS
         return needed
 
     def reserve_build(self,job,parts,quote,part_id,kind,predicted,tripo):
@@ -957,7 +971,7 @@ class Studio:
                     attempt=tripo_budget.reserve_attempt(conn,limits,job['id'],job['owner_id'],'concept',part['id'],
                         0 if getattr(self.provider,'_in_process_fake',False) else CONCEPT_CREDITS,
                         0,self.clock(),provider_key=getattr(tripo,'fingerprint',''),
-                        craft_extra=mesh_credits(mesh_model,textured,True))
+                        craft_extra=mesh_credits(mesh_model,textured,True)+rig_rules.credits(body.animate))
                 data=await tripo.request('POST','/generation/text-to-image',{'model':'seedream_v4','prompt':prompt})
                 task=data.get('task_id')
                 if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)
@@ -1036,7 +1050,7 @@ class Studio:
             if not row or row['state'] in ('ready','failed','cancelled','unknown'):return
             state='unknown' if error.uncertain else 'failed'
             conn.execute('UPDATE studio_jobs SET state=?,error=?,updated=? WHERE id=?',(state,error.code,self.clock(),job_id))
-            tripo_budget.clear_hold(conn,job_id)
+            if state=='failed' or not animate_job(row):tripo_budget.clear_hold(conn,job_id)
             if state=='failed':self.refund(conn,row)
 
     async def tick(self):
@@ -1046,7 +1060,7 @@ class Studio:
             for row in stale:
                 state='unknown' if row['state']=='submitting' else 'failed'
                 conn.execute('UPDATE studio_jobs SET state=?,error=? WHERE id=?',(state,'worker_lease_expired',row['id']))
-                tripo_budget.clear_hold(conn,row['id'])
+                if state=='failed' or not animate_job(row):tripo_budget.clear_hold(conn,row['id'])
                 if state=='failed':self.refund(conn,row)
             conn.execute('DELETE FROM studio_leases WHERE expires<=?',(self.clock(),))
             jobs=[r[0] for r in conn.execute("SELECT id FROM studio_jobs WHERE state IN ('queued','building') AND updated<? ORDER BY created LIMIT 3",(self.clock()-2,))]
@@ -1238,7 +1252,10 @@ class Studio:
                     if entry['state'] in ('pending','image_ready'):
                         if entry['state']=='pending':self.guard_tripo_cap(job,parts)
                         concept=entry.get('concept_task') if entry.get('use_concept') else None
-                        predicted=mesh_credits(mesh_model,textured,bool(concept or (body.image and (len(parts)==1 or body.image_mode=='refine'))))+rig_rules.credits(body.animate)
+                        mesh_cost=mesh_credits(mesh_model,textured,bool(concept or (body.image and (len(parts)==1 or body.image_mode=='refine'))))
+                        # The key must cover the whole rig chain it will own; the mesh attempt reserves only the mesh
+                        # (the rig chain stays in the job hold until each rig/retarget request reserves its own attempt).
+                        predicted=mesh_cost+rig_rules.credits(body.animate)
                         # A refined image belongs to the key that made it; otherwise any key with credit.
                         if entry.get('key'):
                             tripo=self.provider_for(entry['key'])
@@ -1261,7 +1278,7 @@ class Studio:
                             payload.pop('prompt');payload['input']=token;route='/generation/image-to-model'
                             provenance['image_path']='original_reference_to_tripo'
                         elif body.image:provenance['image_path']='llm_interpreted_part_prompts'
-                        attempt=self.reserve_build(job,parts,provenance,p['id'],'mesh',predicted,tripo)
+                        attempt=self.reserve_build(job,parts,provenance,p['id'],'mesh',mesh_cost,tripo)
                         data=await tripo.request('POST',route,payload)
                         task=data.get('task_id')
                         if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)

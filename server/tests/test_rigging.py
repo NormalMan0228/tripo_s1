@@ -8,6 +8,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from server import tripo_budget
 from server.app import create_app
 from server.asset_studio import tripo_credits_committed, billing
 from server.config import Settings
@@ -88,7 +89,6 @@ def finish(world,job):
     raise AssertionError(status)
 
 
-@pytest.mark.xfail(reason='rig credit accounting is not yet ported to tripo_budget attempts (codex/budgetsafe); TRIPOTHON_RIG_ANIM_ENABLED stays off on the main server', strict=False)
 @pytest.mark.parametrize('concept',[False,True])
 def test_success_chain_reserves_and_exposes_real_clips(world,concept):
     app,c,h,calls,_=world
@@ -122,7 +122,6 @@ def test_success_chain_reserves_and_exposes_real_clips(world,concept):
     with app.state.db.transaction() as db:assert tripo_credits_committed(db)==expected
 
 
-@pytest.mark.xfail(reason='rig credit accounting is not yet ported to tripo_budget attempts (codex/budgetsafe); TRIPOTHON_RIG_ANIM_ENABLED stays off on the main server', strict=False)
 @pytest.mark.parametrize('failure,code,spent',[('rig','rig_failed',35),('retarget','animation_failed',45)])
 def test_failure_refunds_once_but_keeps_provider_spend(world,failure,code,spent):
     app,c,h,calls,faults=world;faults['fail']=failure
@@ -171,7 +170,6 @@ def test_transient_poll_retry_keeps_task_and_submission_count(world,kind):
     assert len(calls)==4
 
 
-@pytest.mark.xfail(reason='rig credit accounting is not yet ported to tripo_budget attempts (codex/budgetsafe); TRIPOTHON_RIG_ANIM_ENABLED stays off on the main server', strict=False)
 @pytest.mark.parametrize('kind',['rig','retarget'])
 def test_ambiguous_submission_holds_reservation_without_resubmit(world,kind):
     app,c,h,calls,faults=world;faults['uncertain']=kind
@@ -280,7 +278,6 @@ def test_known_rig_task_survives_restart(world):
     assert status['state']=='ready' and len(calls)==4
 
 
-@pytest.mark.xfail(reason='rig credit accounting is not yet ported to tripo_budget attempts (codex/budgetsafe); TRIPOTHON_RIG_ANIM_ENABLED stays off on the main server', strict=False)
 def test_tester_budget_reserves_the_entire_chain(world):
     app,c,h,calls,_=world
     with app.state.db.transaction() as db:db.execute('UPDATE users SET is_tester=1')
@@ -289,7 +286,9 @@ def test_tester_budget_reserves_the_entire_chain(world):
     app.state.settings.tester_credit_budget=55
     job,_=start(world)
     with app.state.db.transaction() as db:
-        assert db.execute('SELECT credits FROM tester_credit_spend WHERE reference=?',(job+':build',)).fetchone()[0]==55
+        # The whole chain (mesh 10 + rig 25 + 2 clips x 10) is held for the tester before any POST.
+        assert tripo_budget.committed_credits(db,tester=True)==55
+        assert db.execute('SELECT credits FROM tripo_job_holds WHERE job_id=?',(job,)).fetchone()[0]==55
 
 
 def test_turning_flag_off_stops_paid_steps_and_can_resume(world):
@@ -304,7 +303,6 @@ def test_turning_flag_off_stops_paid_steps_and_can_resume(world):
     assert status['state']=='ready' and len(calls)==4
 
 
-@pytest.mark.xfail(reason='rig credit accounting is not yet ported to tripo_budget attempts (codex/budgetsafe); TRIPOTHON_RIG_ANIM_ENABLED stays off on the main server', strict=False)
 def test_missing_rig_bill_retains_full_reservation(world):
     app,c,h,_,_=world;job,_=start(world);status,_=finish(world,job)
     assert status['state']=='ready'
@@ -342,7 +340,6 @@ def test_static_retarget_output_fails_validation_and_refunds(world):
     assert len(calls)==3
 
 
-@pytest.mark.xfail(reason='rig credit accounting is not yet ported to tripo_budget attempts (codex/budgetsafe); TRIPOTHON_RIG_ANIM_ENABLED stays off on the main server', strict=False)
 def test_provider_overrun_stops_next_paid_stage(world):
     app,c,h,calls,_=world;job,_=start(world)
     for _ in range(4):asyncio.run(app.state.studio.process(job))
@@ -351,6 +348,8 @@ def test_provider_overrun_stops_next_paid_stage(world):
         entry=next(iter(parts.values()));assert entry['state']=='animation_pending'
         entry['rig']['credits_consumed']=180
         db.execute('UPDATE studio_jobs SET parts=? WHERE id=?',(json.dumps(parts),job))
+        # The provider's reported bill lives on the rig attempt (tripo_budget ledger).
+        assert db.execute("UPDATE tripo_attempts SET actual_credits=180 WHERE job_id=? AND kind='rig'",(job,)).rowcount==1
     status,_=finish(world,job)
     assert status['state']=='failed' and status['error']=='craft_over_trial_limit'
     assert len(calls)==2
