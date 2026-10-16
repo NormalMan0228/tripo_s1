@@ -61,6 +61,18 @@ def test_default_and_invalid_mode_are_checked_on_startup(monkeypatch):
         sim.new_run(1, 0., 60.)
 
 
+@pytest.mark.parametrize('mode', ['barrier', 'buff'])
+def test_opening_message_says_whether_the_fire_stops_monsters(monkeypatch, mode):
+    monkeypatch.setenv('TRIPOTHON_CAMPFIRE_MODE', mode)
+    s = sim.new_run(1, 0., 60.)
+    expected = ('낮에는 채집하고 밤에는 모닥불 곁에서 회복하세요. 불은 몬스터를 막지 못해요.'
+                if mode == 'buff' else '낮에는 채집하고 밤에는 모닥불 곁을 지키세요.')
+    assert s['message'] == expected
+    assert sim.public_state(s)['campfire']['blocks_monsters'] is (mode == 'barrier')
+    members = [dict(id='1', username='player1', avatar={})]
+    assert coop.new_world(1, 0., 60., members, 'forest', 'standard')['players']['1']['message'] == expected
+
+
 @pytest.mark.parametrize('saved_mode', ['barrier', 'buff', None])
 def test_saved_rules_survive_environment_change_and_json_restart(monkeypatch, saved_mode):
     saved = run(saved_mode or 'barrier')
@@ -268,6 +280,15 @@ def test_fire_rescue_boost_requires_both_helper_and_downed_inside_radius():
     tick_party(state, 1.)
     assert downed['revive_progress'] == pytest.approx(1.)
     assert downed['revive_rate'] == 1.
+
+
+def test_a_teammate_downed_against_a_bench_can_still_be_revived():
+    state = party()
+    downed = state['players']['0']
+    state['world']['obstacles'] = [dict(kind='bench', x=downed['x'] - .82, z=downed['z'], radius=.55)]
+    assert sim.clear_position(state['world'], downed['x'], downed['z'])
+    tick_party(state, 1.)
+    assert downed['revive_rate'] == 2. and downed['revive_progress'] == pytest.approx(2.)
 
 
 def test_leaving_fire_slows_an_ongoing_rescue_without_erasing_progress():

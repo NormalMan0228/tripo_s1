@@ -219,7 +219,10 @@ def test_disconnect_stale_intent_restart_rewards_exactly_once(world):
         assert all(r.status_code == 200 for r in results)
         reward = results[0].json()['reward']
         assert second.get('/v1/me', headers=hs[0]).json()['shards'] == balances[0]+reward
-        assert second.post(route+'/claim', headers=hs[0], json=mutation()).status_code == 409
+        # A retry after a lost reply (fresh request_id): the same payout back, paid once.
+        again = second.post(route+'/claim', headers=hs[0], json=mutation())
+        assert again.status_code == 200 and again.json() == {'reward': reward, 'already_claimed': True}
+        assert second.get('/v1/me', headers=hs[0]).json()['shards'] == balances[0]+reward
         for index in (1, 2):
             assert post(second, hs[index], route+'/claim')['reward'] == reward
             assert second.get('/v1/me', headers=hs[index]).json()['shards'] == balances[index]+reward

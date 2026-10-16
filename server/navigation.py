@@ -10,10 +10,13 @@ def solids(state):
     return resources+tuple((o['x'],o['z'],o['radius']+.3) for o in state.get('obstacles',[]))
 
 
-def segment_open(state,a,b,radius=.9,pit_radius=1.08):
+def segment_open(state,a,b,radius=.9,pit_radius=1.08,solid_pad=.3):
+    """Resources count at `radius`, authored obstacles at their radius + `solid_pad` (pathing keeps .3;
+    swings pass less than the .25 walking margin of simulation.clear_position)."""
     dx,dz=b[0]-a[0],b[1]-a[1]
     length_sq=max(.0001,dx*dx+dz*dz)
-    obstacles=[(x,z,radius if r==.9 else r) for x,z,r in solids(state)]
+    obstacles=[(n['x'],n['z'],radius) for n in state['nodes'] if n['kind'] in ('tree','stone') and n['quantity']>0]
+    obstacles+=[(o['x'],o['z'],o['radius']+solid_pad) for o in state.get('obstacles',[])]
     if pit_radius: obstacles.append((0.,0.,pit_radius))
     for x,z,r in obstacles:
         t=max(0.,min(1.,((x-a[0])*dx+(z-a[1])*dz)/length_sq))

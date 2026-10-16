@@ -683,11 +683,13 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         if not row: fail('run_not_found',404)
         return row
 
+    def claimed_bonus(conn,user_id,run_id):
+        # The story bonus this run's claim paid (ledger), 0 when it paid none.
+        recorded=conn.execute("SELECT amount FROM ledger WHERE user_id=? AND reason='story_reward' AND reference=(SELECT chapter_id FROM campaign_progress WHERE user_id=? AND completed_run=?)",(user_id,user_id,run_id)).fetchone()
+        return recorded[0] if recorded else 0
+
     def run_reply(conn,user_id,row,state):
-        if row['claimed']:
-            recorded=conn.execute("SELECT amount FROM ledger WHERE user_id=? AND reason='story_reward' AND reference=(SELECT chapter_id FROM campaign_progress WHERE user_id=? AND completed_run=?)",(user_id,user_id,row['id'])).fetchone()
-            bonus=recorded[0] if recorded else 0
-        else:bonus=campaign.pending_bonus(conn,user_id,state)
+        bonus=claimed_bonus(conn,user_id,row['id']) if row['claimed'] else campaign.pending_bonus(conn,user_id,state)
         return dict(id=row['id'],reward=row['reward']+bonus,story_bonus=bonus,claimed=bool(row['claimed']),**simulation.public_state(state))
 
     @app.get('/v1/runs/{run_id}')
@@ -703,7 +705,9 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             if body.sequence <= state['sequence']: fail('stale_input')
             state['sequence']=body.sequence
             simulation.advance(state,clock(),body.dx,body.dz,body.sprint)
-            if body.action: state['message']=simulation.action(state,body.action,body.target)
+            # A run that this tick ended (advance: won or lost) keeps its ending line; an action held in
+            # the same request (a repeating attack/gather key) is not tried on it.
+            if body.action and state['status']=='active': state['message']=simulation.action(state,body.action,body.target)
             award=simulation.reward(state)
             conn.execute('UPDATE runs SET state=?,status=?,reward=? WHERE id=?',(json.dumps(state),state['status'],award,run_id))
             if state['status']=='won' and state.get('tutorial'): tutorial.mark(conn,user['id'],run_id,clock())
@@ -714,8 +718,14 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
         def finish(conn,user):
             row=own_run(conn,user['id'],run_id)
             if row['status']!='won': fail('run_not_won')
-            if row['claimed']: fail('reward_already_claimed')
-            state=json.loads(row['state']);bonus=campaign.pending_bonus(conn,user['id'],state)
+            state=json.loads(row['state'])
+            if row['claimed']:
+                # Paid already: a retry of a claim whose reply was lost (the game sends a fresh
+                # request_id) gets the recorded payout again and pays nothing, so the results card
+                # lets the player go home instead of refusing every press.
+                bonus=claimed_bonus(conn,user['id'],run_id)
+                return {'reward':row['reward']+bonus,'story_bonus':bonus,'chapter_completed':state.get('chapter_id') if bonus else None,'already_claimed':True}
+            bonus=campaign.pending_bonus(conn,user['id'],state)
             if bonus:
                 conn.execute('INSERT INTO campaign_progress VALUES (?,?,?,?)',(user['id'],state['chapter_id'],run_id,clock()))
                 money(conn,user['id'],bonus,'story_reward',state['chapter_id'])

@@ -6,6 +6,7 @@ extends Node3D
 ## Night readability: a per-instance additive overlay adds a soft variant-coloured rim, re-lights the
 ## GLB's emission map (eyes, embers, ice, spores) and carries the hit flash, so the shared imported
 ## materials are never duplicated.
+const AnimLod = preload("res://scripts/anim_lod.gd")
 const DIR := "res://assets/monsters/"
 const VARIANTS := ["forest", "quarry", "frost"]
 const LOOPS := ["idle", "walk", "run"]
@@ -46,6 +47,13 @@ var rim := 0.22
 var flash := 0.0
 ## Scale a stand-in is drawn at (shadow_beast.gd): the walk and run clips cover that much more ground.
 var stride := 1.0
+## Overlay values last sent to the shader: _process sends one only when it moved.
+var sent_glow := -1.0
+var sent_rim := -1.0
+var sent_flash := -1.0
+## Animation level of detail (anim_lod.gd): frames since the last advance and the time they held.
+var lod_frame := 0
+var lod_clock := 0.0
 
 static func path_for(p_species: String, p_variant: String) -> String:
 	return DIR + p_species + "_" + (p_variant if p_variant in VARIANTS else "forest") + ".glb"
@@ -93,6 +101,8 @@ func setup(p_species: String, p_variant: String) -> bool:
 		model = null
 		return false
 	player = players[0]
+	# Advanced by _process: every frame while on screen, every third off it (lod_stride).
+	player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	for loop_name in LOOPS:
 		if player.has_animation(loop_name): player.get_animation(loop_name).loop_mode = Animation.LOOP_LINEAR
 	if overlay_shader == null:
@@ -169,9 +179,33 @@ func locomote(ground_speed: float) -> void:
 func hit_flash() -> void:
 	flash = 1.0
 
+## 1 while any of the body can be on screen (or there is no camera), else 3. A tall body is judged
+## at its middle with half its height added to anim_lod.gd's margin, so a boss whose head is in view
+## keeps animating every frame.
+func lod_stride() -> int:
+	var frustum := AnimLod.planes(get_viewport().get_camera_3d())
+	if frustum.is_empty(): return 1
+	var half := 0.5 * height * stride
+	if AnimLod.inside(frustum, global_position + Vector3(0, half, 0), AnimLod.MARGIN + half): return 1
+	return 3
+
 func _process(delta: float) -> void:
+	if is_instance_valid(player) and player.callback_mode_process == AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL:
+		lod_clock += delta
+		lod_frame += 1
+		if lod_frame % lod_stride() == 0:
+			player.advance(lod_clock)
+			lod_clock = 0.0
 	if overlay == null: return
 	flash = maxf(0.0, flash - delta * 5.0)
-	overlay.set_shader_parameter("glow", glow)
-	overlay.set_shader_parameter("rim", rim)
-	overlay.set_shader_parameter("flash", flash)
+	# Each set queues a uniform upload: the breathing glow goes by visible steps, the rim when a
+	# caller changes it, the flash only while it fades.
+	if absf(glow - sent_glow) > 0.01:
+		sent_glow = glow
+		overlay.set_shader_parameter("glow", glow)
+	if rim != sent_rim:
+		sent_rim = rim
+		overlay.set_shader_parameter("rim", rim)
+	if flash != sent_flash:
+		sent_flash = flash
+		overlay.set_shader_parameter("flash", flash)

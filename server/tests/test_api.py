@@ -97,7 +97,9 @@ def test_survival_rejects_time_position_score_and_replay(world):
     claim=mutation(); r=c.post(route+'/claim',headers=a,json=claim)
     assert r.status_code==200
     assert c.post(route+'/claim',headers=a,json=claim).json()==r.json()
-    assert c.post(route+'/claim',headers=a,json=mutation()).status_code==409
+    # The game's retry after a lost reply carries a fresh request_id: the same payout back, paid once.
+    again=c.post(route+'/claim',headers=a,json=mutation())
+    assert again.status_code==200 and again.json()=={**r.json(),'already_claimed':True}
     assert c.get('/v1/me',headers=a).json()['shards']==80+r.json()['reward']
 
 def test_persistence_and_mode_boundary(world):

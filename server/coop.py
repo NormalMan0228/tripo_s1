@@ -124,7 +124,8 @@ def apply_input(state, user_id, body, now):
     actor['last_seen'] = now
     actor['sequence'] = body.sequence
     actor['intent'] = dict(dx=body.dx, dz=body.dz, sprint=body.sprint, at=now)
-    if body.action and actor['hp'] > 0 and not actor['withdrawn']:
+    # Not on a world this tick ended (advance -> finish): the member keeps the ending, not '이미 종료'.
+    if body.action and actor['hp'] > 0 and not actor['withdrawn'] and state['world']['status'] == 'active':
         view = actor_view(state, user_id)
         actor['message'] = simulation.action(view, body.action, body.target)
         actor.update({key: view[key] for key in PLAYER_FIELDS if key in view and key != 'message'})

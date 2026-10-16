@@ -35,7 +35,10 @@ def test_story_gates_authoritative_map_and_once_only_bonus(tmp_path):
             first=mutation();reply=c.post('/v1/runs/'+rid+'/claim',headers=a,json=first)
             assert reply.json()['story_bonus']==chapter['bonus']
             assert c.post('/v1/runs/'+rid+'/claim',headers=a,json=first).json()==reply.json()
-            assert c.post('/v1/runs/'+rid+'/claim',headers=a,json=mutation()).status_code==409
+            wallet=c.get('/v1/me',headers=a).json()['shards']
+            again=c.post('/v1/runs/'+rid+'/claim',headers=a,json=mutation())
+            assert again.status_code==200 and again.json()=={**reply.json(),'already_claimed':True}
+            assert c.get('/v1/me',headers=a).json()['shards']==wallet
             assert c.get('/v1/runs/'+rid,headers=a).json()['reward']==ready['reward']
         assert all(x['completed'] for x in c.get('/v1/me',headers=a).json()['campaign'])
         assert not any(x['completed'] for x in c.get('/v1/me',headers=b).json()['campaign'])

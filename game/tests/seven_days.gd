@@ -146,8 +146,10 @@ func play() -> void:
 	if not chapter.is_empty():
 		for entry in app.me.campaign:
 			if entry.id==chapter:expect(entry.completed,"story completion persisted in journal")
+	# A retry under a fresh request_id (the reply was lost) gets the same payout back and pays nothing twice.
 	var duplicate: Dictionary=await app.api.post("/v1/runs/"+run_id+"/claim",app.api.mutation())
-	expect(not duplicate.ok and duplicate.error=="reward_already_claimed","second reward claim rejected")
+	var wallet: Dictionary=await app.api.request("/v1/me")
+	expect(duplicate.ok and bool(duplicate.data.get("already_claimed",false)) and int(duplicate.data.reward)==reward and wallet.ok and int(wallet.data.shards)==wallet_before+reward,"second reward claim pays nothing twice")
 	await capture("full-run-home")
 	print("SEVEN_DAYS_COMPLETE real_seconds=",real_seconds," reward=",reward)
 	await app.logout()

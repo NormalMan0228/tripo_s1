@@ -20,7 +20,9 @@ def clear_position(s, x, z, radius=.85):
 
 
 def clear_swing(s, a, b):
-    return navigation.segment_open(s,(a['x'],a['z']),(b['x'],b['z']),.55,0)
+    # Obstacles count at radius+.2 here: an actor pressed against a rock, bench or tent stands at
+    # radius+.25 (clear_position), so its swings, strikes and revives must not start inside the solid.
+    return navigation.segment_open(s,(a['x'],a['z']),(b['x'],b['z']),.55,0,.2)
 
 
 def map_bounds(s):
@@ -296,14 +298,18 @@ def new_run(seed, now, day_seconds, map_id='forest', difficulty='standard'):
             raise RuntimeError('forest_layout_exhausted')
         nodes.append({'id': f'n{i}', 'kind': kind, 'x': round(x, 2), 'z': round(z, 2),
                       'quantity': 6 if kind == 'tree' else 4, 'regrow_at': 0})
-    return {'campfire_mode':campfire.configured_mode(), 'map_id':map_id,'difficulty':difficulty,'obstacles':deepcopy(region['obstacles']),
+    # The opening line says what the fire does: a buff fire heals and strengthens but lets monsters in.
+    fire_mode = campfire.configured_mode()
+    return {'campfire_mode':fire_mode, 'map_id':map_id,'difficulty':difficulty,'obstacles':deepcopy(region['obstacles']),
             'hazards':deepcopy(region['hazards']), 'layout_version':region.get('layout_version'), 'x': 0., 'z': 1.4, 'hp': 100., 'hunger': 100., 'stamina': 100., 'sprinting': False,
             'sprint_recover_at': 0., 'elapsed': 0., 'last_wall': now,
             'day_seconds': day_seconds, 'stage_base': day_seconds, 'stage_count': region['stages'],
             'boss': region['boss'], 'tutorial': bool(region.get('tutorial')), 'inventory': {'wood': 5 if difficulty=='relaxed' else 3, 'stone': 0, 'berry': 6 if difficulty=='relaxed' else 4, 'fiber': 0,
             'axe': 0, 'spear': 0, 'soup': 0, 'bandage': 0}, 'nodes': nodes, 'enemies': [],
             'fire_until': 0., 'harvested': 0, 'kills': 0, 'last_action': -10., 'last_attack': -10.,
-            'spawned_night': 0, 'sequence': 0, 'message': '낮에는 채집하고 밤에는 모닥불 곁을 지키세요.', 'status': 'active'}
+            'spawned_night': 0, 'sequence': 0, 'message': ('낮에는 채집하고 밤에는 모닥불 곁에서 회복하세요. 불은 몬스터를 막지 못해요.'
+                                                 if fire_mode == 'buff' else '낮에는 채집하고 밤에는 모닥불 곁을 지키세요.'),
+            'status': 'active'}
 
 def advance(s, now, dx=0., dz=0., sprint=False, solo=True):
     """One tick of a solo run. A party member's view (coop.py, solo=False) takes only its own
@@ -441,9 +447,11 @@ def action(s, kind, target=''):
         if enemy is None or gap(enemy) > 2.6:
             return '가까운 적이 없습니다.'
         enemy['hp'] -= (25 if inv['spear'] else 10) * campfire.attack_multiplier(s)
-        # Successful hits interrupt a telegraphed strike briefly (a boss only while it walks).
+        # Successful hits interrupt a telegraphed strike briefly (a boss only while it walks); a hit
+        # never shortens a longer recovery already running (a charge's stun, a missed strike's pause).
         if not enemy.get('boss') or enemy.get('phase') == 'chase':
-            enemy.update(phase='recover',phase_until=now+.4)
+            longer = enemy.get('phase_until', 0.) if enemy.get('phase') == 'recover' else 0.
+            enemy.update(phase='recover',phase_until=max(now+.4, longer))
         if enemy['hp'] <= 0:
             s['enemies'].remove(enemy)
             s['kills'] += 1

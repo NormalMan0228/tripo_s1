@@ -84,6 +84,11 @@ func run() -> void:
 	await create_timer(2.0).timeout
 	while app.ticking: await process_frame
 	expect(app.world_movement_allowed(), "the expedition takes movement input")
+	# A chat line handing the keys back (chat_box._gave_keys) leaves the server-steered walker's own
+	# controls off; on, it faced along the correction slides again. The checks below run after it.
+	var chat := root.find_child("ChatBox", true, false)
+	if chat and chat.has_method("_gave_keys"): chat.call("_gave_keys")
+	expect(not app.player.controls_enabled, "giving the chat keys back keeps the expedition walker server-steered")
 	process_frame.connect(watch_frame)
 	# 1. Walk right and stop: the walker faces right.
 	await walk("move_right", 1.0)

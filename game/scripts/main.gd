@@ -505,6 +505,11 @@ func error_message(code: String) -> String:
 		"too_many_registrations":tr("이 곳에서는 오늘 계정을 더 만들 수 없어요. 만든 계정으로 로그인해 주세요."),
 		"registration_closed_today":tr("오늘은 새 모험가를 더 받을 수 없어요. 내일 다시 찾아와 주세요."),
 		"client_update_required":tr("새 버전을 받아야 계속할 수 있어요."),
+		# Expedition refusals, in the words the party window already uses (social.gd perform).
+		"party_expedition_active":tr("진행 중인 협동 탐험으로 돌아가 주세요."),
+		"member_has_solo_expedition":tr("개인 생존 탐험을 마친 뒤 파티로 출발해 주세요."),
+		"chapter_locked":tr("이전 장을 먼저 완료하세요"),
+		"run_not_found":tr("탐험이 끝났습니다. 마을에서 다시 준비해 보세요."),
 		"server_maintenance":tr("서버 점검 중이에요. 잠시 뒤 다시 들어와 주세요.")}
 	messages.merge(VillageBuild.BuildRules.server_words())
 	if not preload("res://scripts/build_mode.gd").developer():
@@ -2120,8 +2125,9 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	camp_status=text(navigation,"",12)
 	camp_status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	camp_status.custom_minimum_size=Vector2(210,0)
-	# Two lines (distance and fire, warmth); the ground's line on ice or embers makes a third.
-	camp_status.max_lines_visible=3
+	# Two lines (distance and fire, warmth); a buff fire's night warning or a co-op rescue
+	# (camp_warmth_text) and the ground's line on ice or embers make up to four.
+	camp_status.max_lines_visible=4
 	camp_status.custom_minimum_size.y=camp_status.get_line_height()*2+camp_status.get_theme_constant("line_spacing")
 	await LoadPace.step("expedition bag")
 	right=panel(Vector2(948,20),308,"hero")
@@ -2301,18 +2307,26 @@ func tick_run() -> void:
 		elif feedback.contains("피웠습니다"):
 			CombatAudio.play(self,"fuel",Vector3.ZERO)
 			preload("res://scripts/combat_fx.gd").fuel(self)
-		elif feedback.contains("공격!") or feedback=="가까운 적이 없습니다.":
+		elif feedback.contains("공격!") or feedback.contains("우두머리를 쓰러뜨렸습니다") or feedback=="가까운 적이 없습니다.":
+			# The boss's killing blow answers "우두머리를 쓰러뜨렸습니다!" (simulation.action): the same swing, hit and kill.
 			var weapon: String="spear" if run.inventory.spear>0 else "axe" if run.inventory.axe>0 else ""
 			var struck_enemy := {}
 			var hp_left := 0.0
-			for enemy in run.enemies:
-				var hp_after := 0.0
-				for after in result.data.enemies:
-					if after.id==enemy.id: hp_after=after.hp
-				if hp_after<enemy.hp:
-					struck_enemy=enemy
-					hp_left=hp_after
-					break
+			# A miss struck nobody: an enemy gone from this answer left at dawn or to a partner's blow.
+			# Of the enemies that lost health, the blow is on the nearest by the gap to its body (the
+			# server's own pick); in co-op a partner may have struck another one in the same answer.
+			var nearest := INF
+			if feedback!="가까운 적이 없습니다.":
+				for enemy in run.enemies:
+					var hp_after := 0.0
+					for after in result.data.enemies:
+						if after.id==enemy.id: hp_after=after.hp
+					if hp_after>=float(enemy.hp): continue
+					var gap: float=Vector2(float(enemy.x)-float(result.data.x),float(enemy.z)-float(result.data.z)).length()-float(enemy.get("body",0.0))
+					if gap<nearest:
+						nearest=gap
+						struck_enemy=enemy
+						hp_left=hp_after
 			var kill: bool=not struck_enemy.is_empty() and hp_left<=0
 			CombatAudio.swing(self,weapon,kill)
 			HeroVoice.play(self,"attack_heavy" if kill or CombatAudio.combo%3==0 else "attack")
@@ -2400,6 +2414,47 @@ func walker_clear(x: float, z: float) -> bool:
 		if str(n.get("kind","")) in ["tree","stone"] and float(n.get("quantity",0))>0 and Vector2(x-float(n.x),z-float(n.z)).length()<0.85: return false
 	return true
 
+## A barrier fire keeps the night's monsters out; a buff fire (server campfire mode "buff") heals
+## and strengthens the hero, but monsters walk in. run.campfire.blocks_monsters says which; an older
+## server without run.campfire only had the barrier.
+func campfire_blocks() -> bool:
+	var camp = run.get("campfire")
+	return not camp is Dictionary or bool(camp.get("blocks_monsters",true))
+
+## The camp card's line under the distance and fire (camp_status): the barrier's wording, or a buff
+## fire's heal and attack bonus (run.buffs: "campfire_regeneration" inside the light, "warmed" for a
+## few seconds after) with a night warning that monsters come in; a downed hero's rescue (run.revive)
+## in its place, and a downed teammate's (players[].revive) under it.
+func camp_warmth_text() -> String:
+	var line: String=tr("지도 중앙의 ▲로 돌아오세요")
+	var warm: bool=bool(run.get("warm",false))
+	var revive = run.get("revive")
+	var downed: bool=revive is Dictionary
+	if downed:
+		line=tr("동료가 구조 중 %d%%") % roundi(float(revive.get("progress",0.0))*100.0) if bool(revive.get("active",false)) else tr("쓰러짐 · 동료가 곁에 멈춰 서면 일어나요")
+	elif campfire_blocks():
+		if warm: line=tr("불빛 안 · 밤의 위협을 막아 줍니다")
+	else:
+		var regen := false
+		var warmed := 0.0
+		var attack := 1.1
+		for buff in run.get("buffs",[]):
+			if not buff is Dictionary: continue
+			if str(buff.get("id",""))=="campfire_regeneration": regen=true
+			elif str(buff.get("id",""))=="warmed":
+				warmed=float(buff.get("remaining",0.0))
+				attack=float(buff.get("attack_multiplier",attack))
+		var bonus: int=roundi((attack-1.0)*100.0)
+		if regen: line=tr("불빛 안 · 회복 · 공격력 +%d%%") % bonus
+		elif warmed>0.0: line=tr("온기 · 공격력 +%d%% · %d초") % [bonus,ceili(warmed)]
+	var extra := ""
+	for mate in run.get("players",[]):
+		if not mate is Dictionary or str(mate.get("id",""))==str(run.get("self_id","")) or not mate.get("revive") is Dictionary: continue
+		extra=tr("동료 구조 중 %d%%") % roundi(float(mate.revive.get("progress",0.0))*100.0) if bool(mate.revive.get("active",false)) else tr("동료가 쓰러졌어요 · 곁에 멈춰 서세요")
+		break
+	if extra.is_empty() and warm and not downed and bool(run.get("night",false)) and not campfire_blocks(): extra=tr("몬스터는 불빛 안에도 들어와요")
+	return line if extra.is_empty() else line+"\n"+extra
+
 func update_run() -> void:
 	if coop_run:
 		social.sync_peers(run.get("players", []))
@@ -2425,7 +2480,7 @@ func update_run() -> void:
 	stamina_readout.text="%d / 100" % int(run.get("stamina",100))
 	for item in quick_counts: quick_counts[item].text=str(int(run.inventory[item]))
 	var camp_distance := Vector2(run.x,run.z).length()
-	camp_status.text=tr("야영지 %.0fm · 불 %d초\n%s") % [camp_distance,run.fire_remaining,tr("불빛 안 · 밤의 위협을 막아 줍니다") if run.get("warm",false) else tr("지도 중앙의 ▲로 돌아오세요")]
+	camp_status.text=tr("야영지 %.0fm · 불 %d초\n%s") % [camp_distance,run.fire_remaining,camp_warmth_text()]
 	if run.get("terrain_effect","")=="ice": camp_status.text+=tr("\n얼음 위 · 이동 둔화 / 허기 증가")
 	elif run.get("terrain_effect","")=="ember": camp_status.text+=tr("\n뜨거운 균열! 빨리 벗어나세요")
 	field_map.update_state(run,Vector2(player.facing.x,player.facing.z))
@@ -2441,7 +2496,8 @@ func update_run() -> void:
 		if run.status=="won": objective.text=tr("탐험 성공!\n귀환하여 %d 별씨를 받으세요.") % run.reward
 		elif run.status!="active": objective.text=tr("이번 탐험은 여기까지예요.\n귀환 후 다시 도전할 수 있어요.")
 		elif run.hunger<35: objective.text=tr("먼저 배를 채우세요\nQ로 열매나 수프를 먹으세요.")
-		elif run.night: objective.text=tr("불빛 안에서 밤을 버티세요\nF · 목재 2개로 불 30초 연장\n\n붉은 원 = 적의 공격 예고\nShift로 피하거나 Space로 공격")
+		elif run.night and campfire_blocks(): objective.text=tr("불빛 안에서 밤을 버티세요\nF · 목재 2개로 불 30초 연장\n\n붉은 원 = 적의 공격 예고\nShift로 피하거나 Space로 공격")
+		elif run.night: objective.text=tr("모닥불 곁에서 회복하며 밤을 버티세요\n몬스터는 불빛 안에도 들어와요\nF · 목재 2개로 불 30초 연장\n\n붉은 원 = 적의 공격 예고\nShift로 피하거나 Space로 공격")
 		elif run.inventory.wood<4: objective.text=tr("첫 준비 · 목재 모으기\n나무 옆에서 E로 채집하세요.\n밤에 쓸 목재를 남겨 두세요.")
 		elif run.inventory.axe==0: objective.text=tr("도끼를 만들면 채집이 빨라져요\n목재 3 + 돌 2를 모으세요.\nI · 가방에서 도구 만들기")
 		else: objective.text=tr("다음 밤을 준비하세요\n열매와 목재를 비축하고,\n창으로 그림자 짐승에 맞서세요.")
@@ -2673,12 +2729,14 @@ func toggle_pause() -> void:
 func retry_run() -> void:
 	var region: String=run.get("map_id","forest")
 	var difficulty: String=run.get("difficulty","standard")
+	# A story chapter is retried as that chapter (its goals and first-clear bonus), not a plain run.
+	var chapter: String=str(run.get("chapter_id",""))
 	# One fade for the whole retry: the village is rebuilt under the card, not shown.
 	var veil := Transition.of(get_tree())
 	veil.loading(region_name(region),"run",region)
 	await veil.fade_out()
 	await leave_run(false)
-	if screen=="village": await start_run(region,difficulty)
+	if screen=="village": await start_run(region,difficulty,chapter)
 	if veil.veil.modulate.a>0.5: veil.fade_in()
 
 func suspend_run() -> void:
@@ -2749,11 +2807,20 @@ func show_results() -> void:
 		var reward_text := RpgUi.heading(prize,tr("보상  %d 별씨") % run.get("reward",0),28,Color("8a5a1c"))
 		reward_text.size_flags_vertical=Control.SIZE_SHRINK_CENTER
 	else:
-		var later := RpgUi.caption(card,tr("완주 보상은 7일 생존 후 받을 수 있어요."),14)
+		# What a full clear asks on this run's own terms (stages.py); seven days on runs saved before stages.
+		var terms := tr("완주 보상은 7일 생존 후 받을 수 있어요.")
+		if bool(run.get("tutorial",false)): terms=tr("튜토리얼 목표를 모두 마치면 완주 보상을 받을 수 있어요.")
+		elif run.has("stage_count") and bool(run.get("has_boss",false)): terms=tr("완주 보상은 %d스테이지를 버티고 마지막 밤의 우두머리를 쓰러뜨리면 받을 수 있어요.") % int(run.stage_count)
+		elif run.has("stage_count"): terms=tr("완주 보상은 %d스테이지를 모두 버티면 받을 수 있어요.") % int(run.stage_count)
+		var later := RpgUi.caption(card,terms,14)
 		later.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	if run.get("story") is Dictionary:
 		var story_text := tr("목표가 남아 있어 이야기는 다음 도전에서 이어집니다.")
-		if run.story.objectives_met:story_text=run.story.ending+tr("\n첫 완료 보너스 %d 별씨")%int(run.get("story_bonus",0))
+		if run.story.objectives_met:
+			story_text=str(run.story.ending)
+			# Only a chapter's first clear pays a bonus (campaign.pending_bonus): none on the tutorial or a replay.
+			var bonus := int(run.get("story_bonus",0))
+			if bonus>0: story_text+=tr("\n첫 완료 보너스 %d 별씨") % bonus
 		var story_note := text(card,story_text,14);story_note.custom_minimum_size.x=420;story_note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	if not won:
 		var lesson := tr("밤에는 목재 2개를 남기고 야영지의 불을 지키세요.")
@@ -2783,7 +2850,8 @@ func leave_run(fade := true) -> void:
 	while ticking: await get_tree().process_frame
 	if run.status=="won" and not run.claimed:
 		var result: Dictionary = await api.post(run_route()+"/claim",api.mutation())
-		if not result.ok and coop_run:
+		# A claim whose reply was lost may have been paid: solo or party, the run says so.
+		if not result.ok:
 			var current: Dictionary = await api.request(run_route())
 			if current.ok and current.data.get("claimed", false): result = {"ok":true}
 		if not check(result):
@@ -3504,14 +3572,16 @@ func open_expedition() -> void:
 	var difficulties: Array=me.get("catalog",{}).get("difficulties",[])
 	var refresh := func():
 		var multiplier := 1.0
+		var picked: Dictionary = {}
 		for region in maps:
 			if region.id==chosen_map:
 				details.text=region.name+"\n"+region.description
 				multiplier*=float(region.reward_multiplier)
+				picked=region
 		for difficulty in difficulties:
 			if difficulty.id==chosen_difficulty:
 				multiplier*=float(difficulty.reward_multiplier)
-				estimate.text=difficulty.description+tr("\n완주하면 성과에 따라 별씨 %d–%d개를 받을 수 있어요.") % [int(floor(35*multiplier+0.000001)),int(floor(100*multiplier+0.000001))]
+				estimate.text=difficulty.description+reward_estimate(picked,multiplier)
 				if preload("res://scripts/build_mode.gd").developer():estimate.text+=tr("  ·  보상 계수 ×%.3f")%multiplier
 		for b in region_row.get_children(): b.button_pressed=b.get_meta("id")==chosen_map
 		for b in diff_row.get_children(): b.button_pressed=b.get_meta("id")==chosen_difficulty
@@ -3525,6 +3595,28 @@ func open_expedition() -> void:
 	button(v,tr("준비 완료 · 출발하기"),func(): start_run(chosen_map,chosen_difficulty),"gold")
 	if not maps.is_empty() and not maps.any(func(m): return m.id==chosen_map): chosen_map=str(maps[0].id)
 	refresh.call()
+
+## The starseeds the picker promises for a full clear, as the server pays them (simulation.reward):
+## a staged map 20 + 12 per stage, its play part up to 10 + 8 per stage and, with a boss, 15 + 10 per
+## stage, times the map x difficulty multiplier, rounded down; the tutorial a flat 20; a catalog
+## without stages the old seven days, 35-100.
+func reward_estimate(region: Dictionary, multiplier: float) -> String:
+	if bool(region.get("tutorial",false)): return tr("\n튜토리얼을 마치면 별씨 %d개를 받아요.") % 20
+	var low := 35.0
+	var high := 100.0
+	if region.has("stages"):
+		var count := int(region.stages)
+		var boss := 0
+		if bool(region.get("has_boss",false)): boss=15+10*count
+		low=20+12*count+boss
+		high=low+10+8*count
+	return tr("\n완주하면 성과에 따라 별씨 %d–%d개를 받을 수 있어요.") % [int(floor(low*multiplier+0.000001)),int(floor(high*multiplier+0.000001))]
+
+## A map of the server catalog (catalog.py public_catalog) by id, {} when it is not there.
+func catalog_map(id: String) -> Dictionary:
+	for region in me.get("catalog",{}).get("maps",[]):
+		if region is Dictionary and str(region.get("id",""))==id: return region
+	return {}
 
 ## The painted loading backdrop of a map (transition.gd BACKDROPS), for its card.
 const MAP_ART := {"tutorial":"res://assets/ui/loading/camp.jpg","forest":"res://assets/ui/loading/forest.jpg",
@@ -3707,6 +3799,14 @@ func nearest_npc() -> Node3D:
 			found=npc
 	return found
 
+## Naru on the forest past the stone gate, on the catalog's terms (catalog.py: stages, has_boss):
+## one stage is one day and night, and the boss wakes on the last night.
+func forest_gate_line() -> String:
+	var forest := catalog_map("forest")
+	var nights := int(forest.get("stages",3))
+	if bool(forest.get("has_boss",true)): return tr("캠프 초원의 돌문을 지나면 숲이 시작돼. %d번째 밤에 우두머리가 깨어나.") % nights
+	return tr("캠프 초원의 돌문을 지나면 숲이 시작돼. 밤을 %d번 버티면 돼.") % nights
+
 ## What each NPC says (one line per page) and what the player can do next. The
 ## first line fits the hour and what the villager is doing now (residents.gd).
 func npc_script(role: String) -> Dictionary:
@@ -3742,7 +3842,7 @@ func npc_script(role: String) -> Dictionary:
 	var opener: String=tr(pool[randi()%pool.size()]) if not pool.is_empty() else ""
 	var plan: Dictionary={"lines":[tr("좋은 하루예요!")],"choices":[[tr("안녕"),Callable()]]}
 	match role:
-		"map": plan={"lines":[tr("어서 와! 나는 길잡이 나루야."),tr("캠프 초원의 돌문을 지나면 일곱 밤의 숲이 시작돼."),tr("처음이라면 '산책'으로 길을 익혀 봐. 어려운 길일수록 별씨를 많이 받아.")],
+		"map": plan={"lines":[tr("어서 와! 나는 길잡이 나루야."),forest_gate_line(),tr("처음이라면 '산책'으로 길을 익혀 봐. 어려운 길일수록 별씨를 많이 받아.")],
 			"choices":[[tr("탐험 지도 펼치기"),open_expedition],[tr("길 안내 받기"),life.open_map],[tr("다음에 올게"),Callable()]]}
 		"wardrobe": plan={"lines":[tr("어머, 반가워! 재단사 소라예요."),tr("오늘은 어떤 차림으로 섬을 걸어 볼까요?"),tr("옷 색과 모자, 배낭까지 마음대로 골라 보세요.")],
 			"choices":[[tr("옷장 열기"),open_wardrobe],[tr("지금은 괜찮아"),Callable()]]}

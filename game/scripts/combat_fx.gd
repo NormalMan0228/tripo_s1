@@ -87,6 +87,8 @@ static func slash(app, heavy := false, facing := Vector3.ZERO) -> void:
 	var tick := func() -> void:
 		if not is_instance_valid(arc):
 			if tree.process_frame.is_connected(state.cb): tree.process_frame.disconnect(state.cb)
+			# state.cb is this lambda, which holds state: drop it or the pair (and mat) is never freed.
+			state.erase("cb")
 			return
 		var now := Time.get_ticks_usec()
 		state.t += minf((now-int(state.last))/1000000.0, 1.0/30.0)
@@ -103,6 +105,7 @@ static func slash(app, heavy := false, facing := Vector3.ZERO) -> void:
 			mat.albedo_color.a = 1.0-(t-SLASH_TIME)/SLASH_FADE
 		else:
 			tree.process_frame.disconnect(state.cb)
+			state.erase("cb")
 			arc.queue_free()
 	state.cb = tick
 	draw.call(0.05)

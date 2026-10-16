@@ -174,3 +174,20 @@ def test_enemy_navigates_around_obstacle_instead_of_oscillating():
         assert math.hypot(enemy['x']-3,enemy['z'])>=.85
     assert went_around and enemy['x']>4 and s['hp']<95
     assert all(not k.startswith('_') for k in sim.public_state(s)['enemies'][0])
+
+
+def test_actor_pressed_against_a_solid_still_strikes_and_is_struck():
+    # Walking stops .25 m from an authored solid; swings must not start inside it (pathing keeps .3).
+    s=night_state()
+    s['obstacles']=[dict(kind='boulder',x=5.93,z=0.,radius=.8)]
+    assert sim.clear_position(s,s['x'],s['z'])
+    sim.advance(s,40.1)
+    e=s['enemies'][0]
+    assert e['phase']=='windup'
+    for i in range(1,9): sim.advance(s,40.1+i*.1)
+    assert s['hp']<92 and e['phase']=='recover'
+    assert sim.action(s,'attack')=='맨손 공격!' and e['hp']==35
+    # A swing straight through the boulder is still refused.
+    e.update(x=4.8,z=0.)
+    s['elapsed']+=1
+    assert sim.action(s,'attack')=='가까운 적이 없습니다.' and e['hp']==35

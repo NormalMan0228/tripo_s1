@@ -133,6 +133,21 @@ def test_boar_charge_is_telegraphed_dodgeable_and_ends_stunned(dodge):
     assert s['hp'] == hp  # one hit per charge, nothing while stunned
 
 
+def test_punishing_a_stunned_charger_keeps_its_stun():
+    s = open_field()
+    boar = spawn('boar', s, 8., 3.)
+    s['enemies'] = [boar]
+    stun_end = s['elapsed'] + catalog.ENEMIES['boar']['stun']
+    boar.update(phase='recover', phase_until=stun_end)
+    assert simulation.action(s, 'attack') == '맨손 공격!'
+    assert boar['phase'] == 'recover' and boar['phase_until'] == stun_end
+    # A hit still pauses a creature whose own recovery is shorter (here: already over).
+    boar['phase_until'] = s['elapsed'] - 1.
+    s['elapsed'] += .8
+    simulation.action(s, 'attack')
+    assert boar['phase'] == 'recover' and boar['phase_until'] == pytest.approx(s['elapsed'] + .4)
+
+
 def test_boar_charge_stops_at_an_obstacle():
     s = open_field()
     s['obstacles'] = [{'x': 8., 'z': 2., 'radius': 1.}]

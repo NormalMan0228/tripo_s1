@@ -231,7 +231,9 @@ func _gave_keys() -> void:
 	for action in MOVE_ACTIONS:
 		if InputMap.has_action(action): Input.action_release(action)
 	var place: Node = hub.place if is_instance_valid(hub.place) else null
-	if place and "player" in place and is_instance_valid(place.get("player")) and place.has_method("world_movement_allowed"):
+	# An expedition's walker stays server-steered with its own controls off (main.start_run): turned
+	# on, it would face along the correction slides again instead of the held keys (player.gd).
+	if place and hub.place_kind != "survival" and "player" in place and is_instance_valid(place.get("player")) and place.has_method("world_movement_allowed"):
 		place.player.controls_enabled = place.world_movement_allowed()
 	idle = 0.0
 

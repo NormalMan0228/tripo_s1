@@ -582,7 +582,10 @@ class Multiplayer:
                 if row['withdrawn'] or row['status'] != 'won':
                     fail('run_not_won')
                 if row['claimed']:
-                    fail('reward_already_claimed')
+                    # Paid already (a retry after a lost reply, under a fresh request_id): the recorded
+                    # payout again and nothing paid twice, so the game can go home.
+                    paid = conn.execute("SELECT amount FROM ledger WHERE user_id=? AND reason='coop_reward' AND reference=?", (user['id'], run_id)).fetchone()
+                    return {'reward': paid[0] if paid else state['world']['reward'], 'already_claimed': True}
                 reward = state['world']['reward']
                 money(conn, user['id'], reward, 'coop_reward', run_id)
                 conn.execute('UPDATE coop_members SET claimed=1 WHERE run_id=? AND user_id=?', (run_id, user['id']))

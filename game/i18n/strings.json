@@ -5944,6 +5944,54 @@
    "en": "In the firelight · Safe from night's dangers",
    "zh": "火光范围内 · 可抵挡夜晚的威胁"
   },
+  "불빛 안 · 회복 · 공격력 +%d%%": {
+   "en": "In the firelight · Healing · Attack +%d%%",
+   "zh": "火光范围内 · 恢复中 · 攻击力 +%d%%"
+  },
+  "온기 · 공격력 +%d%% · %d초": {
+   "en": "Warmth · Attack +%d%% · %ds",
+   "zh": "余温 · 攻击力 +%d%% · %d秒"
+  },
+  "몬스터는 불빛 안에도 들어와요": {
+   "en": "Monsters can come into the firelight too",
+   "zh": "怪物也会进入火光范围"
+  },
+  "동료가 구조 중 %d%%": {
+   "en": "A teammate is reviving you %d%%",
+   "zh": "队友正在救援你 %d%%"
+  },
+  "쓰러짐 · 동료가 곁에 멈춰 서면 일어나요": {
+   "en": "Down · A teammate standing still beside you gets you up",
+   "zh": "倒下 · 队友停在身边就能扶你起来"
+  },
+  "동료 구조 중 %d%%": {
+   "en": "Reviving a teammate %d%%",
+   "zh": "正在救援队友 %d%%"
+  },
+  "동료가 쓰러졌어요 · 곁에 멈춰 서세요": {
+   "en": "A teammate is down · Stand still beside them",
+   "zh": "队友倒下了 · 请停在他身边"
+  },
+  "모닥불 곁에서 회복하며 밤을 버티세요\n몬스터는 불빛 안에도 들어와요\nF · 목재 2개로 불 30초 연장\n\n붉은 원 = 적의 공격 예고\nShift로 피하거나 Space로 공격": {
+   "en": "Heal by the campfire and hold out the night\nMonsters can come into the firelight too\nF · 2 wood adds 30s of fire\n\nRed circle = enemy attack warning\nShift to dodge or Space to attack",
+   "zh": "在篝火旁恢复，撑过夜晚\n怪物也会进入火光范围\nF · 用2个木材让火延长30秒\n\n红圈 = 敌人攻击预警\n按 Shift 闪避或按 Space 攻击"
+  },
+  "낮에는 채집하고 밤에는 모닥불 곁에서 회복하세요. 불은 몬스터를 막지 못해요.": {
+   "en": "Gather by day and heal by the Campfire at night. The fire does not keep monsters out.",
+   "zh": "白天采集，夜晚在篝火旁恢复。篝火挡不住怪物。"
+  },
+  "모닥불을 피웠습니다. 곁에서 체력과 기력을 회복하세요. 몬스터는 들어올 수 있어요.": {
+   "en": "Campfire lit. Stay near it to recover health and stamina. Monsters can still come in.",
+   "zh": "篝火点燃了。在旁边可以恢复体力和精力。怪物仍然可能进来。"
+  },
+  "쓰러졌습니다. 동료가 가까이 멈춰 서면 구조할 수 있어요. 모닥불 곁에서는 더 빨라요.": {
+   "en": "You're down. A teammate who stands still nearby can revive you. It is faster by the campfire.",
+   "zh": "你倒下了。队友停在附近就能救你。在篝火旁会更快。"
+  },
+  "동료의 도움으로 다시 일어났습니다.": {
+   "en": "Back on your feet with a teammate's help.",
+   "zh": "在队友的帮助下重新站了起来。"
+  },
   "불빛 안에서 밤을 버티세요\nF · 목재 2개로 불 30초 연장\n\n붉은 원 = 적의 공격 예고\nShift로 피하거나 Space로 공격": {
    "en": "Hold out the night in the firelight\nF · 2 wood adds 30s of fire\n\nRed circle = enemy attack warning\nShift to dodge or Space to attack",
    "zh": "在火光中撑过夜晚\nF · 用2个木材让火延长30秒\n\n红圈 = 敌人攻击预警\n按 Shift 闪避或按 Space 攻击"
@@ -11835,6 +11883,38 @@
   "우두머리": {
    "en": "Boss",
    "zh": "首领"
+  },
+  "완주 보상은 %d스테이지를 버티고 마지막 밤의 우두머리를 쓰러뜨리면 받을 수 있어요.": {
+   "en": "The completion reward is earned by surviving %d stages and defeating the boss on the last night.",
+   "zh": "坚持完 %d 关并在最后一夜击败首领后，可领取通关奖励。"
+  },
+  "완주 보상은 %d스테이지를 모두 버티면 받을 수 있어요.": {
+   "en": "The completion reward is earned after surviving all %d stages.",
+   "zh": "坚持完全部 %d 关后，可领取通关奖励。"
+  },
+  "튜토리얼 목표를 모두 마치면 완주 보상을 받을 수 있어요.": {
+   "en": "Finish every tutorial goal to earn the completion reward.",
+   "zh": "完成全部教程目标后，可领取通关奖励。"
+  },
+  "\n튜토리얼을 마치면 별씨 %d개를 받아요.": {
+   "en": "\nFinish the tutorial to earn %d Starseeds.",
+   "zh": "\n完成教程可获得 %d 个星种。"
+  },
+  "캠프 초원의 돌문을 지나면 숲이 시작돼. %d번째 밤에 우두머리가 깨어나.": {
+   "en": "The forest begins past the stone gate in the camp meadow. On night %d its boss wakes.",
+   "zh": "穿过营地草原的石门就是森林。第 %d 夜，首领会醒来。"
+  },
+  "캠프 초원의 돌문을 지나면 숲이 시작돼. 밤을 %d번 버티면 돼.": {
+   "en": "The forest begins past the stone gate in the camp meadow. Hold out for %d nights.",
+   "zh": "穿过营地草原的石门就是森林。熬过 %d 个夜晚就行。"
+  },
+  "캠프 초원의 돌문을 지나면 숲이 시작돼요. 마지막 밤엔 우두머리가 기다리고요.": {
+   "en": "The forest begins past the stone gate in the camp meadow. A boss waits on the last night.",
+   "zh": "穿过营地草原的石门就是森林。最后一夜还有首领在等着。"
+  },
+  "붉은 원이 보이면 바로 피해요. 우두머리까지 쓰러뜨리면 새 물건을 만들 별씨를 받아요.": {
+   "en": "Dodge right away when you see a red circle. Defeat the boss too and you'll get starseeds for new crafts.",
+   "zh": "看到红圈就马上躲开。连首领也打倒，就能拿到制作新物品的星种。"
   },
   "우두머리의 밤": {
    "en": "The boss's night",

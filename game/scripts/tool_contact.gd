@@ -52,6 +52,8 @@ static func strike(player, target: Vector3, on_hit: Callable, window := 0.7) -> 
 		if state.done: return
 		state.done = true
 		if tree.process_frame.is_connected(state.cb): tree.process_frame.disconnect(state.cb)
+		# state.cb is the tick lambda, which holds state: drop it or the pair is never freed.
+		state.erase("cb")
 		on_hit.call(at)
 	var tick := func() -> void:
 		if state.done: return
@@ -111,5 +113,6 @@ static func pour(player, target: Vector3, on_drop: Callable, seconds := 0.9) -> 
 				on_drop.call(spout, target)
 		if state.pouring >= seconds or state.t >= seconds+0.8:
 			tree.process_frame.disconnect(state.cb)
+			state.erase("cb")
 	state.cb = tick
 	tree.process_frame.connect(tick)
