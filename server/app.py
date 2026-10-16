@@ -468,7 +468,11 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
             if len(recent)>=appearance.EDIT_LIMIT:
                 wait=max(1,math.ceil(recent[0]['created']+appearance.EDIT_WINDOW_SECONDS-now))
                 raise HTTPException(429,'avatar_rate_limited',headers={'Retry-After':str(wait)})
-            value=body.avatar.resolve(appearance.saved_avatar(previous['avatar']))
+            # The stored look (the reply above may show a 0.11.8 game the released ids).
+            stored=conn.execute('SELECT avatar FROM profiles WHERE user_id=?',(user['id'],)).fetchone()
+            saved=appearance.saved_avatar(stored['avatar'] if stored else None)
+            value=body.avatar.resolve(saved)
+            if appearance.legacy_echo(body.avatar,saved):value['character']=saved['character']
             version=previous['version']+1
             # Only one of the 8 new characters completes the first selection (an 0.11.8 wardrobe save does not).
             needs_select=previous['needs_character_select'] and not body.avatar.chooses_character(request.headers.get('x-villagen-version','')[:40])
@@ -841,6 +845,17 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 homestead.UTC_OFFSET.reset(token)
                 homestead.DAILY_OFFSET.reset(daily_token)
     app.add_middleware(PlayerTimeZone)
+
+    # The game's version for this request (appearance.py serves 0.11.8 games the released character ids).
+    class ClientVersion:
+        def __init__(self,inner):self.inner=inner
+        async def __call__(self,scope,receive,send):
+            if scope['type']!='http':return await self.inner(scope,receive,send)
+            value=dict(scope.get('headers') or []).get(b'x-villagen-version',b'').decode('latin-1').strip()[:40]
+            token=appearance.CLIENT_VERSION.set(value or None)
+            try:await self.inner(scope,receive,send)
+            finally:appearance.CLIENT_VERSION.reset(token)
+    app.add_middleware(ClientVersion)
     app.add_middleware(BodyLimitMiddleware,limit=8192,path_limits={'/v1/studio/jobs':IMAGE_FIELD_CHARS+16384},
                        pattern_limits=[(object_paint.UPLOAD_PATH,object_paint.BODY_LIMIT)])
     # Before everything else: maintenance (503) and too-old games (426) stop here; every reply,
