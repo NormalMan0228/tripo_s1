@@ -130,8 +130,16 @@ for r, allowed in ALLOW.items():
     D = np.stack([dist(cols[m], refs[p]) for p in allowed], 1)
     best = D.argmin(1)
     lab = np.array([names.index(allowed[k]) for k in best])
-    lab[D.min(1) > 0.30] = 5
+    lab[D.min(1) > (0.45 if r in ('leg', 'foot') else 0.30)] = 5  # trouser folds shade far from the median
     label[m] = lab
+# face guard: in front of and below the crown, skin-like faces stay skin (dark skin next to brown hair)
+if 'skin' in refs:
+    hm = region == 'head'
+    if hm.any():
+        cy = np.median(cent[hm, 1])
+        span = z.max() - head_z
+        guard = hm & (cent[:, 1] < cy) & (z < head_z + 0.55 * span) & (dist(cols, refs['skin']) < 0.35)
+        label[guard] = names.index('skin')
 # neighbour majority, a few passes
 adj = [[e.index for e in f.edges] for f in bm.faces]
 edge_faces = [[lf.index for lf in e.link_faces] for e in bm.edges]
