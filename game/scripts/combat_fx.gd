@@ -96,7 +96,10 @@ static func slash(app, heavy := false, facing := Vector3.ZERO) -> void:
 			var u := t/SLASH_TIME
 			draw.call(end*(1.0-(1.0-u)*(1.0-u)))
 		elif t < SLASH_TIME+SLASH_FADE:
-			draw.call(end)
+			# The full arc once; the fade only changes the material (the mesh was rebuilt every frame).
+			if not state.has("full"):
+				state.full = true
+				draw.call(end)
 			mat.albedo_color.a = 1.0-(t-SLASH_TIME)/SLASH_FADE
 		else:
 			tree.process_frame.disconnect(state.cb)
