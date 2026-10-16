@@ -102,6 +102,8 @@ func save_elsewhere(look: Dictionary) -> int:
 func wardrobe_editor(app: Node) -> Node:
 	app.open_wardrobe()
 	await seconds(0.2)
+	# An avatar_v2 world opens the eight-character select as its wardrobe (0.11.9.1).
+	if app.avatar_v2: check(is_instance_valid(app.village_modal) and app.village_modal.get_script() == preload("res://scripts/character_select.gd") and app.village_modal.cards.size() == 8, "the wardrobe is the eight-character select")
 	for node in app.village_modal.find_children("*", "HBoxContainer", true, false):
 		if node.get_script() == preload("res://scripts/wardrobe.gd"): return node
 	return null

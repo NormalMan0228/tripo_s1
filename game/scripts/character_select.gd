@@ -7,6 +7,8 @@ extends Control
 ## The new characters' 3D models come from the 05 session one by one: until a card's model is in,
 ## it stands in with an older model (STAND_IN) or the card is locked as 준비 중.
 signal done(avatar: Dictionary)
+## The wardrobe's 닫기 (wardrobe mode only): main.gd closes it without saving.
+signal closed
 
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const Wardrobe = preload("res://scripts/wardrobe.gd")
@@ -32,6 +34,9 @@ var avatar: Dictionary = {}
 var v2 := false
 ## The name others see (avatar_v2 worlds; 2-12 letters, checked by the server): "" keeps the id.
 var display_name := ""
+## The village wardrobe (O / 옷장) on an avatar_v2 world: the same cards and dressing, titled as the
+## wardrobe, 이 모습으로 저장 instead of 모험 시작, and a 닫기 beside it.
+var wardrobe := false
 var name_field: LineEdit
 var status: Label
 var editor: HBoxContainer
@@ -63,8 +68,8 @@ func _ready() -> void:
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", 10)
 	card.add_child(column)
-	RpgUi.label(column, tr("나의 여행자 만들기"), 26, RpgUi.GOLD)
-	RpgUi.caption(column, tr("함께 모험할 여행자를 고르고 꾸며 보세요. 나중에 옷장에서 언제든 바꿀 수 있어요."), 13)
+	RpgUi.label(column, tr("나의 여행자") if wardrobe else tr("나의 여행자 만들기"), 26, RpgUi.GOLD)
+	RpgUi.caption(column, tr("외형은 모든 지역에서 같게 유지됩니다. 능력치는 바뀌지 않습니다.") if wardrobe else tr("함께 모험할 여행자를 고르고 꾸며 보세요. 나중에 옷장에서 언제든 바꿀 수 있어요."), 13)
 	RpgUi.divider(column, Color(RpgUi.GOLD, .6))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 22)
@@ -117,7 +122,10 @@ func _ready() -> void:
 	status = RpgUi.label(foot, "", 13, Color("ffd9a0"))
 	status.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	var start := RpgUi.button(foot, tr("모험 시작"), _start, "gold", "lg", true)
+	if wardrobe:
+		var shut := RpgUi.button(foot, tr("닫기"), func(): closed.emit(), "", "lg", true)
+		shut.name = "Close"
+	var start := RpgUi.button(foot, tr("이 모습으로 저장") if wardrobe else tr("모험 시작"), _start, "gold", "lg", true)
 	start.name = "Start"
 	start.custom_minimum_size.x = 260
 	# The tab and card that match the look now (a 여 stand-in opens the 여 tab).
@@ -197,7 +205,8 @@ func pick(id: String, sound := true) -> void:
 	# A world with avatar_v2 keeps the card's own id (m1...f4; the body shows its stand-in until the
 	# model is in, AvatarLook.shown); an older world keeps the stand-in's id.
 	editor.avatar.character = id if v2 else model
-	if model == id and PRESETS.has(id): editor.avatar.merge(PRESETS[id], true)
+	# The wardrobe opens on the saved look: its colours stay until another card is picked.
+	if model == id and PRESETS.has(id) and (sound or not wardrobe): editor.avatar.merge(PRESETS[id], true)
 	editor.refresh()
 
 func _start() -> void:

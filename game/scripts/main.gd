@@ -3891,6 +3891,11 @@ func first_look() -> void:
 
 func open_wardrobe() -> void:
 	if screen!="village": return
+	# The eight characters (avatar_v2 worlds): the wardrobe is the character select with its cards,
+	# dressing and name; the older four-traveller editor stays for older servers only.
+	if avatar_v2:
+		open_look_select()
+		return
 	var v := modal_card(tr("나의 여행자"),"wardrobe")
 	var editor := preload("res://scripts/wardrobe.gd").new()
 	editor.avatar=me.get("profile",{}).get("avatar",{}).duplicate(true)
@@ -3912,6 +3917,46 @@ func open_wardrobe() -> void:
 	save.custom_minimum_size.y=44
 	save.theme_type_variation="GoldButton"
 
+
+## The avatar_v2 wardrobe: the character select over the village (character_select.gd, wardrobe
+## mode). 이 모습으로 저장 keeps the look and a changed name, then closes; 닫기 and Esc close
+## without saving.
+func open_look_select() -> void:
+	close_village_modal(false)
+	cancel_preview()
+	var picker := CharacterSelect.new()
+	picker.wardrobe = true
+	picker.v2 = true
+	picker.avatar = me.get("profile",{}).get("avatar",{}).duplicate(true)
+	var named_now := str(me.get("display_name",""))
+	picker.display_name = "" if named_now==str(me.get("username","")) else named_now
+	ui.add_child(picker)
+	village_modal = picker
+	player.controls_enabled = false
+	picker.closed.connect(func(): if village_modal==picker: close_village_modal())
+	RpgUi.sfx("open",-8.0)
+	while is_instance_valid(picker):
+		var chosen: Dictionary = await picker.done
+		if not is_instance_valid(picker): return
+		var result: Dictionary = await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":AvatarLook.for_server(chosen,true)}))
+		if not is_instance_valid(picker): return
+		if not result.ok:
+			picker.say(tr("옷을 갈아입지 못했어요. 옷장을 다시 열어 주세요."))
+			continue
+		adopt_profile(result.data,true)
+		var wanted: String = picker.display_name
+		if not wanted.is_empty() and wanted!=str(me.get("display_name","")) and wanted!=str(me.get("username","")):
+			var named: Dictionary = await api.post("/v1/profile/name",api.mutation({"display_name":wanted}))
+			if not is_instance_valid(picker): return
+			if not named.ok:
+				var code := str(named.get("error",""))
+				picker.say({"name_invalid":tr("이름은 2~12자, 글자와 숫자로 지어 주세요."),"name_refused":tr("쓸 수 없는 말이 들어 있어요."),"name_reserved":tr("운영자처럼 보이는 이름은 쓸 수 없어요."),"name_taken":tr("이미 다른 모험가가 쓰는 이름이에요."),"name_change_limited":tr("이름은 하루에 한 번 바꿀 수 있어요.")}.get(code,tr("이 이름은 쓸 수 없어요.")))
+				continue
+			me["display_name"] = str(named.data.get("display_name",wanted))
+		if village_modal==picker: close_village_modal(false)
+		RpgUi.sfx("save",-6.0)
+		message(tr("새로운 여행자 모습이 저장되었습니다."))
+		return
 
 func open_studio(destination: String="workshop") -> void:
 	var session := {"token":api.token,"url":api.base_url,"room":destination,"multiplayer":social.enabled,

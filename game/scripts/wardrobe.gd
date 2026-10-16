@@ -131,9 +131,9 @@ func refresh() -> void:
 		if b.has_meta("character"): b.button_pressed=b.get_meta("character")==avatar.character
 		if b.has_meta("free_part"):
 			b.disabled=avatar.character=="explorer_b" and b.get_meta("free_part") in ["hair","skin"]
-			if not b.disabled: (b as ColorPickerButton).color=Color(str(avatar[b.get_meta("free_part")]))
+			if not b.disabled: (b as ColorPickerButton).color=Color(str(avatar.get(b.get_meta("free_part"),DEFAULTS.get(b.get_meta("free_part"),"#ffffff"))))
 		if b.has_meta("part"):
-			b.text="◆" if avatar[b.get_meta("part")]==b.get_meta("color") else "●"
+			b.text="◆" if avatar.get(b.get_meta("part"),"")==b.get_meta("color") else "●"
 			b.disabled=avatar.character=="explorer_b" and b.get_meta("part") in ["hair","skin"]
 			b.tooltip_text=tr("이 여행자의 머리와 피부는 고유한 모습으로 유지돼요. 옷과 소품을 바꿔 보세요.") if b.disabled else str(b.get_meta("name",""))
 	if actor.animation_player and actor.animation_player.has_animation("idle"): actor.animation_player.play("idle",0.18)
