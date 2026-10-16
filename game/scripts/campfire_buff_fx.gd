@@ -123,14 +123,18 @@ func _end() -> void:
 
 func _process(delta: float) -> void:
 	if app == null or not is_instance_valid(app): return
-	if str(app.get("screen")) != "survival":
+	var field := str(app.get("screen")) == "survival"
+	if not field:
 		target = 0.0
 		ring_target = 0.0
 		on = false
 	level = move_toward(level, target, delta/FADE)
 	flare = maxf(0.0, flare-delta*2.2)
 	ring_level = move_toward(ring_level, ring_target, delta*1.5)
-	if level > 0.001 or flare > 0.0:
+	# On the field the hero wears the rim from the start (at strength 0, under the run's card): put on
+	# at the fire's first warmth, its new shader and the overlay pipelines of every hero mesh compiled
+	# in that frame (the campfire hitch).
+	if field or level > 0.001 or flare > 0.0:
 		if not _dress(): return
 		rim.set_shader_parameter("strength", level)
 		rim.set_shader_parameter("flare", flare)
