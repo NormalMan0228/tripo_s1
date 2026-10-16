@@ -223,6 +223,9 @@ func equip(item: String) -> void:
 	var previous := equipped
 	equipped=item
 	if is_instance_valid(finger_pose):finger_pose.holding=not item.is_empty()
+	# A tool out puts the carried thing away until it goes back (held_items.gd).
+	var held_node := get_node_or_null("Held")
+	if held_node: held_node.call_deferred("refresh", false)
 	if uses_sockets():
 		equip_socketed(previous, item)
 		return
@@ -637,6 +640,11 @@ func apply_avatar(value: Dictionary) -> bool:
 	apply_colors()
 	look_builds+=1
 	equip(old_tool)
+	# The carried thing goes into the new hands (held_items.gd).
+	var held_node := get_node_or_null("Held")
+	if held_node:
+		held_node.rebuild()
+		held_node.refresh(false)
 	for name in was_stowed: stow_new(name)
 	return true
 

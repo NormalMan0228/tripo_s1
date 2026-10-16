@@ -13,7 +13,8 @@ const Fishing=preload("res://scripts/fishing.gd")
 const RpgUi=preload("res://scripts/rpg_ui.gd")
 const ShopSell=preload("res://scripts/shop_sell.gd")
 const Quests=preload("res://scripts/quests.gd")
-const CROP_ORDER := ["turnip","carrot","pumpkin","strawberry","sunflower"]
+## Seed picker order: homestead.CROPS (the first five, then radish, potato, tomato, corn).
+const CROP_ORDER := ["turnip","carrot","pumpkin","strawberry","sunflower","radish","potato","tomato","corn"]
 ## Sound.effect kind per shop/server action (sound.gd core take families).
 const ACTION_SOUNDS := {"harvest":"reward","sell":"sell","buy":"buy","order":"errand","reel":"reward"}
 var app: Node3D
@@ -96,7 +97,8 @@ func request(kind: String, extra: Dictionary={}) -> Dictionary:
 	pending=false
 	if epoch!=app.world_epoch: return {}
 	if not response.ok:
-		deny()
+		# An already-watered bed is a soft refusal (-8 dB), before the message as every refusal.
+		deny(-8.0 if response.error=="life_already_watered" else -6.0)
 		app.message(errors.get(response.error,app.error_message(response.error)))
 		await refresh()
 		return {}
@@ -107,8 +109,8 @@ func request(kind: String, extra: Dictionary={}) -> Dictionary:
 ## Refusals and server errors: the soft UI deny (RpgUi.sfx, UI bus), the one sound of a refusal.
 ## Call it before the message: as a message kind it stands in for that toast's chime (main.refuse()
 ## does the same), so a refusal is heard once, never chime plus blip.
-func deny() -> void:
-	RpgUi.sfx("deny",-6.0)
+func deny(db := -6.0) -> void:
+	RpgUi.sfx("deny",db)
 
 ## Older call sites (shop, tree shaking, tests): message, sound and item feedback.
 func action(kind: String, extra: Dictionary={}) -> bool:
@@ -128,6 +130,7 @@ func attach_world() -> void:
 	farm=Farm.new()
 	farm.name="LifeFarm"
 	app.town.add_child(farm)
+	farm.grew.connect(crop_grew)
 	forage=Forage.new()
 	forage.name="LifeForage"
 	app.town.add_child(forage)
@@ -147,8 +150,8 @@ func plot_entry(index: int) -> Dictionary:
 	var prompt := ""
 	match stage:
 		0: prompt=tr("씨앗 심기")
-		1: prompt=tr("%s에 물 주기") % crop_name
 		5: prompt=tr("%s 수확하기") % crop_name
+		_ when Farm.thirsty(plot): prompt=tr("%s에 물 주기") % crop_name
 		_:
 			var left := int(ceil(maxf(0,float(plot.ready_at)-now())))
 			prompt=tr("%s 자라는 중 · %d:%02d") % [crop_name,left/60,left%60]
@@ -250,10 +253,11 @@ func bed_point(index: int) -> Vector3:
 	return Town.point(Vector2(float(plot.x),float(plot.z)),0.2)
 
 func use_plot(index: int) -> void:
+	# Water whenever the bed is dry (the server grows it at half speed until then).
 	match Farm.stage(state.plots[index],now()):
 		0: open_plot(index)
-		1: water(index)
 		5: harvest(index)
+		_ when Farm.thirsty(state.plots[index]): water(index)
 		_:
 			sfx.play("rustle",1.2,-6)
 			app.message(tr("무럭무럭 자라고 있어요. 마을을 떠나도 계속 자랍니다."))
@@ -270,22 +274,24 @@ func open_plot(index: int) -> void:
 	seed_choices=[]
 	# The shared window (RpgUi.window), night glass over the world just above the hotbar, without a
 	# shade: the bed stays in view. It sits on the window stack (the chat box steps aside); Esc or
-	# the close key shuts it, and the keys 1-5 pick a seed (their caps sit on the slots). A pick is
+	# the close key shuts it, and the keys 1-9 pick a seed (their caps sit on the slots). A pick is
 	# a soft select, then the seed going in (plant: the picker closes without its own sound).
-	var w := RpgUi.window(app.ui,tr("어떤 씨앗을 심을까요?"),{"kind":"night","place":"bottom","width":780,"modal":false,"scroll":false,
+	var crops: Dictionary=state.get("catalog",{}).get("crops",{})
+	var shown := CROP_ORDER.filter(func(crop): return crops.has(crop)).size()
+	var slot_w := 146 if shown<=5 else 112
+	var w := RpgUi.window(app.ui,tr("어떤 씨앗을 심을까요?"),{"kind":"night","place":"bottom","width":maxi(780,shown*(slot_w+8)+60),"modal":false,"scroll":false,
 		"on_close":app.close_village_modal,"id":"seed_picker"})
 	var v: VBoxContainer=w.body
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation",8)
 	v.add_child(row)
-	var crops: Dictionary=state.get("catalog",{}).get("crops",{})
 	for crop in CROP_ORDER:
 		if not crops.has(crop): continue
 		var count := int(state.bag.get(crop+"_seed",0))
 		var data: Dictionary=crops[crop]
 		var number := str(seed_choices.size()+1)
 		var b := Button.new()
-		b.custom_minimum_size=Vector2(146,112)
+		b.custom_minimum_size=Vector2(slot_w,112)
 		b.focus_mode=Control.FOCUS_NONE
 		b.disabled=count<1
 		b.name="Seed_"+crop
@@ -324,7 +330,7 @@ func open_plot(index: int) -> void:
 		app.button(foot,tr("풀밭으로 되돌리기"),func():
 			app.close_village_modal(false)
 			Art.burst(app.world,bed_point(index),"leaf",14)
-			sfx.play("rustle")
+			sfx.play("untill")
 			await request("untill",{"plot":index}))
 	app.village_modal=w.root
 	app.player.controls_enabled=false
@@ -347,12 +353,16 @@ func water(index: int) -> void:
 	app.player.equip("watering_can")
 	app.player.react("craft")
 	sfx.play("water")
-	for i in 3:
-		get_tree().create_timer(i*0.18).timeout.connect(func(): if is_instance_valid(app.world): Art.burst(app.world,at+Vector3(0,0.9,0),"drop",14))
+	# The can pours: drops rain on the bed, then it splashes, a wet ring spreads and the soil
+	# soaks dark (farm.gd keeps it damp while the server's water lasts, to the player's midnight).
+	# From the spout while the can is tipped toward the bed (tool_contact.gd follows the pose).
+	preload("res://scripts/tool_contact.gd").pour(app.player,at+Vector3(0,0.15,0),func(from: Vector3, to: Vector3):
+		if is_instance_valid(app.world): preload("res://scripts/fx.gd").pour(app.world,from,to,3))
 	var data := await request("water",{"plot":index})
 	get_tree().create_timer(0.9).timeout.connect(func(): if is_instance_valid(app.player) and app.player.equipped=="watering_can" and mode!="fish": app.player.equip(""))
 	if data.is_empty(): return
 	preload("res://scripts/fx.gd").burst(app.world,at+Vector3(0,0.3,0),"drop",14)
+	farm.watered(index)
 
 func harvest(index: int) -> void:
 	var at := bed_point(index)
@@ -370,16 +380,34 @@ func harvest(index: int) -> void:
 		preload("res://scripts/fx.gd").item_pop(app,at+Vector3(0,0.5,0),item,int(items[item]),delay)
 		delay += 0.12
 
+## A crop near the walker reached a new stage (farm.gd already popped it, once per poll that
+## raised it): the sprout and ripe sounds (docs/sound/DEV_FEATURE_SFX_KO.md). Several beds rising
+## in one poll are staggered GROW_SOUND_GAP s apart instead of stacking.
+const GROW_SOUND_GAP := 0.15
+var grow_sound_next := 0.0
+func crop_grew(index: int, stage: int) -> void:
+	if stage!=2 and stage!=5: return
+	var kind := "life/ripe" if stage==5 else "life/sprout"
+	var db := -6.0 if stage==5 else -4.0
+	var at: Vector3=farm.beds[index].root.global_position
+	var t := Time.get_ticks_msec()*0.001
+	var start := maxf(t,grow_sound_next)
+	grow_sound_next=start+GROW_SOUND_GAP
+	if start<=t: preload("res://scripts/fx.gd").sound(app,kind,at,1.0,db)
+	else: get_tree().create_timer(start-t).timeout.connect(func(): if is_instance_valid(app): preload("res://scripts/fx.gd").sound(app,kind,at,1.0,db))
+
 func till(cell: Vector2) -> void:
 	var at := Town.point(cell,0.05)
 	app.player.face_point(at)
 	app.player.equip("hoe")
 	dress_hoe()
 	app.player.react("attack")
-	await get_tree().create_timer(0.16).timeout
-	sfx.play("hoe")
-	Art.burst(app.world,at,"dirt",16)
-	Art.burst(app.world,at,"dust",8)
+	# The soil flies when the hoe's blade reaches the ground (tool_contact.gd), not on a fixed delay.
+	preload("res://scripts/tool_contact.gd").strike(app.player,at,func(hit: Vector3):
+		if not is_instance_valid(app.world): return
+		sfx.play("hoe")
+		Art.burst(app.world,hit,"dirt",16)
+		Art.burst(app.world,hit,"dust",8))
 	var data := await request("till",{"x":cell.x,"z":cell.y})
 	get_tree().create_timer(0.5).timeout.connect(func(): if is_instance_valid(app.player) and app.player.equipped=="hoe": app.player.equip(""))
 	if data.is_empty(): return
@@ -497,6 +525,7 @@ func open_storage() -> void:
 		if int(state.bag.get(item,0))<1: continue
 		grid.add_child(item_card(item,"× %d" % int(state.bag.get(item,0))))
 	if grid.get_child_count()==0: app.text(v,tr("아직 모은 물건이 없어요. 밭과 바닷가, 숲 그늘을 둘러보세요."),15)
+	preload("res://scripts/held_items.gd").strip(v,app,state.bag) # carry something around (#64)
 	app.text(v,tr("잎전은 씨앗과 미끼를 사는 마을 전용 돈이에요. 별씨와는 별개입니다."),13)
 	var row := HBoxContainer.new()
 	v.add_child(row)
@@ -573,7 +602,9 @@ func open_shop(again := false) -> void:
 	# Selling also pays starseeds up to a daily allowance (shop_sell.gd, server app.py sell_stars).
 	var allowance := ShopSell.status_text(state)
 	if not allowance.is_empty(): app.text(v,allowance,14).add_theme_color_override("font_color",RpgUi.ACCENT)
-	var row := HBoxContainer.new()
+	# Nine seeds and bait: two rows of five.
+	var row := GridContainer.new()
+	row.columns=5
 	v.add_child(row)
 	var shop: Dictionary=state.catalog.get("shop",{"turnip_seed":2,"pumpkin_seed":4,"bait":1})
 	for item in shop:
@@ -676,6 +707,8 @@ func _process(delta: float) -> void:
 		poll=0
 		refresh()
 	if state.is_empty(): return
+	farm.viewer=app.player.position if is_instance_valid(app.player) else Vector3.INF
+	Farm.crops=state.get("catalog",{}).get("crops",{})
 	farm.sync(state.get("plots",[]),now())
 	forage.sync(state,now())
 	fishing.update(delta)
@@ -710,7 +743,7 @@ func goal_text() -> String:
 		var lines := PackedStringArray()
 		var plots: Array=state.get("plots",[])
 		var ripe := plots.filter(func(plot): return Farm.stage(plot,now())==5).size()
-		var dry := plots.filter(func(plot): return Farm.stage(plot,now())==1).size()
+		var dry := plots.filter(func(plot): return Farm.thirsty(plot)).size()
 		if ripe>0: lines.append("▸ "+tr("다 자란 작물 %d칸 수확하기") % ripe)
 		elif dry>0: lines.append("▸ "+tr("마른 밭 %d칸에 물 주기") % dry)
 		elif not plots.any(func(plot): return plot.get("crop")): lines.append("▸ "+tr("풍차 들판 텃밭에 씨앗 심기"))

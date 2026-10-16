@@ -802,6 +802,7 @@ func build_stage() -> void:
 	if ResourceLoader.exists("res://assets/explorer_b_reference.glb"):
 		hero=AvatarLook.walker(session_avatar,session_version);hero.controls_enabled=false;hero.visual_only=true
 		stage.add_child(hero)
+		preload("res://scripts/held_items.gd").adopt(null,hero) # carried thing (held_items.gd, #64)
 		if not is_instance_valid(seat):
 			seat=RestSeat.new();add_child(seat)
 			# The walk up to a seat uses the room's own walking (no doors or stairs on the way).
@@ -1778,6 +1779,7 @@ func share_presence() -> void:
 	if rich_presence: spot.merge({"vx":clampf(moving.x,-30,30),"vz":clampf(moving.y,-30,30),"t":RemoteMotion.now()})
 	var hub := social_hub()
 	if hub: spot.merge(hub.presence_extra(social_place(),floor_index))
+	spot.merge(preload("res://scripts/held_items.gd").presence_extra(hub)) # carried thing (#64)
 	var response: Dictionary=await api.post_kept("/v1/social/presence",spot,4.0)
 	presence_pending=false
 	if not response.ok and int(response.get("status",0))==422 and not (hub and hub.presence_refused(response)): rich_presence=false
@@ -1832,6 +1834,7 @@ func share_presence() -> void:
 			# Someone who just came in walks in through the front door (not those already here).
 			if peer_baseline and level==0 and is_instance_valid(front_door): front_door.arrive(peers[record.id])
 		AvatarLook.wear(peers[record.id].node,record.get("avatar",{}),version,true)
+		preload("res://scripts/held_items.gd").show_on(peers[record.id].node,record.get("held","")) # carried thing (#64)
 		SocialHud.host_crown(peers[record.id].node,str(record.id)==str(space.get("host_id","")))
 		if int(peers[record.id].get("floor",-1))!=level:
 			# Changing floors is a jump, not a glide across the room.

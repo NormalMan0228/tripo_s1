@@ -118,6 +118,74 @@ static func bed(wet: bool) -> Node3D:
 		for i in 3: part(root,"dome",Vector3(-0.5+i*0.45,0.13,0.22-i*0.2),Vector3(0.3,0.05,0.22),Color("3f2c1e"),Vector3.ZERO,0.25)
 	return root
 
+const SOIL_DRY := Color("9b7650")
+const SOIL_WET := Color("4e3624")
+const RIDGE_DRY := Color("8a6644")
+const RIDGE_WET := Color("3f2b1c")
+
+## A bed whose soil darkens with water: set_wet(bed, 0..1) recolours it (its own materials,
+## so each bed dries on its own clock). Puddles shine while it is soaked.
+static func soil_bed() -> Node3D:
+	var root := Node3D.new()
+	var list: Array=[]
+	for i in 4:
+		var m := StandardMaterial3D.new()
+		m.cull_mode=BaseMaterial3D.CULL_DISABLED
+		list.append(m)
+	list[3].transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+	list[3].roughness=0.1
+	part(root,"box",Vector3(0,0.02,0),Vector3(1.62,0.16,1.62),SOIL_DRY).material_override=list[0]
+	part(root,"box",Vector3(0,0.06,0),Vector3(1.5,0.16,1.5),SOIL_DRY).material_override=list[1]
+	for z in [-0.45,0.0,0.45]:
+		part(root,"capsule",Vector3(0,0.15,z),Vector3(0.15,0.68,0.15),RIDGE_DRY,Vector3(0,0,PI/2)).material_override=list[2]
+	var puddles: Array=[]
+	for i in 3:
+		var d := part(root,"dome",Vector3(-0.5+i*0.48,0.135,0.22-i*0.21),Vector3(0.34,0.03,0.24),Color.BLACK)
+		d.material_override=list[3]
+		d.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		puddles.append(d)
+	root.set_meta("wet_mats",list)
+	root.set_meta("puddles",puddles)
+	set_wet(root,0.0)
+	return root
+
+static func set_wet(bed: Node3D, w: float) -> void:
+	var list: Array=bed.get_meta("wet_mats")
+	(list[0] as StandardMaterial3D).albedo_color=SOIL_DRY.darkened(0.08).lerp(SOIL_WET.darkened(0.1),w)
+	(list[1] as StandardMaterial3D).albedo_color=SOIL_DRY.lerp(SOIL_WET,w)
+	(list[2] as StandardMaterial3D).albedo_color=RIDGE_DRY.lerp(RIDGE_WET,w)
+	for i in 3: (list[i] as StandardMaterial3D).roughness=lerpf(0.95,0.35,w)
+	var pool := clampf((w-0.35)/0.45,0.0,1.0)
+	(list[3] as StandardMaterial3D).albedo_color=Color(0.2,0.14,0.1,pool*0.9)
+	for d in bed.get_meta("puddles"): (d as Node3D).visible=pool>0.01
+
+static var halo_mat: StandardMaterial3D
+## Soft golden glow on the ground under a ripe crop (additive, no light).
+static func halo() -> MeshInstance3D:
+	if not halo_mat:
+		var img := Image.create(64,64,false,Image.FORMAT_RGBA8)
+		for y in 64:
+			for x in 64:
+				var r := Vector2(x-31.5,y-31.5).length()/32.0
+				var a := clampf(1.0-absf(r-0.72)/0.28,0.0,1.0)
+				img.set_pixel(x,y,Color(1,1,1,a*a))
+		img.generate_mipmaps()
+		halo_mat=StandardMaterial3D.new()
+		halo_mat.albedo_texture=ImageTexture.create_from_image(img)
+		halo_mat.albedo_color=Color(1.0,0.84,0.4,0.55)
+		halo_mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+		halo_mat.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
+		halo_mat.blend_mode=BaseMaterial3D.BLEND_MODE_ADD
+		halo_mat.cull_mode=BaseMaterial3D.CULL_DISABLED
+	var m := MeshInstance3D.new()
+	var q := PlaneMesh.new()
+	q.size=Vector2(2.1,2.1)
+	m.mesh=q
+	m.material_override=halo_mat
+	m.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	m.position=Vector3(0,0.17,0)
+	return m
+
 static func ghost(valid: bool) -> Node3D:
 	var root := Node3D.new()
 	var c := Color(0.55,0.95,0.55,0.9) if valid else Color(1.0,0.45,0.4,0.9)
@@ -136,14 +204,32 @@ static func ghost(valid: bool) -> Node3D:
 ## Bed layouts: plant offsets per crop.
 const SPOTS := {"turnip":[Vector2(-0.38,-0.38),Vector2(0.38,-0.38),Vector2(-0.38,0.38),Vector2(0.38,0.38)],
 	"carrot":[Vector2(-0.38,-0.38),Vector2(0.38,-0.38),Vector2(-0.38,0.38),Vector2(0.38,0.38)],
-	"strawberry":[Vector2(-0.36,-0.3),Vector2(0.36,0.3)],"pumpkin":[Vector2(0,0)],"sunflower":[Vector2(-0.35,0.05),Vector2(0.35,-0.05)]}
-const LEAF := {"turnip":Color("6aac5a"),"carrot":Color("4f9a48"),"pumpkin":Color("5f9c4a"),"strawberry":Color("4d8f45"),"sunflower":Color("5c9a3e")}
+	"strawberry":[Vector2(-0.36,-0.3),Vector2(0.36,0.3)],"pumpkin":[Vector2(0,0)],"sunflower":[Vector2(-0.35,0.05),Vector2(0.35,-0.05)],
+	"potato":[Vector2(-0.36,-0.28),Vector2(0.36,0.28)],"tomato":[Vector2(-0.36,0.04),Vector2(0.36,-0.04)],
+	"corn":[Vector2(-0.44,-0.26),Vector2(0.0,0.3),Vector2(0.44,-0.26)],"radish":[Vector2(-0.36,-0.36),Vector2(0.36,-0.36),Vector2(-0.36,0.36),Vector2(0.36,0.36)]}
+const LEAF := {"turnip":Color("6aac5a"),"carrot":Color("4f9a48"),"pumpkin":Color("5f9c4a"),"strawberry":Color("4d8f45"),"sunflower":Color("5c9a3e"),
+	"potato":Color("548f40"),"tomato":Color("4b8a3d"),"corn":Color("6faa4a"),"radish":Color("5fa64c")}
+## The crop's colour on its seed stake (and a hint of it in the seeds).
+const CROP_TINT := {"turnip":Color("b05aa0"),"carrot":Color("ee8a2f"),"pumpkin":Color("e8862e"),"strawberry":Color("e0333f"),
+	"sunflower":Color("f6c531"),"potato":Color("b98a55"),"tomato":Color("e5402f"),"corn":Color("f3cf3f"),"radish":Color("bfe08f")}
 
-## stage: 1 seeds, 2 sprout, 3 leafy, 4 flowering, 5 ripe.
+## Rough top of a ripe crop (sparkles float just above it).
+static func crop_height(kind: String) -> float:
+	return {"sunflower":1.45,"corn":1.4,"tomato":0.95,"radish":0.6,"pumpkin":0.55}.get(kind,0.5)
+
+## stage: 1 seeds, 2 sprout, 3 leafy, 4 budding/flowering, 5 ripe.
 static func crop(kind: String, stage: int, seed_value: int) -> Node3D:
 	var root := Node3D.new()
 	var rng := RandomNumberGenerator.new()
 	rng.seed=seed_value
+	var leaf_c: Color=LEAF.get(kind,LEAF.turnip)
+	var tint: Color=CROP_TINT.get(kind,Color("e8d39a"))
+	if stage<=2:
+		# A little wooden stake with the crop's colour marks what was sown until it shows itself.
+		var stake := part(root,"box",Vector3(0.66,0.32,-0.66),Vector3(0.04,0.42,0.04),Color("9a744c"))
+		stake.rotation.z=0.08
+		part(root,"box",Vector3(0.66,0.48,-0.64),Vector3(0.2,0.15,0.025),Color("f4e6c4"))
+		part(root,"ball",Vector3(0.66,0.48,-0.625),Vector3(0.1,0.1,0.02),tint)
 	for spot in SPOTS.get(kind,SPOTS.turnip):
 		var plant := Node3D.new()
 		plant.position=Vector3(spot.x,0.14,spot.y)
@@ -151,17 +237,27 @@ static func crop(kind: String, stage: int, seed_value: int) -> Node3D:
 		plant.scale=Vector3.ONE*rng.randf_range(0.92,1.08)
 		root.add_child(plant)
 		if stage<=1:
-			for i in 3: part(plant,"ball",Vector3(sin(i*2.1)*0.06,0.02,cos(i*2.1)*0.06),Vector3(0.05,0.035,0.05),Color("e8d39a"))
+			# A soft mound with the seeds pressed into it.
+			part(plant,"dome",Vector3(0,0.0,0),Vector3(0.26,0.12,0.26),Color("8e6a47"))
+			for i in 3: part(plant,"ball",Vector3(sin(i*2.1)*0.05,0.045,cos(i*2.1)*0.05),Vector3(0.05,0.03,0.04),tint.lerp(Color("e8d39a"),0.55))
 			continue
 		if stage==2:
-			for i in 2: leaf(plant,Vector3(0,0.06,0),i*PI+0.4,0.5,0.16,LEAF[kind].lightened(0.25))
-			part(plant,"rod",Vector3(0,0.04,0),Vector3(0.02,0.1,0.02),LEAF[kind].lightened(0.2))
+			if kind=="corn":
+				for i in 2: leaf(plant,Vector3(0,0.04,0),i*PI+0.3,1.15,0.24,leaf_c.lightened(0.25),true)
+			else:
+				for i in 2: leaf(plant,Vector3(0,0.1,0),i*PI+0.4,0.45,0.17,leaf_c.lightened(0.25))
+				part(plant,"rod",Vector3(0,0.05,0),Vector3(0.022,0.11,0.022),leaf_c.lightened(0.2))
+				if kind in ["pumpkin","tomato","potato"]: leaf(plant,Vector3(0,0.1,0),PI*0.5+0.4,0.8,0.1,leaf_c.lightened(0.35))
 			continue
 		match kind:
 			"carrot": _carrot(plant,stage,rng)
 			"pumpkin": _pumpkin(plant,stage,rng)
 			"strawberry": _strawberry(plant,stage,rng)
 			"sunflower": _sunflower(plant,stage,rng)
+			"potato": _potato(plant,stage,rng)
+			"tomato": _tomato(plant,stage,rng)
+			"corn": _corn(plant,stage,rng)
+			"radish": _radish(plant,stage,rng)
 			_: _turnip(plant,stage,rng)
 	return root
 
@@ -240,6 +336,87 @@ static func _sunflower(p: Node3D, stage: int, rng: RandomNumberGenerator) -> voi
 				var a := TAU*k/14
 				part(head,"petal",Vector3(sin(a)*0.2,0,cos(a)*0.2),Vector3(0.1,0.03,0.2),Color("f6c531").lerp(Color("f9db5a"),float(k%2)),Vector3(0,a,0))
 			part(head,"dome",Vector3(0,0.01,0),Vector3(0.28,0.12,0.28),Color("6a4325"))
+
+static func _potato(p: Node3D, stage: int, rng: RandomNumberGenerator) -> void:
+	# A round, bushy plant; white-lilac flowers, then the leaves yellow and potatoes peek out.
+	var n := 7 if stage==3 else 10
+	var size := 0.26 if stage==3 else 0.34
+	var green: Color=LEAF.potato.lerp(Color("b9b25a"),0.35) if stage==5 else LEAF.potato
+	for i in n:
+		var a := TAU*i/n+rng.randf()*0.3
+		var up := 0.06+(i%2)*0.07
+		leaf(p,Vector3(sin(a)*0.04,up,cos(a)*0.04),a,0.55+rng.randf()*0.35,size,green.lerp(Color("7cb35c"),rng.randf()*0.35))
+	part(p,"dome",Vector3(0,0.06,0),Vector3(0.36,0.3,0.36) if stage>3 else Vector3(0.26,0.2,0.26),green.darkened(0.08))
+	if stage==4:
+		for i in 3:
+			var a := TAU*i/3+rng.randf()
+			var at := Vector3(sin(a)*0.12,0.24+rng.randf()*0.05,cos(a)*0.12)
+			for k in 5: part(p,"petal",at+Vector3(sin(k*1.256)*0.03,0,cos(k*1.256)*0.03),Vector3(0.045,0.014,0.045),Color("f2ecf8"))
+			part(p,"ball",at+Vector3(0,0.012,0),Vector3(0.028,0.025,0.028),Color("f4cf3e"))
+	if stage>=5:
+		for i in 4:
+			var a := TAU*i/4+0.4+rng.randf()*0.3
+			var spud := part(p,"ball",Vector3(sin(a)*0.26,0.0,cos(a)*0.26),Vector3(0.17,0.12,0.13),Color("c49a62").lerp(Color("d7b07a"),rng.randf()*0.5),Vector3(0,a,0.2))
+			part(spud,"ball",Vector3(0.22,0.38,0.2),Vector3(0.14,0.14,0.14),Color("8f6a40"))
+
+static func _tomato(p: Node3D, stage: int, rng: RandomNumberGenerator) -> void:
+	# A staked vine: leafy, then yellow star flowers with green fruit, then red clusters.
+	var h := 0.42 if stage==3 else (0.72 if stage==4 else 0.8)
+	part(p,"rod",Vector3(0.09,0.48,0.06),Vector3(0.035,0.96,0.035),Color("a07a4f"))
+	part(p,"rod",Vector3(0,h*0.5,0),Vector3(0.035,h,0.035),Color("5d8f3a"))
+	var rows := 3 if stage==3 else 5
+	for i in rows:
+		var y := 0.08+i*h*0.19
+		for k in 2: leaf(p,Vector3(0,y,0),i*1.9+k*PI,0.35+rng.randf()*0.2,0.24-i*0.015,LEAF.tomato.lerp(Color("74ad55"),rng.randf()*0.4))
+	if stage>=4:
+		var clusters := [Vector3(0.1,h*0.55,-0.08),Vector3(-0.12,h*0.72,0.05),Vector3(0.06,h*0.35,0.12)]
+		for c in clusters:
+			for k in 3:
+				var at: Vector3=c+Vector3(sin(k*2.1)*0.06,-k*0.025,cos(k*2.1)*0.06)
+				if stage==4:
+					if k==0:
+						for j in 5: part(p,"petal",at+Vector3(sin(j*1.256)*0.025,0.02,cos(j*1.256)*0.025),Vector3(0.035,0.012,0.035),Color("f7d23e"))
+					else: part(p,"ball",at,Vector3(0.06,0.06,0.06),Color("7fb85a"))
+				else:
+					part(p,"ball",at,Vector3(0.12,0.11,0.12),Color("e5402f").lerp(Color("f05a3a"),rng.randf()*0.4),Vector3.ZERO,0.35)
+					part(p,"dome",at+Vector3(0,0.045,0),Vector3(0.06,0.03,0.06),Color("4f8f3a"))
+
+static func _corn(p: Node3D, stage: int, rng: RandomNumberGenerator) -> void:
+	# A tall stalk of long arching blades; a tassel, then golden ears in opening husks.
+	var h := 0.55 if stage==3 else (1.15 if stage==4 else 1.3)
+	part(p,"rod",Vector3(0,h*0.5,0),Vector3(0.05,h,0.05),Color("7aa94a"))
+	var blades := 4 if stage==3 else 7
+	for i in blades:
+		var y := 0.05+i*h*0.12
+		leaf(p,Vector3(0,y,0),i*2.4+rng.randf()*0.3,0.55+rng.randf()*0.25,0.42 if stage==3 else 0.55,LEAF.corn.lerp(Color("9cc65e"),rng.randf()*0.4),true)
+	if stage>=4:
+		var tassel := Color("d8c76a") if stage==4 else Color("caa24a")
+		for k in 5: part(p,"rod",Vector3(sin(k*1.256)*0.03,h+0.08,cos(k*1.256)*0.03),Vector3(0.012,0.2,0.012),tassel,Vector3(sin(k*1.256)*0.5,0,cos(k*1.256)*0.5))
+		for e in (1 if stage==4 else 2):
+			var ear := Node3D.new()
+			ear.position=Vector3(0,h*(0.5+e*0.12),0)
+			ear.rotation=Vector3(0,e*PI+0.6,0.45)
+			p.add_child(ear)
+			if stage==5:
+				part(ear,"capsule",Vector3(0,0.05,0),Vector3(0.11,0.07,0.11),Color("8fbf5a"))
+				part(ear,"capsule",Vector3(0,0.16,0),Vector3(0.09,0.11,0.09),Color("f3cf3f"),Vector3.ZERO,0.5)
+				for k in 2: leaf(ear,Vector3(0,0.06,0),k*PI,1.0,0.16,Color("a9cf6a"))
+			else:
+				part(ear,"capsule",Vector3(0,0.06,0),Vector3(0.06,0.066,0.06),Color("8fbf5a"))
+				part(ear,"rod",Vector3(0,0.15,0),Vector3(0.01,0.06,0.01),Color("b5733a"))
+
+static func _radish(p: Node3D, stage: int, rng: RandomNumberGenerator) -> void:
+	# Korean mu: a tall rosette of long leaves; a white root that swells with a pale green
+	# shoulder and stands well out of the soil when ripe.
+	var n := 6 if stage==3 else 7
+	var top := 0.0 if stage<4 else (0.2 if stage==4 else 0.36)
+	for i in n:
+		leaf(p,Vector3(0,0.06+top,0),TAU*i/n+rng.randf()*0.35,1.05+rng.randf()*0.25,0.34 if stage==3 else 0.4,LEAF.radish.lerp(Color("86c063"),rng.randf()*0.45))
+	if stage>=4:
+		# White body standing out of the soil, green shoulder on top.
+		var r := 0.15 if stage==4 else 0.24
+		part(p,"capsule",Vector3(0,top*0.42,0),Vector3(r,top*0.5,r),Color("f4f6ee"),Vector3.ZERO,0.6)
+		part(p,"capsule",Vector3(0,top*0.86,0),Vector3(r*1.03,top*0.16,r*1.03),Color("bfe08f"),Vector3.ZERO,0.6)
 
 ## Gentle twinkles over a ripe bed.
 static func sparkles(parent: Node3D, height: float) -> CPUParticles3D:
