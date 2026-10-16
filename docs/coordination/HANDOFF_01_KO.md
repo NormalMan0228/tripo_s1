@@ -70,4 +70,11 @@
 - 메인 서버는 0.11.9(a286f78)이고 최소 버전 0.11.9입니다. S3에는 0.11.9 설치 파일과 0.11.7·0.11.8 → 0.11.9 패치가 있습니다. 기준판은 D:\lsm26ases(0.11.7, 0.11.8, 0.11.9)입니다.
 - 서버 설정은 compose.yaml 기본값입니다: 리깅·애니 켜짐, 모닥불 buff, 이사 off, 계정당 하루 5회, 서버 전체 횟수 제한 없음, 예산 29106.
 - 내보낸 뒤에는 반드시 pck 안의 project.binary를 검사합니다(ECFG로 시작하고 버전이 맞아야 함). 0.11.9 첫 내보내기에서 0바이트가 나온 적이 있습니다.
-- 다음 패치 대기열(도움 파일 after_0118_queue.txt 끝부분): codex/secaudit2 efdc67a(서버 핫픽스 후보), wt/lowspec 64e4650, codex/lownet c59cbd9, wt/tooluse2 672d294, wt/voices a666d589, wt/mapdoor-cut-3 95bae15(문 절단 도구 실행), wt/body 28104c9(몬스터 11종, GLB 15개 복사), wt/ja 495ea9d(두 단계 import), texdiet와 건물 2048 텍스처, wt/uibag 756c5df.
+- 다음 패치 대기열(도움 파일 after_0118_queue.txt 끝부분): codex/secaudit2 efdc67a(서버 핫픽스 후보), wt/lowspec 64e4650, codex/lownet c59cbd9, wt/vfx3 16c3ae2e(vfx2 + tooluse2 0a083f1 포함, 도구 효과 타이밍), wt/voices a666d589, wt/mapdoor-cut-4 d54b18c4(cut-3 포함, 창문 유리; 문 절단 도구 실행), wt/body 1b893ba(28104c9 포함: 몬스터 11종, GLB 15개 복사 + shadow_beast 결함 수정), wt/ja 495ea9d(두 단계 import), texdiet와 건물 2048 텍스처, wt/uibag 756c5df.
+
+## 2026-10-16 11:45 현재
+
+- 보안 재점검 codex/secaudit2(efdc67a)를 merge-version-gate에 합쳤습니다(ee3dc30). 바뀐 곳은 서버뿐입니다: 표시 이름 우회 차단, 가입 ID 이름 규칙, 로그인 ID 가로채기 차단, 야간 퀘스트 시간대 우회 차단, 예전 리깅·테스터 비용 집계. 서버 전체 테스트는 1,777 통과, 0 실패입니다. Codex 테스트 하나(test_chat 예전 메시지 형식)는 실서버 형식(d07b0795, display_name 포함)에 맞췄습니다.
+- 이 커밋은 서버만 다시 빌드하는 핫픽스로 낼 수 있습니다. 게임 버전은 0.11.9 그대로이고 ops/release.json도 같아서, deploy_school.py --announce 3 --block-older를 실행하면 새 배포 커밋 없이 HEAD만 올라갑니다. 3분 공지와 로그아웃이 한 번 생깁니다. 사용자가 이 세션에서 직접 "배포해"라고 해야 진행합니다.
+- 11:35 사용자 보고: 0.11.7에서 패치를 누르자 창만 닫히고 다시 켜지지 않았습니다. 보관본 0.11.7로 이 PC에서 재현했더니 179MB 패치를 18초에 받고, 스스로 다시 켜져 v0.11.9 타이틀까지 정상으로 왔습니다. 사용자가 누른 곳은 다른 PC입니다(이 PC에는 0.11.7 설치본도 patches 폴더도 없음). 그 PC에서는 Villagen을 한 번 더 실행하면 패치가 적용됩니다. 다음 패치에서 재시작 안내 문구와 실패 기록을 넣습니다.
+- 사용자 데이터의 logs 폴더는 소스 QA 실행과 설치본이 함께 씁니다. ambience .sample 오류는 소스 실행에서 난 것입니다.
