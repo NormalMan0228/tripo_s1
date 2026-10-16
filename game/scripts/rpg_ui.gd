@@ -2502,10 +2502,6 @@ static func dialogue(parent: Control, speaker: String, portrait := "") -> Dictio
 		fit_standee(standee)
 		var keep := standee
 		root.resized.connect(func(): if is_instance_valid(keep): fit_standee(keep))
-		# Leaving: whoever closes the dialogue frees it at once; a copy of the figure steps down and
-		# fades where it stood, so the speaker leaves instead of vanishing.
-		root.tree_exiting.connect(func(): if is_instance_valid(keep) and is_instance_valid(root.get_parent()): _standee_exit(keep, root.get_parent()))
-		face_frames(standee)
 	# The text box: bottom, full width inside safe margins.
 	var box := PanelContainer.new()
 	box.name = "Box"
@@ -2691,68 +2687,6 @@ static func standee_path(portrait: String, mood := "neutral") -> String:
 	if mood != "neutral" and ResourceLoader.exists(base + "_" + mood + ".png"): return base + "_" + mood + ".png"
 	return base + ".png" if ResourceLoader.exists(base + ".png") else ""
 
-## The figure's way out (a dialogue closing): a copy drops 36 px and fades in a quarter second.
-static func _standee_exit(standee: TextureRect, parent: Node) -> void:
-	if calm() or standee.texture == null: return
-	var ghost := TextureRect.new()
-	ghost.texture = standee.texture
-	ghost.expand_mode = standee.expand_mode
-	ghost.stretch_mode = standee.stretch_mode
-	ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ghost.top_level = true
-	ghost.z_index = 4
-	var at := standee.get_global_rect()
-	var place := func():
-		if not is_instance_valid(parent): return
-		parent.add_child(ghost)
-		ghost.global_position = at.position
-		ghost.size = at.size
-		var tween := ghost.create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		tween.tween_property(ghost, "global_position:y", at.position.y + 36.0, 0.26)
-		tween.parallel().tween_property(ghost, "modulate:a", 0.0, 0.26)
-		tween.tween_callback(ghost.queue_free)
-	place.call_deferred()
-
-## Blinks and a talking mouth on the standee (portrait_faces.py: <name>_blink.png, <name>_talk.png
-## beside the standee, full-size overlays with only the eyes or the mouth). Without them, nothing.
-static func face_frames(standee: TextureRect) -> void:
-	var base := standee_path(str(standee.get_meta("portrait", "")))
-	if base.is_empty(): return
-	for part in ["blink", "talk"]:
-		var path := base.get_basename() + "_" + part + ".png"
-		if not ResourceLoader.exists(path): continue
-		var layer := TextureRect.new()
-		layer.name = "Face_" + part
-		layer.texture = load(path)
-		layer.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		layer.stretch_mode = standee.stretch_mode
-		layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		layer.visible = false
-		standee.add_child(layer)
-	if standee.get_node_or_null("Face_blink"): _blink_loop(standee)
-
-static func _blink_loop(standee: TextureRect) -> void:
-	while is_instance_valid(standee) and standee.is_inside_tree():
-		await standee.get_tree().create_timer(randf_range(2.4, 5.0)).timeout
-		var eyes: Control = standee.get_node_or_null("Face_blink") if is_instance_valid(standee) else null
-		# Only the neutral face has its closed eyes drawn.
-		if eyes == null or str(standee.get_meta("mood", "neutral")) != "neutral": continue
-		eyes.visible = true
-		await standee.get_tree().create_timer(0.11).timeout
-		if is_instance_valid(eyes): eyes.visible = false
-
-## While a line types out: the mouth opens and closes with the letters (dialogue typing calls it).
-static func dialogue_talk(d: Dictionary, talking: bool) -> void:
-	var standee: TextureRect = d.get("standee")
-	if not is_instance_valid(standee): return
-	var mouth: Control = standee.get_node_or_null("Face_talk")
-	if mouth == null: return
-	if not talking or str(standee.get_meta("mood", "neutral")) != "neutral":
-		mouth.visible = false
-		return
-	mouth.visible = not mouth.visible
-
 ## The face a line calls for: questions look curious/surprised, exclamations happy.
 static func line_mood(line: String) -> String:
 	var text := line.strip_edges()
@@ -2857,18 +2791,6 @@ static func dialogue_type(d: Dictionary, seconds: float) -> void:
 	var typing := body.create_tween()
 	typing.tween_property(body, "visible_ratio", 1.0, seconds)
 	d.typing = typing
-	_talk_loop(d)
-
-## The mouth moves while the letters come (about eleven times a second) and rests closed after.
-static func _talk_loop(d: Dictionary) -> void:
-	var standee: TextureRect = d.get("standee")
-	if not is_instance_valid(standee) or standee.get_node_or_null("Face_talk") == null or d.get("talking", false): return
-	d.talking = true
-	while is_instance_valid(standee) and standee.is_inside_tree() and dialogue_typing(d):
-		dialogue_talk(d, true)
-		await standee.get_tree().create_timer(0.09).timeout
-	d.talking = false
-	if is_instance_valid(standee): dialogue_talk(d, false)
 
 static func dialogue_typing(d: Dictionary) -> bool:
 	return is_instance_valid(d.get("body")) and (d.body as Label).visible_ratio < 1.0

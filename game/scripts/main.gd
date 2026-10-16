@@ -601,8 +601,6 @@ func login_ui(page := "menu") -> void:
 	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(art)
-	# Cloud shadows drift and the sea glints on the painting (title_live.gd).
-	preload("res://scripts/title_live.gd").apply(art)
 	# The living sky (title_sky.gd, World Labs panorama) in place of the painted art, when chosen.
 	if title_sky and TitleSky.available():
 		art.visible = false
