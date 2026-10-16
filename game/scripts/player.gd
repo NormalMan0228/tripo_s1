@@ -684,6 +684,10 @@ func apply_avatar(value: Dictionary) -> bool:
 	return true
 
 func apply_colors() -> void:
+	# The eight characters (m1..f4, avatar_v2): their own skin is the tint reference, and the accent
+	# colour paints their detail surface (bandana, headband, belt...).
+	var id := str(avatar.get("character",""))
+	var eight := id.length()==2 and id[0] in ["m","f"] and id[1].is_valid_int()
 	# Partitioned GLBs retain original weights, UVs and textures per semantic surface.
 	for mesh in visual.find_children("*","MeshInstance3D",true,false):
 		for index in mesh.mesh.get_surface_count():
@@ -691,7 +695,8 @@ func apply_colors() -> void:
 			if not source is StandardMaterial3D: continue
 			var fields := source.resource_name.to_lower().split("__")
 			var part: String=fields[0]
-			if part not in ["hair","coat","pants","boots","skin","backpack"]: continue
+			if part=="detail" and eight: part="accent"
+			if part not in ["hair","coat","pants","boots","skin","backpack","accent"]: continue
 			if avatar.get("character")=="explorer_b" and avatar.get(part)=={"coat":"#dba448","pants":"#526552","boots":"#765744"}.get(part):continue
 			var material: StandardMaterial3D=source.duplicate()
 			if part=="backpack" and not avatar.get("backpack",true):
@@ -702,13 +707,15 @@ func apply_colors() -> void:
 				tint.shader=preload("res://shaders/avatar_tint.gdshader")
 				tint.set_shader_parameter("albedo_texture",source.albedo_texture)
 				tint.set_shader_parameter("tint",Color(avatar[part]))
-				tint.set_shader_parameter("reference_color",Color("#e4b587") if part=="skin" else Color("#"+fields[1]))
+				tint.set_shader_parameter("reference_color",Color("#e4b587") if part=="skin" and not eight else Color("#"+fields[1]))
 				tint.set_shader_parameter("skin_part",part=="skin")
 				tint.set_shader_parameter("gold_cloth_only",avatar.get("character")=="explorer_b" and part=="coat")
 				mesh.set_surface_override_material(index,tint)
 				continue
 			mesh.set_surface_override_material(index,material)
 	var headwear: String=avatar.get("headwear","none")
+	# f4 (the sailor) wears her own straw hat in the model: no second hat on top.
+	if id=="f4": headwear="none"
 	if headwear!="none":
 		var holder := Node3D.new()
 		holder.name="Headwear_"+headwear
@@ -726,16 +733,28 @@ func apply_colors() -> void:
 				holder.reparent(attachment,false)
 				holder.transform=rest.affine_inverse()*desired
 		var hat_color := Color(avatar.get("coat","#dba448")).darkened(0.15)
-		Art.sphere(holder,Vector3(0,0.03,0),Vector3(0.63,0.2,0.57),hat_color)
-		if headwear=="cap": Art.box(holder,Vector3(0,-0.04,-0.27),Vector3(0.42,0.045,0.3),hat_color)
-		else: Art.sphere(holder,Vector3(0.05,0.09,0),Vector3(0.52,0.16,0.5),hat_color)
+		if headwear=="straw":
+			# A wide straw brim, a low crown and a band in the accent colour.
+			var straw := Color("#d9b46a")
+			Art.sphere(holder,Vector3(0,0.0,0),Vector3(1.05,0.05,1.0),straw)
+			Art.sphere(holder,Vector3(0,0.07,0),Vector3(0.6,0.24,0.56),straw.darkened(0.06))
+			Art.sphere(holder,Vector3(0,0.035,0),Vector3(0.62,0.07,0.58),Color(avatar.get("accent","#a84a32")))
+		else:
+			Art.sphere(holder,Vector3(0,0.03,0),Vector3(0.63,0.2,0.57),hat_color)
+			if headwear=="cap": Art.box(holder,Vector3(0,-0.04,-0.27),Vector3(0.42,0.045,0.3),hat_color)
+			else: Art.sphere(holder,Vector3(0.05,0.09,0),Vector3(0.52,0.16,0.5),hat_color)
 	if avatar.get("backpack",true) and avatar.get("character","explorer")!="explorer":
 		var bag := Node3D.new()
 		bag.name="Backpack"
 		visual.add_child(bag)
 		bag.position=Vector3(0,0.98,0.15)
-		Art.box(bag,Vector3.ZERO,Vector3(0.32,0.4,0.18),Color("aa8c64"))
-		Art.box(bag,Vector3(0,-0.07,0.105),Vector3(0.26,0.17,0.06),Color("85694c"))
+		# A leather pack: rounded body, a top flap and a buckle in the accent colour.
+		var leather := Color("8a6440")
+		Art.box(bag,Vector3(0,-0.03,0),Vector3(0.3,0.34,0.16),leather)
+		Art.sphere(bag,Vector3(0,0.13,0),Vector3(0.3,0.14,0.16),leather)
+		Art.box(bag,Vector3(0,0.1,0.07),Vector3(0.31,0.16,0.05),leather.darkened(0.18))
+		Art.box(bag,Vector3(0,0.03,0.1),Vector3(0.06,0.06,0.02),Color(avatar.get("accent","#c9a35a")))
+		Art.box(bag,Vector3(0,-0.1,0.09),Vector3(0.22,0.12,0.04),leather.darkened(0.08))
 		if hand_skeleton and hand_skeleton.find_bone("Spine02")>=0:
 			var attachment := BoneAttachment3D.new()
 			attachment.bone_name="Spine02"
