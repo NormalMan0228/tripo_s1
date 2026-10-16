@@ -977,6 +977,9 @@ func build_world(survival: bool) -> bool:
 	spark_mat.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
 	sparks.material_override=spark_mat
 	flame.add_child(sparks)
+	# Compile the campfire/buff/combat effect shaders now, under the loading veil, not on the frame the
+	# fire is first lit or the buff first shows (0.11.9 hitches of 53 ms and 184 ms; combat_fx.gd).
+	if survival: preload("res://scripts/combat_fx.gd").warm_up(self, Vector3(0, 1.0, 0))
 	ambience=CPUParticles3D.new()
 	ambience.amount=45
 	ambience.lifetime=8

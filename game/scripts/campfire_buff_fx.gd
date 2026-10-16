@@ -260,3 +260,58 @@ func _pulse() -> void:
 		pulses += 1
 		Fx.ring(world, p, 1.6, Color(1.0, 0.7, 0.35, 0.6), 0.8)
 		Fx.glow(world, p+Vector3(0, 0.5, 0), Color("ffb45a"), 1.4, 0.8)
+
+## The rim overlay, the embers' additive particles and the additive radius ring each compile a shader
+## on first draw (a 184 ms hitch when the buff first showed): draw them once, invisibly, while the
+## expedition loads (CombatFx.warm_up).
+static func warm_up(world: Node3D, at: Vector3) -> void:
+	if rim_shader == null:
+		rim_shader = Shader.new()
+		rim_shader.code = RIM_CODE
+	var holder := Node3D.new()
+	world.add_child(holder)
+	holder.global_position = at
+	var ball := MeshInstance3D.new()
+	var sphere := SphereMesh.new()
+	sphere.radius = 0.02
+	sphere.height = 0.04
+	ball.mesh = sphere
+	var clear := StandardMaterial3D.new()
+	clear.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	clear.albedo_color = Color(1, 1, 1, 0.0)
+	ball.material_override = clear
+	var rim_warm := ShaderMaterial.new()
+	rim_warm.shader = rim_shader
+	rim_warm.set_shader_parameter("strength", 0.0)
+	ball.material_overlay = rim_warm
+	holder.add_child(ball)
+	var ring_warm := MeshInstance3D.new()
+	ring_warm.mesh = Art.mesh("ring")
+	var rm := StandardMaterial3D.new()
+	rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	rm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	rm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	rm.cull_mode = BaseMaterial3D.CULL_DISABLED
+	rm.albedo_color = Color(0, 0, 0, 0.0)
+	ring_warm.material_override = rm
+	ring_warm.scale = Vector3.ONE*0.05
+	holder.add_child(ring_warm)
+	var sparks := CPUParticles3D.new()
+	sparks.mesh = QuadMesh.new()
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = Fx.tex("spark")
+	m.vertex_color_use_as_albedo = true
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	m.billboard_keep_scale = true
+	sparks.material_override = m
+	sparks.amount = 1
+	sparks.lifetime = 0.5
+	sparks.color = Color(0, 0, 0, 0.0)
+	sparks.scale_amount_min = 0.01
+	sparks.scale_amount_max = 0.01
+	holder.add_child(sparks)
+	sparks.emitting = true
+	holder.get_tree().create_timer(1.0).timeout.connect(func(): if is_instance_valid(holder): holder.queue_free())
