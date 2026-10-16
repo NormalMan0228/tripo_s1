@@ -204,6 +204,10 @@
     "name": "리자드맨",
     "map": "quarry",
     "tier": "weak"
+   },
+   "destep_deg": {
+    "death": 26,
+    "idle": 26
    }
   },
   "minotaur": {
@@ -351,7 +355,10 @@
     "idle": "A massive white-furred horned yeti stands in place i",
     "walk": "A massive white-furred yeti walking in place with a ",
     "run": "A massive white-furred yeti running in place in a go",
-    "attack": "A massive white-furred yeti spreads both huge arms w",
+    "attack": {
+     "match": "A massive white-furred yeti spreads both huge arms w",
+     "start": 0.6
+    },
     "hurt": "A massive white-furred yeti is hit: it rocks back a ",
     "death": "A massive white-furred yeti is struck down: it stagg"
    },
@@ -420,6 +427,9 @@
     "name": "서리 마녀",
     "map": "frost",
     "tier": "mid"
+   },
+   "destep_deg": {
+    "death": 26
    }
   },
   "frost_knight": {
@@ -481,7 +491,10 @@
     "idle": "A huge muscular frost giant with an ice crystal crow",
     "walk": "A huge muscular frost giant with a long icy beard wa",
     "run": "A huge muscular frost giant with a long icy beard ru",
-    "attack": "A huge muscular frost giant with a long icy beard ra",
+    "attack": {
+     "match": "A huge muscular frost giant with a long icy beard ra",
+     "start": 0.4
+    },
     "hurt": "A huge muscular frost giant with a long icy beard is",
     "death": "Mortally struck, a huge muscular frost giant with a "
    },
@@ -544,58 +557,231 @@
   },
   "chimera": {
    "height_m": 3.0,
-   "tripo_task": "a9228193-a0a3-4149-898d-18ab5ba3109b",
    "clips": {
-    "idle": "A massive hunched minotaur with heavy shoulders stan",
-    "walk": "A massive hunched minotaur walking in place with a h",
-    "run": "A massive minotaur charging like a bull, running in ",
-    "attack": "A massive hunched minotaur lowers its horned head, d",
-    "hurt": "A massive hunched minotaur is hit: its horned head i",
-    "death": "A massive minotaur is struck hard: it lowers its hor"
+    "idle": "proc_idle",
+    "walk": "proc_walk",
+    "run": "proc_run",
+    "attack": "proc_attack",
+    "hurt": "proc_hurt",
+    "death": "proc_death"
    },
    "loops": [
     "idle",
     "walk",
     "run"
    ],
-   "loop_min_seconds": {
-    "run": 0.7
+   "loop_exact": true,
+   "attack_impact": 0.66,
+   "bones": {
+    "Hips": "tripo::Root",
+    "LeftUpLeg": "tripo::1_Left_Limb_0",
+    "RightUpLeg": "tripo::1_Right_Limb_0",
+    "LeftHand": "tripo::0_Left_Limb_2",
+    "RightHand": "tripo::0_Right_Limb_2",
+    "LeftToeBase": "tripo::0_Left_Limb_3",
+    "RightToeBase": "tripo::0_Right_Limb_3",
+    "LeftFoot": "tripo::1_Left_Limb_3",
+    "RightFoot": "tripo::1_Right_Limb_3",
+    "Head": "tripo::Head_4"
    },
    "catalog": {
     "name": "키메라",
     "map": "quarry",
     "tier": "boss"
    },
-   "proxy_of": "minotaur",
-   "note": "boss stand-in body until chimera (키메라) has its own model: the minotaur motions at 3.0 m, shipped as chimera_<map>.glb"
+   "note": "own model: Tripo \"Other\" auto-rig + 6 procedural Blender motions (tools/body_gen/proc_motion.py, hints in anim/proc_motion_hints.json); source anim/src/chimera/mon_chimera_anim.fbx"
   },
   "dragon": {
    "height_m": 5.0,
-   "tripo_task": "11fa5e3d-9c60-4b04-a105-566735b7ca41",
    "clips": {
-    "idle": "A huge muscular frost giant with an ice crystal crow",
-    "walk": "A huge muscular frost giant with a long icy beard wa",
-    "run": "A huge muscular frost giant with a long icy beard ru",
-    "attack": "A huge muscular frost giant with a long icy beard ra",
-    "hurt": "A huge muscular frost giant with a long icy beard is",
-    "death": "Mortally struck, a huge muscular frost giant with a "
+    "idle": "proc_idle",
+    "walk": "proc_walk",
+    "run": "proc_run",
+    "attack": "proc_attack",
+    "hurt": "proc_hurt",
+    "death": "proc_death"
    },
    "loops": [
     "idle",
     "walk",
     "run"
    ],
-   "loop_min_seconds": {
-    "run": 0.7
+   "loop_exact": true,
+   "attack_impact": 0.7,
+   "bones": {
+    "Hips": "BoneRoot",
+    "LeftUpLeg": "L_Thigh",
+    "RightUpLeg": "R_Thigh",
+    "LeftHand": "L_Hand",
+    "RightHand": "R_Hand",
+    "LeftToeBase": "L_ToeBase",
+    "RightToeBase": "R_ToeBase",
+    "LeftFoot": "L_Foot",
+    "RightFoot": "R_Foot",
+    "Head": "Head"
    },
-   "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8",
    "catalog": {
     "name": "서리 용",
     "map": "frost",
     "tier": "boss"
    },
-   "proxy_of": "glacier_giant",
-   "note": "boss stand-in body until dragon (서리 용) has its own model: the glacier_giant motions at 5.0 m, shipped as dragon_<map>.glb"
+   "note": "own model: Tripo \"Other\" auto-rig + 6 procedural Blender motions (tools/body_gen/proc_motion.py, hints in anim/proc_motion_hints.json); source anim/src/dragon/mon_dragon_anim.fbx"
+  },
+  "centipede": {
+   "height_m": 1.4,
+   "clips": {
+    "idle": "proc_idle",
+    "walk": "proc_walk",
+    "run": "proc_run",
+    "attack": "proc_attack",
+    "hurt": "proc_hurt",
+    "death": "proc_death"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_exact": true,
+   "attack_impact": 0.56,
+   "bones": {
+    "Hips": "tripo::Root",
+    "LeftUpLeg": "bone_54",
+    "RightUpLeg": "bone_56",
+    "LeftHand": "bone_15",
+    "RightHand": "bone_16",
+    "LeftToeBase": "bone_51",
+    "RightToeBase": "bone_53",
+    "LeftFoot": "bone_47",
+    "RightFoot": "bone_49",
+    "Head": "tripo::Head_4"
+   },
+   "glow_hues": [
+    [
+     0.11,
+     0.19
+    ]
+   ],
+   "catalog": {
+    "name": "지네",
+    "map": "forest",
+    "tier": "weak"
+   },
+   "note": "own model: Tripo \"Other\" auto-rig + 6 procedural Blender motions (tools/body_gen/proc_motion.py, hints in anim/proc_motion_hints.json); source anim/src/centipede/mon_centipede_anim.fbx"
+  },
+  "mimic": {
+   "height_m": 1.2,
+   "clips": {
+    "idle": "proc_idle",
+    "walk": "proc_walk",
+    "run": "proc_run",
+    "attack": "proc_attack",
+    "hurt": "proc_hurt",
+    "death": "proc_death"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_exact": true,
+   "attack_impact": 0.5,
+   "bones": {
+    "Hips": "tripo::Root",
+    "LeftUpLeg": "tripo::1_Right_Limb_0",
+    "RightUpLeg": "tripo::3_Left_Limb_0",
+    "LeftHand": "lid",
+    "RightHand": "lid",
+    "LeftToeBase": "tripo::1_Right_Limb_3",
+    "RightToeBase": "tripo::3_Left_Limb_3",
+    "LeftFoot": "tripo::0_Left_Limb_3",
+    "RightFoot": "tripo::2_Left_Limb_2",
+    "Head": "lid"
+   },
+   "catalog": {
+    "name": "미믹",
+    "map": "quarry",
+    "tier": "weak"
+   },
+   "note": "own model: Tripo \"Other\" auto-rig + 6 procedural Blender motions (tools/body_gen/proc_motion.py, hints in anim/proc_motion_hints.json); source anim/src/mimic/mon_mimic_anim.fbx"
+  },
+  "basilisk": {
+   "height_m": 2.2,
+   "clips": {
+    "idle": "proc_idle",
+    "walk": "proc_walk",
+    "run": "proc_run",
+    "attack": "proc_attack",
+    "hurt": "proc_hurt",
+    "death": "proc_death"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_exact": true,
+   "attack_impact": 0.54,
+   "bones": {
+    "Hips": "tripo::Root",
+    "LeftUpLeg": "tripo::1_Left_Limb_0",
+    "RightUpLeg": "tripo::1_Right_Limb_0",
+    "LeftHand": "tripo::Head_2",
+    "RightHand": "tripo::Head_1",
+    "LeftToeBase": "tripo::0_Left_Limb_2",
+    "RightToeBase": "tripo::0_Right_Limb_3",
+    "LeftFoot": "tripo::1_Left_Limb_3",
+    "RightFoot": "tripo::1_Right_Limb_3",
+    "Head": "tripo::Head_1"
+   },
+   "catalog": {
+    "name": "바실리스크",
+    "map": "quarry",
+    "tier": "mid"
+   },
+   "note": "own model: Tripo \"Other\" auto-rig + 6 procedural Blender motions (tools/body_gen/proc_motion.py, hints in anim/proc_motion_hints.json); source anim/src/basilisk/mon_basilisk_anim.fbx"
+  },
+  "naga": {
+   "height_m": 2.4,
+   "clips": {
+    "idle": "proc_idle",
+    "walk": "proc_walk",
+    "run": "proc_run",
+    "attack": "proc_attack",
+    "hurt": "proc_hurt",
+    "death": "proc_death"
+   },
+   "loops": [
+    "idle",
+    "walk",
+    "run"
+   ],
+   "loop_exact": true,
+   "attack_impact": 0.58,
+   "bones": {
+    "Hips": "BoneRoot",
+    "LeftUpLeg": "L_Upperarm",
+    "RightUpLeg": "R_Upperarm",
+    "LeftHand": "L_Hand",
+    "RightHand": "R_Hand",
+    "LeftToeBase": "snake_7",
+    "RightToeBase": "snake_8",
+    "LeftFoot": "snake_6",
+    "RightFoot": "snake_9",
+    "Head": "Head"
+   },
+   "glow_hues": [
+    [
+     0.11,
+     0.19
+    ]
+   ],
+   "catalog": {
+    "name": "나가",
+    "map": "quarry",
+    "tier": "mid"
+   },
+   "note": "own model: Tripo \"Other\" auto-rig + 6 procedural Blender motions (tools/body_gen/proc_motion.py, hints in anim/proc_motion_hints.json); source anim/src/naga/mon_naga_anim.fbx"
   }
  }
 }

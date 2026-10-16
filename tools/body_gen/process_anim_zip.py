@@ -39,6 +39,7 @@ def run(args):
 
 def main():
     mid, zpath = sys.argv[1], sys.argv[2]
+    CFG = os.environ.get('GAME_BUILD') or os.path.join(ANIM, 'game_build.json')  # e.g. game_build_flyers.json
     gif = '--no-gif' not in sys.argv
     scratch = os.environ.get('BODY_SCRATCH') or tempfile.gettempdir()
     work = tempfile.mkdtemp(prefix='anim_%s_' % mid, dir=scratch)
@@ -65,11 +66,11 @@ def main():
     glb = os.path.join(ANIM, 'game', mid + '.glb')
     rep = os.path.join(ANIM, 'game', mid + '_report.json')
     run([BLENDER, '-b', '--factory-startup', '-P', os.path.join(TOOLS, 'build_game_monster.py'), '--',
-         src_fbx, glb, os.path.join(ANIM, 'game_build.json'), mid, rep])
+         src_fbx, glb, CFG, mid, rep])
     frames = os.path.join(work, 'frames')
     run([BLENDER, '-b', '--factory-startup', '-P', os.path.join(TOOLS, 'render_clips.py'), '--', glb, frames, '6'])
     py = sys.executable
-    nclips = len(json.load(open(os.path.join(ANIM, 'game_build.json'), encoding='utf-8'))['monsters'][mid]['clips'])
+    nclips = len(json.load(open(CFG, encoding='utf-8'))['monsters'][mid]['clips'])
     title = '%s (%s) — 게임 클립 %d개, 모두 AI 생성' % (KO.get(mid, mid), mid, nclips)
     run([py, os.path.join(TOOLS, 'clip_sheet.py'), frames, os.path.join(ANIM, 'sheets', mid + '_clips.png'), title, rep])
     if gif:
