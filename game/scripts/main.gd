@@ -809,7 +809,10 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		I18n.remember("username",username.strip_edges())
 	# A new account picks and dresses its traveller first (character_select.gd, 31); the real game
 	# only, so test harnesses that register accounts go straight on.
-	if get_tree().current_scene==self and (register or await needs_character_select()): await first_look()
+	if get_tree().current_scene==self:
+		var pick_look := register
+		if not pick_look: pick_look = await needs_character_select()
+		if pick_look: await first_look()
 	var veil := Transition.of(get_tree())
 	# Where the session picks up (server/last_spot.py): a first sign-in, a long time away or a game
 	# ended at home wakes up in the attic bed; otherwise back on the spot in the own village.
