@@ -119,11 +119,12 @@ for _kind, _stats in ENEMIES.items():
 
 # Species per map and tier (each species belongs to one map; the tutorial borrows the forest's weak).
 # Only species with their own model are rostered (category 2 flyers joined 2026-10-16: harpy, imp,
-# gargoyle, frost wraith, lich; they hover in their GLBs).
+# gargoyle, frost wraith, lich; they hover in their GLBs; category 3 with Blender procedural
+# motions: centipede, mimic, basilisk, naga, plus the chimera and frost dragon bosses).
 ROSTERS = {
     'tutorial': {'weak':('goblin',)},
-    'forest': {'weak':('goblin','harpy'),'mid':('werewolf','troll'),'strong':('cyclops',)},
-    'quarry': {'weak':('skeleton','lizardman','imp'),'mid':('gargoyle',),'strong':('minotaur','mummy_king')},
+    'forest': {'weak':('goblin','harpy','centipede'),'mid':('werewolf','troll'),'strong':('cyclops',)},
+    'quarry': {'weak':('skeleton','lizardman','imp','mimic'),'mid':('gargoyle','basilisk','naga'),'strong':('minotaur','mummy_king')},
     'frost': {'weak':('ghoul','ice_shardling','draugr','frost_wraith'),'mid':('yeti','wendigo','frost_hag','frost_knight'),
               'strong':('ice_golem','glacier_giant','lich')},
 }

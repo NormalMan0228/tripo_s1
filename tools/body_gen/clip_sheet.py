@@ -30,10 +30,12 @@ for clip in ORDER:
     r = rep.get('clips', {}).get(clip, {})
     src = r.get('source', '')
     kind = 'AI 생성' if src and not any(k in src for k in ('run.', 'hit_to_body', 'tripo:run')) else 'Tripo 프리셋'
+    if src.startswith('proc:'):
+        kind = '절차 생성'  # tools/body_gen/proc_motion.py (Blender script, no AI)
     dr.text((16, y + 10), KO.get(clip, clip), font=fm, fill=(40, 36, 32))
     dr.text((16, y + 40), clip, font=fs, fill=(110, 104, 96))
     dr.text((16, y + 62), '%.2f초' % info['seconds'] + (' · 반복' if r.get('loop') else ''), font=fs, fill=(110, 104, 96))
-    dr.text((16, y + 84), kind, font=fs, fill=(30, 110, 60) if kind == 'AI 생성' else (40, 90, 150))
+    dr.text((16, y + 84), kind, font=fs, fill={'AI 생성': (30, 110, 60), '절차 생성': (150, 90, 20)}.get(kind, (40, 90, 150)))
     if clip == 'attack' and 'attack_impact_seconds' in rep:
         dr.text((16, y + 106), '타격 %.2f초' % rep['attack_impact_seconds'], font=fs, fill=(170, 60, 40))
     x = 180

@@ -17,8 +17,8 @@ from server.tests.legacy_saves import legacy_run, legacy_world, strip
 STAGES = {'tutorial': 1, 'forest': 3, 'quarry': 5, 'frost': 7}
 ROSTER = {
     'tutorial': {'weak': ('goblin',)},
-    'forest': {'weak': ('goblin', 'harpy'), 'mid': ('werewolf', 'troll'), 'strong': ('cyclops',)},
-    'quarry': {'weak': ('skeleton', 'lizardman', 'imp'), 'mid': ('gargoyle',), 'strong': ('minotaur', 'mummy_king')},
+    'forest': {'weak': ('goblin', 'harpy', 'centipede'), 'mid': ('werewolf', 'troll'), 'strong': ('cyclops',)},
+    'quarry': {'weak': ('skeleton', 'lizardman', 'imp', 'mimic'), 'mid': ('gargoyle', 'basilisk', 'naga'), 'strong': ('minotaur', 'mummy_king')},
     'frost': {'weak': ('ghoul', 'ice_shardling', 'draugr', 'frost_wraith'),
               'mid': ('yeti', 'wendigo', 'frost_hag', 'frost_knight'), 'strong': ('ice_golem', 'glacier_giant', 'lich')},
 }

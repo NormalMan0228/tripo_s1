@@ -9,6 +9,11 @@ the frame where a hand reaches furthest forward), glow_hues (hue ranges for the 
 yellow eyes), cleanup (mesh_cleanup.py options, repeated on the rigged mesh) and recolor (shift one
 colour family of the base texture, e.g. an NPC's hair, to an approved hue) and hover ({height, bob,
 period, fall}: floating creatures fly at that height and fall out of the air when they die).
+Rigs without Mixamo names (Tripo "Other" rigs animated by proc_motion.py) give "bones": {Mixamo name:
+their bone} for the bones this script measures (Hips, LeftUpLeg/RightUpLeg = a left/right leg pair
+for the facing, LeftHand/RightHand/Head = strikers, LeftToeBase/RightToeBase/LeftFoot/RightFoot =
+feet on the floor) and "loop_exact": true (their loops already end on the first pose, so no window
+search / cropping).
 
 * every clip is re-sampled at 30 fps (the FBX is 24 fps) and quaternion signs are kept continuous;
   loop clips are cropped to the best-matching start/end pair (loop_min_seconds, default 45 % of
@@ -63,8 +68,12 @@ NAMES = [pb.name for pb in PB]
 UP = Vector((0, 0, 1))
 
 
+ALIAS = M.get('bones', {})  # {Mixamo name: bone} for rigs with generic bone names
+
+
 def bone(name):
-    return next(pb for pb in PB if pb.name.split(':')[-1] == name)
+    name = ALIAS.get(name, name)
+    return next(pb for pb in PB if pb.name == name or pb.name.split(':')[-1] == name)
 
 
 # ------------------------------------------------------------------ rest-pose measurements (world space)
@@ -395,14 +404,19 @@ for name, spec in M['clips'].items():
         spec = {'match': spec}
     src = find_source(spec['match'])
     c = sample(src, spec.get('start'), spec.get('end'))
-    info = {'source': 'tripo:' + src.name.split('|', 1)[-1][:80], 'frames': c['n'],
+    kind = 'proc' if src.name.split('|')[-1].startswith('proc_') else 'tripo'  # proc_motion.py actions
+    info = {'source': kind + ':' + src.name.split('|')[-1][:80], 'frames': c['n'],
             'window': [spec.get('start'), spec.get('end')],
             'seconds': round((c['n'] - 1) / FPS, 3), 'loop': name in M.get('loops', [])}
     info['despiked_frames'] = despike(c)
-    info['smoothed_turns'] = destep(c)
+    info['smoothed_turns'] = destep(c, thr=float(M.get('destep_deg', {}).get(name, 40.0)) if isinstance(M.get('destep_deg'), dict) else 40.0)  # per-clip threshold, e.g. {"death": 26}
     if name in ('walk', 'run'):
         info['ground_speed_mps'] = round(ground_speed(c) * M['height_m'] / HEIGHT, 3)
-    if info['loop']:
+    if info['loop'] and M.get('loop_exact'):
+        # procedural loops (proc_motion.py) already end on their first pose: keep every frame
+        info['loop_window_seconds'] = [0.0, info['seconds']]
+        info['seam_quat_error_before'] = close_loop(c)
+    elif info['loop']:
         # loop: crop to the best-matching window, blend the remaining seam, then re-measure the floor
         min_frames = int(round(M.get('loop_min_seconds', {}).get(name, max(0.6, 0.45 * (c['n'] - 1) / FPS)) * FPS))
         i, j, mismatch = best_loop_window(c, min(min_frames, c['n'] - 2))

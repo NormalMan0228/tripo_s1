@@ -65,6 +65,9 @@
     "name": "임프",
     "map": "quarry",
     "tier": "weak"
+   },
+   "destep_deg": {
+    "attack": 26
    }
   },
   "gargoyle": {
@@ -129,6 +132,9 @@
     "name": "서리 망령",
     "map": "frost",
     "tier": "weak"
+   },
+   "destep_deg": {
+    "death": 26
    }
   },
   "lich": {
@@ -161,6 +167,9 @@
     "name": "리치",
     "map": "frost",
     "tier": "strong"
+   },
+   "destep_deg": {
+    "idle": 24
    }
   }
  }
