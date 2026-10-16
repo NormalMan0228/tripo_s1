@@ -25,7 +25,9 @@ var eyes: Array[MeshInstance3D]=[]
 var health: Label3D
 var materials: Array[StandardMaterial3D]=[]
 var clock := 0.0
-var last_hp := 45.0
+var last_hp := -1.0  # -1 until the first snapshot, so spawning is not read as a hit
+## Attack clip speed chosen when the wind-up starts (animate_monster keeps playing it at this rate).
+var attack_rate := 1.0
 var flash := 0.0
 var kind := "wolf"
 var variant := ""
@@ -245,14 +247,16 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 	if phase=="windup" and previous!="windup":
 		windups+=1
 		if not (boss and windups%ROAR_EVERY==0 and voice("roar")): voice("windup")
-		if monster: monster.play("attack",0.08,monster.attack_speed(float(state.get("windup",0.0))),true)
+		if monster:
+			attack_rate=monster.attack_speed(float(state.get("windup",0.0)))
+			monster.play("attack",0.08,attack_rate,true)
 	if previous=="windup" and phase in ["recover","charge"]:
 		# A blow that interrupts the wind-up (hp drops in the same snapshot) cancels the strike call.
 		if phase=="charge": voice("charge")
-		elif state.hp>=last_hp: voice("strike")
+		elif last_hp<0.0 or state.hp>=last_hp: voice("strike")
 		if spore(): burst(SPORE.get(variant,SPORE.forest),Vector3(0,0.5,0),float(state.get("impact",2.0)),26)
 	if previous=="charge" and phase=="recover": voice("dazed")
-	if state.hp<last_hp:
+	if last_hp>=0.0 and state.hp<last_hp:
 		flash=0.16
 		hurt_left=0.0
 		# A boss roars once as its health falls past half (that hit's hurt call gives way).
@@ -261,7 +265,7 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 		if monster:
 			monster.hit_flash()
 			if phase not in ["windup","charge"]:
-				monster.play("hurt",0.05,1.0,true)
+				monster.play("hurt",0.12,1.0,true)  # 0.05 s snapped bones (monster_motion pose pops)
 				hurt_left=monster.length("hurt")
 	last_hp=state.hp
 	health.text=windup_text() if phase=="windup" else "%d / %d" % [state.hp,state.get("max_hp",45)]
@@ -284,7 +288,7 @@ func die() -> void:
 	health.visible=false
 	var wait := 0.5
 	if monster:
-		monster.play("death",0.08,1.0,true)
+		monster.play("death",0.15,1.0,true)
 		wait=monster.length("death")+0.25
 		monster.glow=1.4
 	else:
@@ -294,7 +298,9 @@ func die() -> void:
 	var tween := create_tween()
 	tween.tween_interval(wait)
 	tween.tween_callback(burst.bind(SPORE.get(variant,SPORE.forest),Vector3(0,0.3,0),0.5,14))
-	tween.tween_property(body,"position:y",-0.9,0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	# Sink by the creature's size so a 5 m boss is under the ground before it is freed.
+	var sink := 0.9*maxf(1.0,(monster.height*monster.scale.y/1.7) if monster else 1.0)
+	tween.tween_property(body,"position:y",-sink,0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	tween.parallel().tween_property(body,"scale",Vector3(0.8,0.6,0.8),0.9)
 	tween.tween_callback(queue_free)
 
@@ -367,7 +373,9 @@ func _process(delta: float) -> void:
 	var crouch := phase=="windup"
 	if monster:
 		animate_monster(delta,moving)
-		if HOVER.has(kind): body.position.y=HOVER[kind]+sin(clock*3)*0.08 if not dying else body.position.y
+		# The stand-in's float applies only to the stand-in model itself: species models carry their own
+		# hover (flyers) or stand on the ground (frost hag, naga).
+		if HOVER.has(kind) and str(monster.get("species"))==kind: body.position.y=HOVER[kind]+sin(clock*3)*0.08 if not dying else body.position.y
 		return
 	if animator:
 		var desired := "slash" if phase in ["windup","recover"] and animator.has_animation("slash") else "walk" if moving else "idle"
@@ -400,7 +408,7 @@ func animate_monster(delta: float, moving: bool) -> void:
 	# Eyes flare during the telegraph; a soft breathing glow otherwise keeps them readable at night.
 	monster.glow=lerpf(monster.glow,2.2 if phase in ["windup","charge"] else 0.55+0.15*sin(clock*2.2),minf(1,delta*8))
 	if phase=="windup":
-		monster.play("attack",0.08)
+		monster.play("attack",0.08,attack_rate)
 	elif phase=="charge":
 		monster.play("run",0.1,2.0)
 	elif hurt_left>0:

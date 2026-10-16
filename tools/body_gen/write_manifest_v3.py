@@ -16,6 +16,8 @@ ANIM = os.path.join(ROOT, 'art', 'characters', 'body_p2_v1', 'mon_v3', 'anim')
 man_path, glb_dir = sys.argv[1], sys.argv[2]
 man = json.load(open(man_path, encoding='utf-8'))
 cfg = json.load(open(os.path.join(ANIM, 'game_build.json'), encoding='utf-8'))['monsters']
+if os.path.exists(os.path.join(ANIM, 'game_build_flyers.json')):  # category 2 flyers (hover)
+    cfg.update(json.load(open(os.path.join(ANIM, 'game_build_flyers.json'), encoding='utf-8'))['monsters'])
 ledger = json.load(open(os.path.join(ROOT, 'art', 'characters', 'body_p2_v1', 'ledger.json'), encoding='utf-8'))
 spent = ledger.get('monsters_v3_anim', {}).get('monsters', {})
 out = []
@@ -40,8 +42,8 @@ for k, v in cfg.items():
         'run_mps': r['clips'].get('run', {}).get('ground_speed_mps'),
         'proxy_of': v.get('proxy_of'),
         'tripo_task': v.get('tripo_task'),
-        'credits': spent.get(k, {}).get('credits', 0),
-        'source': 'Tripo P2 + texture 2K + humanoid rig (Mixamo) + 6 AI motions; tools/body_gen/build_game_monster.py',
+        'credits': spent.get(k, {}).get('credits', 0) + ledger.get('monsters_v3_cat23', {}).get('monsters', {}).get(k, {}).get('credits', 0),
+        'source': ('Tripo P2 + texture 2K + Tripo Other rig + 6 Blender procedural motions (tools/body_gen/proc_motion.py)' if any(str(i.get('source', '')).startswith('proc') for i in r['clips'].values()) else 'Tripo P2 + texture 2K + humanoid rig (Mixamo) + 6 AI motions') + '; tools/body_gen/build_game_monster.py',
     })
 man['monsters_v3'] = out
 man['monsters_v3_note'] = ('2026-10-16 mon_v3: one GLB per species named <species>_<map>.glb (monster.gd picks a species '

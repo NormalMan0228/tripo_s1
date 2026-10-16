@@ -1,0 +1,912 @@
+{
+ "notes": "Per-monster hints for tools/body_gen/proc_motion.py (Tripo 'Other' auto-rig: generic bone names, patchy weights). Coordinates are armature space of the Tripo FBX (forward -Y, up +Z, the creature's left = +X, about 1 unit). cleanup: mesh_cleanup.py options run before rigging (new_vertex_bone: bone for the vertices it adds). fix: rig repairs - the mesh is never moved, only bones/weights: add_chain = new bone chain through points, the vertices it takes (only_dominant / only_dominant_match bones, inside box or more_boxes) re-weighted by projection onto the chain, blended into blend_parent at its base, refine = re-centre inner joints in the skin; mirror_chain = copy a leg chain to the other side with mirrored weights; split = new bone that takes the skin above (or below: true) a line in the (y,z) plane; delete = bones left without skin. legs: name -> {ik: hip..ankle bones, foot: bone held flat (null = the mesh tip of the last ik bone)}; the other keys name the bones each species' motion program drives. build_bones: copy into game_build.json 'bones' (Mixamo names the build measures -> this rig's bones).",
+ "centipede": {
+  "root": "tripo::Root",
+  "front": [
+   "bone_2",
+   "bone_3",
+   "tripo::Head_0",
+   "tripo::Head_1",
+   "tripo::Head_2",
+   "tripo::Head_3"
+  ],
+  "head": "tripo::Head_4",
+  "body": [
+   "tripo::Spine_1",
+   "tripo::Spine_2",
+   "tripo::Spine_3",
+   "tripo::Spine_4",
+   "tripo::Spine_5",
+   "tripo::Spine_6",
+   "tripo::Tail_0"
+  ],
+  "tail2": [
+   "bone_38",
+   "bone_39"
+  ],
+  "jaws": [
+   "bone_9",
+   "bone_10",
+   "bone_11",
+   "tripo::Head_5",
+   "bone_15",
+   "bone_16"
+  ],
+  "antennae": [
+   "bone_13",
+   "bone_14"
+  ],
+  "arms": [
+   "bone_17",
+   "bone_18",
+   "bone_19",
+   "bone_20",
+   "bone_21",
+   "bone_22",
+   "bone_23",
+   "bone_24"
+  ],
+  "legs": "auto",
+  "build_bones": {
+   "Hips": "tripo::Root",
+   "LeftUpLeg": "bone_54",
+   "RightUpLeg": "bone_56",
+   "LeftHand": "bone_15",
+   "RightHand": "bone_16",
+   "LeftToeBase": "bone_51",
+   "RightToeBase": "bone_53",
+   "LeftFoot": "bone_47",
+   "RightFoot": "bone_49",
+   "Head": "tripo::Head_4"
+  }
+ },
+ "mimic": {
+  "root": "tripo::Root",
+  "fix": [
+   {
+    "op": "split",
+    "name": "lid",
+    "parent": "tripo::Root",
+    "head": [
+     0.0,
+     0.125,
+     0.475
+    ],
+    "tail": [
+     0.0,
+     -0.12,
+     0.52
+    ],
+    "line": [
+     [
+      -0.2,
+      0.535
+     ],
+     [
+      0.12,
+      0.49
+     ]
+    ],
+    "soft": 0.012,
+    "only_dominant": [
+     "tripo::Root",
+     "tripo::Head_0",
+     "bone_1",
+     "bone_2",
+     "bone_6",
+     "bone_3",
+     "bone_4",
+     "tripo::Spine_0",
+     "bone_8",
+     "bone_9",
+     "tripo::0_Right_Limb_0",
+     "tripo::0_Right_Limb_1",
+     "tripo::1_Left_Limb_0"
+    ],
+    "flatten_to": "tripo::Root",
+    "box": [
+     [
+      -0.25,
+      0.25
+     ],
+     [
+      -0.23,
+      0.17
+     ],
+     [
+      0.27,
+      0.8
+     ]
+    ]
+   },
+   {
+    "op": "mirror_chain",
+    "src": [
+     "tripo::2_Right_Limb_0",
+     "tripo::2_Right_Limb_1",
+     "tripo::2_Right_Limb_2"
+    ],
+    "names": [
+     "mR_Limb_0",
+     "mR_Limb_1",
+     "mR_Limb_2"
+    ],
+    "parent": "tripo::Root",
+    "target": {
+     "x_min": 0.215,
+     "x_min_inner": 0.06,
+     "z_inner": 0.27,
+     "angle": [
+      -30,
+      30
+     ]
+    }
+   }
+  ],
+  "lid": "lid",
+  "legs": {
+   "FL": {
+    "ik": [
+     "tripo::3_Left_Limb_0",
+     "tripo::3_Left_Limb_1",
+     "tripo::3_Left_Limb_2",
+     "tripo::3_Left_Limb_3"
+    ],
+    "foot": null
+   },
+   "ML": {
+    "ik": [
+     "tripo::2_Right_Limb_0",
+     "tripo::2_Right_Limb_1",
+     "tripo::2_Right_Limb_2"
+    ],
+    "foot": null
+   },
+   "BL": {
+    "ik": [
+     "tripo::2_Left_Limb_0",
+     "tripo::2_Left_Limb_1",
+     "tripo::2_Left_Limb_2"
+    ],
+    "foot": null
+   },
+   "FR": {
+    "ik": [
+     "tripo::1_Right_Limb_0",
+     "tripo::1_Right_Limb_1",
+     "tripo::1_Right_Limb_2",
+     "tripo::1_Right_Limb_3"
+    ],
+    "foot": null
+   },
+   "MR": {
+    "ik": [
+     "mR_Limb_0",
+     "mR_Limb_1",
+     "mR_Limb_2"
+    ],
+    "foot": null
+   },
+   "BR": {
+    "ik": [
+     "tripo::0_Left_Limb_0",
+     "tripo::0_Left_Limb_1",
+     "tripo::0_Left_Limb_2",
+     "tripo::0_Left_Limb_3"
+    ],
+    "foot": null
+   }
+  },
+  "build_bones": {
+   "Hips": "tripo::Root",
+   "LeftUpLeg": "tripo::1_Right_Limb_0",
+   "RightUpLeg": "tripo::3_Left_Limb_0",
+   "LeftHand": "lid",
+   "RightHand": "lid",
+   "LeftToeBase": "tripo::1_Right_Limb_3",
+   "RightToeBase": "tripo::3_Left_Limb_3",
+   "LeftFoot": "tripo::0_Left_Limb_3",
+   "RightFoot": "tripo::2_Left_Limb_2",
+   "Head": "lid"
+  },
+  "cleanup": "--drop 9 --drop-island 23:32 --weld 0.0006 --split-nm 40 --fill 8 --box 0.349,0.142,0.261,0.673,0.376,0.451,0.008",
+  "new_vertex_bone": "tripo::Root"
+ },
+ "basilisk": {
+  "root": "tripo::Root",
+  "fix": [
+   {
+    "op": "add_chain",
+    "prefix": "tail_",
+    "parent": "tripo::Root",
+    "blend_parent": "tripo::Root",
+    "points": [
+     [
+      0,
+      0.06,
+      0.33
+     ],
+     [
+      0,
+      0.16,
+      0.27
+     ],
+     [
+      0,
+      0.26,
+      0.215
+     ],
+     [
+      0,
+      0.35,
+      0.145
+     ],
+     [
+      0,
+      0.43,
+      0.09
+     ],
+     [
+      0,
+      0.51,
+      0.055
+     ]
+    ],
+    "only_dominant": [
+     "tripo::Root"
+    ],
+    "box": [
+     [
+      -0.12,
+      0.12
+     ],
+     [
+      0.05,
+      0.6
+     ],
+     [
+      0.0,
+      0.6
+     ]
+    ],
+    "refine": true
+   }
+  ],
+  "pelvis": [
+   0,
+   0.03,
+   0.3
+  ],
+  "spine": [
+   "tripo::Spine_0",
+   "tripo::Spine_1",
+   "tripo::Spine_2",
+   "tripo::Spine_3"
+  ],
+  "neck": [
+   "tripo::Head_0"
+  ],
+  "head": "tripo::Head_1",
+  "jaw": "tripo::Head_2",
+  "tail": [
+   "tail_0",
+   "tail_1",
+   "tail_2",
+   "tail_3",
+   "tail_4"
+  ],
+  "legs": {
+   "FL": {
+    "ik": [
+     "tripo::0_Left_Limb_0",
+     "tripo::0_Left_Limb_1"
+    ],
+    "foot": "tripo::0_Left_Limb_2"
+   },
+   "FR": {
+    "ik": [
+     "tripo::0_Right_Limb_1",
+     "tripo::0_Right_Limb_2"
+    ],
+    "foot": "tripo::0_Right_Limb_3"
+   },
+   "HL": {
+    "ik": [
+     "tripo::1_Left_Limb_0",
+     "tripo::1_Left_Limb_1",
+     "tripo::1_Left_Limb_2"
+    ],
+    "foot": "tripo::1_Left_Limb_3"
+   },
+   "HR": {
+    "ik": [
+     "tripo::1_Right_Limb_0",
+     "tripo::1_Right_Limb_1",
+     "tripo::1_Right_Limb_2"
+    ],
+    "foot": "tripo::1_Right_Limb_3"
+   }
+  },
+  "build_bones": {
+   "Hips": "tripo::Root",
+   "LeftUpLeg": "tripo::1_Left_Limb_0",
+   "RightUpLeg": "tripo::1_Right_Limb_0",
+   "LeftHand": "tripo::Head_2",
+   "RightHand": "tripo::Head_1",
+   "LeftToeBase": "tripo::0_Left_Limb_2",
+   "RightToeBase": "tripo::0_Right_Limb_3",
+   "LeftFoot": "tripo::1_Left_Limb_3",
+   "RightFoot": "tripo::1_Right_Limb_3",
+   "Head": "tripo::Head_1"
+  }
+ },
+ "naga": {
+  "root": "BoneRoot",
+  "fix": [
+   {
+    "op": "add_chain",
+    "prefix": "snake_",
+    "parent": "Hip",
+    "blend_parent": "Pelvis",
+    "points": [
+     [
+      0,
+      -0.3,
+      0.55
+     ],
+     [
+      0,
+      -0.3,
+      0.42
+     ],
+     [
+      0,
+      -0.34,
+      0.3
+     ],
+     [
+      0,
+      -0.35,
+      0.21
+     ],
+     [
+      0,
+      -0.3,
+      0.12
+     ],
+     [
+      0,
+      -0.2,
+      0.085
+     ],
+     [
+      0,
+      -0.05,
+      0.073
+     ],
+     [
+      0,
+      0.1,
+      0.069
+     ],
+     [
+      0,
+      0.25,
+      0.059
+     ],
+     [
+      0,
+      0.38,
+      0.05
+     ],
+     [
+      0,
+      0.49,
+      0.048
+     ]
+    ],
+    "only_dominant_match": [
+     "Thigh",
+     "Calf",
+     "Foot",
+     "ToeBase",
+     "Knee"
+    ],
+    "refine": true
+   },
+   {
+    "op": "delete",
+    "bones": [
+     "L_Thigh",
+     "R_Thigh"
+    ],
+    "with_children": true
+   }
+  ],
+  "snake": [
+   "snake_0",
+   "snake_1",
+   "snake_2",
+   "snake_3",
+   "snake_4",
+   "snake_5",
+   "snake_6",
+   "snake_7",
+   "snake_8",
+   "snake_9"
+  ],
+  "bend_index": 4,
+  "spine": [
+   "Waist",
+   "Spine01",
+   "Spine02"
+  ],
+  "neck": [
+   "NeckTwist01",
+   "NeckTwist02"
+  ],
+  "head": "Head",
+  "arms": {
+   "L": [
+    "L_Clavicle",
+    "L_Upperarm",
+    "L_Forearm",
+    "L_Hand"
+   ],
+   "R": [
+    "R_Clavicle",
+    "R_Upperarm",
+    "R_Forearm",
+    "R_Hand"
+   ]
+  },
+  "fingers": [
+   "Thumb",
+   "Index",
+   "Mid",
+   "Ring",
+   "Pinky"
+  ],
+  "legs": {},
+  "build_bones": {
+   "Hips": "BoneRoot",
+   "LeftUpLeg": "L_Upperarm",
+   "RightUpLeg": "R_Upperarm",
+   "LeftHand": "L_Hand",
+   "RightHand": "R_Hand",
+   "LeftToeBase": "snake_7",
+   "RightToeBase": "snake_8",
+   "LeftFoot": "snake_6",
+   "RightFoot": "snake_9",
+   "Head": "Head"
+  },
+  "cleanup": "--drop 9 --weld 0.0006 --split-nm 40 --fill 8"
+ },
+ "chimera": {
+  "root": "tripo::Root",
+  "pelvis": [
+   0,
+   0.17,
+   0.32
+  ],
+  "spine": [
+   "tripo::Spine_1",
+   "tripo::Spine_2",
+   "tripo::Spine_3",
+   "tripo::Spine_4"
+  ],
+  "neck": [
+   "tripo::Head_0"
+  ],
+  "chest": "tripo::Head_1",
+  "heads_root": "tripo::Head_2",
+  "lion": [
+   "tripo::Head_3",
+   "tripo::Head_4"
+  ],
+  "jaw": "tripo::Head_5",
+  "goats": {
+   "L": "bone_32",
+   "R": "bone_33"
+  },
+  "tail": [
+   "bone_35",
+   "bone_36",
+   "bone_37",
+   "tripo::Tail_0",
+   "tripo::Tail_1",
+   "tripo::Tail_2",
+   "tripo::Tail_3",
+   "tripo::Tail_4",
+   "bone_43",
+   "bone_44"
+  ],
+  "legs": {
+   "FL": {
+    "ik": [
+     "tripo::0_Left_Limb_0",
+     "tripo::0_Left_Limb_1"
+    ],
+    "foot": "tripo::0_Left_Limb_2"
+   },
+   "FR": {
+    "ik": [
+     "tripo::0_Right_Limb_0",
+     "tripo::0_Right_Limb_1"
+    ],
+    "foot": "tripo::0_Right_Limb_2"
+   },
+   "HL": {
+    "ik": [
+     "tripo::1_Left_Limb_0",
+     "tripo::1_Left_Limb_1",
+     "tripo::1_Left_Limb_2"
+    ],
+    "foot": "tripo::1_Left_Limb_3"
+   },
+   "HR": {
+    "ik": [
+     "tripo::1_Right_Limb_0",
+     "tripo::1_Right_Limb_1",
+     "tripo::1_Right_Limb_2"
+    ],
+    "foot": "tripo::1_Right_Limb_3"
+   }
+  },
+  "build_bones": {
+   "Hips": "tripo::Root",
+   "LeftUpLeg": "tripo::1_Left_Limb_0",
+   "RightUpLeg": "tripo::1_Right_Limb_0",
+   "LeftHand": "tripo::0_Left_Limb_2",
+   "RightHand": "tripo::0_Right_Limb_2",
+   "LeftToeBase": "tripo::0_Left_Limb_3",
+   "RightToeBase": "tripo::0_Right_Limb_3",
+   "LeftFoot": "tripo::1_Left_Limb_3",
+   "RightFoot": "tripo::1_Right_Limb_3",
+   "Head": "tripo::Head_4"
+  }
+ },
+ "dragon": {
+  "root": "BoneRoot",
+  "fix": [
+   {
+    "op": "add_chain",
+    "prefix": "tail_",
+    "parent": "Pelvis",
+    "blend_parent": "Pelvis",
+    "points": [
+     [
+      0,
+      -0.05,
+      0.3
+     ],
+     [
+      0,
+      0.03,
+      0.2
+     ],
+     [
+      0,
+      0.1,
+      0.12
+     ],
+     [
+      0,
+      0.19,
+      0.085
+     ],
+     [
+      0,
+      0.28,
+      0.09
+     ],
+     [
+      0,
+      0.35,
+      0.15
+     ],
+     [
+      0,
+      0.4,
+      0.26
+     ],
+     [
+      0,
+      0.43,
+      0.38
+     ],
+     [
+      0,
+      0.45,
+      0.5
+     ],
+     [
+      0,
+      0.45,
+      0.62
+     ]
+    ],
+    "only_dominant": [
+     "Pelvis"
+    ],
+    "box": [
+     [
+      -0.12,
+      0.12
+     ],
+     [
+      -0.07,
+      0.6
+     ],
+     [
+      0.0,
+      0.8
+     ]
+    ],
+    "refine": true
+   },
+   {
+    "op": "add_chain",
+    "prefix": "wingL_",
+    "parent": "Spine02",
+    "blend_parent": "Spine02",
+    "points": [
+     [
+      0.1,
+      -0.08,
+      0.62
+     ],
+     [
+      0.21,
+      -0.07,
+      0.8
+     ],
+     [
+      0.33,
+      -0.05,
+      0.96
+     ],
+     [
+      0.41,
+      0.03,
+      0.64
+     ],
+     [
+      0.47,
+      0.05,
+      0.3
+     ]
+    ],
+    "only_dominant": [
+     "Spine01"
+    ],
+    "box": [
+     [
+      0.12,
+      0.6
+     ],
+     [
+      -0.14,
+      0.3
+     ],
+     [
+      0.2,
+      1.1
+     ]
+    ],
+    "more_boxes": [
+     [
+      [
+       0.12,
+       0.6
+      ],
+      [
+       -0.2,
+       0.3
+      ],
+      [
+       0.7,
+       1.1
+      ]
+     ]
+    ]
+   },
+   {
+    "op": "add_chain",
+    "prefix": "wingR_",
+    "parent": "Spine02",
+    "blend_parent": "Spine02",
+    "points": [
+     [
+      -0.1,
+      -0.08,
+      0.62
+     ],
+     [
+      -0.21,
+      -0.07,
+      0.8
+     ],
+     [
+      -0.33,
+      -0.05,
+      0.96
+     ],
+     [
+      -0.41,
+      0.03,
+      0.64
+     ],
+     [
+      -0.47,
+      0.05,
+      0.3
+     ]
+    ],
+    "only_dominant": [
+     "R_Upperarm"
+    ],
+    "box": [
+     [
+      -0.6,
+      -0.12
+     ],
+     [
+      -0.135,
+      0.3
+     ],
+     [
+      0.2,
+      1.1
+     ]
+    ],
+    "more_boxes": [
+     [
+      [
+       -0.6,
+       -0.12
+      ],
+      [
+       -0.2,
+       0.3
+      ],
+      [
+       0.7,
+       1.1
+      ]
+     ]
+    ]
+   },
+   {
+    "op": "split",
+    "name": "jaw",
+    "parent": "Head",
+    "head": [
+     0.0,
+     -0.31,
+     0.725
+    ],
+    "tail": [
+     0.0,
+     -0.47,
+     0.69
+    ],
+    "line": [
+     [
+      -0.52,
+      0.722
+     ],
+     [
+      -0.33,
+      0.73
+     ]
+    ],
+    "soft": 0.008,
+    "only_dominant": [
+     "Head"
+    ],
+    "flatten_to": "Head",
+    "box": [
+     [
+      -0.14,
+      0.14
+     ],
+     [
+      -0.56,
+      -0.32
+     ],
+     [
+      0.6,
+      0.8
+     ]
+    ],
+    "below": true
+   }
+  ],
+  "pelvis": [
+   0,
+   -0.17,
+   0.34
+  ],
+  "spine": [
+   "Waist",
+   "Spine01",
+   "Spine02"
+  ],
+  "neck": [
+   "NeckTwist01",
+   "NeckTwist02"
+  ],
+  "head": "Head",
+  "jaw": "jaw",
+  "tail": [
+   "tail_0",
+   "tail_1",
+   "tail_2",
+   "tail_3",
+   "tail_4",
+   "tail_5",
+   "tail_6",
+   "tail_7",
+   "tail_8"
+  ],
+  "wings": {
+   "L": [
+    "wingL_0",
+    "wingL_1",
+    "wingL_2",
+    "wingL_3"
+   ],
+   "R": [
+    "wingR_0",
+    "wingR_1",
+    "wingR_2",
+    "wingR_3"
+   ]
+  },
+  "arms": {
+   "L": [
+    "L_Clavicle",
+    "L_Upperarm",
+    "L_Forearm",
+    "L_Hand"
+   ],
+   "R": [
+    "R_Clavicle",
+    "R_Upperarm",
+    "R_Forearm",
+    "R_Hand"
+   ]
+  },
+  "legs": {
+   "L": {
+    "ik": [
+     "L_Thigh",
+     "L_Calf",
+     "L_Foot"
+    ],
+    "foot": "L_ToeBase"
+   },
+   "R": {
+    "ik": [
+     "R_Thigh",
+     "R_Calf",
+     "R_Foot"
+    ],
+    "foot": "R_ToeBase"
+   }
+  },
+  "build_bones": {
+   "Hips": "BoneRoot",
+   "LeftUpLeg": "L_Thigh",
+   "RightUpLeg": "R_Thigh",
+   "LeftHand": "L_Hand",
+   "RightHand": "R_Hand",
+   "LeftToeBase": "L_ToeBase",
+   "RightToeBase": "R_ToeBase",
+   "LeftFoot": "L_Foot",
+   "RightFoot": "R_Foot",
+   "Head": "Head"
+  }
+ }
+}

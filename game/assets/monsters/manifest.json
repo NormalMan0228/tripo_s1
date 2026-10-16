@@ -2409,7 +2409,7 @@
       "tier": "weak",
       "file": "res://assets/monsters/lizardman_quarry.glb",
       "bytes": 2442272,
-      "sha256": "9839dd555f4a752e392de2b740c6f3f6a77e6193216d0f3411d9dd83442e22e1",
+      "sha256": "6d845c6b9c4a4200dab1160b7574fdafe3c4f83b65e843e97c531d67772a3ef1",
       "height_m": 1.7,
       "triangles": 20877,
       "clips": {
@@ -2672,8 +2672,8 @@
       "map": "frost",
       "tier": "mid",
       "file": "res://assets/monsters/yeti_frost.glb",
-      "bytes": 3078948,
-      "sha256": "c8307f12ef109fdbd38aee04bbd2512cc51b2d1ac2a5b6e5014cbbf4114ae206",
+      "bytes": 3032852,
+      "sha256": "ae2edbdc263786d98fb6bc444254f0cc3db7a020af0f3912643180327f25ee64",
       "height_m": 2.6,
       "triangles": 22257,
       "clips": {
@@ -2690,7 +2690,7 @@
           "loop": true
         },
         "attack": {
-          "seconds": 2.967,
+          "seconds": 2.367,
           "loop": false
         },
         "hurt": {
@@ -2702,7 +2702,7 @@
           "loop": false
         }
       },
-      "attack_impact_seconds": 2.467,
+      "attack_impact_seconds": 1.867,
       "walk_mps": 1.078,
       "run_mps": 3.86,
       "proxy_of": null,
@@ -2760,8 +2760,8 @@
       "map": "frost",
       "tier": "mid",
       "file": "res://assets/monsters/frost_hag_frost.glb",
-      "bytes": 2819332,
-      "sha256": "b82509c5ce1c0b791973e3d6cdb88f007b3dc4109f13c8b78e461b6a120b822f",
+      "bytes": 2819356,
+      "sha256": "0c53a082f3bb4152880648b6e0d464f82bb6d525b3c06c6272675cadb4f86189",
       "height_m": 1.8,
       "triangles": 22136,
       "clips": {
@@ -2892,8 +2892,8 @@
       "map": "frost",
       "tier": "strong",
       "file": "res://assets/monsters/glacier_giant_frost.glb",
-      "bytes": 3275384,
-      "sha256": "f78abc50fe22ec51f491b99f557d0d3314cd75ff3879106c838d00ab91378fab",
+      "bytes": 3244912,
+      "sha256": "beaa7ed1f44eb3092fb1ee7516b76d1a6af337ec39402952d9bb7194c87b8fca",
       "height_m": 3.6,
       "triangles": 22169,
       "clips": {
@@ -2910,7 +2910,7 @@
           "loop": true
         },
         "attack": {
-          "seconds": 2.967,
+          "seconds": 2.567,
           "loop": false
         },
         "hurt": {
@@ -2922,7 +2922,7 @@
           "loop": false
         }
       },
-      "attack_impact_seconds": 2.4,
+      "attack_impact_seconds": 2.0,
       "walk_mps": 1.329,
       "run_mps": 0.206,
       "proxy_of": null,
@@ -2936,25 +2936,333 @@
       "map": "quarry",
       "tier": "boss",
       "file": "res://assets/monsters/chimera_quarry.glb",
-      "bytes": 2954836,
-      "sha256": "6863af18b59f51e54bf7e2ccf8dc601d87cd109f56dcd9f586c5abea9d18eba6",
+      "bytes": 2188552,
+      "sha256": "1f00dab9191e4c0de9f440439100b960ba6f7badcc27dddc8e6dae7ee960fce9",
       "height_m": 3.0,
-      "triangles": 22662,
+      "triangles": 22192,
       "clips": {
         "idle": {
-          "seconds": 2.2,
+          "seconds": 3.0,
           "loop": true
         },
         "walk": {
-          "seconds": 2.9,
+          "seconds": 1.3,
           "loop": true
         },
         "run": {
-          "seconds": 1.967,
+          "seconds": 0.7,
+          "loop": true
+        },
+        "attack": {
+          "seconds": 1.4,
+          "loop": false
+        },
+        "hurt": {
+          "seconds": 0.7,
+          "loop": false
+        },
+        "death": {
+          "seconds": 2.2,
+          "loop": false
+        }
+      },
+      "attack_impact_seconds": 0.66,
+      "walk_mps": 0.734,
+      "run_mps": 2.77,
+      "proxy_of": null,
+      "tripo_task": null,
+      "credits": 30,
+      "source": "Tripo P2 + texture 2K + Tripo Other rig + 6 Blender procedural motions (tools/body_gen/proc_motion.py); tools/body_gen/build_game_monster.py"
+    },
+    {
+      "id": "dragon",
+      "name": "서리 용",
+      "map": "frost",
+      "tier": "boss",
+      "file": "res://assets/monsters/dragon_frost.glb",
+      "bytes": 2962804,
+      "sha256": "5e763ec62b4a8c29f4dc77f51c9a765feb317b41558cf6ef13373a2855906350",
+      "height_m": 5.0,
+      "triangles": 22032,
+      "clips": {
+        "idle": {
+          "seconds": 3.0,
+          "loop": true
+        },
+        "walk": {
+          "seconds": 1.4,
+          "loop": true
+        },
+        "run": {
+          "seconds": 0.8,
+          "loop": true
+        },
+        "attack": {
+          "seconds": 1.5,
+          "loop": false
+        },
+        "hurt": {
+          "seconds": 0.7,
+          "loop": false
+        },
+        "death": {
+          "seconds": 2.4,
+          "loop": false
+        }
+      },
+      "attack_impact_seconds": 0.7,
+      "walk_mps": 0.873,
+      "run_mps": 3.909,
+      "proxy_of": null,
+      "tripo_task": null,
+      "credits": 30,
+      "source": "Tripo P2 + texture 2K + Tripo Other rig + 6 Blender procedural motions (tools/body_gen/proc_motion.py); tools/body_gen/build_game_monster.py"
+    },
+    {
+      "id": "centipede",
+      "name": "지네",
+      "map": "forest",
+      "tier": "weak",
+      "file": "res://assets/monsters/centipede_forest.glb",
+      "bytes": 2251692,
+      "sha256": "c1ba5dd5abced805a0228e9aea072e0d63c0990898ed8f14a8b65caf0e3a57d6",
+      "height_m": 1.4,
+      "triangles": 21738,
+      "clips": {
+        "idle": {
+          "seconds": 2.0,
+          "loop": true
+        },
+        "walk": {
+          "seconds": 0.8,
+          "loop": true
+        },
+        "run": {
+          "seconds": 0.6,
+          "loop": true
+        },
+        "attack": {
+          "seconds": 1.2,
+          "loop": false
+        },
+        "hurt": {
+          "seconds": 0.6,
+          "loop": false
+        },
+        "death": {
+          "seconds": 1.8,
+          "loop": false
+        }
+      },
+      "attack_impact_seconds": 0.56,
+      "walk_mps": 0.0,
+      "run_mps": 0.0,
+      "proxy_of": null,
+      "tripo_task": null,
+      "credits": 30,
+      "source": "Tripo P2 + texture 2K + Tripo Other rig + 6 Blender procedural motions (tools/body_gen/proc_motion.py); tools/body_gen/build_game_monster.py"
+    },
+    {
+      "id": "mimic",
+      "name": "미믹",
+      "map": "quarry",
+      "tier": "weak",
+      "file": "res://assets/monsters/mimic_quarry.glb",
+      "bytes": 1861612,
+      "sha256": "fa719e2ecd20a3e3d44f185cc2b0bc2e613412b246ff7f68b3f24ae55e5f2b36",
+      "height_m": 1.2,
+      "triangles": 19247,
+      "clips": {
+        "idle": {
+          "seconds": 2.0,
+          "loop": true
+        },
+        "walk": {
+          "seconds": 0.6,
+          "loop": true
+        },
+        "run": {
+          "seconds": 0.8,
+          "loop": true
+        },
+        "attack": {
+          "seconds": 1.1,
+          "loop": false
+        },
+        "hurt": {
+          "seconds": 0.6,
+          "loop": false
+        },
+        "death": {
+          "seconds": 1.7,
+          "loop": false
+        }
+      },
+      "attack_impact_seconds": 0.5,
+      "walk_mps": 0.593,
+      "run_mps": 1.563,
+      "proxy_of": null,
+      "tripo_task": null,
+      "credits": 30,
+      "source": "Tripo P2 + texture 2K + Tripo Other rig + 6 Blender procedural motions (tools/body_gen/proc_motion.py); tools/body_gen/build_game_monster.py"
+    },
+    {
+      "id": "basilisk",
+      "name": "바실리스크",
+      "map": "quarry",
+      "tier": "mid",
+      "file": "res://assets/monsters/basilisk_quarry.glb",
+      "bytes": 2112724,
+      "sha256": "976fce9d2d81a4ecfacd729ad5722e02463647c6f6215dc6abd14cb51343816d",
+      "height_m": 2.2,
+      "triangles": 21682,
+      "clips": {
+        "idle": {
+          "seconds": 3.0,
+          "loop": true
+        },
+        "walk": {
+          "seconds": 1.2,
+          "loop": true
+        },
+        "run": {
+          "seconds": 0.7,
+          "loop": true
+        },
+        "attack": {
+          "seconds": 1.3,
+          "loop": false
+        },
+        "hurt": {
+          "seconds": 0.667,
+          "loop": false
+        },
+        "death": {
+          "seconds": 2.0,
+          "loop": false
+        }
+      },
+      "attack_impact_seconds": 0.54,
+      "walk_mps": 0.0,
+      "run_mps": 0.0,
+      "proxy_of": null,
+      "tripo_task": null,
+      "credits": 30,
+      "source": "Tripo P2 + texture 2K + Tripo Other rig + 6 Blender procedural motions (tools/body_gen/proc_motion.py); tools/body_gen/build_game_monster.py"
+    },
+    {
+      "id": "naga",
+      "name": "나가",
+      "map": "quarry",
+      "tier": "mid",
+      "file": "res://assets/monsters/naga_quarry.glb",
+      "bytes": 2450504,
+      "sha256": "fd0b8aedb8e269f86a666c89bb1af880f3114455f377bce60f4884137a312865",
+      "height_m": 2.4,
+      "triangles": 20994,
+      "clips": {
+        "idle": {
+          "seconds": 2.4,
+          "loop": true
+        },
+        "walk": {
+          "seconds": 1.2,
+          "loop": true
+        },
+        "run": {
+          "seconds": 0.8,
+          "loop": true
+        },
+        "attack": {
+          "seconds": 1.2,
+          "loop": false
+        },
+        "hurt": {
+          "seconds": 0.6,
+          "loop": false
+        },
+        "death": {
+          "seconds": 2.0,
+          "loop": false
+        }
+      },
+      "attack_impact_seconds": 0.58,
+      "walk_mps": 0.0,
+      "run_mps": 0.0,
+      "proxy_of": null,
+      "tripo_task": null,
+      "credits": 30,
+      "source": "Tripo P2 + texture 2K + Tripo Other rig + 6 Blender procedural motions (tools/body_gen/proc_motion.py); tools/body_gen/build_game_monster.py"
+    },
+    {
+      "id": "harpy",
+      "name": "하피",
+      "map": "forest",
+      "tier": "weak",
+      "file": "res://assets/monsters/harpy_forest.glb",
+      "bytes": 2932176,
+      "sha256": "c0ae2194996f4278b73e9b11580b005795e8da5b27027f47c7995a7c06531d9d",
+      "height_m": 1.8,
+      "triangles": 22941,
+      "clips": {
+        "idle": {
+          "seconds": 1.333,
+          "loop": true
+        },
+        "walk": {
+          "seconds": 2.967,
+          "loop": true
+        },
+        "run": {
+          "seconds": 1.067,
           "loop": true
         },
         "attack": {
           "seconds": 2.967,
+          "loop": false
+        },
+        "hurt": {
+          "seconds": 1.967,
+          "loop": false
+        },
+        "death": {
+          "seconds": 3.967,
+          "loop": false
+        }
+      },
+      "attack_impact_seconds": 0.5,
+      "walk_mps": 0.173,
+      "run_mps": 0.224,
+      "proxy_of": null,
+      "tripo_task": "c7aa15d0-acfc-4e47-8588-0a5babb797f5",
+      "credits": 150,
+      "source": "Tripo P2 + texture 2K + humanoid rig (Mixamo) + 6 AI motions; tools/body_gen/build_game_monster.py"
+    },
+    {
+      "id": "imp",
+      "name": "임프",
+      "map": "quarry",
+      "tier": "weak",
+      "file": "res://assets/monsters/imp_quarry.glb",
+      "bytes": 2813328,
+      "sha256": "ce0a67fa3bb4a35d01b1bf2f294099bd916abce717d8c06e888af9353581f264",
+      "height_m": 1.1,
+      "triangles": 20935,
+      "clips": {
+        "idle": {
+          "seconds": 3.967,
+          "loop": true
+        },
+        "walk": {
+          "seconds": 1.933,
+          "loop": true
+        },
+        "run": {
+          "seconds": 1.9,
+          "loop": true
+        },
+        "attack": {
+          "seconds": 1.967,
           "loop": false
         },
         "hurt": {
@@ -2967,26 +3275,26 @@
         }
       },
       "attack_impact_seconds": 1.0,
-      "walk_mps": 0.056,
-      "run_mps": 0.142,
-      "proxy_of": "minotaur",
-      "tripo_task": "a9228193-a0a3-4149-898d-18ab5ba3109b",
-      "credits": 0,
+      "walk_mps": 0.036,
+      "run_mps": 0.037,
+      "proxy_of": null,
+      "tripo_task": "806a361e-b7b3-498f-94d9-ce7ee6ed3ddf",
+      "credits": 150,
       "source": "Tripo P2 + texture 2K + humanoid rig (Mixamo) + 6 AI motions; tools/body_gen/build_game_monster.py"
     },
     {
-      "id": "dragon",
-      "name": "서리 용",
-      "map": "frost",
-      "tier": "boss",
-      "file": "res://assets/monsters/dragon_frost.glb",
-      "bytes": 3275192,
-      "sha256": "8405324be44a235263e3af7f7f1e757285726a365a7b6366df9a104f5127b1bf",
-      "height_m": 5.0,
-      "triangles": 22169,
+      "id": "gargoyle",
+      "name": "가고일",
+      "map": "quarry",
+      "tier": "mid",
+      "file": "res://assets/monsters/gargoyle_quarry.glb",
+      "bytes": 2747816,
+      "sha256": "2fa7e96792d68ef625bde054c3605c53206b888563e4de6897c0a37be6843da5",
+      "height_m": 2.2,
+      "triangles": 21485,
       "clips": {
         "idle": {
-          "seconds": 2.833,
+          "seconds": 2.033,
           "loop": true
         },
         "walk": {
@@ -2994,7 +3302,7 @@
           "loop": true
         },
         "run": {
-          "seconds": 1.7,
+          "seconds": 0.567,
           "loop": true
         },
         "attack": {
@@ -3010,12 +3318,100 @@
           "loop": false
         }
       },
-      "attack_impact_seconds": 2.4,
-      "walk_mps": 1.846,
-      "run_mps": 0.286,
-      "proxy_of": "glacier_giant",
-      "tripo_task": "11fa5e3d-9c60-4b04-a105-566735b7ca41",
-      "credits": 0,
+      "attack_impact_seconds": 0.733,
+      "walk_mps": 0.083,
+      "run_mps": 3.028,
+      "proxy_of": null,
+      "tripo_task": "cd39284d-9f78-4fde-8e84-d76cbb6bd77e",
+      "credits": 150,
+      "source": "Tripo P2 + texture 2K + humanoid rig (Mixamo) + 6 AI motions; tools/body_gen/build_game_monster.py"
+    },
+    {
+      "id": "frost_wraith",
+      "name": "서리 망령",
+      "map": "frost",
+      "tier": "weak",
+      "file": "res://assets/monsters/frost_wraith_frost.glb",
+      "bytes": 2747892,
+      "sha256": "bae22d2be6685369c395ea08e479dfb6e65d419072ec63d73317ab48622c894e",
+      "height_m": 2.0,
+      "triangles": 20414,
+      "clips": {
+        "idle": {
+          "seconds": 2.967,
+          "loop": true
+        },
+        "walk": {
+          "seconds": 1.333,
+          "loop": true
+        },
+        "run": {
+          "seconds": 1.633,
+          "loop": true
+        },
+        "attack": {
+          "seconds": 1.967,
+          "loop": false
+        },
+        "hurt": {
+          "seconds": 1.967,
+          "loop": false
+        },
+        "death": {
+          "seconds": 3.967,
+          "loop": false
+        }
+      },
+      "attack_impact_seconds": 0.467,
+      "walk_mps": 0.0,
+      "run_mps": 0.0,
+      "proxy_of": null,
+      "tripo_task": "99dd73a0-53c8-4022-a39f-1c8342a1ea20",
+      "credits": 150,
+      "source": "Tripo P2 + texture 2K + humanoid rig (Mixamo) + 6 AI motions; tools/body_gen/build_game_monster.py"
+    },
+    {
+      "id": "lich",
+      "name": "리치",
+      "map": "frost",
+      "tier": "strong",
+      "file": "res://assets/monsters/lich_frost.glb",
+      "bytes": 3035232,
+      "sha256": "2c4ac5c31e13d45acca520892b2cb96616dc8b2eb4ff2fa392503dad621488b6",
+      "height_m": 2.2,
+      "triangles": 21534,
+      "clips": {
+        "idle": {
+          "seconds": 3.933,
+          "loop": true
+        },
+        "walk": {
+          "seconds": 2.967,
+          "loop": true
+        },
+        "run": {
+          "seconds": 0.5,
+          "loop": true
+        },
+        "attack": {
+          "seconds": 2.967,
+          "loop": false
+        },
+        "hurt": {
+          "seconds": 1.967,
+          "loop": false
+        },
+        "death": {
+          "seconds": 3.967,
+          "loop": false
+        }
+      },
+      "attack_impact_seconds": 1.733,
+      "walk_mps": 0.222,
+      "run_mps": 0.64,
+      "proxy_of": null,
+      "tripo_task": "c5ba96fc-af75-4534-99f2-823b5432975a",
+      "credits": 150,
       "source": "Tripo P2 + texture 2K + humanoid rig (Mixamo) + 6 AI motions; tools/body_gen/build_game_monster.py"
     }
   ],
