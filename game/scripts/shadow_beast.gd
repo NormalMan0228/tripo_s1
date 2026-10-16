@@ -373,7 +373,9 @@ func _process(delta: float) -> void:
 	var crouch := phase=="windup"
 	if monster:
 		animate_monster(delta,moving)
-		if HOVER.has(kind): body.position.y=HOVER[kind]+sin(clock*3)*0.08 if not dying else body.position.y
+		# The stand-in's float applies only to the stand-in model itself: species models carry their own
+		# hover (flyers) or stand on the ground (frost hag, naga).
+		if HOVER.has(kind) and str(monster.get("species"))==kind: body.position.y=HOVER[kind]+sin(clock*3)*0.08 if not dying else body.position.y
 		return
 	if animator:
 		var desired := "slash" if phase in ["windup","recover"] and animator.has_animation("slash") else "walk" if moving else "idle"
