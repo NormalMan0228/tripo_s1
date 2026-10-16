@@ -2502,9 +2502,14 @@ func update_run() -> void:
 			for child in nodes[n.id].get_children(): child.visible=(n.quantity<=0) if child.name=="Stump" else (n.quantity>0)
 		else: nodes[n.id].visible=n.quantity>0
 	var alive := []
+	var spawned := 0
 	for enemy in run.enemies:
 		alive.append(enemy.id)
 		if not enemy_nodes.has(enemy.id):
+			# One new monster per update: a night's pack arrives over a few updates instead of
+			# building every body (model, materials, shaders) in the same frame.
+			if spawned>=1: continue
+			spawned+=1
 			var root := preload("res://scripts/shadow_beast.gd").new()
 			root.kind=enemy.get("kind","wolf")
 			root.variant=enemy.get("variant","")
