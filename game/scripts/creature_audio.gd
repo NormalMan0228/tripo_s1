@@ -289,26 +289,30 @@ static func streams(species: String, event: String, region: String) -> Array:
 	cache[key] = list
 	return list
 
-## Reads every take the field can play, one family a frame (each first play read its file from disk in
-## the frame it sounded: monster cries, steps, hits). Started by main.start_run; runs once a process.
+## Reads the takes the field can play ahead of their first use (each first play read its file from
+## disk in the frame it sounded: monster cries, steps). One family a frame while the run's card covers
+## the screen, then one every WARM_GAP s so play never pays for more than one family at once; only the
+## run's region (map ids outside REGIONS warm them all). Started by main.start_run.
+const WARM_GAP := 0.3
 static var _warming := false
-static func warm_spread(tree: SceneTree) -> void:
+static func warm_spread(tree: SceneTree, region := "") -> void:
 	if _warming or tree == null: return
 	_warming = true
-	var families: Array = []
+	var regions: Array = [region] if region in REGIONS else REGIONS
+	var jobs: Array = []
 	for species in SPECIES:
 		for event in EVENTS+EXTRA:
-			for region in REGIONS: families.append([species, event, region])
-	for family in families:
-		streams(family[0], family[1], family[2])
-		await tree.process_frame
-	for gait in GAIT.values():
-		SfxBank.warm(DIR+"step_"+gait)
-		await tree.process_frame
-	for region in REGIONS:
-		for kind in ["accent", "bed"]:
-			SfxBank.warm(DIR+"layer_%s_%s" % [region, kind])
-			await tree.process_frame
+			for r in regions: jobs.append(["c", species, event, r])
+	for gait in GAIT.values(): jobs.append(["s", DIR+"step_"+gait])
+	for r in regions:
+		for kind in ["accent", "bed"]: jobs.append(["s", DIR+"layer_%s_%s" % [r, kind]])
+	var pace = load("res://scripts/load_pace.gd")
+	for job in jobs:
+		if job[0] == "c": streams(job[1], job[2], job[3])
+		else: SfxBank.warm(job[1])
+		if bool(pace.covered): await tree.process_frame
+		else: await tree.create_timer(WARM_GAP).timeout
+	_warming = false
 
 static func preload_all() -> int:
 	var count := 0

@@ -2000,7 +2000,7 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 	if busy: return
 	# The field's sounds and weapon models come in ahead of their first use (they were read from disk
 	# in the frame they first played or swung): sounds one family a frame, the two weapons now.
-	preload("res://scripts/creature_audio.gd").warm_spread(get_tree())
+	preload("res://scripts/creature_audio.gd").warm_spread(get_tree(), map_id)
 	preload("res://scripts/player.gd").warm_tools()
 	if screen == "survival" and coop_run and party_run_id == run_id:
 		close_village_modal()
