@@ -56,7 +56,7 @@
       "npc": "moru",
       "occasion": "request_done",
       "text": {
-        "ko": "부탁을 차근차근 마쳐 줘서 고마워요. 야영 준비도 이웃과 나누면 배낭이 조금 가벼워지는 기분이에요.",
+        "ko": "부탁을 차근차근 마쳐 줘서 고마워. 야영 준비도 이웃과 나누니 배낭이 조금 가벼워지는 기분이야.",
         "en": "Thanks for seeing my request through with care. Sharing camp preparations with a neighbor makes the backpack feel a little lighter.",
         "zh": "谢谢你踏踏实实地完成了委托。和邻居一起分担露营准备，感觉背包也轻了一些。"
       }
@@ -76,7 +76,7 @@
       "npc": "haeru",
       "occasion": "request_done",
       "text": {
-        "ko": "부탁을 해결해 줘서 고마워! 낚싯줄 끝은 조용해도, 고마운 마음은 벌써 팔딱팔딱 뛰고 있어.",
+        "ko": "부탁을 해결해 줘서 고마워요! 낚싯줄 끝은 조용해도, 고마운 마음은 벌써 팔딱팔딱 뛰고 있어요.",
         "en": "Thanks for taking care of my request! My fishing line may be still, but my grateful heart is already doing little leaps.",
         "zh": "谢谢你帮我完成委托！鱼线那头虽然安安静静，我这颗感激的心已经扑腾扑腾跳起来啦。"
       }
@@ -136,7 +136,7 @@
       "npc": "regular",
       "occasion": "request_done",
       "text": {
-        "ko": "부탁을 마쳐 주셔서 고마워요! 커피를 내리는 동안에도 자꾸 웃음이 나니, 오늘 카페에는 고소한 향과 좋은 기분이 가득하겠어요.",
+        "ko": "부탁을 들어줘서 고마워! 커피를 내리는 동안에도 자꾸 웃음이 나. 오늘 카페는 고소한 향이랑 좋은 기분으로 가득하겠어.",
         "en": "Thanks for taking care of my request! I keep smiling while I brew, so the café should be full of rich coffee aromas and good cheer today.",
         "zh": "谢谢你帮我完成委托！冲咖啡时也忍不住微笑，今天的咖啡馆一定会充满醇香和好心情。"
       }
@@ -246,7 +246,7 @@
       "npc": "moru",
       "occasion": "resident_day",
       "text": {
-        "ko": "마을 기념일에는 배낭을 잠시 내려놓고 쉬어 가려 해요. 함께 쉬어 갈 이웃이 있다는 게 가장 든든한 야영 준비 같네요.",
+        "ko": "마을 기념일에는 배낭을 잠시 내려놓고 쉬어 가려 해. 함께 쉬어 갈 이웃이 있다는 게 가장 든든한 야영 준비 같아.",
         "en": "For this village anniversary, I am setting down my backpack for a little rest. Having a neighbor to rest beside feels like the best camp preparation of all.",
         "zh": "这个村庄纪念日，我想先放下背包歇一歇。有邻居一起休息，感觉就是最让人安心的露营准备。"
       }
@@ -266,7 +266,7 @@
       "npc": "haeru",
       "occasion": "resident_day",
       "text": {
-        "ko": "마을 기념일을 축하해! 오늘은 커다란 물고기 이야기보다 이웃과 함께 웃은 이야기를 더 많이 하고 싶어.",
+        "ko": "마을 기념일을 축하해요! 오늘은 커다란 물고기 이야기보다 이웃과 함께 웃은 이야기를 더 많이 하고 싶어요.",
         "en": "Happy village anniversary! Today I would rather tell stories about laughing with neighbors than about enormous fish.",
         "zh": "村庄纪念日快乐！今天比起大鱼的故事，我更想多聊聊和邻居一起笑过的事。"
       }
@@ -346,7 +346,7 @@
       "npc": "moru",
       "occasion": "small_talk",
       "text": {
-        "ko": "야영 배낭을 정리하다가 쉬어 갈 자리부터 떠올렸어요. 준비를 잘하는 날에는 느긋하게 쉬는 시간도 꼭 챙겨야겠지요.",
+        "ko": "야영 배낭을 정리하다가 쉬어 갈 자리부터 떠올렸어. 준비를 잘한 날일수록 느긋하게 쉬는 시간도 꼭 챙겨야지.",
         "en": "While sorting my camping pack, the first thing I pictured was a place to rest. A well-prepared day ought to include some unhurried time too.",
         "zh": "整理露营背包时，我最先想到的却是歇脚的地方。准备周全的一天，也该留出一点悠闲休息的时间吧。"
       }
@@ -356,7 +356,7 @@
       "npc": "haeru",
       "occasion": "small_talk",
       "text": {
-        "ko": "오늘은 물고기보다 물결을 더 오래 구경했어. 낚시꾼에게도 바다 구경만 하는 날이 있어야지!",
+        "ko": "오늘은 물고기보다 물결을 더 오래 구경했어요. 낚시꾼에게도 바다 구경만 하는 날이 있어야죠!",
         "en": "I spent longer watching the ripples than the fish today. Even a fisher needs a day just to admire the sea!",
         "zh": "今天看波纹的时间，比看鱼还长呢。钓鱼的人也该有一天，只顾着欣赏大海呀！"
       }
