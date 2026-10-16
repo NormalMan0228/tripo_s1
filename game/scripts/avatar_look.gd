@@ -53,7 +53,9 @@ static func for_server(value, v2: bool) -> Dictionary:
 	if v2: return look
 	for key in V2_ONLY: look.erase(key)
 	if look.headwear == "straw": look.headwear = "cap"
-	look.character = model_id(str(look.character))
+	# An older server knows only its four: a new character goes as the old one of its kind.
+	var id := str(look.character)
+	if id.length() == 2 and id[0] in ["m", "f"] and id[1].is_valid_int(): look.character = "explorer" if id[0] == "m" else "explorer_b"
 	if not look.skin in OLD_SKINS:
 		var want := Color(str(look.skin))
 		var best: String = OLD_SKINS[0]
