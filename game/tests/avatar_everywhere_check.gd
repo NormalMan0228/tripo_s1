@@ -9,12 +9,16 @@ extends SceneTree
 ## --capture (windowed) saves a cropped tile of each place and look to artifacts/avatar-everywhere/.
 const Main = preload("res://scripts/main.gd")
 const AvatarLook = preload("res://scripts/avatar_look.gd")
-const MODELS := {"explorer_b":"explorer_b_wardrobe", "explorer":"explorer", "ranger":"ranger", "tinker":"tinker"}
+const MODELS := {"explorer_b":"explorer_b_wardrobe", "explorer":"explorer", "ranger":"ranger", "tinker":"tinker",
+	"m3":"m3", "f2":"f2"}
 const LOOKS := [
 	{"character":"ranger", "hair":"#8a3b2a", "coat":"#2f5f9e", "pants":"#3b3b3b", "boots":"#5a3a22", "skin":"#bc865c", "headwear":"cap", "backpack":false},
 	{"character":"tinker", "hair":"#774f3d", "coat":"#ab789f", "pants":"#526552", "boots":"#c47b50", "skin":"#895b43", "headwear":"beret", "backpack":true},
 	{"character":"explorer", "hair":"#d5a250", "coat":"#6889a1", "pants":"#774f3d", "boots":"#30595b", "skin":"#f0cdb1", "headwear":"none", "backpack":false},
 	{"character":"explorer_b", "hair":"#30595b", "coat":"#c47b50", "pants":"#6889a1", "boots":"#774f3d", "skin":"#e4b587", "headwear":"cap", "backpack":true},
+	# The eight new characters (avatar_v2, N1): one man and one woman with changed colours.
+	{"character":"m3", "hair":"#30595b", "coat":"#c47b50", "pants":"#2b394e", "boots":"#20201d", "skin":"#975a38", "headwear":"none", "backpack":true, "accent":"#cfc2ad"},
+	{"character":"f2", "hair":"#7a3b2a", "coat":"#5fa8a0", "pants":"#1e1f42", "boots":"#603222", "skin":"#d09988", "headwear":"beret", "backpack":false, "accent":"#6f4146"},
 ]
 var server := preload("res://tests/qa_server.gd").url()
 var failures: Array[String] = []
