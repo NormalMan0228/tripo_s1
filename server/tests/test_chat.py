@@ -40,7 +40,7 @@ def test_released_clients_keep_the_old_messages_field_and_room(world):
     assert w.say(alice, 'hello')['ok']
     old = w.presence(bravo)
     assert 'chat' not in old and 'social' not in old
-    assert [set(m) for m in old['messages']] == [{'id', 'username', 'text', 'created'}]
+    assert [set(m) for m in old['messages']] == [{'id', 'username', 'display_name', 'text', 'created'}]
     assert old['messages'][0]['username'] == 'alice' and old['messages'][0]['text'] == 'hello'
     # No channel: the party room when in a party, as before chat v2.
     w.call(alice, '/v1/party')
