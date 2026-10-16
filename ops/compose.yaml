@@ -29,8 +29,9 @@ services:
       TRIPOTHON_TESTER_WELCOME_STARS: ${TRIPOTHON_TESTER_WELCOME_STARS:-1500}
       TRIPOTHON_TESTER_CREDIT_BUDGET: ${TRIPOTHON_TESTER_CREDIT_BUDGET:-10000}
       # 0.11.9 switches (set them in ops/production.env; compose passes only the variables listed here).
-      # Campfire: barrier (the old ring) or buff (heal near it, a short strength boost after).
-      TRIPOTHON_CAMPFIRE_MODE: ${TRIPOTHON_CAMPFIRE_MODE:-barrier}
+      # Campfire: buff (heal near it, a short strength boost after; the user's choice 2026-10-16) or
+      # barrier (the old ring).
+      TRIPOTHON_CAMPFIRE_MODE: ${TRIPOTHON_CAMPFIRE_MODE:-buff}
       # Residents moving in and out of the village houses (off = as before).
       TRIPOTHON_RESIDENT_MOVES: ${TRIPOTHON_RESIDENT_MOVES:-off}
       # Rigging and animation with a craft ('움직이는 캐릭터', skeleton + clips as one set): on by the
