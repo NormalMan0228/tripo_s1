@@ -25,7 +25,9 @@ var eyes: Array[MeshInstance3D]=[]
 var health: Label3D
 var materials: Array[StandardMaterial3D]=[]
 var clock := 0.0
-var last_hp := 45.0
+var last_hp := -1.0  # -1 until the first snapshot, so spawning is not read as a hit
+## Attack clip speed chosen when the wind-up starts (animate_monster keeps playing it at this rate).
+var attack_rate := 1.0
 var flash := 0.0
 var kind := "wolf"
 var variant := ""
@@ -245,14 +247,16 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 	if phase=="windup" and previous!="windup":
 		windups+=1
 		if not (boss and windups%ROAR_EVERY==0 and voice("roar")): voice("windup")
-		if monster: monster.play("attack",0.08,monster.attack_speed(float(state.get("windup",0.0))),true)
+		if monster:
+			attack_rate=monster.attack_speed(float(state.get("windup",0.0)))
+			monster.play("attack",0.08,attack_rate,true)
 	if previous=="windup" and phase in ["recover","charge"]:
 		# A blow that interrupts the wind-up (hp drops in the same snapshot) cancels the strike call.
 		if phase=="charge": voice("charge")
-		elif state.hp>=last_hp: voice("strike")
+		elif last_hp<0.0 or state.hp>=last_hp: voice("strike")
 		if spore(): burst(SPORE.get(variant,SPORE.forest),Vector3(0,0.5,0),float(state.get("impact",2.0)),26)
 	if previous=="charge" and phase=="recover": voice("dazed")
-	if state.hp<last_hp:
+	if last_hp>=0.0 and state.hp<last_hp:
 		flash=0.16
 		hurt_left=0.0
 		# A boss roars once as its health falls past half (that hit's hurt call gives way).
@@ -294,7 +298,9 @@ func die() -> void:
 	var tween := create_tween()
 	tween.tween_interval(wait)
 	tween.tween_callback(burst.bind(SPORE.get(variant,SPORE.forest),Vector3(0,0.3,0),0.5,14))
-	tween.tween_property(body,"position:y",-0.9,0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	# Sink by the creature's size so a 5 m boss is under the ground before it is freed.
+	var sink := 0.9*maxf(1.0,(monster.height*monster.scale.y/1.7) if monster else 1.0)
+	tween.tween_property(body,"position:y",-sink,0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	tween.parallel().tween_property(body,"scale",Vector3(0.8,0.6,0.8),0.9)
 	tween.tween_callback(queue_free)
 
@@ -400,7 +406,7 @@ func animate_monster(delta: float, moving: bool) -> void:
 	# Eyes flare during the telegraph; a soft breathing glow otherwise keeps them readable at night.
 	monster.glow=lerpf(monster.glow,2.2 if phase in ["windup","charge"] else 0.55+0.15*sin(clock*2.2),minf(1,delta*8))
 	if phase=="windup":
-		monster.play("attack",0.08)
+		monster.play("attack",0.08,attack_rate)
 	elif phase=="charge":
 		monster.play("run",0.1,2.0)
 	elif hurt_left>0:
