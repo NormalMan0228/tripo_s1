@@ -69,6 +69,17 @@ func exterior() -> void:
 		if "--lit" in OS.get_cmdline_user_args():
 			(opening.material_override as ShaderMaterial).set_shader_parameter("inner_light", 1.0)
 			print("OPENING ", opening.get_path(), " visible=", opening.is_visible_in_tree(), " aabb=", opening.global_transform*opening.get_aabb(), " mesh=", opening.mesh, " shader_ok=", (opening.material_override as ShaderMaterial).shader.code.length())
+			# The door's nodes alone (the building's own meshes hidden): is the doorway drawn at all?
+			var building := leaf.get_parent().get_parent() as Node3D
+			var hidden := []
+			for mesh in building.find_children("*", "MeshInstance3D", true, false):
+				if not (leaf.get_parent() as Node).is_ancestor_of(mesh) and (mesh as Node3D).visible:
+					hidden.append(mesh)
+					(mesh as Node3D).visible = false
+			Doors.set_door_open(id, 1.0)
+			await shot("%s_ext_%s_isolated.png" % [label, id])
+			Doors.set_door_open(id, 0.0)
+			for mesh in hidden: (mesh as Node3D).visible = true
 		for amount in [0.0, 0.5, 1.0]:
 			Doors.set_door_open(id, amount)
 			var image := await shot("%s_ext_%s_%s.png" % [label, id, ["closed", "half", "open"][int(amount*2)]])

@@ -33,7 +33,7 @@ const THICKNESS := 0.05
 const CELL := 0.02
 ## A piece belongs to what the camera sees when it lies this close to the front-most surface there.
 const SURFACE_BAND := 0.08
-const REMOVE_DEPTH := 0.6
+const REMOVE_DEPTH := 2.0
 const EDGE_STEP := 0.03
 ## Hinge sides and opening directions as decided (or set by the user: "override": true).
 const HINGES := "res://maps/archipelago/door_hinges.json"
