@@ -3836,22 +3836,26 @@ func first_look() -> void:
 	picker.avatar = me.get("profile",{}).get("avatar",{}).duplicate(true)
 	picker.v2 = avatar_v2
 	ui.add_child(picker)
-	picker.display_name = str(me.get("profile",{}).get("display_name",""))
 	while is_instance_valid(picker):
 		var chosen: Dictionary = await picker.done
-		var body := {"version":me.get("profile",{}).get("version",0),"avatar":AvatarLook.for_server(chosen,avatar_v2)}
-		if avatar_v2 and not picker.display_name.is_empty(): body["display_name"]=picker.display_name
-		var result: Dictionary = await api.post("/v1/profile",api.mutation(body))
-		if result.ok:
-			adopt_profile(result.data)
+		var result: Dictionary = await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":AvatarLook.for_server(chosen,avatar_v2)}))
+		if not result.ok:
+			message(tr("모습을 저장하지 못했어요. 옷장(O)에서 다시 골라 주세요."))
 			break
-		# A refused name keeps the card open to try another (N1 server, AVATAR8_API_KO.md).
-		var code := str(result.get("error",""))
-		if code.begins_with("name_") and is_instance_valid(picker):
-			picker.say({"name_invalid":tr("이름은 2~12자, 글자와 숫자로 지어 주세요."),"name_refused":tr("쓸 수 없는 말이 들어 있어요."),"name_reserved":tr("운영자처럼 보이는 이름은 쓸 수 없어요."),"name_taken":tr("이미 다른 모험가가 쓰는 이름이에요."),"name_change_limited":tr("이름은 하루에 한 번 바꿀 수 있어요.")}.get(code,tr("이 이름은 쓸 수 없어요.")))
-			continue
-		message(tr("모습을 저장하지 못했어요. 옷장(O)에서 다시 골라 주세요."))
-		break
+		adopt_profile(result.data)
+		# The name others see is saved on its own (N1 server, AVATAR8_API_KO.md); a refused name keeps
+		# the card open to try another, the look already kept.
+		var wanted: String = picker.display_name
+		if not avatar_v2 or wanted.is_empty() or wanted==str(me.get("username","")): break
+		var named: Dictionary = await api.post("/v1/profile/name",api.mutation({"display_name":wanted}))
+		if named.ok:
+			me["display_name"] = str(named.data.get("display_name",wanted))
+			break
+		var code := str(named.get("error",""))
+		if not code.begins_with("name_") or not is_instance_valid(picker):
+			message(tr("이 이름은 쓸 수 없어요."))
+			break
+		picker.say({"name_invalid":tr("이름은 2~12자, 글자와 숫자로 지어 주세요."),"name_refused":tr("쓸 수 없는 말이 들어 있어요."),"name_reserved":tr("운영자처럼 보이는 이름은 쓸 수 없어요."),"name_taken":tr("이미 다른 모험가가 쓰는 이름이에요."),"name_change_limited":tr("이름은 하루에 한 번 바꿀 수 있어요.")}.get(code,tr("이 이름은 쓸 수 없어요.")))
 	if is_instance_valid(picker): picker.queue_free()
 
 func open_wardrobe() -> void:

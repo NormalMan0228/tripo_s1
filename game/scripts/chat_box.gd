@@ -279,16 +279,18 @@ func format(line: Dictionary, me: String) -> String:
 	var text := escape(str(line.get("text", "")))
 	if kind == "system": return "[color=#%s]· %s[/color]" % [RpgUi.SOFT.to_html(false), text]
 	var who := str(line.get("username", ""))
+	# The name others chose (display_name, avatar_v2 worlds); the account id stays for links.
+	var shown_name := str(line.get("display_name", "")) if not str(line.get("display_name", "")).is_empty() else who
 	var name_colour: Color = RpgUi.HOVER if who == me else RpgUi.GOLD
 	var tag := ""
 	if kind in ["party", "global"]: tag = "[%s] " % tr(CHANNEL_NAMES[kind])
 	if kind == "whisper":
-		var to := str(line.get("to_name", ""))
+		var to := str(line.get("to_display_name", "")) if not str(line.get("to_display_name", "")).is_empty() else str(line.get("to_name", ""))
 		tag = (tr("[→%s] ") % to) if who == me else tr("[귓] ")
 	tag = escape(tag)
 	var colour: Color = CHANNEL_COLOURS.get(kind, RpgUi.INK)
 	var pending := " …" if line.get("pending", false) else ""
-	var name_part := "[url=who:%s][b][color=#%s]%s[/color][/b][/url]" % [escape(who).uri_encode(), name_colour.to_html(false), escape(who)]
+	var name_part := "[url=who:%s][b][color=#%s]%s[/color][/b][/url]" % [escape(who).uri_encode(), name_colour.to_html(false), escape(shown_name)]
 	# The owner of the village (or home) being visited speaks under a crown in the place's chat.
 	var host := str(hub.overview.get("host_id", ""))
 	if kind == "local" and not host.is_empty() and str(line.get("user_id", "")) == host:
