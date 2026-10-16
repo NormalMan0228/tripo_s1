@@ -265,7 +265,7 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 		if monster:
 			monster.hit_flash()
 			if phase not in ["windup","charge"]:
-				monster.play("hurt",0.05,1.0,true)
+				monster.play("hurt",0.12,1.0,true)  # 0.05 s snapped bones (monster_motion pose pops)
 				hurt_left=monster.length("hurt")
 	last_hp=state.hp
 	health.text=windup_text() if phase=="windup" else "%d / %d" % [state.hp,state.get("max_hp",45)]
@@ -288,7 +288,7 @@ func die() -> void:
 	health.visible=false
 	var wait := 0.5
 	if monster:
-		monster.play("death",0.08,1.0,true)
+		monster.play("death",0.15,1.0,true)
 		wait=monster.length("death")+0.25
 		monster.glow=1.4
 	else:

@@ -56,7 +56,7 @@ git 밖 GLB: `game/assets/monsters/<id>_<map>.glb` 29종(원본 `mon_v3/anim/gam
 0. **타격 기준 맞추기**: monster_motion.gd의 타격 측정을 build_game_monster의 impact 정의(전방·하방 속도 점수의 첫 일격 끝)와 같게 바꾸거나, 보고서 attack_impact_seconds를 그대로 비교한다.
 
 1. **발 미끄러짐**: 종별로 걷기 클립의 실제 보폭을 재서 WALK_REF/RUN_REF를 맞춘다(발 뼈가 디딘 동안 뒤로 가는 거리 ÷ 시간, build_game_monster의 ground_speed는 제자리 클립에서 0이라 새 측정 필요). 발을 거의 안 드는 6종은 걷기 동작 재생성(유료, 실행 세션 승인 필요) 또는 Blender 발 고정(무료)을 제안.
-2. **튐 완화**: monster.gd play()의 피격 블렌드 0.05→0.12, 쓰러짐 0.08→0.15 시험. 빠른 회전 남은 것(리자드맨 idle/death 38°, 임프 attack 38°, 서리 망령 death 32°)은 build의 destep_deg/despike로 다듬기.
+2. **튐 완화**: 피격 블렌드 0.05→0.12, 쓰러짐 0.08→0.15 적용함(쓰러짐 튐 늑대인간 4→2, 얼음 조각병 3→0, 트롤 대기~멈춤 15→12). 남은 튐은 대부분 공격 중 빠른 손끝(실제로 빠른 동작)이라, 검사기의 큰 몸 POSE_POP 기준과 함께 다시 본다. 빠른 회전 남은 것(리자드맨 idle/death 38°, 임프 attack 38°, 서리 망령 death 32°)은 build의 destep_deg/despike로 다듬기.
 3. ~~부유 오검출~~ 해결(e 커밋): 대역 wisp의 0.3 m 부유를 자기 모델에는 적용하지 않음. 서리 마녀 바닥 0.045 m, 나가 0.13 m, 하피는 GLB 부유 0.9 m만.
 4. 절차 동작 다듬기: 바실리스크·키메라 쓰러짐 중간 0.17H 뜸, 미믹 쓰러짐 다리가 뚜껑 앞을 가림, 나가 턱 없음, 용 송곳니 일부가 아래턱과 같이 움직임.
 5. 주인공: f4 줄무늬 상의는 남색 줄만 색이 바뀜(그림 특성). 모자(f4)·헤어밴드(m3) 같은 장식은 detail로 남는다. 03 카드·프리셋 기본색은 `charsel/game/<id>_parts.json`의 hex.
