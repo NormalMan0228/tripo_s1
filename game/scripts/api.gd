@@ -1,4 +1,5 @@
 extends Node
+@onready var net_policy = preload("res://scripts/net/net_policy.gd").install(self) # LOWNET hook: session policy.
 
 var base_url := "http://127.0.0.1:8765"
 ## This game runs the living-objects VM (offset_x/offset_z, the local clock input): the server sends
@@ -23,6 +24,7 @@ const SESSION_CODES := ["session_reset", "session_expired"]
 ## The login screen chooses the server; there is no offline or bundled sample play.
 
 func request(path: String, payload: Dictionary = {}, method := HTTPClient.METHOD_GET, binary := false, timeout := 12.0) -> Dictionary:
+	if net_policy.handles_poll(path, method, binary): return await net_policy.poll_json(self, path, timeout) # LOWNET hook: conditional GET.
 	var http := HTTPRequest.new()
 	# Large uploads (a painted texture) pass a longer timeout.
 	http.timeout = timeout
@@ -74,13 +76,15 @@ var kept_busy := false
 var round_trip_ms := {}
 
 func post_kept(path: String, payload: Dictionary, timeout := 12.0) -> Dictionary:
+	if not await net_policy.before_presence(self, path, payload): return {"ok": false, "error": "session_changed"} # LOWNET hook: idle/error pacing.
 	var started := Time.get_ticks_msec()
-	if kept_busy: return await request(path, payload, HTTPClient.METHOD_POST, false, timeout)
+	if kept_busy: return await net_policy.kept_fallback(self, path, payload, timeout) # LOWNET hook: observe fallback failures too.
 	kept_busy = true
 	var result := await _kept_request(path, JSON.stringify(payload), timeout)
 	kept_busy = false
 	if result.is_empty(): result = await request(path, payload, HTTPClient.METHOD_POST, false, timeout)
 	round_trip_ms[path] = Time.get_ticks_msec()-started
+	if path == net_policy.PRESENCE: net_policy.record(path, result, round_trip_ms[path]) # LOWNET hook: backoff + weak indicator.
 	return result
 
 ## The server's host, port, TLS and path prefix, from base_url.
@@ -98,6 +102,7 @@ func _origin() -> Dictionary:
 
 func _headers() -> PackedStringArray:
 	var headers := PackedStringArray(["Content-Type: application/json"])
+	headers.append("Accept-Encoding: gzip") # LOWNET hook: kept HTTPClient JSON compression.
 	if not token.is_empty(): headers.append("Authorization: Bearer " + token)
 	headers.append(time_zone_header())
 	headers.append(version_header())
@@ -138,7 +143,8 @@ func _kept_request(path: String, body: String, timeout := 12.0) -> Dictionary:
 		kept.close()
 		return {"ok": false, "error": "connection_failed"}
 	var code := kept.get_response_code()
-	_seen(kept.get_response_headers())
+	var response_headers := kept.get_response_headers() # LOWNET hook: HTTPClient consumes these headers on read.
+	_seen(response_headers)
 	var bytes := PackedByteArray()
 	while kept.get_status() == HTTPClient.STATUS_BODY:
 		kept.poll()
@@ -153,6 +159,7 @@ func _kept_request(path: String, body: String, timeout := 12.0) -> Dictionary:
 			kept.close()
 			return {"ok": false, "error": "connection_failed"}
 	kept_used = Time.get_ticks_msec()
+	bytes = net_policy.decode_json(bytes, response_headers) # LOWNET hook: bounded gzip/deflate decode.
 	var data = parse_body(bytes)
 	if not data is Dictionary: return {"ok":false,"error":"invalid_server_response"}
 	if code >= 400: return _failure(code, data)

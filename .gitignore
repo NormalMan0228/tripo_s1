@@ -72,6 +72,8 @@ tools/third_party_downloads.local.json
 # Claude Code worktrees and stray logs.
 .claude/worktrees/
 debug.log
+.codex-tmppytest/
+.codex-tmp/
 
 # Third-party template avatars (Seed-san etc.) stay local; the face pipeline docs describe them.
 art/templates/

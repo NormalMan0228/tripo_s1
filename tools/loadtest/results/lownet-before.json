@@ -1,0 +1,150 @@
+{
+  "completed": true,
+  "mode": "before",
+  "server_source_sha256": "1365af73fecab066923c0f6f479f61f450b6391c68f28bc040682878b48daa4c",
+  "baseline_commit": "5f7c6c1",
+  "settings": {
+    "bits_per_second_each_direction": 1500000,
+    "rtt_ms": 300,
+    "modeled_segment_loss": 0.01,
+    "seed": 119,
+    "poll_intervals_seconds": {
+      "presence": 0.25,
+      "chat": 4,
+      "social": 5,
+      "studio": 20,
+      "studio_job_after_response": 2
+    }
+  },
+  "poll_seconds": 60.04,
+  "polling": {
+    "presence": {
+      "upload_http_bytes": 51015,
+      "http_wire_bytes": 2171371,
+      "modeled_retransmitted_bytes": 27305,
+      "modeled_lost_segments": 21,
+      "download_http_bytes": 2120356,
+      "http_wire_bytes_per_minute": 2169915.61,
+      "requests": 135,
+      "requests_per_minute": 134.91,
+      "decoded_response_bytes": 2084041,
+      "statuses": {
+        "200": 135
+      }
+    },
+    "chat": {
+      "upload_http_bytes": 3315,
+      "http_wire_bytes": 7530,
+      "modeled_retransmitted_bytes": 281,
+      "modeled_lost_segments": 2,
+      "download_http_bytes": 4215,
+      "http_wire_bytes_per_minute": 7524.95,
+      "requests": 15,
+      "requests_per_minute": 14.99,
+      "decoded_response_bytes": 225,
+      "statuses": {
+        "200": 15
+      }
+    },
+    "social": {
+      "upload_http_bytes": 2520,
+      "http_wire_bytes": 38592,
+      "modeled_retransmitted_bytes": 0,
+      "modeled_lost_segments": 0,
+      "download_http_bytes": 36072,
+      "http_wire_bytes_per_minute": 38566.13,
+      "requests": 12,
+      "requests_per_minute": 11.99,
+      "decoded_response_bytes": 32856,
+      "statuses": {
+        "200": 12
+      }
+    },
+    "studio": {
+      "upload_http_bytes": 6979,
+      "http_wire_bytes": 89435,
+      "modeled_retransmitted_bytes": 2574,
+      "modeled_lost_segments": 3,
+      "download_http_bytes": 82456,
+      "http_wire_bytes_per_minute": 89375.05,
+      "requests": 29,
+      "requests_per_minute": 28.98,
+      "decoded_response_bytes": 74707,
+      "statuses": {
+        "200": 29
+      }
+    }
+  },
+  "asset_original_bytes": 49971684,
+  "asset_part_original_bytes": 16657228,
+  "asset_original_sha256_per_part": [
+    "3694888aa111d36599d10a204b4219229d9d9135ea54caa671d16f40dda4fccd",
+    "9f8aa2d1d26cad509bcc16fa044a81e725a6fe84db2656ebe6e699c2be57b683",
+    "7c35d1ce3013eac48472b922ac1ee64c8e39688a073aef42f669843efb1ef6fa"
+  ],
+  "appearance": {
+    "seconds_to_discover": 0.768,
+    "seconds_to_download_complete": 312.202,
+    "download_bytes": 49971684,
+    "download_sha256_per_part": [
+      "3694888aa111d36599d10a204b4219229d9d9135ea54caa671d16f40dda4fccd",
+      "9f8aa2d1d26cad509bcc16fa044a81e725a6fe84db2656ebe6e699c2be57b683",
+      "7c35d1ce3013eac48472b922ac1ee64c8e39688a073aef42f669843efb1ef6fa"
+    ],
+    "lod_per_part": [
+      "original",
+      "original",
+      "original"
+    ],
+    "seconds_per_part": [
+      103.893,
+      103.618,
+      103.571
+    ],
+    "wire": {
+      "presence": {
+        "upload_http_bytes": 163240,
+        "http_wire_bytes": 7165631,
+        "modeled_retransmitted_bytes": 71389,
+        "modeled_lost_segments": 56,
+        "download_http_bytes": 7002391,
+        "http_wire_bytes_per_minute": 1377116.38
+      },
+      "asset": {
+        "upload_http_bytes": 1069,
+        "http_wire_bytes": 49975468,
+        "modeled_retransmitted_bytes": 493956,
+        "modeled_lost_segments": 357,
+        "download_http_bytes": 49974399,
+        "http_wire_bytes_per_minute": 9604462.66
+      },
+      "studio": {
+        "upload_http_bytes": 31913,
+        "http_wire_bytes": 447065,
+        "modeled_retransmitted_bytes": 6385,
+        "modeled_lost_segments": 6,
+        "download_http_bytes": 415152,
+        "http_wire_bytes_per_minute": 85918.54
+      },
+      "chat": {
+        "upload_http_bytes": 17238,
+        "http_wire_bytes": 39156,
+        "modeled_retransmitted_bytes": 723,
+        "modeled_lost_segments": 4,
+        "download_http_bytes": 21918,
+        "http_wire_bytes_per_minute": 7525.14
+      },
+      "social": {
+        "upload_http_bytes": 13230,
+        "http_wire_bytes": 195741,
+        "modeled_retransmitted_bytes": 2629,
+        "modeled_lost_segments": 2,
+        "download_http_bytes": 182511,
+        "http_wire_bytes_per_minute": 37618.2
+      }
+    },
+    "render_included": false,
+    "asset_http_requests": 4,
+    "asset_http_requests_per_minute": 0.77
+  }
+}
