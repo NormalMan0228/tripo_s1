@@ -691,23 +691,17 @@ func apply_colors() -> void:
 			if not source is StandardMaterial3D: continue
 			var fields := source.resource_name.to_lower().split("__")
 			var part: String=fields[0]
-			# The eight new characters (m1-f4) carry a detail part: the look's accent colours it.
-			var key: String=part
-			if part=="detail":
-				var id: String=str(avatar.get("character",""))
-				if not (id.length()==2 and id[0] in ["m","f"] and id[1].is_valid_int()): continue
-				key="accent"
-			elif part not in ["hair","coat","pants","boots","skin","backpack"]: continue
+			if part not in ["hair","coat","pants","boots","skin","backpack"]: continue
 			if avatar.get("character")=="explorer_b" and avatar.get(part)=={"coat":"#dba448","pants":"#526552","boots":"#765744"}.get(part):continue
 			var material: StandardMaterial3D=source.duplicate()
 			if part=="backpack" and not avatar.get("backpack",true):
 				material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
 				material.albedo_color.a=0
-			elif part!="backpack" and avatar.has(key) and fields.size()==2 and source.albedo_texture:
+			elif part!="backpack" and avatar.has(part) and fields.size()==2 and source.albedo_texture:
 				var tint := ShaderMaterial.new()
 				tint.shader=preload("res://shaders/avatar_tint.gdshader")
 				tint.set_shader_parameter("albedo_texture",source.albedo_texture)
-				tint.set_shader_parameter("tint",Color(avatar[key]))
+				tint.set_shader_parameter("tint",Color(avatar[part]))
 				tint.set_shader_parameter("reference_color",Color("#e4b587") if part=="skin" else Color("#"+fields[1]))
 				tint.set_shader_parameter("skin_part",part=="skin")
 				tint.set_shader_parameter("gold_cloth_only",avatar.get("character")=="explorer_b" and part=="coat")
