@@ -259,6 +259,31 @@ static func warm_up(app, at: Vector3) -> void:
 	Fx.ring(world, at, 0.05, faint, 0.8)
 	preload("res://scripts/campfire_buff_fx.gd").warm_up(world, at)
 	_warm_monster_overlay(app)
+	_warm_beast_motes(world, at)
+
+## A beast's death smoke and spore puff (shadow_beast.gd burst: CPU particles of a small unshaded,
+## alpha-blended sphere) compiled on the first kill. One faint mote of the same kind, drawn now.
+static func _warm_beast_motes(world: Node3D, at: Vector3) -> void:
+	var motes := CPUParticles3D.new()
+	motes.one_shot = true
+	motes.amount = 1
+	motes.lifetime = 0.5
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.01
+	mesh.height = 0.02
+	mesh.radial_segments = 6
+	mesh.rings = 3
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color = Color(0, 0, 0, 0.01)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mesh.material = material
+	motes.mesh = mesh
+	motes.color = Color(0, 0, 0, 0.01)
+	world.add_child(motes)
+	motes.global_position = at
+	motes.emitting = true
+	world.get_tree().create_timer(1.0).timeout.connect(func(): if is_instance_valid(motes): motes.queue_free())
 
 ## The monsters' rim/hit-flash overlay (monster.gd OVERLAY_CODE) compiled when the first beast
 ## appeared. Skinned meshes need their own variant, so it is drawn for a few frames, at zero

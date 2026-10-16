@@ -46,6 +46,10 @@ func run() -> void:
 		app.world.add_child(beast)
 		beast.position = Vector3(1.5+i, 0, -1.0)
 		await frames("beast_%s" % ["first", "second"][i])
+	var beasts := app.world.get_children().filter(func(n): return n.has_method("die"))
+	for i in mini(2, beasts.size()):
+		beasts[i].die()
+		await frames("death_%s" % ["first", "second"][i], 30)
 	CombatFx.strike(app, Vector3(0.5,0,-1), true); await frames("strike_first")
 	CombatFx.strike(app, Vector3(0.5,0,-1), true); await frames("strike_second")
 	quit(0)
