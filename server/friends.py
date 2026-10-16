@@ -139,6 +139,7 @@ def where_of(row):
     where = {'place': place}
     if place in ('village', 'home'):
         where.update(host_id=row['host_id'], host_name=row['host_name'])
+        if row.get('host_display_name'): where['host_display_name'] = row['host_display_name']
     if row['floor'] is not None:
         where['floor'] = row['floor']
     return where
@@ -170,6 +171,7 @@ class Roster:
                 rows = {}
                 for r in conn.execute(
                         'SELECT p.user_id,p.host_id,p.scene,p.place,p.floor,p.seen,u.username,h.username AS host_name,'
+                        'COALESCE(u.display_name,u.username) AS display_name,COALESCE(h.display_name,h.username) AS host_display_name,'
                         'pr.avatar,COALESCE(pr.version,0) AS avatar_version,COALESCE(s.appear_offline,0) AS appear_offline,'
                         "COALESCE(s.roster,'everyone') AS roster,"
                         "CASE WHEN p.place IS NULL AND p.scene='away' THEN (EXISTS(SELECT 1 FROM runs WHERE owner_id=p.user_id AND status='active')"
@@ -301,7 +303,7 @@ class Friends:
             blocked = blocked_ids(conn, me)
             mine = prefs(conn, me)
             friend_rows = conn.execute(
-                'SELECT f.friend_id AS id,f.created,u.username,pr.avatar,COALESCE(pr.version,0) AS avatar_version,'
+                'SELECT f.friend_id AS id,f.created,u.username,COALESCE(u.display_name,u.username) AS display_name,pr.avatar,COALESCE(pr.version,0) AS avatar_version,'
                 "COALESCE(s.appear_offline,0) AS appear_offline,COALESCE(s.drop_in,'off') AS drop_in,s.last_seen,p.seen "
                 'FROM social_friends f JOIN users u ON u.id=f.friend_id LEFT JOIN profiles pr ON pr.user_id=f.friend_id '
                 'LEFT JOIN social_prefs s ON s.user_id=f.friend_id LEFT JOIN mp_presence p ON p.user_id=f.friend_id '
@@ -327,7 +329,7 @@ class Friends:
                         continue
                 elif self.settings.social_roster == 'off':
                     continue
-                entry = {'id': r['user_id'], 'username': r['username'], 'avatar': r['avatar'], 'avatar_version': r['avatar_version'],
+                entry = {'id': r['user_id'], 'username': r['username'], 'display_name': r.get('display_name') or r['username'], 'avatar': r['avatar'], 'avatar_version': r['avatar_version'],
                          'friend': friend, 'place': place_of(r)}
                 if friend or here:
                     entry['where'] = where_of(r)
@@ -340,7 +342,7 @@ class Friends:
                 live = rows.get(f['id'])
                 hidden = bool(f['appear_offline'])
                 is_online = bool(live) and not hidden
-                entry = {'id': f['id'], 'username': f['username'], 'avatar': look(f['avatar']), 'avatar_version': f['avatar_version'],
+                entry = {'id': f['id'], 'username': f['username'], 'display_name': f['display_name'], 'avatar': look(f['avatar']), 'avatar_version': f['avatar_version'],
                          'online': is_online, 'since': f['created'], 'drop_in': f['drop_in'] == 'friends',
                          'last_seen': None if hidden or is_online else (f['seen'] if f['seen'] is not None else f['last_seen'])}
                 if is_online:
@@ -356,10 +358,10 @@ class Friends:
                 "SELECT r.id,r.to_id AS user_id,u.username,r.created FROM social_requests r JOIN users u ON u.id=r.to_id WHERE r.from_id=? AND r.state IN ('pending','suppressed') ORDER BY r.created DESC LIMIT 50", (me,))]
             blocked_list = [dict(r) for r in conn.execute('SELECT b.blocked_id AS id,u.username FROM social_blocks b JOIN users u ON u.id=b.blocked_id WHERE b.user_id=? ORDER BY u.username', (me,))]
             # My village now: the host and every guest, indoors too.
-            host_name = conn.execute('SELECT username FROM users WHERE id=?', (host,)).fetchone()[0]
+            host_name, host_display_name = conn.execute('SELECT username,COALESCE(display_name,username) FROM users WHERE id=?', (host,)).fetchone()
             host_live = rows.get(host)
             guests = []
-            for g in conn.execute('SELECT v.user_id,u.username,p.scene,p.place,p.floor,p.seen,p.host_id,NULL AS host_name,0 AS expedition,'
+            for g in conn.execute('SELECT v.user_id,u.username,COALESCE(u.display_name,u.username) AS display_name,p.scene,p.place,p.floor,p.seen,p.host_id,NULL AS host_name,0 AS expedition,'
                                   'COALESCE(s.appear_offline,0) AS appear_offline FROM mp_visits v JOIN users u ON u.id=v.user_id '
                                   'LEFT JOIN mp_presence p ON p.user_id=v.user_id LEFT JOIN social_prefs s ON s.user_id=v.user_id '
                                   'WHERE v.host_id=? AND v.expires>? ORDER BY u.username', (host, now)):
@@ -367,13 +369,13 @@ class Friends:
                     continue
                 # Appearing offline shows offline here too (the player asking always sees itself).
                 live = g['seen'] is not None and now-g['seen'] < ONLINE_SECONDS
-                entry = {'id': g['user_id'], 'username': g['username'], 'online': bool(live and (g['user_id'] == me or not g['appear_offline']))}
+                entry = {'id': g['user_id'], 'username': g['username'], 'display_name': g['display_name'], 'online': bool(live and (g['user_id'] == me or not g['appear_offline']))}
                 if g['scene'] is not None:
                     entry['place'] = place_of(g)
                     if g['floor'] is not None:
                         entry['floor'] = g['floor']
                 guests.append(entry)
-            village = {'host': {'id': host, 'username': host_name, 'online': bool(host_live) and (host == me or not host_live['appear_offline'])},
+            village = {'host': {'id': host, 'username': host_name, 'display_name': host_display_name, 'online': bool(host_live) and (host == me or not host_live['appear_offline'])},
                        'visiting': host != me, 'guests': guests, 'guest_limit': GUEST_LIMIT}
             if host == me:
                 village['invites_out'] = [dict(r) for r in conn.execute(

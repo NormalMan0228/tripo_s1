@@ -272,7 +272,8 @@ class Chat:
                 user = auth(conn, request)
                 now, uid = self.clock(), user['id']
                 rows = conn.execute('''SELECT r.id,r.sender_id,r.recipient_id,r.state,r.created,r.expires,
-                                       s.username AS from_name,t.username AS to_name
+                                       s.username AS from_name,t.username AS to_name,
+                                       COALESCE(s.display_name,s.username) AS from_display_name,COALESCE(t.display_name,t.username) AS to_display_name
                                        FROM whisper_requests r JOIN users s ON s.id=r.sender_id
                                        JOIN users t ON t.id=r.recipient_id
                                        WHERE (r.sender_id=? OR r.recipient_id=?) AND r.expires>?
@@ -354,17 +355,19 @@ class Chat:
         else:
             cursor = head
         rows = [r for r in rows if r['user_id'] not in blocked and r['to_id'] not in blocked]
-        names = {}
+        names, shown = {}, {}
         wanted = {r['user_id'] for r in rows} | {r['to_id'] for r in rows if r['to_id']}
         if wanted:
             marks = ','.join('?'*len(wanted))
             names = dict(conn.execute(f'SELECT id,username FROM users WHERE id IN ({marks})', tuple(wanted)).fetchall())
+            shown = dict(conn.execute(f'SELECT id,COALESCE(display_name,username) FROM users WHERE id IN ({marks})', tuple(wanted)).fetchall())
         lines = []
         for r in rows:
             line = {'id': r['id'], 'channel': channel_of(r), 'user_id': r['user_id'], 'username': names.get(r['user_id'], ''),
-                    'text': r['text'], 'created': r['created']}
+                    'display_name': shown.get(r['user_id'], ''), 'text': r['text'], 'created': r['created']}
             if r['to_id']:
                 line['to_id'], line['to_name'] = r['to_id'], names.get(r['to_id'], '')
+                line['to_display_name'] = shown.get(r['to_id'], '')
             lines.append(line)
         block = {'cursor': cursor, 'history': history, 'more': more, 'lines': lines}
         # The newest removed lines first: those are the ones most likely still on screen.
@@ -375,9 +378,9 @@ class Chat:
 
     def legacy(self, conn, room, blocked):
         """The 20 newest lines of one room for clients before chat v2 (overview 'messages')."""
-        rows = conn.execute('SELECT e.id,e.user_id,u.username,e.text,e.created FROM mp_messages e JOIN users u ON u.id=e.user_id WHERE room=? AND e.created>? ORDER BY e.id DESC LIMIT 20',
+        rows = conn.execute('SELECT e.id,e.user_id,u.username,COALESCE(u.display_name,u.username) AS display_name,e.text,e.created FROM mp_messages e JOIN users u ON u.id=e.user_id WHERE room=? AND e.created>? ORDER BY e.id DESC LIMIT 20',
                             (room, self.clock()-DELIVERY_SECONDS)).fetchall()
-        return [{'id': r['id'], 'username': r['username'], 'text': r['text'], 'created': r['created']} for r in rows[::-1] if r['user_id'] not in blocked]
+        return [{'id': r['id'], 'username': r['username'], 'display_name': r['display_name'], 'text': r['text'], 'created': r['created']} for r in rows[::-1] if r['user_id'] not in blocked]
 
     # --- moderation ---------------------------------------------------------------------------
     @staticmethod
