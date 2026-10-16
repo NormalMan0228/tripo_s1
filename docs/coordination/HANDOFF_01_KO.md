@@ -90,3 +90,13 @@
 - 디스크: 0.11.9 설치 파일과 zip은 C:\lsm26\old_release_0119로 옮겨 두었습니다(지우지 않음). D:에는 큰 파일을 두지 않습니다.
 - 다음 패치 대기열(after_0118_queue.txt): vfx3, voices 038b17c2, mapguide-1 f60dbdcc, dress-3 cceac441, ground82-2 299990dc, mapperf-2, maptex-1, uibag bc1887a5(되돌린 커밋 4cca7681을 먼저 되돌린 뒤), craftcol-1 498429e0 + wt/build 8e778284, lowspec, lownet, ja.
 - Codex는 10/23 07:47까지 쓸 수 없습니다. 주간 한도는 100%까지 씁니다. 작은 단위가 끝날 때마다 커밋합니다.
+
+## 2026-10-16 15:20 현재
+
+- 메인 서버: 0.11.9.3(14:45 전후, ca2abb5) → 0.11.9.4를 배포했습니다(school-release 18c30d6, 최소 0.11.9.4).
+- 0.11.9.3 = 꾸미기 폴링 수정(총괄 패치) + 03 ed2ca13f(장식색·피부·밀짚모자·가죽 배낭) + /v1/me 최상위 needs_character_select.
+- 0.11.9.4 = N6 f881ff0(탐험 소리·무기 미리 읽기, 베기 궤적) + 05 268bb60(캐릭터 키) + codex/lownet c59cbd9 + wt/lowspec 64e4650. 합친 브랜치는 wt/all01910입니다.
+- N6 d609a47(화면 밖 몬스터 애니 LOD)은 검증 전 WIP라 넣지 않았습니다.
+- 사용자는 "11.9.a"로 전부 합쳐 바로 배포하라고 했습니다. 남은 브랜치 병합은 자동 권한 검사가 두 번 막았습니다(vfx3). 이유는 표시되지 않았습니다. 사용자가 "지금 합친 것만 바로 배포"를 골랐습니다. 글자가 든 버전은 패처·서버·도구가 읽지 못해서 숫자 버전만 씁니다.
+- 남은 대기열(after_0118_queue.txt 끝부분): vfx3 6af6cdb7(G 들기·보따리), voices 038b17c2, mapdoor-obs-1 38252a78, dress-3 cceac441, ground82-2 299990dc, mapperf-2 7d647e85, maptex-1 0a562ed3, uibag f035517e(4cca7681 되돌리기 먼저), craftcol-4 1a7984b9 + wt/build 3cbe26b9(02 먼저), storyq d5a287d4, ja 495ea9d8, texdiet d321dc20, craftnpc 581b0746(꺼진 상태), mergeplan 26a74434.
+- 설치 파일·zip은 S3에 올린 뒤 D:\lsm26\old_release_0119x로 옮겼습니다(지우지 않음). C:\lsm26\old_release_0119에는 0.11.9가 있습니다.
