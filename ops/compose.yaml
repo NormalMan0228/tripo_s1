@@ -33,8 +33,10 @@ services:
       TRIPOTHON_CAMPFIRE_MODE: ${TRIPOTHON_CAMPFIRE_MODE:-barrier}
       # Residents moving in and out of the village houses (off = as before).
       TRIPOTHON_RESIDENT_MOVES: ${TRIPOTHON_RESIDENT_MOVES:-off}
-      # Rigging and animation with a craft ('움직이는 캐릭터'): off until its Tripo budget accounting is done.
-      TRIPOTHON_RIG_ANIM_ENABLED: ${TRIPOTHON_RIG_ANIM_ENABLED:-false}
+      # Rigging and animation with a craft ('움직이는 캐릭터', skeleton + clips as one set): on by the
+      # user's decision (2026-10-16); its costs count against the per-craft cap and the budgets.
+      # production.env TRIPOTHON_RIG_ANIM_ENABLED=false turns it off.
+      TRIPOTHON_RIG_ANIM_ENABLED: ${TRIPOTHON_RIG_ANIM_ENABLED:-true}
       # Design (LLM) calls a day: per account and for the whole server.
       TRIPOTHON_LLM_USER_DAILY_CALL_LIMIT: ${TRIPOTHON_LLM_USER_DAILY_CALL_LIMIT:-20}
       TRIPOTHON_LLM_SERVER_DAILY_CALL_LIMIT: ${TRIPOTHON_LLM_SERVER_DAILY_CALL_LIMIT:-1000}
