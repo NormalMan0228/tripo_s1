@@ -62,13 +62,14 @@ const FOLK := [
 const TASKS := {"fish":"fish","sweep":"sweep","farm":"hoe","write":"write","deliver":"deliver","light_lamps":"lamp"}
 const ROAM := {"sweep":13.0,"farm":9.0,"scout":15.0,"play":12.0,"stroll":11.0,"craft":3.5,"garden":6.0}
 const STAY := ["fish","write"]
-## 보니 and 솔's own models (res://assets/npc/<id>.glb, clips idle/walk/work) wear their daytime
-## look in place of the procedural villager while the files are there; without them, or with
-## this off, they keep the procedural look (sky-blue / yellow hair). After dark (and indoors,
-## interiors.gd) they are the usual silhouette.
+## Residents' own models (res://assets/npc/<id>.glb, clips idle/walk/work) are worn in place of the
+## procedural villager while the files are there, day and night (0.11.9.1: the user saw the
+## silhouette after dark and read it as "not applied"); without a file, or with this off, they
+## keep the procedural look. Indoors (interiors.gd) they are still the usual figure.
 const DAY_MODELS_ENABLED := true
-## Model height (m) per resident: 보니 grown-up, 솔 a child.
-const DAY_MODELS := {"boni":1.66,"sol":1.36}
+## Model height (m) per resident: 보니 grown-up, 솔 a child; the others are 05's P2 residents
+## (art/characters/body_p2_v1 RES r02, r05-r10), attached as soon as their GLB is in assets/npc.
+const DAY_MODELS := {"boni":1.66,"sol":1.36,"fisher":1.62,"gentleman":1.78,"lamplighter":1.74,"scout":1.66,"kid":1.18,"stroller":1.74,"poet":1.64}
 ## Outdoor activities shown with the model's "work" clip while it stands at its spot.
 const MODEL_WORK := ["craft","garden","tend","farm","sweep"]
 ## The schedule only moves a shadow on screen near the walker; elsewhere it hops
@@ -643,13 +644,12 @@ func attach_day_model(walker: Node) -> void:
 ## Walkers wearing a model by day (attach_day_model).
 var model_walkers: Array = []
 
-## By day the model stands in for the procedural villager (whole figure and its gear), with
-## the clip that matches what the walker does; at night, in a doorway fade or indoors the
-## usual figure is back.
+## The model stands in for the procedural villager (whole figure and its gear), day and night,
+## with the clip that matches what the walker does; in a doorway fade the usual figure is back.
 func drive_day_model(walker: Node, delta: float) -> void:
 	var model = walker.get_meta("day_model", null)
 	if not is_instance_valid(model): return
-	var shown: bool = walker.visible and walker.day_blend >= 0.5 and walker.fade > 0.4
+	var shown: bool = walker.visible and walker.fade > 0.4
 	if model.visible != shown:
 		model.visible = shown
 		if is_instance_valid(walker.figure): walker.figure.visible = not shown
