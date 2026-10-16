@@ -37,6 +37,7 @@ from . import craft_moderation
 from .craft_moderation import Refused
 from . import interactions
 from . import archetypes
+from . import craft_kinds
 from . import clock_hands
 from . import behaviour_library as library
 
@@ -163,6 +164,15 @@ class StudioRequest(Mutation):
     size: Literal[craft_styles.SIZE_IDS]='auto'
     # Or the box the player dragged: [width x, height y, depth z] in metres (wins over size).
     dims: list[float]|None=Field(default=None,min_length=3,max_length=3)
+    # The kind the player picked in the craft window's '기능' row (server/craft_kinds.py); '' = guessed
+    # from the words (archetypes.classify). Older clients never send it.
+    archetype: str=Field(default='',max_length=40)
+
+    @field_validator('archetype')
+    @classmethod
+    def known_kind(cls,v):
+        if v and v not in craft_kinds.IDS:raise ValueError('unknown_craft_kind')
+        return v
 
     @field_validator('dims')
     @classmethod
@@ -485,6 +495,8 @@ class Studio:
                     'tripo_budget':limits.tripo_credit_budget,
                     'tripo_budget_used':round(tripo_credits_committed(conn)) if limits.tripo_credit_budget else 0,
                     **craft_styles.public(),
+                    # The kinds the player may pick ('기능' row): a library type with real behaviour.
+                    'kinds':craft_kinds.public(),
                     **({'rigging':{'enabled':True,'rig_type':'biped','clips':list(rig_rules.CLIPS),'rig_credits':25,'clip_credits':10,'pose':'A'}} if settings.rig_anim_enabled else {}),
                     'prices':{'static_mesh':20,'static_textured':40,'dynamic_mesh':30,'dynamic_textured':50},
                     'tripo_estimate':{'models':{'v3.1-20260211':{'text_mesh':10,'text_textured':20,'image_mesh':20,'image_textured':30},'P2-20260801':{'text_mesh':100,'text_textured':110,'image_mesh':100,'image_textured':110}},'image_refinement_per_part':5,'source':'official_rates_and_measured_2026_10_02','max_parts':8,'confirmation_required':True},
@@ -531,7 +543,7 @@ class Studio:
                 if body.image:fail('animate_requires_text',422)
                 if body.geometry!='tripo':fail('animate_requires_tripo',422)
                 body=body.model_copy(update={'motion':'static'})
-            kind=archetypes.classify(body.prompt)
+            kind=archetypes.kind_of(body.prompt,None,body.archetype)
             if not body.animate and kind and kind.get('always_moving') and body.motion=='static' and body.designer!='simple':
                 body=body.model_copy(update={'motion':'dynamic','concept':False})
             # Moving furniture keeps separate parts: at least two Tripo meshes, or one when the game
@@ -1087,14 +1099,14 @@ class Studio:
             if job['state']=='queued':
                 learned=None
                 if body.designer=='fixture':
-                    plan,program=demo_design(body.prompt);provenance={'provider':'authored_fixture','validation':exercise(program,[p['id'] for p in plan['parts']])}
+                    plan,program=demo_design(body.prompt,'' if body.animate else body.archetype);provenance={'provider':'authored_fixture','validation':exercise(program,[p['id'] for p in plan['parts']])}
                 elif body.designer=='simple':
                     plan=simple_plan(body.prompt,look['prop'],body.dims);program={'version':1,'state':{},'functions':{},'events':{}}
                     provenance={'provider':'direct_prompt','validation':exercise(program,['whole'])}
                 else:
                     style_text=craft_styles.designer_style(body.style,body.size,body.dims)
                     # A text-only request made before (same words, style, size and motion): the learned design, no LLM call.
-                    learned=None if body.image or body.animate else library.make_key('design',library.normalize(body.prompt),body.style,body.size,body.motion,style_text,archetypes.VERSION,DESIGN_RULES,*([body.dims] if body.dims else []))
+                    learned=None if body.image or body.animate else library.make_key('design',library.normalize(body.prompt),body.style,body.size,body.motion,style_text,archetypes.VERSION,DESIGN_RULES,*([body.dims] if body.dims else []),*(['kind:'+body.archetype] if body.archetype else []))
                     with self.db.transaction() as conn:cached=library.find(conn,learned) if learned else None
                     if cached:
                         plan,program=cached['value']['plan'],cached['value']['program']
@@ -1110,7 +1122,7 @@ class Studio:
                             request_prompt+='\nThis photo may be rebuilt in 3D exactly as it is, so if any real person (or part of one) appears in it, return {"refused":"person"}.'
                         with self.db.transaction() as conn:categories=[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')]
                         request_prompt+='\nExisting category names (reuse a matching kind, otherwise propose a short new kind): '+json.dumps(categories,ensure_ascii=False)
-                        request_prompt+=rig_rules.POSE if body.animate else archetypes.designer_hint(body.prompt,body.motion)
+                        request_prompt+=rig_rules.POSE if body.animate else archetypes.designer_hint(body.prompt,body.motion,body.archetype)
                         plan,program,provenance=await llm_budget.generate(self.db,self.settings,self.clock,job['owner_id'],'craft_design',job_id,self.designer,request_prompt,body.model,body.effort,body.image,style_text)
                 designed=(plan,program)
                 if body.motion=='static':
@@ -1123,9 +1135,11 @@ class Studio:
                 category=unicodedata.normalize('NFKC',plan['category']).casefold().strip()
                 plan['category']='_'.join(''.join(c if c.isalnum() else ' ' for c in category).split())[:40] or 'decoration'
                 # The library type (server/archetypes.py): its behaviours start on the finished object.
-                kind=None if body.animate else archetypes.classify(body.prompt,plan)
+                kind=None if body.animate else archetypes.kind_of(body.prompt,plan,body.archetype)
                 if kind:
                     provenance['archetype']=kind['id']
+                    # Picked in the craft window, not guessed from the words.
+                    if body.archetype:provenance['archetype_picked']=True
                     plan=archetypes.seat_parts(kind['id'],plan)
                 provenance.update(animate=body.animate)
                 provenance.update(geometry='procedural_proxy' if body.geometry=='proxy' else 'tripo',material=body.material,motion=body.motion)
