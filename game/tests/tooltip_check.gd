@@ -218,10 +218,12 @@ func village() -> void:
 	await audit(app.right.get_parent(), "village bag drawer")
 	var swatches := []
 	for b in app.right.find_children("*", "Button", true, false):
-		if not has_words(b.text) and b.icon == null: swatches.append(b.tooltip_text)
+		# Bag slots (village_bag.gd) carry an object's name, not a colour.
+		if not has_words(b.text) and b.icon == null and not str(b.name).begins_with("Slot_"): swatches.append(b.tooltip_text)
 	expect(swatches == [t("상아색"), t("꿀색"), t("산호색"), t("청록색"), t("하늘색")], "paint swatches named: %s" % [swatches])
-	var close: Button = app.right.get_child(0).get_child(2)
-	expect(close.tooltip_text == t("닫기")+"  ·  I", "drawer close key named with its key")
+	var keys: Array = app.right.get_child(0).get_children().filter(func(c): return c is Button and str(c.tooltip_text).begins_with(t("닫기")))
+	var close: Button = keys[0] if not keys.is_empty() else null
+	expect(close != null and close.tooltip_text == t("닫기")+"  ·  I", "drawer close key named with its key")
 	app.toggle_drawer()
 	await settle(0.3)
 	# Seed picker, storage and wardrobe windows.

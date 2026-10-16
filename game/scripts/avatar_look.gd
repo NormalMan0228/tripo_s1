@@ -14,7 +14,10 @@ const PlayerScript = preload("res://scripts/player.gd")
 
 ## Mirrors server/models.py Avatar. A missing field means the default, so {} and the full
 ## default record are the same look and never rebuild a body.
-const DEFAULTS := {"character":"explorer_b","hair":"#30595b","coat":"#dba448","pants":"#526552","boots":"#765744","skin":"#e4b587","headwear":"none","backpack":true}
+const DEFAULTS := {"character":"explorer_b","hair":"#30595b","coat":"#dba448","pants":"#526552","boots":"#765744","skin":"#e4b587","headwear":"none","backpack":true,"accent":"#c94f3d"}
+## Fields and values only a server with avatar_v2 (/health; docs/design/AVATAR8_API_KO.md) takes.
+const V2_ONLY := ["accent"]
+const OLD_SKINS := ["#e4b587","#f0cdb1","#bc865c","#895b43","#604431"]
 const PARTS := ["hair","coat","pants","boots","skin"]
 
 ## The full look: defaults filled in, unknown fields dropped.
@@ -28,6 +31,38 @@ static func normalize(value) -> Dictionary:
 			if field is bool: look[key]=field
 		elif field is String and not field.is_empty():
 			look[key]=field
+	return look
+
+## The look a body wears: the saved look with a model it can show (model_id).
+static func shown(value) -> Dictionary:
+	var look := normalize(value)
+	look.character = model_id(str(look.character))
+	return look
+
+## The eight new characters (m1-m4, f1-f4; avatar_v2) wear an older model until their own is in the
+## game (assets/<id>.glb from the 05 session): the men the explorer, the women the traveller.
+static func model_id(id: String) -> String:
+	if not (id.length() == 2 and id[0] in ["m", "f"] and id[1].is_valid_int()): return id
+	if ResourceLoader.exists("res://assets/%s.glb" % id): return id
+	return "explorer" if id[0] == "m" else "explorer_b"
+
+## The look as the server takes it: an older server (no avatar_v2) gets no accent, the travel cap
+## for the straw hat and the nearest of its five skins.
+static func for_server(value, v2: bool) -> Dictionary:
+	var look := normalize(value)
+	if v2: return look
+	for key in V2_ONLY: look.erase(key)
+	if look.headwear == "straw": look.headwear = "cap"
+	# An older server knows only its four: a new character goes as the old one of its kind.
+	var id := str(look.character)
+	if id.length() == 2 and id[0] in ["m", "f"] and id[1].is_valid_int(): look.character = "explorer" if id[0] == "m" else "explorer_b"
+	if not look.skin in OLD_SKINS:
+		var want := Color(str(look.skin))
+		var best: String = OLD_SKINS[0]
+		for skin in OLD_SKINS:
+			var c := Color(skin)
+			if Vector3(c.r - want.r, c.g - want.g, c.b - want.b).length() < Vector3(Color(best).r - want.r, Color(best).g - want.g, Color(best).b - want.b).length(): best = skin
+		look.skin = best
 	return look
 
 ## A short key for comparing looks (field order does not matter).
@@ -47,7 +82,7 @@ static func resource_paths() -> Array:
 
 static func walker(look, version := -1) -> CharacterBody3D:
 	var body: CharacterBody3D = PlayerScript.new()
-	body.avatar = normalize(look)
+	body.avatar = shown(look)
 	body.look_version = version
 	return body
 
@@ -59,7 +94,7 @@ static func wear(body: Node, look, version := -1, animate := false) -> bool:
 	if not is_instance_valid(body): return false
 	if version>=0 and version<=int(body.look_version): return false
 	if version>=0: body.look_version = version
-	var changed: bool = body.apply_avatar(normalize(look))
+	var changed: bool = body.apply_avatar(shown(look))
 	if changed and animate and body.is_inside_tree() and body.get_parent() is Node3D and is_instance_valid(body.visual):
 		Fx.squash(body.visual, 0.12, 0.38)
 		Fx.burst(body.get_parent(), body.global_position+Vector3(0,1.1,0), "sparkle", 10, Color(0,0,0,0), 0.35)

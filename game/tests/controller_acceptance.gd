@@ -71,7 +71,7 @@ func run_test() -> void:
 	stage.queue_free();await process_frame
 	var app := Main.new();root.add_child(app);await process_frame
 	await app.authenticate(true,preload("res://tests/qa_server.gd").url(),"control_"+str(Time.get_ticks_usec()),"Controller-test-password","")
-	expect(app.screen=="village","controller test reaches authenticated village")
+	expect(app.screen=="village","controller test reaches authenticated village (screen %s, notice %s)" % [app.screen, app.notice.text if is_instance_valid(app.notice) else ""])
 	if app.screen!="village":quit(1);return
 	if preload("res://scripts/build_mode.gd").developer():
 		app.developer_panel.visible=true;await frames(4)
@@ -82,7 +82,7 @@ func run_test() -> void:
 	Input.action_press("move_right");app.toggle_drawer();await frames(5)
 	var before: Vector3=app.player.position
 	await frames(25)
-	expect(app.player.position.distance_to(before)<.03,"inventory blocks held movement input")
+	expect(app.player.position.distance_to(before)<.03,"inventory blocks held movement input (moved %.3f, controls %s, allowed %s, focus %s)" % [app.player.position.distance_to(before),app.player.controls_enabled,app.world_movement_allowed(),app.get_viewport().gui_get_focus_owner()])
 	app.toggle_drawer();app.modal_card("입력 잠금 검사");await frames(5);before=app.player.position
 	await frames(25)
 	expect(app.player.position.distance_to(before)<.03,"dialogue blocks held movement input")

@@ -867,6 +867,21 @@ static func key_hint(parent: Node, action_or_key: String, text: String, kind := 
 
 ## The one close key: a flat 34 px painted "close" icon that lifts on hover, named "닫기 · Esc" (or
 ## "닫기 · <the key that opened the window>" for an action, kept in step with rebinding).
+## A press handler that runs `callback` one at a time (62): while its awaited work (a request, a
+## load) is still going, more presses on the same key are dropped, so a double click never sends
+## twice. A key that waits on something that never ends frees itself after BUSY_MS.
+const BUSY_MS := 3000
+static func once(b: Control, callback: Callable) -> Callable:
+	return func():
+		if not callback.is_valid(): return
+		var now := Time.get_ticks_msec()
+		if is_instance_valid(b) and b.has_meta("busy") and now - int(b.get_meta("busy_ms", 0)) < BUSY_MS: return
+		if is_instance_valid(b):
+			b.set_meta("busy", true)
+			b.set_meta("busy_ms", now)
+		await callback.call()
+		if is_instance_valid(b): b.remove_meta("busy")
+
 static func close_key(parent: Node, callback: Callable, action := "") -> Button:
 	var b := Button.new()
 	b.name = "Close"
@@ -887,7 +902,7 @@ static func close_key(parent: Node, callback: Callable, action := "") -> Button:
 		watch_key(b, action, named)
 	else: name_tip(b, named, "Esc" if action.is_empty() else action)
 	hover_motion(b, 1.12)
-	b.pressed.connect(func(): if callback.is_valid(): callback.call())
+	b.pressed.connect(once(b, callback))
 	parent.add_child(b)
 	return b
 
@@ -909,7 +924,7 @@ static func button(parent: Node, text: String, callback: Callable, variant := "n
 	# A danger button (delete, leave, discard) answers with the low deny note instead of the click.
 	if variant == "danger": hover_motion(b, 1.03, Vector2(0.5, 0.5), true, "deny", -6.0)
 	else: hover_motion(b, 1.03)
-	b.pressed.connect(func(): if callback.is_valid(): callback.call())
+	b.pressed.connect(once(b, callback))
 	parent.add_child(b)
 	return b
 
@@ -1162,7 +1177,7 @@ static func swatch(parent: Node, hex: String, selected: bool, callback: Callable
 		b.add_theme_stylebox_override(state, dot)
 	name_tip(b, color_name(hex))
 	hover_motion(b, 1.15, Vector2(0.5, 0.5), true, "swatch")
-	b.pressed.connect(func(): if callback.is_valid(): callback.call())
+	b.pressed.connect(once(b, callback))
 	parent.add_child(b)
 	return b
 
@@ -1334,7 +1349,7 @@ static func hotbar(ui: Control, slots: Array, y: float, fold_id := "") -> HBoxCo
 		if not key_id.is_empty():
 			var cap := keycap(b, key_id, 11)
 			cap.position = Vector2(-7,-9)
-		b.pressed.connect(slot.call)
+		b.pressed.connect(once(b, slot.call))
 		hover_motion(b, 1.08, Vector2(0.5, 1.0), true, str(slot.get("press", "click")), float(slot.get("press_db", -4.0)))
 		bar.add_child(b)
 	bar.set_meta("tray", tray)
@@ -2830,7 +2845,7 @@ static func menu_button(parent: Node, value: String, callback: Callable, width :
 	if variant == "NightButton":
 		b.add_theme_color_override("font_hover_color", HOVER)
 		b.add_theme_color_override("font_focus_color", HOVER)
-	b.pressed.connect(callback)
+	b.pressed.connect(once(b, callback))
 	hover_motion(b, 1.03)
 	parent.add_child(b)
 	return b
@@ -2855,6 +2870,8 @@ static func field(parent: Node, placeholder: String, secret := false, dropped :=
 	line.keep_editing_on_text_submit = true
 	parent.add_child(line)
 	if secret or latin: caps_hint(parent, line)
+	# Free-text fields (chat, names) show the input language they type in (lang_chip.gd, 37).
+	else: load("res://scripts/lang_chip.gd").attach(line)
 	return line
 
 ## CapsLock as last seen in a Latin field: -1 unknown, 0 off, 1 on. Godot cannot read the lock
