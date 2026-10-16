@@ -14,8 +14,8 @@ const Town = preload("res://scripts/town.gd")
 const Doors = preload("res://maps/archipelago/building_doors.gd")
 const Interiors = preload("res://scripts/interiors.gd")
 const Dressing = preload("res://scripts/building_dressing.gd")
-const EXTERIOR := ["10_red_house", "01_cafe", "11_purple_house"]
-const INTERIOR := ["home", "01_cafe", "11_purple_house"]
+var EXTERIOR := ["10_red_house", "01_cafe", "11_purple_house"]
+var INTERIOR := ["home", "01_cafe", "11_purple_house"]
 var app: Node
 var out_dir := "res://../artifacts/mapdoor/door_test/"
 var label := "cap"
@@ -25,6 +25,8 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="): out_dir = arg.trim_prefix("--out=").trim_suffix("/")+"/"
 		if arg.begins_with("--label="): label = arg.trim_prefix("--label=")
+		if arg.begins_with("--doors="): EXTERIOR = Array(arg.trim_prefix("--doors=").split(","))
+		if arg.begins_with("--rooms="): INTERIOR = Array(arg.trim_prefix("--rooms=").split(","))
 	call_deferred("run")
 
 func run() -> void:
@@ -64,6 +66,20 @@ func exterior() -> void:
 		var plain := await shot("%s_ext_%s_plain.png" % [label, id])
 		leaf.visible = true
 		opening.visible = true
+		if "--lit" in OS.get_cmdline_user_args():
+			(opening.material_override as ShaderMaterial).set_shader_parameter("inner_light", 1.0)
+			print("OPENING ", opening.get_path(), " visible=", opening.is_visible_in_tree(), " aabb=", opening.global_transform*opening.get_aabb(), " mesh=", opening.mesh, " shader_ok=", (opening.material_override as ShaderMaterial).shader.code.length())
+			# The door's nodes alone (the building's own meshes hidden): is the doorway drawn at all?
+			var building := leaf.get_parent().get_parent() as Node3D
+			var hidden := []
+			for mesh in building.find_children("*", "MeshInstance3D", true, false):
+				if not (leaf.get_parent() as Node).is_ancestor_of(mesh) and (mesh as Node3D).visible:
+					hidden.append(mesh)
+					(mesh as Node3D).visible = false
+			Doors.set_door_open(id, 1.0)
+			await shot("%s_ext_%s_isolated.png" % [label, id])
+			Doors.set_door_open(id, 0.0)
+			for mesh in hidden: (mesh as Node3D).visible = true
 		for amount in [0.0, 0.5, 1.0]:
 			Doors.set_door_open(id, amount)
 			var image := await shot("%s_ext_%s_%s.png" % [label, id, ["closed", "half", "open"][int(amount*2)]])
@@ -87,7 +103,11 @@ func look_at_door(door: Dictionary, size: float, yaw_degrees: float) -> void:
 	var out: Vector2 = (at-Vector2(door.center)).normalized().rotated(deg_to_rad(yaw_degrees))
 	var leaf := Doors.door_leaf(String(door.id))
 	var focus: Vector3 = Town.point(at, 1.2)
-	if leaf: focus = leaf.global_transform*Vector3(-Doors.leaf_size(String(door.id)).x*0.5, 1.1, 0)
+	if leaf:
+		# The opening's middle: cut doors hang under a DoorFrame at the opening's lower left corner.
+		var opening := Doors.leaf_size(String(door.id))
+		var holder := leaf.get_parent() as Node3D
+		focus = holder.global_transform*Vector3(opening.x*0.5, minf(opening.y*0.45, 1.1), 0) if Doors.table()[String(door.id)].has("leaves") else leaf.global_transform*Vector3(-opening.x*0.5, 1.1, 0)
 	app.camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	app.camera.size = size
 	app.camera.position = focus+Vector3(out.x, 0, out.y)*10.0+Vector3(0, 3.0, 0)
@@ -121,6 +141,15 @@ func interiors() -> void:
 				Interiors.set_front_door_open(floor_root, 0.5)
 				aim(camera, hinge, Vector3(1.6, 1.5, 1.4))
 				await shot("%s_int_%s_thickness.png" % [label, room])
+				# The closed door between the camera and the walker fades (door_fade.gd).
+				if "hero" in studio and is_instance_valid(studio.hero):
+					Interiors.set_front_door_open(floor_root, 0.0)
+					aim(camera, hinge, Vector3(1.4, 2.4, 3.6))
+					studio.hero.visible = true
+					studio.hero.global_position = floor_root.to_global(hinge.position+Vector3(-Interiors.DOOR_HALF, 0.0, -1.3))
+					await create_timer(0.8).timeout
+					await shot("%s_int_%s_fade.png" % [label, room])
+					studio.hero.visible = false
 				Interiors.set_front_door_open(floor_root, 1.0)
 			else:
 				aim(camera, hinge, Vector3(1.4, 2.4, 3.6))
