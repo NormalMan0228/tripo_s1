@@ -10,6 +10,7 @@ source rest (limbs only, so an A-pose and a T-pose rest give the same motion). U
 (fingers, toe ends) follow their parents. The hips also take the source hip's movement, scaled by
 the hip-height ratio.
 """
+import math
 import os
 import sys
 
@@ -21,6 +22,13 @@ src_char, out = a[0], a[1]
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 src_anim = a[2] if len(a) > 2 else os.path.join(ROOT, 'game', 'assets', 'explorer.glb')
 CLIPS = ['idle', 'walk', 'run', 'slash']
+# The source run leans and crouches hard; on longer-legged bodies that reads as sitting, so the
+# body lean (hip and spine rotation away from rest) and the hip drop are scaled down per clip.
+DAMP = {}
+# run = the walk sampled 1.7x faster (the source run's high-knee
+# crouch reads as sitting on adult proportions)
+RUN_FROM_WALK = (1.7, 0.0)
+DAMP_BONES = ('Hip', 'Waist', 'Spine01', 'Spine02')
 # Mixamo base name -> (game bone name, source bone, align the rest direction)
 MAP = {
     'Hips': ('Hip', 'Hip', False), 'Spine': ('Waist', 'Waist', False), 'Spine1': ('Spine01', 'Spine01', False),
@@ -100,7 +108,10 @@ for pb in T.pose.bones:
     pb.rotation_mode = 'QUATERNION'
 T.animation_data_create()
 made = []
+made_acts = {}
 for clip in CLIPS:
+    if clip == 'run' and RUN_FROM_WALK:
+        continue
     src = acts.get(clip)
     if not src:
         print('missing source clip', clip)
@@ -109,9 +120,17 @@ for clip in CLIPS:
     f0, f1 = int(src.frame_range[0]), int(src.frame_range[1])
     act = bpy.data.actions.new(clip)
     T.animation_data.action = act
-    for f in range(f0, f1 + 1):
-        sc.frame_set(f)
+    step = RUN_FROM_WALK[0] if clip == 'run' and RUN_FROM_WALK else 1.0
+    lean = Quaternion((1, 0, 0), math.radians(RUN_FROM_WALK[1])) if clip == 'run' and RUN_FROM_WALK and RUN_FROM_WALK[1] else None
+    for k in range(int((f1 - f0) / step) + 1):
+        t = f0 + k * step
+        f = f0 + k
+        sc.frame_set(int(t), subframe=t - int(t))
         P = {}
+        fix = lean
+        if clip in DAMP:  # stand the whole pose up by part of the hip's lean (legs included)
+            Dh = rot(Smw @ S.pose.bones['Hip'].matrix) @ s_rest['Hip'].inverted()
+            fix = Quaternion().slerp(Dh.inverted(), 1 - DAMP[clip])
         for b in order:
             rest = b.matrix_local
             base = P[b.parent.name] @ b.parent.matrix_local.inverted() @ rest if b.parent else rest.copy()
@@ -120,11 +139,15 @@ for clip in CLIPS:
                 sb = src_of[b.name]
                 spb = S.pose.bones[sb]
                 D = rot(Smw @ spb.matrix) @ s_rest[sb].inverted()
+                if fix is not None:
+                    D = fix @ D
                 want = D @ align[b.name] @ rot(Tmw @ rest)
                 R = (Tq.inverted() @ want).to_matrix().to_4x4()
                 head = base.to_translation()
                 if b.name == 'Hip':
                     disp = (Smw @ spb.head) - s_hip0
+                    if clip in DAMP:
+                        disp.z *= DAMP[clip]
                     head = Tmw.inverted() @ (t_hip0 + disp * ratio)
                 M = Matrix.Translation(head) @ R
             P[b.name] = M
@@ -134,17 +157,28 @@ for clip in CLIPS:
             if b.name == 'Hip':
                 pb.keyframe_insert('location', frame=f, group=b.name)
     act.use_fake_user = True
-    made.append((clip, f1 - f0 + 1))
+    made_acts[clip] = act
+    made.append((clip, k + 1))
+if RUN_FROM_WALK and 'walk' in made_acts:  # run = the retargeted walk played RUN_FROM_WALK[0] times faster
+    run = made_acts['walk'].copy()
+    run.name = 'run'
+    w0 = made_acts['walk'].frame_range[0]
+    for fc in run.fcurves:
+        for kp in fc.keyframe_points:
+            for pt in (kp.co, kp.handle_left, kp.handle_right):
+                pt.x = w0 + (pt.x - w0) / RUN_FROM_WALK[0]
+    made_acts['run'] = run
+    made.append(('run', int(run.frame_range[1] - run.frame_range[0]) + 1))
 print('clips', made)
 for o in s_objs:
     bpy.data.objects.remove(o, do_unlink=True)
-for act in [x for x in bpy.data.actions if x.name not in CLIPS]:
+for act in [x for x in bpy.data.actions if x not in made_acts.values()]:
     bpy.data.actions.remove(act)
 T.animation_data.action = None
 for clip, _ in made:  # one NLA track per clip: the exporter writes each track as an animation of that name
     tr = T.animation_data.nla_tracks.new()
     tr.name = clip
-    st = tr.strips.new(clip, int(bpy.data.actions[clip].frame_range[0]), bpy.data.actions[clip])
+    st = tr.strips.new(clip, int(made_acts[clip].frame_range[0]), made_acts[clip])
     st.name = clip
 bpy.ops.object.select_all(action='DESELECT')
 for o in t_objs:
