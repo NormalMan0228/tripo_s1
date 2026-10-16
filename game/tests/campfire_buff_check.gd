@@ -2,7 +2,8 @@ extends SceneTree
 ## Campfire buff look (campfire_buff_fx.gd) on the real walker, fed run states shaped like the
 ## server's (docs/design/CAMPFIRE_BUFF_KO.md), without a server: barrier mode shows nothing; buff mode
 ## inside the radius flares, puts the rim on and starts the embers and heal shimmers; outside the
-## after-heat fades it; with no buffs it ends and the rim comes off; a revived teammate pulses.
+## after-heat fades it; with no buffs it ends (the rim stays on at strength 0 on the field, put on
+## under the run's card so the fire's first warmth compiles nothing); a revived teammate pulses.
 ## --capture (windowed): artifacts/campfire_buff.png — off / flare / steady, at night.
 const BuffFx := preload("res://scripts/campfire_buff_fx.gd")
 const AvatarLook := preload("res://scripts/avatar_look.gd")
@@ -58,7 +59,9 @@ func run_test() -> void:
 	# barrier: nothing at all
 	BuffFx.apply(app, state("barrier", []))
 	await wait(0.3)
-	check(fx.flares == 0 and overlaid() == 0, "barrier mode shows nothing")
+	check(fx.flares == 0 and fx.level < 0.01, "barrier mode shows nothing")
+	# The rim is put on at strength 0 on the field, so the fire's first warmth compiles nothing.
+	check(overlaid() > 0, "on the field the rim is already on (at strength 0)")
 	if capture: shots.append(await shot())
 	# buff, inside the radius
 	var inside := [{"id": "campfire_regeneration", "remaining": 18.0, "hp_per_second": 0.6}, {"id": "warmed", "remaining": 5.0, "attack_multiplier": 1.1}]
@@ -80,7 +83,7 @@ func run_test() -> void:
 	# ended
 	BuffFx.apply(app, state("buff", []))
 	await wait(1.0)
-	check(fx.level < 0.01 and overlaid() == 0, "with no buffs the look fades out and the rim comes off")
+	check(fx.level < 0.01, "with no buffs the look fades out (the rim stays on at strength 0)")
 	# a teammate being revived pulses
 	BuffFx.apply(app, state("buff", [], [{"x": -1.0, "z": 0.5, "revive": {"active": true, "progress": 0.4}}]))
 	await wait(1.2)
