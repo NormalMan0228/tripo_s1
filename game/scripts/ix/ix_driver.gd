@@ -555,6 +555,10 @@ func start_exit(fast: bool) -> void:
 	# Nothing free around the seat (something moved in since): back where the walker really stood.
 	if not spot_free(out): out = Vector3(enter_from.x, out.y, enter_from.z)
 	exit_point = Vector3(out.x, enter_from.y if absf(enter_from.y - out.y) < 0.3 else out.y, out.z)
+	# The floor really under the exit spot (a seat on a deck or on another piece): standing up
+	# lands on it instead of a body popping up or dropping onto it in one tick afterwards.
+	var floor_y := floor_at(exit_point)
+	if floor_y != -INF: exit_point.y = floor_y
 	hold_at = actor.global_position
 	edge_at = IxMath.hold_root(Vector3(socket.origin) + IxMath.dir_of(socket_yaw) * clampf(float(socket.params.get("width", 0.9)) * 0.5 - 0.22, 0.05, 0.4), socket_yaw, m.seat_contact) if kind == "lie" else hold_at
 	if is_instance_valid(pose): pose.carrier = Basis.IDENTITY
@@ -735,6 +739,15 @@ func ensure_pose() -> void:
 
 ## A feet point is free: the injected check (rooms), else a capsule test in the walker's world on
 ## buildings, props and furniture, with ground under it.
+## The height of the floor a physics walker would stand on at this spot, -INF when unknown. Rooms
+## (free_check: the studio's own floor at y 0, no physics floor) keep the spot's height as it is.
+func floor_at(point: Vector3) -> float:
+	if free_check.is_valid() or not (actor is CollisionObject3D) or not actor.is_inside_tree(): return -INF
+	var query := PhysicsRayQueryParameters3D.create(point + Vector3(0, 0.6, 0), point - Vector3(0, 0.6, 0), (actor as CollisionObject3D).collision_mask & ~4)
+	query.exclude = [actor.get_rid()]
+	var hit := actor.get_world_3d().direct_space_state.intersect_ray(query)
+	return float(hit.position.y) if not hit.is_empty() else -INF
+
 func spot_free(point: Vector3) -> bool:
 	if free_check.is_valid(): return bool(free_check.call(point))
 	if not is_instance_valid(actor) or not actor.is_inside_tree(): return true
