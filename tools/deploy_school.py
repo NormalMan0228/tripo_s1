@@ -4,6 +4,8 @@
   python tools/deploy_school.py                 # the server's default wait (10 minutes unless changed
                                                 # with ops/install_auto_update.sh --announce N)
   python tools/deploy_school.py --dry-run       # show what would be pushed
+  python tools/deploy_school.py --message "0.11.9.1 업데이트: 옷장 새 화면"   # the patch message in the
+                                                # maintenance notice (up to 120 characters)
   python tools/deploy_school.py --block-older   # also make this version the minimum: older games
                                                 # cannot sign in and are sent to update (patch or
                                                 # installer); --min-version X sets another minimum
@@ -52,8 +54,14 @@ def main() -> None:
     if announce is not None: release["announce_minutes"] = announce
     if "--block-older" in args: minimum = version
     if minimum is not None: release["min_version"] = minimum
+    # The patch message players read in the maintenance notice (ops/update_online_server.sh).
+    if "--message" in args:
+        message = " ".join(args[args.index("--message") + 1].split()).replace('"', "'").replace("\\", "/")
+        if not 0 < len(message) <= 120:
+            raise SystemExit("--message needs 1 to 120 characters")
+        release["message"] = message
     old = RELEASE.read_text(encoding="utf-8") if RELEASE.exists() else ""
-    new = json.dumps(release, indent=2) + "\n"
+    new = json.dumps(release, indent=2, ensure_ascii=False) + "\n"
     wait = f"{announce} min" if announce is not None else "server default"
     if minimum is not None: wait += f", minimum game {minimum}"
     if dry:

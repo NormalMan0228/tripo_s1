@@ -112,10 +112,14 @@ leave() {
   fi
 }
 trap leave EXIT
+# The patch message for players (tools/deploy_school.py --message, ops/release.json on the release
+# branch as fetched by ops/auto_update.sh); the plain sentence when the release has none.
+update_message=$(git show "origin/$branch:ops/release.json" 2>/dev/null | sed -n 's/.*"message"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
+[ -n "$update_message" ] || update_message="서버 업데이트가 있어요."
 if [ -n "$announce" ]; then
   if [ -z "$running" ]; then
     echo "서버가 꺼져 있어서 공지 없이 바로 업데이트합니다."
-  elif ! policy maintenance --in "$announce" --minutes "$downtime" --hold --message "서버 업데이트가 있어요." >/dev/null; then
+  elif ! policy maintenance --in "$announce" --minutes "$downtime" --hold --message "$update_message" >/dev/null; then
     echo "지금 서버는 공지 기능이 없는 옛 버전이에요. 이번 한 번은 --announce 없이 업데이트해 주세요." >&2
     exit 2
   else
