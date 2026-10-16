@@ -290,29 +290,45 @@ static func streams(species: String, event: String, region: String) -> Array:
 	return list
 
 ## Reads the takes the field can play ahead of their first use (each first play read its file from
-## disk in the frame it sounded: monster cries, steps). One family a frame while the run's card covers
-## the screen, then one every WARM_GAP s so play never pays for more than one family at once; only the
-## run's region (map ids outside REGIONS warm them all). Started by main.start_run.
-const WARM_GAP := 0.3
+## disk in the frame it sounded). Every take under creatures/ (the expedition roster's own voices:
+## goblin_idle, troll_strike ...), combat/ and hero/, bosses' roar and intro first (they sound as the card
+## lifts), then the combat and hero sets, then the rest; one file a frame while the run's card covers the
+## screen, then one every WARM_GAP s (a file is a few ms; ~76 MB in all). Started by main.start_run.
+const WARM_GAP := 0.05
+const WARM_DIRS := ["res://assets/sfx/creatures/", "res://assets/sfx/combat/", "res://assets/sfx/hero/"]
 static var _warming := false
-static func warm_spread(tree: SceneTree, region := "") -> void:
+static func warm_spread(tree: SceneTree, _region := "") -> void:
 	if _warming or tree == null: return
 	_warming = true
-	var regions: Array = [region] if region in REGIONS else REGIONS
-	var jobs: Array = []
-	for species in SPECIES:
-		for event in EVENTS+EXTRA:
-			for r in regions: jobs.append(["c", species, event, r])
-	for gait in GAIT.values(): jobs.append(["s", DIR+"step_"+gait])
-	for r in regions:
-		for kind in ["accent", "bed"]: jobs.append(["s", DIR+"layer_%s_%s" % [r, kind]])
+	var first: Array = []
+	var middle: Array = []
+	var rest: Array = []
+	for dir in WARM_DIRS:
+		for base in _bases(dir):
+			if base.ends_with("_roar") or base.ends_with("_intro"): first.append(base)
+			elif not str(dir).ends_with("creatures/"): middle.append(base)
+			else: rest.append(base)
 	var pace = load("res://scripts/load_pace.gd")
-	for job in jobs:
-		if job[0] == "c": streams(job[1], job[2], job[3])
-		else: SfxBank.warm(job[1])
-		if bool(pace.covered): await tree.process_frame
-		else: await tree.create_timer(WARM_GAP).timeout
+	for base in first+middle+rest:
+		for path in SfxBank.paths(base):
+			SfxBank.stream(path)
+			if bool(pace.covered): await tree.process_frame
+			else: await tree.create_timer(WARM_GAP).timeout
 	_warming = false
+
+## The take families in a folder: file names without their take number (goblin_idle_2.wav -> goblin_idle).
+static func _bases(dir: String) -> Array:
+	var found := {}
+	var folder := DirAccess.open(dir)
+	if folder == null: return []
+	for file in folder.get_files():
+		var name := file.trim_suffix(".import").trim_suffix(".remap")
+		if not (name.ends_with(".wav") or name.ends_with(".ogg")): continue
+		var stem := name.get_basename()
+		var cut := stem.rfind("_")
+		if cut > 0 and stem.substr(cut+1).is_valid_int(): stem = stem.substr(0, cut)
+		found[dir+stem] = true
+	return found.keys()
 
 static func preload_all() -> int:
 	var count := 0
