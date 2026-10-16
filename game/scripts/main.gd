@@ -813,7 +813,8 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 		I18n.remember("username",username.strip_edges())
 	# A new account picks and dresses its traveller first (character_select.gd, 31); the real game
 	# only, so test harnesses that register accounts go straight on.
-	if get_tree().current_scene==self:
+	# QA runs (--qa: stage_smoke, treasure_check ...) sign up fresh accounts and go straight on.
+	if get_tree().current_scene==self and not "--qa" in OS.get_cmdline_user_args():
 		var pick_look := register
 		if not pick_look: pick_look = await needs_character_select()
 		if pick_look: await first_look()
