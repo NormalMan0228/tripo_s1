@@ -62,6 +62,15 @@ const FOLK := [
 const TASKS := {"fish":"fish","sweep":"sweep","farm":"hoe","write":"write","deliver":"deliver","light_lamps":"lamp"}
 const ROAM := {"sweep":13.0,"farm":9.0,"scout":15.0,"play":12.0,"stroll":11.0,"craft":3.5,"garden":6.0}
 const STAY := ["fish","write"]
+## 보니 and 솔's own models (res://assets/npc/<id>.glb, clips idle/walk/work) wear their daytime
+## look in place of the procedural villager while the files are there; without them, or with
+## this off, they keep the procedural look (sky-blue / yellow hair). After dark (and indoors,
+## interiors.gd) they are the usual silhouette.
+const DAY_MODELS_ENABLED := true
+## Model height (m) per resident: 보니 grown-up, 솔 a child.
+const DAY_MODELS := {"boni":1.66,"sol":1.36}
+## Outdoor activities shown with the model's "work" clip while it stands at its spot.
+const MODEL_WORK := ["craft","garden","tend","farm","sweep"]
 ## The schedule only moves a shadow on screen near the walker; elsewhere it hops
 ## (still through its door) so a far-away village keeps time without walking it.
 const NEAR := 28.0
@@ -131,6 +140,7 @@ func setup(main: Node) -> void:
 		walker.configure(entry, self, paths)
 		add_child(walker)
 		walker.dress()
+		attach_day_model(walker)
 		walker.set_day(DayFolk.is_day(str(entry.id), hour), true)
 		walker.min_ground_y = Town.SHORE_MIN_Y
 		walker.set_night(night)
@@ -274,6 +284,8 @@ func _process(delta: float) -> void:
 		if not walker.present and walker.state == "hidden": continue
 		walker.anim_stride = AnimLod.stride(frustum, walker.global_position, Vector3(focus.x, 0, focus.y))
 		if walker.visible: walker.draw(fraction)
+	for walker in model_walkers:
+		if is_instance_valid(walker): drive_day_model(walker, delta)
 	# A closed conversation lets the shadow go back to what it was doing.
 	var modal = app.get("village_modal")
 	for walker in walkers:
@@ -593,10 +605,72 @@ func interact(entry: Dictionary) -> void:
 	var walker = entry.get("walker")
 	if is_instance_valid(walker): talk(walker)
 
+## Puts the resident's own model (DAY_MODELS) under the walker's drawn body, hidden until
+## drive_day_model() shows it by day. Nothing happens without the file.
+func attach_day_model(walker: Node) -> void:
+	var id := str(walker.spec.id)
+	var path := "res://assets/npc/%s.glb" % id
+	if not DAY_MODELS_ENABLED or not DAY_MODELS.has(id) or not ResourceLoader.exists(path) or not is_instance_valid(walker.visual): return
+	var scene := LoadPace.take(path) as PackedScene
+	if scene == null: return
+	var model := scene.instantiate() as Node3D
+	if model == null: return
+	model.name = "DayModel"
+	walker.visual.add_child(model)
+	# Feet on the ground at the resident's height (the same fit as npc.gd).
+	var box := AABB()
+	var first := true
+	for node in model.find_children("*", "MeshInstance3D", true, false):
+		var mesh := node as MeshInstance3D
+		var local: AABB = model.global_transform.affine_inverse()*mesh.global_transform*mesh.get_aabb()
+		box = local if first else box.merge(local)
+		first = false
+	if not first and box.size.y > 0.01:
+		var factor := float(DAY_MODELS[id])/box.size.y
+		model.scale = Vector3.ONE*factor
+		model.position.y = -box.position.y*factor
+	model.visible = false
+	var players := model.find_children("*", "AnimationPlayer", true, false)
+	var player: AnimationPlayer = players[0] if not players.is_empty() else null
+	if player:
+		for clip in player.get_animation_list():
+			player.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+		player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	walker.set_meta("day_model", model)
+	walker.set_meta("day_model_player", player)
+	model_walkers.append(walker)
+
+## Walkers wearing a model by day (attach_day_model).
+var model_walkers: Array = []
+
+## By day the model stands in for the procedural villager (whole figure and its gear), with
+## the clip that matches what the walker does; at night, in a doorway fade or indoors the
+## usual figure is back.
+func drive_day_model(walker: Node, delta: float) -> void:
+	var model = walker.get_meta("day_model", null)
+	if not is_instance_valid(model): return
+	var shown: bool = walker.visible and walker.day_blend >= 0.5 and walker.fade > 0.4
+	if model.visible != shown:
+		model.visible = shown
+		if is_instance_valid(walker.figure): walker.figure.visible = not shown
+	if is_instance_valid(walker.task_node): walker.task_node.visible = not shown
+	if not shown: return
+	var player = walker.get_meta("day_model_player", null)
+	if not is_instance_valid(player): return
+	var clip := "idle"
+	if walker.current_clip == Figure.WALK: clip = "walk"
+	elif walker.state != "talk" and walker.place == "outside" and str(walker.activity) in MODEL_WORK: clip = "work"
+	if not player.has_animation(clip): clip = "idle"
+	if player.current_animation != clip and player.has_animation(clip):
+		player.play(clip, 0.25)
+	player.speed_scale = float(walker.clip_speed) if clip == "walk" else 1.0
+	player.advance(delta)
+
 func leave() -> void:
 	for walker in walkers:
 		if is_instance_valid(walker): walker.queue_free()
 	walkers.clear()
+	model_walkers.clear()
 	if is_instance_valid(dropped): dropped.queue_free()
 	leader = null
 	app = null

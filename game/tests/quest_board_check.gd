@@ -1,7 +1,7 @@
 extends SceneTree
 ## The notice board's "오늘의 부탁", the residents' event letters and the shops' window (#26, #81):
-##   A. on the current QA server (no /v1/quest_board, no /v1/shops): the board stays read-only, the
-##      mailbox opens, the shops are found missing and no talk gets a new choice;
+##   A. on the real QA server: today's five posts, the notice board's choice, a real accept, every
+##      shop answering, a real seed purchase at the farm stall, the mailbox;
 ##   B. with stubbed replies injected into the modules: the board's rows, "받기" posting the right
 ##      URL with a request_id, "완료하기" flying the stars into the counter, the accept limit, the
 ##      talk request's "전하기", event letters' words, a closed shop's reason with its buttons off,
@@ -109,22 +109,52 @@ func run() -> void:
 	expect(await wait_for(func() -> bool: return app.screen == "village" and field() != null, 60.0), "the village with its field objects")
 	var token := str(app.api.token)
 
-	# A. The current server: no board, no shops; everything as before.
-	var none := await QuestBoard.fetch(app.api)
-	expect(none.is_empty() and QuestBoard.missing(token), "no /v1/quest_board: the board is found missing")
+	# A. The real server (server/quest_board.py, server/shops.py): the board, its accept, the shops.
+	var real := await QuestBoard.fetch(app.api)
+	expect(not real.is_empty() and (real.get("list", []) as Array).size() == 5 and not str(real.get("day", "")).is_empty(), "GET /v1/quest_board: five posts for today (%d)" % (real.get("list", []) as Array).size())
+	expect(not QuestBoard.missing(token) and QuestBoard.cached(token).get("day", "") == real.get("day", "-"), "the board is kept for this login")
 	await field().use_notice(field().object("notice"))
 	var shown := await choices()
-	expect("게시판 닫기" in shown and not "✦ 오늘의 부탁" in shown, "the notice board stays read-only (%s)" % str(shown))
-	expect(not texts(app.village_modal).contains("오늘의 부탁"), "no board line on the notice page")
+	expect("게시판 닫기" in shown and "✦ 오늘의 부탁" in shown, "the notice board offers today's requests (%s)" % str(shown))
+	expect(QuestBoard.summary(real).contains("오늘의 부탁"), "the notice page's board line (%s)" % QuestBoard.summary(real))
+	app.close_village_modal()
+	QuestBoard.open(app, real)
+	var rows := 0
+	for entry in real.list: if app.village_modal.find_child("Board_" + str(entry.id), true, false) != null: rows += 1
+	expect(rows == 5, "the board window lists the five posts (%d)" % rows)
+	var first := ""
+	for entry in real.list: if first.is_empty() and QuestBoard.state_of(app, entry) == "available": first = str(entry.id)
+	if bool(real.get("unlocked", false)) and not first.is_empty():
+		var take := row_button("Board_" + first)
+		expect(take != null and take.text == "받기" and not take.disabled, "an open post has 받기 (%s)" % first)
+		take.pressed.emit()
+		expect(await wait_for(func() -> bool: return row_button("Board_" + first) != null and row_button("Board_" + first).text in ["길 안내", "완료하기"], 8.0), "the real accept turns the post into a goal")
+		expect(int(QuestBoard.cached(token).get("accepted", 0)) == 1, "the server counts it (accepted %s)" % str(QuestBoard.cached(token).get("accepted", 0)))
+	else:
+		print("SKIP no open post to accept (unlocked %s)" % str(real.get("unlocked")))
 	app.close_village_modal()
 	await ShopWindow.probe(app.api)
 	var probed := ShopWindow.known(token)
-	expect(probed.size() == 4 and probed.values().all(func(v): return v == false), "no /v1/shops: every shop found missing (%s)" % str(probed))
-	expect(ShopWindow.village_choices(app, "haeru", "해루", cast("haeru")).is_empty(), "no new choices for 해루")
-	app.talk_to(cast("haeru"))
-	shown = await choices()
-	expect(not shown.is_empty() and not "보람의 생선 매입 보기" in shown and not "가게 보기" in shown, "해루's talk is unchanged (%s)" % str(shown))
-	app.close_village_modal()
+	expect(probed.size() == 4 and probed.values().all(func(v): return v == true), "GET /v1/shops/{id}: every shop answers (%s)" % str(probed))
+	var counter := ShopWindow.village_choices(app, "haeru", "해루", cast("haeru"))
+	expect(counter.size() >= 1 and str(counter[0][0]) == "보람의 생선 매입 보기", "해루 offers the fish counter")
+	# The real farm stall: buy one seed with leaf coins (one POST to /v1/shops, none to /v1/homestead).
+	var rw := RpgUi.window(app.ui, "가게", {"place":"centre", "id":"shop_real"})
+	var real_trades := []
+	var real_shop := ShopWindow.build(rw.body, app.api, "farm_stall", {"traded":func(reply: Dictionary): real_trades.append(reply)})
+	expect(await wait_for(func() -> bool: return rw.body.find_child("Buy_turnip_seed", true, false) != null, 8.0), "the real farm stall fills")
+	var coins_before := int(real_shop.shop.get("coins", 0))
+	var seed := rw.body.find_child("Buy_turnip_seed", true, false) as Button
+	if seed != null and not seed.disabled:
+		seed.pressed.emit()
+		expect(await wait_for(func() -> bool: return not real_trades.is_empty(), 8.0), "the real purchase succeeds")
+		expect(not real_trades.is_empty() and int(real_trades[0].get("coins", -1)) < coins_before and int(real_trades[0].get("bag", {}).get("turnip_seed", 0)) >= 1, "coins go down and the seed is in the bag")
+	else:
+		print("SKIP buy is off (coins %d)" % coins_before)
+	RpgUi.close_window(rw, false, false)
+	var store: Dictionary = await app.api.request("/v1/shops/general_store")
+	expect(store.ok and (bool(store.data.get("open", false)) or str(store.data.get("closed_reason", "")) == "danbi_not_moved_in"), "단비's store answers open or with its closed reason")
+	ShopWindow.assume(token, {"general_store":false, "farm_stall":false, "cafe":false, "fishing_shack":false})
 	field().use_mailbox(field().object("mailbox"))
 	shown = await choices()
 	expect("우편함 닫기" in shown, "the mailbox opens as before")

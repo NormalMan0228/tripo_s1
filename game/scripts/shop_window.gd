@@ -24,6 +24,9 @@ const SHOP_IDS := ["general_store", "farm_stall", "cafe", "fishing_shack"]
 const NAMES := {"general_store":"단비의 잡화점", "farm_stall":"한결의 씨앗 가게", "cafe":"빨간 지붕", "fishing_shack":"보람의 생선 매입"}
 const META := "shop_probe"
 const STAR_ICON := "res://assets/starseed.svg"
+## Release switch: false hides "가게 보기" everywhere (no probe, no talk choice), so the game behaves
+## exactly as before the shops; "물건 팔기" (shop_sell.gd) is untouched either way.
+const ENABLED := true
 
 static func t(text: String) -> String:
 	return TranslationServer.translate(text)
@@ -36,10 +39,12 @@ static func known(token: String) -> Dictionary:
 	return kept.get("shops", {}) if str(kept.get("token", "")) == token and not token.is_empty() else {}
 
 static func has_shop(token: String, shop_id: String) -> bool:
+	if not ENABLED: return false
 	return bool(known(token).get(shop_id, false))
 
 ## Asks each shop once per login (GET /v1/shops/{id}); a 404 means the server has no shops.
 static func probe(api: Node) -> void:
+	if not ENABLED: return
 	if api == null or str(api.token).is_empty(): return
 	var token := str(api.token)
 	var kept: Dictionary = Engine.get_meta(META, {})
@@ -105,7 +110,7 @@ static func open_room(room: Node, npc: String, shop_id: String) -> Dictionary:
 	room.talk_lines = []
 	room.talk_choices = []
 	room.show_hud(false)
-	build(w.body, room.api, shop_id, {"title":w.title, "traded":func(reply: Dictionary):
+	build(w.body, room.api, shop_id, {"title":w.title, "counter":true, "traded":func(reply: Dictionary):
 		# The room's sale moment (studio.gd sold): a pop over the keeper, starseeds into the wallet line.
 		if room.has_method("sold"): room.sold(npc, reply)})
 	return w
@@ -124,6 +129,16 @@ static func open_village(app: Node, shop_id: String, anchor: Node3D) -> void:
 		app.message(str(reply.get("message", "")))})
 
 # ------------------------------------------------------------------ the window's content
+
+## A trade's sound through the game's sound node (sound.gd effect: core/<kind>; missing = silent).
+static func trade_sound(kind: String) -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null: return
+	for node in tree.root.get_children():
+		var player = node.get("sound") if "sound" in node else null
+		if player is Node and is_instance_valid(player) and player.has_method("effect"):
+			player.effect(kind)
+			return
 
 static func closed_line(reason: String) -> String:
 	match reason:
@@ -196,6 +211,8 @@ static func build(body: VBoxContainer, api: Node, shop_id: String, hooks := {}) 
 		var ids := pages.map(func(p): return p.id)
 		if not str(state.tab) in ids: state.tab = ids[0] if not ids.is_empty() else ""
 		var draw := func(page: String) -> void:
+			if str(state.tab) != page and bool(state.get("drawn", false)): RpgUi.sfx("select", -9.0)
+			state.drawn = true
 			state.tab = page
 			for child in list.get_children():
 				list.remove_child(child)
@@ -284,15 +301,17 @@ static func build(body: VBoxContainer, api: Node, shop_id: String, hooks := {}) 
 		state.busy = false
 		if not is_instance_valid(list): return
 		if reply.ok:
-			# Buying: the purchase chime; selling: the coins (shop_sell.gd's sound).
-			RpgUi.sfx("coin_gain" if action == "sell" else "confirm", -5.0)
+			# Counters (inside a building) ring the register; the village stalls their buy / sell sound;
+			# an order or a cup of tea plays the "done" chime.
+			if action == "service": RpgUi.sfx("craft_done", -6.0)
+			else: trade_sound("register" if bool(hooks.get("counter", false)) else action)
 			var traded: Callable = hooks.get("traded", Callable())
 			if traded.is_valid(): traded.call(reply.data)
 			# The trade's reply is the bag and coins; the stock comes with the shop again.
 			state.bag = reply.data.get("bag", state.bag)
 			await fns.load.call()
 			return
-		RpgUi.sfx("deny", -8.0)
+		RpgUi.sfx("deny", -6.0)
 		var code := str(reply.get("error", ""))
 		await fns.load.call()
 		if is_instance_valid(head): head.text = error_line(code)

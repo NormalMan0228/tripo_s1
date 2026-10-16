@@ -22,6 +22,9 @@ const Guide := preload("res://scripts/guide.gd")
 const NpcGifts := preload("res://scripts/npc_gifts.gd")
 
 const STAR_ICON := "res://assets/starseed.svg"
+## Release switch: false leaves the notice board read-only, no "전하기" talk choice and no village
+## watcher, exactly as before the board (fetch() answers {} without asking the server).
+const ENABLED := true
 ## Guide keys of a board request ("quest_board:<id>"); story.gd leaves keys it does not know alone.
 const GUIDE_KEY := "quest_board:"
 const META := "quest_board"
@@ -49,6 +52,7 @@ static func remember(board, token: String) -> void:
 
 ## GET /v1/quest_board: the board, or {} when the server has none (404) or cannot be reached.
 static func fetch(api: Node) -> Dictionary:
+	if not ENABLED: return {}
 	if api == null or str(api.token).is_empty(): return {}
 	var token := str(api.token)
 	if missing(token): return {}
@@ -248,22 +252,37 @@ static func finish(app: Node, api: Node, item: Dictionary, state: Dictionary, ag
 	if data.get("homestead") is Dictionary and data.homestead.has("version") and is_instance_valid(app.get("life")) and app.life.has_method("accept"): app.life.accept(data.homestead)
 	app.close_village_modal(false)
 	var at: Vector3 = app.player.global_position if is_instance_valid(app.get("player")) else Vector3.ZERO
-	if app.get("world") != null: QuestsLib.reward_burst(app, at, stars)
+	if app.get("world") != null: QuestsLib.reward_burst(app, at, stars, false)
 	QuestsLib.reward_fly(app, at, stars, total)
-	if stars > 0: RpgUi.hush_toast()
+	RpgUi.sfx("quest_complete", -6.0)
+	RpgUi.hush_toast()
 	app.message(t("게시판 부탁 완료 · %s · %s") % [title_of(item), QuestsLib.stars_text(stars)] if stars > 0 else t("게시판 부탁 완료 · %s") % title_of(item))
 	var note := NpcGifts.letters_note(data)
-	if not note.is_empty() and app.is_inside_tree(): app.get_tree().create_timer(3.2).timeout.connect(func(): if is_instance_valid(app): app.message(note))
+	if not note.is_empty() and app.is_inside_tree(): app.get_tree().create_timer(3.2).timeout.connect(func(): if is_instance_valid(app): letter_arrived(app, note))
 
 ## A refusal: a deny note and why; the board is read again when it changed under the player.
 static func refused(app: Node, api: Node, code: String, state: Dictionary, again: Callable) -> void:
-	RpgUi.sfx("deny", -8.0)
+	RpgUi.sfx("deny", -6.0)
 	app.message(error_line(code), "warn")
 	if code in REFETCH or code == "quest_board_daily_limit":
 		var fresh := await fetch(api)
 		if not fresh.is_empty() and is_instance_valid(app):
 			state.board = fresh
 			again.call(again, "")
+
+## A field object's spot in the world ("mailbox", "notice"), Vector3.INF when there is none.
+static func object_at(app: Node, id: String) -> Vector3:
+	var quests: Node = QuestsLib.village_of(app) if is_instance_valid(app) and app.has_method("chapter") else null
+	var field: Node = quests.story.field_module() if quests != null and quests.get("story") != null else null
+	if field == null or not field.has_method("object"): return Vector3.INF
+	var entry: Dictionary = field.object(id)
+	return entry.root.global_position if entry.get("root") is Node3D and is_instance_valid(entry.root) and entry.root.is_inside_tree() else Vector3.INF
+
+## The resident's letter is in the mailbox: the flap at the mailbox and the notify chime, then the note.
+static func letter_arrived(app: Node, note: String) -> void:
+	Fx.sound(app, "field/flap", object_at(app, "mailbox"), 1.0, -6.0)
+	RpgUi.sfx("notify", -8.0)
+	app.message(note)
 
 # ------------------------------------------------------------------ the route guide
 
@@ -334,7 +353,7 @@ static func watcher_of(app: Node) -> Node:
 
 ## A room was entered (studio.gd show_story): a board visit request whose place is this room counts.
 static func entered_room(room: Node, room_id: String) -> void:
-	if not is_instance_valid(room) or room.get("api") == null or bool(room.get("visiting")): return
+	if not ENABLED or not is_instance_valid(room) or room.get("api") == null or bool(room.get("visiting")): return
 	var api: Node = room.api
 	var board := cached(str(api.token))
 	for entry in board.get("list", []):
@@ -354,7 +373,7 @@ static func entered_room(room: Node, room_id: String) -> void:
 ## The talk choice for a board request that asks to pass a word to `npc` ([] when none):
 ## say(lines, choices) shows the resident's reply; done(reply) is the caller's pop.
 static func talk_choice(api: Node, npc: String, say: Callable, done: Callable) -> Array:
-	if api == null: return []
+	if not ENABLED or api == null: return []
 	var board := cached(str(api.token))
 	if not bool(board.get("unlocked", false)): return []
 	for entry in board.get("list", []):
@@ -386,7 +405,7 @@ var hooked: Node = null
 
 ## Starts the village side under the field objects (field_objects.gd setup).
 static func watch(field: Node, main: Node) -> void:
-	if not is_instance_valid(main) or main.get("api") == null: return
+	if not ENABLED or not is_instance_valid(main) or main.get("api") == null: return
 	var node = load("res://scripts/quest_board.gd").new()
 	node.name = "QuestBoardWatch"
 	node.app = main
@@ -414,8 +433,12 @@ func _process(delta: float) -> void:
 	# Midnight (KST) pins new posts: read them once the old ones expire.
 	if float(board.get("resets_at", 0)) > 0.0 and Time.get_unix_time_from_system() > float(board.resets_at) + 2.0 and not refetching:
 		refetching = true
-		await fetch(app.api)
+		var old_day := str(board.get("day", ""))
+		var fresh := await fetch(app.api)
 		refetching = false
+		if not fresh.is_empty() and str(fresh.get("day", "")) != old_day and is_instance_valid(app):
+			Fx.sound(app, "field/pin", object_at(app, "notice"), 1.0, -6.0)
+			app.message(t("마을 게시판에 새 부탁이 붙었어요"))
 		return
 	for entry in board.get("list", []):
 		var id := str(entry.get("id", ""))

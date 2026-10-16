@@ -14,7 +14,13 @@ extends Node3D
 ##   var move_in := MoveIn.new(); story.add_child(move_in); move_in.story = story; move_in.start()
 ##   move_in.adopt_me(me)              # story.gd adopt_residents, with every /v1/me answer
 ##   MoveIn.letter_lines(letter)       # npc_gifts.gd, for letters carrying "move"
+## Release switch: false = this module does nothing (the lot, the sign and 단비's home stay as the map shows them).
+const ENABLED := true
 const Plots := preload("res://maps/archipelago/plots.gd")
+## The N2 session's house visuals (build/teardown effects, sign, dust); loaded at runtime when present.
+const HOUSE_PLOTS := "res://scripts/house_plots.gd"
+## The village mailbox (field_objects.gd SPECS "mailbox"), where move letters land.
+const MAILBOX_AT := Vector3(-51.3, 2.3, 22.6)
 const Residents := preload("res://scripts/residents.gd")
 const NpcGifts := preload("res://scripts/npc_gifts.gd")
 const Fx := preload("res://scripts/fx.gd")
@@ -28,6 +34,9 @@ const SIGN_SOON := "곧 새 이웃이 이사 와요"
 const SIGN_AWAY := "단비가 잠시 떠났어요"
 const SIGN_HOME := "단비네 집"
 const ARRIVALS := ["moved_in", "returned"]
+const TOAST_IN := "단비 님이 이사 왔어요!"
+const TOAST_BACK := "단비 님이 다시 돌아왔어요!"
+const TOAST_OUT := "단비 님이 잠시 마을을 떠났어요"
 ## Her greeting when she is back, warmer with more hearts (0-1, 2-3, 4+).
 const BACK_LINES := ["다시 왔어요! 그동안 잘 지냈어요?",
 	"다시 왔어요! 그동안 잘 지냈어요? 정말 보고 싶었어요.",
@@ -41,6 +50,10 @@ static var home_override := false
 static var original_home := ""
 ## The home last asked for (tests read it whether or not residents.gd has set_home yet).
 static var last_home := ""
+## What this module last showed on the lot (-1 unknown, 0 empty, 1 house), its sign, and the dust.
+static var shown := -1
+static var last_sign := ""
+static var dusting := false
 
 var story: Node
 ## The residency last shown ({} before any).
@@ -49,9 +62,13 @@ var host := ""
 ## A news entry to celebrate when the village is calm, and a greeting waiting for 단비.
 var pending_arrival: Dictionary = {}
 var pending_back: Dictionary = {}
+var pending_leave: Dictionary = {}
+## True once this module has shown one answer (a later change is live: build effects and sounds).
+var applied := false
 ## How many arrival moments and back greetings this module played (tests).
 var celebrated := 0
 var greeted_back := 0
+var farewells := 0
 var wait := 0.0
 var seen: ConfigFile
 
@@ -63,6 +80,7 @@ func app() -> Node:
 
 ## story.gd setup: the own village takes the last /v1/me, a visit asks for the host's residency.
 func start() -> void:
+	if not ENABLED: return
 	var main := app()
 	if main == null or str(main.api.token).is_empty(): return
 	if story.visiting():
@@ -75,6 +93,7 @@ func start() -> void:
 
 ## A /v1/me answer (own village; the field is always the account's own village).
 func adopt_me(me) -> void:
+	if not ENABLED: return
 	if not me is Dictionary or not me.has("residents") or not is_instance_valid(story) or story.visiting(): return
 	apply(me.residents, true)
 
@@ -93,9 +112,14 @@ func apply(residency, own: bool) -> void:
 	var plots = residency.get("plots", {})
 	var plot_state := str(plots.get(PLOT, "")) if plots is Dictionary else ""
 	var lives := state in ["home", "leaving"] or plot_state == "built"
-	if Plots.is_built(PLOT) != lives: Plots.set_plot_built(PLOT, lives)
+	var was := (shown == 1) if shown >= 0 else Plots.is_built(PLOT)
+	if was != lives or shown < 0: show_house(lives, applied and was != lives)
+	var building := not lives and (state == "arriving" or plot_state == "building")
+	if building and not dusting: house_call("building", [PLOT, app()])
+	dusting = building
 	var sign := SIGN_HOME if lives else (SIGN_AWAY if state == "away" and int(entry.get("moves", 0)) > 0 else SIGN_SOON)
-	if str(Plots.sign_texts.get(PLOT, "")) != sign: Plots.set_sign_text(PLOT, sign)
+	if last_sign != sign or str(Plots.sign_texts.get(PLOT, "")) != sign: set_sign(sign)
+	applied = true
 	var home := str(entry.get("home", ""))
 	set_home(home if lives and not home.is_empty() else "")
 	if not own: return
@@ -107,6 +131,14 @@ func apply(residency, own: bool) -> void:
 		if was_seen(key) or str(pending_arrival.get("id", "")) == str(item.get("id", "")): continue
 		if lives and pending_arrival.is_empty(): pending_arrival = item
 		elif not lives: mark(key)
+	# A move-out this account has not been told about yet (newest only).
+	for item in (news if news is Array else []):
+		if not item is Dictionary or str(item.get("npc", "")) != NPC or str(item.get("kind", "")) != "moved_out": continue
+		var key := "news_"+str(item.get("id", ""))
+		if was_seen(key): break
+		if not lives and pending_leave.is_empty(): pending_leave = item
+		elif lives: mark(key)
+		break
 	# Back after a move-out: one warm greeting per return (moves counts the move-outs).
 	if bool(entry.get("back", false)) and state == "home":
 		var back_key := "back_%d" % int(entry.get("moves", 0))
@@ -117,7 +149,10 @@ func apply(residency, own: bool) -> void:
 			pending_back = {"key":back_key, "hearts":level}
 	else:
 		pending_back = {}
-	set_process(not pending_arrival.is_empty() or not pending_back.is_empty())
+	set_process(waiting())
+
+func waiting() -> bool:
+	return not pending_arrival.is_empty() or not pending_back.is_empty() or not pending_leave.is_empty()
 
 func resident(residency: Dictionary) -> Dictionary:
 	var list = residency.get("residents", [])
@@ -127,11 +162,42 @@ func resident(residency: Dictionary) -> Dictionary:
 
 ## Back to what the map shows by itself: no house, the lot's own sign, her old home.
 func restore() -> void:
-	if Plots.is_built(PLOT): Plots.set_plot_built(PLOT, false)
-	Plots.set_sign_text(PLOT, str(Plots.PLOTS[PLOT].get("sign_text", SIGN_SOON)))
+	if Plots.is_built(PLOT) or shown == 1: show_house(false, false)
+	set_sign(str(Plots.PLOTS[PLOT].get("sign_text", SIGN_SOON)))
+	shown = -1
+	dusting = false
 	set_home("")
 	touched = false
 	data = {}
+
+# ------------------------------------------------------------------ the lot (house_plots.gd when present)
+
+## house_plots.gd (N2 session) as a script, or null while it is not in this build.
+static func house_plots() -> Script:
+	return load(HOUSE_PLOTS) as Script if ResourceLoader.exists(HOUSE_PLOTS) else null
+
+## Calls a house_plots.gd static by name; false when the script or the method is missing.
+static func house_call(method: String, args: Array) -> bool:
+	var script := house_plots()
+	if script == null: return false
+	for entry in script.get_script_method_list():
+		if str(entry.get("name", "")) == method:
+			script.callv(method, args)
+			return true
+	return false
+
+## The house on the lot: house_plots.gd (its own build/teardown effects and sound when `fresh`),
+## else plots.gd with the build sound here.
+func show_house(on: bool, fresh: bool) -> void:
+	shown = int(on)
+	if house_call("show_house", [PLOT, on, fresh, app()]): return
+	Plots.set_plot_built(PLOT, on)
+	if fresh and on and app() != null:
+		Fx.sound(app(), "core/build_appear", Plots.plot_info(PLOT).get("center", Vector3.INF), 1.0, -2.0)
+
+func set_sign(text: String) -> void:
+	last_sign = text
+	if not house_call("set_sign", [PLOT, text]): Plots.set_sign_text(PLOT, text)
 
 ## Her home: `room`, or "" for the one she had before (only if this module changed it).
 static func set_home(room: String) -> void:
@@ -191,9 +257,33 @@ func _process(delta: float) -> void:
 	if not pending_arrival.is_empty():
 		celebrate(pending_arrival)
 		pending_arrival = {}
+	elif not pending_leave.is_empty():
+		farewell(pending_leave)
+		pending_leave = {}
 	elif not pending_back.is_empty():
 		greet_back()
-	set_process(not pending_arrival.is_empty() or not pending_back.is_empty())
+	set_process(waiting())
+
+## Her letter in the mailbox: the flap there and a soft notice chime.
+func letter_sound(news: Dictionary) -> void:
+	if news.get("letter_id") == null or str(news.get("letter_id")).is_empty(): return
+	Fx.sound(app(), "field/flap", MAILBOX_AT, 1.0, -6.0)
+	RpgUi.sfx("notify", -8.0)
+
+## The resident's move sound (sound.gd effect: move_in / move_out).
+func move_sound(kind: String) -> void:
+	var main := app()
+	var player = main.get("sound") if main else null
+	if is_instance_valid(player) and player.has_method("effect"): player.effect(kind)
+
+## She has moved out: the move-out sound, her letter, a toast.
+func farewell(news: Dictionary) -> void:
+	mark("news_"+str(news.get("id", "")))
+	farewells += 1
+	move_sound("move_out")
+	letter_sound(news)
+	var main := app()
+	if main and main.has_method("message"): main.message(tr(TOAST_OUT))
 
 ## Sparkles and a warm glow at the house, a ribbon on the screen, the house's name over the door.
 func celebrate(news: Dictionary) -> void:
@@ -207,7 +297,11 @@ func celebrate(news: Dictionary) -> void:
 	Fx.burst(self, at+Vector3(0, 3.2, 0), "heart", 8, Color(0,0,0,0), 1.2)
 	Fx.title(app(), info.get("door_at", at)+Vector3(0, 2.6, 0), tr(SIGN_HOME), Color("ffe08a"))
 	var back := str(news.get("kind", "")) == "returned"
-	banner(tr("새 이웃") if not back else tr("반가운 얼굴"), tr("단비가 이사 왔어요") if not back else tr("단비가 다시 돌아왔어요"))
+	move_sound("move_in")
+	letter_sound(news)
+	var main := app()
+	if main and main.has_method("message"): main.message(tr(TOAST_BACK if back else TOAST_IN), "social")
+	banner(tr("새 이웃") if not back else tr("반가운 얼굴"), "")
 
 ## The move ribbon (like story.gd banner, without the chapter's line).
 func banner(title: String, line: String) -> void:
@@ -228,16 +322,15 @@ func banner(title: String, line: String) -> void:
 	stars.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var band := RpgUi.ribbon(column, title, true, 30)
 	band.custom_minimum_size.x = 380
-	var words := RpgUi.label(column, line, 18, Color("fff3cf"))
-	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if not line.is_empty():
+		var words := RpgUi.label(column, line, 18, Color("fff3cf"))
+		words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.reset_size()
 	var size := column.get_combined_minimum_size()
 	column.position = Vector2((RpgUi.CANVAS.x-size.x)*0.5, 132.0)
 	column.size = size
 	column.pivot_offset = size*0.5
 	RpgUi.pop_in(column, 0.4, 0.7)
-	RpgUi.sfx("confirm", -2.0)
-	if DisplayServer.get_name() != "headless": Fx.sound(main, "tune", Vector3.INF, 1.15, 2.0)
 	var fade := holder.create_tween()
 	fade.tween_interval(4.0)
 	fade.tween_property(holder, "modulate:a", 0.0, 0.8)

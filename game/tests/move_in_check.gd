@@ -52,9 +52,14 @@ func sign_text() -> String:
 	return label.text if label else str(Plots.sign_texts.get("danbi_plot", ""))
 
 func bubble_with(town: Node, words: String) -> bool:
-	for panel in town.ui.find_children("StoryBubble*", "PanelContainer", true, false):
-		for label in panel.find_children("*", "Label", true, false):
+	# story.gd speech() panels (a second bubble on screen gets an auto name, so read story.bubbles).
+	var seen: Array = []
+	for entry in town.chapter().bubbles:
+		if not is_instance_valid(entry.panel): continue
+		for label in entry.panel.find_children("*", "Label", true, false):
+			seen.append((label as Label).text)
 			if (label as Label).text.contains(words): return true
+	print("NOTE bubbles on screen: ", seen)
 	return false
 
 func run() -> void:
@@ -79,11 +84,16 @@ func run() -> void:
 
 	# 1. Today's server: no "residents" in /v1/me -> nothing changes (also over a few real polls).
 	var sign_before := sign_text()
-	expect(not town.me.has("residents"), "the QA server's /v1/me has no residents field")
+	# The real server (moves off by default) sends {"enabled": false, ...}: the same as no field.
+	var real_me = town.me.get("residents")
+	expect(not town.me.has("residents") or (real_me is Dictionary and not bool(real_me.get("enabled", true))), "the QA server's /v1/me has no residents or moves switched off")
 	mover.adopt_me({"username":"tester"})
 	await create_timer(3.6).timeout
 	expect(not Plots.is_built("danbi_plot") and sign_text() == sign_before and not MoveIn.touched and MoveIn.last_home.is_empty(),
-		"without a residents field the lot, its sign and 단비's home stay as they were")
+		"without moves (no field, or real polls with enabled false) the lot, its sign and 단비's home stay as they were")
+	# From here on the answers are fed by hand: the real polls (moves off) are unhooked.
+	story.move_in = null
+	expect(MoveIn.ENABLED, "the move-in switch is on")
 
 	# 2. Arriving: the sign says a neighbour is coming, no house yet.
 	mover.adopt_me(me_with("arriving"))
@@ -102,6 +112,7 @@ func run() -> void:
 		print("NOTE residents.gd has no set_home/home_of yet: the call is skipped")
 	expect(await wait_for(func() -> bool: return mover.celebrated == 1, 6.0), "the arrival moment plays")
 	expect(town.ui.get_node_or_null("MoveInBanner") != null, "a ribbon tells 단비 moved in")
+	expect(str(town.last_notice) == tr(MoveIn.TOAST_IN), "a toast says 단비 님이 이사 왔어요!")
 	mover.adopt_me(moved_in)
 	var fresh: Node = MoveIn.new()
 	fresh.story = story
@@ -112,7 +123,10 @@ func run() -> void:
 	fresh.queue_free()
 
 	# 4. Moved out: no house, the sign says she left, her old home back.
-	mover.adopt_me(me_with("away", {"moves":1}, moved_in.residents.news))
+	var out_news: Array = [{"id":"news-out-1", "npc":"shopkeeper", "kind":"moved_out", "at":1800000200.0, "letter_id":"l1b", "returned_to_bag":[]}]
+	out_news.append_array(moved_in.residents.news)
+	mover.adopt_me(me_with("away", {"moves":1}, out_news))
+	expect(await wait_for(func() -> bool: return mover.farewells == 1, 6.0) and str(town.last_notice) == tr(MoveIn.TOAST_OUT), "moved out: a farewell toast once")
 	expect(not Plots.is_built("danbi_plot"), "moved out: the house is gone, the lot is back")
 	expect(sign_text() == tr(MoveIn.SIGN_AWAY), "moved out: the sign says 단비가 잠시 떠났어요")
 	expect(MoveIn.last_home != "danbi_house", "moved out: 단비's home is her old one again")
@@ -139,6 +153,9 @@ func run() -> void:
 	# 6. Letters: move letters read sensibly, older letters as before.
 	var page: Array = NpcGifts.letter_lines({"id":"l2", "npc":"shopkeeper", "name":"단비", "level":0, "read":false, "move":{"kind":"back", "npc":"shopkeeper"}})
 	expect(page.size() == 1 and str(page[0]).contains(tr("단비")) and str(page[0]).contains(tr("다시 돌아왔어요! 그동안 보고 싶었어요. 집에 한번 들러 줘요.")), "a move letter reads as 단비's back-home letter")
+	var real_letter: Array = load("res://scripts/npc_letters.gd").letter_lines({"id":"l3", "npc":"shopkeeper", "name":"단비", "level":0, "read":false,
+		"event":{"type":"move_in", "payload":{"kind":"in", "home":"danbi_house", "plot":"danbi_plot", "moves":0}}})
+	expect(real_letter.size() >= 1 and str(real_letter[0]).contains(tr("단비")), "a real-server move letter (event move_in) reads as 단비's letter")
 	var old: Array = NpcGifts.letter_lines({"id":"l0", "npc":"farmer", "name":"보리", "level":2, "personality":"calm", "read":false})
 	expect(old.size() >= 1 and str(old[0]).contains(NpcGifts.hearts(2)), "an older hearts letter reads as before")
 
