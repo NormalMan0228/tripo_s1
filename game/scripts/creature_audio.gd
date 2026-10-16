@@ -289,6 +289,27 @@ static func streams(species: String, event: String, region: String) -> Array:
 	cache[key] = list
 	return list
 
+## Reads every take the field can play, one family a frame (each first play read its file from disk in
+## the frame it sounded: monster cries, steps, hits). Started by main.start_run; runs once a process.
+static var _warming := false
+static func warm_spread(tree: SceneTree) -> void:
+	if _warming or tree == null: return
+	_warming = true
+	var families: Array = []
+	for species in SPECIES:
+		for event in EVENTS+EXTRA:
+			for region in REGIONS: families.append([species, event, region])
+	for family in families:
+		streams(family[0], family[1], family[2])
+		await tree.process_frame
+	for gait in GAIT.values():
+		SfxBank.warm(DIR+"step_"+gait)
+		await tree.process_frame
+	for region in REGIONS:
+		for kind in ["accent", "bed"]:
+			SfxBank.warm(DIR+"layer_%s_%s" % [region, kind])
+			await tree.process_frame
+
 static func preload_all() -> int:
 	var count := 0
 	for species in SPECIES:
