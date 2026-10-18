@@ -46,7 +46,7 @@ def test_gemini_reference_image_is_inline(tmp_path):
 @pytest.mark.parametrize('response,code',[
     (httpx.Response(429,text='quota exceeded for sensitive project'),'llm_rate_limited'),
     (httpx.Response(503,text='sensitive: model is experiencing high demand'),'llm_busy'),
-    (httpx.Response(403,text='sensitive upstream body'),'llm_request_failed'),
+    (httpx.Response(403,text='sensitive upstream body'),'llm_permission_denied'),
     (httpx.Response(200,json={'candidates':[{'finishReason':'SAFETY'}]}),'refused_other'),
     (httpx.Response(404,json={}),'llm_model_unavailable')])
 def test_gemini_errors_are_sanitized(tmp_path,response,code):

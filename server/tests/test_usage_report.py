@@ -62,6 +62,28 @@ def test_route_is_off_without_a_usage_key(tmp_path):
         assert client.get('/v1/ops/usage', headers={'Authorization': 'Bearer ' + USAGE_KEY}).status_code == 404
 
 
+def test_fallback_tokens_follow_actual_provider_without_double_counting_jobs(tmp_path):
+    app = make(tmp_path, usage_key=USAGE_KEY)
+    with TestClient(app) as client:
+        register(client, 'alice_usage')
+        with app.state.db.transaction() as conn:
+            owner = conn.execute('SELECT id FROM users').fetchone()[0]
+            provenance = {'provider':'gemini', 'model':'gemini-test', 'usage':{'input_tokens':30},
+                'usage_complete':False, 'attempts':[
+                    {'provider':'openai','model':'gpt-6-luna','usage':{'input_tokens':10}},
+                    {'provider':'openai','model':'gpt-6-luna','error':'llm_timeout','usage':{}},
+                    {'provider':'gemini','model':'gemini-test','usage':{'input_tokens':20}}]}
+            conn.execute('INSERT INTO studio_jobs(id,owner_id,request,state,cost,provenance,parts,created,updated) VALUES (?,?,?,?,?,?,?,?,?)',
+                ('fallback-job',owner,'{}','failed',30,json.dumps(provenance),'{}',NOW,NOW))
+        data = client.get('/v1/ops/usage', headers={'Authorization':'Bearer '+USAGE_KEY}).json()['llm']
+    assert data['runs']['total'] == 1 and data['tokens']['total']['input'] == 30
+    assert data['incomplete_usage_runs']['total'] == 1
+    models = {m['provider']:m for m in data['by_model']}
+    assert models['openai']['tokens']['total']['input'] == 10
+    assert models['gemini']['tokens']['total']['input'] == 20
+    assert all(m['runs']['total'] == 1 for m in models.values())
+
+
 def test_route_needs_the_usage_key_as_bearer(tmp_path):
     with TestClient(make(tmp_path, usage_key=USAGE_KEY)) as client:
         register(client, 'alice_usage')

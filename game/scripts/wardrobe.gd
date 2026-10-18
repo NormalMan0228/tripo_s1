@@ -4,6 +4,7 @@ var avatar: Dictionary={}
 var v2 := false
 var preview: Node3D
 var actor: CharacterBody3D
+var preview_motion := "idle"
 const RpgUi=preload("res://scripts/rpg_ui.gd")
 ## The preview is the same walker (player.gd through avatar_look.gd) that wears the look everywhere.
 const AvatarLook=preload("res://scripts/avatar_look.gd")
@@ -125,10 +126,18 @@ func _ready() -> void:
 			turn.set_meta("notch",notch)
 			RpgUi.sfx("rotate",-12.0))
 	controls.add_child(turn)
+	var motion := OptionButton.new()
+	motion.name = "MotionPreview"
+	for label in [tr("동작 확인 · 대기"), tr("동작 확인 · 걷기"), tr("동작 확인 · 달리기")]: motion.add_item(label)
+	motion.item_selected.connect(func(index):
+		preview_motion = ["idle", "walk", "run"][index]
+		actor.clip_override = preview_motion)
+	controls.add_child(motion)
 	refresh()
 
 func refresh() -> void:
 	AvatarLook.wear(actor,avatar)
+	actor.clip_override = preview_motion
 	for b in find_children("*","Button",true,false):
 		if b.has_meta("character"): b.button_pressed=b.get_meta("character")==avatar.character
 		if b.has_meta("free_part"):

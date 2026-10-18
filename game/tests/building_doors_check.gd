@@ -28,7 +28,7 @@ func run() -> void:
 	var report := {}
 	var table := Doors.table()
 	for door: Dictionary in Town.DOORS:
-		var entry: Dictionary = table.get(String(door.id), {})
+		var entry: Dictionary = Doors.entry(String(door.id))
 		var leaf_path := String(entry.get("mesh", "")) if not entry.has("leaves") else String(entry.leaves[0].get("mesh", "")) if not (entry.leaves as Array).is_empty() else ""
 		if entry.is_empty() or not ResourceLoader.exists(leaf_path) or not ResourceLoader.exists(String(entry.get("opening", ""))):
 			failures.append("%s: no door in door_leaves.json (run tools/door_leaves.gd)" % door.id)
@@ -83,11 +83,12 @@ func check_map(map: Node3D, label: String, enabled: Array, report: Dictionary) -
 		if String(hinge.get_parent().get_parent().name) != id or String(hinge.name) != "DoorLeaf" or hinge.transform != Transform3D(Basis.IDENTITY, hinge.position): failures.append("%s %s: leaf not at Buildings/<id>/DoorFrame/DoorLeaf, unturned" % [label, id])
 		places[id] = hinge.global_transform
 		var leaf := hinge.get_node("Mesh") as MeshInstance3D
-		var box := leaf.mesh.get_aabb()
 		var size := Doors.leaf_size(id)
 		var leaves := Doors.leaf_entries(id)
+		# Measured flat (a leaf on a slanted wall is turned with it).
+		var box := flat_aabb(leaf.mesh, Doors.flat_basis(leaves[0]) if not leaves.is_empty() else Basis.IDENTITY)
 		if not leaves.is_empty(): size = Vector3(float(leaves[0].width), float(leaves[0].height), size.z)
-		var inward: bool = String(Doors.table()[id].get("opens", "out")) == "in"
+		var inward: bool = String(Doors.entry(id).get("opens", "out")) == "in"
 		# The leaf reaches from its hinge across the doorway: along -x when hung on its right edge.
 		var reach := size.x if not leaves.is_empty() and String(leaves[0].get("hinge", "right")) == "left" else -size.x
 		report[label+"_"+id] = {"leaf_aabb": [snappedf(box.size.x, .01), snappedf(box.size.y, .01), snappedf(box.size.z, .01)], "surfaces": leaf.mesh.get_surface_count()}
@@ -146,5 +147,46 @@ func check_interiors(enabled: Array, report: Dictionary) -> void:
 			else:
 				report["interior_"+room] = {"hinge_x": snappedf(hinge.position.x, .01), "door_width": Doors.leaf_size(String(door.id)).x,
 					"doorway_width": Interiors.DOOR_HALF*2, "fits": Doors.leaf_size(String(door.id)).x <= Interiors.DOOR_HALF*2+0.01}
+			# The leaves sweep (0 .. 108 degrees, the way they open) clear of the room's furniture.
+			var hits := swing_hits(spec, hinge.get_parent() as Node3D)
+			if not hits.is_empty():
+				report["swing_"+room] = hits
+				failures.append("%s: the opening door hits %s" % [room, ", ".join(hits)])
 		elif leaf != null: failures.append("%s: FrontDoor took a leaf though the door is not enabled" % room)
 		holder.free()
+
+## Furniture the room's door leaves pass through while they open: each FrontDoor* leaf's line from its
+## hinge across its width, at every 12 degrees of its swing, tested against the pieces' footprints
+## (Interiors.size_of, turned by their yaw, 4 cm margin); wall-hung pieces above head height are left out.
+## A mesh's box with its vertices turned by `basis` first.
+static func flat_aabb(mesh: Mesh, basis: Basis) -> AABB:
+	var box := AABB()
+	var first := true
+	for i in mesh.get_surface_count():
+		for p: Vector3 in mesh.surface_get_arrays(i)[Mesh.ARRAY_VERTEX]:
+			if first: box = AABB(basis*p, Vector3.ZERO)
+			else: box = box.expand(basis*p)
+			first = false
+	return box
+
+func swing_hits(spec: Dictionary, room: Node3D) -> Array:
+	var hits := []
+	for node in room.get_children():
+		if not String(node.name).begins_with("FrontDoor") or not (node is Node3D) or String(node.name).ends_with("Mount"): continue
+		var leaf := node as Node3D
+		var piece := leaf.get_node_or_null("Mesh") as MeshInstance3D
+		if piece == null: continue
+		var box := flat_aabb(piece.mesh, piece.basis)
+		var reach := box.position.x if absf(box.position.x) > absf(box.end.x) else box.end.x
+		var sign := float(leaf.get_meta("sign", 1.0))
+		for step in 10:
+			var angle := deg_to_rad(Interiors.FRONT_DOOR_OPEN_DEGREES)*step/9.0*sign
+			for k in range(1, 11):
+				var p: Vector3 = leaf.position+Vector3(reach*k/10.0, 0, 0).rotated(Vector3.UP, angle)
+				for item: Dictionary in spec.get("furniture", []):
+					var at: Vector3 = item.get("at", Vector3.ZERO)
+					if at.y > 1.8: continue
+					var size: Vector3 = item.get("size", Interiors.size_of(String(item.kind)))
+					var local := (p-at).rotated(Vector3.UP, -deg_to_rad(float(item.get("yaw", 0.0))))
+					if absf(local.x) <= size.x*0.5+0.04 and absf(local.z) <= size.z*0.5+0.04 and not hits.has(String(item.kind)): hits.append(String(item.kind))
+	return hits

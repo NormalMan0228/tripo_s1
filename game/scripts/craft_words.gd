@@ -54,7 +54,7 @@ static func refused(category: String) -> String:
 		"drugs": return _t("마약과 관련된 물건은 만들 수 없어요.")
 		"person": return _t("실제 사람의 얼굴이나 모습은 만들 수 없어요.")
 		"words": return _t("욕설이 들어간 의뢰는 받을 수 없어요.")
-	return _t("모두가 함께하는 마을에 어울리지 않아 만들 수 없어요.")
+	return _t("생성 서비스의 정책 검사에서 멈췄어요. 구체적인 사유는 제공되지 않았어요.")
 
 ## A failed craft: a short title and why, from the server's reason (older servers: the error code).
 ## {"title": ..., "why": ..., "refused": bool}
@@ -72,6 +72,9 @@ static func failure(value: Dictionary) -> Dictionary:
 		"timeout": why = _t("공방이 너무 오래 걸려 이번 제작을 멈췄어요.")
 		"design": why = _t("AI가 설계도를 완성하지 못했어요. 조금 더 구체적으로 적어 다시 맡겨 보세요.")
 		"busy": why = _t("AI 공방이 지금 붐벼요. 잠시 뒤 다시 맡겨 주세요.")
+		"rate": why = _t("생성 서비스의 요청 한도에 도달했어요. 잠시 뒤 다시 맡겨 주세요.")
+		"connection": why = _t("생성 서비스와 연결하지 못했어요. 잠시 뒤 다시 맡겨 주세요.")
+		"recitation": why = _t("생성 서비스가 기존 자료와의 유사성 검사로 응답을 멈췄어요. 저작권 침해 여부를 판정한 것은 아니에요.")
 		"mesh": why = _t("3D 모양을 빚다가 실패했어요. 표현을 바꿔 다시 맡겨 보세요.")
 		"heavy": why = _t("만든 모델이 너무 복잡해 마을에 놓을 수 없었어요. 더 단순한 물건으로 해 보세요.")
 		"photo": why = _t("참고 그림을 처리하지 못했어요. 다른 그림으로 해 보세요.")

@@ -764,7 +764,7 @@ class Interactions:
                 if [p['id'] for p in result_plan['parts']] != [p['id'] for p in parts]:
                     raise InteractionError('design_changed_parts')
                 idle = {}
-                provenance = {k: provenance.get(k) for k in ('provider', 'model', 'effort', 'usage') if k in provenance} | {'live': live}
+                provenance = {k: provenance.get(k) for k in ('provider', 'model', 'effort', 'usage', 'attempts', 'usage_complete', 'fallback_used') if k in provenance} | {'live': live}
             check(program, parts)
             with self.db.transaction() as conn:
                 current = conn.execute('SELECT owner_id,state FROM objects WHERE id=?', (row['object_id'],)).fetchone()
@@ -788,8 +788,12 @@ class Interactions:
             raise
         except Exception as error:
             code = error.code if isinstance(error, (ProviderError, InteractionError)) else 'design_rejected'
-            if getattr(error, 'usage', None):
+            if hasattr(error, 'usage'):
                 provenance = {'usage': error.usage}
+                if hasattr(error, 'attempts'):
+                    provenance.update(attempts=error.attempts, usage_complete=error.usage_complete)
+                    if error.attempts:
+                        provenance.update({k: error.attempts[-1][k] for k in ('provider', 'model') if k in error.attempts[-1]})
             with self.db.transaction() as conn:
                 self.give_up(conn, design_id, code, provenance)
         finally:

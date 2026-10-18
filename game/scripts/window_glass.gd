@@ -6,9 +6,11 @@ extends RefCounted
 ## gets a "WindowGlass" mesh over its panes (a few millimetres out along the normals, no collision)
 ## drawn by PANE_SHADER: by day the sky gradient of the hour (sky_top over sky_horizon, from
 ## Daylight.sample) reflected over a little of the painted glass, at night dark, or glowing warm while
-## someone inside is awake (building_dressing.gd's room lights). Off unless ENABLED or --window-glass.
+## someone inside is awake (building_dressing.gd's room lights). Surfaces named "hole" plug see-through
+## gaps in the model and keep the wall's own material. On (ENABLED); --no-window-glass turns it off
+## for comparisons.
 const DIR := "res://maps/archipelago/windows/"
-const ENABLED := false
+const ENABLED := true
 const NODE := "WindowGlass"
 const DAY_ZENITH := Color("5f9fd6")
 const PANE_SHADER := """
@@ -47,13 +49,15 @@ void fragment() {
 static var _shader: Shader
 
 static func enabled() -> bool:
-	return ENABLED or "--window-glass" in OS.get_cmdline_user_args()
+	return (ENABLED or "--window-glass" in OS.get_cmdline_user_args()) and not "--no-window-glass" in OS.get_cmdline_user_args()
 
-## Puts the glass on every building whose model has panes; returns {building id: ShaderMaterial}.
-static func install(buildings: Node, manifest: Dictionary, tuning: Dictionary) -> Dictionary:
+## Puts the glass on every building whose model has panes and that has a door (rooms: Town.DOORS ids;
+## a building nobody lives in, the gazebo, keeps its painted glass); returns {building id: ShaderMaterial}.
+static func install(buildings: Node, manifest: Dictionary, tuning: Dictionary, rooms: Array = []) -> Dictionary:
 	var panes := {}
 	if buildings == null or not enabled(): return panes
 	for spec: Dictionary in manifest.buildings:
+		if not rooms.is_empty() and not rooms.has(String(spec.id)): continue
 		var building := buildings.get_node_or_null(String(spec.id)) as Node3D
 		var path := DIR+String(spec.model).get_file().get_basename()+"_glass.res"
 		if building == null or not ResourceLoader.exists(path): continue
@@ -71,7 +75,9 @@ static func install(buildings: Node, manifest: Dictionary, tuning: Dictionary) -
 		var node := MeshInstance3D.new()
 		node.name = NODE
 		node.mesh = mesh
-		node.material_override = material
+		# Panes get the glass; the plugs over see-through holes ("hole" surfaces) keep the wall's material.
+		for i in mesh.get_surface_count():
+			if mesh.surface_get_name(i) != "hole": node.set_surface_override_material(i, material)
 		node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		building.add_child(node)
 		panes[String(spec.id)] = material

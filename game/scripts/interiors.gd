@@ -53,6 +53,9 @@ const PLANS := {
 }
 ## What each building's windows look out on (its island's surroundings).
 const OUTLOOK := {"01_cafe":"meadow","02_timber_house":"meadow","03_teal_cottage":"meadow","04_windmill":"meadow","05_observatory":"garden","06_orange_cottage":"garden","07_greenhouse":"garden","09_town_hall":"town","10_red_house":"town","11_purple_house":"town","12_blue_house":"town","13_shop":"town","16_blue_cottage":"camp","17_lighthouse":"sea","18_meadow_house":"meadow","danbi_house":"town"}
+## The painted outlooks (paint_outlook) keep their sky transparent: the window shows the time of
+## day's sky gradient there (sky_top over sky_horizon, scripts/window_sky.gd, fed with the scenery's
+## night/tint by studio.gd apply_daylight) and the painted scenery, clouds, moon and stars over it.
 const WINDOW_SHADER := """
 shader_type spatial;
 render_mode unshaded, cull_disabled, shadows_disabled;
@@ -62,12 +65,16 @@ uniform float night = 0.0;
 uniform vec4 tint : source_color = vec4(1.0);
 uniform float lift = 0.0;
 uniform float round_mask = 0.0;
+uniform vec3 sky_top : source_color = vec3(0.47, 0.73, 0.89);
+uniform vec3 sky_horizon : source_color = vec3(0.86, 0.94, 0.94);
 void fragment() {
 	if (round_mask > 0.5 && length(UV - vec2(0.5)) > 0.5) discard;
 	vec2 uv = vec2(UV.x, clamp(UV.y * (1.0 - lift) + lift * 0.55, 0.0, 1.0));
-	vec3 day = texture(day_tex, uv).rgb * tint.rgb;
-	vec3 moon = texture(night_tex, uv).rgb;
-	ALBEDO = mix(day, moon, night);
+	vec4 day = texture(day_tex, uv);
+	vec4 moon = texture(night_tex, uv);
+	vec3 scenery = mix(day.rgb * tint.rgb, moon.rgb, night);
+	vec3 sky = mix(sky_top, sky_horizon, smoothstep(0.0, 0.62, uv.y));
+	ALBEDO = mix(sky, scenery, clamp(mix(day.a, moon.a, night), 0.0, 1.0));
 }
 """
 static var window_shader: Shader
@@ -953,18 +960,18 @@ static func glass_walls(root: Node3D, s: Dictionary) -> void:
 		var pane := Art.box(root,origin+Vector3(0,0.7+(h-0.7)*0.5,0),Vector3(length,h-0.7,0.03) if along.x>0.5 else Vector3(0.03,h-0.7,length),Color.WHITE)
 		pane.material_override=glass
 		pane.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		# The garden outside the glass follows the clock like any other window view.
+		# The garden outside the glass follows the clock like any other window view; it fills the glass
+		# exactly (just outside it), so nothing of it floats beside or above the room.
 		var view := MeshInstance3D.new()
 		var quad := QuadMesh.new()
-		var view_len := length+3.2 if along.x>0.5 else length+1.6
-		quad.size=Vector2(view_len,h+0.6)
+		quad.size=Vector2(length,h-0.7)
 		view.mesh=quad
 		view.material_override=view_material(str(s.outlook) if str(s.outlook)!="meadow" else "garden",false,0.0)
 		view.cast_shadow=GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		root.add_child(view)
-		if along.x>0.5: view.position=origin+outward*1.6+Vector3(0,h*0.5+0.2,0)
+		if along.x>0.5: view.position=origin+outward*0.06+Vector3(0,0.7+(h-0.7)*0.5,0)
 		else:
-			view.position=Vector3(origin.x+outward.x*1.6,h*0.5+0.2,-0.8)
+			view.position=Vector3(origin.x+outward.x*0.06,0.7+(h-0.7)*0.5,origin.z)
 			view.rotation.y=-PI*0.5*signf(origin.x)
 		view.add_to_group("window_view")
 		var mullions := int(length/1.25)
@@ -1095,6 +1102,7 @@ static func front(root: Node3D, s: Dictionary) -> void:
 ## room's front door: real size, centred in the doorway, the hinge (FrontDoor's origin) on its right-hand
 ## edge, opening outward like outside. False when the building has none yet (front() keeps its box door).
 const BuildingDoors = preload("res://maps/archipelago/building_doors.gd")
+const DoorFade = preload("res://scripts/door_fade.gd")
 ## Half the doorway's width in front(): DOOR_HALF, or wider for a building whose own door is wider.
 static func doorway_half(s: Dictionary) -> float:
 	var id := str(s.get("building",""))
@@ -1125,7 +1133,14 @@ static func building_door(hinge: Node3D, s: Dictionary, dx: float) -> bool:
 			var piece := MeshInstance3D.new()
 			piece.name="Mesh"
 			piece.mesh=load(String(entry.mesh))
+			# A leaf turned to follow a slanted wall outside (tilt_degrees) stands flat in the room's wall.
+			piece.basis=BuildingDoors.flat_basis(entry)
 			node.add_child(piece)
+			# Full height and facing the camera: it fades while it stands between the camera and the walker.
+			var fade := Node.new()
+			fade.name="Fade"
+			fade.set_script(DoorFade)
+			node.add_child(fade)
 		return true
 	var size := BuildingDoors.leaf_size(id)
 	hinge.position.x=dx+size.x*0.5
@@ -2715,12 +2730,16 @@ static func beam_patch(parent: Node3D, c: Array, tint: Color, alpha: float) -> v
 static func paint_outlook(kind: String, night: bool) -> Image:
 	var wide := 192
 	var tall := 128
-	var image := Image.create_empty(wide,tall,false,Image.FORMAT_RGB8)
+	var image := Image.create_empty(wide,tall,false,Image.FORMAT_RGBA8)
 	var rng := RandomNumberGenerator.new()
 	rng.seed=hash(kind)
 	var sky_top := Color("10183c") if night else Color("78b9e4")
 	var sky_low := Color("2e3a6e") if night else Color("e6f3f0")
-	for y in tall: image.fill_rect(Rect2i(0,y,wide,1),sky_top.lerp(sky_low,minf(1.0,float(y)/(tall*0.62))))
+	# The sky stays transparent (alpha 0): WINDOW_SHADER draws the time of day's gradient there.
+	for y in tall:
+		var sky := sky_top.lerp(sky_low,minf(1.0,float(y)/(tall*0.62)))
+		sky.a=0.0
+		image.fill_rect(Rect2i(0,y,wide,1),sky)
 	var shade := func(c: Color) -> Color: return c.darkened(0.72).lerp(Color("1b2550"),0.45) if night else c
 	if night:
 		for i in 46: image.set_pixel(rng.randi_range(0,wide-1),rng.randi_range(0,int(tall*0.5)),Color("fff3c8") if i%3 else Color("b9c6ff"))

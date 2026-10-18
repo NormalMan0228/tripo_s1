@@ -14,7 +14,8 @@ def main():
     parser.add_argument('--data-dir',type=Path,default=Path(os.getenv('LOCALAPPDATA',str(Path.home()))) / 'TripothonDemo' / 'server-data')
     args=parser.parse_args()
     if not 1024<=args.port<=65535: parser.error('port must be 1024..65535')
-    settings=Settings(data_dir=args.data_dir,mode='demo',tripo_key='',paid_enabled=False,
+    settings=Settings(data_dir=args.data_dir,mode='demo',tripo_key='',tripo_keys=(),paid_enabled=False,
+                      studio_llm='fixture',llm_key='',gemini_key='',
                       registration_code='',daily_generation_limit=100)
     app=create_app(settings)
     uvicorn.run(app,host='127.0.0.1',port=args.port,workers=1,access_log=False,

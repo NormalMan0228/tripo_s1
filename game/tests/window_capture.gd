@@ -12,17 +12,20 @@ const Profile = preload("res://scripts/controller_profile.gd")
 const Dressing = preload("res://scripts/building_dressing.gd")
 const HOURS := [12.0, 18.6, 22.0]
 var BUILDINGS := ["01_cafe", "12_blue_house", "11_purple_house", "16_blue_cottage", "07_greenhouse", "10_red_house"]
-const ROOMS := ["home", "17_lighthouse", "12_blue_house"]
+var ROOMS := ["home", "17_lighthouse", "12_blue_house"]
 var app: Node
 var out_dir := "res://../artifacts/mapdoor/windows/"
 var label := "cap"
 var report := {"shots": 0}
+var hours: Array = HOURS
 
 func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="): out_dir = arg.trim_prefix("--out=").trim_suffix("/")+"/"
 		if arg.begins_with("--label="): label = arg.trim_prefix("--label=")
 		if arg.begins_with("--buildings="): BUILDINGS = Array(arg.trim_prefix("--buildings=").split(","))
+		if arg.begins_with("--rooms="): ROOMS = Array(arg.trim_prefix("--rooms=").split(","))
+		if arg.begins_with("--hours="): hours = Array(arg.trim_prefix("--hours=").split(",")).map(func(h): return float(h))
 	call_deferred("run")
 
 func run() -> void:
@@ -62,12 +65,17 @@ func exterior() -> void:
 
 func interiors() -> void:
 	for room in ROOMS:
-		for hour in HOURS:
+		for hour in hours:
 			Engine.set_meta("interior_hour", hour)
 			Engine.set_meta("studio_session", {"token":"", "url":"http://127.0.0.1:9", "room":room})
 			var studio: Control = load("res://scenes/studio.tscn").instantiate()
 			root.add_child(studio)
-			await create_timer(1.2).timeout
+			await create_timer(1.6).timeout
+			# The room as the game shows it (its own camera; walker and HUD hidden): every window view
+			# in sight, the ones that float off the walls included.
+			if "hero" in studio and is_instance_valid(studio.hero): studio.hero.visible = false
+			for layer in studio.find_children("*", "CanvasLayer", true, false): layer.visible = false
+			await shot("%s_room_%s_h%s.png" % [label, room, str(hour)])
 			var view := first_view(studio)
 			if view:
 				var camera := Camera3D.new()

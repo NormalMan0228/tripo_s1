@@ -242,8 +242,12 @@ static func update_glow(host: Node3D, hour: float, now := false) -> void:
 	var day := int(Residents.clock().day)
 	var doors: Dictionary = root.get_meta("doors", {})
 	for id in doors:
-		var backing: GeometryInstance3D = glows.get(id)
-		if backing == null or not is_instance_valid(backing): continue
+		# A village rebuild frees the old backing. Check the Variant before assigning a
+		# typed Object: Godot rejects freed instances at assignment, before the guard.
+		var candidate = glows.get(id)
+		if not is_instance_valid(candidate): continue
+		var backing := candidate as GeometryInstance3D
+		if backing == null: continue
 		var door: Dictionary = doors[id]
 		var count := 0
 		if occupancy.has(id): count = int(occupancy[id])

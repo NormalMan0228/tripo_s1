@@ -29,7 +29,7 @@ const OPENING_LIFT := 0.002
 ## Buildings whose door is made this way. Empty for now: the user is drawing the door outlines the
 ## leaves will be cut along, so every building keeps its painted door and every room its box door
 ## (the hooks are here, they find no leaf). ALL_DOORS true applies it to every door in door_leaves.json.
-const ENABLED := ["10_red_house"]
+const ENABLED := ["01_cafe", "02_timber_house", "03_teal_cottage", "04_windmill", "05_observatory", "06_orange_cottage", "07_greenhouse", "09_town_hall", "10_red_house", "11_purple_house", "12_blue_house", "13_shop", "16_blue_cottage", "17_lighthouse", "18_meadow_house"]
 const ALL_DOORS := false
 ## Doors tools/door_leaves.gd cannot find by their wood paint: id -> [across from the door point, height
 ## above the pad, width, height, arch rise] in metres on the wall (the top `rise` a half ellipse). The
@@ -64,6 +64,7 @@ void fragment() {
 ## --all-doors: every door in door_leaves.json is on (tests and captures before ALL_DOORS is).
 static var disabled := "--no-doors" in OS.get_cmdline_user_args()
 static var _table: Dictionary = {}
+static var _models: Dictionary = {}
 static var _buildings: Dictionary = {}
 static var _opening_shader: Shader
 
@@ -74,37 +75,59 @@ static func table() -> Dictionary:
 		if parsed is Dictionary: _table = parsed
 	return _table
 
+## A building's entry in door_leaves.json; a building without its own entry takes the one of another
+## building with the same model (its door is cut per model, its frame in model space): a building added
+## later on a cut model (18_meadow_house on blue_house) has its door before the cutter runs again.
+static func entry(id: String) -> Dictionary:
+	var t := table()
+	if t.has(id): return t[id]
+	if _models.is_empty() and FileAccess.file_exists("res://maps/archipelago/building_placements.json"):
+		var placements = JSON.parse_string(FileAccess.get_file_as_string("res://maps/archipelago/building_placements.json"))
+		if placements is Dictionary:
+			for spec: Dictionary in placements.get("buildings", []): _models[String(spec.id)] = String(spec.model)
+	var model := String(_models.get(id, ""))
+	if model.is_empty(): return {}
+	for other: String in t:
+		if String((t[other] as Dictionary).get("model", "")) == model: return t[other]
+	return {}
+
 static func enabled(id: String) -> bool:
-	return not disabled and table().has(id) and (ALL_DOORS or ENABLED.has(id) or "--all-doors" in OS.get_cmdline_user_args())
+	return not disabled and not entry(id).is_empty() and (ALL_DOORS or ENABLED.has(id) or "--all-doors" in OS.get_cmdline_user_args())
 
 ## The door leaf of a building (shared by every building with the same model), or null.
 ## The leaves of a door cut along the user's outline (tools/door_cutter.gd): [{mesh, hinge, reason,
 ## pivot (in the door frame), sign (+1/-1: the rotation that opens it), width, height}]; [] otherwise.
 static func leaf_entries(id: String) -> Array:
 	if not enabled(id): return []
-	return table()[id].get("leaves", [])
+	return entry(id).get("leaves", [])
 
 static func leaf_mesh(id: String) -> ArrayMesh:
 	if not enabled(id): return null
 	var leaves := leaf_entries(id)
 	if not leaves.is_empty(): return load(String(leaves[0].mesh)) as ArrayMesh if ResourceLoader.exists(String(leaves[0].mesh)) else null
-	var path := String(table()[id].get("mesh", ""))
+	var path := String(entry(id).get("mesh", ""))
 	return load(path) as ArrayMesh if ResourceLoader.exists(path) else null
 
 static func opening_mesh(id: String) -> ArrayMesh:
 	if not enabled(id): return null
-	var path := String(table()[id].get("opening", ""))
+	var path := String(entry(id).get("opening", ""))
 	return load(path) as ArrayMesh if ResourceLoader.exists(path) else null
+
+## A leaf that follows a slanted wall outside (its tilt_degrees, the observatory's) as it stands in a
+## flat wall (indoors, checks): turned back and narrowed to its width across the render's front.
+static func flat_basis(leaf: Dictionary) -> Basis:
+	var tilt := deg_to_rad(float(leaf.get("tilt_degrees", 0.0)))
+	return Basis.from_scale(Vector3(cos(tilt), 1, 1))*Basis(Vector3.UP, -tilt)
 
 ## Size of a door leaf in metres: Vector3(width, height, thickness).
 static func leaf_size(id: String) -> Vector3:
-	var rect: Dictionary = table().get(id, {})
+	var rect: Dictionary = entry(id)
 	return Vector3(float(rect.get("width", 0.0)), float(rect.get("height", 0.0)), float(rect.get("thickness", 0.0)))
 
 ## The door's hinge frame in its building's space (origin: the right-hand edge at the threshold, on the
 ## opening plane; x across, y up, z out of the wall).
 static func hinge_frame(id: String) -> Transform3D:
-	var rect: Dictionary = table()[id]
+	var rect: Dictionary = entry(id)
 	if rect.has("frame"):
 		# Cut along a drawn outline (tools/door_cutter.gd): the frame as it was cut.
 		var f: Array = rect.frame
@@ -120,14 +143,13 @@ static func hinge_frame(id: String) -> Transform3D:
 static func install(host: Node3D) -> void:
 	var buildings := host.get_node_or_null("Buildings") if host else null
 	if buildings == null: return
-	for id: String in table():
-		var building := buildings.get_node_or_null(id) as Node3D
-		if building and enabled(id): attach(building, id)
+	for building in buildings.get_children():
+		if building is Node3D and enabled(String(building.name)): attach(building as Node3D, String(building.name))
 
 ## "right" or "left": the door's hinge edge seen from outside. Either way DoorLeaf opens outward with a
 ## positive rotation.y about its +Y (a left-hung door's DoorFrame is turned over: its +Y points down).
 static func hinge_side(id: String) -> String:
-	return String(table().get(id, {}).get("hinge", "right"))
+	return String(entry(id).get("hinge", "right"))
 
 static func attach(building: Node3D, id: String) -> void:
 	_buildings[id] = building
@@ -158,7 +180,7 @@ static func attach(building: Node3D, id: String) -> void:
 			piece.set_meta("door_local_lift", frame.origin.y+pivot.position.y)
 			pivot.add_child(piece)
 		# The cut wall's edge, in the wall's colour, round the doorway (tools/door_cutter.gd REVEAL).
-		var path := String(table()[id].get("reveal", ""))
+		var path := String(entry(id).get("reveal", ""))
 		if ResourceLoader.exists(path):
 			var edge := MeshInstance3D.new()
 			edge.name = "DoorReveal"
@@ -195,7 +217,7 @@ static func attach(building: Node3D, id: String) -> void:
 ## lose the triangles that went into the leaf ("drop") and take the parts of split triangles that stay
 ## outside the outline (<model>_cut.res). Collision keeps the building's own shapes.
 static func cut_building(building: Node3D, id: String) -> void:
-	var rect: Dictionary = table()[id]
+	var rect: Dictionary = entry(id)
 	if not rect.has("drop") or not ResourceLoader.exists(String(rect.get("cut", ""))): return
 	var pieces := load(String(rect.cut)) as ArrayMesh
 	var drop: Dictionary = rect.drop

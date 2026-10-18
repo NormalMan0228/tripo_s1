@@ -187,26 +187,41 @@ class UsageReport:
         described_states = {'ready': 0, 'failed': 0, 'designing': 0}
         default_provider = SETTING_PROVIDER.get(settings.studio_llm, 'unknown')
 
+        incomplete_usage = dict.fromkeys(WINDOWS, 0)
+
         def count_llm(provenance, created, runs):
             run = llm_run(provenance, default_provider)
             if not run:
                 return
-            used = tokens_of(provenance.get('usage'))
-            entry = models.setdefault(run, {'provider': run[0], 'model': run[1],
-                                            'runs': dict.fromkeys(WINDOWS, 0),
-                                            'tokens': {w: no_tokens() for w in WINDOWS}})
+            # Total runs remain jobs. Model runs count one participation per model
+            # per job; tokens follow the actual provider, including before failover.
+            groups = {}
+            attempts = provenance.get('attempts')
+            if isinstance(attempts, list) and attempts and all(
+                    isinstance(a, dict) and llm_run(a, 'unknown') for a in attempts):
+                for attempt in attempts:
+                    slot = groups.setdefault(llm_run(attempt, 'unknown'), no_tokens())
+                    add_tokens(slot, tokens_of(attempt.get('usage')))
+            else:
+                groups[run] = tokens_of(provenance.get('usage'))
+            day = day_of(created)
             for w in windows(created):
                 runs[w] += 1
-                entry['runs'][w] += 1
-                add_tokens(tokens[w], used)
-                add_tokens(entry['tokens'][w], used)
-            day = day_of(created)
-            if day is not None:
-                day['llm_runs'] += 1
-                add_tokens(day['tokens'], used)
-                slot = day['models'].setdefault(run, {'provider': run[0], 'model': run[1], 'runs': 0, **no_tokens()})
-                slot['runs'] += 1
-                add_tokens(slot, used)
+                if provenance.get('usage_complete') is False: incomplete_usage[w] += 1
+            if day is not None: day['llm_runs'] += 1
+            for model_run, used in groups.items():
+                entry = models.setdefault(model_run, {'provider': model_run[0], 'model': model_run[1],
+                    'runs': dict.fromkeys(WINDOWS, 0), 'tokens': {w: no_tokens() for w in WINDOWS}})
+                for w in windows(created):
+                    entry['runs'][w] += 1
+                    add_tokens(tokens[w], used)
+                    add_tokens(entry['tokens'][w], used)
+                if day is not None:
+                    add_tokens(day['tokens'], used)
+                    slot = day['models'].setdefault(model_run,
+                        {'provider': model_run[0], 'model': model_run[1], 'runs': 0, **no_tokens()})
+                    slot['runs'] += 1
+                    add_tokens(slot, used)
 
         with self.db.read() as conn:
             managed_jobs = {row[0] for row in conn.execute('SELECT job_id FROM tripo_job_holds')}
@@ -283,6 +298,8 @@ class UsageReport:
             'tripo_credits': {**{w: round(v, 2) for w, v in credits.items()}, 'committed': round(committed, 2),
                               'incomplete_bills': incomplete},
             'llm': {'provider': settings.studio_llm,
+                    'fallbacks_configured': list(settings.studio_llm_fallbacks),
+                    'incomplete_usage_runs': incomplete_usage,
                     'models_configured': list(settings.gemini_models) if settings.studio_llm == 'gemini' else [],
                     'runs': {w: craft_runs[w] + interaction_runs[w] for w in WINDOWS},
                     'craft_runs': craft_runs, 'interaction_runs': interaction_runs, 'tokens': tokens,

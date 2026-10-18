@@ -58,6 +58,9 @@ func _ready() -> void:
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shade)
+	# Use the shared modal stack so the persistent chat layer also yields to this screen.
+	RpgUi._push_window(self, {"root":self, "shade":shade, "close":null, "id":"character_select",
+		"action":"wardrobe" if wardrobe else "", "kind":"modal", "modal":true})
 	var card := PanelContainer.new()
 	card.add_theme_stylebox_override("panel", RpgUi.panel_style("night"))
 	card.set_anchors_and_offsets_preset(Control.PRESET_CENTER)

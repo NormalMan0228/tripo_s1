@@ -15,11 +15,13 @@
 	"02_timber_house": {
 		"leaves": [
 			{
-				"hinge": "right",
-				"reason": "handle"
+				"hinge": "left",
+				"reason": "user"
 			}
 		],
-		"opens": "in"
+		"note": "사용자: 방향 반대 (2026-10-16)",
+		"opens": "in",
+		"override": true
 	},
 	"03_teal_cottage": {
 		"leaves": [
@@ -135,10 +137,12 @@
 	"17_lighthouse": {
 		"leaves": [
 			{
-				"hinge": "right",
-				"reason": "handle"
+				"hinge": "left",
+				"reason": "user"
 			}
 		],
-		"opens": "in"
+		"note": "사용자: 방향 반대 (2026-10-16)",
+		"opens": "in",
+		"override": true
 	}
 }

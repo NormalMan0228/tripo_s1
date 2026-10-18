@@ -18,7 +18,7 @@ const Town = preload("res://scripts/town.gd")
 const Residents = preload("res://scripts/residents.gd")
 ## Door leaves that open (the 집·문·방문 session drives them: docs/coordination/DOOR_HOOKS_KO.md).
 const BuildingDoors = preload("res://maps/archipelago/building_doors.gd")
-## Window panes drawn whole, all of a building's together (item 9; off unless enabled).
+## Window panes drawn whole, all of a building's together (item 9).
 const WindowGlass = preload("res://scripts/window_glass.gd")
 const SHADER := "res://maps/archipelago/building_exterior.gdshader"
 const PLACEMENTS := "res://maps/archipelago/building_placements.json"
@@ -165,7 +165,7 @@ static func dress(host: Node3D) -> Node3D:
 	_mesh_node(root, "LanternWash", washes.commit(), lights.wash)
 	_mesh_node(root, "LanternPools", pools.commit(), lights.pool)
 	root.set_meta("materials", materials)
-	root.set_meta("panes", WindowGlass.install(buildings, manifest, TUNING))
+	root.set_meta("panes", WindowGlass.install(buildings, manifest, TUNING, Town.DOORS.map(func(door): return String(door.id))))
 	root.set_meta("glass", glass)
 	root.set_meta("lights", lights)
 	root.set_meta("lanterns", spots.size())

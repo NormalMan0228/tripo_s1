@@ -50,6 +50,46 @@ def glass_mask(rgb: np.ndarray) -> np.ndarray:
     return ndimage.binary_fill_holes(ndimage.binary_closing(glass, iterations=2))
 
 
+# See-through holes: the render's background showing inside the building's silhouette (a window with
+# no glass on both walls, a gap in the shell). Open structures, the greenhouse (its glass shows the
+# background through it: plugs there came out as wall-coloured slivers along the frames) and the
+# windmill's sails are left alone.
+OPEN_MODELS = ("gazebo", "picnic_shelter", "stage", "greenhouse")
+HOLE_M2 = (0.01, 3.0)
+
+
+def holes(image: Image.Image, meta: dict, scale: int) -> list:
+    if any(meta.get("model", "").endswith(m + ".glb") for m in OPEN_MODELS):
+        return []
+    small = image.resize((image.width // scale, image.height // scale), Image.NEAREST)
+    a = np.asarray(small).astype(int)
+    background = a[0, 0]
+    empty = np.abs(a - background).sum(axis=2) < 6
+    inside = ndimage.binary_fill_holes(~empty) & empty
+    labels, count = ndimage.label(inside)
+    mpp = float(meta["mpp"]) * scale
+    height = a.shape[0]
+    found = []
+    for index, sl in enumerate(ndimage.find_objects(labels), start=1):
+        if sl is None:
+            continue
+        area = float((labels[sl] == index).sum()) * mpp * mpp
+        if not (HOLE_M2[0] <= area <= HOLE_M2[1]):
+            continue
+        ys, xs = sl
+        # The windmill: its sails and lattice are see-through by design.
+        if "windmill" in meta.get("model", ""):
+            continue
+        yy, xx = np.nonzero(labels[sl] == index)
+        corners = np.concatenate([np.stack([xx + dx, yy + dy], axis=1) for dx in (0, 1) for dy in (0, 1)])
+        ring = corners[ConvexHull(corners).vertices].astype(float)
+        centre = ring.mean(axis=0)
+        ring = centre + (ring - centre) * (1.0 + 2.0 / max(1.0, float(np.abs(ring - centre).max())))
+        found.append({"kind": "hole", "hinge": None, "closed": True,
+                      "pts": [[round(float((x + xs.start) * scale), 1), round(float((y + ys.start) * scale), 1)] for x, y in ring]})
+    return found
+
+
 def door_box(meta: dict, outlines_dir: Path) -> list[tuple[float, float, float, float]]:
     """Pixel boxes over the door on this render: the user's door outlines, else door_leaves.json."""
     boxes = []
@@ -130,13 +170,16 @@ def panes(render: Path, outlines_dir: Path) -> tuple[dict, Image.Image, dict]:
         pts = [[round(float((x + xs.start) * scale), 1), round(float((y + ys.start) * scale), 1)] for x, y in ring]
         found.append({"kind": "window", "hinge": None, "closed": True, "pts": pts})
     stats["panes"] = len(found)
+    plugs = holes(image, meta, scale)
+    stats["holes"] = len(plugs)
+    found += plugs
     del rgb, glass, labels
     check = image
     draw = ImageDraw.Draw(check)
     for b in doors:
         draw.rectangle(b, outline=(255, 0, 0), width=4)
     for poly in found:
-        draw.polygon([tuple(p) for p in poly["pts"]], outline=(0, 255, 0), width=3)
+        draw.polygon([tuple(p) for p in poly["pts"]], outline=(0, 255, 0) if poly["kind"] == "window" else (255, 0, 255), width=3)
     return {"render_id": meta["render_id"], "polys": found, "auto": True}, check, stats
 
 
@@ -157,7 +200,8 @@ def main() -> None:
             user = json.loads(user_file.read_text(encoding="utf-8"))
             merged["polys"] = [p for p in user.get("polys", []) if len(p.get("pts", [])) >= 3]
         if not any(p.get("kind") == "window" for p in merged["polys"]):
-            merged["polys"] += result["polys"]
+            merged["polys"] += [p for p in result["polys"] if p["kind"] == "window"]
+        merged["polys"] += [p for p in result["polys"] if p["kind"] == "hole"]
         (out.parent / "merged").mkdir(parents=True, exist_ok=True)
         (out.parent / "merged" / f"{render.stem}.json").write_text(json.dumps(merged, indent=1), encoding="utf-8")
         check.thumbnail((1024, 1024))

@@ -1,0 +1,15 @@
+# Optional overlay on the existing paid/Tripo stack. Requires BOTH secret files.
+# Primary provider stays as configured by the earlier overlay. No automatic deploy.
+services:
+  api:
+    environment:
+      TRIPOTHON_STUDIO_LLM_FALLBACKS: gemini,openai
+      OPENAI_API_KEY_FILE: /run/secrets/openai_key
+      GEMINI_API_KEY_FILE: /run/secrets/gemini_key
+    secrets: [openai_key, gemini_key]
+
+secrets:
+  openai_key:
+    file: ./secrets/openai-key
+  gemini_key:
+    file: ./secrets/gemini-key

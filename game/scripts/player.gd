@@ -2,10 +2,9 @@ extends CharacterBody3D
 
 const Profile=preload("res://scripts/controller_profile.gd")
 const SPEED := Profile.VILLAGE_WALK
-## Whole-model height (m, hair and hats included) of the new heroes, so the body up to the crown is
-## the hero's own height (m1 1.74, m2 1.72, m3 1.76, m4 1.84, f1 1.62, f2 1.66, f3 1.65, f4 1.63; measured
-## from each GLB's HeadTop bone by 05). Other models fit CHARACTER_SCALE as before.
-const HERO_MODEL_HEIGHT := {"m1":1.864,"m2":1.789,"m3":1.751,"m4":1.876,"f1":1.717,"f2":1.747,"f3":1.695,"f4":1.701}
+## Whole-model height (m, hair and hats included). Keep adult heroes close to
+## the 1.72 m NPCs, retaining small differences between builds.
+const HERO_MODEL_HEIGHT := {"m1":1.80,"m2":1.78,"m3":1.76,"m4":1.82,"f1":1.76,"f2":1.77,"f3":1.75,"f4":1.76}
 var controls_enabled := true
 var visual_only := false
 var facing := Vector3.FORWARD
@@ -190,7 +189,9 @@ func _build_explorer() -> void:
 					pivot.add_child(hero)
 					pivot.scale=Vector3.ONE*(float(HERO_MODEL_HEIGHT.get(str(avatar.get("character","")),Profile.CHARACTER_SCALE))/bounds.size.y)
 					hero.position-=Vector3(bounds.get_center().x,bounds.position.y,bounds.get_center().z)
-					pivot.rotation.y=PI
+					# The artisan GLB was exported facing the opposite direction to the
+					# other seven heroes. Align its model, skeleton and hand tools together.
+					pivot.rotation.y=0.0 if str(avatar.get("character", "")) == "m2" else PI
 					var controllers := hero.find_children("*","AnimationPlayer",true,false)
 					var skeletons := hero.find_children("*","Skeleton3D",true,false)
 					if not skeletons.is_empty():
@@ -198,6 +199,11 @@ func _build_explorer() -> void:
 						hand_index=hand_skeleton.find_bone("R_Hand")
 						action_pose=preload("res://scripts/action_pose.gd").new()
 						hand_skeleton.add_child(action_pose)
+						if str(avatar.get("character", "")) in HERO_MODEL_HEIGHT:
+							var style := preload("res://scripts/hero_style.gd").new()
+							style.actor = self
+							style.character = str(avatar.character)
+							hand_skeleton.add_child(style)
 						action_pose.modification_processed.connect(update_tool_pose)
 					if not controllers.is_empty():
 						animation_player=controllers[0]

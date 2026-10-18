@@ -34,6 +34,19 @@ const CELL := 0.02
 ## A piece belongs to what the camera sees when it lies this close to the front-most surface there.
 const SURFACE_BAND := 0.08
 const REMOVE_DEPTH := 2.0
+## A pane faces the facade's camera within acos(0.5) = 60 degrees (a sloped roof inside a window's
+## outline is not glass).
+const PANE_TURN := 0.5
+## A door plate follows its wall when the door's faces turn this many degrees or more from the
+## render's front (the observatory's door, on its round tower, turns about 27; the others under 7).
+const TILT_MIN := 10.0
+## A drawn pair's seam counts as slanted from this slope (pixels across per pixel down).
+const SEAM_SLANT := 0.05
+## Floaters: pieces of the building left loose round a cut doorway (Tripo layers, plates, handles):
+## connected parts (vertices welded within 1 mm) lying wholly within FLOAT_MARGIN of the outline, from
+## the facade's front back REMOVE_DEPTH, smaller than FLOAT_AREA, are taken out too.
+const FLOAT_MARGIN := 0.5
+const FLOAT_AREA := 1.5
 const EDGE_STEP := 0.03
 ## Hinge sides and opening directions as decided (or set by the user: "override": true).
 const HINGES := "res://maps/archipelago/door_hinges.json"
@@ -44,6 +57,7 @@ const DOUBLE_ASPECT := 0.9
 const REVEAL := 0.22
 var hinges := {}
 var glass := {}
+var floating := {}
 var overrides := {}
 var renders_dir := "res://../artifacts/outline_tool/renders/"
 var outlines_dir := "res://../artifacts/outline_tool/outlines/"
@@ -53,6 +67,10 @@ func _initialize() -> void:
 
 func run() -> void:
 	var only := ""
+	# The merged outlines (tools/window_panes.py: the user's doors and windows, the auto panes, the
+	# see-through holes) when they are there: cutting the user's outlines alone would shrink the glass.
+	if DirAccess.dir_exists_absolute(absolute("res://../artifacts/outline_tool/merged/")):
+		outlines_dir = "res://../artifacts/outline_tool/merged/"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--renders="): renders_dir = arg.trim_prefix("--renders=").trim_suffix("/")+"/"
 		if arg.begins_with("--outlines="): outlines_dir = arg.trim_prefix("--outlines=").trim_suffix("/")+"/"
@@ -83,10 +101,10 @@ func run() -> void:
 			print("DOOR_CUT ", render_id, " missing render metadata or outline")
 			continue
 		var model := model_path(String(meta.model))
-		var ids: Array = meta.get("building_ids", [])
-		if ids.is_empty():
-			for spec: Dictionary in placements.buildings:
-				if String(spec.model) == model: ids.append(String(spec.id))
+		# Every building on this model gets the door (the render may list only the one it was made for).
+		var ids: Array = (meta.get("building_ids", []) as Array).duplicate()
+		for spec: Dictionary in placements.buildings:
+			if String(spec.model) == model and not ids.has(String(spec.id)): ids.append(String(spec.id))
 		var mesh_faces := load_model(model)
 		# A model's panes from all its faces go into one glass mesh.
 		if not glass.has(model): glass[model] = ArrayMesh.new()
@@ -100,7 +118,20 @@ func run() -> void:
 				for p in pts: px.append(Vector2(float(p[0]), float(p[1])))
 				doors.append(px)
 				continue
-			var result := cut_outline(mesh_faces, meta, pts)
+			if String(poly.kind) == "hole":
+				# A see-through hole (tools/window_panes.py): a pane plugs it, flush with the wall round it.
+				var plug := hole_plug(mesh_faces, meta, pts)
+				if not plug.is_empty():
+					var material = null
+					for key in mesh_faces.materials:
+						var m = mesh_faces.materials[key]
+						if m is BaseMaterial3D and (m as BaseMaterial3D).albedo_texture != null:
+							material = m
+							break
+					commit(windows, "hole", plug, material)
+					cut += 1
+				continue
+			var result := cut_outline(mesh_faces, meta, pts, true)
 			print("DOOR_CUT ", render_id, " window ", JSON.stringify(result.stats))
 			cut += 1
 			append_pieces(windows, result.inside, mesh_faces.materials)
@@ -112,7 +143,9 @@ func run() -> void:
 			var union_pts := []
 			for p in plan.union: union_pts.append([p.x, p.y])
 			var result := cut_outline(mesh_faces, meta, union_pts)
-			print("DOOR_CUT ", render_id, " door ", JSON.stringify(result.stats), " leaves=", plan.leaves.map(func(l): return [l.hinge, l.reason]), " opens=", plan.opens)
+			var loose := floaters(mesh_faces, meta, result)
+			floating[render_id] = loose
+			print("DOOR_CUT ", render_id, " door ", JSON.stringify(result.stats), " leaves=", plan.leaves.map(func(l): return [l.hinge, l.reason]), " opens=", plan.opens, " floaters=", loose.count)
 			cut += 1
 			var entry := save_opening(model, result, plan, mesh_faces, float(meta.mpp), image)
 			entry["render_id"] = render_id
@@ -132,6 +165,10 @@ func run() -> void:
 	var saved := FileAccess.open(HINGES, FileAccess.WRITE)
 	saved.store_string(JSON.stringify(hinges, "\t", true))
 	saved.close()
+	var log_file := FileAccess.open(absolute("res://../artifacts/mapdoor")+"floaters.json", FileAccess.WRITE)
+	if log_file:
+		log_file.store_string(JSON.stringify(floating, "\t", true))
+		log_file.close()
 	print("DOOR_CUT_DONE outlines=", cut)
 	quit(0)
 
@@ -188,7 +225,10 @@ static func load_model(model: String) -> Dictionary:
 ## Splits the model along one outline. Returns {inside: [pieces], outside: {key: [pieces]}, drop: {key:
 ## [triangle index]}, frame: {...}, stats}. A piece is {key, verts: [[position, normal, tangent, uv]...]}
 ## (triangles, model space, source winding).
-func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
+## surface_only (windows): only the pane itself, the camera-facing front surface (within SURFACE_BAND,
+## turned at most PANE_TURN off the view) - not the 2 m behind a door's outline (a dormer's roof, the
+## window's reveal sides would glow with the glass).
+func cut_outline(model: Dictionary, meta: Dictionary, pts: Array, surface_only := false) -> Dictionary:
 	var mpp := float(meta.mpp)
 	var o := vec(meta.origin_tl)
 	var u := vec(meta.u)
@@ -211,14 +251,15 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 			var a: Vector3 = project.call(tri.p[0])
 			var b: Vector3 = project.call(tri.p[1])
 			var c: Vector3 = project.call(tri.p[2])
-			if absf((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y)) < 1e-9: continue
-			facing.append([tri, [a, b, c], faces_camera, Rect2(Vector2(minf(a.x, minf(b.x, c.x)), minf(a.y, minf(b.y, c.y))), Vector2.ZERO).expand(Vector2(maxf(a.x, maxf(b.x, c.x)), maxf(a.y, maxf(b.y, c.y))))])
+			# Edge-on faces (a doorway's floor, the lintel's underside) project to lines: kept, marked flat.
+			var flat := absf((b.x-a.x)*(c.y-a.y)-(c.x-a.x)*(b.y-a.y)) < 1e-6
+			facing.append([tri, [a, b, c], faces_camera and not flat, Rect2(Vector2(minf(a.x, minf(b.x, c.x)), minf(a.y, minf(b.y, c.y))), Vector2.ZERO).expand(Vector2(maxf(a.x, maxf(b.x, c.x)), maxf(a.y, maxf(b.y, c.y)))), flat])
 		meta["_facing"] = facing
 	var near := []
 	for entry in meta._facing:
 		var r: Rect2 = entry[3]
 		if r.end.x < box.position.x or r.position.x > box.end.x or r.end.y < box.position.y or r.position.y > box.end.y: continue
-		near.append([entry[0], entry[1], entry[2]])
+		near.append([entry[0], entry[1], entry[2], entry[4] if entry.size() > 4 else false])
 	# The front-most depth seen in each cell of the outline's box.
 	var front := {}
 	for entry in near:
@@ -243,12 +284,28 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 	var top := -INF
 	for cell in front:
 		if Geometry2D.is_point_in_polygon((Vector2(cell)+Vector2(.5, .5))*CELL, poly): top = maxf(top, float(front[cell][0]))
+	var grown_polys := Geometry2D.offset_polygon(poly, 0.03)
+	var grown: PackedVector2Array = grown_polys[0] if not grown_polys.is_empty() else poly
 	var stats := {"triangles_near": near.size(), "taken_whole": 0, "split": 0, "outline_m2": 0.0, "cut_m2": 0.0, "left_m2": 0.0}
 	stats.outline_m2 = absf(signed_area(poly))
 	for entry in near:
 		var tri: Dictionary = entry[0]
 		var q: Array = entry[1]
 		var tri2 := PackedVector2Array([Vector2(q[0].x, q[0].y), Vector2(q[1].x, q[1].y), Vector2(q[2].x, q[2].y)])
+		if surface_only:
+			if not entry[2] or entry[3] or absf(signed_area(tri2)) < 1e-6: continue
+			var normal: Vector3 = -((tri.p[1] as Vector3)-(tri.p[0] as Vector3)).cross((tri.p[2] as Vector3)-(tri.p[0] as Vector3))
+			if normal.normalized().dot(-into) < PANE_TURN: continue
+		elif entry[3] or absf(signed_area(tri2)) < 1e-6:
+			# Edge-on: inside the doorway (its middle within the outline grown 3 cm, from the door's
+			# front back to REMOVE_DEPTH) it goes whole; elsewhere it stays.
+			var mid := (Vector2(q[0].x, q[0].y)+Vector2(q[1].x, q[1].y)+Vector2(q[2].x, q[2].y))/3.0
+			var depth := (float(q[0].z)+float(q[1].z)+float(q[2].z))/3.0
+			if Geometry2D.is_point_in_polygon(mid, grown) and depth <= top+0.02 and depth >= top-REMOVE_DEPTH:
+				if not drop.has(tri.key): drop[tri.key] = []
+				drop[tri.key].append(int(tri.index))
+				stats["edge_on"] = int(stats.get("edge_on", 0))+1
+			continue
 		var pieces_in := Geometry2D.intersect_polygons(tri2, poly)
 		if pieces_in.is_empty(): continue
 		# Only the surface the camera sees: a hidden face behind the door stays where it is.
@@ -258,7 +315,8 @@ func cut_outline(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
 			var w := bary(c, tri2[0], tri2[1], tri2[2])
 			var z: float = q[0].z*w.x+q[1].z*w.y+q[2].z*w.z
 			var cell := Vector2i(floori(c.x/CELL), floori(c.y/CELL))
-			if (entry[2] and (not front.has(cell) or z >= float(front[cell][0])-SURFACE_BAND)) or z >= top-REMOVE_DEPTH: visible = true
+			if entry[2] and (not front.has(cell) or z >= float(front[cell][0])-SURFACE_BAND): visible = true
+			elif not surface_only and z >= top-REMOVE_DEPTH and z <= top+0.02: visible = true
 		if not visible: continue
 		var pieces_out := Geometry2D.clip_polygons(tri2, poly)
 		var turns := pieces_out.map(func(p): return Geometry2D.is_polygon_clockwise(p))
@@ -356,7 +414,22 @@ func plan_opening(doors: Array, meta: Dictionary, image: Image, ids: Array) -> D
 		union = largest(outer if not outer.is_empty() else merged)
 	var box := bounds(union)
 	var leaves := []
-	if doors.size() >= 2:
+	# A pair whose meeting seam runs on a slant in the facade (the observatory): split along the seam
+	# found in the render (the dark line between the leaves), and widen the side the user could not
+	# draw whole (behind a column) to the other leaf's width; hinges on the outer edges.
+	var seam := find_seam(doors) if doors.size() >= 2 else {}
+	if not seam.is_empty():
+		union = widen_pair(union, seam)
+		box = bounds(union)
+		var line_a := float(seam.a)
+		var line_b := float(seam.b)
+		var far := 10000.0
+		var left_side := PackedVector2Array([Vector2(line_a*-far+line_b, -far), Vector2(line_a*far+line_b, far), Vector2(-far, far), Vector2(-far, -far)])
+		var right_side := PackedVector2Array([Vector2(line_a*-far+line_b, -far), Vector2(far, -far), Vector2(far, far), Vector2(line_a*far+line_b, far)])
+		for side in ["left", "right"]:
+			var parts := Geometry2D.intersect_polygons(union, left_side if side == "left" else right_side)
+			if not parts.is_empty(): leaves.append({"poly": largest(parts), "hinge": side, "reason": "double"})
+	elif doors.size() >= 2:
 		# Two drawn leaves: each one as drawn, the later one without what the earlier ones already cover.
 		var sorted := doors.duplicate()
 		sorted.sort_custom(func(a, b): return bounds(a).get_center().x < bounds(b).get_center().x)
@@ -388,6 +461,72 @@ func plan_opening(doors: Array, meta: Dictionary, image: Image, ids: Array) -> D
 			leaves[i].hinge = String(given[i].get("hinge", leaves[i].hinge))
 			leaves[i].reason = "user"
 	return plan
+
+## The seam of a drawn pair (pixels: x = a*y + b) when it runs on a slant (|a| >= SEAM_SLANT): per row,
+## the middle between the left leaf's right edge and the right leaf's left edge (the user's two outlines
+## meet or overlap there), a line fitted through them. {} for a seam that stands upright.
+static func find_seam(doors: Array) -> Dictionary:
+	var sorted := doors.duplicate()
+	sorted.sort_custom(func(p, q): return bounds(p).get_center().x < bounds(q).get_center().x)
+	var left: PackedVector2Array = sorted[0]
+	var right: PackedVector2Array = sorted[sorted.size()-1]
+	var box := bounds(left).merge(bounds(right))
+	var xs := []
+	var ys := []
+	for k in range(1, 20):
+		var y := box.position.y+box.size.y*k/20.0
+		var l := row_extent(left, y)
+		var r := row_extent(right, y)
+		if l.x > l.y or r.x > r.y: continue
+		xs.append((l.y+r.x)*0.5)
+		ys.append(y)
+	if xs.size() < 6: return {}
+	var fit := line_fit(xs, ys)
+	if absf(float(fit.a)) < SEAM_SLANT: return {}
+	return fit
+
+## Where a horizontal line at y crosses a polygon: Vector2(leftmost, rightmost) (x > y when it misses).
+static func row_extent(poly: PackedVector2Array, y: float) -> Vector2:
+	var lo := INF
+	var hi := -INF
+	for i in poly.size():
+		var a := poly[i]
+		var b := poly[(i+1) % poly.size()]
+		if (a.y-y)*(b.y-y) > 0.0 or is_equal_approx(a.y, b.y): continue
+		var x := a.x+(b.x-a.x)*(y-a.y)/(b.y-a.y)
+		lo = minf(lo, x)
+		hi = maxf(hi, x)
+	return Vector2(lo, hi)
+
+static func line_fit(xs: Array, ys: Array) -> Dictionary:
+	var n := float(xs.size())
+	var sy := 0.0
+	var sx := 0.0
+	var syy := 0.0
+	var sxy := 0.0
+	for i in xs.size():
+		sy += float(ys[i])
+		sx += float(xs[i])
+		syy += float(ys[i])*float(ys[i])
+		sxy += float(xs[i])*float(ys[i])
+	var d := n*syy-sy*sy
+	if absf(d) < 1e-9: return {"a": 0.0, "b": sx/maxf(n, 1.0)}
+	var a := (n*sxy-sx*sy)/d
+	return {"a": a, "b": (sx-a*sy)/n}
+
+## A pair's outline widened on the narrower side to the other leaf's width (measured across from the
+## seam at mid height), the extra a strip as tall as the outline: the leaf behind a column is cut whole.
+static func widen_pair(union: PackedVector2Array, seam: Dictionary) -> PackedVector2Array:
+	var box := bounds(union)
+	var y := box.get_center().y
+	var mid := float(seam.a)*y+float(seam.b)
+	var left := mid-box.position.x
+	var right := box.end.x-mid
+	if absf(left-right) < 0.08*maxf(left, right): return union
+	var strip := Rect2(box.end.x-2.0, box.position.y, left-right+2.0, box.size.y) if right < left else Rect2(mid-right-(right-left), box.position.y, right-left+2.0, box.size.y)
+	var merged := Geometry2D.merge_polygons(union, rect_poly(strip))
+	var outer := merged.filter(func(q): return not Geometry2D.is_polygon_clockwise(q) or merged.size() == 1)
+	return largest(outer if not outer.is_empty() else merged)
 
 static func largest(polys: Array) -> PackedVector2Array:
 	var best := PackedVector2Array()
@@ -460,6 +599,20 @@ func save_opening(model: String, result: Dictionary, plan: Dictionary, mesh_face
 	var to_frame := frame.affine_inverse()
 	var name := model.get_file().get_basename()
 	var leaves := []
+	# A doorway in a turned wall (TILT_MIN or more, the observatory): one plane for all its leaves, the
+	# doorway's own faces' turn through the median of its front surface round the outline.
+	var union_m := PackedVector2Array()
+	for p in plan.union: union_m.append(p*mpp)
+	var shared := door_plane(result.taken, union_m, to_frame)
+	var plane_n := 0.0
+	if not shared.is_empty() and absf(rad_to_deg(float(shared.tilt))) >= TILT_MIN:
+		var along := []
+		var union_centre := centroid(union_m)
+		for q in union_m: along.append((to_frame*(o+u*q.x+v*q.y+out*float(surface_at(result, q, union_centre).z))).dot(shared.normal))
+		along.sort()
+		plane_n = float(along[along.size()/2])
+	else:
+		shared = {}
 	for i in plan.leaves.size():
 		var leaf: Dictionary = plan.leaves[i]
 		var poly := PackedVector2Array()
@@ -468,21 +621,49 @@ func save_opening(model: String, result: Dictionary, plan: Dictionary, mesh_face
 		var hinge_x: float = lbox.end.x if leaf.hinge == "right" else lbox.position.x
 		var pivot: Vector3 = to_frame*(o+u*hinge_x+v*lbox.end.y+out*front_z)
 		var to_leaf := Transform3D(Basis.IDENTITY, pivot).affine_inverse()*to_frame
+		# A door set in a wall at an angle to the render's front (TILT_MIN or more, measured from the
+		# door's own faces) gets its plate along that wall: built in a space turned by `tilt` about the
+		# hinge's vertical (its plane z = 0 there), then turned back into the frame.
+		var plane := door_plane(result.taken, poly, to_frame)
+		var tilt := 0.0
+		var outline_point := func(q: Vector2) -> Vector3: return to_frame*(o+u*q.x+v*q.y+out*front_z)
+		var dir: Vector3 = (to_frame.basis*(result.into as Vector3)).normalized()
+		# Frame point -> onto the leaf's plane along the render's view (no change while the leaf is flat).
+		var project := func(at: Vector3) -> Vector3: return at
+		if not shared.is_empty():
+			tilt = float(shared.tilt)
+			var nf: Vector3 = shared.normal
+			# Through the doorway's front surface (the faces' middle lies deeper, the layers behind the
+			# door counted in).
+			var cf: Vector3 = nf*plane_n
+			project = func(at: Vector3) -> Vector3: return at+dir*(nf.dot(cf-at)/nf.dot(dir))
+			outline_point = func(q: Vector2) -> Vector3:
+				var at: Vector3 = to_frame*(o+u*q.x+v*q.y+out*front_z)
+				return at+dir*(nf.dot(cf-at)/nf.dot(dir))
+			pivot = outline_point.call(Vector2(hinge_x, lbox.end.y))
+			to_leaf = Transform3D(Basis(Vector3.UP, tilt), pivot).affine_inverse()*to_frame
 		# A new leaf, a plate in the outline's shape (the user's rule): its front is the facade's own
 		# door, the cut pieces laid flat (their layering kept a hair apart, no relief), textured as the
 		# building; back and edges in the door's colour; a handle on both faces at the free edge.
 		var parts := {}
+		var to_plate := Transform3D(Basis(Vector3.UP, tilt), pivot).affine_inverse()
 		for t in result.taken:
 			if not t[2]: continue
 			for piece in Geometry2D.intersect_polygons(t[1], poly):
 				var verts := triangulate(piece, t[0], t[1])
 				if not parts.has(t[0].key): parts[t[0].key] = []
 				for vtx in verts:
-					var p: Vector3 = to_leaf*(vtx[0] as Vector3)
-					p.z = clampf(p.z*0.03, -0.008, 0.004)
+					# Projected onto the plate along the view (a turned plate keeps the facade's picture),
+					# its depth off the plate squeezed.
+					var at: Vector3 = to_frame*(vtx[0] as Vector3)
+					var on: Vector3 = project.call(at)
+					var p: Vector3 = to_plate*on
+					p.z = clampf((p.z+(at-on).dot(-dir))*0.03, -0.008, 0.004)
 					parts[t[0].key].append([p, vtx[3], Vector3.BACK, Vector4(1, 0, 0, 1)])
 		var leaf_poly := PackedVector2Array()
-		for q in poly: leaf_poly.append(Vector2((to_leaf*(o+u*q.x+v*q.y+out*front_z)).x, (to_leaf*(o+u*q.x+v*q.y+out*front_z)).y))
+		for q in poly:
+			var at: Vector3 = to_plate*(outline_point.call(q) as Vector3)
+			leaf_poly.append(Vector2(at.x, at.y))
 		if signed_area(leaf_poly) < 0.0: leaf_poly.reverse()
 		var colour := region_colour(image, leaf.poly, false)
 		var paint := StandardMaterial3D.new()
@@ -510,10 +691,18 @@ func save_opening(model: String, result: Dictionary, plan: Dictionary, mesh_face
 			if ((quad[1]-quad[0]) as Vector3).cross(quad[2]-quad[0]).dot(normal) > 0.0: quad = [quad[0], quad[2], quad[1], quad[3], quad[5], quad[4]]
 			for p in quad: plate.append([p, Vector2.ZERO, normal, Vector4(1, 0, 0, 1)])
 		parts["paint"] = plate
-		var lw := lbox.size.x
-		var lh := lbox.size.y
-		var handle_x: float = (-lw+0.1) if leaf.hinge == "right" else (lw-0.1)
-		parts["metal"] = handle(Vector3(handle_x, minf(1.0, lh*0.45), 0.0), THICKNESS)
+		var plate_box := bounds(leaf_poly)
+		var lh := plate_box.size.y
+		var handle_x: float = (plate_box.position.x+0.1) if leaf.hinge == "right" else (plate_box.end.x-0.1)
+		parts["metal"] = handle(Vector3(handle_x, plate_box.position.y+minf(1.0, lh*0.45), 0.0), THICKNESS)
+		if tilt != 0.0:
+			# Back into the frame's directions (the hinge node stays unturned while closed).
+			var turn := Basis(Vector3.UP, tilt)
+			for key in parts:
+				var list: Array = parts[key]
+				for k in list.size():
+					var vtx: Array = list[k]
+					list[k] = [turn*(vtx[0] as Vector3), vtx[1], (turn*(vtx[2] as Vector3)).normalized(), vtx[3]]
 		var mesh := ArrayMesh.new()
 		var iron := StandardMaterial3D.new()
 		iron.albedo_color = Color(0.2, 0.18, 0.16)
@@ -525,7 +714,8 @@ func save_opening(model: String, result: Dictionary, plan: Dictionary, mesh_face
 		var path: String = Doors.DOORS_DIR+name+("" if i == 0 else str(i+1))+".res"
 		ResourceSaver.save(mesh, path)
 		var sign := (1.0 if leaf.hinge == "right" else -1.0)*(1.0 if plan.opens == "out" else -1.0)
-		leaves.append({"mesh": path, "hinge": leaf.hinge, "reason": leaf.reason, "pivot": [pivot.x, pivot.y, pivot.z], "sign": sign,
+		leaves.append({"mesh": path, "hinge": leaf.hinge, "reason": leaf.reason, "pivot": [pivot.x, pivot.y, pivot.z], "sign": sign, "tilt_degrees": snappedf(rad_to_deg(tilt), 0.1),
+			"wall_degrees": snappedf(rad_to_deg(float(plane.tilt)), 0.1) if not plane.is_empty() else 0.0,
 			"width": snappedf(lbox.size.x, .001), "height": snappedf(lbox.size.y, .001)})
 	# The hole's edge: a reveal from the wall's surface REVEAL metres in, in the wall's colour, so the
 	# cut never shows the hollow building (the dark doorway lies behind it).
@@ -535,6 +725,44 @@ func save_opening(model: String, result: Dictionary, plan: Dictionary, mesh_face
 	var ring := PackedVector2Array()
 	for q in plan.union: ring.append(q*mpp)
 	var ring_centre := centroid(ring)
+	# The reveal runs from the door's surface round the hole straight into the wall (its turn: the
+	# leaves' mean tilt) back to `inner`, REVEAL behind the front-most point of that surface along the
+	# wall's normal, a centimetre inside the outline. The dark doorway behind it is the outline itself
+	# pushed back into the wall (not a box round it): nothing of it shows outside the hole, on a slanted
+	# wall (the observatory) or over an arch's corners (16).
+	var turned := 0.0
+	for leaf in leaves: turned += deg_to_rad(float(leaf.tilt_degrees))/leaves.size()
+	var wall_basis := Basis(Vector3.UP, turned)
+	var normal: Vector3 = wall_basis.z
+	var depths := []
+	var across := Vector2(INF, -INF)
+	var shape := PackedVector2Array()
+	for q in ring:
+		var at: Vector3 = to_frame*(o+u*q.x+v*q.y+out*float(surface_at(result, q, ring_centre).z))
+		depths.append(at.dot(normal))
+		across = Vector2(minf(across.x, at.dot(wall_basis.x)), maxf(across.y, at.dot(wall_basis.x)))
+		shape.append(Vector2(at.dot(wall_basis.x), at.y))
+	depths.sort()
+	var front_n: float = float(depths.back()) if not depths.is_empty() else 0.0
+	var inner := front_n-REVEAL
+	# A turned wall (the observatory): the outline laid on the leaves' plane along the render's view and
+	# pushed along the wall's normal, for the reveal and the tube alike, so they meet the leaves' edges
+	# and each other (the surface's own points zig-zag across: gaps, the sky through the doorway).
+	var view: Vector3 = (to_frame.basis*(result.into as Vector3)).normalized()
+	# The frame depth (z) of the leaves' plane over a frame point (a turned wall only).
+	var plane_z := func(at: Vector3) -> float: return (plane_n-normal.x*at.x-normal.y*at.y)/normal.z
+	var on_plane := func(q: Vector2) -> Vector3:
+		var at: Vector3 = to_frame*(o+u*q.x+v*q.y+out*front_z)
+		return at+view*((plane_n-at.dot(normal))/view.dot(normal))
+	if turned != 0.0:
+		shape = PackedVector2Array()
+		across = Vector2(INF, -INF)
+		# A centimetre in, like the reveal, so the two meet edge to edge.
+		var shrunk := Geometry2D.offset_polygon(ring, -0.01)
+		for q in (shrunk[0] if not shrunk.is_empty() else ring):
+			var at: Vector3 = on_plane.call(q)
+			shape.append(Vector2(at.dot(wall_basis.x), at.y))
+			across = Vector2(minf(across.x, at.dot(wall_basis.x)), maxf(across.y, at.dot(wall_basis.x)))
 	var reveal := []
 	for k in ring.size():
 		var a := ring[k]
@@ -546,10 +774,22 @@ func save_opening(model: String, result: Dictionary, plan: Dictionary, mesh_face
 		for j in steps:
 			var q1 := a.lerp(b, float(j)/steps)
 			var q2 := a.lerp(b, float(j+1)/steps)
-			var f1: Vector3 = to_frame*(o+u*q1.x+v*q1.y+out*float(surface_at(result, q1, ring_centre).z))
-			var f2: Vector3 = to_frame*(o+u*q2.x+v*q2.y+out*float(surface_at(result, q2, ring_centre).z))
-			var d1 := Vector3(f1.x, f1.y, -REVEAL)
-			var d2 := Vector3(f2.x, f2.y, -REVEAL)
+			var i1 := q1+n2*0.01
+			var i2 := q2+n2*0.01
+			var f1: Vector3 = to_frame*(o+u*i1.x+v*i1.y+out*float(surface_at(result, q1, ring_centre).z))
+			var f2: Vector3 = to_frame*(o+u*i2.x+v*i2.y+out*float(surface_at(result, q2, ring_centre).z))
+			var d1 := f1+normal*(inner-f1.dot(normal))
+			var d2 := f2+normal*(inner-f2.dot(normal))
+			if turned != 0.0:
+				# Straight back along the render's view, the cut's own prism (pushed along the wall's normal
+				# it left gaps to the grass and kept the building's faces inside the tube): from the wall's
+				# surface or the leaves' plane, whichever is further out, to REVEAL behind the plane.
+				var p1: float = plane_z.call(f1)
+				var p2: float = plane_z.call(f2)
+				d1 = Vector3(f1.x, f1.y, p1-REVEAL)
+				d2 = Vector3(f2.x, f2.y, p2-REVEAL)
+				f1 = Vector3(f1.x, f1.y, maxf(f1.z, p1))
+				f2 = Vector3(f2.x, f2.y, maxf(f2.z, p2))
 			var quad := [f1, f2, d2, f1, d2, d1]
 			# Facing into the hole (seen from the doorway): clockwise from the inward side.
 			if ((quad[1]-quad[0]) as Vector3).cross(quad[2]-quad[0]).dot(inward) > 0.0: quad = [quad[0], quad[2], quad[1], quad[3], quad[5], quad[4]]
@@ -574,24 +814,72 @@ func save_opening(model: String, result: Dictionary, plan: Dictionary, mesh_face
 				tool.set_uv(Vector2(p.x/maxf(w, .01), 1.0-p.y/maxf(h, .01)))
 				tool.add_vertex(p)
 	else:
-		var d := depth+0.15
-		# Five inner faces of a box behind the opening (seen from outside: back, sides, top, floor).
-		var faces := [[Vector3(0, 0, -d), Vector3(w, 0, -d), Vector3(w, h, -d), Vector3(0, h, -d)],
-			[Vector3(0, 0, 0), Vector3(0, 0, -d), Vector3(0, h, -d), Vector3(0, h, 0)],
-			[Vector3(w, 0, -d), Vector3(w, 0, 0), Vector3(w, h, 0), Vector3(w, h, -d)],
-			[Vector3(0, h, -d), Vector3(w, h, -d), Vector3(w, h, 0), Vector3(0, h, 0)],
-			[Vector3(0, 0, 0), Vector3(w, 0, 0), Vector3(w, 0, -d), Vector3(0, 0, -d)]]
-		for quad in faces:
-			var centre: Vector3 = (quad[0]+quad[1]+quad[2]+quad[3])*0.25
-			var inward := (Vector3(w*0.5, h*0.5, -d*0.5)-centre).normalized()
-			var tris := [[quad[0], quad[1], quad[2]], [quad[0], quad[2], quad[3]]]
-			for tri in tris:
-				# Front faces wind clockwise seen from their side: facing into the box.
-				if ((tri[1]-tri[0]) as Vector3).cross(tri[2]-tri[0]).dot(inward) > 0.0: tri = [tri[0], tri[2], tri[1]]
-				for p in tri:
-					tool.set_normal(inward)
-					tool.set_uv(Vector2(clampf(p.x/maxf(w, .01), 0, 1), clampf(1.0-p.y/maxf(h, .01), 0, 1)))
-					tool.add_vertex(p)
+		var x0 := across.x
+		var x1 := across.y
+		# On a turned wall the dark tube starts behind the reveal, so between a leaf's edge and the wall
+		# the reveal shows, not the tube.
+		var z0 := front_n if turned == 0.0 else inner
+		var z1 := front_n-(REVEAL+depth+0.15)
+		# The outline pushed back from the front-most surface (z0) to z1, in the wall's directions: its
+		# sides and its back, facing in, then turned into the frame.
+		var tris := []
+		var middle := centroid(shape)
+		for k in shape.size():
+			var a := shape[k]
+			var b := shape[(k+1) % shape.size()]
+			var n2 := Vector2(b.y-a.y, -(b.x-a.x)).normalized()
+			if n2.dot(middle-(a+b)*0.5) < 0.0: n2 = -n2
+			var inward := Vector3(n2.x, n2.y, 0)
+			tris.append([[Vector3(a.x, a.y, z0), Vector3(b.x, b.y, z0), Vector3(b.x, b.y, z1)], inward])
+			tris.append([[Vector3(a.x, a.y, z0), Vector3(b.x, b.y, z1), Vector3(a.x, a.y, z1)], inward])
+		var order := Geometry2D.triangulate_polygon(shape)
+		for k in range(0, order.size(), 3):
+			tris.append([[Vector3(shape[order[k]].x, shape[order[k]].y, z1), Vector3(shape[order[k+1]].x, shape[order[k+1]].y, z1),
+				Vector3(shape[order[k+2]].x, shape[order[k+2]].y, z1)], Vector3.BACK])
+		var turn := wall_basis
+		if turned != 0.0:
+			# A turned wall: the tube runs straight back along the render's view too (the cut's prism, in
+			# frame directions), from REVEAL behind the leaves' plane, a centimetre inside the outline.
+			turn = Basis.IDENTITY
+			tris = []
+			var flat := PackedVector2Array()
+			var fronts := []
+			var shrunk := Geometry2D.offset_polygon(ring, -0.01)
+			for q in (shrunk[0] if not shrunk.is_empty() else ring):
+				var at: Vector3 = to_frame*(o+u*q.x+v*q.y+out*front_z)
+				flat.append(Vector2(at.x, at.y))
+				fronts.append(float(plane_z.call(at))-REVEAL)
+			x0 = INF
+			x1 = -INF
+			for q in flat:
+				x0 = minf(x0, q.x)
+				x1 = maxf(x1, q.x)
+			var reach := depth+0.15
+			var centre_flat := centroid(flat)
+			for k in flat.size():
+				var a := flat[k]
+				var b := flat[(k+1) % flat.size()]
+				var za: float = fronts[k]
+				var zb: float = fronts[(k+1) % flat.size()]
+				var n2 := Vector2(b.y-a.y, -(b.x-a.x)).normalized()
+				if n2.dot(centre_flat-(a+b)*0.5) < 0.0: n2 = -n2
+				var inward := Vector3(n2.x, n2.y, 0)
+				tris.append([[Vector3(a.x, a.y, za), Vector3(b.x, b.y, zb), Vector3(b.x, b.y, zb-reach)], inward])
+				tris.append([[Vector3(a.x, a.y, za), Vector3(b.x, b.y, zb-reach), Vector3(a.x, a.y, za-reach)], inward])
+			var cap := Geometry2D.triangulate_polygon(flat)
+			for k in range(0, cap.size(), 3):
+				var corners := []
+				for c in [cap[k], cap[k+1], cap[k+2]]: corners.append(Vector3(flat[c].x, flat[c].y, float(fronts[c])-reach))
+				tris.append([corners, normal])
+		for entry in tris:
+			var tri: Array = entry[0]
+			var inward: Vector3 = entry[1]
+			# Front faces wind clockwise seen from their side: facing into the doorway.
+			if ((tri[1]-tri[0]) as Vector3).cross(tri[2]-tri[0]).dot(inward) > 0.0: tri = [tri[0], tri[2], tri[1]]
+			for p in tri:
+				tool.set_normal(turn*inward)
+				tool.set_uv(Vector2(clampf((p.x-x0)/maxf(x1-x0, .01), 0, 1), clampf(1.0-p.y/maxf(h, .01), 0, 1)))
+				tool.add_vertex(turn*p)
 	tool.index()
 	tool.commit(doorway)
 	ResourceSaver.save(doorway, Doors.DOORS_DIR+name+"_opening.res")
@@ -609,7 +897,146 @@ func save_opening(model: String, result: Dictionary, plan: Dictionary, mesh_face
 		"cut": Doors.DOORS_DIR+name+"_cut.res", "drop": drop, "thickness": THICKNESS,
 		"frame": [frame.basis.x.x, frame.basis.x.y, frame.basis.x.z, frame.basis.y.x, frame.basis.y.y, frame.basis.y.z,
 			frame.basis.z.x, frame.basis.z.y, frame.basis.z.z, frame.origin.x, frame.origin.y, frame.origin.z],
-		"width": snappedf(w, .001), "height": snappedf(h, .001), "depth": snappedf(depth+0.15, .001), "outline_px": outline, "stats": result.stats}
+		"width": snappedf(w, .001), "height": snappedf(h, .001), "depth": snappedf(REVEAL+depth+0.15, .001), "reveal_depth": snappedf(-inner, .001), "outline_px": outline, "stats": result.stats}
+
+## Loose parts round a cut doorway (see FLOAT_MARGIN): added to the cut's dropped triangles. Returns
+## {count, area_m2, parts: [{triangles, area_m2, centre (model space), size}]}.
+func floaters(model: Dictionary, meta: Dictionary, result: Dictionary) -> Dictionary:
+	var o: Vector3 = result.o
+	var u: Vector3 = result.u
+	var v: Vector3 = result.v
+	var into: Vector3 = result.into
+	var top := float(result.front_z)
+	var grown := Geometry2D.offset_polygon(result.poly, FLOAT_MARGIN)
+	var region: PackedVector2Array = grown[0] if not grown.is_empty() else result.poly
+	var drop: Dictionary = result.drop
+	var dropped := {}
+	for key in drop:
+		for index in drop[key]: dropped["%s#%d" % [key, index]] = true
+	# Union-find over the building's remaining triangles, joined where they share a welded vertex.
+	var parent: Array = []
+	var tris: Array = model.tris
+	parent.resize(tris.size())
+	for i in tris.size(): parent[i] = i
+	var welded := {}
+	var alive := PackedByteArray()
+	alive.resize(tris.size())
+	for i in tris.size():
+		var tri: Dictionary = tris[i]
+		if dropped.has("%s#%d" % [tri.key, int(tri.index)]): continue
+		alive[i] = 1
+		for p: Vector3 in tri.p:
+			var cell := Vector3i(roundi(p.x*1000.0), roundi(p.y*1000.0), roundi(p.z*1000.0))
+			if welded.has(cell):
+				var a := root_of(parent, i)
+				var b := root_of(parent, int(welded[cell]))
+				if a != b: parent[a] = b
+			else: welded[cell] = i
+	# Each part: wholly in the region (in the outline's margin, from the facade's front back)?
+	var parts := {}
+	for i in tris.size():
+		if alive[i] == 0: continue
+		var root := root_of(parent, i)
+		if not parts.has(root): parts[root] = {"inside": true, "area": 0.0, "members": [], "box": AABB()}
+		var part: Dictionary = parts[root]
+		if not part.inside: continue
+		var tri: Dictionary = tris[i]
+		var c: Vector3 = ((tri.p[0] as Vector3)+(tri.p[1] as Vector3)+(tri.p[2] as Vector3))/3.0
+		var img := Vector2((c-o).dot(u), (c-o).dot(v))
+		var depth := -(c-o).dot(into)
+		if not Geometry2D.is_point_in_polygon(img, region) or depth > top+0.02 or depth < top-REMOVE_DEPTH:
+			part.inside = false
+			part.members = []
+			continue
+		part.area += 0.5*((tri.p[1] as Vector3)-(tri.p[0] as Vector3)).cross((tri.p[2] as Vector3)-(tri.p[0] as Vector3)).length()
+		part.box = AABB(c, Vector3.ZERO) if part.members.is_empty() else (part.box as AABB).expand(c)
+		part.members.append(i)
+	var report := {"count": 0, "area_m2": 0.0, "parts": []}
+	for root in parts:
+		var part: Dictionary = parts[root]
+		if not part.inside or part.members.is_empty() or float(part.area) >= FLOAT_AREA: continue
+		for i in part.members:
+			var tri: Dictionary = tris[i]
+			if not drop.has(tri.key): drop[tri.key] = []
+			drop[tri.key].append(int(tri.index))
+		var box: AABB = part.box
+		report.count += 1
+		report.area_m2 = snappedf(float(report.area_m2)+float(part.area), 0.0001)
+		report.parts.append({"triangles": part.members.size(), "area_m2": snappedf(float(part.area), 0.0001),
+			"centre": [snappedf(box.get_center().x, .01), snappedf(box.get_center().y, .01), snappedf(box.get_center().z, .01)],
+			"size": [snappedf(box.size.x, .01), snappedf(box.size.y, .01), snappedf(box.size.z, .01)]})
+	return report
+
+## A pane over a see-through hole: the hole's outline (pixels) laid on the wall's surface round it (the
+## middle depth of the faces in a band just outside the hole, 1 cm behind), facing out, one texel of
+## the wall's texture. [] when there is no wall round it.
+func hole_plug(model: Dictionary, meta: Dictionary, pts: Array) -> Array:
+	var poly := PackedVector2Array()
+	for p in pts: poly.append(Vector2(float(p[0]), float(p[1])))
+	var grown := Geometry2D.offset_polygon(poly, 14.0)
+	if grown.is_empty(): return []
+	var ring_pts := []
+	for p in grown[0]: ring_pts.append([p.x, p.y])
+	var probe := cut_outline_front(model, meta, ring_pts)
+	var mpp := float(meta.mpp)
+	var depths := []
+	var uvs := []
+	for cell: Vector2i in probe:
+		var at := (Vector2(cell)+Vector2(0.5, 0.5))*CELL/mpp
+		if Geometry2D.is_point_in_polygon(at, poly): continue
+		depths.append(float(probe[cell][0]))
+		uvs.append(probe[cell][1])
+	if depths.size() < 4: return []
+	depths.sort()
+	var depth: float = depths[depths.size()/2]-0.01
+	var uv: Vector2 = uvs[uvs.size()/2]
+	var o := vec(meta.origin_tl)
+	var u := vec(meta.u)
+	var v := vec(meta.v)
+	var out := -vec(meta.view_dir).normalized()
+	var points := PackedVector3Array()
+	for p in poly: points.append(o+u*p.x*mpp+v*p.y*mpp+out*depth)
+	var order := Geometry2D.triangulate_polygon(poly)
+	var verts := []
+	for k in range(0, order.size(), 3):
+		var tri := [points[order[k]], points[order[k+1]], points[order[k+2]]]
+		# Front faces wind clockwise as the viewer outside sees them: the cross points away (-out).
+		if ((tri[1]-tri[0]) as Vector3).cross(tri[2]-tri[0]).dot(out) > 0.0: tri = [tri[0], tri[2], tri[1]]
+		for q in tri: verts.append([q, uv, out, Vector4(1, 0, 0, 1)])
+	return verts
+
+## The front-most depth and texcoord per cell over an outline's box (cut_outline's grid, nothing cut).
+func cut_outline_front(model: Dictionary, meta: Dictionary, pts: Array) -> Dictionary:
+	return cut_outline(model, meta, pts).front
+
+## Union-find root with path halving (parent: an Array, changed in place).
+static func root_of(parent: Array, i: int) -> int:
+	while int(parent[i]) != i:
+		parent[i] = parent[int(parent[i])]
+		i = int(parent[i])
+	return i
+
+## The plane the door's own faces lie in (camera-facing taken faces inside the leaf outline), in frame
+## space: {normal (level), point (area-weighted middle), tilt (radians about +y from the frame's +z)}.
+static func door_plane(taken: Array, poly: PackedVector2Array, to_frame: Transform3D) -> Dictionary:
+	var normal := Vector3.ZERO
+	var middle := Vector3.ZERO
+	var total := 0.0
+	for t in taken:
+		if not t[2]: continue
+		for piece in Geometry2D.intersect_polygons(t[1], poly):
+			var area := absf(signed_area(piece))
+			if area <= 0.0: continue
+			var tri: Dictionary = t[0]
+			var outward: Vector3 = -((tri.p[1] as Vector3)-(tri.p[0] as Vector3)).cross((tri.p[2] as Vector3)-(tri.p[0] as Vector3))
+			if outward.length() < 1e-9: continue
+			normal += (to_frame.basis*outward.normalized())*area
+			middle += (to_frame*(((tri.p[0] as Vector3)+(tri.p[1] as Vector3)+(tri.p[2] as Vector3))/3.0))*area
+			total += area
+	normal.y = 0.0
+	if total <= 0.0 or normal.length() < 1e-6: return {}
+	normal = normal.normalized()
+	return {"normal": normal, "point": middle/total, "tilt": atan2(normal.x, normal.z)}
 
 ## A small iron handle (rose and lever) on both faces of a leaf THICKNESS deep, at `at` on the front.
 static func handle(at: Vector3, thickness: float) -> Array:

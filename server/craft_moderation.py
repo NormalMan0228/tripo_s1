@@ -151,8 +151,11 @@ def refusal_detail(category, client_version):
 # Studio error code -> the reason the craft window shows (game/scripts/craft_words.gd failure()).
 REASONS = {
     'timeout': ('generation_timeout', 'concept_timeout', 'llm_timeout'),
-    'design': ('llm_invalid_design', 'llm_incomplete', 'studio_validation_failed', 'design_too_large'),
-    'busy': ('llm_busy', 'llm_rate_limited', 'llm_model_unavailable', 'llm_request_failed', 'codex_request_failed',
+    'design': ('llm_invalid_design', 'llm_incomplete', 'llm_invalid_response', 'studio_validation_failed', 'design_too_large'),
+    'recitation': ('llm_recitation',),
+    'rate': ('llm_rate_limited',),
+    'connection': ('llm_unreachable',),
+    'busy': ('llm_busy', 'codex_request_failed',
              'upstream_rate_limit', 'upstream_unavailable', 'upstream_unreachable', 'provider_busy'),
     'mesh': ('generation_failed', 'upstream_schema', 'upstream_rejected', 'upstream_non_json', 'upstream_invalid_json',
              'upstream_response_too_large', 'asset_download_failed', 'asset_integrity_failed', 'unsafe_asset_url',
@@ -160,10 +163,10 @@ REASONS = {
     'heavy': ('assembly_render_budget_exceeded', 'assembly_too_large', 'asset_too_large', 'room_render_budget_exceeded'),
     'photo': ('image_refinement_failed', 'reference_upload_failed', 'invalid_reference_image', 'invalid_image'),
     'restart': ('planning_interrupted', 'worker_lease_expired', 'submission_interrupted'),
-    'setup': ('llm_not_configured', 'provider_configuration_required', 'key_not_configured', 'codex_unavailable',
+    'setup': ('llm_not_configured', 'llm_authentication', 'llm_permission_denied', 'llm_request_failed', 'llm_model_unavailable', 'provider_configuration_required', 'key_not_configured', 'codex_unavailable',
               'developer_provider_forbidden', 'live_generation_disabled', 'upstream_authentication'),
-    'credit': ('insufficient_provider_credit', 'tripo_budget_exhausted', 'tester_credit_budget_exhausted'),
-    'limit': ('craft_over_trial_limit', 'user_total_generation_limit', 'craft_star_limit_exceeded'),
+    'credit': ('llm_quota_exhausted', 'insufficient_provider_credit', 'tripo_budget_exhausted', 'tester_credit_budget_exhausted'),
+    'limit': ('llm_account_daily_limit', 'llm_server_daily_limit', 'craft_over_trial_limit', 'user_total_generation_limit', 'craft_star_limit_exceeded'),
     # Character skeleton and clips (server/rig_pipeline.py, server/rigged_glb.py).
     'rig': ('rig_failed', 'animation_failed', 'animation_static', 'animation_clip_mismatch', 'animation_skeleton_mismatch',
             'rigging_disabled'),

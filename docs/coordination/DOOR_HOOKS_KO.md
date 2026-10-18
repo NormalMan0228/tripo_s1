@@ -110,6 +110,9 @@ if opening:
   .tools\godot\Godot_v4.7.2-stable_win64_console.exe --headless --path game --script res://../tools/door_cutter.gd
   ```
   (`-- --only=red_house__front`로 한 렌더만, `-- --renders=DIR --outlines=DIR`로 다른 폴더를 씁니다.)
+  `artifacts/outline_tool/merged`가 있으면 그것을 기본으로 씁니다(사용자 문·창 윤곽 + 자동 창 + 뚫린 구멍,
+  `tools/window_panes.py`가 만듦). 윤곽을 새로 그렸으면 먼저 `.tools\art-venv\Scripts\python.exe tools/window_panes.py`를 실행합니다.
+  merged 없이 사용자 윤곽만으로 자르면 창 유리(`windows/*_glass.res`)가 사용자가 그린 창만으로 줄어듭니다.
 - 문(`door`): 윤곽 안에서 카메라가 보는 모든 면을 윤곽선을 따라 삼각형째 잘라 문짝으로 가져갑니다. 윤곽 밖 조각은 건물에 남습니다.
   결과는 `doors/<모델>.res`(6 cm 두께 문짝), `<모델>_opening.res`(문간), `<모델>_cut.res`(건물에 남는 조각)이고,
   `door_leaves.json`에 `frame`, `hinge`, `drop`(건물에서 뺄 삼각형)이 들어갑니다. 실행하면 `DOOR_CUT <render_id> door {...}` 줄의
@@ -120,7 +123,8 @@ if opening:
   바깥쪽 열림이 **양수**(+108°)입니다. 왼쪽 경첩 문은 `DoorFrame`이 뒤집혀(로컬 +Y가 아래) 있어서 같은 값으로 바깥쪽으로 열립니다.
   실내도 같아서, 왼쪽 경첩 방은 `FrontDoorMount`(z축으로 뒤집힌 받침) 아래에 `FrontDoor`가 있고 `rotation.y` 0↔108°로 바깥쪽으로 열립니다.
   `BuildingDoors.hinge_side(id)`가 `"right"`/`"left"`를 돌려줍니다.
-- 창문(`window`): 윤곽 안 유리 면을 `windows/<모델>_glass.res`로 모읍니다(9번 창문 작업용, 아직 게임에서 쓰지 않음).
+- 창문(`window`): 윤곽 안에서 카메라를 향한 앞 표면(60° 이내)만 `windows/<모델>_glass.res`로 모읍니다. 뚫린 구멍(`hole`)은
+  둘레 벽 깊이에 벽 재질 판(`hole` 표면)으로 막습니다. 게임에서는 `scripts/window_glass.gd`가 켜져 있습니다(9번 창문).
 - 적용: 결과를 커밋하고 `building_doors.gd`의 `ENABLED`에 건물 id를 넣거나 `ALL_DOORS := true`로 켭니다.
 
 ## 4-2. 사용자 윤곽 문: 경첩·양문·여는 방향 (2026-10-16 새벽 사용자 지시)
@@ -143,6 +147,24 @@ if opening:
 - 실내 문간은 문 폭에 맞춰 넓어집니다(`doorway_half`). 안쪽으로 열린 실내 문이 가구와 부딪히는지는 아직 검사하지 않습니다.
 - 아직 안 그린 4채(보라 지붕 집, 파란 집, 파란 지붕 오두막, 등대)는 예전 자동 윤곽 데이터라 `ALL_DOORS`를 켜면 덧댄 문짝이 됩니다.
   다 그린 뒤 커터를 다시 실행하면 같은 방식이 됩니다.
+
+## 4-3. 문 v2/v3 (2026-10-16 오전, 사용자 지시)
+- 문짝은 잘라낸 면이 아니라 **새 판**입니다: 윤곽 모양의 5 cm 판이고, 앞면은 건물 문 그림을 평평하게 붙였습니다.
+  뒷면과 옆면은 문 색, 양면에 쇠 손잡이가 있습니다. 구멍 둘레에는 벽색 리빌(`DoorReveal`, 22 cm)이 있고, 뒤는 어두운 문간(`DoorOpening`)입니다.
+- 구멍: 윤곽 안의 면을 문 앞면에서 2 m 깊이까지 모두 지웁니다(여러 겹, 옆면, 문간 바닥과 인방 밑면 포함). 문 앞쪽은 건드리지 않습니다.
+- 떠 있는 조각: 윤곽 둘레 0.5 m, 문 앞면에서 2 m 깊이 안에 완전히 들어 있고 건물 본체와 이어지지 않은(꼭짓점 1 mm 용접 기준)
+  면적 1.5 m² 미만 조각도 지웁니다. 기록: `artifacts/mapdoor/floaters.json`.
+- 천문대 양문: 두 윤곽 사이 경계가 비스듬하면(기울기 0.05 이상) 그 선을 따라 두 장으로 나눕니다. 천문대 문은 둥근 탑에 있어
+  벽이 렌더 정면과 약 27° 돌아 있으므로 문짝 판을 그 벽면을 따라 세웁니다(`tilt_degrees`, 10° 이상일 때만). 실내 `FrontDoor`는
+  `BuildingDoors.flat_basis(leaf)`로 평평하게 되돌려 씁니다.
+- 어두운 문간(`DoorOpening`)은 사각 상자가 아니라 **윤곽 모양을 벽 안쪽으로 민 통**입니다(벽 기울기를 따름). 그래서 아치 위 모서리나
+  비스듬한 벽 앞으로 검은 면이 튀어나오지 않습니다(16 파란 지붕 오두막 문 위 검은 막대 수정, 2026-10-16).
+- 경첩 바꾸기: `door_hinges.json`의 항목에 `"override": true`를 넣고 `hinge`를 고친 뒤 커터를 다시 실행합니다
+  (02 목조 주택, 17 등대가 사용자 지시로 왼쪽 경첩).
+- 켜진 문: `ENABLED`에 14채 모두와 `18_meadow_house`가 있습니다.
+- **18_meadow_house**: 문 데이터는 모델(blue_house)마다 하나라서, 같은 모델을 쓰는 건물은 `BuildingDoors.entry(id)`가 자동으로 찾아 씁니다.
+  `Town.DOORS`에 아직 없으면 그냥 무시됩니다. **wt/mapinterior를 병합한 뒤에는 `tools/door_cutter.gd`를 한 번 실행해서**
+  18_meadow_house 항목이 `door_leaves.json`에 생기게 합니다(실행 방법은 4-1 참고).
 
 ## 5. 검증
 - `game/tests/building_doors_check.gd`(헤드리스): 모든 `Town.DOORS`에 문 리소스가 있는지, 켜진 문의 노드 이름과 위치,

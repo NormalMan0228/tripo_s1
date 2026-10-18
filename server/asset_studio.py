@@ -1364,8 +1364,10 @@ class Studio:
         except ProviderError as error:
             if isinstance(error,DesignFailure):
                 # Rejected output still consumed LLM tokens; never label it free.
-                self.update(job_id,provenance=json.dumps({'provider':provider_name(self.settings),
-                    'model':body.model,'effort':body.effort,'usage':error.usage,'attempts':error.attempts,
+                last=error.attempts[-1] if error.attempts else {}
+                self.update(job_id,provenance=json.dumps({'provider':last.get('provider',provider_name(self.settings)),
+                    'model':last.get('model',body.model),'effort':body.effort,'usage':error.usage,
+                    'usage_complete':error.usage_complete,'attempts':error.attempts,
                     'tripo_credits_consumed':0,'known_tripo_credits':0,'billing_complete':True}))
             # Poll/download errors keep the paid task ID. Never submit it again; past the part's deadline
             # the craft fails (and is refunded) instead of waiting on Tripo forever.

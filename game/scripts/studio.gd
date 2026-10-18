@@ -14,6 +14,7 @@ const LoadPace=preload("res://scripts/load_pace.gd")
 const I18n=preload("res://scripts/i18n.gd")
 const Interiors=preload("res://scripts/interiors.gd")
 const Daylight=preload("res://scripts/daylight.gd")
+const WindowSky=preload("res://scripts/window_sky.gd")
 const RpgUi=preload("res://scripts/rpg_ui.gd")
 const Residents=preload("res://scripts/residents.gd")
 const DayFolk=preload("res://scripts/day_folk.gd")
@@ -1038,6 +1039,7 @@ func apply_daylight(force := false) -> void:
 		var material: ShaderMaterial=view.material_override
 		material.set_shader_parameter("night",clampf(night*1.15,0.0,1.0))
 		material.set_shader_parameter("tint",tint)
+		WindowSky.feed(material,daylight_sample)
 	for index in floor_roots.size():
 		if force or index==floor_index: Interiors.sunbeams(floor_roots[index],building_spec.floors[index],daylight_sample)
 	var colors: Dictionary=room_spec.colors

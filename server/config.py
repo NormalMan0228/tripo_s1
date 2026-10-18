@@ -169,6 +169,9 @@ class Settings:
     # servers may shorten it (TRIPOTHON_STAGE_SECONDS) for quick test runs; live servers keep 90.
     day_seconds: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_STAGE_SECONDS', '90')))
     studio_llm: str = field(default_factory=lambda: os.getenv('TRIPOTHON_STUDIO_LLM', 'fixture'))
+    # Only explicitly enabled backups with server credentials can receive a request.
+    studio_llm_fallbacks: tuple = field(default_factory=lambda: tuple(v.strip() for v in os.getenv(
+        'TRIPOTHON_STUDIO_LLM_FALLBACKS', '').split(',') if v.strip()))
     studio_design_format: str = field(default_factory=lambda: os.getenv('TRIPOTHON_DESIGN_FORMAT','classic'))
     studio_credit_rate: float = field(default_factory=lambda: float(os.getenv('TRIPOTHON_STARS_PER_CREDIT','1')))
     llm_key: str = field(default_factory=lambda: configured_secret('OPENAI_API_KEY'), repr=False)
@@ -218,6 +221,8 @@ class Settings:
             raise ValueError('TRIPOTHON_MODE must be demo or live')
         if self.studio_llm not in ('fixture','codex','openai','gemini'):
             raise ValueError('Invalid studio LLM provider')
+        if any(v not in ('openai','gemini') for v in self.studio_llm_fallbacks):
+            raise ValueError('Invalid studio LLM fallback provider')
         if self.studio_design_format not in ('classic','structured'):
             raise ValueError('Invalid studio design format')
         if (type(self.llm_user_daily_call_limit) is not int or type(self.llm_server_daily_call_limit) is not int

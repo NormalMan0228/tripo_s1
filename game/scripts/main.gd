@@ -346,9 +346,10 @@ func _ready() -> void:
 	ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.theme = make_theme()
 	layer.add_child(ui)
-	if not Engine.has_meta("studio_session") and DisplayServer.get_name()!="headless":
-		# Let the loading card reach the screen before the village is built.
-		for i in 2: await get_tree().process_frame
+	if not Engine.has_meta("studio_session"):
+		# Finish the root's child setup before synchronous loads flush deferred HUD
+		# additions. Headless starts need this too; rendered starts also draw the card.
+		for i in (1 if DisplayServer.get_name()=="headless" else 2): await get_tree().process_frame
 	# Back from a room, enter_village() below builds the village (once, after the server answers).
 	if not Engine.has_meta("studio_session"):
 		# What the village needs loads on worker threads while the build goes on under the card.
@@ -374,6 +375,9 @@ func _ready() -> void:
 		# Maintenance began during the walk out of the room: the gate already sent the player to the title.
 		if api.token.is_empty(): return
 		social.enabled = social.feature_enabled() and server_status.ok and int(server_status.data.get("multiplayer_protocol", 0)) == 1
+		# Returning from a room creates a new Main, whose capability flags start false.
+		# Restore this too, or Sora/O opens the legacy four-character editor.
+		avatar_v2 = server_status.ok and int(server_status.data.get("avatar_v2", 0)) >= 1
 		await enter_village()
 		# The walker steps out of the open door and it shuts behind (village_doors.gd); no door there: the doorstep.
 		if not VillageDoors.walk_out(self,str(session.get("room","workshop")),veil):
@@ -4047,6 +4051,7 @@ func open_look_select() -> void:
 	picker.display_name = "" if named_now==str(me.get("username","")) else named_now
 	ui.add_child(picker)
 	village_modal = picker
+	hide_hud()
 	player.controls_enabled = false
 	picker.closed.connect(func(): if village_modal==picker: close_village_modal())
 	RpgUi.sfx("open",-8.0)

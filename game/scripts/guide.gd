@@ -24,6 +24,8 @@ const Fx := preload("res://scripts/fx.gd")
 const Art := preload("res://scripts/art.gd")
 const RpgUi := preload("res://scripts/rpg_ui.gd")
 const GameSettings := preload("res://scripts/game_settings.gd")
+## The way itself: roads and bridges, off-road legs only where the walker can go (map-owned).
+const WalkRoute := preload("res://maps/archipelago/walk_route.gd")
 
 signal arrived(key: String)
 
@@ -142,10 +144,7 @@ var target: Dictionary = {}
 ## Walker -> goal, recomputed every REFRESH seconds while the walker moves.
 var route := PackedVector2Array()
 var remaining := 0.0
-var goal_cost := PackedFloat32Array()
-var goal_next := PackedInt32Array()
-var goal_edge: Array = []
-var goal_entry := Vector2.ZERO
+var walk := WalkRoute.new()
 var last_from := Vector2.INF
 var refresh_wait := 0.0
 var heights: Dictionary = {}
@@ -322,68 +321,19 @@ func field(seeds: Dictionary) -> Array:
 				next[other] = best
 	return [cost, next]
 
-## Costs toward the goal for every node (rebuilt once per goal).
+## Costs toward the goal for every node (rebuilt once per goal; walk_route.gd).
 func plan() -> void:
-	var goal: Vector2 = target.at
-	goal_cost = PackedFloat32Array()
-	goal_next = PackedInt32Array()
-	goal_edge = paths.nearest_edge(goal)
-	if goal_edge.is_empty(): return
-	goal_entry = Geometry2D.get_closest_point_to_segment(goal, paths.points[goal_edge[0]], paths.points[goal_edge[1]])
-	var seeds := {}
-	for node in goal_edge: seeds[node] = goal_entry.distance_to(paths.points[node])
-	var result := field(seeds)
-	goal_cost = result[0]
-	goal_next = result[1]
+	walk.plan(self, target.at)
 
-## Walker -> nearest road -> cheapest roads and bridges -> goal (or straight across
-## dry land when the goal is close and the roads go round).
+## Walker -> road -> cheapest roads and bridges -> goal, never through walls, water
+## or over cliffs (walk_route.gd).
 func update_route(from: Vector2) -> void:
 	last_from = from
-	route.clear()
-	route.append(from)
-	var goal: Vector2 = target.at
-	var via := INF
-	var first := -1
-	var entry := from
-	var edge := paths.nearest_edge(from)
-	if not edge.is_empty() and not goal_cost.is_empty():
-		entry = Geometry2D.get_closest_point_to_segment(from, paths.points[edge[0]], paths.points[edge[1]])
-		if (edge[0] == goal_edge[0] and edge[1] == goal_edge[1]) or (edge[0] == goal_edge[1] and edge[1] == goal_edge[0]):
-			via = from.distance_to(entry)+entry.distance_to(goal_entry)
-			first = -2
-		else:
-			for node in edge:
-				var c: float = from.distance_to(entry)+entry.distance_to(paths.points[node])+goal_cost[node]
-				if c < via:
-					via = c
-					first = node
-		via += goal_entry.distance_to(goal)
-	var straight := from.distance_to(goal)
-	if first == -1 or (straight < DIRECT and straight <= via+0.5 and dry_line(from, goal)):
-		route.append(goal)
-	else:
-		if entry.distance_to(from) > 0.4: route.append(entry)
-		var node := first
-		var guard := 0
-		while node >= 0 and guard < 512:
-			if paths.points[node].distance_to(route[route.size()-1]) > 0.05: route.append(paths.points[node])
-			node = goal_next[node]
-			guard += 1
-		if goal_entry.distance_to(route[route.size()-1]) > 0.3: route.append(goal_entry)
-		if goal.distance_to(goal_entry) > 0.3: route.append(goal)
+	route = walk.route(self, from)
 	remaining = 0.0
 	for i in route.size()-1: remaining += route[i].distance_to(route[i+1])
 	lay_trail()
 	push_views()
-
-## True when every metre between a and b is above the sea.
-func dry_line(a: Vector2, b: Vector2) -> bool:
-	var steps := int(a.distance_to(b)/1.5)
-	for i in range(1, steps+1):
-		var y := ground_y(a.lerp(b, float(i)/(steps+1)))
-		if is_nan(y) or y < Town.SHORE_MIN_Y+0.15: return false
-	return true
 
 ## Chevrons sit at fixed distances from the goal, so walking on does not slide them;
 ## only the ones the walker passes or that fall within AHEAD metres change.
@@ -435,7 +385,7 @@ func probe(p: Vector2) -> float:
 	if hit.is_empty(): return NAN
 	var y: float = hit.position.y
 	var body := hit.collider as CollisionObject3D
-	if body and body.collision_layer & 2:
+	if body and body.collision_layer & 2 and not WalkRoute.on_deck(p):
 		var land := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(p.x, 60, p.y), Vector3(p.x, -20, p.y), 1))
 		if not land.is_empty() and land.position.y > Town.SHORE_MIN_Y and y-float(land.position.y) > 2.0: y = land.position.y
 	return y

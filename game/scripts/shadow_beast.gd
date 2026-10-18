@@ -96,11 +96,11 @@ func build() -> void:
 		body.add_child(creature)
 		animator=creature.player
 		height=creature.height
-		if art!=species and species!="" and size_hint>0.0:
-			# The stand-in at the species' height; its strides grow with it.
-			creature.stride=size_hint/maxf(creature.height,0.1)
-			creature.scale=Vector3.ONE*creature.stride
-			height=size_hint
+		# Apply the encounter size to authored models too (previously only stand-ins
+		# respected it). Keep regular creatures near human scale; bosses stay large.
+		height = display_height(creature.height, size_hint, boss)
+		creature.stride=height/maxf(creature.height,0.1)
+		creature.scale=Vector3.ONE*creature.stride
 	else:
 		creature.free()
 		match kind:
@@ -118,6 +118,10 @@ func build() -> void:
 		# A procedural stand-in grows as a whole (its body's own scale animates the crouch).
 		if species!="" and species!=kind and size_hint>0.0: scale=Vector3.ONE*(size_hint/height)
 	health.position.y=height+HOVER.get(kind,0.0)+0.45
+
+static func display_height(model_height: float, requested: float, is_boss: bool) -> float:
+	var target := requested if requested > 0.0 else model_height
+	return maxf(target, model_height) if is_boss else minf(target, 2.2)
 
 func build_wolf() -> void:
 	A.sphere(body,Vector3(0,0.58,0),Vector3(0.78,0.65,1.2),Color("3c5056"))
