@@ -482,9 +482,10 @@ func _input(event: InputEvent) -> void:
 	if not capture.is_empty():
 		if event is InputEventKey and event.pressed and not event.echo:
 			var key: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
-			finish_capture(key)
 			get_viewport().set_input_as_handled()
+			finish_capture(key)
 		elif event is InputEventMouseButton and event.pressed:
+			get_viewport().set_input_as_handled()
 			finish_capture(KEY_ESCAPE)
 		return
 	if not is_instance_valid(confirm) and event.is_pressed() and not event.is_echo() and _is_navigation(event):
@@ -496,11 +497,14 @@ func _input(event: InputEvent) -> void:
 				get_viewport().set_input_as_handled()
 				return
 	if event is InputEventKey and event.pressed and not event.echo:
-		match event.physical_keycode:
+		var key: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
+		match key:
 			KEY_ESCAPE:
+				# The title's close callback removes this menu immediately. Consume
+				# the event while its viewport still exists, before replacing that UI.
+				get_viewport().set_input_as_handled()
 				if is_instance_valid(confirm): cancel_close()
 				else: request_close()
-				get_viewport().set_input_as_handled()
 			KEY_PAGEUP:
 				next_tab(-1); get_viewport().set_input_as_handled()
 			KEY_PAGEDOWN:
@@ -510,7 +514,9 @@ func _input(event: InputEvent) -> void:
 			JOY_BUTTON_LEFT_SHOULDER: next_tab(-1); get_viewport().set_input_as_handled()
 			JOY_BUTTON_RIGHT_SHOULDER: next_tab(1); get_viewport().set_input_as_handled()
 			JOY_BUTTON_B:
-				request_close(); get_viewport().set_input_as_handled()
+				get_viewport().set_input_as_handled()
+				if is_instance_valid(confirm): cancel_close()
+				else: request_close()
 
 func _is_navigation(event: InputEvent) -> bool:
 	for action in ["ui_up","ui_down","ui_left","ui_right","ui_focus_next","ui_focus_prev"]:

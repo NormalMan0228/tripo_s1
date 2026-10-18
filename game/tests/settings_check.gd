@@ -173,7 +173,7 @@ func check_engine_state() -> void:
 	check(root.msaa_3d == Viewport.MSAA_4X, "high preset MSAA 4x")
 	check(is_equal_approx(root.mesh_lod_threshold, 1.0/1.6), "view detail high LOD threshold")
 	GameSettings.set_value("preset", "low")
-	check(root.msaa_3d == Viewport.MSAA_DISABLED and is_equal_approx(root.scaling_3d_scale, 0.8), "low preset MSAA off, 80% scale")
+	check(root.msaa_3d == Viewport.MSAA_DISABLED and is_equal_approx(root.scaling_3d_scale, 0.75), "low preset MSAA off, 75% scale")
 	GameSettings.set_value("shadows", "high")
 	check(GameSettings.get_value("preset") == "custom", "changing a preset value makes it custom")
 	GameSettings.set_value("render_scale", 65)
