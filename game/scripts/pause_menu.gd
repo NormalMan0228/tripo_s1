@@ -59,6 +59,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	process_priority = 100
 	context = context_of(app)
+	if app.has_method("cancel_held_world_actions"): app.cancel_held_world_actions()
 	if context == "survival" and "paused" in app and not app.paused and str(app.run.get("status","")) == "active":
 		# The same switch main.gd's toggle_pause() flips: no ticks reach the server.
 		app.paused = true

@@ -224,6 +224,7 @@ func _took_keys() -> void:
 	RpgUi.sfx("tab", -14.0)
 	wake()
 	var place: Node = hub.place if is_instance_valid(hub.place) else null
+	if place and place.has_method("cancel_held_world_actions"): place.cancel_held_world_actions()
 	if place and "player" in place and is_instance_valid(place.get("player")): place.player.controls_enabled = false
 
 func _gave_keys() -> void:
@@ -231,6 +232,7 @@ func _gave_keys() -> void:
 	for action in MOVE_ACTIONS:
 		if InputMap.has_action(action): Input.action_release(action)
 	var place: Node = hub.place if is_instance_valid(hub.place) else null
+	if place and place.has_method("cancel_held_world_actions"): place.cancel_held_world_actions()
 	# An expedition's walker stays server-steered with its own controls off (main.start_run): turned
 	# on, it would face along the correction slides again instead of the held keys (player.gd).
 	if place and hub.place_kind != "survival" and "player" in place and is_instance_valid(place.get("player")) and place.has_method("world_movement_allowed"):

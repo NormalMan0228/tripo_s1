@@ -230,6 +230,8 @@ var toolbar_bar: HBoxContainer
 var warmth_ring: MeshInstance3D
 var strike_markers: Dictionary = {}
 var repeat_action := 0.0
+## Only a fresh press delivered to gameplay arms repeat; UI/global Input flags cannot.
+var held_world_actions: Dictionary = {}
 ## The survival "end the expedition?" window (its RpgUi.window root) while it is open.
 var return_dialog: Control
 var last_camp_warning := -100.0
@@ -855,6 +857,7 @@ func authenticate(register: bool, host: String, username: String, password: Stri
 ## turning: await it. Uncovered it runs in one go as before. False when a newer build (a logout
 ## during the load) replaced this one before it finished.
 func build_world(survival: bool) -> bool:
+	cancel_held_world_actions()
 	var paced := LoadPace.covered
 	if paced: hold(true)
 	social.reset_world()
@@ -2236,6 +2239,7 @@ func run_route() -> String:
 	return ("/v1/coop/runs/" if coop_run else "/v1/runs/")+run_id
 
 func tick_run() -> void:
+	if not world_movement_allowed(): cancel_held_world_actions()
 	if ticking or busy or (paused and not coop_run) or run.get("status","")!="active" or VersionGate.is_blocked(): return
 	ticking=true
 	var movement := movement_input()
@@ -3100,6 +3104,31 @@ func text_input_active() -> bool:
 	var focus := get_viewport().gui_get_focus_owner()
 	return focus is LineEdit or focus is TextEdit
 
+func cancel_held_world_actions() -> void:
+	held_world_actions.clear()
+	repeat_action = 0.0
+	if pending_action in ["attack","harvest"]:
+		pending_action = ""
+		pending_target = ""
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT,NOTIFICATION_APPLICATION_FOCUS_IN]:
+		cancel_held_world_actions()
+
+func _input(event: InputEvent) -> void:
+	# Release is observed before a text field can consume it in the GUI phase.
+	for action in ["attack","interact"]:
+		if event.is_action_released(action): held_world_actions.erase(action)
+
+func held_world_action_down(action: String) -> bool:
+	if not held_world_actions.has(action) or not Input.is_action_pressed(action): return false
+	var key_event := held_world_actions[action] as InputEventKey
+	if key_event:
+		# An orphan action flag must not outlive the physical key that armed it.
+		if key_event.physical_keycode != KEY_NONE: return Input.is_physical_key_pressed(key_event.physical_keycode)
+		return Input.is_key_pressed(key_event.keycode)
+	return true
+
 func world_movement_allowed() -> bool:
 	if PauseMenu.is_open() or VersionGate.is_blocked(): return false
 	if is_instance_valid(painter) or is_instance_valid(interaction_panel): return false
@@ -3112,6 +3141,7 @@ func movement_input() -> Vector2:
 	return Input.get_vector("move_left","move_right","move_forward","move_back") if world_movement_allowed() else Vector2.ZERO
 
 func _process(delta: float) -> void:
+	if not world_movement_allowed(): cancel_held_world_actions()
 	follow_camera(delta)
 	update_world_audio(delta)
 	if is_instance_valid(developer_label) and is_instance_valid(developer_panel) and developer_panel.visible:
@@ -3132,8 +3162,8 @@ func _process(delta: float) -> void:
 		repeat_action+=delta
 		if repeat_action>=0.43 and world_movement_allowed():
 			repeat_action=0
-			if Input.is_action_pressed("attack"): intent("attack")
-			elif Input.is_action_pressed("interact"): intent("harvest")
+			if held_world_action_down("attack"): intent("attack")
+			elif held_world_action_down("interact"): intent("harvest")
 		var previous_position: Vector3=player.position
 		player.position=predict_walker(delta)
 		# The walker faces where the player steers; a server correction folding in only slides it.
@@ -3334,6 +3364,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if paused: return
 	if text_input_active():return
+	if screen=="survival" and world_movement_allowed() and event.is_pressed() and not event.is_echo():
+		for action in ["attack","interact"]:
+			if event.is_action_pressed(action):
+				held_world_actions[action] = event.duplicate()
+				repeat_action = 0.0
+				intent("attack" if action=="attack" else "harvest")
+				get_viewport().set_input_as_handled()
+				return
 	# Placing: R turns 15° (Shift back, Alt/Ctrl a single degree; held keys repeat), the wheel 5°.
 	if screen=="village" and is_instance_valid(preview):
 		if event is InputEventKey and event.pressed and key==KEY_R:
@@ -3371,11 +3409,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		if is_instance_valid(right) and right.get_parent().visible:return
 		if screen=="survival":
 			match key:
-				KEY_E: intent("harvest")
 				KEY_Q: intent("eat")
 				KEY_F: intent("fire")
 				KEY_H: intent("heal")
-				KEY_SPACE: intent("attack")
 		elif screen=="village":
 			if key==KEY_V: VillageBuild.toggle_pass(self)
 			if key==KEY_TAB: life.open_map()
