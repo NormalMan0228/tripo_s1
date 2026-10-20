@@ -1,7 +1,7 @@
 """Who has cleared the expedition tutorial (/v1/me tutorial_done).
 
-A player's first expedition is the tutorial map (the client starts it while tutorial_done is false);
-clearing it once, alone or with a party, sets tutorial_done for good. Abandoning or leaving it does
+The tutorial is a selectable expedition map; tutorial_done is progress, not a forced destination.
+Clearing it once, alone or with a party, sets tutorial_done for good. Abandoning or leaving it does
 not. Accounts that went on expeditions before the tutorial existed have had their first expedition:
 when this table is first made they are recorded as done (run_id 'before_tutorial').
 """

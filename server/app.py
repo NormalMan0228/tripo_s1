@@ -603,7 +603,7 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 # Top level too: the game reads it here to send pre-0.11.9 accounts to the eight-character select once.
                 'needs_character_select':own_profile['needs_character_select'],**shown_name(conn,user['id']),'catalog':catalog.public_catalog(),'campaign':campaign.public(conn,user['id']),
                 'active_run':active['id'] if active else None,
-                # False until the expedition tutorial is cleared once: the game starts it for the first expedition.
+                # False until the selectable expedition tutorial is cleared once.
                 'tutorial_done':tutorial.done(conn,user['id']),
                 'active_run_summary':active_summary,
                 'pending_reward':{'id':pending_reward['id'],'reward':pending_reward['reward']+campaign.pending_bonus(conn,user['id'],json.loads(pending_reward['state']))} if pending_reward else None,

@@ -64,6 +64,17 @@
 
 출시 PCK를 사용한 실제 입력·동작 검사 **19개 통과**, 오류 로그 없음. 설정 입력 63개와 협동 멀티 검사 38개도 회귀 통과했습니다. 재현·검증 스크립트: `game/tests/survival_attack_input_check.gd`. 근거: `artifacts/attack-input-before.log`, `attack-input-after.log`, `attack-input-packaged-after.log`. 같은 로컬 `0.11.9.5` 실행 파일을 다시 빌드했으며 운영 업로드는 하지 않았습니다.
 
+## 탐험 지역 선택 오류 · 2026-10-20
+
+- **원인**: `tutorial_done=false`인 계정은 `start_run()`에서 선택한 지역을 `tutorial`로 덮어쓰고 이야기 장 번호까지 지웠습니다. 지역 카드의 선택은 정상이어도 출발 시 모두 첫 야영지로 바뀌었습니다.
+- **수정**: 강제 변경을 제거했습니다. 숲·채석장·설원과 이야기 장은 선택대로 시작하며 첫 야영지도 독립된 카드로 선택할 수 있습니다. 튜토리얼 완료·보상 조건은 그대로입니다.
+- **이어하기**: 저장된 탐험의 실제 지역·난이도를 넘기고 툴팁에도 지역을 표시합니다. 기존 저장을 삭제하거나 튜토리얼을 임의 완료하지 않습니다. 이미 저장된 첫 야영지는 이어하기로 남으므로 다른 지역을 고르려면 먼저 **탐험을 마치고 귀환**합니다.
+- **재현·검증**: 새 계정으로 실제 지역 카드와 출발 버튼을 클릭하는 `game/tests/expedition_map_selection.gd` 추가. 수정 전 49검사 중 18실패, 수정 후 화면 검사 53개 통과. 각 지역의 서버 상태·화면·난이도, 저장 탐험 재개, 튜토리얼 미완료 상태의 이야기 장 선택을 확인했습니다. 서버 회귀 44개 통과.
+- 튜토리얼 목표·보상·완료 기록과 숲의 3단계 진행·보스 출현·크기·야간 유지 검사 16개도 통과했습니다. 전체 클라이언트 스크립트 컴파일 실패 0, 출시 내보내기 오류 0. 근거: `map-selection-stage-after.log`, `map-selection-compile.log`, `demo-export.log`.
+- 다시 내보낸 **출시 PCK에서도 동일한 화면 검사 53개 통과**, 실행 오류 0. 근거: `map-selection-packaged-after.log`, `map-selection-packaged-after-error.log`.
+- 화면 근거: `artifacts/map-selection-forest.png`, `map-selection-quarry.png`, `map-selection-frost.png`, `map-selection-tutorial.png`. 재현 로그: `map-selection-before.log`, 수정 후: `map-selection-after.log`.
+- 이번 오류 수정은 클라이언트 동작 변경입니다. 서버 파일은 설명 주석만 바꿨으며 이번 수정에 서버 배포는 필요하지 않습니다. 로컬 중간판을 갱신하고 운영 업로드는 하지 않았습니다.
+
 ## 생성 실패 진단과 LLM 전환
 
 기존 OpenAI 경로는 여러 HTTP 오류를 `llm_request_failed`로 합쳤고, Gemini는 같은 회사 내 모델 재시도만 있었습니다. 새 코드는 다음 원인을 구분합니다.
@@ -131,6 +142,6 @@ OpenAI↔Gemini 전환을 구현했습니다. `TRIPOTHON_STUDIO_LLM`이 주 제�
 5. 큰 작업 사본은 각 브랜치의 미반영 변경·무시된 생성 자산을 보존한 뒤 개별 정리. 차단된 ZIP 삭제는 미완료로 남김.
 6. 토큰 최적화·AI 작업자 워크플로우 작업은 사용자의 요청대로 계속 일시 중단.
 
-출시 PCK: 1,504,223,640바이트 / SHA256 `582d1ca861a18fcf28afc9552d08b72bb4a93872c21d940a4998be15210392a9`.
+출시 PCK: 1,504,223,208바이트 / SHA256 `df465a415df0be2b1aa5ff029f0fadbe84b1348fec295f0658ba1198a53272cc`.
 
 최종 여유 공간: C:/ 30.54GiB, D:/ 35.68GiB (이번 빌드 생성 후 측정).

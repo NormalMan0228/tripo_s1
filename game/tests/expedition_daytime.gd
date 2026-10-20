@@ -12,7 +12,7 @@ extends SceneTree
 ##     QA server with short stages (TRIPOTHON_STAGE_SECONDS=24: the forest's boss night ~82 s in).
 ## Checks along the way: noon (0.3) is the map's tuned day grade, 0.6 is the sunset (its warm sun),
 ## the night is dark, the boss night red, the guide marks each goal. --skip-tutorial marks the new
-## account's tutorial as cleared on the client, so its expeditions go to the maps themselves.
+## account's tutorial as cleared on the client for its guide captures. Map choices are always honoured.
 ## Prints EXPDAY PASS/FAIL lines and EXPDAY_RESULT {json}.
 ## Usage: Godot --path game --position X,Y --script res://tests/expedition_daytime.gd -- --qa --mute
 ##   --server=http://127.0.0.1:8831 --out=D:/.../artifacts/tod [--maps=forest] [--skip-tutorial] [--skip-boss]
@@ -150,13 +150,13 @@ func run() -> void:
 # ------------------------------------------------------------------ the tutorial
 func tutorial() -> void:
 	await create_timer(1.5).timeout
-	app().start_run("forest", "relaxed")
+	app().start_run("tutorial", "relaxed")
 	if not await wait_until(in_survival, 90.0):
 		check(false, "the tutorial started")
 		return
 	var map := map_node()
 	var guide: Node = map.get_node_or_null("TutorialGuide") if map else null
-	check(run_state().get("map_id") == "tutorial" and guide != null, "the first expedition is the tutorial, with its guide in the world")
+	check(run_state().get("map_id") == "tutorial" and guide != null, "the selected tutorial has its guide in the world")
 	if guide == null: return
 	await create_timer(2.0).timeout
 	app().paused = true

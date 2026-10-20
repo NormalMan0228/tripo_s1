@@ -1415,7 +1415,7 @@ func refresh_inventory() -> void:
 	if is_instance_valid(reward_button): reward_button.visible=me.get("pending_reward")!=null
 	if is_instance_valid(expedition_button):
 		var saved = me.get("active_run_summary")
-		expedition_button.tooltip_text=(tr("탐험 이어하기 · %d일") % saved.day) if saved is Dictionary else tr("탐험")
+		expedition_button.tooltip_text=(region_name(str(saved.get("map_id","forest")))+" · "+(tr("탐험 이어하기 · %d일") % saved.day)) if saved is Dictionary else tr("탐험")
 	if me.get("pending_job")!=null and job_id.is_empty(): job_id=me.pending_job
 	# The craft under way, also after a relaunch: the village follows it again without opening C.
 	var crafting = me.get("pending_craft")
@@ -2030,11 +2030,8 @@ func start_run(map_id := "forest", difficulty := "standard", chapter_id := "", p
 		return
 	close_village_modal()
 	cancel_preview()
-	# The first expedition is the tutorial until it is cleared once (/v1/me tutorial_done; a run under
-	# way resumes as it is, a party goes where its leader chose).
-	if party_run_id.is_empty() and not bool(me.get("tutorial_done",true)):
-		map_id="tutorial"
-		chapter_id=""
+	# Honour the region/story the player selected. The tutorial is its own map card;
+	# tutorial_done must never silently replace another destination or story chapter.
 	busy=true
 	# The expedition's props read on a worker thread while the server answers and the card comes up,
 	# for the map the run is on: a run under way (resumed) stays on the map it began on. A co-op run's
@@ -3590,7 +3587,8 @@ func swatch(parent: Node, color: Color, callback: Callable) -> Button:
 func open_expedition() -> void:
 	if screen!="village" or busy: return
 	if me.get("active_run_summary") is Dictionary:
-		await start_run()
+		var saved: Dictionary=me.active_run_summary
+		await start_run(str(saved.get("map_id","forest")),str(saved.get("difficulty","standard")))
 		return
 	var v := modal_card(tr("어디로 떠날까요?"))
 	button(v,tr("이야기 수첩 · 섬의 세 가지 기록"),open_story)

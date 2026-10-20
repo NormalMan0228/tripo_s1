@@ -1,7 +1,7 @@
 extends SceneTree
 ## Expedition stages in the real game, in a window, against a QA server whose first stage is short
 ## (demo mode, TRIPOTHON_STAGE_SECONDS, e.g. 12: stages of 12, 16, 20 s). A new account:
-##  1. asks for the forest and gets the tutorial (its first expedition, /v1/me tutorial_done false);
+##  1. explicitly selects the tutorial (/v1/me tutorial_done false);
 ##     the night comes and outlasts its stage (stage_remaining -1, no boss), the creatures are the
 ##     tutorial's species (the goblin) drawn with its own Tripo model, and nobody falls there;
 ##  2. its goals (gather 6, an axe, a fire, 2 kills) are met by a bot playing through the public run
@@ -97,13 +97,13 @@ func run() -> void:
 
 func tutorial() -> void:
 	await create_timer(1.5).timeout
-	app().start_run("forest", "veteran")
+	app().start_run("tutorial", "veteran")
 	if not await wait_until(in_survival, 90.0):
 		check(false, "the first expedition started")
 		return
 	var s := run_state()
 	check(s.get("map_id") == "tutorial" and (s.get("tutorial") == true) and s.get("difficulty") == "relaxed" and int(s.get("stage_count", 0)) == 1,
-		"asking for the forest started the tutorial (relaxed, 1 stage): %s/%s/%s" % [s.get("map_id"), s.get("difficulty"), s.get("stage_count")])
+		"selecting the tutorial starts it (relaxed, 1 stage): %s/%s/%s" % [s.get("map_id"), s.get("difficulty"), s.get("stage_count")])
 	if not await wait_until(func(): return (run_state().get("night", false) == true) and not run_state().get("enemies", []).is_empty(), 60.0):
 		check(false, "the tutorial's night came with its creatures")
 		return
