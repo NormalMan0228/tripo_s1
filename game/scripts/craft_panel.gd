@@ -46,6 +46,8 @@ var job: Dictionary = {}
 var image_data := ""
 var busy := false
 var textures := {}
+var concept_feedback: LineEdit
+var feedback_drafts := {}
 var defaults_applied := false
 ## The steps view while the server works (see _show_working); empty when another view shows.
 var working: Dictionary = {}
@@ -716,6 +718,7 @@ func _show_form() -> void:
 	_update_options()
 
 func _clear_status() -> void:
+	concept_feedback = null
 	for child in status.get_children(): child.queue_free()
 	working = {}
 
@@ -933,6 +936,24 @@ func _show_quote(value: Dictionary) -> void:
 		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		status.add_child(picture)
 		_load_picture(picture, str(concept.get("url", "")))
+		if not str(quote.get("concept_error", "")).is_empty():
+			_label(status, tr("다시 그리지 못해 이전 그림을 유지했어요. 의견을 고쳐 다시 시도할 수 있어요."), 14, false, RpgUi.ACCENT)
+		if not str(concept.get("feedback", "")).is_empty():
+			_label(status, tr("이 그림에 요청한 수정: %s") % str(concept.feedback), 13, true)
+		_label(status, tr("그림에서 바꾸고 싶은 점 (선택 · 500자)"), 14)
+		concept_feedback = LineEdit.new()
+		concept_feedback.name = "ConceptFeedback"
+		concept_feedback.max_length = 500
+		concept_feedback.placeholder_text = tr("예: 지붕은 파랗게, 다리는 짧게. 나머지는 그대로")
+		concept_feedback.custom_minimum_size.y = 40
+		concept_feedback.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var draft: Dictionary = feedback_drafts.get(job_id, {})
+		var picture_number := int(concept.get("draws", 1))
+		if int(draft.get("draws", -1)) == picture_number: concept_feedback.text = str(draft.get("text", ""))
+		var feedback_job := job_id
+		concept_feedback.text_changed.connect(func(text: String) -> void: feedback_drafts[feedback_job] = {"draws": picture_number, "text": text})
+		status.add_child(concept_feedback)
+		_label(status, tr("의견을 쓰면 현재 그림을 수정하고, 비워 두면 새로 그려요. 다시 그리기는 5크레딧이 추가돼요."), 13, true)
 		var words := {"top": tr("위"), "bottom": tr("아래"), "left": tr("왼쪽"), "right": tr("오른쪽")}
 		for side in concept.get("edges", []):
 			if words.has(str(side)): cut.append(str(words[str(side)]))
@@ -957,6 +978,10 @@ func _show_quote(value: Dictionary) -> void:
 		var locked := draws >= int(concept.get("max_draws", 4)) or (cap > 0 and next_total > cap)
 		# A cut picture makes the redraw a step forward too.
 		var redraw := _button(row, tr("다시 그리기 (+5크레딧)"), redraw_concept, "gold" if not cut.is_empty() and not locked else "")
+		if is_instance_valid(concept_feedback):
+			redraw.text = tr("의견 반영해 다시 그리기 (+5크레딧)") if not concept_feedback.text.strip_edges().is_empty() else tr("다시 그리기 (+5크레딧)")
+			concept_feedback.editable = not locked
+			concept_feedback.text_changed.connect(func(text: String) -> void: redraw.text = tr("의견 반영해 다시 그리기 (+5크레딧)") if not text.strip_edges().is_empty() else tr("다시 그리기 (+5크레딧)"))
 		redraw.disabled = locked
 		if redraw.disabled: redraw.tooltip_text = tr("그림은 최대 %d장까지, 1회 한도 안에서 그릴 수 있어요.") % int(concept.get("max_draws", 4))
 		var text_row := _row(status)
@@ -997,7 +1022,8 @@ func confirm(use_picture: bool) -> void:
 func redraw_concept() -> void:
 	if busy or job_id.is_empty(): return
 	busy = true
-	var reply: Dictionary = await tracker.api.post("/v1/studio/jobs/" + job_id + "/redraw", tracker.api.mutation())
+	var feedback := concept_feedback.text.strip_edges() if is_instance_valid(concept_feedback) else ""
+	var reply: Dictionary = await tracker.api.post("/v1/studio/jobs/" + job_id + "/redraw", tracker.api.mutation({"feedback": feedback}))
 	busy = false
 	if not reply.ok:
 		RpgUi.sfx("deny", -6.0)

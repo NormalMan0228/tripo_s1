@@ -197,6 +197,14 @@ class StudioConfirm(Mutation):
     # With a concept picture: build from it (image-to-3D) or ignore it and build from the text.
     use_concept: bool=True
 
+class StudioRedraw(Mutation):
+    feedback: str=Field(default='',max_length=500)
+
+    @field_validator('feedback')
+    @classmethod
+    def trimmed_feedback(cls,value):
+        return value.strip()
+
 class StudioEvent(Mutation):
     version: int=Field(ge=1)
     event: Literal['click','near','leave']
@@ -644,7 +652,7 @@ class Studio:
                 value['reason'],value['refusal']=craft_moderation.failure_reason(value['error'] if value['state'] in ('failed','unknown') else '')
                 concept=value['provenance'].get('concept')
                 if concept:
-                    value['concept']={'url':'/v1/studio/jobs/'+job_id+'/concept?v='+str(concept.get('draws',1)),'draws':concept.get('draws',1),
+                    value['concept']={'url':'/v1/studio/jobs/'+job_id+'/concept?v='+str(concept.get('draws',1)),'draws':concept.get('draws',1),'feedback':concept.get('feedback',''),
                         'max_draws':MAX_CONCEPT_DRAWS,'redraw_credits':CONCEPT_CREDITS,'used':value['provenance'].get('concept_used'),
                         'estimate_with_concept':value['provenance'].get('estimated_tripo_credits'),'estimate_text_only':value['provenance'].get('estimate_text_only'),
                         'edges':concept.get('edges',[])}
@@ -729,13 +737,15 @@ class Studio:
                 return Response(path.read_bytes(),media_type='image/jpeg',headers={'Cache-Control':'no-store'})
 
         @app.post('/v1/studio/jobs/{job_id}/redraw')
-        def redraw(job_id:str,body:Mutation,request:Request):
+        def redraw(job_id:str,body:StudioRedraw,request:Request):
             def edit(conn,user):
                 limits=settings.limits_for(user)
                 row=conn.execute('SELECT * FROM studio_jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
                 if not row:fail('job_not_found',404)
                 quote=json.loads(row['provenance'] or '{}')
                 if row['state']!='awaiting_confirmation' or not quote.get('concept'):fail('cannot_redraw')
+                refused=craft_moderation.check_text(body.feedback)
+                if refused:fail(craft_moderation.refusal_detail(refused,request.headers.get('x-villagen-version','')[:40]),422)
                 if int(quote['concept'].get('draws',1))>=MAX_CONCEPT_DRAWS:fail('concept_redraw_limit',429)
                 # Failed/uncertain pictures can still cost credits. Count accepted attempts
                 # durably under the mutation transaction, not only successful pictures.
@@ -753,10 +763,13 @@ class Studio:
                     except ProviderError as error:fail(error.code,429)
                     if provider_busy(conn,job_id,settings.studio_queue_limit):fail('provider_busy')
                 quote['redraw']=True
+                quote['redraw_feedback']=body.feedback
                 quote['concept_redraw_attempts']=attempts+1
                 conn.execute("UPDATE studio_jobs SET state='queued',provenance=?,updated=? WHERE id=?",(json.dumps(quote),clock(),job_id))
                 return {'id':job_id,'state':'queued'}
-            return mutate(request,body,'studio_redraw:'+job_id,edit)
+            # Preserve replay fingerprints for older clients that send only request_id.
+            replay_body=body if 'feedback' in body.model_fields_set else Mutation(request_id=body.request_id)
+            return mutate(request,replay_body,'studio_redraw:'+job_id,edit)
 
         @app.get('/v1/objects/{object_id}/assembly')
         def assembly(object_id:str,request:Request):
@@ -947,6 +960,7 @@ class Studio:
         limits=self.limits_for_job(job)
         part=plan['parts'][0];entry=parts[part['id']]
         concept=dict(provenance.get('concept') or {'draws':0})
+        feedback=provenance.pop('redraw_feedback','')
         textured=body.material=='textured'
         with self.db.read() as conn:spent=tripo_budget.attempt_credits(conn,job['id'])
         if body.geometry=='tripo':
@@ -971,12 +985,27 @@ class Studio:
             if body.geometry!='tripo':blob=fixture_concept(str(part.get('prompt','')))
             else:
                 tripo=self.provider_for(entry['key']) if entry.get('key') else await self.pick_provider(CONCEPT_CREDITS)
+                route='/generation/text-to-image'
+                payload={'model':'seedream_v4','prompt':prompt}
+                if feedback and concept.get('file'):
+                    # Edit the last approved picture, not a fresh unrelated text drawing.
+                    image_path=self.assets/str(concept['file'])
+                    if image_path.parent.resolve()!=self.assets.resolve() or not image_path.is_file():
+                        raise ProviderError('concept_reference_missing')
+                    if image_path.stat().st_size>IMAGE_UPLOAD_BYTES:raise ProviderError('concept_reference_missing')
+                    reference=await tripo.upload_image('data:image/jpeg;base64,'+base64.b64encode(image_path.read_bytes()).decode())
+                    route='/generation/image-to-image'
+                    payload={'model':'seedream_v5','input':reference,'size':'2K','output_format':'png',
+                             'prompt':('Edit this object reference image. Preserve its identity, style and all details not mentioned in the requested changes. '
+                                       'Keep the complete object visible with wide margins on a neutral background. '
+                                       + (rig_rules.POSE if body.animate else '')
+                                       +' Requested visual changes: '+feedback)}
                 with self.db.transaction() as conn:
                     attempt=tripo_budget.reserve_attempt(conn,limits,job['id'],job['owner_id'],'concept',part['id'],
                         0 if getattr(self.provider,'_in_process_fake',False) else CONCEPT_CREDITS,
                         0,self.clock(),provider_key=getattr(tripo,'fingerprint',''),
                         craft_extra=mesh_credits(mesh_model,textured,True)+rig_rules.credits(body.animate))
-                data=await tripo.request('POST','/generation/text-to-image',{'model':'seedream_v4','prompt':prompt})
+                data=await tripo.request('POST',route,payload)
                 task=data.get('task_id')
                 if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)
                 with self.db.transaction() as conn:tripo_budget.record_task(conn,attempt,task,self.clock())
@@ -1003,7 +1032,7 @@ class Studio:
         name=job['id']+'-concept.jpg'
         target=self.assets/name;temporary=target.with_suffix('.tmp');temporary.write_bytes(blob);temporary.replace(target)
         # Sides where the object reaches the picture edge (it would be built cut): the window warns.
-        concept.update(file=name,draws=int(concept.get('draws',0))+1,edges=await asyncio.to_thread(cut_edges,blob))
+        concept.update(file=name,draws=int(concept.get('draws',0))+1,edges=await asyncio.to_thread(cut_edges,blob),feedback=feedback)
         provenance['concept']=concept
         provenance.pop('concept_error',None);provenance.pop('concept_skipped',None)
         if body.geometry=='tripo':

@@ -13,12 +13,16 @@ from server.tests.test_studio import mutation, account
 class Provider:
     def __init__(self, fail_concept=False):
         self.calls = []
+        self.uploads = []
         self.fail_concept = fail_concept
     async def balance(self): return 10000
     async def request(self, method, path, payload):
         self.calls.append((path, payload))
-        if path.endswith('text-to-image'): return {'task_id': 'concept-%d' % len(self.calls)}
+        if path.endswith(('text-to-image','image-to-image')): return {'task_id': 'concept-%d' % len(self.calls)}
         return {'task_id': 'mesh-%d' % len(self.calls)}
+    async def upload_image(self, image):
+        self.uploads.append(image)
+        return 'uploaded-reference-%d' % len(self.uploads)
     async def task(self, task):
         if task.startswith('concept'):
             if self.fail_concept: return {'status': 'failed'}
