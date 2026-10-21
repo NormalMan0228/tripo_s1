@@ -11,7 +11,8 @@ extends Node3D
 const Residents = preload("res://scripts/residents.gd")
 const Town = preload("res://scripts/town.gd")
 const LoadPace = preload("res://scripts/load_pace.gd")
-const HEIGHT := 1.72
+const ActorSize = preload("res://scripts/actor_size.gd")
+const HEIGHT := ActorSize.HUMAN_HEIGHT
 const SWAP_DISTANCE := 14.0
 ## Longest wait (s) for the walker to look away before swapping in plain sight.
 const SWAP_PATIENCE := 45.0
@@ -52,18 +53,7 @@ func setup(cast: String, facing_yaw: float) -> void:
 	if not scenes.has(path): scenes[path] = LoadPace.take(path)
 	model = (scenes[path] as PackedScene).instantiate()
 	add_child(model)
-	# Normalise to the walker's 1.72 m height with the feet on the ground.
-	var box := AABB()
-	var first := true
-	for node in model.find_children("*", "MeshInstance3D", true, false):
-		var mesh := node as MeshInstance3D
-		var local: AABB = model.global_transform.affine_inverse() * mesh.global_transform * mesh.get_aabb()
-		box = local if first else box.merge(local)
-		first = false
-	if not first and box.size.y > 0.01:
-		var factor := HEIGHT / box.size.y
-		model.scale = Vector3.ONE * factor
-		model.position.y = -box.position.y * factor
+	ActorSize.fit(model,ActorSize.human_height(cast))
 	var animation := model.find_children("*", "AnimationPlayer", true, false)
 	if not animation.is_empty():
 		anim_player = animation[0] as AnimationPlayer

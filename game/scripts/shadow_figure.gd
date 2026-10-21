@@ -44,6 +44,7 @@ extends CharacterBody3D
 const SILHOUETTE := preload("res://shaders/shadow_silhouette.gdshader")
 const VILLAGER := preload("res://shaders/villager_look.gdshader")
 const DayFolk = preload("res://scripts/day_folk.gd")
+const ActorSize = preload("res://scripts/actor_size.gd")
 ## Emote bubbles get a bark in the figure's register (voice_babble.gd; preloads only sfx_bank.gd).
 const VoiceBabble = preload("res://scripts/voice_babble.gd")
 const IxPose = preload("res://scripts/ix/ix_pose.gd")
@@ -64,7 +65,6 @@ const MODEL := "res://assets/explorer_b_wardrobe.glb"
 const MOTION := "res://assets/explorer_b_motion.glb"
 const WALK := "shadow/walk"
 const IDLE := "shadow/idle"
-const BASE_SCALE := 1.7
 const STEP_HEIGHT := 0.36
 ## Walker capsule (0.32) + this body (0.28) + a hair: a resident never steps closer.
 const PLAYER_CLEAR := 0.62
@@ -273,7 +273,7 @@ func configure(entry: Dictionary, owner_folk: Node, graph: RefCounted) -> void:
 	title = TranslationServer.translate(str(entry.title))
 	night_title = title
 	var build: Array = entry.get("build", [1.0, 1.0])
-	height_scale = float(build[0])
+	height_scale = ActorSize.human_height(str(entry.id))/ActorSize.HUMAN_HEIGHT
 	width_scale = float(build[1])
 	pace = float(entry.get("speed", 1.25))
 	roam_center = entry.get("home", Vector2.ZERO)
@@ -317,13 +317,13 @@ func _ready() -> void:
 	visual = Node3D.new()
 	add_child(visual)
 	figure = Node3D.new()
-	figure.scale = Vector3(width_scale, 1.0, width_scale)*BASE_SCALE*height_scale
-	figure.scale.y = BASE_SCALE*height_scale
+	figure.scale = Vector3(width_scale, 1.0, width_scale)
 	visual.add_child(figure)
 	build_body()
+	ActorSize.fit(figure,ActorSize.human_height(str(spec.id)))
 	nameplate = Label3D.new()
 	nameplate.text = title
-	nameplate.position.y = 1.88*height_scale+0.22
+	nameplate.position.y = ActorSize.HUMAN_HEIGHT*height_scale+0.28
 	preload("res://scripts/art.gd").style_nameplate(nameplate, 19)
 	nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	nameplate.no_depth_test = false
@@ -331,7 +331,7 @@ func _ready() -> void:
 	nameplate.add_to_group("npc_nameplates")
 	add_child(nameplate)
 	bubble = Label3D.new()
-	bubble.position.y = 1.88*height_scale+0.62
+	bubble.position.y = nameplate.position.y+0.4
 	bubble.pixel_size = 0.008
 	bubble.font_size = 54
 	bubble.outline_size = 10
@@ -879,7 +879,7 @@ func close_eyes(value: bool) -> void:
 
 ## Places the visual for the pose: seated hips on the origin, a lying body centred on it.
 func apply_layout() -> void:
-	var length := 1.88*height_scale
+	var length := ActorSize.HUMAN_HEIGHT*height_scale
 	match pose:
 		"lie":
 			var dir := Vector3(sin(face_yaw), 0, cos(face_yaw))
@@ -897,7 +897,7 @@ func apply_layout() -> void:
 			layout_offset = Vector3.ZERO
 	visual.position = layout_offset
 	if is_instance_valid(nameplate):
-		nameplate.position.y = (0.75 if pose == "lie" else (1.3 if pose.begins_with("sit") else 1.88))*height_scale+0.22
+		nameplate.position.y = (0.75 if pose == "lie" else (1.3 if pose.begins_with("sit") else ActorSize.HUMAN_HEIGHT))*height_scale+0.28
 		bubble.position.y = nameplate.position.y+0.4
 
 ## Bends the legs after each animation step (the clip rewrites them every advance), with the walker's

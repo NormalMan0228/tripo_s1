@@ -8,6 +8,7 @@ extends Node3D
 ## the species' height (a boss: a big stand-in until its model lands).
 const A = preload("res://scripts/art.gd")
 const Monster = preload("res://scripts/monster.gd")
+const ActorSize = preload("res://scripts/actor_size.gd")
 const AUDIO_PATH := "res://scripts/creature_audio.gd"
 const WINDUP_TEXT := {"brute": "내려찍기!", "wisp": "불꽃!", "boar": "돌진!", "shroom": "포자!"}
 ## A species drawn with another's model says what its behaviour does.
@@ -115,13 +116,18 @@ func build() -> void:
 			if mesh not in eyes and mesh.material_override is StandardMaterial3D:
 				materials.append(mesh.material_override)
 				if tint[1]>0: mesh.material_override.albedo_color=mesh.material_override.albedo_color.lerp(tint[0],tint[1])
-		# A procedural stand-in grows as a whole (its body's own scale animates the crouch).
-		if species!="" and species!=kind and size_hint>0.0: scale=Vector3.ONE*(size_hint/height)
+		# The body animates crouches; a separate frame keeps its size persistent and
+		# leaves labels/effects in world units, just like the authored-model path.
+		var frame := Node3D.new()
+		frame.name="SizeFrame"
+		add_child(frame)
+		body.reparent(frame,false)
+		height=display_height(ActorSize.bounds(body).size.y,size_hint,boss)
+		ActorSize.fit(frame,height)
 	health.position.y=height+HOVER.get(kind,0.0)+0.45
 
 static func display_height(model_height: float, requested: float, is_boss: bool) -> float:
-	var target := requested if requested > 0.0 else model_height
-	return maxf(target, model_height) if is_boss else minf(target, 2.2)
+	return ActorSize.monster_height(model_height,requested,is_boss)
 
 func build_wolf() -> void:
 	A.sphere(body,Vector3(0,0.58,0),Vector3(0.78,0.65,1.2),Color("3c5056"))

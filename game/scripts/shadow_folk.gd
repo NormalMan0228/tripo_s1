@@ -21,6 +21,7 @@ const Minimap = preload("res://scripts/minimap.gd")
 const Residents = preload("res://scripts/residents.gd")
 const LoadPace = preload("res://scripts/load_pace.gd")
 const AnimLod = preload("res://scripts/anim_lod.gd")
+const ActorSize = preload("res://scripts/actor_size.gd")
 const LAYOUT := "res://maps/archipelago/environment_layout.json"
 ## Bridge deck centre lines (environment_layout.json), used if the manifest is missing.
 const BRIDGES := [[Vector2(-11,-36),Vector2(15,-36)],[Vector2(57,-7),Vector2(57,14)],[Vector2(-9,27),Vector2(16,27)],[Vector2(-25,58),Vector2(2,73)]]
@@ -69,7 +70,7 @@ const STAY := ["fish","write"]
 const DAY_MODELS_ENABLED := true
 ## Model height (m) per resident: 보니 grown-up, 솔 a child; the others are 05's P2 residents
 ## (art/characters/body_p2_v1 RES r02, r05-r10), attached as soon as their GLB is in assets/npc.
-const DAY_MODELS := {"boni":1.66,"sol":1.36,"fisher":1.62,"gentleman":1.78,"lamplighter":1.74,"scout":1.66,"kid":1.18,"stroller":1.74,"poet":1.64}
+const DAY_MODELS := {"boni":ActorSize.HUMAN_HEIGHT,"sol":ActorSize.CHILD_HEIGHT,"fisher":ActorSize.HUMAN_HEIGHT,"gentleman":ActorSize.HUMAN_HEIGHT,"lamplighter":ActorSize.HUMAN_HEIGHT,"scout":ActorSize.HUMAN_HEIGHT,"kid":ActorSize.CHILD_HEIGHT,"stroller":ActorSize.HUMAN_HEIGHT,"poet":ActorSize.HUMAN_HEIGHT}
 ## Outdoor activities shown with the model's "work" clip while it stands at its spot.
 const MODEL_WORK := ["craft","garden","tend","farm","sweep"]
 ## The schedule only moves a shadow on screen near the walker; elsewhere it hops
@@ -618,18 +619,7 @@ func attach_day_model(walker: Node) -> void:
 	if model == null: return
 	model.name = "DayModel"
 	walker.visual.add_child(model)
-	# Feet on the ground at the resident's height (the same fit as npc.gd).
-	var box := AABB()
-	var first := true
-	for node in model.find_children("*", "MeshInstance3D", true, false):
-		var mesh := node as MeshInstance3D
-		var local: AABB = model.global_transform.affine_inverse()*mesh.global_transform*mesh.get_aabb()
-		box = local if first else box.merge(local)
-		first = false
-	if not first and box.size.y > 0.01:
-		var factor := float(DAY_MODELS[id])/box.size.y
-		model.scale = Vector3.ONE*factor
-		model.position.y = -box.position.y*factor
+	ActorSize.fit(model,ActorSize.human_height(id))
 	model.visible = false
 	var players := model.find_children("*", "AnimationPlayer", true, false)
 	var player: AnimationPlayer = players[0] if not players.is_empty() else null

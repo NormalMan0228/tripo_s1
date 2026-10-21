@@ -1,6 +1,5 @@
 extends RefCounted
 ## Shared world scale and presentation tuning. Survival speed remains server-owned.
-const CHARACTER_SCALE := 1.7
 const BODY_RADIUS := .32
 const BODY_HEIGHT := 1.5
 const VILLAGE_WALK := 2.8

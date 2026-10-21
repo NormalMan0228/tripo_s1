@@ -15,6 +15,7 @@ const Loader = preload("res://scripts/model_loader.gd")
 const Daylight = preload("res://scripts/daylight.gd")
 const Residents = preload("res://scripts/residents.gd")
 const ControllerProfile = preload("res://scripts/controller_profile.gd")
+const ActorSize = preload("res://scripts/actor_size.gd")
 const DayFolk = preload("res://scripts/day_folk.gd")
 const SfxBank = preload("res://scripts/sfx_bank.gd")
 const BUILDINGS := "res://maps/archipelago/building_placements.json"
@@ -3057,6 +3058,7 @@ static func stand_in_figure(id: String) -> Node3D:
 		var eye := Art.sphere(root,Vector3(x,1.34,0.19),Vector3(0.07,0.05,0.03),Color.WHITE)
 		eye.material_override.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
 	for x in [-0.1,0.1]: Detail.cylinder(root,Vector3(x,0.08,0),0.06,0.16,dark,6)
+	ActorSize.fit(root,ActorSize.human_height(id))
 	return root
 
 ## A resident with their own model (shadow_folk.gd DAY_MODELS) wears it in rooms too, in place of
@@ -3081,23 +3083,7 @@ static func wear_day_model(figure: Node3D, id: String) -> void:
 	if model == null: return
 	model.name = "DayModel"
 	(visual as Node3D).add_child(model)
-	# Feet on the floor at the resident's height (the same fit as shadow_folk and npc.gd).
-	var box := AABB()
-	var first := true
-	for node in model.find_children("*", "MeshInstance3D", true, false):
-		var mesh := node as MeshInstance3D
-		var xf := Transform3D()
-		var walk: Node = mesh
-		while walk != model and walk is Node3D:
-			xf = (walk as Node3D).transform*xf
-			walk = walk.get_parent()
-		var local: AABB = xf*mesh.get_aabb()
-		box = local if first else box.merge(local)
-		first = false
-	if not first and box.size.y > 0.01:
-		var factor := float(heights[id])/box.size.y
-		model.scale = Vector3.ONE*factor
-		model.position.y = -box.position.y*factor
+	ActorSize.fit(model,ActorSize.human_height(id))
 	var players := model.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
 		var player := players[0] as AnimationPlayer

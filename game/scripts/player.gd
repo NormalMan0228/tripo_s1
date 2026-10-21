@@ -1,10 +1,9 @@
 extends CharacterBody3D
 
 const Profile=preload("res://scripts/controller_profile.gd")
+const ActorSize=preload("res://scripts/actor_size.gd")
 const SPEED := Profile.VILLAGE_WALK
-## Whole-model height (m, hair and hats included). Keep adult heroes close to
-## the 1.72 m NPCs, retaining small differences between builds.
-const HERO_MODEL_HEIGHT := {"m1":1.80,"m2":1.78,"m3":1.76,"m4":1.82,"f1":1.76,"f2":1.77,"f3":1.75,"f4":1.76}
+const MODERN_HEROES := ["m1","m2","m3","m4","f1","f2","f3","f4"]
 var controls_enabled := true
 var visual_only := false
 var facing := Vector3.FORWARD
@@ -122,7 +121,7 @@ func _build_explorer() -> void:
 	if avatar.get("character")=="haeru":
 		var actor := preload("res://assets/haeru_v1.glb").instantiate() as Node3D
 		visual.add_child(actor)
-		actor.scale=Vector3.ONE*Profile.CHARACTER_SCALE
+		ActorSize.fit(actor,ActorSize.HUMAN_HEIGHT)
 		# Developer GLB is X-forward; Player visual expects -Z-forward.
 		actor.rotation.y=PI*.5
 		animation_player=actor.find_children("*","AnimationPlayer",true,false)[0]
@@ -139,7 +138,7 @@ func _build_explorer() -> void:
 		var character=preload("res://scripts/style_character.gd").new()
 		character.wardrobe=true
 		visual.add_child(character)
-		character.scale=Vector3.ONE*Profile.CHARACTER_SCALE;character.rotation.y=PI
+		ActorSize.fit(character,ActorSize.HUMAN_HEIGHT);character.rotation.y=PI
 		animation_player=character.animator;hand_skeleton=character.body_skeleton
 		hand_skeleton.modifier_callback_mode_process=Skeleton3D.MODIFIER_CALLBACK_MODE_PROCESS_PHYSICS
 		# Advance once in the motor tick, then let contact IK read the same phase.
@@ -187,7 +186,7 @@ func _build_explorer() -> void:
 					var pivot := Node3D.new()
 					visual.add_child(pivot)
 					pivot.add_child(hero)
-					pivot.scale=Vector3.ONE*(float(HERO_MODEL_HEIGHT.get(str(avatar.get("character","")),Profile.CHARACTER_SCALE))/bounds.size.y)
+					pivot.scale=Vector3.ONE*(ActorSize.HUMAN_HEIGHT/bounds.size.y)
 					hero.position-=Vector3(bounds.get_center().x,bounds.position.y,bounds.get_center().z)
 					# The artisan GLB was exported facing the opposite direction to the
 					# other seven heroes. Align its model, skeleton and hand tools together.
@@ -199,7 +198,7 @@ func _build_explorer() -> void:
 						hand_index=hand_skeleton.find_bone("R_Hand")
 						action_pose=preload("res://scripts/action_pose.gd").new()
 						hand_skeleton.add_child(action_pose)
-						if str(avatar.get("character", "")) in HERO_MODEL_HEIGHT:
+						if str(avatar.get("character", "")) in MODERN_HEROES:
 							var style := preload("res://scripts/hero_style.gd").new()
 							style.actor = self
 							style.character = str(avatar.character)
@@ -233,6 +232,11 @@ func _build_explorer() -> void:
 		else: right_leg=leg
 	for x in [-0.14,0.14]: Art.sphere(visual,Vector3(x,1.37,-0.275),Vector3(0.09,0.12,0.06),Color("263f42"))
 	for y in [0.71,0.88,1.05]: Art.sphere(visual,Vector3(-0.02,y,-0.21),Vector3.ONE*0.055,Color("655442"))
+	var frame := Node3D.new()
+	for child in visual.get_children():
+		visual.remove_child(child);frame.add_child(child)
+	visual.add_child(frame)
+	ActorSize.fit(frame,ActorSize.HUMAN_HEIGHT)
 
 func equip(item: String) -> void:
 	if item==equipped: return
