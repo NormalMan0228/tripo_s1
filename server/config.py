@@ -140,6 +140,10 @@ class Settings:
     # Seconds one submitted Tripo part may take (queued, running or unreachable) before the craft
     # fails and its starseeds come back; the task is never submitted again.
     studio_part_deadline: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_PART_DEADLINE', '1200')))
+    studio_workers: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_WORKERS', '4')))
+    studio_queue_limit: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_QUEUE_LIMIT', '32')))
+    # Total wall time for the first design, including model retries and repairs.
+    studio_design_deadline: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_DESIGN_DEADLINE', '180')))
     # A Tripo task that reports failed is submitted again this many times before the craft fails.
     studio_retries: int = field(default_factory=lambda: int(os.getenv('TRIPOTHON_STUDIO_RETRIES', '2')))
     # Village residents decorate their homes with gifts (server/npc_homes.py). Seconds from a gift
@@ -257,6 +261,10 @@ class Settings:
             raise ValueError('Invalid studio retries')
         if not 60 <= self.studio_part_deadline <= 86400:
             raise ValueError('Invalid studio part deadline')
+        if not 1 <= self.studio_workers <= 8 or not self.studio_workers <= self.studio_queue_limit <= 100:
+            raise ValueError('Invalid studio concurrency or queue limit')
+        if not 30 <= self.studio_design_deadline <= 600:
+            raise ValueError('Invalid studio design deadline')
         if self.fake_tripo:
             from .fake_tripo import FAKE_KEY
             if any(key and key != FAKE_KEY for key in (self.tripo_key, *self.tripo_keys)):

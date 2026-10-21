@@ -8,6 +8,7 @@ import base64
 import hashlib
 import io
 import json
+import logging
 import math
 import threading
 import uuid
@@ -406,8 +407,10 @@ def tripo_requests(conn,user_id,exclude=''):
 
 # A held (unknown) submission waits for an operator and uses no provider capacity, so it does not
 # stop other crafts; its credits still count against the budget (tripo_credits_committed).
-def provider_busy(conn,exclude=''):
-    return conn.execute("SELECT 1 FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled','awaiting_confirmation','unknown') AND id!=?",(exclude,)).fetchone() or         conn.execute("SELECT 1 FROM jobs WHERE state IN ('queued','submitting','generating')").fetchone()
+def provider_busy(conn,exclude='',limit=32):
+    active=conn.execute("SELECT count(*) FROM studio_jobs WHERE state NOT IN ('ready','failed','cancelled','awaiting_confirmation','unknown') AND id!=?",(exclude,)).fetchone()[0]
+    legacy=conn.execute("SELECT count(*) FROM jobs WHERE state IN ('queued','submitting','generating')").fetchone()[0]
+    return active+legacy>=limit
 
 def track(entry,result):
     """Keeps the progress (0-100) a Tripo task poll reports, for the craft window's percentage."""
@@ -447,7 +450,8 @@ class Studio:
         self.db,self.settings,self.clock,self.provider=db,settings,clock,provider
         self.money,self.new_object,self.assets=money,new_object,assets
         self.designer=designer or DesignProvider(settings)
-        self.lock=asyncio.Lock()
+        self.lock=asyncio.Semaphore(settings.studio_workers)
+        self.tasks={}
         # Seconds between polls of a Tripo task the worker waits on inline (concept pictures).
         self.poll_pause=3.0
         self.claims={}
@@ -574,7 +578,7 @@ class Studio:
                 # keeps its starseeds and still counts toward every limit, but does not stop a new craft.
                 if conn.execute("SELECT 1 FROM studio_jobs WHERE owner_id=? AND state NOT IN ('ready','failed','cancelled','unknown')",(user['id'],)).fetchone():fail('generation_pending')
                 if body.geometry=='tripo':
-                    if provider_busy(conn):fail('provider_busy')
+                    if provider_busy(conn,limit=settings.studio_queue_limit):fail('provider_busy')
                     cap=limits.max_credits_per_craft
                     if cap:
                         try:
@@ -690,7 +694,7 @@ class Studio:
                 tripo_job=json.loads(row['request']).get('geometry')=='tripo'
                 if json.loads(row['request']).get('animate') and not settings.rig_anim_enabled:fail('rigging_disabled',503)
                 if tripo_job and not (settings.paid_enabled and settings.tripo_key):fail('live_generation_disabled',503)
-                if tripo_job and provider_busy(conn,job_id):fail('provider_busy')
+                if tripo_job and provider_busy(conn,job_id,settings.studio_queue_limit):fail('provider_busy')
                 if limits.user_total_generation_limit and tripo_requests(conn,user['id'],job_id)>=limits.user_total_generation_limit:
                     fail('user_total_generation_limit',429)
                 quote=json.loads(row['provenance']);parts=json.loads(row['parts'] or '{}')
@@ -747,7 +751,7 @@ class Studio:
                     if limits.tripo_credit_budget and tripo_credits_committed(conn,job_id)+spent+CONCEPT_CREDITS>limits.tripo_credit_budget:fail('tripo_budget_exhausted',429)
                     try:check_tester_budget(conn,limits,CONCEPT_CREDITS)
                     except ProviderError as error:fail(error.code,429)
-                    if provider_busy(conn,job_id):fail('provider_busy')
+                    if provider_busy(conn,job_id,settings.studio_queue_limit):fail('provider_busy')
                 quote['redraw']=True
                 quote['concept_redraw_attempts']=attempts+1
                 conn.execute("UPDATE studio_jobs SET state='queued',provenance=?,updated=? WHERE id=?",(json.dumps(quote),clock(),job_id))
@@ -1054,17 +1058,39 @@ class Studio:
             if state=='failed':self.refund(conn,row)
 
     async def tick(self):
+        # A slow designer must not hold up the next player's finished provider task.
+        for job,task in list(self.tasks.items()):
+            if task.done():
+                del self.tasks[job]
+                if not task.cancelled() and task.exception():
+                    logging.getLogger(__name__).error('Studio worker failed for %s: %s',job,type(task.exception()).__name__)
         with self.db.transaction() as conn:
             # Recover abandoned claims without requiring another server restart.
-            stale=conn.execute("SELECT studio_jobs.* FROM studio_jobs JOIN studio_leases ON job_id=id WHERE expires<=? AND state IN ('planning','submitting')",(self.clock(),)).fetchall()
+            stale=conn.execute("SELECT studio_jobs.* FROM studio_jobs LEFT JOIN studio_leases ON job_id=id WHERE (expires IS NULL OR expires<=?) AND state IN ('planning','submitting')",(self.clock(),)).fetchall()
             for row in stale:
                 state='unknown' if row['state']=='submitting' else 'failed'
                 conn.execute('UPDATE studio_jobs SET state=?,error=? WHERE id=?',(state,'worker_lease_expired',row['id']))
                 if state=='failed' or not animate_job(row):tripo_budget.clear_hold(conn,row['id'])
                 if state=='failed':self.refund(conn,row)
             conn.execute('DELETE FROM studio_leases WHERE expires<=?',(self.clock(),))
-            jobs=[r[0] for r in conn.execute("SELECT id FROM studio_jobs WHERE state IN ('queued','building') AND updated<? ORDER BY created LIMIT 3",(self.clock()-2,))]
-        for job in jobs:await self.process(job)
+            jobs=[r[0] for r in conn.execute("SELECT id FROM studio_jobs WHERE state IN ('queued','building') AND updated<? AND NOT EXISTS (SELECT 1 FROM studio_leases WHERE job_id=studio_jobs.id AND expires>?) ORDER BY updated,created LIMIT ?",(self.clock()-2,self.clock(),max(0,self.settings.studio_workers-len(self.tasks))))]
+        for job in jobs:
+            if job not in self.tasks:self.tasks[job]=asyncio.create_task(self.process(job))
+
+    async def worker(self):
+        try:
+            while True:
+                try:await self.tick()
+                except asyncio.CancelledError:raise
+                except Exception as error:
+                    # A transient database failure cannot silently stop all crafting.
+                    logging.getLogger(__name__).error('Studio scheduler retry: %s',type(error).__name__)
+                await asyncio.sleep(2)
+        finally:
+            tasks=list(self.tasks.values())
+            for task in tasks:task.cancel()
+            await asyncio.gather(*tasks,return_exceptions=True)
+            self.tasks.clear()
 
     async def process(self,job_id):
         async with self.lock:
@@ -1137,7 +1163,9 @@ class Studio:
                         with self.db.transaction() as conn:categories=[r[0] for r in conn.execute('SELECT name FROM asset_categories ORDER BY name LIMIT 100')]
                         request_prompt+='\nExisting category names (reuse a matching kind, otherwise propose a short new kind): '+json.dumps(categories,ensure_ascii=False)
                         request_prompt+=rig_rules.POSE if body.animate else archetypes.designer_hint(body.prompt,body.motion,body.archetype)
-                        plan,program,provenance=await llm_budget.generate(self.db,self.settings,self.clock,job['owner_id'],'craft_design',job_id,self.designer,request_prompt,body.model,body.effort,body.image,style_text)
+                        try:
+                            plan,program,provenance=await asyncio.wait_for(llm_budget.generate(self.db,self.settings,self.clock,job['owner_id'],'craft_design',job_id,self.designer,request_prompt,body.model,body.effort,body.image,style_text),timeout=self.settings.studio_design_deadline)
+                        except asyncio.TimeoutError:raise ProviderError('llm_timeout') from None
                 designed=(plan,program)
                 if body.motion=='static':
                     plan=static_plan(plan,body.prompt,look['prop'],body.dims)

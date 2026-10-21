@@ -230,17 +230,17 @@ def create_app(settings=None, clock=time.time, provider=None, worker_enabled=Tru
                 except asyncio.CancelledError: raise
                 except Exception:
                     job_error(job_id,ProviderError('worker_internal',uncertain=True))
-            await studio.tick()
             await asyncio.sleep(2)
 
     @asynccontextmanager
     async def lifespan(app):
         task = asyncio.create_task(worker()) if worker_enabled else None
-        yield
-        if task:
-            task.cancel()
-            try: await task
-            except asyncio.CancelledError: pass
+        studio_task = asyncio.create_task(studio.worker()) if worker_enabled else None
+        try:yield
+        finally:
+            for pending in (task,studio_task):
+                if pending:pending.cancel()
+            await asyncio.gather(*(pending for pending in (task,studio_task) if pending),return_exceptions=True)
 
     app = FastAPI(title='Tripothon authoritative server',version='0.6.0',lifespan=lifespan,
                   docs_url=None,redoc_url=None,openapi_url=None)

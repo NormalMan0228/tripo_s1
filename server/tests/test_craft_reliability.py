@@ -76,8 +76,10 @@ def test_a_stuck_tripo_part_fails_at_its_deadline_and_refunds(tmp_path):
         value = c.get('/v1/studio/jobs/' + job, headers=a).json()
         assert value['state'] == 'building' and value['progress'] == 0.4
         assert c.get('/v1/me', headers=a).json()['pending_craft'] == {'id': job, 'state': 'building'}
-        # Meanwhile only one craft uses Tripo.
-        assert c.post('/v1/studio/jobs', headers=b, json=mutation(prompt='lamp', geometry='tripo', motion='static')).json()['detail'] == 'provider_busy'
+        # A stuck craft no longer prevents a different player from starting.
+        other=c.post('/v1/studio/jobs', headers=b, json=mutation(prompt='lamp', geometry='tripo', motion='static'))
+        assert other.status_code == 200
+        assert c.post('/v1/studio/jobs/'+other.json()['id']+'/cancel',headers=b,json=mutation()).status_code == 200
         now[0] += 599; run(app, job)
         assert c.get('/v1/studio/jobs/' + job, headers=a).json()['state'] == 'building'
         now[0] += 2; run(app, job)
