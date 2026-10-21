@@ -39,6 +39,12 @@ func transitions(ap: AnimationPlayer,label: String) -> void:
 	Blend.advance(ap,.016667);modifier._process_modification_with_delta(.016667)
 	check(gap(before,pose(rig))<.002,label+" loop seam retains prior pose")
 	modifier.elapsed=modifier.duration
+	var repeat_clip := "attack" if ap.has_animation("attack") else "agree"
+	ap.play(repeat_clip,0);ap.advance(ap.get_animation(repeat_clip).length*.8)
+	before=pose(rig);Blend.play(ap,repeat_clip,.24)
+	modifier._process_modification_with_delta(1.0/60)
+	check(ap.current_animation_position<.001 and gap(before,pose(rig))<.002,label+" repeating action restarts time without resetting visible pose")
+	modifier.elapsed=modifier.duration
 func update_gait(body: Node3D,ap: AnimationPlayer,gait: SkeletonModifier3D) -> void:
 	if gait.has_method("update_motion"):gait.update_motion(1.0/60)
 	else:

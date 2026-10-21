@@ -19,7 +19,7 @@ static func install(animator: AnimationPlayer) -> SkeletonModifier3D:
 	animator.set_meta("pose_transition",modifier)
 	return modifier
 
-static func play(animator: AnimationPlayer,clip: String,seconds := .22,start := -1.0) -> void:
+static func play(animator: AnimationPlayer,clip: String,seconds := .22,start := 0.0) -> void:
 	var modifier=install(animator)
 	if modifier!=null and not animator.assigned_animation.is_empty():modifier.begin(seconds)
 	animator.play(clip,0.0)
