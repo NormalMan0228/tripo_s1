@@ -121,8 +121,12 @@ def check_text(text):
                 return name
     # Korean swearing from the chat list (its English words name ordinary things too: cock, balls...) and
     # the English swears above. Only word masks count: the link pass would hide a particle after a URL.
-    masked = _swears().check(text, info=False)
-    if (masked.blocked or any(a != b and is_hangul(a) for a, b in zip(text, masked.text))
+    # Numeric head-to-body proportions (3등신, 2.5등신의) describe character geometry, not insults.
+    # Only replace that bounded phrase for the profanity check; other words are still checked.
+    swear_text = re.sub(r'(?<![\w.])(?:[1-9]|1[0-2])(?:\.[0-9])?\s*등신(?=(?:의|으로|인|로)?(?:\s|$|[.,!?]))',
+                        lambda match: match.group().replace('등신', '비율'), plain)
+    masked = _swears().check(swear_text, info=False)
+    if (masked.blocked or any(a != b and is_hangul(a) for a, b in zip(swear_text, masked.text))
             or _english_swears().check(text, info=False).masked):
         return 'words'
     return ''
