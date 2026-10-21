@@ -19,11 +19,19 @@ var advances := 0
 var skipped := 0
 var disabled_lod := false
 var focus: Node3D
+var gait: SkeletonModifier3D
+var current_clip := ""
 
 func setup(body: Node3D, drawn: Node3D, player: AnimationPlayer, id: String) -> void:
 	name="ContextMotion";actor=body;model=drawn;animator=player;actor_id=id
 	Motions.configure(animator)
 	animator.callback_mode_process=AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	var blend=preload("res://scripts/motion_blend.gd").install(animator)
+	if blend!=null:
+		gait=preload("res://scripts/ground_gait.gd").new()
+		blend.get_parent().add_child(gait)
+		gait.setup(actor,model,animator,1.0)
+		gait.facing_offset=0.0 if id in ["boni","sol"] else PI/2
 
 func set_talking(active: bool) -> void:
 	if active and not talking: greet()
@@ -46,16 +54,23 @@ func _process(delta: float) -> void:
 	greeting_left=maxf(0.0,greeting_left-delta)
 	var clip := selected_clip()
 	if clip.is_empty(): return
-	var changed := str(animator.current_animation)!=clip
+	var changed := current_clip!=clip
 	if changed:
-		animator.play(clip,.2)
+		preload("res://scripts/motion_blend.gd").play(animator,clip,.24)
+		current_clip=clip
 		if clip in ["relax","look_around","fold_arms","wait","work","dig"]:
 			# A stable per-resident offset avoids synchronized crowd motion.
 			animator.seek(fposmod(float(actor_id.hash()%1009)/1009.0,1.0)*animator.get_animation(clip).length,false)
 	# Agree repeats softly only while a conversation is open. Work resumes on close.
-	elif not animator.is_playing() and (talking or clip=="warm_up"):
-		animator.play(clip,.2)
+	elif (not animator.is_playing() or (animator.get_animation(clip).loop_mode==Animation.LOOP_NONE and animator.current_animation_position>=animator.get_animation(clip).length-.18*animator.speed_scale)) and talking:
+		preload("res://scripts/motion_blend.gd").play(animator,clip,.24)
+		current_clip=clip
 	animator.speed_scale=walk_speed if moving else (1.765 if clip=="greet" else .8 if clip=="agree" else 1.0)
+	if is_instance_valid(gait):
+		gait.update_motion(delta)
+		if moving:
+			var rate: float=gait.playback_speed()
+			if rate>0.0:animator.speed_scale=rate
 	clock+=delta;frames+=1
 	var at := actor.global_position
 	var target := focus.global_position if is_instance_valid(focus) else at
@@ -63,4 +78,4 @@ func _process(delta: float) -> void:
 	if frames%stride!=0 and not changed: skipped+=1;return
 	# A sleeping/lying model holds its pose instead of breathing through the bed.
 	if posture=="lie" and not changed: clock=0.0;skipped+=1;return
-	animator.advance(clock);clock=0.0;advances+=1
+	preload("res://scripts/motion_blend.gd").advance(animator,clock);clock=0.0;advances+=1

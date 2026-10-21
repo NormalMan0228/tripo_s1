@@ -49,6 +49,7 @@ var built := false
 var dying := false
 var hurt_left := 0.0
 var ground_speed := 0.0
+var drawn_speed := 0.0
 var last_snapshot_ms := -1
 var last_snapshot_at := Vector3.ZERO
 var idle_call := 0.0
@@ -276,7 +277,7 @@ func update_snapshot(state: Dictionary, player_at: Vector3) -> void:
 			monster.hit_flash()
 			if phase not in ["windup","charge"]:
 				monster.play("hurt",0.12,1.0,true)  # 0.05 s snapped bones (monster_motion pose pops)
-				hurt_left=monster.length("hurt")
+				hurt_left=maxf(0.0,monster.length("hurt")-.2)
 	last_hp=state.hp
 	health.text=windup_text() if phase=="windup" else "%d / %d" % [state.hp,state.get("max_hp",45)]
 	health.modulate=Color("f08d72") if phase=="windup" else Color("d4dcca")
@@ -374,6 +375,7 @@ func _process(delta: float) -> void:
 	if not dying:
 		var before := position
 		position=position.lerp(target_position,minf(1,delta*15))
+		drawn_speed=Vector2(position.x-before.x,position.z-before.z).length()/maxf(delta,.001)
 		rotation.y=lerp_angle(rotation.y,target_angle,minf(1,delta*10))
 		footfall(position.distance_to(before))
 	idle_call-=delta
@@ -428,5 +430,5 @@ func animate_monster(delta: float, moving: bool) -> void:
 	elif phase=="recover" and kind=="boar":
 		monster.play("idle",0.2,0.5)
 	else:
-		monster.locomote(ground_speed if moving or ground_speed>0.12 else 0.0)
+		monster.locomote(drawn_speed if moving or drawn_speed>.12 else 0.0)
 	clip=monster.clip

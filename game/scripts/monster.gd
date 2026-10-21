@@ -34,6 +34,8 @@ void fragment() {
 }
 """
 static var overlay_shader: Shader
+static var gait_speeds: Dictionary={}
+var foot_gait: SkeletonModifier3D
 
 var species := "wolf"
 var variant := "forest"
@@ -126,6 +128,13 @@ func setup(p_species: String, p_variant: String) -> bool:
 		bounds = box if first else bounds.merge(box)
 		first = false
 	height = maxf(0.3, bounds.end.y) if not first else 1.0
+	var transition=preload("res://scripts/motion_blend.gd").install(player)
+	if transition!=null and species not in ["harpy","imp","gargoyle","frost_wraith","lich"]:
+		foot_gait=preload("res://scripts/ground_gait.gd").new()
+		transition.get_parent().add_child(foot_gait);foot_gait.setup(self,model,player,1.0)
+	if gait_speeds.is_empty() and FileAccess.file_exists(DIR+"gait_speeds.json"):
+		var measured=JSON.parse_string(FileAccess.get_file_as_string(DIR+"gait_speeds.json"))
+		if measured is Dictionary:gait_speeds=measured
 	return true
 
 func _ready() -> void:
@@ -150,10 +159,12 @@ func length(clip_name: String) -> float:
 func play(clip_name: String, blend := 0.15, speed := 1.0, restart := false) -> void:
 	if not has(clip_name): return
 	player.speed_scale = speed
-	if clip == clip_name and not restart and player.is_playing(): return
+	if clip == clip_name and not restart: return
+	var start := 0.0
+	if clip in LOOPS and clip_name in ["walk","run"] and clip in ["walk","run"]:
+		start=fposmod(player.current_animation_position/maxf(.001,length(clip)),1.0)*length(clip_name)
 	clip = clip_name
-	player.play(clip_name, blend)
-	if restart: player.seek(0.0, true)
+	preload("res://scripts/motion_blend.gd").play(player,clip_name,maxf(.12,blend),start)
 
 ## Clip speed that lands this species' blow at `windup` seconds (1.0 when unknown), kept
 ## within 0.5-1.8x so the motion still reads.
@@ -163,18 +174,19 @@ func attack_speed(windup: float) -> float:
 	return clampf(at / windup, 0.5, 1.8)
 
 func finished() -> bool:
-	return player == null or not player.is_playing() or (clip not in LOOPS and player.current_animation_position >= length(clip) - 0.02)
+	return player == null or not player.is_playing() or (clip not in LOOPS and player.current_animation_position >= length(clip) - .20*maxf(.05,player.speed_scale))
 
 ## Locomotion clip and speed for a measured ground speed.
 func locomote(ground_speed: float) -> void:
-	var walk_ref: float = WALK_REF.get(species, 1.0)*stride
-	var run_ref: float = RUN_REF.get(species, 2.0)*stride
+	var measured: Dictionary=gait_speeds.get(species+"_"+variant,{})
+	var walk_ref: float = float(measured.get("walk",WALK_REF.get(species,1.0)))*stride
+	var run_ref: float = float(measured.get("run",RUN_REF.get(species,2.0)))*stride
 	if ground_speed < 0.12:
 		play("idle", 0.25)
-	elif ground_speed > walk_ref * 1.55 and has("run"):
-		play("run", 0.2, clampf(ground_speed / run_ref, 0.7, 2.2))
+	elif ground_speed > float(WALK_REF.get(species,1.0))*stride * (1.35 if clip=="run" else 1.7) and has("run"):
+		play("run", 0.2, clampf(ground_speed / maxf(.05,run_ref), .05, 3.5))
 	else:
-		play("walk", 0.2, clampf(ground_speed / walk_ref, 0.6, 1.6))
+		play("walk", 0.2, clampf(ground_speed / maxf(.05,walk_ref), .05, 3.5))
 
 func hit_flash() -> void:
 	flash = 1.0
@@ -190,11 +202,15 @@ func lod_stride() -> int:
 	return 3
 
 func _process(delta: float) -> void:
+	if is_instance_valid(foot_gait):
+		foot_gait.update_motion(delta)
+		var rate: float=foot_gait.playback_speed()
+		if rate>0.0:player.speed_scale=rate
 	if is_instance_valid(player) and player.callback_mode_process == AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL:
 		lod_clock += delta
 		lod_frame += 1
 		if lod_frame % lod_stride() == 0:
-			player.advance(lod_clock)
+			preload("res://scripts/motion_blend.gd").advance(player,lod_clock)
 			lod_clock = 0.0
 	if overlay == null: return
 	flash = maxf(0.0, flash - delta * 5.0)

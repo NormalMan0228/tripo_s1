@@ -1,0 +1,46 @@
+{
+  "basilisk_quarry": {
+    "run": 2.165,
+    "walk": 0.553
+  },
+  "boar_forest": {
+    "run": 0.67,
+    "walk": 0.319
+  },
+  "boar_frost": {
+    "run": 0.982,
+    "walk": 0.44
+  },
+  "boar_quarry": {
+    "run": 0.356,
+    "walk": 0.215
+  },
+  "centipede_forest": {
+    "run": 0.685,
+    "walk": 0.394
+  },
+  "chimera_quarry": {
+    "run": 2.765,
+    "walk": 0.733
+  },
+  "dragon_frost": {
+    "run": 3.421,
+    "walk": 0.773
+  },
+  "naga_quarry": {
+    "run": 0.62,
+    "walk": 0.268
+  },
+  "wolf_forest": {
+    "run": 0.82,
+    "walk": 0.472
+  },
+  "wolf_frost": {
+    "run": 0.576,
+    "walk": 0.322
+  },
+  "wolf_quarry": {
+    "run": 0.658,
+    "walk": 0.628
+  }
+}

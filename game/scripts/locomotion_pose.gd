@@ -2,6 +2,8 @@ extends SkeletonModifier3D
 ## Contact-aware lower-body IK over the reviewed clips; no face/hand/mesh edits.
 const FINGER_PARTS := ["Thumb_","Index_","Middle_","Ring_","Little_"]
 var actor: Node3D
+var forward_sign := -1.0
+var preserve_bend := false
 var legs: Array[Dictionary]=[]
 var phase := 0.0
 var blend := 0.0
@@ -14,7 +16,7 @@ var previous_solved: Dictionary={}
 
 func smooth_solved_pose(skeleton: Skeleton3D,delta: float,legs_only: bool) -> void:
 	# Contact releases and clip transitions share a finite angular velocity.
-	# Body 20 rad/s; legs 24 rad/s preserve reach without a one-frame pose swap.
+	# Body 16 rad/s; legs 18 rad/s preserve reach without a one-frame pose swap.
 	# Normal source poses pass through; only a discontinuous target is limited.
 	for index in skeleton.get_bone_count():
 		var is_leg := false
@@ -35,22 +37,36 @@ func smooth_solved_pose(skeleton: Skeleton3D,delta: float,legs_only: bool) -> vo
 		if previous_solved.has(index):
 			var old: Quaternion=previous_solved[index]
 			var angle := old.angle_to(target)
-			var weight := minf(1.0,(24.0 if legs_only else 20.0)*delta/maxf(.00001,angle))
+			var weight := minf(1.0,(18.0 if legs_only else 16.0)*delta/maxf(.00001,angle))
 			target=old.slerp(target,weight)
 		skeleton.set_bone_pose_rotation(index,target);previous_solved[index]=target
+
+func body_basis() -> Basis:return actor.visual.global_basis
+func motion_speed() -> float:return actor.locomotion_velocity.length()
+func motion_clip() -> String:return actor.current_clip
+func motion_phase() -> float:return actor.gait_phase
+
+func leg_bone(skeleton: Skeleton3D,side: String,part: String) -> int:
+	var long_side := "Left" if side=="L" else "Right"
+	var mix: String={"Thigh":"UpLeg","Calf":"Leg","Foot":"Foot"}[part]
+	var cast: String={"Thigh":"UpperLeg","Calf":"LowerLeg","Foot":"Foot"}[part]
+	for name in [side+"_"+part,"mixamorig_"+long_side+mix,"mixamorig:"+long_side+mix,cast+"."+side,part+"."+side]:
+		var index := skeleton.find_bone(name)
+		if index>=0:return index
+	return -1
 
 func configure(player: Node3D) -> void:
 	actor=player
 	var skeleton := get_skeleton()
 	for side in ["L","R"]:
-		var hip := skeleton.find_bone(side+"_Thigh")
-		var knee := skeleton.find_bone(side+"_Calf")
-		var foot := skeleton.find_bone(side+"_Foot")
+		var hip := leg_bone(skeleton,side,"Thigh")
+		var knee := leg_bone(skeleton,side,"Calf")
+		var foot := leg_bone(skeleton,side,"Foot")
 		if mini(hip,mini(knee,foot))<0:continue
 		var a := skeleton.global_transform*skeleton.get_bone_global_rest(hip).origin
 		var b := skeleton.global_transform*skeleton.get_bone_global_rest(knee).origin
 		var c := skeleton.global_transform*skeleton.get_bone_global_rest(foot).origin
-		var offset: Vector3=actor.visual.global_basis.inverse()*(c-actor.global_position)
+		var offset: Vector3=body_basis().inverse()*(c-actor.global_position)
 		legs.append({"hip":hip,"knee":knee,"foot":foot,"offset":offset,"reach":a.distance_to(b)+b.distance_to(c),"contact":false,"target":c,"start":c,"last_phase":0.0})
 
 func rotate_joint(skeleton: Skeleton3D,index: int,basis: Basis,weight: float) -> void:
@@ -72,8 +88,9 @@ func solve(skeleton: Skeleton3D,leg: Dictionary,target_world: Vector3,weight: fl
 	var distance := clampf(hip.origin.distance_to(target),absf(length_a-length_b)+.001,length_a+length_b-.003)
 	var direction := (target-hip.origin).normalized()
 	# Knee bends along the character's facing direction, expressed in rig space.
-	var forward: Vector3=skeleton.global_basis.inverse()*(-actor.visual.global_basis.z)
-	var pole := (forward-direction*forward.dot(direction)).normalized()
+	var forward: Vector3=skeleton.global_basis.inverse()*(body_basis().z*forward_sign)
+	var bend := knee.origin-hip.origin if preserve_bend else forward
+	var pole := (bend-direction*bend.dot(direction)).normalized()
 	if pole.length_squared()<.01:pole=Vector3.FORWARD
 	var along := (length_a*length_a-length_b*length_b+distance*distance)/(2.0*distance)
 	var bent := hip.origin+direction*along+pole*sqrt(maxf(0,length_a*length_a-along*along))
@@ -91,7 +108,7 @@ func solve(skeleton: Skeleton3D,leg: Dictionary,target_world: Vector3,weight: fl
 ## True when a foot point sits on (or near) the other leg's side of the body.
 func crossed(leg: Dictionary,point: Vector3) -> bool:
 	var side: float=float(leg.offset.x)
-	var local: Vector3=actor.visual.global_basis.orthonormalized().inverse()*(point-actor.global_position)
+	var local: Vector3=body_basis().orthonormalized().inverse()*(point-actor.global_position)
 	return local.x*signf(side)<absf(side)*.25
 
 func cycle_for_speed(actual_speed: float) -> float:
@@ -106,26 +123,28 @@ func _process_modification_with_delta(delta: float) -> void:
 	var skeleton := get_skeleton()
 	# Solve contacts against the filtered pelvis before applying leg corrections.
 	smooth_solved_pose(skeleton,delta,false)
-	speed=actor.locomotion_velocity.length()
+	speed=motion_speed()
 	running=speed>3.4
-	var active: bool=speed>.12 and (actor.current_clip=="walk" or actor.current_clip=="run")
+	var active: bool=speed>.12 and (motion_clip()=="walk" or motion_clip()=="run")
 	blend=lerpf(blend,1.0 if active else 0.0,1.0-exp(-16.0*delta))
 	if not active:
 		contact_error=0
 		contact_vertical_error=0
-		for leg in legs:leg.contact=false
+		for leg in legs:
+			if blend>.01:solve(skeleton,leg,leg.target,blend)
+			else:leg.contact=false
 		smooth_solved_pose(skeleton,delta,true)
 		return
 	var stance := .38 if running else .50
 	cycle_seconds=cycle_for_speed(speed)
-	phase=actor.gait_phase
-	var forward: Vector3=-actor.visual.global_basis.z.normalized()
+	phase=motion_phase()
+	var forward: Vector3=body_basis().z.normalized()*forward_sign
 	var footprint := speed*cycle_seconds*stance
 	contact_error=0
 	for i in 2:
 		var leg: Dictionary=legs[i]
 		var p := fposmod(phase+float(i)*.5,1.0)
-		var home: Vector3=actor.global_position+actor.visual.global_basis*leg.offset
+		var home: Vector3=actor.global_position+body_basis()*leg.offset
 		if p<stance:
 			if not leg.contact:
 				leg.target=home+forward*(footprint*(.5-p/stance))

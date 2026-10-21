@@ -166,6 +166,9 @@ func _build_character() -> void:
 							style.actor = self
 							style.character = str(avatar.character)
 							hand_skeleton.add_child(style)
+						locomotion_pose=preload("res://scripts/locomotion_pose.gd").new()
+						hand_skeleton.add_child(locomotion_pose)
+						locomotion_pose.configure(self)
 						action_pose.modification_processed.connect(update_tool_pose)
 					if not controllers.is_empty():
 						animation_player=controllers[0]
@@ -489,7 +492,7 @@ func _physics_process(delta: float) -> void:
 		if current_clip!=desired:
 			var preserve_gait: bool=desired in ["walk","run"] and is_instance_valid(locomotion_pose)
 			current_clip=desired
-			animation_player.play(desired,0.08 if acting else 0.18)
+			preload("res://scripts/motion_blend.gd").play(animation_player,desired,.12 if acting else .24)
 			if preserve_gait:
 				animation_player.seek(gait_phase*animation_player.get_animation(desired).length,false)
 			if acting and desired==action_clip: animation_player.seek(action_start,true)
@@ -503,7 +506,7 @@ func _physics_process(delta: float) -> void:
 			var lod := preload("res://scripts/anim_lod.gd")
 			var gap: int=1 if controls_enabled or acting or interacting else lod.stride(lod.planes(get_viewport().get_camera_3d()),global_position,global_position)
 			if animation_frame%gap==0:
-				animation_player.advance(animation_clock);animation_clock=0.0
+				preload("res://scripts/motion_blend.gd").advance(animation_player,animation_clock);animation_clock=0.0
 			if desired in ["walk","run"]:
 				gait_phase=fposmod(animation_player.current_animation_position/animation_player.get_animation(desired).length,1.0)
 		visual_lift=0.0

@@ -49,9 +49,10 @@ func run_review() -> void:
 			trace.append({"clip":player.current_clip,"speed":speed,"phase":player.gait_phase,"ik_phase":player.locomotion_pose.phase,"contact_error":player.locomotion_pose.contact_error})
 	Input.action_release("move_right")
 	var out := ProjectSettings.globalize_path("res://../artifacts/production-lab-20261003")
+	DirAccess.make_dir_recursive_absolute(out)
 	var report := {"samples":trace.size(),"gait_transitions":transition_count,"max_transition_phase_error":max_phase_error,
 		"max_joint_step_deg_per_60hz":max_step,"max_step_bone":max_step_bone,"max_step_clip":max_step_clip,"max_motor_excess_m":max_excess,"idle_after_release":player.current_clip=="idle",
-		"finger_samples":player.finger_pose.samples.size(),"provider_calls":0,
+		"finger_samples":player.finger_pose.samples.size() if is_instance_valid(player.finger_pose) else 0,"provider_calls":0,
 		"pass":transition_count==2 and max_phase_error<.0001 and max_excess<.001 and max_step<25 and player.current_clip=="idle"}
 	var f := FileAccess.open(out.path_join("game-continuity.json"),FileAccess.WRITE);f.store_string(JSON.stringify(report,"  "));f.close()
 	f=FileAccess.open(out.path_join("game-continuity-trace.json"),FileAccess.WRITE);f.store_string(JSON.stringify(trace));f.close()
