@@ -311,3 +311,10 @@
 검증: 9개 스타일의 미리보기/텍스트 3D 요청, 3개 스타일의 참고 이미지 편집, 직접/병합 경로, 9개 스타일의 최대 길이 보존을 포함하여 관련 서버 검사 172개 통과. 실제 유료 생성은 실행하지 않아 외형 결과의 품질은 검증하지 않았습니다. 기록: artifacts/player-appearance-tests.log. 공개 API 길이 조건: https://developers.tripo3d.ai/en/docs/generation-text-to-model/standard
 
 배포 결과는 이어지는 확인 항목에 기록합니다. 기존 0.11.9.10 설치파일을 다시 만들 필요가 없는 서버 변경입니다.
+
+
+### 사용자 외형 지시 수정 배포 확인
+
+- 2026-10-21T17:25:24.529372+09:00: 운영 서버 0.11.9.10 / `ae44be79`, 정상 응답·점검 해제를 확인했습니다.
+- 예고 대기 0분, 기존 설치파일과 자동 패치를 그대로 사용합니다. 새 제작/다시 그리기부터 수정된 지시가 적용됩니다. 이미 완성된 이미지와 3D는 자동 변경하지 않습니다.
+- 배포 근거: `artifacts/appearance-hotfix-verification.json`, `artifacts/appearance-hotfix-deploy.log`.
