@@ -32,7 +32,9 @@ static func advance(animator: AnimationPlayer,delta: float) -> void:
 		# Hold the visible end pose across a loop seam, then ease into its beginning.
 		if animation.loop_mode==Animation.LOOP_LINEAR and animator.current_animation_position+delta*animator.speed_scale>=animation.length:
 			var modifier=install(animator)
-			if modifier!=null:modifier.begin(minf(.16,animation.length*.2))
+			if modifier!=null:
+				var seam := minf(.045,animation.length/maxf(.05,absf(animator.speed_scale))*.06) if clip in ["walk","run"] else minf(.16,animation.length*.2)
+				modifier.begin(seam)
 	animator.advance(delta)
 
 func begin(seconds: float) -> void:
@@ -43,6 +45,13 @@ func begin(seconds: float) -> void:
 	else:
 		source.clear()
 		for bone in skeleton.get_bone_count():source.append(skeleton.get_bone_pose(bone))
+	# Locomotion IK is applied after this modifier. Carry its last displayed
+	# rotations into a new action instead of snapping back to the uncorrected rig.
+	for child in skeleton.get_children():
+		if child is SkeletonModifier3D and child.get("previous_solved") is Dictionary:
+			var rotations: Dictionary=child.get("previous_solved")
+			for bone in rotations:
+				if bone>=0 and bone<source.size():source[bone].basis=Basis(rotations[bone]).scaled(source[bone].basis.get_scale())
 	shown=source.duplicate();duration=maxf(.001,seconds);elapsed=0.0
 
 func _process_modification_with_delta(delta: float) -> void:

@@ -1,5 +1,10 @@
 extends SceneTree
 ## Exercises the actual shipped Player without accounts, server or paid services.
+class DisplayedPose extends SkeletonModifier3D:
+	var rotations: Array[Quaternion]=[]
+	func _process_modification_with_delta(_delta: float) -> void:
+		var skeleton := get_skeleton();rotations.clear()
+		for i in skeleton.get_bone_count():rotations.append(skeleton.get_bone_pose_rotation(i))
 func _initialize() -> void:call_deferred("run_review")
 func run_review() -> void:
 	var stage := Node3D.new();root.add_child(stage)
@@ -8,6 +13,7 @@ func run_review() -> void:
 	var box := BoxShape3D.new();box.size=Vector3(80,.2,80);shape.shape=box;floor.position.y=-.1
 	var player=preload("res://scripts/player.gd").new();stage.add_child(player)
 	await process_frame
+	var displayed := DisplayedPose.new();player.hand_skeleton.add_child(displayed)
 	var previous_position: Vector3=player.position
 	var previous: Array=[]
 	var previous_phase := 0.0
@@ -34,15 +40,15 @@ func run_review() -> void:
 			var rotations: Array=[]
 			for i in player.hand_skeleton.get_bone_count():
 				# SkeletonModifier restores the base pose after submission to the skin.
-				# Sample the modifier's final rotation for corrected leg bones.
-				var q: Quaternion=player.locomotion_pose.previous_solved.get(i,player.hand_skeleton.get_bone_pose_rotation(i));rotations.append(q)
+				# Sample after every modifier: the actual pose submitted to the skin.
+				var q: Quaternion=displayed.rotations[i] if displayed.rotations.size()==player.hand_skeleton.get_bone_count() else player.hand_skeleton.get_bone_pose_rotation(i);rotations.append(q)
 				if not previous.is_empty():
 					var step := rad_to_deg(q.angle_to(previous[i]))/maxf(1,dt*60)
 					if step>max_step:
 						max_step=step;max_step_bone=player.hand_skeleton.get_bone_name(i);max_step_clip=player.current_clip
 			previous=rotations
 			if player.current_clip!=previous_clip and previous_clip in ["walk","run"] and player.current_clip in ["walk","run"]:
-				var expected := fposmod(previous_phase+dt/player.locomotion_pose.cycle_for_speed(speed),1)
+				var expected := fposmod(previous_phase+dt*player.animation_player.speed_scale/player.animation_player.get_animation(player.current_clip).length,1)
 				max_phase_error=maxf(max_phase_error,absf(wrapf(player.gait_phase-expected,-.5,.5)))
 				transition_count+=1
 			previous_phase=player.gait_phase;previous_clip=player.current_clip

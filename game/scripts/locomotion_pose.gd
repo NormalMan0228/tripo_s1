@@ -4,6 +4,7 @@ const FINGER_PARTS := ["Thumb_","Index_","Middle_","Ring_","Little_"]
 var actor: Node3D
 var forward_sign := -1.0
 var preserve_bend := false
+var authored_run := false
 var legs: Array[Dictionary]=[]
 var phase := 0.0
 var blend := 0.0
@@ -121,6 +122,13 @@ func cycle_for_speed(actual_speed: float) -> float:
 func _process_modification_with_delta(delta: float) -> void:
 	if not is_instance_valid(actor) or legs.size()!=2:return
 	var skeleton := get_skeleton()
+	# Running has an authored flight phase and knee lift. The walking contact
+	# solver must not replace that trajectory with a low synthetic foot arc.
+	if authored_run and motion_clip()=="run":
+		blend=0.0;contact_error=0.0;contact_vertical_error=0.0
+		for leg in legs:leg.contact=false
+		previous_solved.clear()
+		return
 	# Solve contacts against the filtered pelvis before applying leg corrections.
 	smooth_solved_pose(skeleton,delta,false)
 	speed=motion_speed()

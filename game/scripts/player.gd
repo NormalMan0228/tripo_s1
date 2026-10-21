@@ -169,6 +169,7 @@ func _build_character() -> void:
 						locomotion_pose=preload("res://scripts/locomotion_pose.gd").new()
 						hand_skeleton.add_child(locomotion_pose)
 						locomotion_pose.configure(self)
+						locomotion_pose.authored_run=true
 						action_pose.modification_processed.connect(update_tool_pose)
 					if not controllers.is_empty():
 						animation_player=controllers[0]
@@ -496,7 +497,7 @@ func _physics_process(delta: float) -> void:
 			if preserve_gait:
 				animation_player.seek(gait_phase*animation_player.get_animation(desired).length,false)
 			if acting and desired==action_clip: animation_player.seek(action_start,true)
-		if is_instance_valid(locomotion_pose) and desired in ["walk","run"]:
+		if is_instance_valid(locomotion_pose) and desired=="walk":
 			var seconds: float=locomotion_pose.cycle_for_speed(locomotion_velocity.length())
 			animation_player.speed_scale=animation_player.get_animation(desired).length/seconds
 		else:

@@ -23,14 +23,16 @@ const RIM := {"forest": Color("86d39a"), "quarry": Color("ff9a52"), "frost": Col
 const OVERLAY_CODE := """
 shader_type spatial;
 render_mode unshaded, blend_add, depth_draw_never, cull_back, shadows_disabled;
-uniform sampler2D glow_map : source_color, filter_linear_mipmap;
+uniform sampler2D glow_map : source_color, hint_default_black, filter_linear_mipmap;
+uniform bool has_glow_map = false;
 uniform vec3 rim_color : source_color = vec3(0.5, 0.8, 0.6);
 uniform float rim = 0.22;
 uniform float glow = 0.6;
 uniform float flash = 0.0;
 void fragment() {
 	float edge = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
-	ALBEDO = rim_color * edge * rim + texture(glow_map, UV).rgb * glow + vec3(1.0, 0.88, 0.72) * flash * (0.35 + edge);
+	vec3 mapped_glow = has_glow_map ? texture(glow_map, UV).rgb * glow : vec3(0.0);
+	ALBEDO = rim_color * edge * rim + mapped_glow + vec3(1.0, 0.88, 0.72) * flash * (0.08 + edge * 0.22);
 }
 """
 static var overlay_shader: Shader
@@ -44,6 +46,7 @@ var player: AnimationPlayer
 var clip := ""
 var height := 1.0
 var overlay: ShaderMaterial
+var overlays: Array[ShaderMaterial]=[]
 var glow := 0.6
 var rim := 0.22
 var flash := 0.0
@@ -117,11 +120,16 @@ func setup(p_species: String, p_variant: String) -> bool:
 	var first := true
 	for mesh in model.find_children("*", "MeshInstance3D", true, false):
 		var instance := mesh as MeshInstance3D
-		instance.material_overlay = overlay
+		var mesh_overlay: ShaderMaterial=overlay if overlays.is_empty() else ShaderMaterial.new()
+		mesh_overlay.shader=overlay_shader;mesh_overlay.set_shader_parameter("rim_color",RIM[variant])
+		overlays.append(mesh_overlay);instance.material_overlay=mesh_overlay
 		for surface in instance.mesh.get_surface_count():
 			var material := instance.get_active_material(surface) as StandardMaterial3D
-			if material and material.emission_enabled and material.emission_texture:
-				overlay.set_shader_parameter("glow_map", material.emission_texture)
+			# An overlay spans this mesh, not an individual surface. Only reuse a
+			# matching single-surface map; other surfaces keep their own emission.
+			if instance.mesh.get_surface_count()==1 and material and material.emission_enabled and material.emission_texture:
+				mesh_overlay.set_shader_parameter("glow_map",material.emission_texture)
+				mesh_overlay.set_shader_parameter("has_glow_map",true)
 		# Skinned GLB meshes are exported in the model root space (metres); the armature node's scale
 		# only applies to the skeleton, so the rest AABB is already the in-game size.
 		var box := instance.get_aabb() if instance.skin else relative_transform(instance, model) * instance.get_aabb()
@@ -218,10 +226,10 @@ func _process(delta: float) -> void:
 	# caller changes it, the flash only while it fades.
 	if absf(glow - sent_glow) > 0.01:
 		sent_glow = glow
-		overlay.set_shader_parameter("glow", glow)
+		for layer in overlays:layer.set_shader_parameter("glow", glow)
 	if rim != sent_rim:
 		sent_rim = rim
-		overlay.set_shader_parameter("rim", rim)
+		for layer in overlays:layer.set_shader_parameter("rim", rim)
 	if flash != sent_flash:
 		sent_flash = flash
-		overlay.set_shader_parameter("flash", flash)
+		for layer in overlays:layer.set_shader_parameter("flash", flash)
