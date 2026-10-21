@@ -40,6 +40,8 @@ def world(tmp_path):
             calls.append((path,payload))
             if faults.get('uncertain') and path.endswith(faults['uncertain']):
                 raise httpx.ReadTimeout('ambiguous',request=request)
+            if faults.get('reject') and path.endswith(faults['reject']):
+                return httpx.Response(faults.get('reject_status',429),json={'code':1})
         if '/tasks/' in path:
             task=path.rsplit('/',1)[-1];kind=tasks[task]
             if faults.get('poll_once')==kind:
@@ -180,6 +182,22 @@ def test_ambiguous_submission_holds_reservation_without_resubmit(world,kind):
     assert len(calls)==count
     with app.state.db.transaction() as db:assert tripo_credits_committed(db)==55
     assert c.get('/v1/me',headers=h).json()['shards']==445
+
+
+@pytest.mark.parametrize('kind',['rig','retarget'])
+@pytest.mark.parametrize('status,code',[(429,'upstream_rate_limit'),(401,'upstream_authentication')])
+def test_rejected_rig_submission_does_not_repeat_or_accumulate_reservations(world,kind,status,code):
+    app,c,h,calls,faults=world;faults.update(reject=kind,reject_status=status)
+    job,_=start(world);result,_=finish(world,job)
+    assert result['state']=='failed' and result['error']==code,result
+    assert sum(path.endswith(kind) for path,_ in calls)==1
+    with app.state.db.read() as db:
+        attempts=db.execute('SELECT count(*) FROM tripo_attempts WHERE job_id=?',(job,)).fetchone()[0]
+    for _ in range(3):asyncio.run(app.state.studio.process(job))
+    with app.state.db.read() as db:
+        assert db.execute('SELECT count(*) FROM tripo_attempts WHERE job_id=?',(job,)).fetchone()[0]==attempts
+    assert sum(path.endswith(kind) for path,_ in calls)==1
+    assert c.get('/v1/me',headers=h).json()['shards']==500
 
 
 def test_animation_deadline_refunds(world):

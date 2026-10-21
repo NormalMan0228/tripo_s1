@@ -1399,7 +1399,11 @@ class Studio:
                     'tripo_credits_consumed':0,'known_tripo_credits':0,'billing_complete':True}))
             # Poll/download errors keep the paid task ID. Never submit it again; past the part's deadline
             # the craft fails (and is refunded) instead of waiting on Tripo forever.
-            if not error.uncertain and 'parts' in locals() and any((p.get('task') and p['state']=='generating') or (p.get('image_task') and p['state']=='image_generating') or p['state'] in RIG_STATES for p in parts.values()) and error.code in ('upstream_unreachable','upstream_unavailable','upstream_rate_limit','asset_download_failed','key_not_configured','upstream_authentication','upstream_non_json','upstream_invalid_json'):
+            with self.db.read() as conn:
+                submitting=conn.execute('SELECT state FROM studio_jobs WHERE id=?',(job_id,)).fetchone()[0]=='submitting'
+            # A rejected POST has no task to poll. Retrying a pending rig here would
+            # reserve and POST again on every tick until the craft's budget runs out.
+            if not submitting and not error.uncertain and 'parts' in locals() and any((p.get('task') and p['state']=='generating') or (p.get('image_task') and p['state']=='image_generating') or p['state'] in RIG_STATES for p in parts.values()) and error.code in ('upstream_unreachable','upstream_unavailable','upstream_rate_limit','asset_download_failed','key_not_configured','upstream_authentication','upstream_non_json','upstream_invalid_json'):
                 try:
                     self.overdue(parts)
                     self.update(job_id,state='building',error=error.code,parts=json.dumps(parts));return
