@@ -71,19 +71,19 @@ def validate_plan(data):
     return plan
 
 
-def simple_plan(request, prop='high-quality semi-realistic game prop with believable proportions and real materials, not toy-like', dims=None):
+def simple_plan(request, prop='', dims=None):
     """The cheapest craft: the player's words go straight to Tripo as one static
     mesh. No LLM design step, no moving parts. dims: the box the player dragged
     ([width, height, depth] m), named in the prompt and used as the part's size."""
-    words=' '.join(request.split())[:300]
+    words=' '.join(request.split())[:800]
     box=[float(v) for v in dims] if dims else [1.2,1.2,1.2]
     shape=(', '+proportions(dims)) if dims else ''
     return validate_plan({'title':words[:60] or 'object','category':'decoration','parts':[{
-        'id':'whole','parent':'','prompt':('A single '+prop+', clean silhouette, no base plate'+shape+': '+words)[:800],
+        'id':'whole','parent':'','prompt':(words+'. Selected style: '+prop+shape)[:800],
         'shape':'box','size':box,'position':[0,box[1]/2,0],'color':'#c9a46e'}]})
 
 
-def static_plan(plan,request,prop='high-quality semi-realistic game prop with believable proportions and real materials',dims=None):
+def static_plan(plan,request,prop='',dims=None):
     """Static furniture is one complete mesh, never separately billed hidden parts. Its box is the
     designed parts' overall extent, so the game keeps the designer's real-world size. dims (the box
     the player dragged) puts its proportions into the Tripo prompt."""
@@ -95,7 +95,7 @@ def static_plan(plan,request,prop='high-quality semi-realistic game prop with be
         part['prompt']=(shape+words)[:800]
         return {**plan,'parts':[part]}
     first=plan['parts'][0]
-    prompt=('Complete assembled static furniture, '+prop+'. '+shape+request+' Visual components: '+
+    prompt=('Complete assembled subject: '+request+'. Selected style: '+prop+'. '+shape+' Visual components: '+
             '; '.join(p['prompt'] for p in plan['parts']))[:800]
     return validate_plan({'title':plan['title'],'category':plan['category'],'parts':[{
         'id':'whole','parent':'','prompt':prompt,'shape':first['shape'],

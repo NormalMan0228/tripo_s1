@@ -261,9 +261,8 @@ class Placement(Mutation):
         if self.action=='place' and self.surface=='wall' and self.wall is None:raise ValueError('wall_required')
         return self
 
-# Learned designs (behaviour_library) made under older designer rules are not reused: 'safety1' is the
-# contract that refuses inappropriate requests instead of softening them (asset_contract.py SAFETY).
-DESIGN_RULES='safety1'
+# Old designs can contain hidden furniture/island styling. Keep safety rules and regenerate those designs.
+DESIGN_RULES='safety1-player-appearance2'
 
 def price(body):
     # Game economy quote, deliberately NOT advertised as the provider's credit price.
@@ -971,16 +970,16 @@ class Studio:
                 with self.db.transaction() as conn:committed=tripo_credits_committed(conn,job['id'])
                 if committed+spent+CONCEPT_CREDITS>limits.tripo_credit_budget:
                     provenance['concept_skipped']='budget';return
-        # A product-style render: the picture becomes Tripo's image reference, so believable shapes and
-        # materials give a better model. Style words in the description (cute, anime...) still win.
+        # Framing is technical; appearance is controlled by the player and chosen style.
         # Tripo rebuilds only what the picture shows: the whole object, small enough to leave wide margins
         # (an object touching the edge came back cut, task 73).
-        prompt=('Concept art of ONLY this object. A zoomed-out full shot: the ENTIRE object centred with wide empty margins '
+        prompt=('Player description: '+body.prompt+'. '+
+                'Concept art of ONLY the requested subject. A zoomed-out full shot: the ENTIRE subject centred with wide empty margins '
                 '(at least 15% of the picture) on every side, nothing touching or cut by the picture edge, no floor. '
-                'Three-quarter view, plain light-grey background, soft studio lighting. Style: '+craft_styles.style(body.style)['concept']+
-                ', unless the description asks for another style. No text, no people. Object: '+str(part.get('prompt','')))[:1800]
+                'Three-quarter view, plain light-grey background, neutral lighting. '+craft_styles.visual_style(body.style)+
+                'Use the description above for the subject, including any requested markings.')
         if body.animate:
-            prompt='Front view concept art. '+rig_rules.POSE+' Style: '+craft_styles.style(body.style)['concept']+'. Character: '+str(part.get('prompt',''))
+            prompt='Player description: '+body.prompt+'. Front view concept art. '+rig_rules.POSE+' '+craft_styles.visual_style(body.style)
         try:
             if body.geometry!='tripo':blob=fixture_concept(str(part.get('prompt','')))
             else:
@@ -998,6 +997,7 @@ class Studio:
                     payload={'model':'seedream_v5','input':reference,'size':'2K','output_format':'png',
                              'prompt':('Edit this object reference image. Preserve its identity, style and all details not mentioned in the requested changes. '
                                        'Keep the complete object visible with wide margins on a neutral background. '
+                                       +craft_styles.visual_style(body.style)
                                        + (rig_rules.POSE if body.animate else '')
                                        +' Requested visual changes: '+feedback)}
                 with self.db.transaction() as conn:
@@ -1285,7 +1285,8 @@ class Studio:
                         reference=await tripo.upload_image(body.image)
                         attempt=self.reserve_build(job,parts,provenance,p['id'],'refine',CONCEPT_CREDITS,tripo)
                         data=await tripo.request('POST','/generation/image-to-image',{'model':'seedream_v5','input':reference,
-                            'prompt':'Create a clean isolated product reference of ONLY this component: '+p['prompt']+'. Preserve the reference design and soft illustrated island style. Neutral background, no text, no other components.',
+                            'prompt':'Create an isolated reference of ONLY this component: '+p['prompt']+'. Player visual request (apply only to this component): '+body.prompt+'. '+craft_styles.visual_style(body.style)+
+                                     'Preserve the reference design and requested details. Neutral background, no extra components.',
                             'size':'2K','output_format':'png'})
                         task=data.get('task_id')
                         if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)
@@ -1319,7 +1320,7 @@ class Studio:
                             if await tripo.balance()-predicted<self.settings.credit_reserve:raise ProviderError('insufficient_provider_credit')
                         else:tripo=await self.pick_provider(predicted)
                         payload={'model':mesh_model,
-                            'prompt':p['prompt']+' '+(rig_rules.POSE if body.animate else 'Standalone isolated component. Cozy rounded matte game furniture. No other parts, no ground.'),
+                            'prompt':craft_styles.mesh_prompt(p['prompt'],body.style),
                             # UVs are always requested (no surcharge): uncoloured crafts are painted
                             # in the game's painter, which maps its texture through them.
                             'face_limit':8000 if body.animate else 3000,'texture':textured,'pbr':textured,'quad':False,'export_uv':True}

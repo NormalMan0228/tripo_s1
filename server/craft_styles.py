@@ -107,11 +107,25 @@ def proportions(dims):
     return f'proportions about {w:g} m wide x {h:g} m tall x {d:g} m deep'
 
 
+APPEARANCE_RULE = ('Appearance must come only from the selected style and the player description/reference image. '
+                   'Explicit visual details in the description or reference take priority over conflicting style defaults. '
+                   'Preserve the requested subject identity, colours, clothing and proportions; do not substitute another subject. ')
+
+
+def visual_style(style_id, field='concept'):
+    return APPEARANCE_RULE + 'Selected style: ' + style(style_id)[field] + '. '
+
+
+def mesh_prompt(description, style_id):
+    # Tripo text-to-model accepts 1024 characters. Part descriptions already carry the selected
+    # appearance and (for animated characters) rig pose, so don't repeat the long style/pose text.
+    return ('Style: '+style(style_id)['names']['en']+'. Subject details take priority. '
+            +description+' Standalone subject/component.')
+
+
 def designer_style(style_id, size_id, dims=None):
     """The STYLE section of the LLM designer prompt (trusted server text)."""
-    text = ('Villagen: a sunny island village in a modern fantasy RPG. Unless the player asks for another style, describe '
-            'each object as ' + style(style_id)['llm'] + '. Readable at an orthographic camera distance. Avoid horror, '
-            'realistic skin and razor edges.')
+    text = visual_style(style_id, 'llm')
     if dims:
         w, h, d = dims
         return text + (f' The finished object is about {w:g} m wide (x), {h:g} m tall (y) and {d:g} m deep (z); design every '

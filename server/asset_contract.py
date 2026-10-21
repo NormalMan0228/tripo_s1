@@ -7,7 +7,9 @@ from .asset_vm import validate_program, exercise, ProgramError
 # The chosen craft style (server/craft_styles.py); the player's own style words still win.
 STYLE = designer_style(DEFAULT_STYLE, 'auto')
 CONTRACT = '''Return ONLY one JSON object with keys plan and program. No markdown or tools.
-Create original furniture/object geometry specifications and NEW named numeric API functions plus event code.
+Create geometry specifications for the subject the player requests (characters, creatures, objects or furniture)
+and NEW named numeric API functions plus event code. Preserve named identities and explicit visual details.
+Do not reinterpret a requested character as themed furniture or substitute an original character.
 Title maximum 60 characters, category maximum 40 characters, each part prompt 3..800 characters.
 The plan has title, category and 1..8 parts. Each part: id (ASCII identifier <=48), parent (other id or empty),
 prompt (English standalone 3D part description), shape (box/ellipsoid/petal, proxy shape only), size [x,y,z]
