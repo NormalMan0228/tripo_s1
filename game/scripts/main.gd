@@ -2542,6 +2542,7 @@ func update_run() -> void:
 	if run.status!="active" and not results_shown:
 		results_shown=true
 		var won: bool=run.status=="won"
+		if won and is_instance_valid(player): player.react("cheer")
 		# The run's own ending, one phrase each: the hero's level-up chime, then the horn fanfare
 		# (core/win) once that chime has rung; or the faint over a soft falling phrase (core/lose).
 		# The results card adds nothing on top (show_results).
@@ -3926,6 +3927,8 @@ func talk_to(npc: Node3D) -> void:
 	var request: Array=preload("res://scripts/quests.gd").choice(self,cast,str(npc.get_meta("title")),cast,npc)
 	if not request.is_empty(): plan.choices.insert(0,request)
 	open_dialogue(str(npc.get_meta("title")),cast,plan.lines,plan.choices)
+	if npc.has_method("begin_talk"): npc.begin_talk(village_modal)
+	player.react("greet")
 
 ## Gifts go to the residents of your own village only.
 func can_gift() -> bool:

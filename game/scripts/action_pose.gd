@@ -46,6 +46,15 @@ func _process_modification_with_delta(delta: float) -> void:
 		"hurt":
 			rotate_bone(skeleton,"Spine02",Vector3(-0.3*power,0,0.12*power))
 			rotate_bone(skeleton,"Head",Vector3(0.12*power,0,0))
-		"eat", "craft":
+		"thrust":
+			rotate_bone(skeleton,"Spine02",Vector3(.16*power,.18*power,0))
+			rotate_bone(skeleton,"R_Upperarm",Vector3(1.1*power,0,-.08*power))
+			rotate_bone(skeleton,"R_Forearm",Vector3(-.38*power,0,0))
+		"craft":
+			rotate_bone(skeleton,"R_Upperarm",Vector3(.6*power,0,-.1*power))
+			rotate_bone(skeleton,"L_Upperarm",Vector3(.45*power,0,.12*power))
+			rotate_bone(skeleton,"R_Forearm",Vector3((.8+.15*sin(progress*TAU*2))*power,0,0))
+			rotate_bone(skeleton,"L_Forearm",Vector3(.9*power,0,0))
+		"eat":
 			rotate_bone(skeleton,"R_Upperarm",Vector3(0.8*power,0,0))
 			rotate_bone(skeleton,"R_Forearm",Vector3(1.2*power,0,0))

@@ -624,9 +624,12 @@ func attach_day_model(walker: Node) -> void:
 	var players := model.find_children("*", "AnimationPlayer", true, false)
 	var player: AnimationPlayer = players[0] if not players.is_empty() else null
 	if player:
-		for clip in player.get_animation_list():
-			player.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
-		player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		var motion := preload("res://scripts/resident_motion.gd").new()
+		walker.add_child(motion);motion.setup(walker,model,player,id)
+		var rigs := model.find_children("*","Skeleton3D",true,false)
+		if not rigs.is_empty():
+			var work_pose := preload("res://scripts/npc_work_pose.gd").new()
+			work_pose.actor=walker;work_pose.motion=motion;rigs[0].add_child(work_pose)
 	walker.set_meta("day_model", model)
 	walker.set_meta("day_model_player", player)
 	model_walkers.append(walker)
@@ -645,16 +648,13 @@ func drive_day_model(walker: Node, delta: float) -> void:
 		if is_instance_valid(walker.figure): walker.figure.visible = not shown
 	if is_instance_valid(walker.task_node): walker.task_node.visible = not shown
 	if not shown: return
-	var player = walker.get_meta("day_model_player", null)
-	if not is_instance_valid(player): return
-	var clip := "idle"
-	if walker.current_clip == Figure.WALK: clip = "walk"
-	elif walker.state != "talk" and walker.place == "outside" and str(walker.activity) in MODEL_WORK: clip = "work"
-	if not player.has_animation(clip): clip = "idle"
-	if player.current_animation != clip and player.has_animation(clip):
-		player.play(clip, 0.25)
-	player.speed_scale = float(walker.clip_speed) if clip == "walk" else 1.0
-	player.advance(delta)
+	var motion := walker.get_node_or_null("ContextMotion")
+	if motion==null: return
+	motion.moving=walker.current_clip==Figure.WALK
+	motion.walk_speed=float(walker.clip_speed)
+	motion.activity=str(walker.activity) if walker.place=="outside" else "idle"
+	motion.set_talking(walker.state=="talk")
+	motion.focus=player_node()
 
 func leave() -> void:
 	for walker in walkers:

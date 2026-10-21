@@ -1,6 +1,6 @@
 extends Node3D
-## A village NPC from the authored cast (art/characters/npc_cast_idle_v11, copied
-## to res://assets/npc). Plays the 20 s idle loop, turns toward a nearby player
+## A village NPC from the authored cast (res://assets/npc). Plays contextual
+## job/idle/greeting/conversation clips and turns toward a nearby player
 ## and stands on the terrain. Without the local cast files it shows nothing and
 ## the caller falls back to a stand-in walker.
 ## follow_schedule() makes it keep residents.gd hours: it stands at its outdoor spot
@@ -24,6 +24,8 @@ var turn_target := 0.0
 var talk_rate := 5.0
 var player: Node3D
 var anim_player: AnimationPlayer
+var motion: Node
+var talk_window: WeakRef
 var app: Node
 var cast := ""
 ## Where it works (main.gd TownLayout.VILLAGERS[role]) and the spot key of that work.
@@ -32,8 +34,6 @@ var block_key := ""
 var pending: Dictionary = {}
 var pending_for := 0.0
 var schedule_clock := 0.0
-var anim_clock := 0.0
-var anim_frame := 0
 var outside := true
 var swapping := false
 
@@ -57,15 +57,17 @@ func setup(cast: String, facing_yaw: float) -> void:
 	var animation := model.find_children("*", "AnimationPlayer", true, false)
 	if not animation.is_empty():
 		anim_player = animation[0] as AnimationPlayer
-		var names := anim_player.get_animation_list()
-		if not names.is_empty():
-			var clip := anim_player.get_animation(names[0])
-			clip.loop_mode = Animation.LOOP_LINEAR
-			anim_player.play(names[0])
-			# Stagger the four NPCs so they do not breathe in sync.
-			anim_player.seek(randf() * clip.length, true)
-			# Stepped here: slower when far from the camera, not at all while indoors.
-			anim_player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		motion=preload("res://scripts/resident_motion.gd").new();add_child(motion)
+		motion.setup(self,model,anim_player,cast)
+		# This actor owns the schedule and animation clock; stopping its process also stops the rig.
+		motion.set_process(false)
+		var rigs := model.find_children("*","Skeleton3D",true,false)
+		if not rigs.is_empty():
+			var work_pose := preload("res://scripts/npc_work_pose.gd").new()
+			work_pose.actor=self;work_pose.motion=motion;rigs[0].add_child(work_pose)
+		var idle := preload("res://scripts/context_motions.gd").fallback(anim_player,"idle")
+		if not idle.is_empty():
+			anim_player.play(idle);anim_player.advance(0)
 	turn_target = facing_yaw
 	rotation.y = facing_yaw
 
@@ -81,6 +83,10 @@ func face_point(point: Vector3) -> void:
 	var to := point - global_position
 	if Vector2(to.x, to.z).length() > 0.05: turn_target = atan2(to.x, to.z)
 
+func begin_talk(window: Control) -> void:
+	talk_window=weakref(window)
+	if is_instance_valid(motion): motion.set_talking(true)
+
 func _process(delta: float) -> void:
 	if not cast.is_empty():
 		schedule_clock -= delta
@@ -94,14 +100,13 @@ func _process(delta: float) -> void:
 	if is_instance_valid(player) and player.global_position.distance_to(global_position) < 4.0:
 		face_point(player.global_position)
 	rotation.y = lerp_angle(rotation.y, turn_target, 1.0 - exp(-talk_rate * delta))
-	if not is_instance_valid(anim_player): return
-	anim_clock += delta
-	anim_frame += 1
-	var focus := player.global_position if is_instance_valid(player) else global_position
-	var stride: int = preload("res://scripts/anim_lod.gd").stride(preload("res://scripts/anim_lod.gd").planes(get_viewport().get_camera_3d()), global_position, focus)
-	if anim_frame % stride == 0:
-		anim_player.advance(anim_clock)
-		anim_clock = 0.0
+	if not is_instance_valid(motion): return
+	if talk_window!=null:
+		var window = talk_window.get_ref()
+		if not is_instance_valid(window) or window.is_queued_for_deletion():
+			motion.set_talking(false);talk_window=null
+	motion.focus=player
+	motion._process(delta)
 
 func hour_now() -> float:
 	var daylight = app.get("daylight") if is_instance_valid(app) else null
@@ -137,6 +142,7 @@ func player_gap(at: Vector3) -> float:
 
 func apply(block: Dictionary) -> void:
 	pending = {}
+	if is_instance_valid(motion): motion.activity=str(block.get("activity","idle"))
 	outside = block.place == "outside"
 	visible = outside
 	if outside:

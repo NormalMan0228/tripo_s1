@@ -3,6 +3,7 @@ extends CharacterBody3D
 const Profile=preload("res://scripts/controller_profile.gd")
 const Roster=preload("res://scripts/character_roster.gd")
 const ActorSize=preload("res://scripts/actor_size.gd")
+const ContextMotions=preload("res://scripts/context_motions.gd")
 const SPEED := Profile.VILLAGE_WALK
 const MODERN_HEROES = Roster.IDS
 var controls_enabled := true
@@ -56,6 +57,13 @@ static func warm_tools() -> void:
 		var path: String = "res://assets/authored_"+item+"_v1.glb"
 		if not models.has(path) and ResourceLoader.exists(path): models[path]=load(path)
 var action_until := 0.0
+var action_clip := ""
+var action_kind := ""
+var action_rate := 1.0
+var action_start := 0.0
+var idle_seconds := 0.0
+var animation_clock := 0.0
+var animation_frame := 0
 var tool_grip := Basis.IDENTITY
 var ambient_clip := "idle"
 var greeting_until := 0.0
@@ -161,9 +169,8 @@ func _build_character() -> void:
 						action_pose.modification_processed.connect(update_tool_pose)
 					if not controllers.is_empty():
 						animation_player=controllers[0]
-						for clip in ["idle","walk","run"]:
-							if animation_player.has_animation(clip):
-								animation_player.get_animation(clip).loop_mode=Animation.LOOP_LINEAR
+						ContextMotions.configure(animation_player)
+						animation_player.callback_mode_process=AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 					return
 	push_error("No modern player model available: "+hero_path)
 
@@ -469,24 +476,34 @@ func _physics_process(delta: float) -> void:
 	if is_instance_valid(action_pose): action_pose.body_basis=visual.global_basis.orthonormalized()
 	var moving := minf(1.0,locomotion_velocity.length()/SPEED)
 	stride+=delta*11*moving
-	if is_instance_valid(animation_player) and animation_player.has_animation("walk") and animation_player.has_animation("idle"):
+	idle_seconds=idle_seconds+delta if moving<=.1 else 0.0
+	if is_instance_valid(animation_player) and animation_player.has_animation("walk") and animation_player.has_animation("idle") and visual.is_visible_in_tree():
 		var desired := ("run" if (sprinting or locomotion_velocity.length()>3.4) and animation_player.has_animation("run") else "walk") if moving>0.1 else "idle"
-		if Time.get_ticks_msec()*0.001<action_until: desired="slash"
+		var interacting: bool=is_instance_valid(ix) and ix.busy()
+		if moving>.1 and action_kind in ["greet","bow","clap","cheer"]: action_until=0.0
+		if desired=="idle" and idle_seconds>2.0 and not interacting:
+			desired=ContextMotions.idle(animation_player,str(avatar.get("character",Roster.DEFAULT)))
+		var acting: bool=Time.get_ticks_msec()*0.001<action_until and not action_clip.is_empty() and not interacting
+		if acting: desired=action_clip
 		if not clip_override.is_empty() and animation_player.has_animation(clip_override): desired=clip_override
 		if current_clip!=desired:
 			var preserve_gait: bool=desired in ["walk","run"] and is_instance_valid(locomotion_pose)
 			current_clip=desired
-			animation_player.play(desired,0.08 if desired=="slash" else 0.18)
+			animation_player.play(desired,0.08 if acting else 0.18)
 			if preserve_gait:
 				animation_player.seek(gait_phase*animation_player.get_animation(desired).length,false)
-			if desired=="slash": animation_player.seek(1.1,true)
+			if acting and desired==action_clip: animation_player.seek(action_start,true)
 		if is_instance_valid(locomotion_pose) and desired in ["walk","run"]:
 			var seconds: float=locomotion_pose.cycle_for_speed(locomotion_velocity.length())
 			animation_player.speed_scale=animation_player.get_animation(desired).length/seconds
 		else:
-			animation_player.speed_scale=3.2 if desired=="slash" else (1.0 if desired=="run" else (1.5 if moving>0.1 else 1.0))
+			animation_player.speed_scale=action_rate if acting and desired==action_clip else (1.0 if desired=="run" else (1.5 if moving>0.1 else 1.0))
 		if animation_player.callback_mode_process==AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL:
-			animation_player.advance(delta)
+			animation_clock+=delta;animation_frame+=1
+			var lod := preload("res://scripts/anim_lod.gd")
+			var gap: int=1 if controls_enabled or acting or interacting else lod.stride(lod.planes(get_viewport().get_camera_3d()),global_position,global_position)
+			if animation_frame%gap==0:
+				animation_player.advance(animation_clock);animation_clock=0.0
 			if desired in ["walk","run"]:
 				gait_phase=fposmod(animation_player.current_animation_position/animation_player.get_animation(desired).length,1.0)
 		visual_lift=0.0
@@ -554,14 +571,13 @@ func step_up(delta: float) -> void:
 
 func react(kind: String) -> void:
 	# Visual response only. The collision body and server position never change.
-	if kind in ["attack","gather"] and equipped=="axe" and animation_player and animation_player.has_animation("slash"):
-		# Tripo's 6.6s clip has long idle handles. Use the actual wind-up, strike and recovery.
-		action_until=Time.get_ticks_msec()*0.001+0.7
-		current_clip=""
-	elif is_instance_valid(action_pose): action_pose.trigger(kind)
+	if kind!="hurt" and action_kind=="hurt" and Time.get_ticks_msec()*.001<action_until: return
+	var played := play_context_action(kind)
+	if not played and is_instance_valid(action_pose): action_pose.trigger("thrust" if kind=="attack" and equipped=="spear" else kind)
 	use_pose(kind)
 	if reaction_tween and reaction_tween.is_valid(): reaction_tween.kill()
 	visual.scale=Vector3.ONE
+	if played: return
 	# Seated or lying, the whole-body squash would bob the seat contact: the gesture alone plays.
 	if is_instance_valid(ix) and ix.seated(): return
 	reaction_tween=create_tween()
@@ -576,6 +592,20 @@ func react(kind: String) -> void:
 			swing.tween_property(tool,"rotation",rest+Vector3(0.25,0,-0.9),0.08)
 			swing.tween_property(tool,"rotation",rest,0.2)
 			swing.tween_callback(func(): tool.remove_meta("swing"))
+
+func play_context_action(kind: String) -> bool:
+	if not is_instance_valid(animation_player) or (is_instance_valid(ix) and ix.busy()): return false
+	var held := get_node_or_null("Held")
+	if kind in ["greet","clap","bow","cheer"] and held!=null and bool(held.get("shown")): return false
+	var spec := ContextMotions.action(kind,equipped)
+	if spec.is_empty() or not animation_player.has_animation(str(spec.clip)): return false
+	action_kind=kind;action_clip=str(spec.clip)
+	action_start=float(spec.from)
+	action_rate=float(spec.span)/float(spec.seconds)
+	action_until=Time.get_ticks_msec()*.001+float(spec.seconds)
+	current_clip="";idle_seconds=0.0
+	if is_instance_valid(action_pose): action_pose.elapsed=action_pose.duration
+	return true
 
 func face_point(point: Vector3) -> void:
 	var direction := point-position
@@ -606,6 +636,7 @@ func apply_avatar(value: Dictionary) -> bool:
 	equipment=null
 	tool_node=null
 	current_clip=""
+	action_clip="";action_kind="";action_until=0.0;idle_seconds=0.0;animation_clock=0.0
 	left_leg=null
 	right_leg=null
 	var was_stowed: Array=stowed.keys()
@@ -626,31 +657,12 @@ func apply_colors() -> void:
 	# The eight characters (m1..f4, avatar_v2): their own skin is the tint reference, and the accent
 	# colour paints their detail surface (bandana, headband, belt...).
 	var id := str(avatar.get("character",""))
-	var eight := id.length()==2 and id[0] in ["m","f"] and id[1].is_valid_int()
 	# Partitioned GLBs retain original weights, UVs and textures per semantic surface.
 	for mesh in visual.find_children("*","MeshInstance3D",true,false):
 		for index in mesh.mesh.get_surface_count():
 			var source: Material=mesh.mesh.surface_get_material(index)
 			if not source is StandardMaterial3D: continue
-			var fields := source.resource_name.to_lower().split("__")
-			var part: String=fields[0]
-			if part=="detail" and eight: part="accent"
-			if part not in ["hair","coat","pants","boots","skin","backpack","accent"]: continue
-			var material: StandardMaterial3D=source.duplicate()
-			if part=="backpack" and not avatar.get("backpack",true):
-				material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
-				material.albedo_color.a=0
-			elif part!="backpack" and avatar.has(part) and fields.size()==2 and source.albedo_texture:
-				var tint := ShaderMaterial.new()
-				tint.shader=preload("res://shaders/avatar_tint.gdshader")
-				tint.set_shader_parameter("albedo_texture",source.albedo_texture)
-				tint.set_shader_parameter("tint",Color(avatar[part]))
-				tint.set_shader_parameter("reference_color",Color("#e4b587") if part=="skin" and not eight else Color("#"+fields[1]))
-				tint.set_shader_parameter("skin_part",part=="skin")
-				tint.set_shader_parameter("gold_cloth_only",false)
-				mesh.set_surface_override_material(index,tint)
-				continue
-			mesh.set_surface_override_material(index,material)
+			mesh.set_surface_override_material(index,preload("res://scripts/actor_materials.gd").surface(source,avatar))
 	var headwear: String=avatar.get("headwear","none")
 	# f4 (the sailor) wears her own straw hat in the model: no second hat on top.
 	if id=="f4": headwear="none"

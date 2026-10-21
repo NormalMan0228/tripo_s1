@@ -3087,9 +3087,12 @@ static func wear_day_model(figure: Node3D, id: String) -> void:
 	var players := model.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
 		var player := players[0] as AnimationPlayer
-		if player.has_animation("idle"):
-			player.get_animation("idle").loop_mode = Animation.LOOP_LINEAR
-			player.play("idle")
+		var motion := preload("res://scripts/resident_motion.gd").new()
+		figure.add_child(motion);motion.setup(figure,model,player,id)
+		var rigs := model.find_children("*","Skeleton3D",true,false)
+		if not rigs.is_empty():
+			var work_pose := preload("res://scripts/npc_work_pose.gd").new()
+			work_pose.actor=figure;work_pose.motion=motion;rigs[0].add_child(work_pose)
 	figure.set_meta("day_model", model)
 	show_day_model(figure, not str(figure.get("pose")).begins_with("sit"))
 

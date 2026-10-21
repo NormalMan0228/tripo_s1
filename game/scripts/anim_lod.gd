@@ -8,11 +8,22 @@ const MARGIN := 3.0
 ## Tests only (tests/motion_fps.gd): the old rule, camera distance <26 m: 1, <50 m: 3, else 8.
 static var legacy := false
 static var legacy_eye := Vector3.INF
+static var cached_frame := -1
+static var cached_camera := 0
+static var cached_planes: Array = []
+static var plane_reads := 0
+static var plane_hits := 0
 
 ## The camera's frustum planes, once per frame for a loop over many characters.
 static func planes(camera: Camera3D) -> Array:
 	if camera == null or not is_instance_valid(camera) or not camera.is_inside_tree(): return []
-	return camera.get_frustum()
+	var frame := Engine.get_process_frames()
+	var id := camera.get_instance_id()
+	if frame==cached_frame and id==cached_camera:
+		plane_hits+=1;return cached_planes
+	cached_frame=frame;cached_camera=id
+	cached_planes=camera.get_frustum();plane_reads+=1
+	return cached_planes
 
 static func inside(frustum: Array, point: Vector3, margin := MARGIN) -> bool:
 	for plane in frustum:

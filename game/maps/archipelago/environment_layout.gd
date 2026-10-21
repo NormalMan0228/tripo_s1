@@ -17,6 +17,7 @@ var collision_shapes: Dictionary = {}
 var lod_meshes: Dictionary = {}
 var lod_entries: Array[Dictionary] = []
 var lod_timer := 0.0
+var lod_view := {}
 var output_path := "res://../art/maps/archipelago_environment_v1/"
 ## Every Tripo prop is ~20k triangles; their LODs are 1.2k-5k. Ground cover reads the
 ## same from the follow camera with its LOD up to a close zoom, so it switches much
@@ -240,9 +241,15 @@ func _update_prop_lods() -> void:
 	if not is_instance_valid(host) or host.camera == null:
 		return
 	var camera := host.camera as Camera3D
-	var view := camera.global_transform.affine_inverse()
 	# Settings "view detail": above 1 the full meshes stay on for smaller/farther props.
 	var pixels := get_viewport().get_visible_rect().size.y*preload("res://scripts/game_settings.gd").lod_multiplier()
+	# Orthographic LOD depends on zoom and viewport, not the walker's position.
+	# Skip the hundreds of unchanged prop checks; perspective views track their pose.
+	var state := {"camera":camera.get_instance_id(),"projection":camera.projection,"zoom":camera.size,"fov":camera.fov,"pixels":pixels,"count":lod_entries.size()}
+	if camera.projection==Camera3D.PROJECTION_PERSPECTIVE: state["transform"]=camera.global_transform
+	if state==lod_view: return
+	lod_view=state
+	var view := camera.global_transform.affine_inverse()
 	for entry in lod_entries:
 		var mesh := entry.node as MeshInstance3D
 		var projected: float = entry.size*pixels/maxf(camera.size,.1)

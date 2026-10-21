@@ -93,6 +93,16 @@ var bounds := 22.0
 var noise := FastNoiseLite.new()
 var rng := RandomNumberGenerator.new()
 var materials: Array[ShaderMaterial] = []
+var sent_focus := Vector3.INF
+var sent_camera := Vector3.INF
+var sent_night := -1.0
+var sent_haze := Color(-1,-1,-1,-1)
+var sent_material_count := -1
+var sent_glow_count := -1
+var uniform_writes := 0
+var cover_lod_zoom := -1.0
+var cover_lod_pixels := -1.0
+var cover_lod_count := -1
 var glow_materials: Array[ShaderMaterial] = []
 var props := {}
 var batches := {}
@@ -1552,13 +1562,22 @@ func _process(delta: float) -> void:
 	if is_instance_valid(app) and app.get("player") is Node3D and is_instance_valid(app.get("player")):
 		focus = (app.get("player") as Node3D).global_position
 	var cam_pos := camera.global_position if is_instance_valid(camera) else Vector3(0,1000,0)
+	var haze := _haze()
+	var fresh_materials := materials.size()!=sent_material_count
+	var moved: bool=fresh_materials or not focus.is_equal_approx(sent_focus)
+	var view_moved: bool=fresh_materials or not cam_pos.is_equal_approx(sent_camera)
+	var light_changed: bool=fresh_materials or not is_equal_approx(night,sent_night)
+	var haze_changed: bool=fresh_materials or not haze.is_equal_approx(sent_haze)
 	for mat in materials:
-		mat.set_shader_parameter("focus",focus)
-		mat.set_shader_parameter("camera_world",cam_pos)
-		mat.set_shader_parameter("night",night)
-		mat.set_shader_parameter("haze_color",_haze())
-	for mat in glow_materials:
-		mat.set_shader_parameter("glow",float(mat.get_meta("glow_base",0.0))*(0.25+night*1.0))
+		if moved: mat.set_shader_parameter("focus",focus);uniform_writes+=1
+		if view_moved: mat.set_shader_parameter("camera_world",cam_pos);uniform_writes+=1
+		if light_changed: mat.set_shader_parameter("night",night);uniform_writes+=1
+		if haze_changed: mat.set_shader_parameter("haze_color",haze);uniform_writes+=1
+	if light_changed or glow_materials.size()!=sent_glow_count:
+		for mat in glow_materials:
+			mat.set_shader_parameter("glow",float(mat.get_meta("glow_base",0.0))*(0.25+night*1.0));uniform_writes+=1
+	sent_focus=focus;sent_camera=cam_pos;sent_night=night;sent_haze=haze
+	sent_material_count=materials.size();sent_glow_count=glow_materials.size()
 	for p in follow_particles:
 		if is_instance_valid(p): p.global_position = Vector3(focus.x,p.global_position.y,focus.z-2.0)
 	var flies := get_node_or_null("Fireflies") as CPUParticles3D
@@ -1568,9 +1587,10 @@ func _process(delta: float) -> void:
 		if want_low != low_active:
 			low_active = want_low
 			for m in multimeshes: m.mm.mesh = m.low if low_active else m.high
-		if not cover_multimeshes.is_empty():
+		var pixels := get_viewport().get_visible_rect().size.y*GameSettings.lod_multiplier()
+		if not cover_multimeshes.is_empty() and (cover_lod_count!=cover_multimeshes.size() or not is_equal_approx(cover_lod_zoom,camera.size) or not is_equal_approx(cover_lod_pixels,pixels)):
 			# The village's rule (environment_layout.gd _update_prop_lods) for an orthographic camera.
-			var pixels := get_viewport().get_visible_rect().size.y*GameSettings.lod_multiplier()
+			cover_lod_zoom=camera.size;cover_lod_pixels=pixels;cover_lod_count=cover_multimeshes.size()
 			for m in cover_multimeshes:
 				var projected: float = m.size*pixels/maxf(camera.size,0.1)
 				var use_low := projected < (COVER_LIMITS.y if m.low_active else COVER_LIMITS.x)

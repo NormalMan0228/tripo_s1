@@ -2907,12 +2907,16 @@ func pose_resident(entry: Dictionary) -> void:
 	var holder: Node3D=entry.holder
 	var body: Node3D=entry.body
 	var level := int(entry.floor)
+	var motion := body.get_node_or_null("ContextMotion")
+	if motion:
+		motion.activity=str(occupant.get("activity","idle"));motion.posture="stand"
 	var f: Dictionary=building_spec.floors[level]
 	var still := body.has_method("set_pose")
 	holder.basis=Basis()
 	var kind := str(record.get("kind",""))
 	if occupant.get("asleep",false) and kind=="bed":
 		entry.pose="lie"
+		if motion: motion.posture="lie"
 		var size: Vector3=record.size
 		var head := Vector3(0,0,-1).rotated(Vector3.UP,float(record.yaw))
 		var top := minf(size.y*0.5,0.62)+0.02
@@ -2937,6 +2941,7 @@ func pose_resident(entry: Dictionary) -> void:
 		return
 	if kind in Interiors.SEATS and still:
 		entry.pose="sit"
+		if motion: motion.posture="sit"
 		var size: Vector3=record.size
 		var height: float=size.y*0.5 if kind!="bench" else 0.47
 		holder.position=record.center+Vector3(0,0,0.04).rotated(Vector3.UP,float(record.yaw))+Vector3(0,height+0.02,0)
@@ -3019,6 +3024,8 @@ func walk_to(entry: Dictionary, target: Vector3, done: Callable) -> void:
 		done.call();return
 	face_body(entry,atan2(offset.x,offset.z))
 	if body.has_method("play_clip"): body.play_clip("walk")
+	var motion := body.get_node_or_null("ContextMotion")
+	if motion: motion.moving=true;motion.walk_speed=1.0
 	# Heard on the floor while it walks (room_steps), walking out of the room too.
 	entry["walking"]=true
 	if not entry in stepping: stepping.append(entry)
@@ -3026,6 +3033,7 @@ func walk_to(entry: Dictionary, target: Vector3, done: Callable) -> void:
 	tween.tween_property(holder,"position",target,offset.length()/1.1)
 	tween.tween_callback(func():
 		entry["walking"]=false
+		if is_instance_valid(motion): motion.moving=false
 		if body.has_method("play_clip"): body.play_clip("idle")
 		if not entry.record.is_empty() and npcs.has(str(entry.id)):
 			var look: Vector3=entry.record.center-holder.position
@@ -3112,6 +3120,11 @@ func open_talk(id: String, lines: Array = [], choices: Array = []) -> void:
 	talk_box=Control.new();talk_box.name="TalkBox";talk_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	talk_box.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	add_child(talk_box)
+	if entry.body.has_method("begin_talk"): entry.body.begin_talk(talk_box)
+	else:
+		var motion := (entry.body as Node).get_node_or_null("ContextMotion")
+		if motion: motion.set_talking(true)
+	if is_instance_valid(hero): hero.react("greet")
 	# The same illustrated card + night box as the village (RpgUi.dialogue).
 	var hour: float=float(resident_clock().hour)
 	talk_window=RpgUi.dialogue(talk_box,tr(Interiors.resident_title(id,hour)),Interiors.portrait(id,hour))
@@ -3170,6 +3183,9 @@ func advance_talk() -> void:
 ## Closes the talk (or the storage chest's window), with the close sound only when a box was open.
 ## sound false: a talk replaced by the next one, or a choice whose outcome has its own sound.
 func close_talk(sound := true) -> void:
+	if npcs.has(talk_id):
+		var motion := (npcs[talk_id].body as Node).get_node_or_null("ContextMotion")
+		if motion: motion.set_talking(false)
 	# A shared window (the storage chest) leaves the window stack with its own close sound and fade.
 	if is_instance_valid(talk_box) and talk_box.has_meta("rpg_window"): RpgUi.close_window(talk_box.get_meta("rpg_window"))
 	elif is_instance_valid(talk_box):
