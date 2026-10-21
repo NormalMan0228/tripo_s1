@@ -35,6 +35,7 @@ from .object_paint import version_column as paint_version
 from . import object_shape
 from . import build_rules
 from . import craft_styles
+from . import studio_multiview
 from . import craft_moderation
 from .craft_moderation import Refused
 from . import interactions
@@ -161,6 +162,8 @@ class StudioRequest(Mutation):
     image: str=Field(default='',max_length=IMAGE_FIELD_CHARS)
     # Text-only crafts: draw a concept picture first and let the player approve it (see draw_concept).
     concept: bool=False
+    # New single-character image crafts use four consistent views after approval.
+    multiview: bool=True
     # Named look and size the player picked (server/craft_styles.py).
     style: Literal[craft_styles.STYLE_IDS]=craft_styles.DEFAULT_STYLE
     size: Literal[craft_styles.SIZE_IDS]='auto'
@@ -369,7 +372,7 @@ PLACED_ELSEWHERE='다른 곳에 놓여 있는 가구예요. 그곳에서 먼저 
 def billing(parts):
     reported=[];missing=False
     for part in parts.values():
-        for task,key in (('task','credits_consumed'),('image_task','image_credits_consumed'),('concept_task','concept_credits_consumed')):
+        for task,key in (('task','credits_consumed'),('image_task','image_credits_consumed'),('concept_task','concept_credits_consumed'),('multiview_task','multiview_credits_consumed')):
             if not part.get(task):continue
             value=part.get(key)
             if type(value) in (int,float) and math.isfinite(value) and 0<=value<=1000000:reported.append(value)
@@ -406,7 +409,7 @@ def tripo_requests(conn,user_id,exclude=''):
             if json.loads(row['request']).get('geometry')!='tripo':continue
             parts=json.loads(row['parts'] or '{}')
         except (TypeError,ValueError):parts={}
-        sent=sum(1 for p in parts.values() if isinstance(p,dict) for k in ('task','image_task') if p.get(k))
+        sent=sum(1 for p in parts.values() if isinstance(p,dict) for k in ('task','image_task','multiview_task') if p.get(k))
         if row['state'] in ('building','submitting','unknown','ready'):sent=max(sent,1)
         total+=sent
     return total
@@ -429,12 +432,14 @@ def build_progress(parts):
     picture is the first fifth of its part."""
     total=0.0;reported=False
     for p in parts.values():
-        state=p.get('state');share=(p.get('progress') or 0)/100;picture=.2 if p.get('image_task') else 0.0
+        state=p.get('state');share=(p.get('progress') or 0)/100;picture=(.2 if p.get('image_task') else 0.0)+(.2 if p.get('multiview_task') else 0.0)
         reported=reported or state=='ready' or 'progress' in p
         if state=='ready':total+=1
         elif state=='generating':total+=picture+share*(1-picture)
         elif state=='image_generating':total+=share*.2
         elif state=='image_ready':total+=.2
+        elif state=='multiview_generating':total+=max(0,picture-.2)+share*.2
+        elif state=='multiview_ready':total+=picture
     return round(total/len(parts),3) if parts and reported else None
 
 def stage(state,provenance):
@@ -591,12 +596,14 @@ class Studio:
                         try:
                             least=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',meshes,bool(body.image),body.image_mode=='refine')+rig_rules.credits(body.animate)
                         except ProviderError:least=cap+1
-                        if body.animate and body.concept:least+=CONCEPT_CREDITS+(10 if (settings.tripo_model if body.mesh_model=='configured' else body.mesh_model)=='v3.1-20260211' else 0)
+                        if body.concept and not body.image and (body.animate or studio_multiview.cost(body,meshes)):least+=CONCEPT_CREDITS+(10 if (settings.tripo_model if body.mesh_model=='configured' else body.mesh_model)=='v3.1-20260211' else 0)
+                        least+=studio_multiview.cost(body,meshes,body.image or body.concept)
                         if least>cap:fail('craft_over_trial_limit',403)
                     if limits.tripo_credit_budget or limits.is_tester:
                         try:need=estimate(settings.tripo_model if body.mesh_model=='configured' else body.mesh_model,body.material=='textured',meshes,bool(body.image),body.image_mode=='refine')+rig_rules.credits(body.animate)
                         except ProviderError:need=0
-                        if body.concept and not body.image:need+=CONCEPT_CREDITS+(10 if body.animate and (settings.tripo_model if body.mesh_model=='configured' else body.mesh_model)=='v3.1-20260211' else 0)
+                        if body.concept and not body.image:need+=CONCEPT_CREDITS+(10 if (settings.tripo_model if body.mesh_model=='configured' else body.mesh_model)=='v3.1-20260211' and (body.animate or studio_multiview.cost(body,meshes)) else 0)
+                        need+=studio_multiview.cost(body,meshes,body.image or body.concept)
                         if limits.tripo_credit_budget and tripo_credits_committed(conn)+need>limits.tripo_credit_budget:fail('tripo_budget_exhausted',429)
                         try:check_tester_budget(conn,limits,need)
                         except ProviderError as error:fail(error.code,429)
@@ -637,6 +644,9 @@ class Studio:
                     value['design']={'title':str(plan.get('title',''))[:120],
                         'parts':[{'id':str(p.get('id',''))[:40],'prompt':str(p.get('prompt',''))[:600]} for p in plan['parts'][:8]]}
                 parts=json.loads(value['parts'])
+                views={view:'/v1/studio/jobs/'+job_id+'/views/'+view
+                       for entry in parts.values() for view in entry.get('multiview_files',{})}
+                if views:value['multiview_images']=views
                 if value['provenance'].get('geometry')=='tripo':
                     managed=conn.execute('SELECT 1 FROM tripo_job_holds WHERE job_id=?',(job_id,)).fetchone()
                     value['provenance'].update(tripo_budget.job_billing(conn,job_id) if managed else billing(parts))
@@ -709,6 +719,7 @@ class Studio:
                     for entry in parts.values():entry['use_concept']=body.use_concept
                     quote['concept_used']=body.use_concept
                     if not body.use_concept and quote.get('estimate_text_only') is not None:
+                        quote.pop('multiview',None)
                         quote['estimated_tripo_credits']=quote['estimate_text_only']
                         quote['quoted_game_cost']=max(row['cost'],math.ceil(float(quote['estimated_tripo_credits'])*settings.studio_credit_rate))
                 if limits.tripo_credit_budget and tripo_credits_committed(conn,job_id)+float(quote.get('estimated_tripo_credits') or 0)>limits.tripo_credit_budget:
@@ -735,6 +746,20 @@ class Studio:
                 if not concept.get('file') or not path.is_file():fail('concept_not_found',404)
                 return Response(path.read_bytes(),media_type='image/jpeg',headers={'Cache-Control':'no-store'})
 
+        @app.get('/v1/studio/jobs/{job_id}/views/{view}')
+        def multiview_image(job_id:str,view:str,request:Request):
+            if view not in studio_multiview.VIEWS:fail('image_not_found',404)
+            with db.read() as conn:
+                user=auth(conn,request)
+                row=conn.execute('SELECT parts FROM studio_jobs WHERE id=? AND owner_id=?',(job_id,user['id'])).fetchone()
+                if not row:fail('job_not_found',404)
+                files=[p.get('multiview_files',{}).get(view) for p in json.loads(row['parts']).values()]
+                name=next((name for name in files if name),None)
+                if not name:fail('image_not_found',404)
+                path=self.assets/name
+                if path.parent.resolve()!=self.assets.resolve() or not path.is_file():fail('image_not_found',404)
+                return Response(path.read_bytes(),media_type='image/jpeg',headers={'Cache-Control':'no-store'})
+
         @app.post('/v1/studio/jobs/{job_id}/redraw')
         def redraw(job_id:str,body:StudioRedraw,request:Request):
             def edit(conn,user):
@@ -756,7 +781,8 @@ class Studio:
                     spent=tripo_budget.attempt_credits(conn,job_id)
                     model=settings.tripo_model if asked.get('mesh_model','configured')=='configured' else asked['mesh_model']
                     cap=limits.max_credits_per_craft
-                    if cap and spent+CONCEPT_CREDITS+mesh_credits(model,asked.get('material')=='textured',True)>cap:fail('craft_over_trial_limit',403)
+                    remaining=mesh_credits(model,asked.get('material')=='textured',True)+rig_rules.credits(asked.get('animate'))+studio_multiview.cost(StudioRequest.model_validate({'multiview':False,**asked}),len(parts))
+                    if cap and spent+CONCEPT_CREDITS+remaining>cap:fail('craft_over_trial_limit',403)
                     if limits.tripo_credit_budget and tripo_credits_committed(conn,job_id)+spent+CONCEPT_CREDITS>limits.tripo_credit_budget:fail('tripo_budget_exhausted',429)
                     try:check_tester_budget(conn,limits,CONCEPT_CREDITS)
                     except ProviderError as error:fail(error.code,429)
@@ -906,7 +932,7 @@ class Studio:
 
     def remaining_build(self,job,parts):
         """Estimates for the provider requests that have not yet been submitted."""
-        body=StudioRequest.model_validate_json(job['request'])
+        body=StudioRequest.model_validate({'multiview':False,**json.loads(job['request'])})
         model=self.settings.tripo_model if body.mesh_model=='configured' else body.mesh_model
         needed=0
         for part in parts.values():
@@ -914,6 +940,8 @@ class Studio:
             image=bool(part.get('use_concept') or (body.image and (len(parts)==1 or body.image_mode=='refine')))
             if not part.get('task') and not part.get('mesh_attempt') and part.get('state')!='ready':
                 needed+=mesh_credits(model,body.material=='textured',image)
+            if not part.get('multiview_task') and not part.get('multiview_attempt'):
+                needed+=studio_multiview.cost(body,len(parts),image)
             if body.image_mode=='refine' and not part.get('image_task') and not part.get('refine_attempt'):
                 needed+=CONCEPT_CREDITS
             if body.animate:
@@ -941,7 +969,7 @@ class Studio:
         return attempt
 
     def record_build_bill(self,job,parts):
-        actual=sum(p.get(key) or 0 for p in parts.values() for key in ('credits_consumed','image_credits_consumed')
+        actual=sum(p.get(key) or 0 for p in parts.values() for key in ('credits_consumed','image_credits_consumed','multiview_credits_consumed')
                    if type(p.get(key)) in (int,float) and math.isfinite(p[key]) and p[key]>=0)
         actual+=sum(e.get('credits_consumed') or 0 for p in parts.values() for e in rig_bill_entries(p)
                     if type(e.get('credits_consumed')) in (int,float) and math.isfinite(e['credits_consumed']) and e['credits_consumed']>=0)
@@ -961,10 +989,11 @@ class Studio:
         concept=dict(provenance.get('concept') or {'draws':0})
         feedback=provenance.pop('redraw_feedback','')
         textured=body.material=='textured'
+        views_cost=studio_multiview.cost(body,len(parts))
         with self.db.read() as conn:spent=tripo_budget.attempt_credits(conn,job['id'])
         if body.geometry=='tripo':
             cap=limits.max_credits_per_craft
-            if cap and spent+CONCEPT_CREDITS+mesh_credits(mesh_model,textured,True)+rig_rules.credits(body.animate)>cap:
+            if cap and spent+CONCEPT_CREDITS+mesh_credits(mesh_model,textured,True)+rig_rules.credits(body.animate)+views_cost>cap:
                 provenance['concept_skipped']='over_cap';return
             if limits.tripo_credit_budget:
                 with self.db.transaction() as conn:committed=tripo_credits_committed(conn,job['id'])
@@ -1004,7 +1033,7 @@ class Studio:
                     attempt=tripo_budget.reserve_attempt(conn,limits,job['id'],job['owner_id'],'concept',part['id'],
                         0 if getattr(self.provider,'_in_process_fake',False) else CONCEPT_CREDITS,
                         0,self.clock(),provider_key=getattr(tripo,'fingerprint',''),
-                        craft_extra=mesh_credits(mesh_model,textured,True)+rig_rules.credits(body.animate))
+                        craft_extra=mesh_credits(mesh_model,textured,True)+rig_rules.credits(body.animate)+views_cost)
                 data=await tripo.request('POST',route,payload)
                 task=data.get('task_id')
                 if not isinstance(task,str) or not task or len(task)>200 or '/' in task:raise ProviderError('upstream_schema',uncertain=True)
@@ -1037,8 +1066,9 @@ class Studio:
         provenance.pop('concept_error',None);provenance.pop('concept_skipped',None)
         if body.geometry=='tripo':
             images=float(entry.get('concept_credits_consumed') or 0)
-            provenance.update(estimated_tripo_credits=images+mesh_credits(mesh_model,textured,True)+rig_rules.credits(body.animate),
+            provenance.update(estimated_tripo_credits=images+mesh_credits(mesh_model,textured,True)+rig_rules.credits(body.animate)+views_cost,
                               estimate_text_only=images+mesh_credits(mesh_model,textured,False)+rig_rules.credits(body.animate))
+            if views_cost:provenance['multiview']={'enabled':True,'views':list(studio_multiview.VIEWS),'estimated_credits':views_cost}
             provenance['quoted_game_cost']=max(job['cost'],math.ceil(provenance['estimated_tripo_credits']*self.settings.studio_credit_rate))
 
     def part_colour(self,plan,parts,part,entry,body):
@@ -1058,14 +1088,14 @@ class Studio:
         limit=self.limits_for_job(job).user_total_generation_limit
         if not limit:return
         with self.db.transaction() as conn:used=tripo_requests(conn,job['owner_id'],job['id'])
-        sent=sum(1 for p in parts.values() for k in ('task','image_task') if p.get(k))
+        sent=sum(1 for p in parts.values() for k in ('task','image_task','multiview_task') if p.get(k))
         if used+sent>=limit:raise ProviderError('user_total_generation_limit')
 
     def overdue(self,parts):
         """Raises generation_timeout when a submitted part has waited on Tripo past the deadline
         (settings.studio_part_deadline). Parts submitted before deadlines existed start counting now."""
         for entry in parts.values():
-            if entry.get('state') not in ('generating','image_generating',*RIG_STATES):continue
+            if entry.get('state') not in ('generating','image_generating','multiview_generating',*RIG_STATES):continue
             started=entry.setdefault('submitted',self.clock())
             if self.clock()-started>self.settings.studio_part_deadline:raise ProviderError('generation_timeout')
 
@@ -1151,7 +1181,7 @@ class Studio:
             if job['state']=='queued':conn.execute("UPDATE studio_jobs SET state='planning' WHERE id=?",(job_id,))
         limits=self.limits_for_job(job)
         try:
-            body=StudioRequest.model_validate_json(job['request'])
+            body=StudioRequest.model_validate({'multiview':False,**json.loads(job['request'])})
             if body.animate and not self.settings.rig_anim_enabled:
                 self.update(job_id,state=job['state'],error='rigging_disabled');return
             mesh_model=self.settings.tripo_model if body.mesh_model=='configured' else body.mesh_model
@@ -1224,7 +1254,7 @@ class Studio:
                 if body.geometry=='tripo':
                     def quote():
                         meshes=sum(1 for entry in parts.values() if not entry.get('primitive'))
-                        return estimate(mesh_model,body.material=='textured',meshes,bool(body.image) and (len(plan['parts'])==1 or body.image_mode=='refine'),body.image_mode=='refine')+rig_rules.credits(body.animate)
+                        return estimate(mesh_model,body.material=='textured',meshes,bool(body.image) and (len(plan['parts'])==1 or body.image_mode=='refine'),body.image_mode=='refine')+rig_rules.credits(body.animate)+studio_multiview.cost(body,len(parts),body.image)
                     cap=limits.max_credits_per_craft
                     if cap and quote()>cap and len(plan['parts'])>1:
                         # Over the per-craft cap with its parts: one complete piece instead, with the type's
@@ -1305,10 +1335,16 @@ class Studio:
                         if result.get('status')=='banned':raise Refused('other')
                         if result.get('status') in ('failed','cancelled','expired'):raise ProviderError('image_refinement_failed')
                         if result.get('status')!='success':raise ProviderError('upstream_schema',uncertain=True)
+                        if studio_multiview.cost(body,len(parts),body.image):
+                            name=job_id+'-'+p['id']+'-refined.jpg'
+                            blob=await self.provider_for(entry.get('key')).fetch_image(image_url(result.get('output',{})))
+                            target=self.assets/name;temporary=target.with_suffix('.tmp');temporary.write_bytes(blob);temporary.replace(target)
+                            entry['refined_file']=name
                         entry.update(state='image_ready',image_credits_consumed=result.get('credits_consumed'));entry.pop('progress',None)
                         self.update(job_id,state='building',parts=json.dumps(parts))
-                    if entry['state'] in ('pending','image_ready'):
-                        if entry['state']=='pending':self.guard_tripo_cap(job,parts)
+                    if await studio_multiview.advance(self,job,body,parts,p['id'],provenance):return
+                    if entry['state'] in ('pending','image_ready','multiview_ready'):
+                        if entry['state'] in ('pending','multiview_ready'):self.guard_tripo_cap(job,parts)
                         concept=entry.get('concept_task') if entry.get('use_concept') else None
                         mesh_cost=mesh_credits(mesh_model,textured,bool(concept or (body.image and (len(parts)==1 or body.image_mode=='refine'))))
                         # The key must cover the whole rig chain it will own; the mesh attempt reserves only the mesh
@@ -1325,7 +1361,11 @@ class Studio:
                             # in the game's painter, which maps its texture through them.
                             'face_limit':8000 if body.animate else 3000,'texture':textured,'pbr':textured,'quad':False,'export_uv':True}
                         route='/generation/text-to-model'
-                        if concept:
+                        if entry.get('multiview_files'):
+                            payload.pop('prompt');payload['inputs']=await studio_multiview.mesh_inputs(self,tripo,entry)
+                            route='/generation/multiview-to-model'
+                            provenance['image_path']='approved_character_multiview_to_tripo'
+                        elif concept:
                             payload.pop('prompt');payload['input']=concept;route='/generation/image-to-model'
                             provenance['image_path']='approved_concept_image_to_tripo'
                         elif entry.get('image_task'):
@@ -1361,7 +1401,7 @@ class Studio:
                         retries=int(entry.get('retries',0))
                         if retries<self.settings.studio_retries:
                             for key in ('task','mesh_attempt','submitted','credits_consumed','progress'):entry.pop(key,None)
-                            entry.update(state='image_ready' if entry.get('image_task') else 'pending',retries=retries+1)
+                            entry.update(state='multiview_ready' if entry.get('multiview_files') else ('image_ready' if entry.get('image_task') else 'pending'),retries=retries+1)
                             self.update(job_id,state='building',parts=json.dumps(parts));return
                         raise ProviderError('generation_failed')
                     if result.get('status')!='success':raise ProviderError('upstream_schema',uncertain=True)
@@ -1433,7 +1473,7 @@ class Studio:
                 submitting=conn.execute('SELECT state FROM studio_jobs WHERE id=?',(job_id,)).fetchone()[0]=='submitting'
             # A rejected POST has no task to poll. Retrying a pending rig here would
             # reserve and POST again on every tick until the craft's budget runs out.
-            if not submitting and not error.uncertain and 'parts' in locals() and any((p.get('task') and p['state']=='generating') or (p.get('image_task') and p['state']=='image_generating') or p['state'] in RIG_STATES for p in parts.values()) and error.code in ('upstream_unreachable','upstream_unavailable','upstream_rate_limit','asset_download_failed','key_not_configured','upstream_authentication','upstream_non_json','upstream_invalid_json'):
+            if not submitting and not error.uncertain and 'parts' in locals() and any((p.get('task') and p['state']=='generating') or (p.get('image_task') and p['state']=='image_generating') or (p.get('multiview_task') and p['state']=='multiview_generating') or p['state'] in RIG_STATES for p in parts.values()) and error.code in ('upstream_unreachable','upstream_unavailable','upstream_rate_limit','asset_download_failed','key_not_configured','upstream_authentication','upstream_non_json','upstream_invalid_json'):
                 try:
                     self.overdue(parts)
                     self.update(job_id,state='building',error=error.code,parts=json.dumps(parts));return

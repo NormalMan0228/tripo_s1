@@ -75,7 +75,7 @@ def refund_studio_not_submitted(db,job_id,reference,verified=False):
             raise OperationError('worker_still_holds_lease')
         parts=json.loads(job['parts'])
         provenance=json.loads(job['provenance'] or '{}')
-        if any(p.get('task') or p.get('image_task') or p.get('credits_consumed') or p.get('image_credits_consumed') for p in parts.values()) or provenance.get('tripo_credits_consumed'):
+        if any(p.get('task') or p.get('image_task') or p.get('multiview_task') or p.get('credits_consumed') or p.get('image_credits_consumed') or p.get('multiview_credits_consumed') for p in parts.values()) or provenance.get('tripo_credits_consumed'):
             raise OperationError('recorded_task_must_be_reconciled')
         entries=conn.execute("SELECT amount FROM ledger WHERE user_id=? AND reference=? AND reason IN ('studio_charge','studio_quote_charge','studio_refund','studio_resume_charge','studio_resume_refund')",(job['owner_id'],job_id)).fetchall()
         outstanding=-sum(r['amount'] for r in entries)

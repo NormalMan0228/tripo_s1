@@ -35,7 +35,7 @@ def world(tmp_path):
             if faults.get('static_download'):
                 from server.asset_assembly import fixture_glb
                 return httpx.Response(200,content=fixture_glb('box'))
-        if request.method=='POST':
+        if request.method=='POST' and not path.endswith('/files'):
             payload=json.loads(request.content)
             calls.append((path,payload))
             if faults.get('uncertain') and path.endswith(faults['uncertain']):
@@ -48,12 +48,12 @@ def world(tmp_path):
                 faults.pop('poll_once')
                 return httpx.Response(503,json={'code':1})
             result=fake.handle_request(request).json()
-            result['data']['credits_consumed']={'text-to-model':10,'image-to-model':20,'text-to-image':5,'rig':25,'retarget':10}[kind]
+            result['data']['credits_consumed']={'text-to-model':10,'image-to-model':20,'text-to-image':5,'image-to-multiview':10,'multiview-to-model':20,'rig':25,'retarget':10}[kind]
             if faults.get('fail')==kind:result['data']['status']='failed'
             if faults.get('running')==kind:result['data']['status']='running'
             return httpx.Response(200,json=result)
         response=fake.handle_request(request)
-        if request.method=='POST' and response.status_code==200:
+        if request.method=='POST' and response.status_code==200 and not path.endswith('/files'):
             tasks[response.json()['data']['task_id']]=path.rsplit('/',1)[-1]
         return response
     app.state.studio.provider=TripoProvider(settings,httpx.MockTransport(handle))
@@ -96,7 +96,7 @@ def test_success_chain_reserves_and_exposes_real_clips(world,concept):
     app,c,h,calls,_=world
     assert c.get('/v1/studio',headers=h).json()['rigging']['clips']==['idle','walk']
     job,quote=start(world,concept=concept)
-    expected=70 if concept else 55
+    expected=80 if concept else 55
     assert quote['provenance']['estimated_tripo_credits']==expected
     with app.state.db.transaction() as db:assert tripo_credits_committed(db)==expected
     status,states=finish(world,job)
@@ -106,7 +106,7 @@ def test_success_chain_reserves_and_exposes_real_clips(world,concept):
     assert rig['moves'] is True and rig['clips']==['idle','walk'] and rig['default_clip']=='idle'
     assert status['provenance']['tripo_credits_consumed']==expected
     routes=[path.rsplit('/',1)[-1] for path,_ in calls]
-    assert routes==(['text-to-image','image-to-model'] if concept else ['text-to-model'])+['rig','retarget','retarget']
+    assert routes==(['text-to-image','image-to-multiview','multiview-to-model'] if concept else ['text-to-model'])+['rig','retarget','retarget']
     assert 'A-pose' in calls[0][1]['prompt']
     assert calls[-2][1]['animation']=='preset:biped:idle' and calls[-1][1]['animation']=='preset:biped:walk'
     assert calls[-1][1]['input']==calls[-2][1]['input']

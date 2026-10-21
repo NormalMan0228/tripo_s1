@@ -58,7 +58,7 @@ def legacy_bills(parts):
     """Every provider step stored before the durable attempt ledger existed."""
     for part in parts.values():
         for task, key in (('task','credits_consumed'), ('image_task','image_credits_consumed'),
-                          ('concept_task','concept_credits_consumed')):
+                          ('concept_task','concept_credits_consumed'), ('multiview_task','multiview_credits_consumed')):
             yield part.get(task), part.get(key)
         for entry in [part.get('rig', {}), *part.get('anims', {}).values()]:
             yield entry.get('task'), entry.get('credits_consumed')

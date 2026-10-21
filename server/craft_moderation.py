@@ -165,7 +165,7 @@ REASONS = {
              'upstream_response_too_large', 'asset_download_failed', 'asset_integrity_failed', 'unsafe_asset_url',
              'unapproved_asset_host', 'invalid_model', 'stored_part_changed'),
     'heavy': ('assembly_render_budget_exceeded', 'assembly_too_large', 'asset_too_large', 'room_render_budget_exceeded'),
-    'photo': ('image_refinement_failed', 'reference_upload_failed', 'invalid_reference_image', 'invalid_image'),
+    'photo': ('image_refinement_failed', 'reference_upload_failed', 'invalid_reference_image', 'invalid_image', 'multiview_failed', 'multiview_reference_missing'),
     'restart': ('planning_interrupted', 'worker_lease_expired', 'submission_interrupted'),
     'setup': ('llm_not_configured', 'llm_authentication', 'llm_permission_denied', 'llm_request_failed', 'llm_model_unavailable', 'provider_configuration_required', 'key_not_configured', 'codex_unavailable',
               'developer_provider_forbidden', 'live_generation_disabled', 'upstream_authentication'),

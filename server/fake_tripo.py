@@ -30,16 +30,16 @@ def _task_id(kind, payload, now):
     """Task IDs encode model/image/rig/animation, texture, shape and start time."""
     words = str(payload.get('prompt') or payload.get('input') or '')
     shape = 'box' if hashlib.sha256(words.encode()).digest()[0] % 2 == 0 else 'ball'
-    return '-'.join(('fake', 'i' if kind in IMAGE_ROUTES else ('r' if kind == 'rig' else ('a' if kind == 'retarget' else 'm')), 't' if payload.get('texture') else 'u',
+    return '-'.join(('fake', 'v' if kind=='image-to-multiview' else ('i' if kind in IMAGE_ROUTES else ('r' if kind == 'rig' else ('a' if kind == 'retarget' else 'm'))), 't' if payload.get('texture') else 'u',
                      shape, str(int(now)), secrets.token_hex(6)))
 
 
 def _parse(task):
     parts = task.split('-')
-    if len(parts) != 6 or parts[0] != 'fake' or parts[1] not in ('m','i','r','a') or parts[2] not in 'tu' \
+    if len(parts) != 6 or parts[0] != 'fake' or parts[1] not in ('m','i','r','a','v') or parts[2] not in 'tu' \
             or parts[3] not in ('box', 'ball') or not parts[4].isdigit():
         return None
-    return {'animated':parts[1] == 'a', 'image': parts[1] == 'i', 'textured': parts[2] == 't', 'shape': parts[3], 'started': int(parts[4])}
+    return {'multiview':parts[1]=='v', 'animated':parts[1] == 'a', 'image': parts[1] == 'i', 'textured': parts[2] == 't', 'shape': parts[3], 'started': int(parts[4])}
 
 
 def transport(seconds=0.0, clock=time.time):
@@ -83,6 +83,8 @@ def transport(seconds=0.0, clock=time.time):
                 return _answer({'task_id': name, 'status': 'running', 'progress': int(100 * max(0, waited) / seconds)})
             output = {'generated_image': 'https://%s/images/%s.jpg' % (HOST, name)} if task['image'] \
                 else {'model_url': 'https://%s/models/%s.glb' % (HOST, name)}
+            if task['multiview']:
+                output={'generate_multiview_image':{v+'_view_url':'https://%s/images/%s.jpg' % (HOST,name) for v in ('front','left','back','right')}}
             return _answer({'task_id': name, 'status': 'success', 'progress': 100, 'credits_consumed': 0, 'output': output})
         return _answer('unknown route', 404)
     return httpx.MockTransport(handle)
