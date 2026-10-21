@@ -453,7 +453,7 @@ func build_ui() -> void:
 	# Top left: the character frame (portrait, name, the two currencies), the village's own.
 	var look := AvatarLook.normalize(session_avatar)
 	var portrait := "res://assets/ui/portrait_%s.png" % str(look.get("character","explorer"))
-	frame=RpgUi.player_frame(hud,portrait if ResourceLoader.exists(portrait) else "res://assets/ui/portrait_explorer.png","profile")
+	frame=RpgUi.player_frame(hud,portrait if ResourceLoader.exists(portrait) else "res://assets/ui/portrait_f1.png","profile")
 	frame.panel.name="PlayerFrame"
 	frame.name.text=session_name
 	frame.name.visible=not session_name.is_empty()
@@ -800,7 +800,7 @@ func build_stage() -> void:
 	LoadPace.span = span
 	await LoadPace.step("room walker")
 	# Authored character is separate from all player-created furniture.
-	if ResourceLoader.exists("res://assets/explorer_b_reference.glb"):
+	if ResourceLoader.exists("res://assets/f1.glb"):
 		hero=AvatarLook.walker(session_avatar,session_version);hero.controls_enabled=false;hero.visual_only=true
 		stage.add_child(hero)
 		preload("res://scripts/held_items.gd").adopt(null,hero) # carried thing (held_items.gd, #64)

@@ -1,9 +1,10 @@
 extends CharacterBody3D
 
 const Profile=preload("res://scripts/controller_profile.gd")
+const Roster=preload("res://scripts/character_roster.gd")
 const ActorSize=preload("res://scripts/actor_size.gd")
 const SPEED := Profile.VILLAGE_WALK
-const MODERN_HEROES := ["m1","m2","m3","m4","f1","f2","f3","f4"]
+const MODERN_HEROES = Roster.IDS
 var controls_enabled := true
 var visual_only := false
 var facing := Vector3.FORWARD
@@ -95,6 +96,7 @@ const Art = preload("res://scripts/art.gd")
 const LifeArt = preload("res://scripts/life_art.gd")
 
 func _ready() -> void:
+	avatar["character"]=Roster.canonical(str(avatar.get("character",Roster.DEFAULT)))
 	Profile.ensure_input()
 	floor_snap_length = 0.3
 	# Characters stand on layer 4 so ground probes (layers 1, 2 and 8) never hit them.
@@ -111,62 +113,15 @@ func _ready() -> void:
 	add_child(shape)
 	visual = Node3D.new()
 	add_child(visual)
-	_build_explorer()
+	_build_character()
 	apply_colors()
 	look_builds+=1
 	visual.rotation.y=PI
 	return
 
-func _build_explorer() -> void:
-	if avatar.get("character")=="haeru":
-		var actor := preload("res://assets/haeru_v1.glb").instantiate() as Node3D
-		visual.add_child(actor)
-		ActorSize.fit(actor,ActorSize.HUMAN_HEIGHT)
-		# Developer GLB is X-forward; Player visual expects -Z-forward.
-		actor.rotation.y=PI*.5
-		animation_player=actor.find_children("*","AnimationPlayer",true,false)[0]
-		hand_skeleton=actor.find_children("*","Skeleton3D",true,false)[0]
-		hand_index=hand_skeleton.find_bone("R_Hand")
-		for clip in ["idle","walk","fishing"]:
-			animation_player.get_animation(clip).loop_mode=Animation.LOOP_LINEAR
-		animation_player.get_animation("greet").loop_mode=Animation.LOOP_NONE
-		ambient_clip="fishing"
-		animation_player.play("fishing")
-		animation_player.advance(0)
-		return
-	if avatar.get("character","explorer_b")=="explorer_b":
-		var character=preload("res://scripts/style_character.gd").new()
-		character.wardrobe=true
-		visual.add_child(character)
-		ActorSize.fit(character,ActorSize.HUMAN_HEIGHT);character.rotation.y=PI
-		animation_player=character.animator;hand_skeleton=character.body_skeleton
-		hand_skeleton.modifier_callback_mode_process=Skeleton3D.MODIFIER_CALLBACK_MODE_PROCESS_PHYSICS
-		# Advance once in the motor tick, then let contact IK read the same phase.
-		animation_player.callback_mode_process=AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
-		hand_index=hand_skeleton.find_bone("R_Hand")
-		action_pose=preload("res://scripts/action_pose.gd").new();hand_skeleton.add_child(action_pose)
-		action_pose.modification_processed.connect(update_tool_pose)
-		finger_pose=preload("res://scripts/finger_pose.gd").new();hand_skeleton.add_child(finger_pose);finger_pose.configure(animation_player)
-		var library: AnimationLibrary=animation_player.get_animation_library("")
-		for pair in [["idle","movement/B_Scout"],["walk","movement/B_TrailWalk"],["run","movement/B_Dash"]]:
-			library.add_animation(pair[0],animation_player.get_animation(pair[1]).duplicate(true))
-		locomotion_pose=preload("res://scripts/locomotion_pose.gd").new()
-		hand_skeleton.add_child(locomotion_pose)
-		locomotion_pose.configure(self)
-		action_pose.modification_processed.disconnect(update_tool_pose)
-		locomotion_pose.modification_processed.connect(update_tool_pose)
-		# Pose the very first frame. The motor tick only advances the clip on the next
-		# physics step, and until then the rig showed its T-pose through scene fades.
-		animation_player.play("idle")
-		animation_player.advance(0)
-		current_clip="idle"
-		# The skeleton applies poses in the physics step, so a frame drawn before the
-		# first tick still showed the bind pose: stay hidden until that tick.
-		visual.visible=false
-		reveal_pending=true
-		return
-	# Authored fallback remains playable if the optional Scenario model is unavailable.
-	var hero_path: String="res://assets/"+str(avatar.get("character","explorer"))+".glb"
+func _build_character() -> void:
+	var hero_path: String=Roster.model_path(str(avatar.character))
+	if not ResourceLoader.exists(hero_path): hero_path=Roster.model_path(Roster.DEFAULT)
 	if ResourceLoader.exists(hero_path):
 		if not models.has(hero_path): models[hero_path]=load(hero_path)
 		var packed := models[hero_path] as PackedScene
@@ -210,33 +165,7 @@ func _build_explorer() -> void:
 							if animation_player.has_animation(clip):
 								animation_player.get_animation(clip).loop_mode=Animation.LOOP_LINEAR
 					return
-	Art.sphere(visual,Vector3(0,1.35,0),Vector3(0.65,0.66,0.6),Color("e4b587"))
-	Art.sphere(visual,Vector3(0,1.62,0.04),Vector3(0.7,0.33,0.65),Color("30595b"))
-	for x in [-0.22,0.0,0.22]:
-		var tuft := Art.cone(visual,Vector3(x,1.5,-0.28),0.18,0.33,Color("30595b"))
-		tuft.rotation_degrees.z=180
-	Art.box(visual,Vector3(0,0.9,0),Vector3(0.55,0.65,0.38),Color("dba448"))
-	Art.box(visual,Vector3(0,1.15,-0.22),Vector3(0.58,0.14,0.1),Color("417f7a"))
-	Art.box(visual,Vector3(0.15,0.95,-0.23),Vector3(0.12,0.4,0.08),Color("417f7a"))
-	Art.box(visual,Vector3(0,0.95,0.3),Vector3(0.45,0.5,0.25),Color("a68c63"))
-	for x in [-0.36,0.36]:
-		Art.box(visual,Vector3(x,0.9,0),Vector3(0.17,0.47,0.19),Color("dba448"))
-		Art.sphere(visual,Vector3(x,0.64,0),Vector3(0.18,0.2,0.18),Color("e4b587"))
-	for x in [-0.16,0.16]:
-		var leg := Node3D.new()
-		visual.add_child(leg)
-		leg.position=Vector3(x,0.6,0)
-		Art.box(leg,Vector3(0,-0.2,0),Vector3(0.22,0.4,0.24),Color("526552"))
-		Art.box(leg,Vector3(0,-0.48,-0.06),Vector3(0.24,0.18,0.35),Color("765744"))
-		if x<0: left_leg=leg
-		else: right_leg=leg
-	for x in [-0.14,0.14]: Art.sphere(visual,Vector3(x,1.37,-0.275),Vector3(0.09,0.12,0.06),Color("263f42"))
-	for y in [0.71,0.88,1.05]: Art.sphere(visual,Vector3(-0.02,y,-0.21),Vector3.ONE*0.055,Color("655442"))
-	var frame := Node3D.new()
-	for child in visual.get_children():
-		visual.remove_child(child);frame.add_child(child)
-	visual.add_child(frame)
-	ActorSize.fit(frame,ActorSize.HUMAN_HEIGHT)
+	push_error("No modern player model available: "+hero_path)
 
 func equip(item: String) -> void:
 	if item==equipped: return
@@ -266,14 +195,6 @@ func equip(item: String) -> void:
 		var hand_transform: Transform3D=hand_skeleton.global_transform*hand_skeleton.get_bone_global_pose(hand_index)
 		tool.basis=hand_transform.basis.inverse()*visual.global_basis.orthonormalized()
 		if item=="axe": tool.basis=tool.basis*Basis(Vector3.FORWARD,PI)
-		if avatar.get("character","explorer_b")=="explorer_b":
-			# Hand-local palm center and the line across the finger bases form the grip.
-			tool.position=Vector3(-.015,.095,0)
-			tool.basis=Basis(Vector3.LEFT,Vector3.FORWARD,Vector3.DOWN).scaled(Vector3.ONE/hand_transform.basis.get_scale().x)
-		elif avatar.get("character")=="haeru":
-			tool.position=Vector3(0,.045,0)
-			# Establish the grip once; the original fishing/greeting wrist animates it.
-			tool.basis=hand_transform.basis.inverse()*Basis(Vector3.UP,visual.global_rotation.y)*Basis(Vector3.RIGHT,-.35)
 		tool_grip=tool.basis
 	else:
 		equipment=Node3D.new()
@@ -326,7 +247,7 @@ func build_tool(item: String, tool: Node3D) -> void:
 		Art.box(tool,Vector3(0.07,0.43,0),Vector3(0.32,0.23,0.12),Color("a8b8ae"))
 
 ## ------------------------------------------------------------------ sockets
-## The explorer_b rig carries items on the shared sockets (equip_sockets.gd): the item in use on
+## Equipment can carry items on shared sockets (equip_sockets.gd): the item in use on
 ## hand_r, the ones put down on their stow socket (an axe or a rod on the back) until used again.
 ## Moving between the hand and a stow socket eases over SOCKET_MOVE s instead of jumping.
 const EquipSockets = preload("res://scripts/equip_sockets.gd")
@@ -335,7 +256,7 @@ const SOCKET_MOVE := 0.22
 var stowed := {}
 
 func uses_sockets() -> bool:
-	return avatar.get("character","explorer_b")=="explorer_b" and is_instance_valid(hand_skeleton) and not EquipSockets.rig_of(hand_skeleton).is_empty()
+	return false # Modern heroes currently use the bone-relative grip below.
 
 ## The socket frame `name` (hand_r, hand_l, back, hip_r, hip_l, head) on this body, or null.
 func socket(name: String) -> Node3D:
@@ -436,9 +357,6 @@ func drop_item(node: Node3D) -> void:
 func update_tool_pose() -> void:
 	if not is_instance_valid(tool_node) or not is_instance_valid(hand_skeleton): return
 	if uses_sockets(): return
-	if avatar.get("character","explorer_b") in ["explorer_b","haeru"]:
-		tool_node.basis=tool_grip
-		return
 	if current_clip=="slash":
 		tool_node.basis=tool_grip
 		return
@@ -553,8 +471,6 @@ func _physics_process(delta: float) -> void:
 	stride+=delta*11*moving
 	if is_instance_valid(animation_player) and animation_player.has_animation("walk") and animation_player.has_animation("idle"):
 		var desired := ("run" if (sprinting or locomotion_velocity.length()>3.4) and animation_player.has_animation("run") else "walk") if moving>0.1 else "idle"
-		if avatar.get("character")=="haeru" and moving<=.1:
-			desired="greet" if Time.get_ticks_msec()*.001<greeting_until else ambient_clip
 		if Time.get_ticks_msec()*0.001<action_until: desired="slash"
 		if not clip_override.is_empty() and animation_player.has_animation(clip_override): desired=clip_override
 		if current_clip!=desired:
@@ -668,13 +584,14 @@ func face_point(point: Vector3) -> void:
 	action_facing=direction.normalized()
 	facing=action_facing
 	facing_until=Time.get_ticks_msec()*0.001+0.4
-	if avatar.get("character")=="haeru":greeting_until=Time.get_ticks_msec()*.001+2.5
 
 ## Rebuilds the character in a new look; returns false when the look is unchanged (or the body
 ## is not built yet: _ready builds it in `avatar`).
 func apply_avatar(value: Dictionary) -> bool:
-	if value==avatar: return false
-	avatar=value.duplicate(true)
+	var next := value.duplicate(true)
+	next["character"]=Roster.canonical(str(next.get("character",Roster.DEFAULT)))
+	if next==avatar: return false
+	avatar=next
 	if not is_instance_valid(visual): return false
 	var old_tool := equipped
 	equipped=""
@@ -693,7 +610,7 @@ func apply_avatar(value: Dictionary) -> bool:
 	right_leg=null
 	var was_stowed: Array=stowed.keys()
 	stowed.clear()
-	_build_explorer()
+	_build_character()
 	apply_colors()
 	look_builds+=1
 	equip(old_tool)
@@ -719,7 +636,6 @@ func apply_colors() -> void:
 			var part: String=fields[0]
 			if part=="detail" and eight: part="accent"
 			if part not in ["hair","coat","pants","boots","skin","backpack","accent"]: continue
-			if avatar.get("character")=="explorer_b" and avatar.get(part)=={"coat":"#dba448","pants":"#526552","boots":"#765744"}.get(part):continue
 			var material: StandardMaterial3D=source.duplicate()
 			if part=="backpack" and not avatar.get("backpack",true):
 				material.transparency=BaseMaterial3D.TRANSPARENCY_ALPHA
@@ -731,7 +647,7 @@ func apply_colors() -> void:
 				tint.set_shader_parameter("tint",Color(avatar[part]))
 				tint.set_shader_parameter("reference_color",Color("#e4b587") if part=="skin" and not eight else Color("#"+fields[1]))
 				tint.set_shader_parameter("skin_part",part=="skin")
-				tint.set_shader_parameter("gold_cloth_only",avatar.get("character")=="explorer_b" and part=="coat")
+				tint.set_shader_parameter("gold_cloth_only",false)
 				mesh.set_surface_override_material(index,tint)
 				continue
 			mesh.set_surface_override_material(index,material)
@@ -743,7 +659,7 @@ func apply_colors() -> void:
 		holder.name="Headwear_"+headwear
 		visual.add_child(holder)
 		holder.position.y=1.63
-		if avatar.get("character","explorer")!="explorer": holder.scale=Vector3.ONE*0.58
+		holder.scale=Vector3.ONE*0.58
 		if is_instance_valid(hand_skeleton):
 			var head := hand_skeleton.find_bone("Head")
 			if head>=0:
@@ -765,7 +681,7 @@ func apply_colors() -> void:
 			Art.sphere(holder,Vector3(0,0.03,0),Vector3(0.63,0.2,0.57),hat_color)
 			if headwear=="cap": Art.box(holder,Vector3(0,-0.04,-0.27),Vector3(0.42,0.045,0.3),hat_color)
 			else: Art.sphere(holder,Vector3(0.05,0.09,0),Vector3(0.52,0.16,0.5),hat_color)
-	if avatar.get("backpack",true) and avatar.get("character","explorer")!="explorer":
+	if avatar.get("backpack",true):
 		var bag := Node3D.new()
 		bag.name="Backpack"
 		visual.add_child(bag)
@@ -785,14 +701,3 @@ func apply_colors() -> void:
 			var rest: Transform3D=hand_skeleton.global_transform*hand_skeleton.get_bone_global_rest(hand_skeleton.find_bone("Spine02"))
 			bag.reparent(attachment,false)
 			bag.transform=rest.affine_inverse()*desired
-	elif not avatar.get("backpack",true) and avatar.get("character","explorer")=="explorer":
-		# The generated backpack shares an outer shell with the coat. Close the exposed back.
-		var coat_back := Art.sphere(visual,Vector3(0,0.79,0.14),Vector3(0.43,0.42,0.19),Color(avatar.get("coat","#c28b38")).darkened(0.2))
-		if hand_skeleton and hand_skeleton.find_bone("Spine02")>=0:
-			var attachment := BoneAttachment3D.new()
-			attachment.bone_name="Spine02"
-			hand_skeleton.add_child(attachment)
-			var desired: Transform3D=coat_back.global_transform
-			var rest: Transform3D=hand_skeleton.global_transform*hand_skeleton.get_bone_global_rest(hand_skeleton.find_bone("Spine02"))
-			coat_back.reparent(attachment,false)
-			coat_back.transform=rest.affine_inverse()*desired

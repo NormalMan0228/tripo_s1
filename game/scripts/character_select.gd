@@ -4,30 +4,16 @@ extends Control
 ## sees them in 3D and dresses them (the wardrobe editor, wardrobe.gd: colours, hat, pack), then
 ## 모험 시작 saves the look (/v1/profile) and the game goes on to the first place. main.gd
 ## authenticate awaits `done`; only the real game shows it (test harnesses add Main directly).
-## The new characters' 3D models come from the 05 session one by one: until a card's model is in,
-## it stands in with an older model (STAND_IN) or the card is locked as 준비 중.
+## Only the eight current character models can be selected or previewed.
 signal done(avatar: Dictionary)
 ## The wardrobe's 닫기 (wardrobe mode only): main.gd closes it without saving.
 signal closed
 
 const RpgUi = preload("res://scripts/rpg_ui.gd")
 const Wardrobe = preload("res://scripts/wardrobe.gd")
-## id (the server's character id), picture, tab, role, stand-in model (an older character the
-## server already has) or "" while locked.
-const CARDS := [["m1", "m1_adventurer", "m", "모험가", "explorer"], ["m2", "m2_artisan", "m", "장인", ""], ["m3", "m3_fisher", "m", "낚시꾼", ""], ["m4", "m4_smith", "m", "대장장이", ""],
-	["f1", "f1_adventurer", "f", "모험가", "explorer_b"], ["f2", "f2_herbalist", "f", "약초사", ""], ["f3", "f3_inventor", "f", "발명가", ""], ["f4", "f4_sailor", "f", "선원", ""]]
-## Each new character's own colours (05 session, art/characters/body_p2_v1/charsel/game/<id>_parts.json):
-## picking a card whose model is in starts from its original look.
-const PRESETS := {"m1":{"hair":"#67321b","skin":"#ca9582","coat":"#c05426","pants":"#21243a","boots":"#9a4b22","accent":"#516b3c"},
-	"m2":{"hair":"#171518","skin":"#cb9383","coat":"#865a27","pants":"#623e29","boots":"#341d16","accent":"#858484"},
-	"m3":{"hair":"#181717","skin":"#975a38","coat":"#5787b8","pants":"#cabaa6","boots":"#8a5b3c","accent":"#cfc2ad"},
-	"m4":{"hair":"#b84208","skin":"#d39081","coat":"#62664d","pants":"#2b394e","boots":"#20201d","accent":"#808074"},
-	"f1":{"hair":"#d36629","skin":"#d09b87","coat":"#d8ad2b","pants":"#347272","boots":"#ece9e5","accent":"#844330"},
-	"f2":{"hair":"#1c1b20","skin":"#d09988","coat":"#9f7fb8","pants":"#1e1f42","boots":"#603222","accent":"#6f4146"},
-	"f3":{"hair":"#7bbfa7","skin":"#d7a288","coat":"#883b21","pants":"#676460","boots":"#252420","accent":"#726761"},
-	"f4":{"hair":"#5f3927","skin":"#9f5e3f","coat":"#5b5978","pants":"#961f24","boots":"#d8d5cf","accent":"#90687d"}}
-## Characters whose own 3D model is in (05 session); the rest wear their stand-in or stay locked.
-static var ready_models: Array = []
+const Roster=preload("res://scripts/character_roster.gd")
+const CARDS=Roster.CARDS
+const PRESETS=Roster.PRESETS
 
 var avatar: Dictionary = {}
 ## The world takes avatar_v2 looks (main.gd): accent, straw hat and any skin in the editor.
@@ -44,10 +30,9 @@ var cards: Dictionary = {}
 var pages: Dictionary = {}
 var chosen := ""
 
-## The model a card wears now: its own once it is in (assets/<id>.glb), else its stand-in
-## ("" = locked).
-static func model_for(id: String, stand_in: String) -> String:
-	return id if id in ready_models or ResourceLoader.exists("res://assets/%s.glb" % id) else stand_in
+## A missing modern model stays unavailable instead of reviving a retired avatar.
+static func model_for(id: String) -> String:
+	return id if id in Roster.IDS and ResourceLoader.exists(Roster.model_path(id)) else ""
 
 func _ready() -> void:
 	name = "CharacterSelect"
@@ -131,11 +116,7 @@ func _ready() -> void:
 	var start := RpgUi.button(foot, tr("이 모습으로 저장") if wardrobe else tr("모험 시작"), _start, "gold", "lg", true)
 	start.name = "Start"
 	start.custom_minimum_size.x = 260
-	# The tab and card that match the look now (a 여 stand-in opens the 여 tab).
-	var now := str(editor.avatar.get("character", "explorer_b"))
-	var first := "f1" if now in ["explorer_b", "ranger"] or now.begins_with("f") else "m1"
-	for spec in CARDS:
-		if spec[0] == now or spec[4] == now: first = spec[0]
+	var first := Roster.canonical(str(editor.avatar.get("character",Roster.DEFAULT)))
 	RpgUi.select_tab(tabs, "f" if first.begins_with("f") else "m")
 	pick(first, false)
 	_fit.call_deferred(card)
@@ -151,7 +132,7 @@ func _fit(card: Control) -> void:
 
 func _card(spec: Array, group: ButtonGroup) -> Button:
 	var id: String = spec[0]
-	var model := model_for(id, spec[4])
+	var model := model_for(id)
 	var b := Button.new()
 	b.name = "Card_" + id
 	b.toggle_mode = true
@@ -205,9 +186,7 @@ func pick(id: String, sound := true) -> void:
 	for key in editor.find_children("*", "Button", true, false):
 		if key.has_meta("character") and key.get_meta("character") == model:
 			if sound: key.pressed.emit()
-	# A world with avatar_v2 keeps the card's own id (m1...f4; the body shows its stand-in until the
-	# model is in, AvatarLook.shown); an older world keeps the stand-in's id.
-	editor.avatar.character = id if v2 else model
+	editor.avatar.character = id
 	# The wardrobe opens on the saved look: its colours stay until another card is picked.
 	if model == id and PRESETS.has(id) and (sound or not wardrobe): editor.avatar.merge(PRESETS[id], true)
 	editor.refresh()

@@ -180,7 +180,7 @@ func friends_page() -> void:
 	if not incoming.is_empty():
 		section(tr("받은 친구 신청"))
 		for entry in incoming:
-			RpgUi.person_row(list, {"username":entry.username, "character":"explorer_b", "state":"online", "where":tr("친구가 되고 싶어 해요")}, [
+			RpgUi.person_row(list, {"username":entry.username, "character":"f1", "state":"online", "where":tr("친구가 되고 싶어 해요")}, [
 				{"icon":"accept", "tip":tr("수락"), "call":func(): hub.answer_request(str(entry.id), "accept")},
 				{"icon":"decline", "tip":tr("거절"), "call":func(): hub.answer_request(str(entry.id), "decline")}])
 	var friends: Array = hub.people.get("friends", [])
@@ -201,13 +201,13 @@ func friends_page() -> void:
 	if not outgoing.is_empty():
 		section(tr("보낸 신청"))
 		for entry in outgoing:
-			RpgUi.person_row(list, {"username":entry.username, "character":"explorer_b", "state":"offline", "where":tr("답을 기다려요")}, [
+			RpgUi.person_row(list, {"username":entry.username, "character":"f1", "state":"offline", "where":tr("답을 기다려요")}, [
 				{"icon":"decline", "tip":tr("신청 취소"), "call":func(): hub.answer_request(str(entry.id), "cancel")}])
 	var blocked: Array = hub.people.get("blocked", [])
 	if not blocked.is_empty():
 		section(tr("차단한 사람"))
 		for entry in blocked:
-			RpgUi.person_row(list, {"username":entry.username, "character":"explorer_b", "state":"offline", "where":""}, [
+			RpgUi.person_row(list, {"username":entry.username, "character":"f1", "state":"offline", "where":""}, [
 				{"icon":"lock", "tip":tr("차단 풀기"), "call":func(): hub.unblock(str(entry.id))}])
 
 func online_page() -> void:
@@ -239,14 +239,14 @@ func village_page() -> void:
 		section(tr("받은 초대"))
 		for invitation in invites:
 			var village := str(invitation.get("kind", "")) == "village"
-			RpgUi.person_row(list, {"username":invitation.get("sender", ""), "character":"explorer_b", "state":"online", "where":tr("마을로 초대했어요") if village else tr("파티로 초대했어요")}, [
+			RpgUi.person_row(list, {"username":invitation.get("sender", ""), "character":"f1", "state":"online", "where":tr("마을로 초대했어요") if village else tr("파티로 초대했어요")}, [
 				{"icon":"accept", "tip":tr("수락"), "call":func(): hub.answer_invite(invitation, "accept")},
 				{"icon":"decline", "tip":tr("거절"), "call":func(): hub.answer_invite(invitation, "decline")}])
 	var knocks: Array = my.get("knocks", hub.overview.get("knocks", []))
 	if knocks is Array and not knocks.is_empty():
 		section(tr("문 두드리는 사람"))
 		for knock in knocks:
-			RpgUi.person_row(list, {"username":knock.get("username", knock.get("sender", "")), "character":"explorer_b", "state":"online", "where":tr("놀러 오고 싶어 해요")}, [
+			RpgUi.person_row(list, {"username":knock.get("username", knock.get("sender", "")), "character":"f1", "state":"online", "where":tr("놀러 오고 싶어 해요")}, [
 				{"icon":"accept", "tip":tr("들이기"), "call":func(): hub.answer_invite({"id":knock.id, "kind":"knock"}, "accept")},
 				{"icon":"decline", "tip":tr("거절"), "call":func(): hub.answer_invite({"id":knock.id, "kind":"knock"}, "decline")}])
 	section(tr("마을에 있는 사람"))
@@ -267,7 +267,7 @@ func village_page() -> void:
 			actions.append({"icon":"leave", "tip":tr("방문 끝내기"), "call":func(): hub.eject(str(person.id))})
 		var where := where_text(person)
 		if bool(person.get("host", false)): where = tr("마을 주인")
-		var row := RpgUi.person_row(list, {"username":person.username, "character":"explorer_b", "state":"online" if bool(person.get("online", true)) else "offline", "where":where}, actions)
+		var row := RpgUi.person_row(list, {"username":person.username, "character":"f1", "state":"online" if bool(person.get("online", true)) else "offline", "where":where}, actions)
 		if bool(person.get("host", false)):
 			var crown := RpgUi.icon("crown", 20)
 			crown.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -305,7 +305,7 @@ func party_page() -> void:
 		section(tr("파티 %d/3명") % party.get("members", []).size())
 		for member in party.get("members", []):
 			var leader := str(member.get("id", "")) == str(party.get("leader_id", ""))
-			var row := RpgUi.person_row(list, {"username":member.get("username", ""), "character":"explorer_b", "state":"online" if bool(member.get("online", false)) else "offline", "where":tr("파티장") if leader else ""}, [])
+			var row := RpgUi.person_row(list, {"username":member.get("username", ""), "character":"f1", "state":"online" if bool(member.get("online", false)) else "offline", "where":tr("파티장") if leader else ""}, [])
 			if leader:
 				var crown := RpgUi.icon("crown", 20)
 				crown.size_flags_vertical = Control.SIZE_SHRINK_CENTER

@@ -173,3 +173,12 @@
 - 일반 몬스터는 원본 높이 최대1.90m(동작에 따라 순간 높이는 달라짐), 보스는 기존 큰 크기 유지/최소3.50m. 임시 몸체도 같은 기준과 발 위치/체력 표시를 적용하며, 웅크리기 동작은 크기 프레임과 분리했습니다.
 - 새 출시 PCK로 `actor_scale_check.gd` 256검사 통과, 오류0. 사람형51경우·몬스터34종/44모델·보스·임시 모델·옷장·외형 재생성 포함. 방/소라17검사와 공격입력19검사 회귀 통과. 전체 컴파일 실패0.
 - 로컬 `C:/lsm26/Villagen_0.11.9.5` 재빌드. PCK 해시는 `artifacts/demo-pack-check.json`. 운영 업로드/서버 변경/유료 생성 호출 없음. 비교 이미지는 `artifacts/actor-scale-players.png`, `actor-scale-residents.png`, `actor-scale-monsters.png`.
+
+## 2026-10-21 · 구형 플레이어 제거 및 m2 팔
+
+- 사용자 요청에 따라 플레이 가능한 외형은 신형8명(m1~m4/f1~f4)만 남깁니다. `character_roster.gd`에 목록·프리셋·구형 ID 연결을 모았습니다. 구형 저장/접속 정보는 신형으로 연결하고 색상 등 다른 값은 보존합니다.
+- 구형 플레이어 생성 분기, stand-in, 구형 선택 버튼, 구형 초상화를 제거했습니다. 신형 8명 초상화 추가. 게임 자원50파일을 `artifacts/retired-player-assets/`에 복구용 분리했으며 출시 PCK에는 포함되지 않습니다. 현 주민이 사용하는 공용 wardrobe/motion 리그와 NPC 해루는 유지합니다.
+- m2는 bind pose가 정상이지만 서로 반대 방향의 원본 동작을 팔다리별로 정렬하면서 쇄골이 안으로 꺾였습니다. `tools/body_gen/retarget_player.py --align-body`로 먼저 몸체 방향을 맞춘 뒤 4개 클립을 다시 옮겼습니다. 현재 기본 동작 참조는 구형 explorer 대신 신형 m1입니다.
+- m2 어깨 폭: 수정 전 대기 약0.09m → 수정 후 약0.39m. idle/walk/run/slash 각48시점, 총192시점의 어깨 폭을 검사합니다. 사진: `artifacts/m2-arm-before.png`, `m2-arm-review.png`, `m2-arm-detail.png`.
+- 출시 PCK로 roster/구형 자원 제거/저장 연결/8명 미리보기/m2팔59검사 통과, 새8명 기준 전체크기246검사, 마을/방/소라17검사, 서버 외형59시험, 출시 공격입력19검사 통과. 최종 오류0·컴파일 실패0.
+- 같은 로컬0.11.9.5 재빌드, 직전 PCK보다 약50.55MiB 감소. 해시 `artifacts/demo-pack-check.json`. 서버 변경/운영 업로드/유료 생성 호출 없음. 주 체크아웃과 무관한 미완료 자산은 건드리지 않았습니다.

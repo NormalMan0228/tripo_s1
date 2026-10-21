@@ -1,5 +1,6 @@
 extends SceneTree
-## Measure actual runtime bodies in metres, including older avatars and both resident builders.
+## Measure the current eight avatars and both resident builders in rendered world metres.
+const Roster = preload("res://scripts/character_roster.gd")
 const Player = preload("res://scripts/player.gd")
 const Npc = preload("res://scripts/npc.gd")
 const Folk = preload("res://scripts/shadow_folk.gd")
@@ -95,7 +96,7 @@ func run() -> void:
 	Art.box(stage,Vector3(0,-.06,-4),Vector3(18,.1,18),Color("b9c4b0"))
 	for x in range(-9,10):Art.box(stage,Vector3(x,0,-4),Vector3(.012,.012,18),Color("8c9c86"))
 	camera=Camera3D.new();stage.add_child(camera);camera.projection=Camera3D.PROJECTION_ORTHOGONAL;camera.current=true
-	for id in ["m1","m2","m3","m4","f1","f2","f3","f4","explorer_b","explorer","ranger","tinker","haeru"]:
+	for id in Roster.IDS:
 		var actor := Player.new();actor.avatar={"character":id,"backpack":false};actor.controls_enabled=false;actor.visual_only=true
 		stage.add_child(actor); actor.set_physics_process(false);actor.visual.visible=true;actor.visual.rotation.y=PI
 		await measured(actor.visual,actor,1.75,"player/"+id)
@@ -109,14 +110,14 @@ func run() -> void:
 	changing.set_physics_process(false)
 	# Let the renderer register the initial material before replacing that body.
 	if DisplayServer.get_name()!="headless": await RenderingServer.frame_post_draw
-	for id in ["explorer_b","haeru","f4","m1","f4"]:
+	for id in ["m1","m2","f4","m1","f4"]:
 		changing.apply_avatar({"character":id,"backpack":false})
 		await process_frame;await process_frame
 		await measured(changing.visual,changing,1.75,"changed/"+id)
 	changing.queue_free();await process_frame;await process_frame
 	var preview := Wardrobe.new();preview.avatar={"character":"m1","backpack":false};root.add_child(preview)
 	if DisplayServer.get_name()!="headless": await RenderingServer.frame_post_draw
-	for id in ["m1","explorer_b","haeru","f4"]:
+	for id in ["m1","m2","f1","f4"]:
 		preview.avatar.character=id;preview.refresh()
 		await process_frame;await process_frame
 		await measured(preview.actor.visual,preview.actor,1.75,"wardrobe/"+id)

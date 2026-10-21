@@ -1,8 +1,11 @@
 """Turn a Tripo Mixamo-rigged character into a player GLB: rename the bones to the names the game
 uses (player.gd / action_pose.gd look for R_Hand, Head, Spine02, R_Upperarm, R_Forearm) and copy the
-current player clips (idle, walk, run, slash from game/assets/explorer.glb) onto it.
+current player clips (idle, walk, run, slash from game/assets/m1.glb) onto it.
 
-  blender -b --factory-startup -P tools/body_gen/retarget_player.py -- <character.glb|fbx> <out.glb> [source.glb]
+  blender -b --factory-startup -P tools/body_gen/retarget_player.py -- <character.glb|fbx> <out.glb> [source.glb] [--align-body]
+
+Use --align-body when source and target face different directions; this aligns the
+whole body frame from the thigh rests before solving individual limbs.
 
 Retargeting is done in world space per mapped bone: the source bone's rotation away from its rest
 pose is applied to the target bone after the target rest is turned to point the same way as the
@@ -18,9 +21,11 @@ import bpy
 from mathutils import Matrix, Quaternion
 
 a = sys.argv[sys.argv.index('--') + 1:]
+align_body = '--align-body' in a
+a = [arg for arg in a if arg != '--align-body']
 src_char, out = a[0], a[1]
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-src_anim = a[2] if len(a) > 2 else os.path.join(ROOT, 'game', 'assets', 'explorer.glb')
+src_anim = a[2] if len(a) > 2 else os.path.join(ROOT, 'game', 'assets', 'm1.glb')
 CLIPS = ['idle', 'walk', 'run', 'slash']
 # The source run leans and crouches hard; on longer-legged bodies that reads as sitting, so the
 # body lean (hip and spine rotation away from rest) and the hip drop are scaled down per clip.
@@ -82,6 +87,15 @@ pairs = [(MAP[k][0], MAP[k][1], MAP[k][2]) for k in MAP]
 pairs = [p for p in pairs if p[0] in T.data.bones and p[1] in S.data.bones]
 print('mapped', len(pairs), 'of', len(MAP))
 Tmw, Smw = T.matrix_world.copy(), S.matrix_world.copy()  # import-time frames: clips that also move the armature object are read relative to it
+if align_body:
+    # Align the source motion's body frame before aligning individual limbs. A target
+    # facing the opposite way (m2) otherwise turns both clavicles inward and collapses
+    # the shoulders, although the imported bind pose and skin are healthy.
+    target_side = (Tmw @ T.data.bones['L_Thigh'].head_local) - (Tmw @ T.data.bones['R_Thigh'].head_local)
+    source_side = (Smw @ S.data.bones['L_Thigh'].head_local) - (Smw @ S.data.bones['R_Thigh'].head_local)
+    yaw = math.atan2(target_side.y, target_side.x) - math.atan2(source_side.y, source_side.x)
+    Smw = Matrix.Rotation(yaw, 4, 'Z') @ Smw
+    print('source_body_alignment_degrees', math.degrees(yaw))
 Tq = rot(Tmw)
 s_rest = {sb: rot(Smw @ S.data.bones[sb].matrix_local) for _, sb, _ in pairs}
 align = {}

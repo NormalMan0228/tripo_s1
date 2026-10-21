@@ -86,7 +86,7 @@ func show_look(look, version := -1) -> void:
 ## How much of each character the medallion shows, from the top of the head down, as a share of
 ## its height (the big-headed characters need more to reach the shoulders), tuned to match the
 ## authored portraits (assets/ui/portrait_*.png).
-const SPAN := {"explorer_b":0.32, "explorer":0.56, "ranger":0.33, "tinker":0.35}
+const SPAN := {}
 
 ## Frames head and shoulders like the authored portraits: from just above the head (or the hat)
 ## down to the shoulders. The body's bounds (as drawn, skinning included) give the head's top and
@@ -132,7 +132,7 @@ func frame_head() -> void:
 		body = box if first else body.merge(box)
 		first = false
 	if first: return
-	var span: float = SPAN.get(str(actor.avatar.get("character","explorer_b")), 0.32)
+	var span: float = SPAN.get(str(actor.avatar.get("character","f1")), 0.32)
 	var top := maxf(body.end.y, hat_top)+body.size.y*0.02
 	var bottom := body.end.y-body.size.y*span
 	var middle := Vector3(body.get_center().x, (top+bottom)*0.5, 0)

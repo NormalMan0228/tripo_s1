@@ -7,7 +7,7 @@ extends RefCounted
 ##   hip_r, hip_l    at the belt on each side, hanging; the item's +Y points down
 ##   head            on the crown; the item's +Y up
 ## Bones come from the ISS-1 humanoid map (ix/ix_rig.gd), so every rig it knows works: the player
-## (style_character) and the residents (the wardrobe GLB) share Explorer B, haeru and the legacy GLBs
+## and residents share these APIs; modern heroes retain the Tripo humanoid bone names
 ## are the A-pose Tripo rig. ISS-1's own names are accepted too (ALIASES: grip_r is hand_r, grip_l
 ## hand_l, head_top head), so interaction code and held items share these nodes. The frames are worked
 ## out from the rig's rest pose

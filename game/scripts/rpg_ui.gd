@@ -1071,8 +1071,7 @@ static func avatar_thumb(parent: Node, character: String, size := 36.0) -> Contr
 	medal.size = Vector2(size * 0.84, size * 0.84)
 	medal.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(medal)
-	var path := "res://assets/ui/portrait_%s.png" % character
-	if not ResourceLoader.exists(path): path = "res://assets/ui/portrait_explorer.png"
+	var path: String=preload("res://scripts/character_roster.gd").portrait_path(character)
 	medal.add_child(icon(path, size * 0.84))
 	var ring := TextureRect.new()
 	ring.texture = half("portrait_ring")

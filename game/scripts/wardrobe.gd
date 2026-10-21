@@ -8,6 +8,7 @@ var preview_motion := "idle"
 const RpgUi=preload("res://scripts/rpg_ui.gd")
 ## The preview is the same walker (player.gd through avatar_look.gd) that wears the look everywhere.
 const AvatarLook=preload("res://scripts/avatar_look.gd")
+const Roster=preload("res://scripts/character_roster.gd")
 const DEFAULTS=AvatarLook.DEFAULTS
 
 func _ready() -> void:
@@ -54,9 +55,9 @@ func _ready() -> void:
 	add_child(controls)
 	var row := HBoxContainer.new()
 	controls.add_child(row)
-	for id in ["explorer_b","explorer","ranger","tinker"]:
+	for id in Roster.IDS:
 		var b := Button.new()
-		b.text={"explorer_b":tr("여행자"),"explorer":tr("루"),"ranger":tr("미라"),"tinker":tr("테오")}[id]
+		b.text=id
 		b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 		b.set_meta("character",id)
 		b.toggle_mode=true
@@ -64,8 +65,7 @@ func _ready() -> void:
 		b.pressed.connect(func():
 			RpgUi.sfx("tab",-8.0)
 			avatar.character=id
-			var presets: Dictionary={"explorer":{"hair":"#30595b","coat":"#dba448","pants":"#526552","boots":"#765744"},"ranger":{"hair":"#a64e2c","coat":"#68765a","pants":"#45433f","boots":"#754b38"},"tinker":{"hair":"#343b53","coat":"#ad5545","pants":"#51566c","boots":"#b48b4b"}}
-			avatar.merge(presets.get(id,presets.explorer),true)
+			avatar.merge(Roster.PRESETS[id],true)
 			refresh())
 		row.add_child(b)
 	for key in ["hair","coat","pants","boots","skin"]+(["accent"] if v2 else []):
@@ -141,10 +141,8 @@ func refresh() -> void:
 	for b in find_children("*","Button",true,false):
 		if b.has_meta("character"): b.button_pressed=b.get_meta("character")==avatar.character
 		if b.has_meta("free_part"):
-			b.disabled=avatar.character=="explorer_b" and b.get_meta("free_part") in ["hair","skin"]
-			if not b.disabled: (b as ColorPickerButton).color=Color(str(avatar.get(b.get_meta("free_part"),DEFAULTS.get(b.get_meta("free_part"),"#ffffff"))))
+			(b as ColorPickerButton).color=Color(str(avatar.get(b.get_meta("free_part"),DEFAULTS.get(b.get_meta("free_part"),"#ffffff"))))
 		if b.has_meta("part"):
 			b.text="◆" if avatar.get(b.get_meta("part"),"")==b.get_meta("color") else "●"
-			b.disabled=avatar.character=="explorer_b" and b.get_meta("part") in ["hair","skin"]
-			b.tooltip_text=tr("이 여행자의 머리와 피부는 고유한 모습으로 유지돼요. 옷과 소품을 바꿔 보세요.") if b.disabled else str(b.get_meta("name",""))
+			b.tooltip_text=str(b.get_meta("name",""))
 	if actor.animation_player and actor.animation_player.has_animation("idle"): actor.animation_player.play("idle",0.18)

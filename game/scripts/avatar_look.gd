@@ -11,10 +11,11 @@ extends RefCounted
 
 const Fx = preload("res://scripts/fx.gd")
 const PlayerScript = preload("res://scripts/player.gd")
+const Roster = preload("res://scripts/character_roster.gd")
 
 ## Mirrors server/models.py Avatar. A missing field means the default, so {} and the full
 ## default record are the same look and never rebuild a body.
-const DEFAULTS := {"character":"explorer_b","hair":"#30595b","coat":"#dba448","pants":"#526552","boots":"#765744","skin":"#e4b587","headwear":"none","backpack":true,"accent":"#c94f3d"}
+const DEFAULTS := {"character":"f1","hair":"#d36629","coat":"#d8ad2b","pants":"#347272","boots":"#ece9e5","skin":"#d09b87","headwear":"none","backpack":true,"accent":"#844330"}
 ## Fields and values only a server with avatar_v2 (/health; docs/design/AVATAR8_API_KO.md) takes.
 const V2_ONLY := ["accent"]
 const OLD_SKINS := ["#e4b587","#f0cdb1","#bc865c","#895b43","#604431"]
@@ -31,6 +32,7 @@ static func normalize(value) -> Dictionary:
 			if field is bool: look[key]=field
 		elif field is String and not field.is_empty():
 			look[key]=field
+	look.character=Roster.canonical(str(look.character))
 	return look
 
 ## The look a body wears: the saved look with a model it can show (model_id).
@@ -39,12 +41,9 @@ static func shown(value) -> Dictionary:
 	look.character = model_id(str(look.character))
 	return look
 
-## The eight new characters (m1-m4, f1-f4; avatar_v2) wear an older model until their own is in the
-## game (assets/<id>.glb from the 05 session): the men the explorer, the women the traveller.
+## Old saved/presence ids become a modern character, never an old model.
 static func model_id(id: String) -> String:
-	if not (id.length() == 2 and id[0] in ["m", "f"] and id[1].is_valid_int()): return id
-	if ResourceLoader.exists("res://assets/%s.glb" % id): return id
-	return "explorer" if id[0] == "m" else "explorer_b"
+	return Roster.canonical(id)
 
 ## The look as the server takes it: an older server (no avatar_v2) gets no accent, the travel cap
 ## for the straw hat and the nearest of its five skins.
@@ -74,11 +73,9 @@ static func signature(value) -> String:
 
 ## A walker (player.gd) built in this look from its first frame. Callers set position and
 ## controls; the look is applied in _ready, so the default character never shows first.
-## The walker's model and motion files, for LoadPace.want() before the first village build.
+## The modern roster plus the shared resident rig/motion used by the town's NPCs.
 static func resource_paths() -> Array:
-	# The walker wears the wardrobe model (style_character.gd): read on the main thread at its first
-	# build it held a frame for about 0.2-0.3 s.
-	return ["res://assets/explorer_b_wardrobe.glb", "res://assets/explorer_b_motion.glb", "res://assets/explorer_b_reference.glb"]
+	return Roster.IDS.map(func(id):return Roster.model_path(id))+["res://assets/explorer_b_wardrobe.glb","res://assets/explorer_b_motion.glb"]
 
 static func walker(look, version := -1) -> CharacterBody3D:
 	var body: CharacterBody3D = PlayerScript.new()

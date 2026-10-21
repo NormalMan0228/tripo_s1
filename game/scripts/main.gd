@@ -1074,7 +1074,7 @@ func enter_village() -> void:
 	screen = "loading"
 	if not await build_world(false): return
 	clear_ui()
-	frame = RpgUi.player_frame(ui,"res://assets/ui/portrait_explorer.png","profile")
+	frame = RpgUi.player_frame(ui,"res://assets/ui/portrait_f1.png","profile")
 	left = frame.column
 	wallet = frame.status
 	reward_button=button(left,tr("받지 않은 생존 보상 받기"),claim_pending_reward,"primary")
@@ -3811,7 +3811,7 @@ func spawn_villagers() -> void:
 		else:
 			var walker := Player.new()
 			walker.controls_enabled=false
-			walker.avatar={"character":"explorer_b","coat":entry.coat,"pants":"#51574b","boots":"#826345","backpack":entry.role=="map","headwear":"none"}
+			walker.avatar={"character":"f1","coat":entry.coat,"pants":"#51574b","boots":"#826345","backpack":entry.role=="map","headwear":"none"}
 			world.add_child(walker)
 			walker.facing=Vector3(0,0,1)
 			npc=walker
@@ -4044,31 +4044,7 @@ func first_look() -> void:
 
 func open_wardrobe() -> void:
 	if screen!="village": return
-	# The eight characters (avatar_v2 worlds): the wardrobe is the character select with its cards,
-	# dressing and name; the older four-traveller editor stays for older servers only.
-	if avatar_v2:
-		open_look_select()
-		return
-	var v := modal_card(tr("나의 여행자"),"wardrobe")
-	var editor := preload("res://scripts/wardrobe.gd").new()
-	editor.avatar=me.get("profile",{}).get("avatar",{}).duplicate(true)
-	editor.v2=avatar_v2
-	v.add_child(editor)
-	var status := RpgUi.caption(v,tr("외형은 모든 지역에서 같게 유지됩니다. 능력치는 바뀌지 않습니다."),12)
-	var save := button(v,tr("이 모습으로 저장"),func():
-		var result: Dictionary=await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":AvatarLook.for_server(editor.avatar,avatar_v2)}))
-		if not is_instance_valid(editor): return
-		if result.ok:
-			adopt_profile(result.data,true)
-			close_village_modal()
-			RpgUi.sfx("save",-6.0)
-			message(tr("새로운 여행자 모습이 저장되었습니다."))
-		else:
-			RpgUi.sfx("deny",-6.0)
-			status.text=tr("옷을 갈아입지 못했어요. 옷장을 다시 열어 주세요.")
-	)
-	save.custom_minimum_size.y=44
-	save.theme_type_variation="GoldButton"
+	open_look_select()
 
 
 ## The avatar_v2 wardrobe: the character select over the village (character_select.gd, wardrobe
@@ -4079,7 +4055,7 @@ func open_look_select() -> void:
 	cancel_preview()
 	var picker := CharacterSelect.new()
 	picker.wardrobe = true
-	picker.v2 = true
+	picker.v2 = avatar_v2
 	picker.avatar = me.get("profile",{}).get("avatar",{}).duplicate(true)
 	var named_now := str(me.get("display_name",""))
 	picker.display_name = "" if named_now==str(me.get("username","")) else named_now
@@ -4092,7 +4068,7 @@ func open_look_select() -> void:
 	while is_instance_valid(picker):
 		var chosen: Dictionary = await picker.done
 		if not is_instance_valid(picker): return
-		var result: Dictionary = await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":AvatarLook.for_server(chosen,true)}))
+		var result: Dictionary = await api.post("/v1/profile",api.mutation({"version":me.get("profile",{}).get("version",0),"avatar":AvatarLook.for_server(chosen,avatar_v2)}))
 		if not is_instance_valid(picker): return
 		if not result.ok:
 			picker.say(tr("옷을 갈아입지 못했어요. 옷장을 다시 열어 주세요."))

@@ -347,7 +347,7 @@ func _ready() -> void:
 	retitle(true)
 	push_day()
 
-## Shared gait clips, retargeted once onto the wardrobe rig (as style_character.gd does).
+## Shared resident gait clips, retargeted once onto the town rig.
 static func library_for(target_animator: AnimationPlayer, target_skeleton: Skeleton3D) -> AnimationLibrary:
 	if _library != null: return _library
 	_library = AnimationLibrary.new()
