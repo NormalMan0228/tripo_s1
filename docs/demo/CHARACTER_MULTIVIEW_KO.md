@@ -42,3 +42,12 @@ flowchart LR
 - 구현/시험은 완료했으며, 운영 반영 시각과 커밋은 아래 배포 확인에 별도로 기록합니다.
 
 공식 근거: [멀티뷰 생성](https://developers.tripo3d.ai/en/docs/generation-image-to-multiview), [P 시리즈 멀티뷰 3D](https://developers.tripo3d.ai/en/docs/generation-multiview-to-model/p), [요금](https://developers.tripo3d.ai/en/pricing).
+
+
+### 캐릭터 멀티뷰 제작 배포 확인
+
+- 2026-10-21T17:57:12.983105+09:00: 운영 서버 0.11.9.10 / `ae44da15`, 정상 응답·점검 해제를 확인했습니다.
+- 확정한 캐릭터 그림 → 정면·좌측·후면·우측 → 4장 기반 3D. 새 단일 캐릭터 이미지 제작부터 적용되며, 기존 설치파일로 이용합니다.
+- 관련 시험 168개 통과. 실제 네 방향 생성 10 + P2 재질 모델 110 = 120크레딧 사용, Godot 렌더링 확인.
+- 기존/변경 흐름도, 적용 범위, 이미지·모델 근거 및 한계: `docs/demo/CHARACTER_MULTIVIEW_KO.md`.
+- 배포 근거: `artifacts/multiview-verification.json`, `artifacts/multiview-deploy.log`.

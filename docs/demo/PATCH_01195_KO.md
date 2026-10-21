@@ -377,3 +377,12 @@ OpenAI↔Gemini 전환을 구현했습니다. `TRIPOTHON_STUDIO_LLM`이 주 제�
 - 2026-10-21T17:41:41.453013+09:00: 운영 서버 0.11.9.10 / `a0e5417f`, 정상 응답·점검 해제를 확인했습니다.
 - 예고 대기 0분, 기존 설치파일과 자동 패치를 그대로 사용합니다. 새 제작/다시 그리기부터 수정된 지시가 적용됩니다. 이미 완성된 이미지와 3D는 자동 변경하지 않습니다.
 - 배포 근거: `artifacts/proportions-hotfix-verification.json`, `artifacts/proportions-hotfix-deploy.log`.
+
+
+### 캐릭터 멀티뷰 제작 배포 확인
+
+- 2026-10-21T17:57:12.983105+09:00: 운영 서버 0.11.9.10 / `ae44da15`, 정상 응답·점검 해제를 확인했습니다.
+- 확정한 캐릭터 그림 → 정면·좌측·후면·우측 → 4장 기반 3D. 새 단일 캐릭터 이미지 제작부터 적용되며, 기존 설치파일로 이용합니다.
+- 관련 시험 168개 통과. 실제 네 방향 생성 10 + P2 재질 모델 110 = 120크레딧 사용, Godot 렌더링 확인.
+- 기존/변경 흐름도, 적용 범위, 이미지·모델 근거 및 한계: `docs/demo/CHARACTER_MULTIVIEW_KO.md`.
+- 배포 근거: `artifacts/multiview-verification.json`, `artifacts/multiview-deploy.log`.
